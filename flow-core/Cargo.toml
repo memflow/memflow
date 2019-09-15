@@ -1,0 +1,10 @@
+[package]
+name = "flow-core"
+version = "0.1.0"
+authors = ["ko1N <ko1N1337@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+clap = "2.*"
+flow-cpu = { path = "../flow-cpu" }
+flow-mem = { path = "../flow-mem" }

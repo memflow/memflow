@@ -28,8 +28,8 @@ fn main() {
         }
     };
 
-    let length = bridge.read_physical_memory(0x1000, 8).unwrap();
-    println!("Received memory: {:?}", length);
+    let mem = bridge.read_physical_memory(0x1000, 8).unwrap();
+    println!("Received memory: {:?}", mem);
 
     //bridge.read_registers().unwrap();
 

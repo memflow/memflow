@@ -4,7 +4,7 @@
 
 use std::time::Instant;
 
-use qemu_connector::QemuMonitor;
+use flow_qemu::QemuMonitor;
 
 fn main() {
     // TODO: fork this lib and add missing features, maybe?

@@ -1,7 +1,7 @@
 use clap::{App, Arg};
 use std::time::Instant;
 
-use qemu_connector::Qmp;
+use flow_qemu::Qmp;
 
 //////////////////////////////
 // TEST IMPL

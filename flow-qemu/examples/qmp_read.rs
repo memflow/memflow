@@ -6,6 +6,7 @@ use flow_qemu::Qmp;
 //////////////////////////////
 // TEST IMPL
 //////////////////////////////
+/*
 use std::{fmt, num::ParseIntError};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -30,10 +31,12 @@ impl fmt::Display for DecodeHexError {
 }
 
 impl std::error::Error for DecodeHexError {}
+*/
 
 /**
  * 0000000000001000: 0xe8 0x90 0xbf 0x7f 0x00 0x00 0x00 0x00
  */
+/*
 pub fn decode_hex(s: &str) -> Result<Vec<u8>, DecodeHexError> {
     if s.len() % 2 != 0 {
         Err(DecodeHexError::OddLength)
@@ -46,6 +49,7 @@ pub fn decode_hex(s: &str) -> Result<Vec<u8>, DecodeHexError> {
         })
     }
 }
+*/
 
 /*pub fn encode_hex(bytes: &[u8]) -> String {
     bytes

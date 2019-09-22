@@ -221,6 +221,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "flow-va"
+version = "0.1.0"
+dependencies = [
+ "flow-core 0.1.0",
+]
+
+[[package]]
 name = "flow-win32"
 version = "0.1.0"
 dependencies = [

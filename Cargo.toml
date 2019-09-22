@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "flow-core",
+    "flow-va",
     "flow-cli",
     "flow-qemu",
     "flow-qemu/bridge",
@@ -8,6 +9,7 @@ members = [
 ]
 default-members = [
     "flow-core",
+    "flow-va",
     "flow-cli",
     "flow-qemu",
     "flow-qemu/bridge",

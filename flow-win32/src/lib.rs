@@ -1,4 +1,5 @@
 pub mod dtb;
+pub mod ntos;
 
 #[cfg(test)]
 mod tests {

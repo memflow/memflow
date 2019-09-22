@@ -1,0 +1,10 @@
+[package]
+name = "flow-cli"
+version = "0.1.0"
+authors = ["ko1N <ko1N1337@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+clap = "2.*"
+flow-core = { path = "../flow-core" }
+qemu-connector = { git = "ssh://git@gitlab.strictlypaste.xyz:2201/rust/qemu-connector.git" }

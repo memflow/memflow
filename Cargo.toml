@@ -1,10 +1,9 @@
 [workspace]
 members = [
     "flow-core",
-    "flow-cpu",
-    "flow-mem",
+    "flow-cli",
 ]
 default-members = [
     "flow-core",
-    "flow-mem",
+    "flow-cli",
 ]

@@ -4,5 +4,11 @@ version = "0.1.0"
 authors = ["ko1N <ko1N1337@gmail.com>"]
 edition = "2018"
 
+[features]
+default = ["x64", "x64-pae", "x86"]
+x64 = []
+x64-pae = []
+x86 = []
+
 [dependencies]
 flow-core = { path = "../flow-core" }

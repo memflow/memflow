@@ -7,4 +7,4 @@ edition = "2018"
 [dependencies]
 clap = "2.*"
 flow-core = { path = "../flow-core" }
-qemu-connector = { git = "ssh://git@gitlab.strictlypaste.xyz:2201/rust/qemu-connector.git" }
+flow-qemu = { path = "../flow-qemu" }

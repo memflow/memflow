@@ -1,0 +1,31 @@
+stages:
+  - test
+  - build
+
+test:
+  stage: test
+  image: "rust:latest"
+  before_script:
+    - apt-get update
+    - apt-get install -yq capnproto
+  script:
+    - rustc --version
+    - cargo --version
+    - cargo test --all --verbose
+
+linux-native:
+  stage: build
+  image: "rust:latest"
+  before_script:
+    - apt-get update
+    - apt-get install -yq capnproto
+  script:
+    - rustc --version
+    - cargo --version
+    - cargo build --release
+  artifacts:
+    paths:
+      - target/release/libflow_core.rlib
+      - target/release/libflow_qemu.rlib
+      - target/release/libflow_qemu_bridge.rlib
+      - target/release/flow-cli

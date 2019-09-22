@@ -2,8 +2,12 @@
 members = [
     "flow-core",
     "flow-cli",
+    "flow-qemu",
+    "flow-qemu/bridge",
 ]
 default-members = [
     "flow-core",
     "flow-cli",
+    "flow-qemu",
+    "flow-qemu/bridge",
 ]

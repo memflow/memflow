@@ -2,6 +2,15 @@
 pub mod x64;
 
 /*
+pub trait VirtualAddressTranslation {
+    fn virt_to_phys(cr3: u64, addr: u64) -> u64;
+}
+
+impl VirtualAddressTranslation for Machine {
+}
+*/
+
+/*
 uint64_t
 phys_process_manager::_virt_to_phys(uint64_t cr3, uint64_t addr) {
 	uint64_t pml4e_addr, pml4e_value;

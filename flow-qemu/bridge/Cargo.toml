@@ -19,4 +19,4 @@ capnp-rpc = "0.10.0"
 
 [lib]
 name = "flow_qemu_bridge"
-crate-type = ["dylib"]
+crate-type = ["cdylib"]

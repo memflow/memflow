@@ -1,8 +1,7 @@
 use clap::{App, Arg};
-use std::time::Instant;
 
-use flow_core::mem::PhysicalMemory;
 use flow_qemu::BridgeConnector;
+use flow_core::machine::Machine;
 use flow_win32::dtb;
 
 fn main() {
@@ -30,5 +29,6 @@ fn main() {
         }
     };
 
-    dtb::find(&mut bridge).unwrap();
+    let mut machine = Machine::new(&mut bridge);
+    dtb::find(&mut machine).unwrap();
 }

@@ -1,7 +1,8 @@
 pub mod cpu;
 pub mod mem;
 pub mod net;
-pub mod proc;
+pub mod machine;
+pub mod os;
 
 #[cfg(test)]
 mod tests {

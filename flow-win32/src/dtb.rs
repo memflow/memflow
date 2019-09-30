@@ -3,20 +3,20 @@ use std::io::{Error, ErrorKind, Result};
 
 use byteorder::{ByteOrder, LittleEndian};
 
-use flow_core::{machine::Machine};
+use flow_core::machine::Machine;
+use flow_core::cpu::Architecture;
 
 pub struct DTB {
+    pub arch: Architecture,
     pub va: u64,
     pub dtb: u64,
 }
 
 pub struct Windows {
-    dtb: DTB
+    dtb: DTB,
 }
 
 pub fn find(machine: &mut Machine) -> Result<DTB> {
-    // println!("found x64 dtb in lowstub < 1M: va={:x} dtb={:x}", va, dtb);
-
     // read low 1mb stub
     let low1m = machine.mem.read_physical_memory(0, 0x100000)?;
 
@@ -48,17 +48,17 @@ pub fn find(machine: &mut Machine) -> Result<DTB> {
     Err(Error::new(ErrorKind::Other, "unable to find dtb"))
 }
 
-pub fn find_x64_lowstub(stub: &Vec<u8>) -> Result<DTB> {
-    stub
-        .chunks_exact(0x1000)
+fn find_x64_lowstub(stub: &Vec<u8>) -> Result<DTB> {
+    stub.chunks_exact(0x1000)
         .skip(1)
         .filter(|c| (0xffffffffffff00ff & LittleEndian::read_u64(&c)) == 0x00000001000600E9) // start bytes
         .filter(|c| (0xfffff80000000003 & LittleEndian::read_u64(&c[0x70..])) == 0xfffff80000000000) // kernel entry
         .filter(|c| (0xffffff0000000fff & LittleEndian::read_u64(&c[0xA0..])) == 0) // pml4
         .nth(0)
-        .ok_or(Error::new(ErrorKind::Other, "unable to find x64 dtb in lowstub < 1M"))
+        .ok_or_else(|| Error::new(ErrorKind::Other, "unable to find x64 dtb in lowstub < 1M"))
         .and_then(|c| {
-            Ok(DTB{
+            Ok(DTB {
+                arch: Architecture::X64,
                 va: LittleEndian::read_u64(&c[0x70..]),
                 dtb: LittleEndian::read_u64(&c[0xA0..]),
             })
@@ -95,13 +95,13 @@ fn _find_x64(mem: &[u8]) -> Option<()> {
     None
 }
 
-pub fn find_x64(mem: &Vec<u8>) -> Result<DTB> {
-    mem.
-        chunks_exact(0x1000)
+fn find_x64(mem: &Vec<u8>) -> Result<DTB> {
+    mem.chunks_exact(0x1000)
         .position(|c| _find_x64(c).is_some())
-        .ok_or(Error::new(ErrorKind::Other, "unable to find x64 dtb in lowstub < 16M"))
+        .ok_or_else(|| Error::new(ErrorKind::Other, "unable to find x64 dtb in lowstub < 16M"))
         .and_then(|i| {
-            Ok(DTB{
+            Ok(DTB {
+                arch: Architecture::X64,
                 va: 0,
                 dtb: (i as u64) * 0x1000,
             })
@@ -109,7 +109,32 @@ pub fn find_x64(mem: &Vec<u8>) -> Result<DTB> {
 }
 
 // see _find_x64
+// pa, pb16M + pa
 fn _find_x86_pae(mem: &[u8]) -> Option<()> {
+    // pa, pb16M + pa
+
+    /*
+    match mem.to_vec()
+    .chunks_exact(8)
+    .take(3) // < 0x20
+    .filter(|c| c[0] != pa + (i << 9) + 0x1001)
+    .nth(0) {
+        Some(_c) => return false,
+        None => (),
+    }
+    */
+
+    match mem
+        .to_vec()
+        .chunks_exact(8)
+        .skip(3) // >= 0x20
+        .filter(|c| c[0] != 0)
+        .nth(0)
+    {
+        Some(_c) => return None,
+        None => return Some(()),
+    }
+
     /*
     for(QWORD i = 0; i < 0x1000; i += 8) {
         if((i < 0x20) && ((*(PQWORD)(pbPage + i) != pa + (i << 9) + 0x1001))) {
@@ -120,16 +145,20 @@ fn _find_x86_pae(mem: &[u8]) -> Option<()> {
     }
     return TRUE;
     */
-    None
 }
 
-pub fn find_x86_pae(mem: &Vec<u8>) -> Result<DTB> {
-    mem.
-        chunks_exact(0x1000)
+fn find_x86_pae(mem: &Vec<u8>) -> Result<DTB> {
+    mem.chunks_exact(0x1000)
         .position(|c| _find_x86_pae(c).is_some())
-        .ok_or(Error::new(ErrorKind::Other, "unable to find x64_pae dtb in lowstub < 16M"))
+        .ok_or_else(|| {
+            Error::new(
+                ErrorKind::Other,
+                "unable to find x64_pae dtb in lowstub < 16M",
+            )
+        })
         .and_then(|i| {
-            Ok(DTB{
+            Ok(DTB {
+                arch: Architecture::X86Pae,
                 va: 0,
                 dtb: (i as u64) * 0x1000,
             })
@@ -157,13 +186,13 @@ fn _find_x86(mem: &[u8]) -> Option<()> {
     None
 }
 
-pub fn find_x86(mem: &Vec<u8>) -> Result<DTB> {
-    mem.
-        chunks_exact(0x1000)
+fn find_x86(mem: &Vec<u8>) -> Result<DTB> {
+    mem.chunks_exact(0x1000)
         .position(|c| _find_x86(c).is_some())
-        .ok_or(Error::new(ErrorKind::Other, "unable to find x86 dtb in lowstub < 16M"))
+        .ok_or_else(|| Error::new(ErrorKind::Other, "unable to find x86 dtb in lowstub < 16M"))
         .and_then(|i| {
-            Ok(DTB{
+            Ok(DTB {
+                arch: Architecture::X86,
                 va: 0,
                 dtb: (i as u64) * 0x1000,
             })

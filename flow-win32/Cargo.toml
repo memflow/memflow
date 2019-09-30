@@ -7,3 +7,4 @@ edition = "2018"
 [dependencies]
 flow-core = { path = "../flow-core" }
 byteorder = "1.*"
+num = "0.*"

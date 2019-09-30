@@ -2,7 +2,7 @@ use clap::{App, Arg};
 
 use flow_qemu::BridgeConnector;
 use flow_core::machine::Machine;
-use flow_win32::dtb;
+use flow_win32;
 
 fn main() {
     let argv = App::new("flow-core")
@@ -30,5 +30,5 @@ fn main() {
     };
 
     let mut machine = Machine::new(&mut bridge);
-    dtb::find(&mut machine).unwrap();
+    flow_win32::init(&mut machine).unwrap();
 }

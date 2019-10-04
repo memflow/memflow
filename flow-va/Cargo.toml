@@ -12,3 +12,4 @@ x86 = []
 
 [dependencies]
 flow-core = { path = "../flow-core" }
+byteorder = "1.*"

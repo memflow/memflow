@@ -1,7 +1,6 @@
 use clap::{App, Arg};
 
 use flow_qemu::BridgeConnector;
-use flow_core::machine::Machine;
 use flow_win32;
 
 fn main() {
@@ -29,6 +28,5 @@ fn main() {
         }
     };
 
-    let mut machine = Machine::new(&mut bridge);
-    flow_win32::init(&mut machine).unwrap();
+    flow_win32::init(&mut bridge).unwrap();
 }

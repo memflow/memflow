@@ -3,22 +3,23 @@ use std::io::{Error, ErrorKind, Result};
 
 use byteorder::{ByteOrder, LittleEndian};
 
-use flow_core::machine::Machine;
-use flow_core::cpu::Architecture;
+use flow_core::arch::{Architecture, InstructionSet};
+use flow_core::addr::{Address, Length};
+use flow_core::mem::PhysicalRead;
 
 pub struct DTB {
     pub arch: Architecture,
-    pub va: u64,
-    pub dtb: u64,
+    pub va: Address,
+    pub dtb: Address,
 }
 
 pub struct Windows {
     dtb: DTB,
 }
 
-pub fn find(machine: &mut Machine) -> Result<DTB> {
+pub fn find<T: PhysicalRead>(mem: &mut T) -> Result<DTB> {
     // read low 1mb stub
-    let low1m = machine.mem.read_physical_memory(0, 0x100000)?;
+    let low1m = mem.phys_read(Address::from(0), Length::from(0x100000))?;
 
     // find x64 dtb in low stub < 1M
     match find_x64_lowstub(&low1m) {
@@ -28,7 +29,7 @@ pub fn find(machine: &mut Machine) -> Result<DTB> {
 
     // TODO: append instead of read twice?
     // read low 16mb stub
-    let low16m = machine.mem.read_physical_memory(0, 0x1000000)?;
+    let low16m = mem.phys_read(Address::from(0), Length::from(0x1000000))?;
 
     match find_x64(&low16m) {
         Ok(d) => return Ok(d),
@@ -58,9 +59,9 @@ fn find_x64_lowstub(stub: &Vec<u8>) -> Result<DTB> {
         .ok_or_else(|| Error::new(ErrorKind::Other, "unable to find x64 dtb in lowstub < 1M"))
         .and_then(|c| {
             Ok(DTB {
-                arch: Architecture::X64,
-                va: LittleEndian::read_u64(&c[0x70..]),
-                dtb: LittleEndian::read_u64(&c[0xA0..]),
+                arch: Architecture::from(InstructionSet::X64),
+                va: Address::from(LittleEndian::read_u64(&c[0x70..])),
+                dtb: Address::from(LittleEndian::read_u64(&c[0xA0..])),
             })
         })
 }
@@ -101,9 +102,9 @@ fn find_x64(mem: &Vec<u8>) -> Result<DTB> {
         .ok_or_else(|| Error::new(ErrorKind::Other, "unable to find x64 dtb in lowstub < 16M"))
         .and_then(|i| {
             Ok(DTB {
-                arch: Architecture::X64,
-                va: 0,
-                dtb: (i as u64) * 0x1000,
+                arch: Architecture::from(InstructionSet::X64),
+                va: Address::from(0),
+                dtb: Address::from((i as u64) * 0x1000),
             })
         })
 }
@@ -158,9 +159,9 @@ fn find_x86_pae(mem: &Vec<u8>) -> Result<DTB> {
         })
         .and_then(|i| {
             Ok(DTB {
-                arch: Architecture::X86Pae,
-                va: 0,
-                dtb: (i as u64) * 0x1000,
+                arch: Architecture::from(InstructionSet::X86Pae),
+                va: Address::from(0),
+                dtb: Address::from((i as u64) * 0x1000),
             })
         })
 }
@@ -192,9 +193,9 @@ fn find_x86(mem: &Vec<u8>) -> Result<DTB> {
         .ok_or_else(|| Error::new(ErrorKind::Other, "unable to find x86 dtb in lowstub < 16M"))
         .and_then(|i| {
             Ok(DTB {
-                arch: Architecture::X86,
-                va: 0,
-                dtb: (i as u64) * 0x1000,
+                arch: Architecture::from(InstructionSet::X86),
+                va: Address::from(0),
+                dtb: Address::from((i as u64) * 0x1000),
             })
         })
 }

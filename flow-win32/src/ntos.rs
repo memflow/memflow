@@ -3,29 +3,30 @@ use num::range_step;
 
 use byteorder::{ByteOrder, LittleEndian};
 
-use flow_core::machine::Machine;
-use flow_core::cpu::Architecture;
+use flow_core::arch::InstructionSet;
+use flow_core::addr::Address;
+use flow_core::mem::{PhysicalRead, VirtualRead};
 
 use crate::dtb::DTB;
 
 // VmmWinInit_FindNtosScan
-pub fn find(machine: &mut Machine, dtb: DTB) -> Result<()> {
+pub fn find<T: PhysicalRead + VirtualRead>(mem: &mut T, dtb: DTB) -> Result<()> {
     // TODO: create system process around current dtb
 
-    if dtb.arch == Architecture::X64 {
-        if dtb.va != 0 {
-            match find_x64_with_va(machine, dtb.va) {
+    if dtb.arch.instruction_set == InstructionSet::X64 {
+        if dtb.va.valid() {
+            match find_x64_with_va(mem, dtb.va) {
                 Ok(b) => return Ok(b),
                 Err(e) => println!("Error: {}", e),
             }
         }
         
-        match find_x64(machine) {
+        match find_x64(mem) {
             Ok(b) => return Ok(b),
             Err(e) => println!("Error: {}", e),
         }
     } else {
-        match find_x86(machine) {
+        match find_x86(mem) {
             Ok(b) => return Ok(b),
             Err(e) => println!("Error: {}", e),
         }
@@ -35,14 +36,14 @@ pub fn find(machine: &mut Machine, dtb: DTB) -> Result<()> {
 }
 
 // VmmWinInit_FindNtosScanHint64
-fn find_x64_with_va(machine: &mut Machine, va: u64) -> Result<()> {
+fn find_x64_with_va<T: PhysicalRead + VirtualRead>(mem: &mut T, va: Address) -> Result<()> {
     // va was found previously
 
     // TODO: .rev()
-    for base in range_step(va - 0x2000000, va & !0x1fffff, 0x200000) {
+//    for base in range_step(va - 0x2000000, va & !0x1fffff, 0x200000) {
         // ...
         // VmmReadEx with sysProc ...
-        let mem = machine.mem.read_physical_memory(base, 0x200000)?;
+  //      let mem = machine.mem.read_memory(base, 0x200000)?;
 
         /*
         mem
@@ -57,15 +58,15 @@ fn find_x64_with_va(machine: &mut Machine, va: u64) -> Result<()> {
                 // return current base + p
             })
             */
-    }
+   // }
 
     Ok(())
 }
 
-fn find_x64(machine: &mut Machine) -> Result<()> {
+fn find_x64<T: PhysicalRead + VirtualRead>(mem: &mut T) -> Result<()> {
     Ok(())
 }
 
-fn find_x86(machine: &mut Machine) -> Result<()> {
+fn find_x86<T: PhysicalRead + VirtualRead>(mem: &mut T) -> Result<()> {
     Ok(())
 }

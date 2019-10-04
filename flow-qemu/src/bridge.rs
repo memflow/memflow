@@ -11,7 +11,9 @@ use capnp_rpc::{pry, rpc_twoparty_capnp, twoparty, RpcSystem};
 
 use crate::bridge_capnp::bridge;
 
-use flow_core::mem::PhysicalMemory;
+use flow_core::addr::{Address, Length};
+use flow_core::arch::Architecture;
+use flow_core::mem::{PhysicalRead, VirtualRead, PhysicalWrite, VirtualWrite};
 
 pub struct BridgeConnector {
     bridge: bridge::Client,
@@ -51,11 +53,11 @@ impl BridgeConnector {
     }
 }
 
-impl PhysicalMemory for BridgeConnector {
-    fn read_physical_memory(&mut self, addr: u64, len: u64) -> Result<Vec<u8>> {
-        let mut request = self.bridge.read_physical_memory_request();
-        request.get().set_address(addr);
-        request.get().set_length(len);
+impl PhysicalRead for BridgeConnector {
+    fn phys_read(&mut self, addr: Address, len: Length) -> Result<Vec<u8>> {
+        let mut request = self.bridge.phys_read_request();
+        request.get().set_address(addr.addr);
+        request.get().set_length(len.len);
         self.runtime
             .block_on(
                 request.send().promise.and_then(|response| {
@@ -65,19 +67,35 @@ impl PhysicalMemory for BridgeConnector {
             .map_err(|_e| Error::new(ErrorKind::Other, "unable to read memory"))
             .and_then(|v| Ok(v))
     }
+}
 
-    fn write_physical_memory(&mut self, addr: u64, data: &Vec<u8>) -> Result<u64> {
-        let mut request = self.bridge.write_physical_memory_request();
-        request.get().set_address(addr);
+impl VirtualRead for BridgeConnector {
+    fn virt_read(&mut self, arch: Architecture, dtb: Address, addr: Address, len: Length) -> Result<Vec<u8>> {
+        // TODO
+        Err(Error::new(ErrorKind::Other, "not implemented yet"))
+    }
+}
+
+impl PhysicalWrite for BridgeConnector {
+    fn phys_write(&mut self, addr: Address, data: &Vec<u8>) -> Result<Length> {
+        let mut request = self.bridge.phys_write_request();
+        request.get().set_address(addr.addr);
         request.get().set_data(data);
         self.runtime
             .block_on(
                 request
                     .send()
                     .promise
-                    .and_then(|response| Promise::ok(pry!(response.get()).get_length())),
+                    .and_then(|response| Promise::ok(Length::from(pry!(response.get()).get_length()))),
             )
             .map_err(|_e| Error::new(ErrorKind::Other, "unable to write memory"))
             .and_then(|v| Ok(v))
+    }
+}
+
+impl VirtualWrite for BridgeConnector {
+    fn write_mem(&mut self, arch: Architecture, dtb: Address, addr: Address, data: &Vec<u8>) -> Result<Length> {
+        // TODO:
+        Err(Error::new(ErrorKind::Other, "not implemented yet"))
     }
 }

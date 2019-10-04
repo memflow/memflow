@@ -10,49 +10,69 @@ macro_rules! get_bit {
 }
 
 // page test macros
+#[macro_export]
 macro_rules! is_large_page {
 	($a:expr) => {
 		get_bit!($a, 7)
 	};
 }
 
+#[macro_export]
 macro_rules! is_transition_page {
 	($a:expr) => {
 		get_bit!($a, 11)
 	};
 }
 
+#[macro_export]
 macro_rules! is_prototype_page {
 	($a:expr) => {
 		get_bit!($a, 10)
 	};
 }
 
-//#define CHECK_ENTRY(entry) (GET_BIT(entry, 0) ? 1 : ((IS_TRANSITION_PAGE(entry) && !(IS_PROTOTYPE_PAGE(entry))) ? 1 : 0))
+// TODO: tests
+#[macro_export]
+macro_rules! check_entry {
+	($a:expr) => {
+		if get_bit!($a, 0) {
+			true
+		} else if is_transition_page!($a) && !is_prototype_page!($a) {
+			true
+		} else {
+			false
+		}
+	};
+}
+
 
 // TODO: write tests for these macros
 // pagetable indizes
+#[macro_export]
 macro_rules! pml4_index_bits {
 	($a:expr) => {
-		($a & make_bit_mask!(39, 47)) >> 36
+		($a & make_bit_mask(39, 47)) >> 36
 	};
 }
 
+#[macro_export]
 macro_rules! pdpte_index_bits {
 	($a:expr) => {
-		($a & make_bit_mask!(30, 38)) >> 27
+		($a & make_bit_mask(30, 38)) >> 27
 	};
 }
 
+#[macro_export]
 macro_rules! pd_index_bits {
 	($a:expr) => {
-		($a & make_bit_mask!(21, 29)) >> 18
+		($a & make_bit_mask(21, 29)) >> 18
 	};
 }
 
+#[macro_export]
 macro_rules! pt_index_bits {
 	($a:expr) => {
-		($a & make_bit_mask!(12, 20)) >> 9
+		($a & make_bit_mask(12, 20)) >> 9
 	};
 }
 
@@ -72,7 +92,7 @@ mod tests {
 
 	#[test]
 	fn test_get_bit() {
-		//assert_eq!(make_bit_mask!(0, 11), 0xfff);
+		//assert_eq!(make_bit_mask(0, 11), 0xfff);
 	}
 
 	#[test]

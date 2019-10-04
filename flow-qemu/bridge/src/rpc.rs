@@ -18,10 +18,10 @@ struct BridgeImpl;
 
 impl bridge::Server for BridgeImpl {
     // readPhysicalMemory @0 (address :UInt64, length :UInt64) -> (memory :MemoryRegion);
-    fn read_physical_memory(
+    fn phys_read(
         &mut self,
-        params: bridge::ReadPhysicalMemoryParams,
-        mut results: bridge::ReadPhysicalMemoryResults,
+        params: bridge::PhysReadParams,
+        mut results: bridge::PhysReadResults,
     ) -> Promise<(), Error> {
         let address = pry!(params.get()).get_address();
         let length = pry!(params.get()).get_length();
@@ -31,10 +31,10 @@ impl bridge::Server for BridgeImpl {
     }
 
     // writePhysicalMemory @1 (address :UInt64, data: Data) -> (length :UInt64);
-    fn write_physical_memory(
+    fn phys_write(
         &mut self,
-        params: bridge::WritePhysicalMemoryParams,
-        mut results: bridge::WritePhysicalMemoryResults,
+        params: bridge::PhysWriteParams,
+        mut results: bridge::PhysWriteResults,
     ) -> Promise<(), Error> {
         let address = pry!(params.get()).get_address();
         let data = pry!(pry!(params.get()).get_data());

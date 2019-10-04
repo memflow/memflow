@@ -2,7 +2,6 @@ use clap::{App, Arg};
 use std::time::Instant;
 
 use flow_qemu::BridgeConnector;
-use flow_core::mem::PhysicalMemory;
 
 fn main() {
     let argv = App::new("examples/bridge_read")
@@ -28,7 +27,7 @@ fn main() {
         }
     };
 
-    let mem = bridge.read_physical_memory(0x1000, 8).unwrap();
+    let mem = bridge.read_memory(0x1000, 8).unwrap();
     println!("Received memory: {:?}", mem);
 
     //bridge.read_registers().unwrap();
@@ -36,9 +35,9 @@ fn main() {
     let start = Instant::now();
     let mut counter = 0;
     loop {
-        //let r = bridge.read_physical_memory(0x1000, 0x1000).unwrap();
-        //bridge.write_physical_memory(0x1000, &r).unwrap();
-        bridge.read_physical_memory(0x1000, 0x1000).unwrap();
+        //let r = bridge.read_memory(0x1000, 0x1000).unwrap();
+        //bridge.write_memory(0x1000, &r).unwrap();
+        bridge.read_memory(0x1000, 0x1000).unwrap();
 
         counter += 1;
         if (counter % 10000) == 0 {

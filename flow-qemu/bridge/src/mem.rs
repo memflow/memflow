@@ -24,7 +24,7 @@ impl Wrapper {
 //
 impl PhysicalRead for Wrapper {
     fn phys_read(&mut self, addr: Address, len: Length) -> Result<Vec<u8>> {
-        let mut l = len.len as c_ulonglong;
+        let mut l = len.as_usize() as c_ulonglong;
         let mem = CPU_PHYSICAL_MEMORY_MAP.unwrap()(addr.addr, &mut l, 0);
         if mem.is_null() {
             Err(Error::new(ErrorKind::Other, "unable to read memory"))
@@ -55,9 +55,11 @@ impl PhysicalWrite for Wrapper {
     }
 }
 
+// TODO: this doesnt work as we need to check each page individually!
 impl VirtualRead for Wrapper {
     fn virt_read(&mut self, arch: Architecture, dtb: Address, addr: Address, len: Length) -> Result<Vec<u8>> {
         let pa = flow_va::vtop(arch, self, dtb, addr)?;
+        //println!("virt_read(): pa={:x}", pa);
         if !pa.is_null() {
             self.phys_read(pa, len)
         } else {
@@ -67,9 +69,11 @@ impl VirtualRead for Wrapper {
     }
 }
 
+// TODO: this doesnt work as we need to check each page individually!
 impl VirtualWrite for Wrapper {
     fn virt_write(&mut self, arch: Architecture, dtb: Address, addr: Address, data: &Vec<u8>) -> Result<Length> {
         let pa = flow_va::vtop(arch, self, dtb, addr)?;
+        //println!("virt_write(): pa={:x}", pa);
         if !pa.is_null() {
             self.phys_write(pa, data)
         } else {

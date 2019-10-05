@@ -7,6 +7,7 @@ use arch::{Architecture, InstructionSet};
 use address::{Address, Length};
 use mem::PhysicalRead;
 
+#[derive(Debug, Copy, Clone)]
 pub struct DTB {
     pub arch: Architecture,
     pub va: Address,
@@ -97,7 +98,7 @@ fn _find_x64(mem: &[u8]) -> Option<()> {
 }
 
 fn find_x64(mem: &Vec<u8>) -> Result<DTB> {
-    mem.chunks_exact(0x1000)
+    mem.chunks_exact(Length::from_kb(4).as_usize())
         .position(|c| _find_x64(c).is_some())
         .ok_or_else(|| Error::new(ErrorKind::Other, "unable to find x64 dtb in lowstub < 16M"))
         .and_then(|i| {

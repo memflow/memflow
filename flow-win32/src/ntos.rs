@@ -3,19 +3,19 @@ use num::range_step;
 
 use byteorder::{ByteOrder, LittleEndian};
 
-use arch::InstructionSet;
-use address::Address;
+use arch::{Architecture, InstructionSet};
+use address::{Address, Length};
 use mem::{PhysicalRead, VirtualRead};
 
 use crate::dtb::DTB;
 
 // VmmWinInit_FindNtosScan
-pub fn find<T: PhysicalRead + VirtualRead>(mem: &mut T, dtb: DTB) -> Result<()> {
+pub fn find<T: PhysicalRead + VirtualRead>(mem: &mut T, dtb: DTB) -> Result<Address> {
     // TODO: create system process around current dtb
 
     if dtb.arch.instruction_set == InstructionSet::X64 {
         if !dtb.va.is_null() {
-            match find_x64_with_va(mem, dtb.va) {
+            match find_x64_with_va(mem, &dtb) {
                 Ok(b) => return Ok(b),
                 Err(e) => println!("Error: {}", e),
             }
@@ -36,37 +36,57 @@ pub fn find<T: PhysicalRead + VirtualRead>(mem: &mut T, dtb: DTB) -> Result<()> 
 }
 
 // VmmWinInit_FindNtosScanHint64
-fn find_x64_with_va<T: PhysicalRead + VirtualRead>(mem: &mut T, va: Address) -> Result<()> {
+fn find_x64_with_va<T: PhysicalRead + VirtualRead>(mem: &mut T, dtb: &DTB) -> Result<Address> {
+    println!("find_x64_with_va(): trying to find ntoskrnl.exe with va hint {:x}", dtb.va.addr);
+
     // va was found previously
+    // TODO: use address structure for this as well!
+    let mut va_base = dtb.va.addr & !0x1fffff;
+    while va_base + Length::from_mb(32).as_u64() > dtb.va.addr {
+        println!("trying to read {:x}", va_base);
+        let buf = mem.virt_read(dtb.arch, dtb.dtb, Address::from(va_base), Length::from_mb(2))?;
+        if buf.is_empty() {
+            // TODO: print address as well
+            return Err(Error::new(ErrorKind::Other, "Unable to read memory when scanning for ntoskrnl.exe"))
+        }
+println!("found buf with len {}", buf.len());
 
-    // TODO: .rev()
-//    for base in range_step(va - 0x2000000, va & !0x1fffff, 0x200000) {
-        // ...
-        // VmmReadEx with sysProc ...
-  //      let mem = machine.mem.read_memory(base, 0x200000)?;
-
-        /*
-        mem
+        let res = buf
             .chunks_exact(0x1000)
-            .filter(|c| LittleEndian::read_u32(&c) == 0x5a4d) // MZ
-            .chunks_exact(8)
-            .filter(|c| LittleEndian::read_u64(&c) == 0x45444F434C4F4F50) // POOLCODE
-            .ok_or_else(|| Error::new(ErrorKind::Other, "unable to find x64 dtb in lowstub < 1M"))
-            .and_then(|c| {
+            .enumerate()
+            .filter(|(_, c)| LittleEndian::read_u32(&c) == 0x5a4d) // MZ
+            .inspect(|(_, _)| println!("found MZ header"))
+            .flat_map(|(i, c)| c.chunks_exact(8).map(move |c| (i, c)))
+            .filter(|(_, c)| LittleEndian::read_u64(&c) == 0x45444F434C4F4F50) // POOLCODE
+            .filter(|(_, _)| {
+                // check for module name
+                true
+            })
+            .nth(0)
+            .ok_or_else(|| Error::new(ErrorKind::Other, "unable to find ntoskrnl.exe with va hint"))
+            .and_then(|(i, _)| {
                 // PE_GetModuleNameEx()
                 // compare to ntoskrnl.exe
                 // return current base + p
-            })
-            */
-   // }
+                // ...
+                Ok(va_base + i as u64 * 0x1000)
+            });
 
-    Ok(())
+        match res {
+            Ok(b) => return Ok(Address::from(b)),
+            Err(_) => (),
+        }
+
+        va_base -= Length::from_mb(2).as_u64();
+    }
+
+    Err(Error::new(ErrorKind::Other, "unable to find ntoskrnl.exe with va hint"))
 }
 
-fn find_x64<T: PhysicalRead + VirtualRead>(mem: &mut T) -> Result<()> {
-    Ok(())
+fn find_x64<T: PhysicalRead + VirtualRead>(mem: &mut T) -> Result<Address> {
+    Err(Error::new(ErrorKind::Other, "find_x64(): not implemented yet"))
 }
 
-fn find_x86<T: PhysicalRead + VirtualRead>(mem: &mut T) -> Result<()> {
-    Ok(())
+fn find_x86<T: PhysicalRead + VirtualRead>(mem: &mut T) -> Result<Address> {
+    Err(Error::new(ErrorKind::Other, "find_x86(): not implemented yet"))
 }

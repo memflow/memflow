@@ -12,7 +12,7 @@ pub enum ByteOrder {
     BigEndian,
 }
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum InstructionSet {
     X64,
     X86Pae,
@@ -33,6 +33,7 @@ macro_rules! match_instruction_set {
 #[allow(dead_code)]
 impl InstructionSet {
     // TODO: figure out a better way for this...
+    // TODO: https://doc.rust-lang.org/std/convert/trait.TryFrom.html
     pub fn to_u8(&self) -> u8 {
         match self {
             InstructionSet::X64 => 1,
@@ -69,7 +70,7 @@ impl InstructionSet {
 
 // TODO: do we gain anything from this wrap?
 // TODO: do we need any other fields?
-#[derive(Debug, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct Architecture {
     pub instruction_set: InstructionSet,
 }

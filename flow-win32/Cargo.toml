@@ -10,3 +10,4 @@ arch = { path = "../flow-core/arch" }
 mem = { path = "../flow-core/mem" }
 byteorder = "1.*"
 num = "0.*"
+goblin = "0.0.*"

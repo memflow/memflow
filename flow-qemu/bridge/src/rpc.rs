@@ -43,7 +43,7 @@ impl bridge::Server for BridgeImpl {
         let address = Address::from(pry!(params.get()).get_address());
         let data = pry!(pry!(params.get()).get_data());
         let len = mem::Wrapper::new().phys_write(address, &data.to_vec()).unwrap_or_else(|_e| Length::from(0));
-        results.get().set_length(len.len);
+        results.get().set_length(len.as_u64());
         Promise::ok(())
     }
 
@@ -73,7 +73,7 @@ impl bridge::Server for BridgeImpl {
         let address = Address::from(pry!(params.get()).get_address());
         let data = pry!(pry!(params.get()).get_data());
         let len = mem::Wrapper::new().virt_write(Architecture::from(ins), dtb, address, &data.to_vec()).unwrap_or_else(|_e| Length::from(0));
-        results.get().set_length(len.len);
+        results.get().set_length(len.as_u64());
         Promise::ok(())
     }
 
@@ -99,7 +99,7 @@ pub fn listen(url: &str) -> io::Result<()> {
         listener
             .incoming()
             .map_err(|e| { libc_eprintln!("client accept failed: {:?}", e) })
-            .for_each(|s| {
+            .for_each(move |s| {
                 libc_eprintln!("client connected");
 
                 //s.set_nodelay(true)?;

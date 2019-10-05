@@ -58,7 +58,7 @@ impl PhysicalRead for BridgeConnector {
     fn phys_read(&mut self, addr: Address, len: Length) -> Result<Vec<u8>> {
         let mut request = self.bridge.phys_read_request();
         request.get().set_address(addr.addr);
-        request.get().set_length(len.len);
+        request.get().set_length(len.as_u64());
         self.runtime
             .block_on(
                 request.send().promise.and_then(|response| {
@@ -77,7 +77,7 @@ impl VirtualRead for BridgeConnector {
         request.get().set_arch(arch.instruction_set.to_u8());
         request.get().set_dtb(dtb.addr);
         request.get().set_address(addr.addr);
-        request.get().set_length(len.len);
+        request.get().set_length(len.as_u64());
         self.runtime
             .block_on(
                 request.send().promise.and_then(|response| {

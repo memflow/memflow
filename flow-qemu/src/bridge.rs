@@ -11,7 +11,7 @@ use capnp_rpc::{pry, rpc_twoparty_capnp, twoparty, RpcSystem};
 
 use crate::bridge_capnp::bridge;
 
-use flow_core::addr::{Address, Length};
+use flow_core::address::{Address, Length};
 use flow_core::arch::Architecture;
 use flow_core::mem::{PhysicalRead, VirtualRead, PhysicalWrite, VirtualWrite};
 

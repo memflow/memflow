@@ -5,7 +5,7 @@ use masks::*;
 use std::io::{Error, ErrorKind, Result};
 use byteorder::{ByteOrder, LittleEndian};
 
-use flow_core::addr::{Address, Length};
+use flow_core::address::{Address, Length};
 use flow_core::mem::PhysicalRead;
 
 // TODO: can we put this in a trait?

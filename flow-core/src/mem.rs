@@ -1,7 +1,7 @@
 // TODO: custom error + result
 use std::io::Result;
 
-use crate::addr::{Address, Length};
+use crate::address::{Address, Length};
 use crate::arch::Architecture;
 
 pub trait PhysicalRead {

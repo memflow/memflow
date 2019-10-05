@@ -1,4 +1,8 @@
-use crate::addr::Length;
+pub mod x64;
+pub mod x86_pae;
+pub mod x86;
+
+use crate::address::Length;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum ByteOrder {
@@ -13,41 +17,44 @@ pub enum InstructionSet {
     X86
 }
 
-pub trait TypeLengths {
-    fn len_addr(&self) -> Length;
-}
-
-// TODO: split up implementation for each type
-impl TypeLengths for InstructionSet {
-    fn len_addr(&self) -> Length {
-        match self {
-            InstructionSet::X64 => Length::from(8),
-            InstructionSet::X86Pae => Length::from(4),
-            InstructionSet::X86 => Length::from(4),
+macro_rules! match_instruction_set {
+    ($value:expr, $func:ident) => (
+        match $value {
+            InstructionSet::X64 => x64::$func(),
+            InstructionSet::X86Pae => x86_pae::$func(),
+            InstructionSet::X86 => x86::$func(),
         }
-    }
+    )
 }
 
-// TODO: create a typeSize helper for each instruction set to convert type lengths! (extend Length!)
+// TODO: change this to operate on enum variants directly
+#[allow(dead_code)]
+impl InstructionSet {
+    fn byte_order(&self) -> ByteOrder {
+        match_instruction_set!(self, byte_order)
+    }
 
-pub fn byte_order(ins: &InstructionSet) -> ByteOrder {
-    match ins {
-        InstructionSet::X64 => ByteOrder::LittleEndian,
-        InstructionSet::X86Pae => ByteOrder::LittleEndian,
-        InstructionSet::X86 => ByteOrder::LittleEndian,
+    fn len_addr(&self) -> Length {
+        match_instruction_set!(self, len_addr)
+    }
+
+    fn len_u64(&self) -> Length {
+        match_instruction_set!(self, len_u64)
+    }
+
+    fn len_u32(&self) -> Length {
+        match_instruction_set!(self, len_u32)
     }
 }
 
 #[derive(Debug, Clone)]
 pub struct Architecture {
-    pub byte_order: ByteOrder,
     pub instruction_set: InstructionSet,
 }
 
 impl From<InstructionSet> for Architecture {
     fn from(item: InstructionSet) -> Self {
         Architecture{
-            byte_order: byte_order(&item),
             instruction_set: item,
         }
     }

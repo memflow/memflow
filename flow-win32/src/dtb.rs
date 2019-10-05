@@ -4,7 +4,7 @@ use std::io::{Error, ErrorKind, Result};
 use byteorder::{ByteOrder, LittleEndian};
 
 use flow_core::arch::{Architecture, InstructionSet};
-use flow_core::addr::{Address, Length};
+use flow_core::address::{Address, Length};
 use flow_core::mem::PhysicalRead;
 
 pub struct DTB {

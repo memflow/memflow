@@ -10,7 +10,7 @@ pub mod x86;
 use std::io::Result;
 
 use flow_core::arch::{Architecture, InstructionSet};
-use flow_core::addr::Address;
+use flow_core::address::Address;
 use flow_core::mem::PhysicalRead;
 
 // virtual -> physical

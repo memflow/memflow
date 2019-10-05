@@ -1,6 +1,7 @@
-pub mod machine;
-pub mod addr;
+pub mod address;
 pub mod arch;
+
+pub mod machine;
 pub mod os;
 
 pub mod cpu;

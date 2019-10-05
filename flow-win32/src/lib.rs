@@ -1,7 +1,7 @@
 // TODO: custom errors
 use std::io::Result;
 
-use flow_core::mem::{PhysicalRead, VirtualRead};
+use mem::{PhysicalRead, VirtualRead};
 
 pub mod dtb;
 pub mod ntos;

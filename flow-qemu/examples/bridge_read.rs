@@ -2,8 +2,8 @@ use clap::{App, Arg};
 use std::time::Instant;
 
 use flow_qemu::BridgeConnector;
-use flow_core::address::{Address, Length};
-use flow_core::mem::PhysicalRead;
+use address::{Address, Length};
+use mem::PhysicalRead;
 
 fn main() {
     let argv = App::new("examples/bridge_read")

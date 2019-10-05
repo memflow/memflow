@@ -3,9 +3,9 @@ use std::os::raw::{c_ulonglong, c_void};
 use std::io::{Error, ErrorKind, Result};
 use std::ptr::copy_nonoverlapping;
 
-use flow_core::address::{Address, Length};
-use flow_core::arch::Architecture;
-use flow_core::mem::{PhysicalRead, PhysicalWrite, VirtualRead, VirtualWrite};
+use address::{Address, Length};
+use arch::Architecture;
+use ::mem::{PhysicalRead, PhysicalWrite, VirtualRead, VirtualWrite};
 
 use flow_va;
 

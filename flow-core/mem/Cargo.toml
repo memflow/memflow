@@ -1,0 +1,9 @@
+[package]
+name = "mem"
+version = "0.1.0"
+authors = ["ko1N <ko1N1337@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+address = { path = "../address" }
+arch = { path = "../arch" }

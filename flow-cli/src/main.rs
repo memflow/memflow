@@ -28,5 +28,6 @@ fn main() {
         }
     };
 
+    // os functionality should be located in core!
     flow_win32::init(&mut bridge).unwrap();
 }

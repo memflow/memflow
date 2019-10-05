@@ -3,9 +3,9 @@ use std::io::{Error, ErrorKind, Result};
 
 use byteorder::{ByteOrder, LittleEndian};
 
-use flow_core::arch::{Architecture, InstructionSet};
-use flow_core::address::{Address, Length};
-use flow_core::mem::PhysicalRead;
+use arch::{Architecture, InstructionSet};
+use address::{Address, Length};
+use mem::PhysicalRead;
 
 pub struct DTB {
     pub arch: Architecture,

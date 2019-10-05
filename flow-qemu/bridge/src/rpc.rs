@@ -10,9 +10,9 @@ use tokio::runtime::current_thread;
 use capnp::{capability::Promise, Error};
 use capnp_rpc::{pry, rpc_twoparty_capnp, twoparty, RpcSystem};
 
-use flow_core::address::{Address, Length};
-use flow_core::arch::{Architecture, InstructionSet};
-use flow_core::mem::{PhysicalRead, PhysicalWrite, VirtualRead, VirtualWrite};
+use address::{Address, Length};
+use arch::{Architecture, InstructionSet};
+use ::mem::{PhysicalRead, PhysicalWrite, VirtualRead, VirtualWrite};
 
 use crate::bridge_capnp::bridge;
 use crate::cpu;

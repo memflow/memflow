@@ -4,7 +4,7 @@ pub mod x86;
 
 use std::io::{Error, ErrorKind, Result};
 
-use crate::address::Length;
+use address::Length;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum ByteOrder {

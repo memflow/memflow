@@ -1,8 +1,8 @@
 // TODO: custom error + result
 use std::io::Result;
 
-use crate::address::{Address, Length};
-use crate::arch::Architecture;
+use address::{Address, Length};
+use arch::Architecture;
 
 pub trait PhysicalRead {
     fn phys_read(&mut self, addr: Address, len: Length) -> Result<Vec<u8>>;

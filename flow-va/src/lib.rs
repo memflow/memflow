@@ -9,9 +9,9 @@ pub mod x86;
 
 use std::io::Result;
 
-use flow_core::arch::{Architecture, InstructionSet};
-use flow_core::address::{Address, Length};
-use flow_core::mem::{PhysicalRead, VirtualRead, PhysicalWrite, VirtualWrite};
+use arch::{Architecture, InstructionSet};
+use address::{Address, Length};
+use mem::{PhysicalRead, VirtualRead, PhysicalWrite, VirtualWrite};
 
 // virtual -> physical
 pub fn vtop<T: PhysicalRead>(arch: Architecture, mem: &mut T, dtb: Address, addr: Address) -> Result<Address> {

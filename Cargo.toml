@@ -1,6 +1,9 @@
 [workspace]
 members = [
     "flow-core",
+    "flow-core/address",
+    "flow-core/arch",
+    "flow-core/mem",
     "flow-va",
     "flow-cli",
     "flow-qemu",
@@ -9,6 +12,9 @@ members = [
 ]
 default-members = [
     "flow-core",
+    "flow-core/address",
+    "flow-core/arch",
+    "flow-core/mem",
     "flow-va",
     "flow-cli",
     "flow-qemu",

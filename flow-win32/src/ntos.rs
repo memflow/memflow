@@ -3,9 +3,9 @@ use num::range_step;
 
 use byteorder::{ByteOrder, LittleEndian};
 
-use flow_core::arch::InstructionSet;
-use flow_core::address::Address;
-use flow_core::mem::{PhysicalRead, VirtualRead};
+use arch::InstructionSet;
+use address::Address;
+use mem::{PhysicalRead, VirtualRead};
 
 use crate::dtb::DTB;
 

@@ -5,8 +5,8 @@ use masks::*;
 use std::io::{Error, ErrorKind, Result};
 use byteorder::{ByteOrder, LittleEndian};
 
-use flow_core::address::{Address, Length};
-use flow_core::mem::PhysicalRead;
+use address::{Address, Length};
+use mem::PhysicalRead;
 
 // TODO: can we put this in a trait?
 fn read_address<T: PhysicalRead>(mem: &mut T, addr: Address) -> Result<Address> {

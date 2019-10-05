@@ -11,9 +11,9 @@ use capnp_rpc::{pry, rpc_twoparty_capnp, twoparty, RpcSystem};
 
 use crate::bridge_capnp::bridge;
 
-use flow_core::address::{Address, Length};
-use flow_core::arch::Architecture;
-use flow_core::mem::{PhysicalRead, VirtualRead, PhysicalWrite, VirtualWrite};
+use address::{Address, Length};
+use arch::Architecture;
+use mem::{PhysicalRead, VirtualRead, PhysicalWrite, VirtualWrite};
 
 pub struct BridgeConnector {
     bridge: bridge::Client,

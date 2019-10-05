@@ -5,12 +5,13 @@ use masks::*;
 use std::io::{Error, ErrorKind, Result};
 use byteorder::{ByteOrder, LittleEndian};
 
-use address::{Address, Length};
+use arch::x64;
+use address::Address;
 use mem::PhysicalRead;
 
 // TODO: can we put this in a trait?
 fn read_address<T: PhysicalRead>(mem: &mut T, addr: Address) -> Result<Address> {
-	let a = mem.phys_read(addr, Length::from(8))?; // sizeof(u64)
+	let a = mem.phys_read(addr, x64::len_addr())?;
 	Ok(Address::from(LittleEndian::read_u64(&a)))
 }
 

@@ -10,8 +10,8 @@ pub mod x86;
 use std::io::Result;
 
 use arch::{Architecture, InstructionSet};
-use address::{Address, Length};
-use mem::{PhysicalRead, VirtualRead, PhysicalWrite, VirtualWrite};
+use address::Address;
+use mem::PhysicalRead;
 
 // virtual -> physical
 pub fn vtop<T: PhysicalRead>(arch: Architecture, mem: &mut T, dtb: Address, addr: Address) -> Result<Address> {

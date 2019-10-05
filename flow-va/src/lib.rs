@@ -10,11 +10,11 @@ pub mod x86;
 use std::io::Result;
 
 use flow_core::arch::{Architecture, InstructionSet};
-use flow_core::address::Address;
-use flow_core::mem::PhysicalRead;
+use flow_core::address::{Address, Length};
+use flow_core::mem::{PhysicalRead, VirtualRead, PhysicalWrite, VirtualWrite};
 
 // virtual -> physical
-fn vtop<T: PhysicalRead>(arch: Architecture, mem: &mut T, dtb: Address, addr: Address) -> Result<Address> {
+pub fn vtop<T: PhysicalRead>(arch: Architecture, mem: &mut T, dtb: Address, addr: Address) -> Result<Address> {
 	match arch.instruction_set {
 		InstructionSet::X64 => x64::vtop(mem, dtb, addr),
 		InstructionSet::X86Pae => x86_pae::vtop(mem, dtb, addr),

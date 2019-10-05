@@ -10,6 +10,10 @@ use tokio::runtime::current_thread;
 use capnp::{capability::Promise, Error};
 use capnp_rpc::{pry, rpc_twoparty_capnp, twoparty, RpcSystem};
 
+use flow_core::address::{Address, Length};
+use flow_core::arch::{Architecture, InstructionSet};
+use flow_core::mem::{PhysicalRead, PhysicalWrite, VirtualRead, VirtualWrite};
+
 use crate::bridge_capnp::bridge;
 use crate::cpu;
 use crate::mem;
@@ -17,34 +21,64 @@ use crate::mem;
 struct BridgeImpl;
 
 impl bridge::Server for BridgeImpl {
-    // readPhysicalMemory @0 (address :UInt64, length :UInt64) -> (memory :MemoryRegion);
+    // physRead @0 (address :UInt64, length :UInt64) -> (memory :MemoryRegion);
     fn phys_read(
         &mut self,
         params: bridge::PhysReadParams,
         mut results: bridge::PhysReadResults,
     ) -> Promise<(), Error> {
-        let address = pry!(params.get()).get_address();
-        let length = pry!(params.get()).get_length();
-        let data = mem::phys_read(address, length).unwrap_or_else(|_e| Vec::new());
+        let address = Address::from(pry!(params.get()).get_address());
+        let length = Length::from(pry!(params.get()).get_length());
+        let data = mem::Wrapper::new().phys_read(address, length).unwrap_or_else(|_e| Vec::new());
         results.get().set_data(&data);
         Promise::ok(())
     }
 
-    // writePhysicalMemory @1 (address :UInt64, data: Data) -> (length :UInt64);
+    // physWrite @1 (address :UInt64, data: Data) -> (length :UInt64);
     fn phys_write(
         &mut self,
         params: bridge::PhysWriteParams,
         mut results: bridge::PhysWriteResults,
     ) -> Promise<(), Error> {
-        let address = pry!(params.get()).get_address();
+        let address = Address::from(pry!(params.get()).get_address());
         let data = pry!(pry!(params.get()).get_data());
-        let len = mem::phys_write(address, &data.to_vec()).unwrap_or_else(|_e| 0);
-        results.get().set_length(len);
+        let len = mem::Wrapper::new().phys_write(address, &data.to_vec()).unwrap_or_else(|_e| Length::from(0));
+        results.get().set_length(len.len);
+        Promise::ok(())
+    }
+
+    // virtRead @2 (arch: UInt8, dtb :UInt64, address :UInt64, length :UInt64) -> (data: Data);
+    fn virt_read(
+        &mut self,
+        params: bridge::VirtReadParams,
+        mut results: bridge::VirtReadResults
+    ) -> Promise<(), Error> {
+        let ins = pry!(InstructionSet::from_u8(pry!(params.get()).get_arch()));
+        let dtb = Address::from(pry!(params.get()).get_dtb());
+        let address = Address::from(pry!(params.get()).get_address());
+        let length = Length::from(pry!(params.get()).get_length());
+        let data = mem::Wrapper::new().virt_read(Architecture::from(ins), dtb, address, length).unwrap_or_else(|_e| Vec::new());
+        results.get().set_data(&data);
+        Promise::ok(())
+    }
+
+    // virtWrite @3 (arch: UInt8, dtb: UInt64, address :UInt64, data: Data) -> (length :UInt64);
+    fn virt_write(
+        &mut self,
+        params: bridge::VirtWriteParams,
+        mut results: bridge::VirtWriteResults,
+    ) -> Promise<(), Error> {
+        let ins = pry!(InstructionSet::from_u8(pry!(params.get()).get_arch()));
+        let dtb = Address::from(pry!(params.get()).get_dtb());
+        let address = Address::from(pry!(params.get()).get_address());
+        let data = pry!(pry!(params.get()).get_data());
+        let len = mem::Wrapper::new().virt_write(Architecture::from(ins), dtb, address, &data.to_vec()).unwrap_or_else(|_e| Length::from(0));
+        results.get().set_length(len.len);
         Promise::ok(())
     }
 
     // TODO: test
-    // readRegisters @2 () -> (data: Data);
+    // readRegisters @4 () -> (data: Data);
     fn read_registers(
         &mut self,
         params: bridge::ReadRegistersParams,

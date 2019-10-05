@@ -17,5 +17,5 @@ pub trait PhysicalWrite {
 }
 
 pub trait VirtualWrite {
-    fn write_mem(&mut self, arch: Architecture, dtb: Address, addr: Address, data: &Vec<u8>) -> Result<Length>;
+    fn virt_write(&mut self, arch: Architecture, dtb: Address, addr: Address, data: &Vec<u8>) -> Result<Length>;
 }

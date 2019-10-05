@@ -1,10 +1,8 @@
-use libc::{dlsym, RTLD_DEFAULT};
 use libc_print::*;
 use std::ffi::CString;
 use std::os::raw::{c_int, c_ulonglong, c_void};
 
-use std::io::{Error, ErrorKind, Result};
-use std::ptr::copy_nonoverlapping;
+use std::io::{Result};
 
 use crate::native::*;
 

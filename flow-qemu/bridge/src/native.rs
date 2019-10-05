@@ -3,9 +3,6 @@ use libc_print::*;
 use std::ffi::CString;
 use std::os::raw::{c_char, c_int, c_ulonglong, c_void};
 
-use std::io::{Error, ErrorKind, Result};
-use std::ptr::copy_nonoverlapping;
-
 macro_rules! find_sym {
     ($type: ty, $name: expr) => {{
         let name_cstr = CString::new(stringify!($name)).unwrap();

@@ -14,7 +14,7 @@ pub fn find<T: PhysicalRead + VirtualRead>(mem: &mut T, dtb: DTB) -> Result<()> 
     // TODO: create system process around current dtb
 
     if dtb.arch.instruction_set == InstructionSet::X64 {
-        if dtb.va.valid() {
+        if !dtb.va.is_null() {
             match find_x64_with_va(mem, dtb.va) {
                 Ok(b) => return Ok(b),
                 Err(e) => println!("Error: {}", e),

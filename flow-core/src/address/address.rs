@@ -7,8 +7,8 @@ pub struct Address {
 }
 
 impl Address {
-    pub fn valid(&self) -> bool {
-        self.addr != 0
+    pub fn is_null(&self) -> bool {
+        self.addr == 0
     }
 }
 

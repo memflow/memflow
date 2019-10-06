@@ -47,14 +47,14 @@ fn find_x64_with_va<T: PhysicalRead + VirtualRead>(mem: &mut T, dtb: &DTB) -> Re
         let buf = mem.virt_read(dtb.arch, dtb.dtb, Address::from(va_base), Length::from_mb(2))?;
         if buf.is_empty() {
             // TODO: print address as well
-            return Err(Error::new(ErrorKind::Other, "Unable to read memory when scanning for ntoskrnl.exe"))
+            //return Err(Error::new(ErrorKind::Other, "Unable to read memory when scanning for ntoskrnl.exe"))
         }
 println!("found buf with len {}", buf.len());
 
         let res = buf
             .chunks_exact(0x1000)
             .enumerate()
-            .filter(|(_, c)| LittleEndian::read_u32(&c) == 0x5a4d) // MZ
+            .filter(|(_, c)| LittleEndian::read_u16(&c) == 0x5a4d) // MZ
             .inspect(|(_, _)| println!("found MZ header"))
             .flat_map(|(i, c)| c.chunks_exact(8).map(move |c| (i, c)))
             .filter(|(_, c)| LittleEndian::read_u64(&c) == 0x45444F434C4F4F50) // POOLCODE

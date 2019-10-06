@@ -94,7 +94,7 @@ impl BridgeConnector {
     // virtRead @2 (arch: UInt8, dtb :UInt64, address :UInt64, length :UInt64) -> (data: Data);
     fn virt_read_chunk(&mut self, arch: Architecture, dtb: Address, addr: Address, len: Length) -> Result<Vec<u8>> {
         let mut request = self.bridge.virt_read_request();
-        request.get().set_arch(arch.instruction_set.to_u8());
+        request.get().set_arch(arch.instruction_set.as_u8());
         request.get().set_dtb(dtb.as_u64());
         request.get().set_address(addr.as_u64());
         request.get().set_length(len.as_u64());
@@ -111,7 +111,7 @@ impl BridgeConnector {
     // virtWrite @3 (arch: UInt8, dtb: UInt64, address :UInt64, data: Data) -> (length :UInt64);
     fn virt_write_chunk(&mut self, arch: Architecture, dtb: Address, addr: Address, data: &Vec<u8>) -> Result<Length> {
         let mut request = self.bridge.virt_write_request();
-        request.get().set_arch(arch.instruction_set.to_u8());
+        request.get().set_arch(arch.instruction_set.as_u8());
         request.get().set_dtb(dtb.as_u64());
         request.get().set_address(addr.as_u64());
         request.get().set_data(data);

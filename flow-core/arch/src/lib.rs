@@ -3,6 +3,7 @@ pub mod x86_pae;
 pub mod x86;
 
 use std::io::{Error, ErrorKind, Result};
+use std::convert::TryFrom;
 
 use address::Length;
 
@@ -30,24 +31,27 @@ macro_rules! match_instruction_set {
     )
 }
 
-#[allow(dead_code)]
-impl InstructionSet {
-    // TODO: figure out a better way for this...
-    // TODO: https://doc.rust-lang.org/std/convert/trait.TryFrom.html
-    pub fn to_u8(&self) -> u8 {
-        match self {
-            InstructionSet::X64 => 1,
-            InstructionSet::X86Pae => 2,
-            InstructionSet::X86 => 3,
-        }
-    }
+// TODO: figure out a better way for this
+impl TryFrom<u8> for InstructionSet {
+    type Error = std::io::Error;
 
-    pub fn from_u8(val: u8) -> Result<Self> {
-        match val {
+    fn try_from(value: u8) -> Result<Self> {
+        match value {
             1 => Ok(InstructionSet::X64),
             2 => Ok(InstructionSet::X86Pae),
             3 => Ok(InstructionSet::X86),
             _ => Err(Error::new(ErrorKind::Other, "Invalid InstructionSet value"))
+        }
+    }
+}
+
+#[allow(dead_code)]
+impl InstructionSet {
+    pub fn as_u8(&self) -> u8 {
+        match self {
+            InstructionSet::X64 => 1,
+            InstructionSet::X86Pae => 2,
+            InstructionSet::X86 => 3,
         }
     }
 

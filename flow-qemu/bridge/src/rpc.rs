@@ -1,6 +1,7 @@
 use libc_print::*;
 
 use std::io;
+use std::convert::TryFrom;
 
 use tokio::io::AsyncRead;
 use tokio::net::UnixListener;
@@ -55,7 +56,7 @@ impl bridge::Server for BridgeImpl {
         params: bridge::VirtReadParams,
         mut results: bridge::VirtReadResults
     ) -> Promise<(), Error> {
-        let ins = pry!(InstructionSet::from_u8(pry!(params.get()).get_arch()));
+        let ins = pry!(InstructionSet::try_from(pry!(params.get()).get_arch()));
         let dtb = Address::from(pry!(params.get()).get_dtb());
         let address = Address::from(pry!(params.get()).get_address());
         let length = Length::from(pry!(params.get()).get_length());
@@ -70,7 +71,7 @@ impl bridge::Server for BridgeImpl {
         params: bridge::VirtWriteParams,
         mut results: bridge::VirtWriteResults,
     ) -> Promise<(), Error> {
-        let ins = pry!(InstructionSet::from_u8(pry!(params.get()).get_arch()));
+        let ins = pry!(InstructionSet::try_from(pry!(params.get()).get_arch()));
         let dtb = Address::from(pry!(params.get()).get_dtb());
         let address = Address::from(pry!(params.get()).get_address());
         let data = pry!(pry!(params.get()).get_data());

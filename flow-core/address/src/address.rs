@@ -19,6 +19,10 @@ impl From<u64> for Address {
 }
 
 impl Address {
+    pub fn null() -> Self {
+        Address{ 0: 0 }
+    }
+    
     pub fn is_null(&self) -> bool {
         self.0 == 0
     }

@@ -3,6 +3,9 @@ use std::io::Result;
 
 use mem::{PhysicalRead, VirtualRead};
 
+// TODO: move this in a seperate crate as a elf/pe/macho helper for pa/va
+pub mod pe;
+
 pub mod dtb;
 pub mod ntos;
 

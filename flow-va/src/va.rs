@@ -15,6 +15,7 @@ impl<T: PhysicalRead + VirtualAddressTranslation> VatImpl<T> {
 	}
 }
 
+// TODO: recover from vtop failures if we request to much memory!
 impl<T: PhysicalRead + VirtualAddressTranslation> VirtualRead for VatImpl<T> {
 	fn virt_read(&mut self, arch: Architecture, dtb: Address, addr: Address, len: Length) -> Result<Vec<u8>> {
 		println!("virt_read(): wrapper!");
@@ -30,11 +31,12 @@ impl<T: PhysicalRead + VirtualAddressTranslation> VirtualRead for VatImpl<T> {
                 aligned_len = end - base;
             }
 
-            let pa = self.0.vtop(arch, dtb, base)?;
+            let pa = self.0.vtop(arch, dtb, base).unwrap_or(Address::null());
             if !pa.is_null() {
                 let mem = self.0.phys_read(pa, aligned_len)?;
+                let start = (base - addr).as_usize();
                 mem.iter().enumerate().for_each(|(i, b)| {
-                    result[(base - addr).as_usize() + i] = *b;
+                    result[start + i] = *b;
                 });
             } else {
                 // skip

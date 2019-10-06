@@ -1,9 +1,12 @@
+use pretty_env_logger;
 use clap::{App, Arg};
 
 use flow_qemu::BridgeConnector;
 use flow_win32;
 
 fn main() {
+    pretty_env_logger::init();
+
     let argv = App::new("flow-core")
         .version("0.1")
         .arg(

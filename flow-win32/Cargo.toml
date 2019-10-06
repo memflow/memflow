@@ -8,6 +8,8 @@ edition = "2018"
 address = { path = "../flow-core/address" }
 arch = { path = "../flow-core/arch" }
 mem = { path = "../flow-core/mem" }
+log = { version = "0.*", default-features = false }
 byteorder = "1.*"
 num = "0.*"
-goblin = "0.0.*"
+goblin = "0.0.24"
+scroll = "0.9"

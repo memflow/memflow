@@ -20,6 +20,7 @@ gdb-remote-protocol = { git = "https://github.com/luser/rust-gdb-remote-protocol
 address = { path = "../flow-core/address" }
 arch = { path = "../flow-core/arch" }
 mem = { path = "../flow-core/mem" }
+log = { version = "0.*", default-features = false }
 
 [[example]]
 name = "monitor_read"

@@ -10,9 +10,21 @@ impl fmt::LowerHex for Length {
     }
 }
 
+impl From<i32> for Length {
+    fn from(item: i32) -> Self {
+        Self{ 0: item as u64, }
+    }
+}
+
 impl From<u64> for Length {
     fn from(item: u64) -> Self {
         Self{ 0: item, }
+    }
+}
+
+impl From<usize> for Length {
+    fn from(item: usize) -> Self {
+        Self{ 0: item as u64, }
     }
 }
 
@@ -37,8 +49,24 @@ impl Length {
         Length{ 0: len * 1024, }
     }
 
+    pub fn from_kib(len: u64) -> Self {
+        Length{ 0: len * 1024 * 8, }
+    }
+
     pub fn from_mb(len: u64) -> Self {
         Length{ 0: len * 1024 * 1024, }
+    }
+
+    pub fn from_mib(len: u64) -> Self {
+        Length{ 0: len * 1024 * 1024 * 8, }
+    }
+
+    pub fn from_gb(len: u64) -> Self {
+        Length{ 0: len * 1024 * 1024 * 1024, }
+    }
+
+    pub fn from_gib(len: u64) -> Self {
+        Length{ 0: len * 1024 * 1024 * 1024 * 8, }
     }
 }
 

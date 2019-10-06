@@ -7,6 +7,11 @@ use arch::{Architecture, InstructionSet};
 use address::{Address, Length};
 use mem::{PhysicalRead, VirtualRead};
 
+use goblin::container::Endian;
+use goblin::pe::data_directories::DataDirectory;
+use goblin::pe::PE;
+use goblin::pe::utils::get_data;
+
 use crate::dtb::DTB;
 
 // VmmWinInit_FindNtosScan
@@ -55,12 +60,37 @@ println!("found buf with len {}", buf.len());
             .chunks_exact(0x1000)
             .enumerate()
             .filter(|(_, c)| LittleEndian::read_u16(&c) == 0x5a4d) // MZ
-            .inspect(|(_, _)| println!("found MZ header"))
+            .inspect(|(i, _)| println!("found MZ header {}", i))
             .flat_map(|(i, c)| c.chunks_exact(8).map(move |c| (i, c)))
             .filter(|(_, c)| LittleEndian::read_u64(&c) == 0x45444F434C4F4F50) // POOLCODE
-            .filter(|(_, _)| {
+            .filter(|(i, c)| {
                 // check for module name
-                true
+                println!("found POOLCODE header {}", i);
+                let addr = va_base + (*i as u64) * 0x1000;
+        println!("trying to read {:x}", addr);
+                let b = mem.virt_read(dtb.arch, dtb.dtb, Address::from(addr), Length::from_mb(8)).unwrap();
+                println!("read {:x} bytes", b.len());
+                // TODO: implement manual pe parser
+                match PE::parse(&b) {
+                    Ok(p) => {
+                        println!("pe header parsed! length={:x}", p.size);
+                        println!("{:?}", p);
+                        println!("name: {}", p.name.unwrap_or_default());
+                        p.sections.iter().for_each(|s| println!("section found: {}", String::from_utf8(s.name.to_vec()).unwrap_or_default()));
+                        p.exports.iter().for_each(|e| println!("export found: {:?}", e));
+                        p.export_data.iter().for_each(|e| println!("export_data found: {:?}", e));
+                        p.libraries.iter().for_each(|l| println!("library found: {}", l));
+                        //p.header.optional_header.unwrap().windows_fields.
+                        let optional_header = p.header.optional_header.expect("No optional header");
+                        let exps = optional_header.data_directories.get_export_table().unwrap();
+                        println!("export table size: {}", exps.size);
+                        true
+                    },
+                    Err(e) => {
+                        println!("Unable to parse PE header: {:?}", e);
+                        false
+                    },
+                }
             })
             .nth(0)
             .ok_or_else(|| Error::new(ErrorKind::Other, "unable to find ntoskrnl.exe with va hint"))

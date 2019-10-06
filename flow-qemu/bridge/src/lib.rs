@@ -36,6 +36,8 @@ lazy_static! {
     };
 }
 
+// we dont wanna execute construct/destruct in tests
+#[cfg(not(test))]
 #[ctor]
 fn construct() {
     let socket = &*BR_SOCKET;
@@ -48,6 +50,7 @@ fn construct() {
     });
 }
 
+#[cfg(not(test))]
 #[dtor]
 fn destruct() {
     // TODO: verify if the socket was created properly!

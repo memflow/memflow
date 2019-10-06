@@ -1,3 +1,5 @@
+use log::{info, trace, debug};
+
 // TODO: custom errors
 use std::io::Result;
 
@@ -14,7 +16,7 @@ pub fn init<T: PhysicalRead + VirtualRead>(mem: &mut T) -> Result<()> {
 
     // find dirtable base
     let dtb = dtb::find(mem)?;
-    println!("dtb::find(): arch={:?} va={:x} dtb={:x}", dtb.arch, dtb.va, dtb.dtb);
+    info!("dtb::find: arch={:?} va={:x} dtb={:x}", dtb.arch, dtb.va, dtb.dtb);
 
 /*
     machine.cpu = Some(CPU{
@@ -27,7 +29,7 @@ pub fn init<T: PhysicalRead + VirtualRead>(mem: &mut T) -> Result<()> {
     // find ntoskrnl.exe base
     let ntos = ntos::find(mem, dtb)?;
 
-    pe::test_read_pe(mem, dtb, ntos)?;
+    //pe::test_read_pe(mem, dtb, ntos)?;
 
     // TODO: copy architecture and 
 

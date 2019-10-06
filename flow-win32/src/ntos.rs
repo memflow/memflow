@@ -40,12 +40,12 @@ pub fn find<T: PhysicalRead + VirtualRead>(mem: &mut T, dtb: DTB) -> Result<Addr
 
 // VmmWinInit_FindNtosScanHint64
 fn find_x64_with_va<T: PhysicalRead + VirtualRead>(mem: &mut T, dtb: &DTB) -> Result<Address> {
-    trace!("find_x64_with_va(): trying to find ntoskrnl.exe with va hint at {:x}", dtb.va.as_u64());
+    trace!("find_x64_with_va: trying to find ntoskrnl.exe with va hint at {:x}", dtb.va.as_u64());
 
     // va was found previously
     let mut va_base = dtb.va.as_u64() & !0x1fffff;
     while va_base + Length::from_mb(32).as_u64() > dtb.va.as_u64() {
-        trace!("find_x64_with_va(): probing at {:x}", va_base);
+        trace!("find_x64_with_va: probing at {:x}", va_base);
 
         let buf = mem.virt_read(dtb.arch, dtb.dtb, Address::from(va_base), Length::from_mb(2))?;
         if buf.is_empty() {
@@ -57,28 +57,31 @@ fn find_x64_with_va<T: PhysicalRead + VirtualRead>(mem: &mut T, dtb: &DTB) -> Re
             .chunks_exact(0x1000)
             .enumerate()
             .filter(|(_, c)| LittleEndian::read_u16(&c) == 0x5a4d) // MZ
-            .inspect(|(i, _)| trace!("find_x64_with_va(): found potential MZ flag at offset {:x}", i * 0x1000))
+            .inspect(|(i, _)| trace!("find_x64_with_va: found potential MZ flag at offset {:x}", i * 0x1000))
             .flat_map(|(i, c)| c.chunks_exact(8).map(move |c| (i, c)))
             .filter(|(_, c)| LittleEndian::read_u64(&c) == 0x45444F434C4F4F50) // POOLCODE
-            .inspect(|(i, _)| trace!("find_x64_with_va(): found potential POOLCODE flag at offset {:x}", i * 0x1000))
+            .inspect(|(i, _)| trace!("find_x64_with_va: found potential POOLCODE flag at offset {:x}", i * 0x1000))
             .filter(|(i, c)| {
                 // try to probe pe header
                 let probe_addr = Address::from(va_base + (*i as u64) * 0x1000);
-                let probe_buf = mem.virt_read(dtb.arch, dtb.dtb, probe_addr, Length::from_mb(8)).unwrap();
-                match PE::parse(&probe_buf) {
+                let probe_buf = mem.virt_read(dtb.arch, dtb.dtb, probe_addr, Length::from_mb(32)).unwrap();
+                let pe = match PE::parse(&probe_buf) {
                     Ok(pe) => {
-                        trace!("find_x64_with_va(): found PE header:\n{:?}", pe);
-                        true
+                        trace!("find_x64_with_va: found pe header:\n{:?}", pe);
+                        pe
                     },
                     Err(e) => {
-                        trace!("find_x64_with_va(): potential PE header at offset {:x} could not be probed: {:?}", i * 0x1000, e);
-                        false
-                    },
-                }
+                        trace!("find_x64_with_va: potential pe header at offset {:x} could not be probed: {:?}", i * 0x1000, e);
+                        return false;
+                    }
+                };
+
+                info!("find_x64_with_va: found pe header for {}", pe.name.unwrap_or_default());
+                return pe.name.unwrap_or_default() == "ntoskrnl.exe"
             })
             .nth(0)
             .ok_or_else(|| {
-                Error::new(ErrorKind::Other, "find_x64_with_va(): unable to locate ntoskrnl.exe via va hint")
+                Error::new(ErrorKind::Other, "find_x64_with_va: unable to locate ntoskrnl.exe via va hint")
             })
             .and_then(|(i, _)| {
                 Ok(va_base + i as u64 * 0x1000)
@@ -91,7 +94,7 @@ fn find_x64_with_va<T: PhysicalRead + VirtualRead>(mem: &mut T, dtb: &DTB) -> Re
         va_base -= Length::from_mb(2).as_u64();
     }
 
-    Err(Error::new(ErrorKind::Other, "find_x64_with_va(): unable to locate ntoskrnl.exe via va hint"))
+    Err(Error::new(ErrorKind::Other, "find_x64_with_va: unable to locate ntoskrnl.exe via va hint"))
 }
 
 fn find_x64<T: PhysicalRead + VirtualRead>(mem: &mut T) -> Result<Address> {

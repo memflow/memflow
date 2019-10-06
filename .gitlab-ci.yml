@@ -11,7 +11,7 @@ test:
   script:
     - rustc --version
     - cargo --version
-    - cargo test --all --verbose
+    - RUST_BACKTRACE=1 cargo test --all --verbose
 
 linux-native:
   stage: build

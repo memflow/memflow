@@ -22,7 +22,6 @@ impl<T: PhysicalRead + VirtualAddressTranslation> VirtualRead for VatImpl<T> {
 
         let mut result: Vec<u8> = vec![0; len.as_usize()];
 
-        // TODO: check if comparison works?
         let mut base = addr;
         let end = addr + len;
         while base < end {
@@ -46,17 +45,6 @@ impl<T: PhysicalRead + VirtualAddressTranslation> VirtualRead for VatImpl<T> {
         }
 
         Ok(result)
-
-/*
-        let pa = self.0.vtop(arch, dtb, addr)?;
-        println!("virt_read(): pa={:x}", pa);
-        if !pa.is_null() {
-            self.phys_read(pa, len)
-        } else {
-            // TODO: add more debug info
-            Err(Error::new(ErrorKind::Other, "virt_read(): readunable to resolve physical address"))
-        }
-    */
 	}
 }
 

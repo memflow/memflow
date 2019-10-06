@@ -12,10 +12,7 @@ use goblin::pe::PE;
 
 use crate::dtb::DTB;
 
-// VmmWinInit_FindNtosScan
 pub fn find<T: PhysicalRead + VirtualRead>(mem: &mut T, dtb: DTB) -> Result<Address> {
-    // TODO: create system process around current dtb
-
     if dtb.arch.instruction_set == InstructionSet::X64 {
         if !dtb.va.is_null() {
             match find_x64_with_va(mem, &dtb) {
@@ -38,7 +35,6 @@ pub fn find<T: PhysicalRead + VirtualRead>(mem: &mut T, dtb: DTB) -> Result<Addr
     Err(Error::new(ErrorKind::Other, "unable to find ntoskrnl.exe"))
 }
 
-// VmmWinInit_FindNtosScanHint64
 fn find_x64_with_va<T: PhysicalRead + VirtualRead>(mem: &mut T, dtb: &DTB) -> Result<Address> {
     trace!("find_x64_with_va: trying to find ntoskrnl.exe with va hint at {:x}", dtb.va.as_u64());
 

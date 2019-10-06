@@ -1,3 +1,20 @@
+general:
+- replace println!() with appropiate log macros
+
+va:
+- find a better way to encapsulate VatImpl
+- add more tests to x64 vtop
+- add ptov
+
+core/arch:
+- find a better way to define architecture agnostic type lengths
+
+core/addr:
+- tests
+- more operator overloads as appropiate
+
+....
+
 #define first_cpu        QTAILQ_FIRST_RCU(&cpus)
 #define CPU_NEXT(cpu)    QTAILQ_NEXT_RCU(cpu, node)
 #define CPU_FOREACH(cpu) QTAILQ_FOREACH_RCU(cpu, &cpus, node)

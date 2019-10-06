@@ -6,6 +6,8 @@ use address::{Address, Length};
 use mem::{PhysicalRead, VirtualRead};
 use scroll::ctx::MeasureWith;
 
+use pretty_hex::*;
+
 use crate::dtb::DTB;
 
 // testing
@@ -70,6 +72,10 @@ impl<'a, T: PhysicalRead + VirtualRead, Ctx> MeasureWith<Ctx> for VirtualScrollR
 /// 
 /// 
 pub fn test_read_pe<T: PhysicalRead + VirtualRead>(mem: &mut T, dtb: DTB, base: Address) -> Result<()> {
+    let header_buf = mem.virt_read(dtb.arch, dtb.dtb, base, Length::from_kb(4))?;
+    info!("{:?}", header_buf.hex_dump());
+
+    /*
     let header_buf = mem.virt_read(dtb.arch, dtb.dtb, base, Length::from_mb(32))?;
     let header = PE::parse(&header_buf).unwrap(); // pe::header::Header::parse(&header_buf).unwrap(); // TODO: ?;
     println!("header: {:?}", header);
@@ -78,7 +84,7 @@ pub fn test_read_pe<T: PhysicalRead + VirtualRead>(mem: &mut T, dtb: DTB, base: 
     header.exports.iter().for_each(|e| println!("export found: {:?}", e));
     header.export_data.iter().for_each(|e| println!("export_data found: {:?}", e));
     header.libraries.iter().for_each(|l| println!("library found: {}", l));
-
+    */
 /*
     let sections_offset = &mut (header.dos_header.pe_pointer as usize + pe::header::SIZEOF_PE_MAGIC + pe::header::SIZEOF_COFF_HEADER + header.coff_header.size_of_optional_header as usize);
     let sections = header.coff_header.sections(&header_buf, sections_offset).unwrap();

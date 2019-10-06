@@ -13,3 +13,4 @@ byteorder = "1.*"
 num = "0.*"
 goblin = { git = "https://github.com/ko1N/goblin", features = ["pe_mapped"] }
 scroll = "0.9"
+pretty-hex = "0.*"

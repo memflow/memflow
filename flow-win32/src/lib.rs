@@ -29,7 +29,7 @@ pub fn init<T: PhysicalRead + VirtualRead>(mem: &mut T) -> Result<()> {
     // find ntoskrnl.exe base
     let ntos = ntos::find(mem, dtb)?;
 
-    //pe::test_read_pe(mem, dtb, ntos)?;
+    pe::test_read_pe(mem, dtb, ntos)?;
 
     // TODO: copy architecture and 
 

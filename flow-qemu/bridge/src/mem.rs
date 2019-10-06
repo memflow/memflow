@@ -4,18 +4,15 @@ use std::io::{Error, ErrorKind, Result};
 use std::ptr::copy_nonoverlapping;
 
 use address::{Address, Length};
-use arch::Architecture;
 use ::mem::{PhysicalRead, PhysicalWrite};
-
-use flow_va::VatImpl;
 
 use crate::native::*;
 
 pub struct Wrapper;
 
 impl Wrapper {
-    pub fn new() -> VatImpl<Wrapper> {
-        VatImpl::new(Wrapper{})
+    pub fn new() -> Wrapper {
+        Wrapper{}
     }
 }
 

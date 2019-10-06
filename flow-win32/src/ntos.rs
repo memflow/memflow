@@ -1,16 +1,14 @@
+use log::{info, trace, debug};
+
 use std::io::{Error, ErrorKind, Result};
-use num::range_step;
 
 use byteorder::{ByteOrder, LittleEndian};
 
-use arch::{Architecture, InstructionSet};
+use arch::{InstructionSet};
 use address::{Address, Length};
 use mem::{PhysicalRead, VirtualRead};
 
-use goblin::container::Endian;
-use goblin::pe::data_directories::DataDirectory;
 use goblin::pe::PE;
-use goblin::pe::utils::get_data;
 
 use crate::dtb::DTB;
 
@@ -42,75 +40,58 @@ pub fn find<T: PhysicalRead + VirtualRead>(mem: &mut T, dtb: DTB) -> Result<Addr
 
 // VmmWinInit_FindNtosScanHint64
 fn find_x64_with_va<T: PhysicalRead + VirtualRead>(mem: &mut T, dtb: &DTB) -> Result<Address> {
-    println!("find_x64_with_va(): trying to find ntoskrnl.exe with va hint {:x}", dtb.va.as_u64());
+    trace!("find_x64_with_va(): trying to find ntoskrnl.exe with va hint at {:x}", dtb.va.as_u64());
 
     // va was found previously
-    // TODO: use address structure for this as well!
     let mut va_base = dtb.va.as_u64() & !0x1fffff;
     while va_base + Length::from_mb(32).as_u64() > dtb.va.as_u64() {
-        println!("trying to read {:x}", va_base);
+        trace!("find_x64_with_va(): probing at {:x}", va_base);
+
         let buf = mem.virt_read(dtb.arch, dtb.dtb, Address::from(va_base), Length::from_mb(2))?;
         if buf.is_empty() {
             // TODO: print address as well
-            //return Err(Error::new(ErrorKind::Other, "Unable to read memory when scanning for ntoskrnl.exe"))
+            return Err(Error::new(ErrorKind::Other, "Unable to read memory when scanning for ntoskrnl.exe"))
         }
-println!("found buf with len {}", buf.len());
 
         let res = buf
             .chunks_exact(0x1000)
             .enumerate()
             .filter(|(_, c)| LittleEndian::read_u16(&c) == 0x5a4d) // MZ
-            .inspect(|(i, _)| println!("found MZ header {}", i))
+            .inspect(|(i, _)| trace!("find_x64_with_va(): found potential MZ flag at offset {:x}", i * 0x1000))
             .flat_map(|(i, c)| c.chunks_exact(8).map(move |c| (i, c)))
             .filter(|(_, c)| LittleEndian::read_u64(&c) == 0x45444F434C4F4F50) // POOLCODE
+            .inspect(|(i, _)| trace!("find_x64_with_va(): found potential POOLCODE flag at offset {:x}", i * 0x1000))
             .filter(|(i, c)| {
-                // check for module name
-                println!("found POOLCODE header {}", i);
-                let addr = va_base + (*i as u64) * 0x1000;
-        println!("trying to read {:x}", addr);
-                let b = mem.virt_read(dtb.arch, dtb.dtb, Address::from(addr), Length::from_mb(8)).unwrap();
-                println!("read {:x} bytes", b.len());
-                // TODO: implement manual pe parser
-                match PE::parse(&b) {
-                    Ok(p) => {
-                        println!("pe header parsed! length={:x}", p.size);
-                        println!("{:?}", p);
-                        println!("name: {}", p.name.unwrap_or_default());
-                        p.sections.iter().for_each(|s| println!("section found: {}", String::from_utf8(s.name.to_vec()).unwrap_or_default()));
-                        p.exports.iter().for_each(|e| println!("export found: {:?}", e));
-                        p.export_data.iter().for_each(|e| println!("export_data found: {:?}", e));
-                        p.libraries.iter().for_each(|l| println!("library found: {}", l));
-                        //p.header.optional_header.unwrap().windows_fields.
-                        let optional_header = p.header.optional_header.expect("No optional header");
-                        let exps = optional_header.data_directories.get_export_table().unwrap();
-                        println!("export table size: {}", exps.size);
+                // try to probe pe header
+                let probe_addr = Address::from(va_base + (*i as u64) * 0x1000);
+                let probe_buf = mem.virt_read(dtb.arch, dtb.dtb, probe_addr, Length::from_mb(8)).unwrap();
+                match PE::parse(&probe_buf) {
+                    Ok(pe) => {
+                        trace!("find_x64_with_va(): found PE header:\n{:?}", pe);
                         true
                     },
                     Err(e) => {
-                        println!("Unable to parse PE header: {:?}", e);
+                        trace!("find_x64_with_va(): potential PE header at offset {:x} could not be probed: {:?}", i * 0x1000, e);
                         false
                     },
                 }
             })
             .nth(0)
-            .ok_or_else(|| Error::new(ErrorKind::Other, "unable to find ntoskrnl.exe with va hint"))
+            .ok_or_else(|| {
+                Error::new(ErrorKind::Other, "find_x64_with_va(): unable to locate ntoskrnl.exe via va hint")
+            })
             .and_then(|(i, _)| {
-                // PE_GetModuleNameEx()
-                // compare to ntoskrnl.exe
-                // return current base + p
-                // ...
                 Ok(va_base + i as u64 * 0x1000)
             });
-
         match res {
-            Ok(b) => return Ok(Address::from(b)),
-            Err(_) => (),
+            Ok(a) => return Ok(Address::from(a)),
+            Err(e) => debug!("{:?}", e),
         }
 
         va_base -= Length::from_mb(2).as_u64();
     }
 
-    Err(Error::new(ErrorKind::Other, "unable to find ntoskrnl.exe with va hint"))
+    Err(Error::new(ErrorKind::Other, "find_x64_with_va(): unable to locate ntoskrnl.exe via va hint"))
 }
 
 fn find_x64<T: PhysicalRead + VirtualRead>(mem: &mut T) -> Result<Address> {

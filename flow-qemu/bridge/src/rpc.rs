@@ -14,6 +14,8 @@ use address::{Address, Length};
 use arch::{Architecture, InstructionSet};
 use ::mem::{PhysicalRead, PhysicalWrite, VirtualRead, VirtualWrite};
 
+use flow_va::VatImpl;
+
 use crate::bridge_capnp::bridge;
 use crate::cpu;
 use crate::mem;
@@ -57,7 +59,7 @@ impl bridge::Server for BridgeImpl {
         let dtb = Address::from(pry!(params.get()).get_dtb());
         let address = Address::from(pry!(params.get()).get_address());
         let length = Length::from(pry!(params.get()).get_length());
-        let data = mem::Wrapper::new().virt_read(Architecture::from(ins), dtb, address, length).unwrap_or_else(|_e| Vec::new());
+        let data = VatImpl::new(mem::Wrapper::new()).virt_read(Architecture::from(ins), dtb, address, length).unwrap_or_else(|_e| Vec::new());
         results.get().set_data(&data);
         Promise::ok(())
     }
@@ -72,7 +74,7 @@ impl bridge::Server for BridgeImpl {
         let dtb = Address::from(pry!(params.get()).get_dtb());
         let address = Address::from(pry!(params.get()).get_address());
         let data = pry!(pry!(params.get()).get_data());
-        let len = mem::Wrapper::new().virt_write(Architecture::from(ins), dtb, address, &data.to_vec()).unwrap_or_else(|_e| Length::from(0));
+        let len = VatImpl::new(mem::Wrapper::new()).virt_write(Architecture::from(ins), dtb, address, &data.to_vec()).unwrap_or_else(|_e| Length::from(0));
         results.get().set_length(len.as_u64());
         Promise::ok(())
     }

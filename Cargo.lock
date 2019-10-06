@@ -295,7 +295,7 @@ dependencies = [
  "address 0.1.0",
  "arch 0.1.0",
  "byteorder 1.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "goblin 0.0.24 (registry+https://github.com/rust-lang/crates.io-index)",
+ "goblin 0.0.24 (git+https://github.com/ko1N/goblin)",
  "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "mem 0.1.0",
  "num 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -368,7 +368,7 @@ dependencies = [
 [[package]]
 name = "goblin"
 version = "0.0.24"
-source = "registry+https://github.com/rust-lang/crates.io-index"
+source = "git+https://github.com/ko1N/goblin#2a9344ce719a73f981baf7cbfa51c88b7dc65f59"
 dependencies = [
  "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "plain 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1339,7 +1339,7 @@ dependencies = [
 "checksum gdb-remote-protocol 0.1.0 (git+https://github.com/luser/rust-gdb-remote-protocol)" = "<none>"
 "checksum gdb_remote 0.1.0 (git+https://github.com/emoon/gdb-remote)" = "<none>"
 "checksum getrandom 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)" = "473a1265acc8ff1e808cd0a1af8cee3c2ee5200916058a2ca113c29f2d903571"
-"checksum goblin 0.0.24 (registry+https://github.com/rust-lang/crates.io-index)" = "e3fa261d919c1ae9d1e4533c4a2f99e10938603c4208d56c05bec7a872b661b0"
+"checksum goblin 0.0.24 (git+https://github.com/ko1N/goblin)" = "<none>"
 "checksum humantime 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)" = "df004cfca50ef23c36850aaaa59ad52cc70d0e90243c3c7737a4dd32dc7a3c4f"
 "checksum iovec 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)" = "dbe6e417e7d0975db6512b90796e8ce223145ac4e33c377e4a42882a0e88bb08"
 "checksum itoa 0.4.4 (registry+https://github.com/rust-lang/crates.io-index)" = "501266b7edd0174f8530248f87f99c88fbe60ca4ef3dd486835b8d8d53136f7f"

@@ -67,24 +67,10 @@ impl<T: PhysicalRead + PhysicalWrite + VirtualAddressTranslation> VirtualWrite f
         let pa = self.0.vtop(arch, dtb, addr)?;
         println!("virt_write(): pa={:x}", pa);
         if !pa.is_null() {
-            self.phys_write(pa, data)
+            self.0.phys_write(pa, data)
         } else {
             // TODO: add more debug info
             Err(Error::new(ErrorKind::Other, "virt_write(): unable to resolve physical address"))
         }
 	}
-}
-
-// forward declare PhysicalRead
-impl<T: PhysicalRead> PhysicalRead for VatImpl<T> {
-    fn phys_read(&mut self, addr: Address, len: Length) -> Result<Vec<u8>> {
-        self.0.phys_read(addr, len)
-    }
-}
-
-// forward declare PhysicalWrite
-impl<T: PhysicalWrite> PhysicalWrite for VatImpl<T> {
-    fn phys_write(&mut self, addr: Address, data: &Vec<u8>) -> Result<Length> {
-        self.0.phys_write(addr, data)
-    }
 }

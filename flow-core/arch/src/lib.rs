@@ -55,6 +55,10 @@ impl InstructionSet {
         match_instruction_set!(self, byte_order)
     }
 
+    pub fn page_size(&self) -> Length {
+        match_instruction_set!(self, page_size)
+    }
+
     pub fn len_addr(&self) -> Length {
         match_instruction_set!(self, len_addr)
     }

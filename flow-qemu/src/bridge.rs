@@ -57,7 +57,7 @@ impl PhysicalRead for BridgeConnector {
     // physRead @0 (address :UInt64, length :UInt64) -> (data :Data);
     fn phys_read(&mut self, addr: Address, len: Length) -> Result<Vec<u8>> {
         let mut request = self.bridge.phys_read_request();
-        request.get().set_address(addr.addr);
+        request.get().set_address(addr.as_u64());
         request.get().set_length(len.as_u64());
         self.runtime
             .block_on(
@@ -75,8 +75,8 @@ impl VirtualRead for BridgeConnector {
     fn virt_read(&mut self, arch: Architecture, dtb: Address, addr: Address, len: Length) -> Result<Vec<u8>> {
         let mut request = self.bridge.virt_read_request();
         request.get().set_arch(arch.instruction_set.to_u8());
-        request.get().set_dtb(dtb.addr);
-        request.get().set_address(addr.addr);
+        request.get().set_dtb(dtb.as_u64());
+        request.get().set_address(addr.as_u64());
         request.get().set_length(len.as_u64());
         self.runtime
             .block_on(
@@ -93,7 +93,7 @@ impl PhysicalWrite for BridgeConnector {
     // physWrite @1 (address :UInt64, data: Data) -> (length :UInt64);
     fn phys_write(&mut self, addr: Address, data: &Vec<u8>) -> Result<Length> {
         let mut request = self.bridge.phys_write_request();
-        request.get().set_address(addr.addr);
+        request.get().set_address(addr.as_u64());
         request.get().set_data(data);
         self.runtime
             .block_on(
@@ -112,8 +112,8 @@ impl VirtualWrite for BridgeConnector {
     fn virt_write(&mut self, arch: Architecture, dtb: Address, addr: Address, data: &Vec<u8>) -> Result<Length> {
         let mut request = self.bridge.virt_write_request();
         request.get().set_arch(arch.instruction_set.to_u8());
-        request.get().set_dtb(dtb.addr);
-        request.get().set_address(addr.addr);
+        request.get().set_dtb(dtb.as_u64());
+        request.get().set_address(addr.as_u64());
         request.get().set_data(data);
         self.runtime
             .block_on(

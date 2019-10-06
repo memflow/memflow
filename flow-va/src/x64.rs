@@ -17,39 +17,39 @@ fn read_address<T: PhysicalRead>(mem: &mut T, addr: Address) -> Result<Address> 
 
 pub fn vtop<T: PhysicalRead>(mem: &mut T, dtb: Address, addr: Address) -> Result<Address> {
 	let pml4e = read_address(mem,
-		Address::from((dtb.addr & make_bit_mask(12, 51)) | pml4_index_bits!(addr.addr)))?;
-	if !check_entry!(pml4e.addr) {
+		Address::from((dtb.as_u64() & make_bit_mask(12, 51)) | pml4_index_bits!(addr.as_u64())))?;
+	if !check_entry!(pml4e.as_u64()) {
 		return Err(Error::new(ErrorKind::Other, "unable to read pml4e"));
 	}
 
 	let pdpte = read_address(mem, 
-		Address::from((pml4e.addr & make_bit_mask(12, 51)) | pdpte_index_bits!(addr.addr)))?;
-	if !check_entry!(pdpte.addr) {
+		Address::from((pml4e.as_u64() & make_bit_mask(12, 51)) | pdpte_index_bits!(addr.as_u64())))?;
+	if !check_entry!(pdpte.as_u64()) {
 		return Err(Error::new(ErrorKind::Other, "unable to read pdpte"));
 	}
 
-	if is_large_page!(pdpte.addr) {
+	if is_large_page!(pdpte.as_u64()) {
 		println!("found 1gb page");
-		return Ok(Address::from((pdpte.addr & make_bit_mask(30, 51)) | (addr.addr & make_bit_mask(0, 29))));
+		return Ok(Address::from((pdpte.as_u64() & make_bit_mask(30, 51)) | (addr.as_u64() & make_bit_mask(0, 29))));
 	}
 
 	let pgd = read_address(mem, 
-		Address::from((pdpte.addr & make_bit_mask(12, 51)) | pd_index_bits!(addr.addr)))?;
-	if !check_entry!(pgd.addr) {
+		Address::from((pdpte.as_u64() & make_bit_mask(12, 51)) | pd_index_bits!(addr.as_u64())))?;
+	if !check_entry!(pgd.as_u64()) {
 		return Err(Error::new(ErrorKind::Other, "unable to read pgd"));
 	}
 
-	if is_large_page!(pgd.addr) {
+	if is_large_page!(pgd.as_u64()) {
 		println!("found 2mb page");
-		return Ok(Address::from((pgd.addr & make_bit_mask(21, 51)) | (addr.addr & make_bit_mask(0, 20))));
+		return Ok(Address::from((pgd.as_u64() & make_bit_mask(21, 51)) | (addr.as_u64() & make_bit_mask(0, 20))));
 	}
 
 	let pte = read_address(mem,
-		Address::from((pgd.addr & make_bit_mask(12, 51)) | pt_index_bits!(addr.addr)))?;
-	if !check_entry!(pte.addr) {
+		Address::from((pgd.as_u64() & make_bit_mask(12, 51)) | pt_index_bits!(addr.as_u64())))?;
+	if !check_entry!(pte.as_u64()) {
 		return Err(Error::new(ErrorKind::Other, "unable to read pte"));
 	}
 
 	println!("found 4kb page");
-	return Ok(Address::from((pte.addr & make_bit_mask(12, 51)) | (addr.addr & make_bit_mask(0, 11))));
+	return Ok(Address::from((pte.as_u64() & make_bit_mask(12, 51)) | (addr.as_u64() & make_bit_mask(0, 11))));
 }

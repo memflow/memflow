@@ -5,17 +5,17 @@ use std::ptr::copy_nonoverlapping;
 
 use address::{Address, Length};
 use arch::Architecture;
-use ::mem::{PhysicalRead, PhysicalWrite, VirtualRead, VirtualWrite};
+use ::mem::{PhysicalRead, PhysicalWrite};
 
-use flow_va;
+use flow_va::VatImpl;
 
 use crate::native::*;
 
 pub struct Wrapper;
 
 impl Wrapper {
-    pub fn new() -> Self {
-        Wrapper{}
+    pub fn new() -> VatImpl<Wrapper> {
+        VatImpl::new(Wrapper{})
     }
 }
 
@@ -25,7 +25,7 @@ impl Wrapper {
 impl PhysicalRead for Wrapper {
     fn phys_read(&mut self, addr: Address, len: Length) -> Result<Vec<u8>> {
         let mut l = len.as_usize() as c_ulonglong;
-        let mem = CPU_PHYSICAL_MEMORY_MAP.unwrap()(addr.addr, &mut l, 0);
+        let mem = CPU_PHYSICAL_MEMORY_MAP.unwrap()(addr.as_u64(), &mut l, 0);
         if mem.is_null() {
             Err(Error::new(ErrorKind::Other, "unable to read memory"))
         } else {
@@ -42,7 +42,7 @@ impl PhysicalRead for Wrapper {
 impl PhysicalWrite for Wrapper {
     fn phys_write(&mut self, addr: Address, data: &Vec<u8>) -> Result<Length> {
         let mut l = data.len() as c_ulonglong;
-        let mem = CPU_PHYSICAL_MEMORY_MAP.unwrap()(addr.addr, &mut l, 1);
+        let mem = CPU_PHYSICAL_MEMORY_MAP.unwrap()(addr.as_u64(), &mut l, 1);
         if mem.is_null() {
             Err(Error::new(ErrorKind::Other, "unable to write memory"))
         } else {
@@ -51,34 +51,6 @@ impl PhysicalWrite for Wrapper {
             }
             CPU_PHYSICAL_MEMORY_UNMAP.unwrap()(mem, l, 1, l);
             Ok(Length::from(l as u64))
-        }
-    }
-}
-
-// TODO: this doesnt work as we need to check each page individually!
-impl VirtualRead for Wrapper {
-    fn virt_read(&mut self, arch: Architecture, dtb: Address, addr: Address, len: Length) -> Result<Vec<u8>> {
-        let pa = flow_va::vtop(arch, self, dtb, addr)?;
-        //println!("virt_read(): pa={:x}", pa);
-        if !pa.is_null() {
-            self.phys_read(pa, len)
-        } else {
-            // TODO: add more debug info
-            Err(Error::new(ErrorKind::Other, "virt_read(): readunable to resolve physical address"))
-        }
-    }
-}
-
-// TODO: this doesnt work as we need to check each page individually!
-impl VirtualWrite for Wrapper {
-    fn virt_write(&mut self, arch: Architecture, dtb: Address, addr: Address, data: &Vec<u8>) -> Result<Length> {
-        let pa = flow_va::vtop(arch, self, dtb, addr)?;
-        //println!("virt_write(): pa={:x}", pa);
-        if !pa.is_null() {
-            self.phys_write(pa, data)
-        } else {
-            // TODO: add more debug info
-            Err(Error::new(ErrorKind::Other, "virt_write(): unable to resolve physical address"))
         }
     }
 }

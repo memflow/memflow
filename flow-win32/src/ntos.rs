@@ -37,12 +37,12 @@ pub fn find<T: PhysicalRead + VirtualRead>(mem: &mut T, dtb: DTB) -> Result<Addr
 
 // VmmWinInit_FindNtosScanHint64
 fn find_x64_with_va<T: PhysicalRead + VirtualRead>(mem: &mut T, dtb: &DTB) -> Result<Address> {
-    println!("find_x64_with_va(): trying to find ntoskrnl.exe with va hint {:x}", dtb.va.addr);
+    println!("find_x64_with_va(): trying to find ntoskrnl.exe with va hint {:x}", dtb.va.as_u64());
 
     // va was found previously
     // TODO: use address structure for this as well!
-    let mut va_base = dtb.va.addr & !0x1fffff;
-    while va_base + Length::from_mb(32).as_u64() > dtb.va.addr {
+    let mut va_base = dtb.va.as_u64() & !0x1fffff;
+    while va_base + Length::from_mb(32).as_u64() > dtb.va.as_u64() {
         println!("trying to read {:x}", va_base);
         let buf = mem.virt_read(dtb.arch, dtb.dtb, Address::from(va_base), Length::from_mb(2))?;
         if buf.is_empty() {

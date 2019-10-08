@@ -9,6 +9,7 @@ use address::{Address, Length};
 use mem::{PhysicalRead, VirtualRead};
 
 use goblin::pe::PE;
+use goblin::pe::options::ParseOptions;
 
 use crate::dtb::DTB;
 
@@ -61,7 +62,11 @@ fn find_x64_with_va<T: PhysicalRead + VirtualRead>(mem: &mut T, dtb: &DTB) -> Re
                 // try to probe pe header
                 let probe_addr = Address::from(va_base + (*i as u64) * 0x1000);
                 let probe_buf = mem.virt_read(dtb.arch, dtb.dtb, probe_addr, Length::from_mb(32)).unwrap();
-                let pe = match PE::parse(&probe_buf) {
+
+                let mut pe_opts = ParseOptions::default();
+                pe_opts.rva = false;
+
+                let pe = match PE::parse_with_opts(&probe_buf, &pe_opts) {
                     Ok(pe) => {
                         trace!("find_x64_with_va: found pe header:\n{:?}", pe);
                         pe

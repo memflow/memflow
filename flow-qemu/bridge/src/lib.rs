@@ -43,6 +43,7 @@ fn construct() {
     let socket = &*BR_SOCKET;
     libc_eprintln!("starting qemu-connector-bridge at {}", socket);
     thread::spawn(move || {
+        // TODO: retry + timeout?
         match rpc::listen(socket) {
             Ok(_) => (),
             Err(e) => { libc_eprintln!("unable to start qemu-connector-bridge: {:?}", e); },

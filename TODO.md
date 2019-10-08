@@ -13,6 +13,20 @@ core/addr:
 - tests
 - more operator overloads as appropiate
 
+hex:
+- use m4b/hexplay for colored hex output
+
+fetching pdbs:
+- https://github.com/m4b/goblin/blob/05c2fe9609a6d1dfc4622b59a0a5d1a9702c39be/src/pe/debug.rs#L26
+- rekall fetch_pdb <PDB filename> <GUID>
+- rekall parse_pdb <PDB filename> > rekall-profile.json
+- https://github.com/google/rekall/blob/a82349758fdc15274501cf41ff5b4bc913698494/rekall-core/rekall/plugins/tools/mspdb.py#L119
+- https://github.com/m4b/goblin/pull/183/commits/84b2c37e835e621c549fdae857eecc0fd9ef31d8#diff-d0d67e7a3a3d00cb0e6d863395e0096bR833
+- https://github.com/willglynn/pdb
+
+rekall winmem:
+- https://github.com/google/rekall/tree/master/tools/windows/winpmem
+
 ....
 
 #define first_cpu        QTAILQ_FIRST_RCU(&cpus)

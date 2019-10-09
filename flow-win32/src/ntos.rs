@@ -64,7 +64,7 @@ fn find_x64_with_va<T: PhysicalRead + VirtualRead>(mem: &mut T, dtb: &DTB) -> Re
                 let probe_buf = mem.virt_read(dtb.arch, dtb.dtb, probe_addr, Length::from_mb(32)).unwrap();
 
                 let mut pe_opts = ParseOptions::default();
-                pe_opts.rva = false;
+                pe_opts.resolve_rva = false;
 
                 let pe = match PE::parse_with_opts(&probe_buf, &pe_opts) {
                     Ok(pe) => {

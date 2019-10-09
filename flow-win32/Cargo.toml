@@ -11,6 +11,6 @@ mem = { path = "../flow-core/mem" }
 log = { version = "0.*", default-features = false }
 byteorder = "1.*"
 num = "0.*"
-goblin = { git = "https://github.com/ko1N/goblin" }
+goblin = { path = "../../goblin-mapped" }
 scroll = "0.9"
 pretty-hex = "0.*"

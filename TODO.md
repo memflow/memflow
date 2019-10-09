@@ -21,8 +21,11 @@ fetching pdbs:
 - rekall fetch_pdb <PDB filename> <GUID>
 - rekall parse_pdb <PDB filename> > rekall-profile.json
 - https://github.com/google/rekall/blob/a82349758fdc15274501cf41ff5b4bc913698494/rekall-core/rekall/plugins/tools/mspdb.py#L119
-- https://github.com/m4b/goblin/pull/183/commits/84b2c37e835e621c549fdae857eecc0fd9ef31d8#diff-d0d67e7a3a3d00cb0e6d863395e0096bR833
+- https://github.com/m4b/goblin/commit/cfa098a528409847c568216e04f764b792f8425a#diff-d0d67e7a3a3d00cb0e6d863395e0096bR843
 - https://github.com/willglynn/pdb
+
+goblin fixes:
+https://github.com/libvmi/libvmi/blob/master/tools/windows-offset-finder/getGUID.cpp#L309
 
 rekall winmem:
 - https://github.com/google/rekall/tree/master/tools/windows/winpmem

@@ -11,7 +11,14 @@ pub mod pe;
 pub mod dtb;
 pub mod ntos;
 
-pub fn init<T: PhysicalRead + VirtualRead>(mem: &mut T) -> Result<()> {
+// TODO: refactor/move - this is just temporary
+use address::Address;
+pub struct Windows {
+    pub dtb: dtb::DTB,
+    pub kernel_base: Address,
+}
+
+pub fn init<T: PhysicalRead + VirtualRead>(mem: &mut T) -> Result<Windows> {
     // TODO: add options to supply valid dtb
 
     // find dirtable base
@@ -33,5 +40,8 @@ pub fn init<T: PhysicalRead + VirtualRead>(mem: &mut T) -> Result<()> {
 
     // TODO: copy architecture and 
 
-    Ok(())
+    Ok(Windows {
+        dtb: dtb,
+        kernel_base: ntos,
+    })
 }

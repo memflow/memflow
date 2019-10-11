@@ -15,3 +15,4 @@ mem = { path = "../flow-core/mem" }
 goblin = { path = "../../goblin-mapped" }
 uuid = "0.7.4" # remove this if goblin has this built in
 byteorder = "1.*"
+duma = "*"

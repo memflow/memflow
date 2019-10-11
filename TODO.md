@@ -23,12 +23,19 @@ fetching pdbs:
 - https://github.com/google/rekall/blob/a82349758fdc15274501cf41ff5b4bc913698494/rekall-core/rekall/plugins/tools/mspdb.py#L119
 - https://github.com/m4b/goblin/commit/cfa098a528409847c568216e04f764b792f8425a#diff-d0d67e7a3a3d00cb0e6d863395e0096bR843
 - https://github.com/willglynn/pdb
+GUID/Age                       3B5C345ED2538B4C4A412409A0FDF4351                           
+PDB                            ntkrnlmp.pdb                                                
 
 goblin fixes:
 https://github.com/libvmi/libvmi/blob/master/tools/windows-offset-finder/getGUID.cpp#L309
 
 rekall winmem:
 - https://github.com/google/rekall/tree/master/tools/windows/winpmem
+
+....
+
+GUID/Age                       3B5C345ED2538B4C4A412409A0FDF4351                                              3b5c345ed2538b4c4a412409a0fdf435
+PDB                            ntkrnlmp.pdb                                                
 
 ....
 

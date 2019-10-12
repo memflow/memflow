@@ -4,6 +4,10 @@ version = "0.1.0"
 authors = ["ko1N <ko1N1337@gmail.com>"]
 edition = "2018"
 
+[features]
+default = ["locking"]
+locking = []
+
 [build-dependencies]
 capnpc = "0.10.1"
 

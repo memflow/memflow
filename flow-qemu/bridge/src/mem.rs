@@ -3,8 +3,10 @@ use std::os::raw::{c_ulonglong, c_void};
 use std::io::{Error, ErrorKind, Result};
 use std::ptr::copy_nonoverlapping;
 
-use address::{Address, Length};
 use ::mem::{PhysicalRead, PhysicalWrite};
+use address::{Address, Length};
+
+use std::ffi::CString;
 
 use crate::native::*;
 
@@ -12,7 +14,21 @@ pub struct Wrapper;
 
 impl Wrapper {
     pub fn new() -> Wrapper {
-        Wrapper{}
+        if cfg!(feature = "locking") {
+            // we will lock the main thread of qemu to prevent writes here
+            // this will encapsulte either physical memory or vat reads
+            let file_cstr = CString::new(file!()).unwrap();
+            QEMU_MUTEX_LOCK_IOTHREAD_IMPL.unwrap()(file_cstr.as_ptr(), line!() as i32);
+        }
+        Wrapper {}
+    }
+}
+
+#[cfg(feature = "locking")]
+impl Drop for Wrapper {
+    fn drop(&mut self) {
+        // we will free the qemu main thread lock here
+        QEMU_MUTEX_UNLOCK_IOTHREAD.unwrap()();
     }
 }
 

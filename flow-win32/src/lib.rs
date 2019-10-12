@@ -8,23 +8,20 @@ use mem::{PhysicalRead, VirtualRead};
 // TODO: move this in a seperate crate as a elf/pe/macho helper for pa/va
 pub mod pe;
 
+pub mod cache;
 pub mod dtb;
 pub mod ntos;
 pub mod sysproc;
-pub mod cache;
 pub mod win;
 
-use win::{Windows, ProcessList};
+use win::{ProcessList, Windows};
 
 pub fn init<T: PhysicalRead + VirtualRead>(mem: &mut T) -> Result<Windows> {
     // TODO: add options to supply valid dtb
 
     // find dirtable base
     let dtb = dtb::find(mem)?;
-    info!(
-        "dtb::find: arch={:?} va={:x} dtb={:x}",
-        dtb.arch, dtb.va, dtb.dtb
-    );
+    info!("arch={:?} va={:x} dtb={:x}", dtb.arch, dtb.va, dtb.dtb);
 
     /*
         machine.cpu = Some(CPU{
@@ -36,9 +33,11 @@ pub fn init<T: PhysicalRead + VirtualRead>(mem: &mut T) -> Result<Windows> {
     // TODO: add option to supply a va hint
     // find ntoskrnl.exe base
     let ntos = ntos::find(mem, dtb)?;
+    info!("ntos={:x}", ntos);
 
     // system eprocess -> find
     let sysproc = sysproc::find(mem, dtb, ntos)?;
+    info!("sysproc={:x}", sysproc);
 
     // PsLoadedModuleList / KDBG -> find
 

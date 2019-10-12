@@ -12,4 +12,5 @@ flow-qemu = { path = "../flow-qemu" }
 flow-win32 = { path = "../flow-win32" }
 address = { path = "../flow-core/address" }
 mem = { path = "../flow-core/mem" }
-goblin = { path = "../../goblin-mapped" }
+goblin = { git = "https://github.com/ko1N/goblin" }
+pdb = { git = "https://github.com/willglynn/pdb" }

@@ -5,7 +5,8 @@ use std::io::{Error, ErrorKind, Result};
 use address::{Address, Length};
 use flow_qemu::BridgeConnector;
 use flow_win32;
-use flow_win32::Windows;
+use flow_win32::cache;
+use flow_win32::win::Windows;
 use goblin::pe::{options::ParseOptions, PE};
 use mem::VirtualRead;
 
@@ -71,13 +72,22 @@ fn microsoft_download_ntos<T: VirtualRead>(mem: &mut T, win: &Windows) -> Result
     };
 
     if let Some(debug) = pe.debug_data {
-        println!("debug_data: {:?}", debug);
+        //println!("debug_data: {:?}", debug);
         if let Some(codeview) = debug.codeview_pdb70_debug_info {
+            /*
             microsoft_download(
                 &String::from_utf8(codeview.filename.to_vec())
                     .unwrap_or_default()
                     .trim_matches(char::from(0)),
                 sig_to_uuid(&codeview.signature, codeview.age).unwrap_or_default(),
+            )
+            .unwrap();
+            */
+            cache::fetch_pdb(
+                &String::from_utf8(codeview.filename.to_vec())
+                    .unwrap_or_default()
+                    .trim_matches(char::from(0)),
+                &sig_to_uuid(&codeview.signature, codeview.age).unwrap_or_default(),
             )
             .unwrap();
         }

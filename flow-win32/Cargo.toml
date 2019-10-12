@@ -14,3 +14,7 @@ num = "0.*"
 goblin = { path = "../../goblin-mapped" }
 scroll = "0.9"
 pretty-hex = "0.*"
+clap = "2.*"
+uuid = "0.*" # remove this if goblin has this built in
+duma = "*"
+dirs = "2.*"

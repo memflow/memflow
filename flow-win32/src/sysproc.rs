@@ -53,7 +53,7 @@ pub fn find_exported<T: PhysicalRead + VirtualRead>(
         .ok_or_else(|| {
             Error::new(
                 ErrorKind::Other,
-                "unable to find PsInitialSystemProcess export",
+                "unable to find export PsInitialSystemProcess",
             )
         })
         .and_then(|e| Ok(ntos + Length::from(e.rva)))
@@ -68,5 +68,19 @@ pub fn find_in_section<T: PhysicalRead + VirtualRead>(
     // find section ALMOSTRO
     // scan for va of system process (dtb.va)
     // ... check if its 32 or 64bit
+
+    let header_buf = mem.virt_read(dtb.arch, dtb.dtb, ntos, Length::from_mb(32))?;
+
+    let mut pe_opts = ParseOptions::default();
+    pe_opts.resolve_rva = false;
+
+    let header = PE::parse_with_opts(&header_buf, &pe_opts).unwrap(); // TODO: error
+    let sect = header
+        .sections
+        .iter()
+        .filter(|s| String::from_utf8(s.name.to_vec()).unwrap_or_default() == "ALMOSTRO")
+        .nth(0)
+        .ok_or_else(|| Error::new(ErrorKind::Other, "unable to find section ALMOSTRO"))?;
+
     Err(Error::new(ErrorKind::Other, "not implemented yet"))
 }

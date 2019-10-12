@@ -11,13 +11,10 @@ pub mod pe;
 pub mod dtb;
 pub mod ntos;
 pub mod sysproc;
+pub mod cache;
+pub mod win;
 
-// TODO: refactor/move - this is just temporary
-use address::Address;
-pub struct Windows {
-    pub dtb: dtb::DTB,
-    pub kernel_base: Address,
-}
+use win::{Windows, ProcessList};
 
 pub fn init<T: PhysicalRead + VirtualRead>(mem: &mut T) -> Result<Windows> {
     // TODO: add options to supply valid dtb
@@ -51,8 +48,11 @@ pub fn init<T: PhysicalRead + VirtualRead>(mem: &mut T) -> Result<Windows> {
 
     // TODO: copy architecture and
 
-    Ok(Windows {
+    let mut win = Windows {
         dtb: dtb,
         kernel_base: ntos,
-    })
+        eproc_base: sysproc,
+    };
+    let list = win.process_list();
+    Ok(win)
 }

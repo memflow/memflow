@@ -14,10 +14,6 @@ pub struct DTB {
     pub dtb: Address,
 }
 
-pub struct Windows {
-    dtb: DTB,
-}
-
 pub fn find<T: PhysicalRead>(mem: &mut T) -> Result<DTB> {
     // read low 1mb stub
     let low1m = mem.phys_read(Address::from(0), Length::from(0x100000))?;

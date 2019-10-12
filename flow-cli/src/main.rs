@@ -10,44 +10,6 @@ use flow_win32::win::Windows;
 use goblin::pe::{options::ParseOptions, PE};
 use mem::VirtualRead;
 
-use byteorder::ReadBytesExt;
-use byteorder::{ByteOrder, LittleEndian};
-use std::io::Cursor;
-use uuid::{BytesError, Uuid};
-
-// test
-use clap::ArgMatches;
-use duma::{download, utils};
-
-fn microsoft_download(module: &str, uuid: String) -> Result<()> {
-    println!("downloading {} {}", module, uuid);
-
-    let url = utils::parse_url(&format!(
-        "https://msdl.microsoft.com/download/symbols/{}/{}/{}",
-        module, uuid, module
-    ))
-    .unwrap();
-    download::http_download(url, &ArgMatches::default(), "0.1").unwrap();
-
-    Ok(())
-}
-
-fn sig_to_uuid(sig: &[u8; 16], age: u32) -> std::result::Result<String, BytesError> {
-    let mut rdr = Cursor::new(sig);
-    let uuid = Uuid::from_fields(
-        rdr.read_u32::<LittleEndian>().unwrap_or_default(), // TODO: fix error handling
-        rdr.read_u16::<LittleEndian>().unwrap_or_default(),
-        rdr.read_u16::<LittleEndian>().unwrap_or_default(),
-        &sig[8..],
-    )?;
-
-    Ok(format!(
-        "{}{:X}",
-        uuid.to_simple().to_string().to_uppercase(),
-        age
-    ))
-}
-
 fn microsoft_download_ntos<T: VirtualRead>(mem: &mut T, win: &Windows) -> Result<()> {
     let ntos_buf = mem
         .virt_read(
@@ -71,29 +33,7 @@ fn microsoft_download_ntos<T: VirtualRead>(mem: &mut T, win: &Windows) -> Result
         }
     };
 
-    if let Some(debug) = pe.debug_data {
-        //println!("debug_data: {:?}", debug);
-        if let Some(codeview) = debug.codeview_pdb70_debug_info {
-            /*
-            microsoft_download(
-                &String::from_utf8(codeview.filename.to_vec())
-                    .unwrap_or_default()
-                    .trim_matches(char::from(0)),
-                sig_to_uuid(&codeview.signature, codeview.age).unwrap_or_default(),
-            )
-            .unwrap();
-            */
-            cache::fetch_pdb(
-                &String::from_utf8(codeview.filename.to_vec())
-                    .unwrap_or_default()
-                    .trim_matches(char::from(0)),
-                &sig_to_uuid(&codeview.signature, codeview.age).unwrap_or_default(),
-            )
-            .unwrap();
-        }
-    } else {
-        //Err(Error::new(ErrorKind::Other, "pe.debug_data not found"))
-    }
+    cache::fetch_pdb(&pe).unwrap();
 
     Ok(())
 }

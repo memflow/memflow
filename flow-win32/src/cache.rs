@@ -1,11 +1,14 @@
 use dirs;
 use log::{info, trace, warn};
 use std::fs;
-use std::io::{Error, ErrorKind, Result};
+use std::io::{Cursor, Error, ErrorKind, Result};
 use std::path::PathBuf;
 
+use byteorder::ReadBytesExt;
+use byteorder::{ByteOrder, LittleEndian};
 use clap::ArgMatches;
 use duma;
+use goblin::pe::{debug::CodeviewPDB70DebugInfo, PE};
 use uuid::{BytesError, Uuid};
 
 fn cache_dir() -> Result<PathBuf> {
@@ -40,7 +43,7 @@ fn download_pdb(pdbname: &str, guid: &String) -> Result<()> {
     }
 }
 
-pub fn fetch_pdb(pdbname: &str, guid: &String) -> Result<PathBuf> {
+fn download_pdb_cache(pdbname: &str, guid: &String) -> Result<PathBuf> {
     info!("fetching pdb for {} with guid/age {}", pdbname, guid);
 
     let cache_dir = cache_dir()?.join(pdbname);
@@ -68,4 +71,51 @@ pub fn fetch_pdb(pdbname: &str, guid: &String) -> Result<PathBuf> {
     }
 
     Ok(cache_file)
+}
+
+// TODO: this function might be omitted in the future if this is merged to goblin internally
+fn generate_guid(codeview: &CodeviewPDB70DebugInfo) -> std::result::Result<String, BytesError> {
+    let mut rdr = Cursor::new(codeview.signature);
+    let uuid = Uuid::from_fields(
+        rdr.read_u32::<LittleEndian>().unwrap_or_default(), // TODO: fix error handling
+        rdr.read_u16::<LittleEndian>().unwrap_or_default(),
+        rdr.read_u16::<LittleEndian>().unwrap_or_default(),
+        &codeview.signature[8..],
+    )?;
+
+    Ok(format!(
+        "{}{:X}",
+        uuid.to_simple().to_string().to_uppercase(),
+        codeview.age
+    ))
+}
+
+pub fn fetch_pdb(pe: &PE) -> Result<PathBuf> {
+    let debug = match pe.debug_data {
+        Some(d) => d,
+        None => {
+            return Err(Error::new(
+                ErrorKind::Other,
+                "unable to read debug_data in pe header",
+            ))
+        }
+    };
+
+    let codeview = match debug.codeview_pdb70_debug_info {
+        Some(c) => c,
+        None => {
+            return Err(Error::new(
+                ErrorKind::Other,
+                "unable to read codeview in debug header",
+            ))
+        }
+    };
+
+    // TODO: map error of generate_guid properly
+    download_pdb_cache(
+        &String::from_utf8(codeview.filename.to_vec())
+            .unwrap_or_default()
+            .trim_matches(char::from(0)),
+        &generate_guid(&codeview).unwrap_or_default(),
+    )
 }

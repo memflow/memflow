@@ -13,8 +13,18 @@ core/addr:
 - tests
 - more operator overloads as appropiate
 
+qemu/communication:
+- protobuf
+- https://docs.rs/mio/0.6.10/mio/struct.Poll.html
+
 hex:
 - use m4b/hexplay for colored hex output
+
+ipc:
+https://github.com/thehydroimpulse/nanomsg.rs/blob/master/examples/reqrep.rs
++
+serde or some other binary serialization
+= speed
 
 fetching pdbs:
 - https://github.com/m4b/goblin/blob/05c2fe9609a6d1dfc4622b59a0a5d1a9702c39be/src/pe/debug.rs#L26

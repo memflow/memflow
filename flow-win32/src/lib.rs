@@ -1,4 +1,4 @@
-use log::{info, trace, debug};
+use log::{debug, info, trace};
 
 // TODO: custom errors
 use std::io::Result;
@@ -10,6 +10,7 @@ pub mod pe;
 
 pub mod dtb;
 pub mod ntos;
+pub mod sysproc;
 
 // TODO: refactor/move - this is just temporary
 use address::Address;
@@ -23,22 +24,32 @@ pub fn init<T: PhysicalRead + VirtualRead>(mem: &mut T) -> Result<Windows> {
 
     // find dirtable base
     let dtb = dtb::find(mem)?;
-    info!("dtb::find: arch={:?} va={:x} dtb={:x}", dtb.arch, dtb.va, dtb.dtb);
+    info!(
+        "dtb::find: arch={:?} va={:x} dtb={:x}",
+        dtb.arch, dtb.va, dtb.dtb
+    );
 
-/*
-    machine.cpu = Some(CPU{
-        byte_order: ByteOrder::LittleEndian,
-        arch: dtb.arch,
-    })
-*/
+    /*
+        machine.cpu = Some(CPU{
+            byte_order: ByteOrder::LittleEndian,
+            arch: dtb.arch,
+        })
+    */
 
     // TODO: add option to supply a va hint
     // find ntoskrnl.exe base
     let ntos = ntos::find(mem, dtb)?;
 
-    pe::test_read_pe(mem, dtb, ntos)?;
+    // system eprocess -> find
+    let sysproc = sysproc::find(mem, dtb, ntos)?;
 
-    // TODO: copy architecture and 
+    // PsLoadedModuleList / KDBG -> find
+
+    // pdb, winreg?
+
+    //pe::test_read_pe(mem, dtb, ntos)?;
+
+    // TODO: copy architecture and
 
     Ok(Windows {
         dtb: dtb,

@@ -13,6 +13,7 @@ use goblin::pe::options::ParseOptions;
 
 use crate::dtb::DTB;
 
+// TODO: -> Result<WinProcess>
 pub fn find<T: PhysicalRead + VirtualRead>(mem: &mut T, dtb: DTB) -> Result<Address> {
     if dtb.arch.instruction_set == InstructionSet::X64 {
         if !dtb.va.is_null() {

@@ -5,6 +5,8 @@ va:
 - find a better way to encapsulate VatImpl
 - add more tests to x64 vtop
 - add ptov
+- move va into flow-core and use forward declares in core
+- could va serve as an entirely seperate crate (and we just provide the trait impls locally?)
 
 core/arch:
 - find a better way to define architecture agnostic type lengths
@@ -13,39 +15,18 @@ core/addr:
 - tests
 - more operator overloads as appropiate
 
-qemu/communication:
-- protobuf
-- https://docs.rs/mio/0.6.10/mio/struct.Poll.html
+pci/tlp:
+- http://xillybus.com/tutorials/pci-express-tlp-pcie-primer-tutorial-guide-1
+- create custom parse/generate crate for basic tlps
 
 hex:
 - use m4b/hexplay for colored hex output
-
-ipc:
-https://github.com/thehydroimpulse/nanomsg.rs/blob/master/examples/reqrep.rs
-+
-serde or some other binary serialization
-= speed
-
-fetching pdbs:
-- https://github.com/m4b/goblin/blob/05c2fe9609a6d1dfc4622b59a0a5d1a9702c39be/src/pe/debug.rs#L26
-- rekall fetch_pdb <PDB filename> <GUID>
-- rekall parse_pdb <PDB filename> > rekall-profile.json
-- https://github.com/google/rekall/blob/a82349758fdc15274501cf41ff5b4bc913698494/rekall-core/rekall/plugins/tools/mspdb.py#L119
-- https://github.com/m4b/goblin/commit/cfa098a528409847c568216e04f764b792f8425a#diff-d0d67e7a3a3d00cb0e6d863395e0096bR843
-- https://github.com/willglynn/pdb
-GUID/Age                       3B5C345ED2538B4C4A412409A0FDF4351                           
-PDB                            ntkrnlmp.pdb                                                
 
 goblin fixes:
 https://github.com/libvmi/libvmi/blob/master/tools/windows-offset-finder/getGUID.cpp#L309
 
 rekall winmem:
 - https://github.com/google/rekall/tree/master/tools/windows/winpmem
-
-....
-
-GUID/Age                       3B5C345ED2538B4C4A412409A0FDF4351                                              3b5c345ed2538b4c4a412409a0fdf435
-PDB                            ntkrnlmp.pdb                                                
 
 ....
 

@@ -1,7 +1,10 @@
-use address::Address;
+use std::path::PathBuf;
+
+use address::{Address, Length};
 use goblin::pe::PE;
 
 use crate::dtb::DTB;
+use crate::cache;
 
 // TODO: cache processes somewhat?
 pub struct Windows {
@@ -10,9 +13,22 @@ pub struct Windows {
     pub eproc_base: Address,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 pub struct WinProcess {
-    //pub pe: PE,
+    pub base: Address,
+    pub size: Length,
+    pub pdb: Option<PathBuf>,
+}
+
+// TODO: should we borrow pe header here?
+impl WinProcess {
+    pub fn from(base: Address, pe: &PE) -> Self {
+        Self {
+            base: base,
+            size: Length::from(pe.size),
+            pdb: cache::fetch_pdb(pe).ok(),
+        }
+    }
 }
 
 // TODO: move to base

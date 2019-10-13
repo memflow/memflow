@@ -35,6 +35,9 @@ pub fn init<T: PhysicalRead + VirtualRead>(mem: &mut T) -> Result<Windows> {
     let ntos = ntos::find(mem, dtb)?;
     info!("ntos={:x}", ntos);
 
+    // try to fetch pdb
+    let pdb = cache::fetch_pdb(pe: &PE)?;
+
     // system eprocess -> find
     let sysproc = sysproc::find(mem, dtb, ntos)?;
     info!("sysproc={:x}", sysproc);

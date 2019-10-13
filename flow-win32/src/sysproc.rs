@@ -59,6 +59,8 @@ pub fn find_exported<T: PhysicalRead + VirtualRead>(
         .and_then(|e| Ok(ntos + Length::from(e.rva)))
 }
 
+// scan in pdb
+
 // scan in section
 pub fn find_in_section<T: PhysicalRead + VirtualRead>(
     mem: &mut T,

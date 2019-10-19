@@ -52,16 +52,16 @@ fn find_x64_with_va<T: PhysicalRead + VirtualRead>(mem: &mut T, dtb: &DTB) -> Re
         }
 
         let res = buf
-            .chunks_exact(0x1000)
+            .chunks_exact(arch::x64::page_size().as_usize())
             .enumerate()
             .filter(|(_, c)| LittleEndian::read_u16(&c) == 0x5a4d) // MZ
-            .inspect(|(i, _)| trace!("find_x64_with_va: found potential MZ flag at offset {:x}", i * 0x1000))
+            .inspect(|(i, _)| trace!("find_x64_with_va: found potential MZ flag at offset {:x}", i * arch::x64::page_size().as_usize()))
             .flat_map(|(i, c)| c.chunks_exact(8).map(move |c| (i, c)))
             .filter(|(_, c)| LittleEndian::read_u64(&c) == 0x45444F434C4F4F50) // POOLCODE
-            .inspect(|(i, _)| trace!("find_x64_with_va: found potential POOLCODE flag at offset {:x}", i * 0x1000))
+            .inspect(|(i, _)| trace!("find_x64_with_va: found potential POOLCODE flag at offset {:x}", i * arch::x64::page_size().as_usize()))
             .filter(|(i, c)| {
                 // try to probe pe header
-                let probe_addr = Address::from(va_base + (*i as u64) * 0x1000);
+                let probe_addr = Address::from(va_base + (*i as u64) * arch::x64::page_size().as_u64());
                 let probe_buf = mem.virt_read(dtb.arch, dtb.dtb, probe_addr, Length::from_mb(32)).unwrap();
 
                 let mut pe_opts = ParseOptions::default();
@@ -73,7 +73,7 @@ fn find_x64_with_va<T: PhysicalRead + VirtualRead>(mem: &mut T, dtb: &DTB) -> Re
                         pe
                     },
                     Err(e) => {
-                        trace!("find_x64_with_va: potential pe header at offset {:x} could not be probed: {:?}", i * 0x1000, e);
+                        trace!("find_x64_with_va: potential pe header at offset {:x} could not be probed: {:?}", i * arch::x64::page_size().as_usize(), e);
                         return false;
                     }
                 };
@@ -86,7 +86,7 @@ fn find_x64_with_va<T: PhysicalRead + VirtualRead>(mem: &mut T, dtb: &DTB) -> Re
                 Error::new(ErrorKind::Other, "find_x64_with_va: unable to locate ntoskrnl.exe via va hint")
             })
             .and_then(|(i, _)| {
-                Ok(va_base + i as u64 * 0x1000)
+                Ok(va_base + i as u64 * arch::x64::page_size().as_u64())
             });
         match res {
             Ok(a) => return Ok(Address::from(a)),

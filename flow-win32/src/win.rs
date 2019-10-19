@@ -21,6 +21,9 @@ pub struct WinProcess {
 }
 
 // TODO: should we borrow pe header here?
+// TODO2: pdb should only be resolved for ms processes, in particular ntoskrnl!
+// move pdb to Windows {} -> kernel_pdb or something
+// also backjwards ref WinProcess in Windows for ntoskrnl
 impl WinProcess {
     pub fn from(base: Address, pe: &PE) -> Self {
         Self {

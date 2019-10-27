@@ -1,9 +1,9 @@
 pub mod x64;
-pub mod x86_pae;
 pub mod x86;
+pub mod x86_pae;
 
-use std::io::{Error, ErrorKind, Result};
 use std::convert::TryFrom;
+use std::io::{Error, ErrorKind, Result};
 
 use address::Length;
 
@@ -17,18 +17,18 @@ pub enum ByteOrder {
 pub enum InstructionSet {
     X64,
     X86Pae,
-    X86
+    X86,
 }
 
 // TODO: change this to operate on enum variants directly
 macro_rules! match_instruction_set {
-    ($value:expr, $func:ident) => (
+    ($value:expr, $func:ident) => {
         match $value {
             InstructionSet::X64 => x64::$func(),
             InstructionSet::X86Pae => x86_pae::$func(),
             InstructionSet::X86 => x86::$func(),
         }
-    )
+    };
 }
 
 // TODO: figure out a better way for this
@@ -40,7 +40,7 @@ impl TryFrom<u8> for InstructionSet {
             1 => Ok(InstructionSet::X64),
             2 => Ok(InstructionSet::X86Pae),
             3 => Ok(InstructionSet::X86),
-            _ => Err(Error::new(ErrorKind::Other, "Invalid InstructionSet value"))
+            _ => Err(Error::new(ErrorKind::Other, "Invalid InstructionSet value")),
         }
     }
 }
@@ -85,7 +85,7 @@ pub struct Architecture {
 
 impl From<InstructionSet> for Architecture {
     fn from(item: InstructionSet) -> Self {
-        Architecture{
+        Architecture {
             instruction_set: item,
         }
     }

@@ -12,21 +12,21 @@ pub use va::VatImpl;
 
 use std::io::Result;
 
-use arch::{Architecture, InstructionSet};
 use address::Address;
+use arch::{Architecture, InstructionSet};
 use mem::PhysicalRead;
 
 pub trait VirtualAddressTranslation {
-	fn vtop(&mut self, arch: Architecture, dtb: Address, addr: Address) -> Result<Address>;
+    fn vtop(&mut self, arch: Architecture, dtb: Address, addr: Address) -> Result<Address>;
 }
 
 impl<T: PhysicalRead> VirtualAddressTranslation for T {
-	// virtual -> physical
-	fn vtop(&mut self, arch: Architecture, dtb: Address, addr: Address) -> Result<Address> {
-		match arch.instruction_set {
-			InstructionSet::X64 => x64::vtop(self, dtb, addr),
-			InstructionSet::X86Pae => x86_pae::vtop(self, dtb, addr),
-			InstructionSet::X86 => x86::vtop(self, dtb, addr),
-		}
-	}
+    // virtual -> physical
+    fn vtop(&mut self, arch: Architecture, dtb: Address, addr: Address) -> Result<Address> {
+        match arch.instruction_set {
+            InstructionSet::X64 => x64::vtop(self, dtb, addr),
+            InstructionSet::X86Pae => x86_pae::vtop(self, dtb, addr),
+            InstructionSet::X86 => x86::vtop(self, dtb, addr),
+        }
+    }
 }

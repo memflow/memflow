@@ -1,3 +1,5 @@
+use crate::error::{Error, Result};
+
 use log::{info, trace, warn};
 
 use std::ops::{Index, RangeFrom};
@@ -9,9 +11,6 @@ use scroll::ctx::MeasureWith;
 use pretty_hex::*;
 
 use crate::dtb::DTB;
-
-// testing
-use std::io::{Error, ErrorKind, Result};
 
 use goblin::pe::{self, PE};
 
@@ -26,7 +25,7 @@ pub struct VirtualScrollReader<'a, T: PhysicalRead + VirtualRead> {
 
 impl<'a, T: PhysicalRead + VirtualRead> VirtualScrollReader<'a, T> {
     pub fn new(mem: &'a mut T, dtb: DTB, base: Address) -> Self {
-        VirtualScrollReader{
+        VirtualScrollReader {
             mem: mem,
             dtb: dtb,
             base: base,
@@ -67,11 +66,14 @@ impl<'a, T: PhysicalRead + VirtualRead, Ctx> MeasureWith<Ctx> for VirtualScrollR
 }
 */
 
-
 ////////////////////
-/// 
-/// 
-pub fn test_read_pe<T: PhysicalRead + VirtualRead>(mem: &mut T, dtb: DTB, base: Address) -> Result<()> {
+///
+///
+pub fn test_read_pe<T: PhysicalRead + VirtualRead>(
+    mem: &mut T,
+    dtb: DTB,
+    base: Address,
+) -> Result<()> {
     let header_buf = mem.virt_read(dtb.arch, dtb.dtb, base, Length::from_kb(4))?;
     info!("{:?}", header_buf.hex_dump());
 
@@ -85,43 +87,43 @@ pub fn test_read_pe<T: PhysicalRead + VirtualRead>(mem: &mut T, dtb: DTB, base: 
     header.export_data.iter().for_each(|e| println!("export_data found: {:?}", e));
     header.libraries.iter().for_each(|l| println!("library found: {}", l));
     */
-/*
-    let sections_offset = &mut (header.dos_header.pe_pointer as usize + pe::header::SIZEOF_PE_MAGIC + pe::header::SIZEOF_COFF_HEADER + header.coff_header.size_of_optional_header as usize);
-    let sections = header.coff_header.sections(&header_buf, sections_offset).unwrap();
-    println!("sections: {:?}", sections);
-    
-    if let Some(optional_header) = header.optional_header {
-        println!("optional_header: {:?}", optional_header);
+    /*
+        let sections_offset = &mut (header.dos_header.pe_pointer as usize + pe::header::SIZEOF_PE_MAGIC + pe::header::SIZEOF_COFF_HEADER + header.coff_header.size_of_optional_header as usize);
+        let sections = header.coff_header.sections(&header_buf, sections_offset).unwrap();
+        println!("sections: {:?}", sections);
 
-        let entry = optional_header.standard_fields.address_of_entry_point as usize;
-        let image_base = optional_header.windows_fields.image_base as usize;
-        let file_alignment = optional_header.windows_fields.file_alignment;
-        println!("entry {:#x} image_base {:#x} file_alignment {:#x}", entry, image_base, file_alignment);
+        if let Some(optional_header) = header.optional_header {
+            println!("optional_header: {:?}", optional_header);
 
-        if let Some(export_table) = *optional_header.data_directories.get_export_table() {
-            println!("export_table: {:?}", export_table);
-            let export_rva = export_table.virtual_address as usize;
-            println!("export_rva: {:x}", export_rva);
-            // base + export_rva ...
-            let export_offset = pe::utils::find_offset_or(export_rva, &sections, file_alignment, &format!("cannot map export_rva ({:#x}) into offset", export_rva)).unwrap();
-            println!("export_offset: {:x}", export_offset);
+            let entry = optional_header.standard_fields.address_of_entry_point as usize;
+            let image_base = optional_header.windows_fields.image_base as usize;
+            let file_alignment = optional_header.windows_fields.file_alignment;
+            println!("entry {:#x} image_base {:#x} file_alignment {:#x}", entry, image_base, file_alignment);
 
-            //let export_buf = 
+            if let Some(export_table) = *optional_header.data_directories.get_export_table() {
+                println!("export_table: {:?}", export_table);
+                let export_rva = export_table.virtual_address as usize;
+                println!("export_rva: {:x}", export_rva);
+                // base + export_rva ...
+                let export_offset = pe::utils::find_offset_or(export_rva, &sections, file_alignment, &format!("cannot map export_rva ({:#x}) into offset", export_rva)).unwrap();
+                println!("export_offset: {:x}", export_offset);
 
-            // TODO: ExportDirectoryTable::parse(bytes, export_offset)
-            if let Ok(ed) = pe::export::ExportData::parse(&header_buf, export_table, &sections, file_alignment) {
-                println!("export data {:#?}", ed);
-                /*
-                exports = export::Export::parse(bytes, &ed, &sections, file_alignment)?;
-                name = ed.name;
-                debug!("name: {:#?}", name);
-                export_data = Some(ed);
-                */
+                //let export_buf =
+
+                // TODO: ExportDirectoryTable::parse(bytes, export_offset)
+                if let Ok(ed) = pe::export::ExportData::parse(&header_buf, export_table, &sections, file_alignment) {
+                    println!("export data {:#?}", ed);
+                    /*
+                    exports = export::Export::parse(bytes, &ed, &sections, file_alignment)?;
+                    name = ed.name;
+                    debug!("name: {:#?}", name);
+                    export_data = Some(ed);
+                    */
+                }
+
             }
-
         }
-    }
-*/
+    */
     /*
     println!("pe header parsed! length={:x}", p.size);
     println!("{:?}", p);

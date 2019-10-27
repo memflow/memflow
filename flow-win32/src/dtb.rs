@@ -1,10 +1,9 @@
-// TODO: custom errors
-use std::io::{Error, ErrorKind, Result};
+use crate::error::{Error, Result};
 
 use byteorder::{ByteOrder, LittleEndian};
 
-use arch::{self, Architecture, InstructionSet};
 use address::{Address, Length};
+use arch::{self, Architecture, InstructionSet};
 use mem::PhysicalRead;
 
 #[derive(Debug, Copy, Clone)]
@@ -43,7 +42,7 @@ pub fn find<T: PhysicalRead>(mem: &mut T) -> Result<DTB> {
         Err(e) => println!("Error: {}", e),
     }
 
-    Err(Error::new(ErrorKind::Other, "unable to find dtb"))
+    Err(Error::new("unable to find dtb"))
 }
 
 fn find_x64_lowstub(stub: &Vec<u8>) -> Result<DTB> {
@@ -53,7 +52,7 @@ fn find_x64_lowstub(stub: &Vec<u8>) -> Result<DTB> {
         .filter(|c| (0xfffff80000000003 & LittleEndian::read_u64(&c[0x70..])) == 0xfffff80000000000) // kernel entry
         .filter(|c| (0xffffff0000000fff & LittleEndian::read_u64(&c[0xA0..])) == 0) // pml4
         .nth(0)
-        .ok_or_else(|| Error::new(ErrorKind::Other, "unable to find x64 dtb in lowstub < 1M"))
+        .ok_or_else(|| Error::new("unable to find x64 dtb in lowstub < 1M"))
         .and_then(|c| {
             Ok(DTB {
                 arch: Architecture::from(InstructionSet::X64),
@@ -96,7 +95,7 @@ fn _find_x64(mem: &[u8]) -> Option<()> {
 fn find_x64(mem: &Vec<u8>) -> Result<DTB> {
     mem.chunks_exact(arch::x64::page_size().as_usize())
         .position(|c| _find_x64(c).is_some())
-        .ok_or_else(|| Error::new(ErrorKind::Other, "unable to find x64 dtb in lowstub < 16M"))
+        .ok_or_else(|| Error::new("unable to find x64 dtb in lowstub < 16M"))
         .and_then(|i| {
             Ok(DTB {
                 arch: Architecture::from(InstructionSet::X64),
@@ -148,12 +147,7 @@ fn _find_x86_pae(mem: &[u8]) -> Option<()> {
 fn find_x86_pae(mem: &Vec<u8>) -> Result<DTB> {
     mem.chunks_exact(arch::x86_pae::page_size().as_usize())
         .position(|c| _find_x86_pae(c).is_some())
-        .ok_or_else(|| {
-            Error::new(
-                ErrorKind::Other,
-                "unable to find x64_pae dtb in lowstub < 16M",
-            )
-        })
+        .ok_or_else(|| Error::new("unable to find x64_pae dtb in lowstub < 16M"))
         .and_then(|i| {
             Ok(DTB {
                 arch: Architecture::from(InstructionSet::X86Pae),
@@ -187,7 +181,7 @@ fn _find_x86(mem: &[u8]) -> Option<()> {
 fn find_x86(mem: &Vec<u8>) -> Result<DTB> {
     mem.chunks_exact(arch::x86::page_size().as_usize())
         .position(|c| _find_x86(c).is_some())
-        .ok_or_else(|| Error::new(ErrorKind::Other, "unable to find x86 dtb in lowstub < 16M"))
+        .ok_or_else(|| Error::new("unable to find x86 dtb in lowstub < 16M"))
         .and_then(|i| {
             Ok(DTB {
                 arch: Architecture::from(InstructionSet::X86),

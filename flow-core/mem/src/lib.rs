@@ -9,7 +9,13 @@ pub trait PhysicalRead {
 }
 
 pub trait VirtualRead {
-    fn virt_read(&mut self, arch: Architecture, dtb: Address, addr: Address, len: Length) -> Result<Vec<u8>>;
+    fn virt_read(
+        &mut self,
+        arch: Architecture,
+        dtb: Address,
+        addr: Address,
+        len: Length,
+    ) -> Result<Vec<u8>>;
 }
 
 pub trait PhysicalWrite {
@@ -17,5 +23,11 @@ pub trait PhysicalWrite {
 }
 
 pub trait VirtualWrite {
-    fn virt_write(&mut self, arch: Architecture, dtb: Address, addr: Address, data: &Vec<u8>) -> Result<Length>;
+    fn virt_write(
+        &mut self,
+        arch: Architecture,
+        dtb: Address,
+        addr: Address,
+        data: &Vec<u8>,
+    ) -> Result<Length>;
 }

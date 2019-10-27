@@ -1,5 +1,5 @@
-use std::ops;
 use std::fmt;
+use std::ops;
 
 use crate::length::Length;
 
@@ -14,15 +14,15 @@ impl fmt::LowerHex for Address {
 
 impl From<u64> for Address {
     fn from(item: u64) -> Self {
-        Self{ 0: item, }
+        Self { 0: item }
     }
 }
 
 impl Address {
     pub fn null() -> Self {
-        Address{ 0: 0 }
+        Address { 0: 0 }
     }
-    
+
     pub fn is_null(&self) -> bool {
         self.0 == 0
     }
@@ -36,7 +36,9 @@ impl Address {
     }
 
     pub fn as_page_aligned(&self, page_size: Length) -> Address {
-        Address{ 0: self.0 & (!(page_size.as_u64() - 1)) }
+        Address {
+            0: self.0 & (!(page_size.as_u64() - 1)),
+        }
     }
 }
 
@@ -44,13 +46,17 @@ impl ops::Add<Length> for Address {
     type Output = Self;
 
     fn add(self, other: Length) -> Self {
-        Self{ 0: self.0 + other.as_u64(), }
+        Self {
+            0: self.0 + other.as_u64(),
+        }
     }
 }
 
 impl ops::AddAssign<Length> for Address {
     fn add_assign(&mut self, other: Length) {
-        *self = Self{ 0: self.0 + other.as_u64(), }
+        *self = Self {
+            0: self.0 + other.as_u64(),
+        }
     }
 }
 
@@ -74,27 +80,33 @@ impl ops::Sub<Length> for Address {
 
 #[cfg(test)]
 mod tests {
-	use crate::address::Address;
-	use crate::length::Length;
+    use crate::address::Address;
+    use crate::length::Length;
 
-	#[test]
-	fn test_from() {
-		assert_eq!(Address::null().is_null(), true);
-		assert_eq!(Address::from(1337).as_u64(), 1337);
-		assert_eq!(Address::from(4321).as_usize(), 4321);
+    #[test]
+    fn test_from() {
+        assert_eq!(Address::null().is_null(), true);
+        assert_eq!(Address::from(1337).as_u64(), 1337);
+        assert_eq!(Address::from(4321).as_usize(), 4321);
     }
 
-	#[test]
-	fn test_alignment() {
-        assert_eq!(Address::from(0x1234).as_page_aligned(Length::from_kb(4)), Address::from(0x1000));
-        assert_eq!(Address::from(0xFFF12345).as_page_aligned(Length::from_b(0x10000)), Address::from(0xFFF10000));
+    #[test]
+    fn test_alignment() {
+        assert_eq!(
+            Address::from(0x1234).as_page_aligned(Length::from_kb(4)),
+            Address::from(0x1000)
+        );
+        assert_eq!(
+            Address::from(0xFFF12345).as_page_aligned(Length::from_b(0x10000)),
+            Address::from(0xFFF10000)
+        );
     }
 
-	#[test]
-	fn test_ops() {
+    #[test]
+    fn test_ops() {
         assert_eq!(Address::from(10) + Length::from(5), Address::from(15));
 
         assert_eq!(Address::from(10) - Address::from(5), Length::from(5));
         assert_eq!(Address::from(100) - Length::from(5), Address::from(95));
-	}
+    }
 }

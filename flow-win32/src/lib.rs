@@ -1,10 +1,13 @@
+use crate::error::{Error, Result};
+
 use log::{debug, info, trace};
 
 // TODO: custom errors
-use std::io::Result;
 use std::collections::HashMap;
 
 use mem::{PhysicalRead, VirtualRead};
+
+pub mod error;
 
 // TODO: move this in a seperate crate as a elf/pe/macho helper for pa/va
 pub mod pe;
@@ -59,11 +62,11 @@ pub fn init<T: PhysicalRead + VirtualRead>(mem: &mut T) -> Result<Windows> {
         Err(e) => {
             info!("unable to fetch pdb from memory: {:?}", e);
             None
-        },
+        }
     };
 
     println!("kernel_pdb: {:?}", kernel_pdb.clone().unwrap());
-    
+
     let mut win = Windows {
         dtb: dtb,
         kernel_base: kernel_base,
@@ -77,8 +80,12 @@ pub fn init<T: PhysicalRead + VirtualRead>(mem: &mut T) -> Result<Windows> {
     // TODO: add class wrapper to Windows struct
     //let pdb = ; // TODO: add manual pdb option
     //let class = types::Struct::from(pdb, "_EPROCESS").unwrap();
-    println!("_EPROCESS::UniqueProcessId: {:?}",
-        win.get_kernel_struct("_EPROCESS").unwrap().get_field("UniqueProcessId"));
+    println!(
+        "_EPROCESS::UniqueProcessId: {:?}",
+        win.get_kernel_struct("_EPROCESS")
+            .unwrap()
+            .get_field("UniqueProcessId")
+    );
 
     // PsLoadedModuleList / KDBG -> find
 

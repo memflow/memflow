@@ -46,7 +46,9 @@ fn construct() {
         // TODO: retry + timeout?
         match rpc::listen(socket) {
             Ok(_) => (),
-            Err(e) => { libc_eprintln!("unable to start qemu-connector-bridge: {:?}", e); },
+            Err(e) => {
+                libc_eprintln!("unable to start qemu-connector-bridge: {:?}", e);
+            }
         }
     });
 }

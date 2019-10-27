@@ -1,4 +1,4 @@
-use log::{info, trace, debug};
+use log::{debug, info, trace};
 
 use std::io::{Error, ErrorKind, Result};
 use std::path::Path;
@@ -15,7 +15,7 @@ use crate::bridge_capnp::bridge;
 
 use address::{Address, Length};
 use arch::Architecture;
-use mem::{PhysicalRead, VirtualRead, PhysicalWrite, VirtualWrite};
+use mem::{PhysicalRead, PhysicalWrite, VirtualRead, VirtualWrite};
 
 pub struct BridgeConnector {
     bridge: bridge::Client,
@@ -80,10 +80,9 @@ impl PhysicalWrite for BridgeConnector {
         request.get().set_data(data);
         self.runtime
             .block_on(
-                request
-                    .send()
-                    .promise
-                    .and_then(|response| Promise::ok(Length::from(pry!(response.get()).get_length()))),
+                request.send().promise.and_then(|response| {
+                    Promise::ok(Length::from(pry!(response.get()).get_length()))
+                }),
             )
             .map_err(|_e| Error::new(ErrorKind::Other, "unable to write memory"))
             .and_then(|v| Ok(v))
@@ -92,7 +91,13 @@ impl PhysicalWrite for BridgeConnector {
 
 impl BridgeConnector {
     // virtRead @2 (arch: UInt8, dtb :UInt64, address :UInt64, length :UInt64) -> (data: Data);
-    fn virt_read_chunk(&mut self, arch: Architecture, dtb: Address, addr: Address, len: Length) -> Result<Vec<u8>> {
+    fn virt_read_chunk(
+        &mut self,
+        arch: Architecture,
+        dtb: Address,
+        addr: Address,
+        len: Length,
+    ) -> Result<Vec<u8>> {
         let mut request = self.bridge.virt_read_request();
         request.get().set_arch(arch.instruction_set.as_u8());
         request.get().set_dtb(dtb.as_u64());
@@ -109,7 +114,13 @@ impl BridgeConnector {
     }
 
     // virtWrite @3 (arch: UInt8, dtb: UInt64, address :UInt64, data: Data) -> (length :UInt64);
-    fn virt_write_chunk(&mut self, arch: Architecture, dtb: Address, addr: Address, data: &Vec<u8>) -> Result<Length> {
+    fn virt_write_chunk(
+        &mut self,
+        arch: Architecture,
+        dtb: Address,
+        addr: Address,
+        data: &Vec<u8>,
+    ) -> Result<Length> {
         let mut request = self.bridge.virt_write_request();
         request.get().set_arch(arch.instruction_set.as_u8());
         request.get().set_dtb(dtb.as_u64());
@@ -117,10 +128,9 @@ impl BridgeConnector {
         request.get().set_data(data);
         self.runtime
             .block_on(
-                request
-                    .send()
-                    .promise
-                    .and_then(|response| Promise::ok(Length::from(pry!(response.get()).get_length()))),
+                request.send().promise.and_then(|response| {
+                    Promise::ok(Length::from(pry!(response.get()).get_length()))
+                }),
             )
             .map_err(|_e| Error::new(ErrorKind::Other, "unable to write memory"))
             .and_then(|v| Ok(v))
@@ -131,7 +141,13 @@ impl BridgeConnector {
 // TODO: split up sections greater than 32mb into multiple packets due to capnp limitations!
 //
 impl VirtualRead for BridgeConnector {
-    fn virt_read(&mut self, arch: Architecture, dtb: Address, addr: Address, len: Length) -> Result<Vec<u8>> {
+    fn virt_read(
+        &mut self,
+        arch: Architecture,
+        dtb: Address,
+        addr: Address,
+        len: Length,
+    ) -> Result<Vec<u8>> {
         if len > Length::from_mb(32) {
             info!("virt_read(): reading multiple 32mb chunks");
             let mut result: Vec<u8> = vec![0; len.as_usize()];
@@ -162,7 +178,13 @@ impl VirtualRead for BridgeConnector {
 }
 
 impl VirtualWrite for BridgeConnector {
-    fn virt_write(&mut self, arch: Architecture, dtb: Address, addr: Address, data: &Vec<u8>) -> Result<Length> {
+    fn virt_write(
+        &mut self,
+        arch: Architecture,
+        dtb: Address,
+        addr: Address,
+        data: &Vec<u8>,
+    ) -> Result<Length> {
         // TODO: implement chunk logic
         self.virt_write_chunk(arch, dtb, addr, data)
     }

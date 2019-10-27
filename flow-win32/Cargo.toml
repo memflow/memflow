@@ -19,3 +19,5 @@ uuid = "0.*" # remove this if goblin has this built in
 duma = "*"
 dirs = "2.*"
 pdb = { git = "https://github.com/willglynn/pdb" }
+url = "1.7.2"
+failure = { version = "0.1.5", features = [] }

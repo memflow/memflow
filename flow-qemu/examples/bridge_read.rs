@@ -1,8 +1,8 @@
 use clap::{App, Arg};
 use std::time::Instant;
 
-use flow_qemu::BridgeConnector;
 use address::{Address, Length};
+use flow_qemu::BridgeConnector;
 use mem::PhysicalRead;
 
 fn main() {
@@ -29,7 +29,9 @@ fn main() {
         }
     };
 
-    let mem = bridge.phys_read(Address::from(0x1000), Length::from(8)).unwrap();
+    let mem = bridge
+        .phys_read(Address::from(0x1000), Length::from(8))
+        .unwrap();
     println!("Received memory: {:?}", mem);
 
     //bridge.read_registers().unwrap();
@@ -39,7 +41,9 @@ fn main() {
     loop {
         //let r = bridge.read_memory(0x1000, 0x1000).unwrap();
         //bridge.write_memory(0x1000, &r).unwrap();
-        bridge.phys_read(Address::from(0x1000), Length::from(0x1000)).unwrap();
+        bridge
+            .phys_read(Address::from(0x1000), Length::from(0x1000))
+            .unwrap();
 
         counter += 1;
         if (counter % 10000) == 0 {

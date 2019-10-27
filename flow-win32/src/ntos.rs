@@ -1,15 +1,15 @@
-use log::{info, trace, debug};
+use crate::error::{Error, Result};
 
-use std::io::{Error, ErrorKind, Result};
+use log::{debug, info, trace};
 
 use byteorder::{ByteOrder, LittleEndian};
 
-use arch::{InstructionSet};
 use address::{Address, Length};
+use arch::InstructionSet;
 use mem::{PhysicalRead, VirtualRead};
 
-use goblin::pe::PE;
 use goblin::pe::options::ParseOptions;
+use goblin::pe::PE;
 
 use crate::dtb::DTB;
 
@@ -22,7 +22,7 @@ pub fn find<T: PhysicalRead + VirtualRead>(mem: &mut T, dtb: DTB) -> Result<Addr
                 Err(e) => println!("Error: {}", e),
             }
         }
-        
+
         match find_x64(mem) {
             Ok(b) => return Ok(b),
             Err(e) => println!("Error: {}", e),
@@ -34,21 +34,31 @@ pub fn find<T: PhysicalRead + VirtualRead>(mem: &mut T, dtb: DTB) -> Result<Addr
         }
     }
 
-    Err(Error::new(ErrorKind::Other, "unable to find ntoskrnl.exe"))
+    Err(Error::new("unable to find ntoskrnl.exe"))
 }
 
 fn find_x64_with_va<T: PhysicalRead + VirtualRead>(mem: &mut T, dtb: &DTB) -> Result<Address> {
-    trace!("find_x64_with_va: trying to find ntoskrnl.exe with va hint at {:x}", dtb.va.as_u64());
+    trace!(
+        "find_x64_with_va: trying to find ntoskrnl.exe with va hint at {:x}",
+        dtb.va.as_u64()
+    );
 
     // va was found previously
     let mut va_base = dtb.va.as_u64() & !0x1fffff;
     while va_base + Length::from_mb(32).as_u64() > dtb.va.as_u64() {
         trace!("find_x64_with_va: probing at {:x}", va_base);
 
-        let buf = mem.virt_read(dtb.arch, dtb.dtb, Address::from(va_base), Length::from_mb(2))?;
+        let buf = mem.virt_read(
+            dtb.arch,
+            dtb.dtb,
+            Address::from(va_base),
+            Length::from_mb(2),
+        )?;
         if buf.is_empty() {
             // TODO: print address as well
-            return Err(Error::new(ErrorKind::Other, "Unable to read memory when scanning for ntoskrnl.exe"))
+            return Err(Error::new(
+                "Unable to read memory when scanning for ntoskrnl.exe",
+            ));
         }
 
         let res = buf
@@ -83,7 +93,7 @@ fn find_x64_with_va<T: PhysicalRead + VirtualRead>(mem: &mut T, dtb: &DTB) -> Re
             })
             .nth(0)
             .ok_or_else(|| {
-                Error::new(ErrorKind::Other, "find_x64_with_va: unable to locate ntoskrnl.exe via va hint")
+                Error::new("find_x64_with_va: unable to locate ntoskrnl.exe via va hint")
             })
             .and_then(|(i, _)| {
                 Ok(va_base + i as u64 * arch::x64::page_size().as_u64())
@@ -96,13 +106,15 @@ fn find_x64_with_va<T: PhysicalRead + VirtualRead>(mem: &mut T, dtb: &DTB) -> Re
         va_base -= Length::from_mb(2).as_u64();
     }
 
-    Err(Error::new(ErrorKind::Other, "find_x64_with_va: unable to locate ntoskrnl.exe via va hint"))
+    Err(Error::new(
+        "find_x64_with_va: unable to locate ntoskrnl.exe via va hint",
+    ))
 }
 
 fn find_x64<T: PhysicalRead + VirtualRead>(mem: &mut T) -> Result<Address> {
-    Err(Error::new(ErrorKind::Other, "find_x64(): not implemented yet"))
+    Err(Error::new("find_x64(): not implemented yet"))
 }
 
 fn find_x86<T: PhysicalRead + VirtualRead>(mem: &mut T) -> Result<Address> {
-    Err(Error::new(ErrorKind::Other, "find_x86(): not implemented yet"))
+    Err(Error::new("find_x86(): not implemented yet"))
 }

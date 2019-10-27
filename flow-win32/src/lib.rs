@@ -2,6 +2,7 @@ use log::{debug, info, trace};
 
 // TODO: custom errors
 use std::io::Result;
+use std::collections::HashMap;
 
 use mem::{PhysicalRead, VirtualRead};
 
@@ -16,6 +17,15 @@ pub mod win;
 
 use win::{ProcessList, Windows};
 
+/*
+Options:
+- supply cr3
+- supply kernel hint
+- supply pdb
+- supply kernel offsets for basic structs (dumped windbg maybe)
+*/
+
+// TODO: impl Windows {}
 pub fn init<T: PhysicalRead + VirtualRead>(mem: &mut T) -> Result<Windows> {
     // TODO: add options to supply valid dtb
 
@@ -32,15 +42,43 @@ pub fn init<T: PhysicalRead + VirtualRead>(mem: &mut T) -> Result<Windows> {
 
     // TODO: add option to supply a va hint
     // find ntoskrnl.exe base
-    let ntos = ntos::find(mem, dtb)?;
-    info!("ntos={:x}", ntos);
+    let kernel_base = ntos::find(mem, dtb)?;
+    info!("ntos={:x}", kernel_base);
 
     // try to fetch pdb
     //let pdb = cache::fetch_pdb(pe)?;
 
     // system eprocess -> find
-    let sysproc = sysproc::find(mem, dtb, ntos)?;
+    let sysproc = sysproc::find(mem, dtb, kernel_base)?;
     info!("sysproc={:x}", sysproc);
+
+    // grab pdb
+    // TODO: new func or something in Windows impl
+    let kernel_pdb = match cache::fetch_pdb_from_mem(mem, &dtb, kernel_base) {
+        Ok(p) => Some(p),
+        Err(e) => {
+            info!("unable to fetch pdb from memory: {:?}", e);
+            None
+        },
+    };
+
+    println!("kernel_pdb: {:?}", kernel_pdb.clone().unwrap());
+    
+    let mut win = Windows {
+        dtb: dtb,
+        kernel_base: kernel_base,
+        eproc_base: sysproc,
+        kernel_pdb: kernel_pdb,
+        kernel_structs: HashMap::new(),
+    };
+
+    // TODO: create fallback thingie which implements hardcoded offsets
+    // TODO: create fallback which parses C struct from conf file + manual pdb
+    // TODO: add class wrapper to Windows struct
+    //let pdb = ; // TODO: add manual pdb option
+    //let class = types::Struct::from(pdb, "_EPROCESS").unwrap();
+    println!("_EPROCESS::UniqueProcessId: {:?}",
+        win.get_kernel_struct("_EPROCESS").unwrap().get_field("UniqueProcessId"));
 
     // PsLoadedModuleList / KDBG -> find
 
@@ -50,11 +88,6 @@ pub fn init<T: PhysicalRead + VirtualRead>(mem: &mut T) -> Result<Windows> {
 
     // TODO: copy architecture and
 
-    let mut win = Windows {
-        dtb: dtb,
-        kernel_base: ntos,
-        eproc_base: sysproc,
-    };
     let list = win.process_list();
     Ok(win)
 }

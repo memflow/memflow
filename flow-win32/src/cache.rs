@@ -4,11 +4,15 @@ use std::fs;
 use std::io::{Cursor, Error, ErrorKind, Result};
 use std::path::PathBuf;
 
+use crate::dtb::DTB;
+use mem::{PhysicalRead, VirtualRead};
+use address::{Address, Length};
+
 use byteorder::ReadBytesExt;
 use byteorder::{ByteOrder, LittleEndian};
 use clap::ArgMatches;
 use duma;
-use goblin::pe::{debug::CodeviewPDB70DebugInfo, PE};
+use goblin::pe::{debug::CodeviewPDB70DebugInfo, options::ParseOptions, PE};
 use uuid::{BytesError, Uuid};
 
 fn cache_dir() -> Result<PathBuf> {
@@ -21,6 +25,12 @@ fn cache_dir() -> Result<PathBuf> {
 fn download_pdb(pdbname: &str, guid: &String) -> Result<()> {
     info!("downloading pdb for {} with guid/age {}", pdbname, guid);
 
+    /*
+    TODO: in reality this is 3 urls  which we check in order:
+    ntkrnlmp.pdb/ID/ntkrnlmp.pdb
+    ntkrnlmp.pdb/ID/ntkrnlmp.pd_
+    ntkrnlmp.pdb/ID/file.ptr
+    */
     let url = match duma::utils::parse_url(&format!(
         "https://msdl.microsoft.com/download/symbols/{}/{}/{}",
         pdbname, guid, pdbname
@@ -30,10 +40,11 @@ fn download_pdb(pdbname: &str, guid: &String) -> Result<()> {
             return Err(Error::new(
                 ErrorKind::Other,
                 format!("unable to format download url: {}", e),
-            ))
+            ));
         }
     };
 
+    println!("downloading pdb from {:?}", url);
     match duma::download::http_download(url, &ArgMatches::default(), "0.1") {
         Ok(_) => Ok(()),
         Err(e) => Err(Error::new(
@@ -41,6 +52,8 @@ fn download_pdb(pdbname: &str, guid: &String) -> Result<()> {
             format!("unable to download pdb file: {}", e),
         )),
     }
+
+    // TODO: check if file is empty (404, other error)
 }
 
 fn download_pdb_cache(pdbname: &str, guid: &String) -> Result<PathBuf> {
@@ -57,6 +70,7 @@ fn download_pdb_cache(pdbname: &str, guid: &String) -> Result<PathBuf> {
 
         // create cache dir if necessary and move the downloaded file
         if !cache_dir.exists() {
+            info!("creating cache directory {:?}", cache_dir.to_str());
             fs::create_dir_all(&cache_dir)?;
         }
 
@@ -90,7 +104,7 @@ fn generate_guid(codeview: &CodeviewPDB70DebugInfo) -> std::result::Result<Strin
     ))
 }
 
-pub fn fetch_pdb(pe: &PE) -> Result<PathBuf> {
+pub fn fetch_pdb_from_pe(pe: &PE) -> Result<PathBuf> {
     let debug = match pe.debug_data {
         Some(d) => d,
         None => {
@@ -118,4 +132,30 @@ pub fn fetch_pdb(pe: &PE) -> Result<PathBuf> {
             .trim_matches(char::from(0)),
         &generate_guid(&codeview).unwrap_or_default(),
     )
+}
+
+pub fn fetch_pdb_from_mem<T: VirtualRead>(mem: &mut T, dtb: &DTB, kernel_base: Address) -> Result<PathBuf> {
+    let ntos_buf = mem
+        .virt_read(
+            dtb.arch,
+            dtb.dtb,
+            kernel_base,
+            Length::from_mb(32),
+        )
+        .unwrap();
+
+    let mut pe_opts = ParseOptions::default();
+    pe_opts.resolve_rva = false;
+
+    let pe = match PE::parse_with_opts(&ntos_buf, &pe_opts) {
+        Ok(pe) => pe,
+        Err(e) => {
+            return Err(Error::new(
+                ErrorKind::Other,
+                format!("unable to parse pe header: {}", e),
+            ))
+        }
+    };
+
+    fetch_pdb_from_pe(&pe)
 }

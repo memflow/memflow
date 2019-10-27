@@ -1,2 +1,1 @@
-pub trait CPU {
-}
+pub trait CPU {}

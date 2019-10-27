@@ -1,5 +1,6 @@
+use crate::error::{Error, Result};
+
 use log::{info, trace, warn};
-use std::io::{Error, ErrorKind, Result};
 
 use address::{Address, Length};
 use mem::{PhysicalRead, VirtualRead};
@@ -26,10 +27,7 @@ pub fn find<T: PhysicalRead + VirtualRead>(
         Err(e) => warn!("{}", e),
     }
 
-    Err(Error::new(
-        ErrorKind::Other,
-        "unable to find system eprocess",
-    ))
+    Err(Error::new("unable to find system eprocess"))
 }
 
 // find from exported symbol
@@ -50,12 +48,7 @@ pub fn find_exported<T: PhysicalRead + VirtualRead>(
         .filter(|e| e.name.unwrap_or_default() == "PsInitialSystemProcess") // PsActiveProcessHead
         .inspect(|e| info!("found eat entry: {:?}", e))
         .nth(0)
-        .ok_or_else(|| {
-            Error::new(
-                ErrorKind::Other,
-                "unable to find export PsInitialSystemProcess",
-            )
-        })
+        .ok_or_else(|| Error::new("unable to find export PsInitialSystemProcess"))
         .and_then(|e| Ok(ntos + Length::from(e.rva)))
 }
 
@@ -82,7 +75,7 @@ pub fn find_in_section<T: PhysicalRead + VirtualRead>(
         .iter()
         .filter(|s| String::from_utf8(s.name.to_vec()).unwrap_or_default() == "ALMOSTRO")
         .nth(0)
-        .ok_or_else(|| Error::new(ErrorKind::Other, "unable to find section ALMOSTRO"))?;
+        .ok_or_else(|| Error::new("unable to find section ALMOSTRO"))?;
 
-    Err(Error::new(ErrorKind::Other, "not implemented yet"))
+    Err(Error::new("not implemented yet"))
 }

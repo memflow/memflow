@@ -1,12 +1,16 @@
+use crate::error::{Error, Result};
+
 use dirs;
 use log::{info, trace, warn};
+use pdb::PDB;
 use std::fs;
-use std::io::{Cursor, Error, ErrorKind, Result};
+use std::fs::File;
+use std::io::Cursor;
 use std::path::PathBuf;
 
 use crate::dtb::DTB;
-use mem::{PhysicalRead, VirtualRead};
 use address::{Address, Length};
+use mem::{PhysicalRead, VirtualRead};
 
 use byteorder::ReadBytesExt;
 use byteorder::{ByteOrder, LittleEndian};
@@ -16,10 +20,25 @@ use goblin::pe::{debug::CodeviewPDB70DebugInfo, options::ParseOptions, PE};
 use uuid::{BytesError, Uuid};
 
 fn cache_dir() -> Result<PathBuf> {
-    let home = dirs::home_dir()
-        .ok_or_else(|| Error::new(ErrorKind::Other, "unable to get home directory"))?;
+    let home = dirs::home_dir().ok_or_else(|| Error::new("unable to get home directory"))?;
     let cache = home.join(".memflow").join("cache");
     Ok(cache)
+}
+
+fn try_download_pdb(url: &str, filename: &str) -> Result<()> {
+    let url = duma::utils::parse_url(&format!("{}/{}", url, filename))?;
+
+    println!("trying to download pdb from {:?}", url);
+    match duma::download::http_download(url, &ArgMatches::default(), "0.1") {
+        Ok(_) => (),
+        Err(e) => return Err(Error::new(format!("unable to download pdb file: {}", e))),
+    }
+
+    // try to parse pdb
+    let file = File::open(filename)?;
+    let mut pdb = PDB::open(file)?;
+
+    Ok(())
 }
 
 fn download_pdb(pdbname: &str, guid: &String) -> Result<()> {
@@ -31,29 +50,16 @@ fn download_pdb(pdbname: &str, guid: &String) -> Result<()> {
     ntkrnlmp.pdb/ID/ntkrnlmp.pd_
     ntkrnlmp.pdb/ID/file.ptr
     */
-    let url = match duma::utils::parse_url(&format!(
+    let url = duma::utils::parse_url(&format!(
         "https://msdl.microsoft.com/download/symbols/{}/{}/{}",
         pdbname, guid, pdbname
-    )) {
-        Ok(u) => u,
-        Err(e) => {
-            return Err(Error::new(
-                ErrorKind::Other,
-                format!("unable to format download url: {}", e),
-            ));
-        }
-    };
+    ))?;
 
     println!("downloading pdb from {:?}", url);
-    match duma::download::http_download(url, &ArgMatches::default(), "0.1") {
-        Ok(_) => Ok(()),
-        Err(e) => Err(Error::new(
-            ErrorKind::Other,
-            format!("unable to download pdb file: {}", e),
-        )),
-    }
+    duma::download::http_download(url, &ArgMatches::default(), "0.1")?;
 
     // TODO: check if file is empty (404, other error)
+    Ok(())
 }
 
 fn download_pdb_cache(pdbname: &str, guid: &String) -> Result<PathBuf> {
@@ -107,22 +113,12 @@ fn generate_guid(codeview: &CodeviewPDB70DebugInfo) -> std::result::Result<Strin
 pub fn fetch_pdb_from_pe(pe: &PE) -> Result<PathBuf> {
     let debug = match pe.debug_data {
         Some(d) => d,
-        None => {
-            return Err(Error::new(
-                ErrorKind::Other,
-                "unable to read debug_data in pe header",
-            ))
-        }
+        None => return Err(Error::new("unable to read debug_data in pe header")),
     };
 
     let codeview = match debug.codeview_pdb70_debug_info {
         Some(c) => c,
-        None => {
-            return Err(Error::new(
-                ErrorKind::Other,
-                "unable to read codeview in debug header",
-            ))
-        }
+        None => return Err(Error::new("unable to read codeview in debug header")),
     };
 
     // TODO: map error of generate_guid properly
@@ -134,28 +130,19 @@ pub fn fetch_pdb_from_pe(pe: &PE) -> Result<PathBuf> {
     )
 }
 
-pub fn fetch_pdb_from_mem<T: VirtualRead>(mem: &mut T, dtb: &DTB, kernel_base: Address) -> Result<PathBuf> {
+pub fn fetch_pdb_from_mem<T: VirtualRead>(
+    mem: &mut T,
+    dtb: &DTB,
+    kernel_base: Address,
+) -> Result<PathBuf> {
     let ntos_buf = mem
-        .virt_read(
-            dtb.arch,
-            dtb.dtb,
-            kernel_base,
-            Length::from_mb(32),
-        )
+        .virt_read(dtb.arch, dtb.dtb, kernel_base, Length::from_mb(32))
         .unwrap();
 
     let mut pe_opts = ParseOptions::default();
     pe_opts.resolve_rva = false;
 
-    let pe = match PE::parse_with_opts(&ntos_buf, &pe_opts) {
-        Ok(pe) => pe,
-        Err(e) => {
-            return Err(Error::new(
-                ErrorKind::Other,
-                format!("unable to parse pe header: {}", e),
-            ))
-        }
-    };
+    let pe = PE::parse_with_opts(&ntos_buf, &pe_opts)?;
 
     fetch_pdb_from_pe(&pe)
 }

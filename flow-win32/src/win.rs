@@ -1,12 +1,12 @@
 use log::{debug, info, trace};
-use std::path::PathBuf;
 use std::collections::HashMap;
+use std::path::PathBuf;
 
 use address::{Address, Length};
 use goblin::pe::PE;
 
-use crate::dtb::DTB;
 use crate::cache;
+use crate::dtb::DTB;
 
 pub mod types;
 
@@ -22,7 +22,6 @@ pub struct Windows {
 
 impl Windows {
     pub fn get_kernel_struct<'a>(&'a mut self, name: &str) -> Option<types::Struct> {
-
         match self.kernel_structs.get(name) {
             Some(s) => return Some(s.clone()),
             None => trace!("struct {} not found in cache", name),
@@ -32,7 +31,10 @@ impl Windows {
         match self.kernel_pdb {
             Some(_) => (),
             None => {
-                debug!("unable to resolve kernel_struct {} since pdb was not found", name);
+                debug!(
+                    "unable to resolve kernel_struct {} since pdb was not found",
+                    name
+                );
                 return None;
             }
         }
@@ -42,7 +44,7 @@ impl Windows {
             Ok(s) => {
                 self.kernel_structs.insert(String::from(name), s.clone());
                 return Some(s);
-            },
+            }
             Err(e) => trace!("struct {} not found: {:?}", name, e),
         }
         None

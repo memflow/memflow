@@ -1,7 +1,7 @@
 use libc_print::*;
 
-use std::io;
 use std::convert::TryFrom;
+use std::io;
 
 use tokio::io::AsyncRead;
 use tokio::net::UnixListener;
@@ -11,9 +11,9 @@ use tokio::runtime::current_thread;
 use capnp::{capability::Promise, Error};
 use capnp_rpc::{pry, rpc_twoparty_capnp, twoparty, RpcSystem};
 
+use ::mem::{PhysicalRead, PhysicalWrite, VirtualRead, VirtualWrite};
 use address::{Address, Length};
 use arch::{Architecture, InstructionSet};
-use ::mem::{PhysicalRead, PhysicalWrite, VirtualRead, VirtualWrite};
 
 use flow_va::VatImpl;
 
@@ -32,7 +32,9 @@ impl bridge::Server for BridgeImpl {
     ) -> Promise<(), Error> {
         let address = Address::from(pry!(params.get()).get_address());
         let length = Length::from(pry!(params.get()).get_length());
-        let data = mem::Wrapper::new().phys_read(address, length).unwrap_or_else(|_e| Vec::new());
+        let data = mem::Wrapper::new()
+            .phys_read(address, length)
+            .unwrap_or_else(|_e| Vec::new());
         results.get().set_data(&data);
         Promise::ok(())
     }
@@ -45,7 +47,9 @@ impl bridge::Server for BridgeImpl {
     ) -> Promise<(), Error> {
         let address = Address::from(pry!(params.get()).get_address());
         let data = pry!(pry!(params.get()).get_data());
-        let len = mem::Wrapper::new().phys_write(address, &data.to_vec()).unwrap_or_else(|_e| Length::from(0));
+        let len = mem::Wrapper::new()
+            .phys_write(address, &data.to_vec())
+            .unwrap_or_else(|_e| Length::from(0));
         results.get().set_length(len.as_u64());
         Promise::ok(())
     }
@@ -54,13 +58,15 @@ impl bridge::Server for BridgeImpl {
     fn virt_read(
         &mut self,
         params: bridge::VirtReadParams,
-        mut results: bridge::VirtReadResults
+        mut results: bridge::VirtReadResults,
     ) -> Promise<(), Error> {
         let ins = pry!(InstructionSet::try_from(pry!(params.get()).get_arch()));
         let dtb = Address::from(pry!(params.get()).get_dtb());
         let address = Address::from(pry!(params.get()).get_address());
         let length = Length::from(pry!(params.get()).get_length());
-        let data = VatImpl::new(mem::Wrapper::new()).virt_read(Architecture::from(ins), dtb, address, length).unwrap_or_else(|_e| Vec::new());
+        let data = VatImpl::new(mem::Wrapper::new())
+            .virt_read(Architecture::from(ins), dtb, address, length)
+            .unwrap_or_else(|_e| Vec::new());
         results.get().set_data(&data);
         Promise::ok(())
     }
@@ -75,7 +81,9 @@ impl bridge::Server for BridgeImpl {
         let dtb = Address::from(pry!(params.get()).get_dtb());
         let address = Address::from(pry!(params.get()).get_address());
         let data = pry!(pry!(params.get()).get_data());
-        let len = VatImpl::new(mem::Wrapper::new()).virt_write(Architecture::from(ins), dtb, address, &data.to_vec()).unwrap_or_else(|_e| Length::from(0));
+        let len = VatImpl::new(mem::Wrapper::new())
+            .virt_write(Architecture::from(ins), dtb, address, &data.to_vec())
+            .unwrap_or_else(|_e| Length::from(0));
         results.get().set_length(len.as_u64());
         Promise::ok(())
     }
@@ -101,7 +109,7 @@ pub fn listen(url: &str) -> io::Result<()> {
     current_thread::block_on_all(
         listener
             .incoming()
-            .map_err(|e| { libc_eprintln!("client accept failed: {:?}", e) })
+            .map_err(|e| libc_eprintln!("client accept failed: {:?}", e))
             .for_each(move |s| {
                 libc_eprintln!("client connected");
 

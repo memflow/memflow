@@ -4,12 +4,12 @@ use std::io::{Error, ErrorKind, Result};
 use std::path::PathBuf;
 
 use flow_core::address::{Address, Length};
+use flow_core::mem::VirtualRead;
 use flow_qemu::BridgeConnector;
 use flow_win32;
 use flow_win32::cache;
 use flow_win32::win::Windows;
 use goblin::pe::{options::ParseOptions, PE};
-use flow_core::mem::VirtualRead;
 use pdb::{FallibleIterator, PdbInternalSectionOffset};
 
 fn print_row(offset: PdbInternalSectionOffset, kind: &str, name: pdb::RawString<'_>) {

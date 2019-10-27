@@ -2,7 +2,7 @@ use libc_print::*;
 use std::ffi::CString;
 use std::os::raw::{c_int, c_ulonglong, c_void};
 
-use std::io::{Result};
+use std::io::Result;
 
 use crate::native::*;
 

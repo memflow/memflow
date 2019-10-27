@@ -1,3 +1,5 @@
+use log::{trace};
+
 #[macro_use]
 mod masks;
 use masks::*;
@@ -33,7 +35,7 @@ pub fn vtop<T: PhysicalRead>(mem: &mut T, dtb: Address, addr: Address) -> Result
     }
 
     if is_large_page!(pdpte.as_u64()) {
-        println!("found 1gb page");
+        trace!("found 1gb page");
         return Ok(Address::from(
             (pdpte.as_u64() & make_bit_mask(30, 51)) | (addr.as_u64() & make_bit_mask(0, 29)),
         ));
@@ -48,7 +50,7 @@ pub fn vtop<T: PhysicalRead>(mem: &mut T, dtb: Address, addr: Address) -> Result
     }
 
     if is_large_page!(pgd.as_u64()) {
-        println!("found 2mb page");
+        trace!("found 2mb page");
         return Ok(Address::from(
             (pgd.as_u64() & make_bit_mask(21, 51)) | (addr.as_u64() & make_bit_mask(0, 20)),
         ));
@@ -62,7 +64,7 @@ pub fn vtop<T: PhysicalRead>(mem: &mut T, dtb: Address, addr: Address) -> Result
         return Err(Error::new(ErrorKind::Other, "unable to read pte"));
     }
 
-    println!("found 4kb page");
+    trace!("found 4kb page");
     return Ok(Address::from(
         (pte.as_u64() & make_bit_mask(12, 51)) | (addr.as_u64() & make_bit_mask(0, 11)),
     ));

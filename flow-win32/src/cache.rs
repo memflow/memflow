@@ -1,19 +1,19 @@
 use crate::error::{Error, Result};
 
 use dirs;
-use log::{info, trace, warn};
+use log::info;
 use pdb::PDB;
 use std::fs;
 use std::fs::File;
 use std::io::Cursor;
 use std::path::PathBuf;
 
-use crate::dtb::DTB;
+use crate::kernel::KernelStubInfo;
 use address::{Address, Length};
-use mem::{PhysicalRead, VirtualRead};
+use mem::VirtualRead;
 
 use byteorder::ReadBytesExt;
-use byteorder::{ByteOrder, LittleEndian};
+use byteorder::LittleEndian;
 use clap::ArgMatches;
 use duma;
 use goblin::pe::{debug::CodeviewPDB70DebugInfo, options::ParseOptions, PE};
@@ -29,14 +29,11 @@ fn try_download_pdb(url: &str, filename: &str) -> Result<()> {
     let url = duma::utils::parse_url(&format!("{}/{}", url, filename))?;
 
     println!("trying to download pdb from {:?}", url);
-    match duma::download::http_download(url, &ArgMatches::default(), "0.1") {
-        Ok(_) => (),
-        Err(e) => return Err(Error::new(format!("unable to download pdb file: {}", e))),
-    }
+    duma::download::http_download(url, &ArgMatches::default(), "0.1")?;
 
     // try to parse pdb
     let file = File::open(filename)?;
-    let mut pdb = PDB::open(file)?;
+    let pdb = PDB::open(file)?;
 
     Ok(())
 }
@@ -132,11 +129,11 @@ pub fn fetch_pdb_from_pe(pe: &PE) -> Result<PathBuf> {
 
 pub fn fetch_pdb_from_mem<T: VirtualRead>(
     mem: &mut T,
-    dtb: &DTB,
+    kernel_stub_info: &KernelStubInfo,
     kernel_base: Address,
 ) -> Result<PathBuf> {
     let ntos_buf = mem
-        .virt_read(dtb.arch, dtb.dtb, kernel_base, Length::from_mb(32))
+        .virt_read(kernel_stub_info.arch, kernel_stub_info.dtb, kernel_base, Length::from_mb(32))
         .unwrap();
 
     let mut pe_opts = ParseOptions::default();

@@ -74,6 +74,18 @@ impl InstructionSet {
     pub fn len_u32(&self) -> Length {
         match_instruction_set!(self, len_u32)
     }
+
+    pub fn len_i64(&self) -> Length {
+        match_instruction_set!(self, len_i64)
+    }
+
+    pub fn len_i32(&self) -> Length {
+        match_instruction_set!(self, len_i32)
+    }
+
+    pub fn len_f32(&self) -> Length {
+        match_instruction_set!(self, len_f32)
+    }
 }
 
 // TODO: do we gain anything from this wrap?

@@ -1,22 +1,18 @@
-use crate::error::{Error, Result};
+use crate::error::Result;
 
-use log::{info, trace, warn};
-
-use std::ops::{Index, RangeFrom};
+use log::info;
 
 use address::{Address, Length};
 use mem::{PhysicalRead, VirtualRead};
-use scroll::ctx::MeasureWith;
 
 use pretty_hex::*;
 
-use crate::dtb::DTB;
-
-use goblin::pe::{self, PE};
+use crate::kernel::KernelStubInfo;
 
 // TODO: move this in a seperate crate as a elf/pe/macho helper for pa/va
 
 // TODO: we need both a physical and virtual reader, our use case is va though
+/*
 pub struct VirtualScrollReader<'a, T: PhysicalRead + VirtualRead> {
     mem: &'a mut T,
     dtb: DTB,
@@ -32,6 +28,7 @@ impl<'a, T: PhysicalRead + VirtualRead> VirtualScrollReader<'a, T> {
         }
     }
 }
+*/
 
 /*
 impl<'a, T: PhysicalRead + VirtualRead> Index<usize> for VirtualScrollReader<'a, T> {
@@ -71,10 +68,10 @@ impl<'a, T: PhysicalRead + VirtualRead, Ctx> MeasureWith<Ctx> for VirtualScrollR
 ///
 pub fn test_read_pe<T: PhysicalRead + VirtualRead>(
     mem: &mut T,
-    dtb: DTB,
+    stub_info: KernelStubInfo,
     base: Address,
 ) -> Result<()> {
-    let header_buf = mem.virt_read(dtb.arch, dtb.dtb, base, Length::from_kb(4))?;
+    let header_buf = mem.virt_read(stub_info.arch, stub_info.dtb, base, Length::from_kb(4))?;
     info!("{:?}", header_buf.hex_dump());
 
     /*

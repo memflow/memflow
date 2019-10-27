@@ -10,6 +10,7 @@ pub mod x86;
 pub mod va;
 pub use va::VatImpl;
 
+// TODO: replace by custom error results
 use std::io::Result;
 
 use address::Address;

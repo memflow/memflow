@@ -1,20 +1,18 @@
-use log::{debug, info, trace};
+use log::{debug, trace};
 use std::collections::HashMap;
 use std::path::PathBuf;
 
 use address::{Address, Length};
-use goblin::pe::PE;
 
-use crate::cache;
-use crate::dtb::DTB;
+use crate::kernel::KernelStubInfo;
 
 pub mod types;
 
 // TODO: cache processes somewhat?
 pub struct Windows {
-    pub dtb: DTB,
+    pub kernel_stub_info: KernelStubInfo,
     pub kernel_base: Address,
-    pub eproc_base: Address,
+    pub eprocess_base: Address,
 
     pub kernel_pdb: Option<PathBuf>,
     pub kernel_structs: HashMap<String, types::Struct>,

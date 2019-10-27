@@ -1,6 +1,6 @@
 use crate::error::{Error, Result};
 
-use log::{debug, info, trace};
+use log::{debug, info, trace, warn};
 
 use byteorder::{ByteOrder, LittleEndian};
 
@@ -11,21 +11,21 @@ use mem::{PhysicalRead, VirtualRead};
 use goblin::pe::options::ParseOptions;
 use goblin::pe::PE;
 
-use crate::dtb::DTB;
+use crate::kernel::KernelStubInfo;
 
 // TODO: -> Result<WinProcess>
-pub fn find<T: PhysicalRead + VirtualRead>(mem: &mut T, dtb: DTB) -> Result<Address> {
-    if dtb.arch.instruction_set == InstructionSet::X64 {
-        if !dtb.va.is_null() {
-            match find_x64_with_va(mem, &dtb) {
+pub fn find<T: PhysicalRead + VirtualRead>(mem: &mut T, stub_info: &KernelStubInfo) -> Result<Address> {
+    if stub_info.arch.instruction_set == InstructionSet::X64 {
+        if !stub_info.va.is_null() {
+            match find_x64_with_va(mem, stub_info) {
                 Ok(b) => return Ok(b),
-                Err(e) => println!("Error: {}", e),
+                Err(e) => warn!("{}", e),
             }
         }
 
         match find_x64(mem) {
             Ok(b) => return Ok(b),
-            Err(e) => println!("Error: {}", e),
+            Err(e) => warn!("{}", e),
         }
     } else {
         match find_x86(mem) {
@@ -37,20 +37,20 @@ pub fn find<T: PhysicalRead + VirtualRead>(mem: &mut T, dtb: DTB) -> Result<Addr
     Err(Error::new("unable to find ntoskrnl.exe"))
 }
 
-fn find_x64_with_va<T: PhysicalRead + VirtualRead>(mem: &mut T, dtb: &DTB) -> Result<Address> {
+fn find_x64_with_va<T: PhysicalRead + VirtualRead>(mem: &mut T, stub_info: &KernelStubInfo) -> Result<Address> {
     trace!(
         "find_x64_with_va: trying to find ntoskrnl.exe with va hint at {:x}",
-        dtb.va.as_u64()
+        stub_info.va.as_u64()
     );
 
     // va was found previously
-    let mut va_base = dtb.va.as_u64() & !0x1fffff;
-    while va_base + Length::from_mb(32).as_u64() > dtb.va.as_u64() {
+    let mut va_base = stub_info.va.as_u64() & !0x1fffff;
+    while va_base + Length::from_mb(32).as_u64() > stub_info.va.as_u64() {
         trace!("find_x64_with_va: probing at {:x}", va_base);
 
         let buf = mem.virt_read(
-            dtb.arch,
-            dtb.dtb,
+            stub_info.arch,
+            stub_info.dtb,
             Address::from(va_base),
             Length::from_mb(2),
         )?;
@@ -72,7 +72,7 @@ fn find_x64_with_va<T: PhysicalRead + VirtualRead>(mem: &mut T, dtb: &DTB) -> Re
             .filter(|(i, c)| {
                 // try to probe pe header
                 let probe_addr = Address::from(va_base + (*i as u64) * arch::x64::page_size().as_u64());
-                let probe_buf = mem.virt_read(dtb.arch, dtb.dtb, probe_addr, Length::from_mb(32)).unwrap();
+                let probe_buf = mem.virt_read(stub_info.arch, stub_info.dtb, probe_addr, Length::from_mb(32)).unwrap();
 
                 let mut pe_opts = ParseOptions::default();
                 pe_opts.resolve_rva = false;

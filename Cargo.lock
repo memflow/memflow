@@ -677,6 +677,7 @@ version = "0.1.0"
 dependencies = [
  "address 0.1.0",
  "arch 0.1.0",
+ "byteorder 1.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]

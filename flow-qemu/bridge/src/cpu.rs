@@ -20,13 +20,4 @@ pub fn state() -> Result<()> {
     QEMU_MUTEX_UNLOCK_IOTHREAD.unwrap()();
 
     Ok(())
-    /*
-    if env.is_null() {
-        libc_eprintln!("env is null");
-        Err(Error::new(ErrorKind::Other, "unable to get cpu env"))
-    } else {
-        libc_eprintln!("env is set!");
-        Ok(())
-    }
-    */
 }

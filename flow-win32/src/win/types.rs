@@ -19,7 +19,6 @@ pub struct Struct {
 }
 
 impl Struct {
-    // TODO: wrap this in win->struct("asdf")
     pub fn from(filename: PathBuf, class_name: &str) -> Result<Self> {
         let file = File::open(filename)?;
         let mut pdb = PDB::open(file)?;
@@ -40,7 +39,6 @@ impl Struct {
                     && !class.properties.forward_reference()
                 {
                     data.add(&type_finder, typ.index(), &mut needed_types)?;
-                    //println!("{:?}", class);
                     break;
                 }
             }
@@ -65,29 +63,10 @@ impl Struct {
             }
         }
 
-        if data.classes.is_empty() {
-            eprintln!("sorry, class {} was not found", class_name);
-        } else {
-            println!("{}", data);
-        }
-
-        println!("--------------------");
-
-        //data.classes.iter()
-        //    .inspect()
-
         // TODO: transform this to a hashmap
         let mut field_map = HashMap::new();
         for class in &data.classes {
-            //println!("{:?}", class.name);
             // TODO: filter class?
-            /*
-                    class
-                        .fields
-                        .iter()
-                        .filter(|f| f.name.to_string() == "UniqueProcessId")
-                        .for_each(|f| println!("{:?}", f));
-            */
             class.fields.iter().for_each(|f| {
                 field_map.insert(
                     f.name.to_string().into_owned(),

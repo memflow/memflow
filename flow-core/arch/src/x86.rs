@@ -20,3 +20,15 @@ pub fn len_u64() -> Length {
 pub fn len_u32() -> Length {
     Length::from(4)
 }
+
+pub fn len_i64() -> Length {
+    Length::from(4)
+}
+
+pub fn len_i32() -> Length {
+    Length::from(4)
+}
+
+pub fn len_f32() -> Length {
+    Length::from(4)
+}

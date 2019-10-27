@@ -109,7 +109,7 @@ pub fn listen(url: &str) -> io::Result<()> {
     current_thread::block_on_all(
         listener
             .incoming()
-            .map_err(|e| libc_eprintln!("client accept failed: {:?}", e))
+            .map_err(|e| { libc_eprintln!("client accept failed: {:?}", e); })
             .for_each(move |s| {
                 libc_eprintln!("client connected");
 

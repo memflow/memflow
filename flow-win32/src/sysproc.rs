@@ -47,7 +47,7 @@ pub fn find_exported<T: PhysicalRead + VirtualRead>(
     header
         .exports
         .iter()
-        .filter(|e| e.name.unwrap_or_default() == "PsInitialSystemProcess")
+        .filter(|e| e.name.unwrap_or_default() == "PsInitialSystemProcess") // PsActiveProcessHead
         .inspect(|e| info!("found eat entry: {:?}", e))
         .nth(0)
         .ok_or_else(|| {

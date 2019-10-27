@@ -77,31 +77,8 @@ fn dump_pdb(filename: &str) -> pdb::Result<()> {
 }
 
 fn microsoft_download_ntos<T: VirtualRead>(mem: &mut T, win: &Windows) -> Result<()> {
-    let ntos_buf = mem
-        .virt_read(
-            win.dtb.arch,
-            win.dtb.dtb,
-            win.kernel_base,
-            Length::from_mb(32),
-        )
-        .unwrap();
-
-    let mut pe_opts = ParseOptions::default();
-    pe_opts.resolve_rva = false;
-
-    let pe = match PE::parse_with_opts(&ntos_buf, &pe_opts) {
-        Ok(pe) => pe,
-        Err(e) => {
-            return Err(Error::new(
-                ErrorKind::Other,
-                format!("unable to parse pe header: {}", e),
-            ))
-        }
-    };
-
-    let pdb = cache::fetch_pdb(&pe).unwrap();
+    //let pdb = cache::fetch_pdb_from_mem(mem, win)?;
     //dump_pdb(pdb.to_str().unwrap_or_default()).unwrap();
-
     Ok(())
 }
 

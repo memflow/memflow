@@ -11,16 +11,16 @@ use mem::{PhysicalRead, VirtualRead};
 use goblin::pe::options::ParseOptions;
 use goblin::pe::PE;
 
-use crate::kernel::KernelStubInfo;
+use crate::kernel::StartBlock;
 
 // TODO: -> Result<WinProcess>
 pub fn find<T: PhysicalRead + VirtualRead>(
     mem: &mut T,
-    stub_info: &KernelStubInfo,
+    start_block: &StartBlock,
 ) -> Result<Address> {
-    if stub_info.arch.instruction_set == InstructionSet::X64 {
-        if !stub_info.va.is_null() {
-            match find_x64_with_va(mem, stub_info) {
+    if start_block.arch.instruction_set == InstructionSet::X64 {
+        if !start_block.va.is_null() {
+            match find_x64_with_va(mem, start_block) {
                 Ok(b) => return Ok(b),
                 Err(e) => warn!("{}", e),
             }
@@ -42,21 +42,21 @@ pub fn find<T: PhysicalRead + VirtualRead>(
 
 fn find_x64_with_va<T: PhysicalRead + VirtualRead>(
     mem: &mut T,
-    stub_info: &KernelStubInfo,
+    start_block: &StartBlock,
 ) -> Result<Address> {
     trace!(
         "find_x64_with_va: trying to find ntoskrnl.exe with va hint at {:x}",
-        stub_info.va.as_u64()
+        start_block.va.as_u64()
     );
 
     // va was found previously
-    let mut va_base = stub_info.va.as_u64() & !0x1fffff;
-    while va_base + Length::from_mb(32).as_u64() > stub_info.va.as_u64() {
+    let mut va_base = start_block.va.as_u64() & !0x1fffff;
+    while va_base + Length::from_mb(32).as_u64() > start_block.va.as_u64() {
         trace!("find_x64_with_va: probing at {:x}", va_base);
 
         let buf = mem.virt_read(
-            stub_info.arch,
-            stub_info.dtb,
+            start_block.arch,
+            start_block.dtb,
             Address::from(va_base),
             Length::from_mb(2),
         )?;
@@ -78,7 +78,7 @@ fn find_x64_with_va<T: PhysicalRead + VirtualRead>(
             .filter(|(i, c)| {
                 // try to probe pe header
                 let probe_addr = Address::from(va_base + (*i as u64) * arch::x64::page_size().as_u64());
-                let probe_buf = mem.virt_read(stub_info.arch, stub_info.dtb, probe_addr, Length::from_mb(32)).unwrap();
+                let probe_buf = mem.virt_read(start_block.arch, start_block.dtb, probe_addr, Length::from_mb(32)).unwrap();
 
                 let mut pe_opts = ParseOptions::default();
                 pe_opts.resolve_rva = false;

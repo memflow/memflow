@@ -7,7 +7,7 @@ use mem::{PhysicalRead, VirtualRead};
 
 use pretty_hex::*;
 
-use crate::kernel::KernelStubInfo;
+use crate::kernel::StartBlock;
 
 // TODO: move this in a seperate crate as a elf/pe/macho helper for pa/va
 
@@ -68,10 +68,10 @@ impl<'a, T: PhysicalRead + VirtualRead, Ctx> MeasureWith<Ctx> for VirtualScrollR
 ///
 pub fn test_read_pe<T: PhysicalRead + VirtualRead>(
     mem: &mut T,
-    stub_info: KernelStubInfo,
+    start_block: StartBlock,
     base: Address,
 ) -> Result<()> {
-    let header_buf = mem.virt_read(stub_info.arch, stub_info.dtb, base, Length::from_kb(4))?;
+    let header_buf = mem.virt_read(start_block.arch, start_block.dtb, base, Length::from_kb(4))?;
     info!("{:?}", header_buf.hex_dump());
 
     /*

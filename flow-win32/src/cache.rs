@@ -8,7 +8,7 @@ use std::fs::File;
 use std::io::Cursor;
 use std::path::PathBuf;
 
-use crate::kernel::KernelStubInfo;
+use crate::kernel::StartBlock;
 use address::{Address, Length};
 use mem::VirtualRead;
 
@@ -129,13 +129,13 @@ pub fn fetch_pdb_from_pe(pe: &PE) -> Result<PathBuf> {
 
 pub fn fetch_pdb_from_mem<T: VirtualRead>(
     mem: &mut T,
-    kernel_stub_info: &KernelStubInfo,
+    start_block: &StartBlock,
     kernel_base: Address,
 ) -> Result<PathBuf> {
     let ntos_buf = mem
         .virt_read(
-            kernel_stub_info.arch,
-            kernel_stub_info.dtb,
+            start_block.arch,
+            start_block.dtb,
             kernel_base,
             Length::from_mb(32),
         )

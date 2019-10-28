@@ -1,12 +1,12 @@
 use crate::error::Result;
 use log::info;
-use std::collections::HashMap;
 use mem::{PhysicalRead, VirtualRead};
+use std::collections::HashMap;
 
-pub mod error;
-pub mod pe;
 pub mod cache;
+pub mod error;
 pub mod kernel;
+pub mod pe;
 pub mod win;
 
 use win::{ProcessList, Windows};
@@ -25,7 +25,10 @@ pub fn init<T: PhysicalRead + VirtualRead>(mem: &mut T) -> Result<Windows> {
 
     // find dirtable base
     let stub_info = kernel::lowstub::find(mem)?;
-    info!("arch={:?} va={:x} dtb={:x}", stub_info.arch, stub_info.va, stub_info.dtb);
+    info!(
+        "arch={:?} va={:x} dtb={:x}",
+        stub_info.arch, stub_info.va, stub_info.dtb
+    );
 
     /*
         machine.cpu = Some(CPU{

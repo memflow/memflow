@@ -1,4 +1,4 @@
-use log::{trace};
+use log::trace;
 
 #[macro_use]
 mod masks;

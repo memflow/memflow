@@ -14,7 +14,10 @@ use goblin::pe::PE;
 use crate::kernel::KernelStubInfo;
 
 // TODO: -> Result<WinProcess>
-pub fn find<T: PhysicalRead + VirtualRead>(mem: &mut T, stub_info: &KernelStubInfo) -> Result<Address> {
+pub fn find<T: PhysicalRead + VirtualRead>(
+    mem: &mut T,
+    stub_info: &KernelStubInfo,
+) -> Result<Address> {
     if stub_info.arch.instruction_set == InstructionSet::X64 {
         if !stub_info.va.is_null() {
             match find_x64_with_va(mem, stub_info) {
@@ -37,7 +40,10 @@ pub fn find<T: PhysicalRead + VirtualRead>(mem: &mut T, stub_info: &KernelStubIn
     Err(Error::new("unable to find ntoskrnl.exe"))
 }
 
-fn find_x64_with_va<T: PhysicalRead + VirtualRead>(mem: &mut T, stub_info: &KernelStubInfo) -> Result<Address> {
+fn find_x64_with_va<T: PhysicalRead + VirtualRead>(
+    mem: &mut T,
+    stub_info: &KernelStubInfo,
+) -> Result<Address> {
     trace!(
         "find_x64_with_va: trying to find ntoskrnl.exe with va hint at {:x}",
         stub_info.va.as_u64()

@@ -4,13 +4,13 @@ use std::path::PathBuf;
 
 use address::{Address, Length};
 
-use crate::kernel::KernelStubInfo;
+use crate::kernel::StartBlock;
 
 pub mod types;
 
 // TODO: cache processes somewhat?
 pub struct Windows {
-    pub kernel_stub_info: KernelStubInfo,
+    pub start_block: StartBlock,
     pub kernel_base: Address,
     pub eprocess_base: Address,
 

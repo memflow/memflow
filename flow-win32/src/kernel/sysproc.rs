@@ -8,21 +8,21 @@ use mem::{PhysicalRead, VirtualRead};
 use goblin::pe::options::ParseOptions;
 use goblin::pe::PE;
 
-use crate::kernel::KernelStubInfo;
+use crate::kernel::StartBlock;
 
 pub fn find<T: PhysicalRead + VirtualRead>(
     mem: &mut T,
-    stub_info: &KernelStubInfo,
+    start_block: &StartBlock,
     ntos: Address,
 ) -> Result<Address> {
     trace!("trying to find system eprocess");
 
-    match find_exported(mem, stub_info, ntos) {
+    match find_exported(mem, start_block, ntos) {
         Ok(e) => return Ok(e),
         Err(e) => warn!("{}", e),
     }
 
-    match find_in_section(mem, stub_info, ntos) {
+    match find_in_section(mem, start_block, ntos) {
         Ok(e) => return Ok(e),
         Err(e) => warn!("{}", e),
     }
@@ -33,10 +33,10 @@ pub fn find<T: PhysicalRead + VirtualRead>(
 // find from exported symbol
 pub fn find_exported<T: PhysicalRead + VirtualRead>(
     mem: &mut T,
-    stub_info: &KernelStubInfo,
+    start_block: &StartBlock,
     ntos: Address,
 ) -> Result<Address> {
-    let header_buf = mem.virt_read(stub_info.arch, stub_info.dtb, ntos, Length::from_mb(32))?;
+    let header_buf = mem.virt_read(start_block.arch, start_block.dtb, ntos, Length::from_mb(32))?;
 
     let mut pe_opts = ParseOptions::default();
     pe_opts.resolve_rva = false;
@@ -51,7 +51,7 @@ pub fn find_exported<T: PhysicalRead + VirtualRead>(
         .ok_or_else(|| Error::new("unable to find export PsInitialSystemProcess"))
         .and_then(|e| Ok(ntos + Length::from(e.rva)))?;
 
-    //mem.virt_read_addr(stub_info.arch, stub_info.dtb, addr: Address).unwrap();
+    //mem.virt_read_addr(start_block.arch, start_block.dtb, addr: Address).unwrap();
     Ok(Address::null())
 }
 
@@ -60,14 +60,14 @@ pub fn find_exported<T: PhysicalRead + VirtualRead>(
 // scan in section
 pub fn find_in_section<T: PhysicalRead + VirtualRead>(
     mem: &mut T,
-    stub_info: &KernelStubInfo,
+    start_block: &StartBlock,
     ntos: Address,
 ) -> Result<Address> {
     // find section ALMOSTRO
     // scan for va of system process (dtb.va)
     // ... check if its 32 or 64bit
 
-    let header_buf = mem.virt_read(stub_info.arch, stub_info.dtb, ntos, Length::from_mb(32))?;
+    let header_buf = mem.virt_read(start_block.arch, start_block.dtb, ntos, Length::from_mb(32))?;
 
     let mut pe_opts = ParseOptions::default();
     pe_opts.resolve_rva = false;

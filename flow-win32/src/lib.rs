@@ -24,10 +24,10 @@ pub fn init<T: PhysicalRead + VirtualRead>(mem: &mut T) -> Result<Windows> {
     // TODO: add options to supply valid dtb
 
     // find dirtable base
-    let stub_info = kernel::lowstub::find(mem)?;
+    let start_block = kernel::lowstub::find(mem)?;
     info!(
         "arch={:?} va={:x} dtb={:x}",
-        stub_info.arch, stub_info.va, stub_info.dtb
+        start_block.arch, start_block.va, start_block.dtb
     );
 
     /*
@@ -39,19 +39,19 @@ pub fn init<T: PhysicalRead + VirtualRead>(mem: &mut T) -> Result<Windows> {
 
     // TODO: add option to supply a va hint
     // find ntoskrnl.exe base
-    let kernel_base = kernel::ntos::find(mem, &stub_info)?;
+    let kernel_base = kernel::ntos::find(mem, &start_block)?;
     info!("kernel_base={:x}", kernel_base);
 
     // try to fetch pdb
     //let pdb = cache::fetch_pdb(pe)?;
 
     // system eprocess -> find
-    let eprocess_base = kernel::sysproc::find(mem, &stub_info, kernel_base)?;
+    let eprocess_base = kernel::sysproc::find(mem, &start_block, kernel_base)?;
     info!("eprocess_base={:x}", eprocess_base);
 
     // grab pdb
     // TODO: new func or something in Windows impl
-    let kernel_pdb = match cache::fetch_pdb_from_mem(mem, &stub_info, kernel_base) {
+    let kernel_pdb = match cache::fetch_pdb_from_mem(mem, &start_block, kernel_base) {
         Ok(p) => Some(p),
         Err(e) => {
             info!("unable to fetch pdb from memory: {:?}", e);
@@ -62,7 +62,7 @@ pub fn init<T: PhysicalRead + VirtualRead>(mem: &mut T) -> Result<Windows> {
     println!("kernel_pdb: {:?}", kernel_pdb.clone().unwrap());
 
     let mut win = Windows {
-        kernel_stub_info: stub_info,
+        start_block: start_block,
         kernel_base: kernel_base,
         eprocess_base: eprocess_base,
         kernel_pdb: kernel_pdb,

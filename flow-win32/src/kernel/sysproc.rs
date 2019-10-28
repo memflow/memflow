@@ -42,8 +42,7 @@ pub fn find_exported<T: PhysicalRead + VirtualRead>(
     pe_opts.resolve_rva = false;
 
     let header = PE::parse_with_opts(&header_buf, &pe_opts).unwrap(); // TODO: error
-    let sys_proc =
-        header
+    let sys_proc = header
         .exports
         .iter()
         .filter(|e| e.name.unwrap_or_default() == "PsInitialSystemProcess") // PsActiveProcessHead

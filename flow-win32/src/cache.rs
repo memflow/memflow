@@ -12,8 +12,8 @@ use crate::kernel::KernelStubInfo;
 use address::{Address, Length};
 use mem::VirtualRead;
 
-use byteorder::ReadBytesExt;
 use byteorder::LittleEndian;
+use byteorder::ReadBytesExt;
 use clap::ArgMatches;
 use duma;
 use goblin::pe::{debug::CodeviewPDB70DebugInfo, options::ParseOptions, PE};
@@ -133,7 +133,12 @@ pub fn fetch_pdb_from_mem<T: VirtualRead>(
     kernel_base: Address,
 ) -> Result<PathBuf> {
     let ntos_buf = mem
-        .virt_read(kernel_stub_info.arch, kernel_stub_info.dtb, kernel_base, Length::from_mb(32))
+        .virt_read(
+            kernel_stub_info.arch,
+            kernel_stub_info.dtb,
+            kernel_base,
+            Length::from_mb(32),
+        )
         .unwrap();
 
     let mut pe_opts = ParseOptions::default();

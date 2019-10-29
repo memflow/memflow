@@ -1,4 +1,5 @@
 use crate::error::{Error, Result};
+use log::warn;
 
 use dirs;
 use log::info;
@@ -25,41 +26,45 @@ fn cache_dir() -> Result<PathBuf> {
     Ok(cache)
 }
 
-fn try_download_pdb(url: &str, filename: &str) -> Result<()> {
+fn try_download_pdb(url: &String, filename: &String) -> Result<()> {
     let url = duma::utils::parse_url(&format!("{}/{}", url, filename))?;
 
     println!("trying to download pdb from {:?}", url);
     duma::download::http_download(url, &ArgMatches::default(), "0.1")?;
 
     // try to parse pdb
-    let file = File::open(filename)?;
-    let pdb = PDB::open(file)?;
+    let file = File::open(filename).map_err(|e| { fs::remove_file(filename).ok(); e })?;
+    PDB::open(file).map_err(|e| { fs::remove_file(filename).ok(); e })?;
 
     Ok(())
 }
 
-fn download_pdb(pdbname: &str, guid: &String) -> Result<()> {
+fn download_pdb(pdbname: &String, guid: &String) -> Result<()> {
     info!("downloading pdb for {} with guid/age {}", pdbname, guid);
 
-    /*
-    TODO: in reality this is 3 urls  which we check in order:
-    ntkrnlmp.pdb/ID/ntkrnlmp.pdb
-    ntkrnlmp.pdb/ID/ntkrnlmp.pd_
-    ntkrnlmp.pdb/ID/file.ptr
-    */
-    let url = duma::utils::parse_url(&format!(
-        "https://msdl.microsoft.com/download/symbols/{}/{}/{}",
-        pdbname, guid, pdbname
-    ))?;
+    let base_url = format!("https://msdl.microsoft.com/download/symbols/{}/{}", pdbname, guid);
+    match try_download_pdb(&base_url, pdbname) {
+        Ok(_) => return Ok(()),
+        Err(e) => warn!("unable to download pdb: {:?}", e),
+    }
 
-    println!("downloading pdb from {:?}", url);
-    duma::download::http_download(url, &ArgMatches::default(), "0.1")?;
+    let mut pdbname2 = String::from(pdbname);
+    pdbname2.truncate(pdbname2.len() - 1);
+    pdbname2.push('_');
+    match try_download_pdb(&base_url, &pdbname2) {
+        Ok(_) => return Ok(()),
+        Err(e) => warn!("could not fetch {}: {:?}", pdbname2, e),
+    }
 
-    // TODO: check if file is empty (404, other error)
-    Ok(())
+    match try_download_pdb(&base_url, &"file.ptr".to_string()) {
+        Ok(_) => return Ok(()),
+        Err(e) => warn!("could not fetch file.ptr: {:?}", e),
+    }
+
+    Err(Error::new("unable to download a valid pdb"))
 }
 
-fn download_pdb_cache(pdbname: &str, guid: &String) -> Result<PathBuf> {
+fn download_pdb_cache(pdbname: &String, guid: &String) -> Result<PathBuf> {
     info!("fetching pdb for {} with guid/age {}", pdbname, guid);
 
     let cache_dir = cache_dir()?.join(pdbname);
@@ -122,7 +127,7 @@ pub fn fetch_pdb_from_pe(pe: &PE) -> Result<PathBuf> {
     download_pdb_cache(
         &String::from_utf8(codeview.filename.to_vec())
             .unwrap_or_default()
-            .trim_matches(char::from(0)),
+            .trim_matches(char::from(0)).to_string(),
         &generate_guid(&codeview).unwrap_or_default(),
     )
 }

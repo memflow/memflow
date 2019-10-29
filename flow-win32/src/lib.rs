@@ -49,17 +49,19 @@ pub fn init<T: PhysicalRead + VirtualRead>(mem: &mut T) -> Result<Windows> {
     let eprocess_base = kernel::sysproc::find(mem, &start_block, kernel_base)?;
     info!("eprocess_base={:x}", eprocess_base);
 
+    // TODO: add a module like sysproc/ntoskrnl/etc which will fetch pdb with various fallbacks and return early here
     // grab pdb
     // TODO: new func or something in Windows impl
     let kernel_pdb = match cache::fetch_pdb_from_mem(mem, &start_block, kernel_base) {
-        Ok(p) => Some(p),
+        Ok(p) => {
+            info!("valid kernel_pdb found: {:?}", p);
+            Some(p)
+        },
         Err(e) => {
-            info!("unable to fetch pdb from memory: {:?}", e);
+            info!("unable to fetch pdb for ntoskrnl: {:?}", e);
             None
         }
     };
-
-    println!("kernel_pdb: {:?}", kernel_pdb.clone().unwrap());
 
     let mut win = Windows {
         start_block: start_block,

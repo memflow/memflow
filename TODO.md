@@ -8,6 +8,12 @@ va:
 - move va into flow-core and use forward declares in core
 - could va serve as an entirely seperate crate (and we just provide the trait impls locally?)
 
+win:
+- verify each stage and early abort (e.g. see if offsets can be probed from the pdb/struct parser)
+
+download:
+- fork duma and add proper lib stuff (create a struct instead of argopts)
+
 core/arch:
 - find a better way to define architecture agnostic type lengths
 

@@ -22,6 +22,23 @@ pci/tlp:
 hex:
 - use m4b/hexplay for colored hex output
 
+qemu:
+- add option to access rpc via unix/udp/tcp
+
+cli:
+- add a feature to parse / edit xmls via the cli so we can make sure all vms are setup for memflow
+  and we can resolve the socket url by vm name
+- remote cli (which can access the cli-daemon remotly) with those features as well!
+
+general:
+- c bindings
+https://www.greyblake.com/blog/2017-08-10-exposing-rust-library-to-c/
+- js bindings
+https://doc.rust-lang.org/1.2.0/book/rust-inside-other-languages.html
+
+other:
+- create a rpm/tlp32 wrapper/hook so u can inject memflow into any regular rpm tool
+
 goblin fixes:
 https://github.com/libvmi/libvmi/blob/master/tools/windows-offset-finder/getGUID.cpp#L309
 

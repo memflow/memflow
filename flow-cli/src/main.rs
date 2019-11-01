@@ -111,5 +111,8 @@ fn main() {
 
     // os functionality should be located in core!
     let win = flow_win32::init(&mut bridge).unwrap();
-    microsoft_download_ntos(&mut bridge, &win).unwrap();
+    //microsoft_download_ntos(&mut bridge, &win).unwrap();
+    
+    // iterate processes
+    
 }

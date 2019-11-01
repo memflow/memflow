@@ -51,8 +51,11 @@ pub fn find_exported<T: PhysicalRead + VirtualRead>(
         .ok_or_else(|| Error::new("unable to find export PsInitialSystemProcess"))
         .and_then(|e| Ok(ntos + Length::from(e.rva)))?;
 
-    //mem.virt_read_addr(start_block.arch, start_block.dtb, addr: Address).unwrap();
-    Ok(Address::null())
+    // read value again
+    // TODO: fallback for 32bit
+    // TODO: wrap error properly
+    let addr = mem.virt_read_addr(start_block.arch, start_block.dtb, sys_proc)?;
+    Ok(addr)
 }
 
 // scan in pdb

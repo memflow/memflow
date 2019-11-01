@@ -9,7 +9,7 @@ pub mod kernel;
 pub mod pe;
 pub mod win;
 
-use win::{ProcessList, Windows};
+use win::{Windows};
 
 /*
 Options:
@@ -91,6 +91,6 @@ pub fn init<T: PhysicalRead + VirtualRead>(mem: &mut T) -> Result<Windows> {
 
     // TODO: copy architecture and
 
-    let list = win.process_list();
+    let list = win.process_iter(mem);
     Ok(win)
 }

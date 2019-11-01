@@ -6,6 +6,8 @@ use byteorder::{BigEndian, ByteOrder, LittleEndian};
 use address::{Address, Length};
 use arch::{self, Architecture, InstructionSet};
 
+use std::ffi::{CStr, CString};
+
 pub trait PhysicalRead {
     fn phys_read(&mut self, addr: Address, len: Length) -> Result<Vec<u8>>;
 }
@@ -85,6 +87,19 @@ pub trait VirtualRead {
             read_f32,
             &r
         ))
+    }
+
+    fn virt_read_cstr(&mut self, arch: Architecture, dtb: Address, addr: Address, len: Length) -> Result<String> {
+        let mut r = self.virt_read(arch, dtb, addr, len)?;
+        match r.iter().enumerate().filter(|(i, c)| **c == 0u8).nth(0) {
+            Some((n, _)) => {
+                r.truncate(n);
+            },
+            None => (),
+        }
+
+        let v = CString::new(r)?;
+        Ok(String::from(v.to_string_lossy()))
     }
 }
 

@@ -42,6 +42,7 @@ impl Address {
     }
 }
 
+// Address + Length => Address
 impl ops::Add<Length> for Address {
     type Output = Self;
 
@@ -52,6 +53,7 @@ impl ops::Add<Length> for Address {
     }
 }
 
+// Address += Length
 impl ops::AddAssign<Length> for Address {
     fn add_assign(&mut self, other: Length) {
         *self = Self {
@@ -75,6 +77,15 @@ impl ops::Sub<Length> for Address {
 
     fn sub(self, other: Length) -> Address {
         Address::from(self.0 - other.as_u64())
+    }
+}
+
+// Address -= Length
+impl ops::SubAssign<Length> for Address {
+    fn sub_assign(&mut self, other: Length) {
+        *self = Self {
+            0: self.0 - other.as_u64(),
+        }
     }
 }
 

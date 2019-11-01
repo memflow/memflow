@@ -10,6 +10,12 @@ impl fmt::LowerHex for Length {
     }
 }
 
+impl From<u16> for Length {
+    fn from(item: u16) -> Self {
+        Self { 0: item as u64 }
+    }
+}
+
 impl From<i32> for Length {
     fn from(item: i32) -> Self {
         Self { 0: item as u64 }

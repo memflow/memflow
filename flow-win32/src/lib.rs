@@ -21,6 +21,7 @@ Options:
 - supply kernel offsets for basic structs (dumped windbg maybe)
 */
 
+// TODO: can we get rid of RefCell and just use Rc ?
 type Memory<T> = Rc<RefCell<T>>;
 
 // TODO: impl Windows {}

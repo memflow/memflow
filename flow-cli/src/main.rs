@@ -43,27 +43,20 @@ fn main() {
 
     // os functionality should be located in core!
     let bridgerc = Rc::new(RefCell::new(bridge));
-    let mut win = Box::new(flow_win32::init(bridgerc).unwrap());
-    //microsoft_download_ntos(&mut bridge, &win).unwrap();
-    
-    // iterate processes
-    /*println!(
-        "_EPROCESS::UniqueProcessId: {:?}",
-        win.get_kernel_struct("_EPROCESS")
-            .unwrap()
-            .get_field("UniqueProcessId")
-    );*/
+    let mut win = flow_win32::init(bridgerc).unwrap();
 
-/*    win
-        .process_list()
-        .unwrap()
-        .iter()
-        .for_each(|p| println!("test: {:x}", p.eprocess));*/
-
-    win
+    let mut proc = win
         .process_iter()
-        .for_each(|mut p| {
-            println!("test: {:?} {:?}", p.get_pid(), p.get_name());
-        });
+        .filter_map(|mut p| {
+            if p.get_name().unwrap_or_default() == "svchost.exe" {
+                Some(p)
+            } else {
+                None
+            }
+        })
+        .nth(0)
+        .ok_or_else(|| "unable to find svchost.exe")
+        .unwrap();
 
+    println!("found svchost.exe: {:?} {:?}", proc.get_pid(), proc.get_name());
 }

@@ -6,7 +6,7 @@ use byteorder::{ByteOrder, LittleEndian};
 
 use address::{Address, Length};
 use arch::InstructionSet;
-use mem::{PhysicalRead, VirtualRead};
+use mem::{VirtualRead};
 
 use goblin::pe::options::ParseOptions;
 use goblin::pe::PE;
@@ -14,7 +14,7 @@ use goblin::pe::PE;
 use crate::kernel::StartBlock;
 
 // TODO: -> Result<WinProcess>
-pub fn find<T: PhysicalRead + VirtualRead>(
+pub fn find<T: VirtualRead>(
     mem: &mut T,
     start_block: &StartBlock,
 ) -> Result<Address> {
@@ -40,7 +40,7 @@ pub fn find<T: PhysicalRead + VirtualRead>(
     Err(Error::new("unable to find ntoskrnl.exe"))
 }
 
-fn find_x64_with_va<T: PhysicalRead + VirtualRead>(
+fn find_x64_with_va<T: VirtualRead>(
     mem: &mut T,
     start_block: &StartBlock,
 ) -> Result<Address> {
@@ -117,10 +117,10 @@ fn find_x64_with_va<T: PhysicalRead + VirtualRead>(
     ))
 }
 
-fn find_x64<T: PhysicalRead + VirtualRead>(mem: &mut T) -> Result<Address> {
+fn find_x64<T: VirtualRead>(mem: &mut T) -> Result<Address> {
     Err(Error::new("find_x64(): not implemented yet"))
 }
 
-fn find_x86<T: PhysicalRead + VirtualRead>(mem: &mut T) -> Result<Address> {
+fn find_x86<T: VirtualRead>(mem: &mut T) -> Result<Address> {
     Err(Error::new("find_x86(): not implemented yet"))
 }

@@ -1,4 +1,5 @@
 // https://github.com/willglynn/pdb/blob/master/examples/pdb2hpp.rs
+use log::trace;
 use std::collections::BTreeSet;
 
 pub type TypeSet = BTreeSet<pdb::TypeIndex>;
@@ -433,7 +434,7 @@ impl<'p> Data<'p> {
             }
 
             // ignore
-            other => eprintln!("warning: don't know how to add {:?}", other),
+            other => trace!("don't know how to add {:?}", other),
         }
 
         Ok(())

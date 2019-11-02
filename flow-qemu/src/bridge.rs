@@ -58,6 +58,8 @@ impl BridgeConnector {
 impl PhysicalRead for BridgeConnector {
     // physRead @0 (address :UInt64, length :UInt64) -> (data :Data);
     fn phys_read(&mut self, addr: Address, len: Length) -> Result<Vec<u8>> {
+        trace!("phys_read({:?}, {:?})", addr, len);
+        
         let mut request = self.bridge.phys_read_request();
         request.get().set_address(addr.as_u64());
         request.get().set_length(len.as_u64());
@@ -75,6 +77,8 @@ impl PhysicalRead for BridgeConnector {
 impl PhysicalWrite for BridgeConnector {
     // physWrite @1 (address :UInt64, data: Data) -> (length :UInt64);
     fn phys_write(&mut self, addr: Address, data: &Vec<u8>) -> Result<Length> {
+        trace!("phys_write({:?})", addr);
+
         let mut request = self.bridge.phys_write_request();
         request.get().set_address(addr.as_u64());
         request.get().set_data(data);
@@ -148,6 +152,8 @@ impl VirtualRead for BridgeConnector {
         addr: Address,
         len: Length,
     ) -> Result<Vec<u8>> {
+        trace!("virt_read({:?}, {:?}, {:?}, {:?})", arch, dtb, addr, len);
+
         if len > Length::from_mb(32) {
             info!("virt_read(): reading multiple 32mb chunks");
             let mut result: Vec<u8> = vec![0; len.as_usize()];
@@ -186,6 +192,7 @@ impl VirtualWrite for BridgeConnector {
         data: &Vec<u8>,
     ) -> Result<Length> {
         // TODO: implement chunk logic
+        trace!("virt_write({:?}, {:?}, {:?})", arch, dtb, addr);
         self.virt_write_chunk(arch, dtb, addr, data)
     }
 }

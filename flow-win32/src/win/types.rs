@@ -1,8 +1,11 @@
-// TODO: custom errors
-use pdb::{FallibleIterator, Result, PDB};
+use log::{debug, trace};
+
+use pdb::{self, FallibleIterator, Result};
 use std::collections::HashMap;
 use std::fs::File;
 use std::path::PathBuf;
+
+use address::{Length};
 
 mod data;
 use data::TypeSet;
@@ -10,7 +13,7 @@ use data::TypeSet;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Field {
     pub type_name: String,
-    pub offset: u16,
+    pub offset: Length,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -21,7 +24,7 @@ pub struct Struct {
 impl Struct {
     pub fn from(filename: PathBuf, class_name: &str) -> Result<Self> {
         let file = File::open(filename)?;
-        let mut pdb = PDB::open(file)?;
+        let mut pdb = pdb::PDB::open(file)?;
 
         let type_information = pdb.type_information()?;
         let mut type_finder = type_information.finder();
@@ -72,7 +75,7 @@ impl Struct {
                     f.name.to_string().into_owned(),
                     Field {
                         type_name: f.type_name.clone(),
-                        offset: f.offset,
+                        offset: Length::from(f.offset),
                     },
                 );
             });
@@ -85,5 +88,36 @@ impl Struct {
 
     pub fn get_field(&self, name: &str) -> Option<&Field> {
         self.field_map.get(name)
+    }
+}
+
+#[derive(Clone)]
+pub struct PDB {
+    pub file: PathBuf,
+    pub structs: HashMap<String, Struct>,
+}
+
+impl PDB {
+    pub fn new(file: PathBuf) -> Self {
+        PDB{
+            file: file,
+            structs: HashMap::new(),
+        }
+    }
+
+    pub fn get_struct(&mut self, name: &str) -> Option<Struct> {
+        match self.structs.get(name) {
+            Some(s) => return Some(s.clone()),
+            None => trace!("struct {} not found in cache", name),
+        }
+
+        match Struct::from(self.file.clone(), name) {
+            Ok(s) => {
+                self.structs.insert(String::from(name), s.clone());
+                return Some(s);
+            }
+            Err(e) => trace!("struct {} not found: {:?}", name, e),
+        }
+        None
     }
 }

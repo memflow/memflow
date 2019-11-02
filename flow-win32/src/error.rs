@@ -49,11 +49,26 @@ impl std::error::Error for Error {
     }
 }
 
+impl std::convert::From<&str> for Error {
+    fn from(error: &str) -> Self {
+        Self::new(error)
+    }
+}
+
 impl std::convert::From<std::io::Error> for Error {
     fn from(error: std::io::Error) -> Self {
         Self::new(error)
     }
 }
+
+// TODO: wait for try_trait to be stabilized
+/*
+impl std::convert::From<std::option::NoneError> for Error {
+    fn from(error: std::option::NoneError) -> Self {
+        Self::new(error)
+    }
+}
+*/
 
 impl std::convert::From<pdb::Error> for Error {
     fn from(error: pdb::Error) -> Self {

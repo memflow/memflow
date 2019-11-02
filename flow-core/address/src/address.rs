@@ -3,7 +3,7 @@ use std::ops;
 
 use crate::length::Length;
 
-#[derive(Debug, Copy, Clone, PartialEq, PartialOrd)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Address(u64);
 
 impl fmt::LowerHex for Address {

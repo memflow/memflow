@@ -1,7 +1,7 @@
 use std::fmt;
 use std::ops;
 
-#[derive(Debug, Copy, Clone, PartialEq, PartialOrd)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Length(u64);
 
 impl fmt::LowerHex for Length {

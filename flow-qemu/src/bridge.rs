@@ -1,10 +1,11 @@
 use log::{debug, info, trace};
 
 use std::io::{Error, ErrorKind, Result};
-use std::path::Path;
+use std::net::SocketAddr;
+use url::Url;
 
 use tokio::io::AsyncRead;
-use tokio::net::UnixStream;
+use tokio::net::{UnixStream, TcpStream};
 use tokio::prelude::*;
 use tokio::runtime::current_thread::Runtime;
 
@@ -23,11 +24,44 @@ pub struct BridgeConnector {
 }
 
 impl BridgeConnector {
-    pub fn connect<'a, P: AsRef<Path>>(path: P) -> Result<BridgeConnector> {
-        let mut runtime = Runtime::new().unwrap();
-        let stream = runtime.block_on(UnixStream::connect(path))?;
-        let (reader, writer) = stream.split();
+    pub fn connect(urlstr: &str) -> Result<BridgeConnector> {
+        let url = Url::parse(urlstr)
+            .map_err(|e| Error::new(ErrorKind::Other, e))?;
 
+        match url.scheme() {
+            "unix" => {
+                let mut runtime = Runtime::new().unwrap();
+                let stream = runtime.block_on(UnixStream::connect(url.path()))?;
+                let (reader, writer) = stream.split();
+
+                Ok(BridgeConnector {
+                    bridge: Self::connect_rpc(&mut runtime, reader, writer)?,
+                    runtime: runtime,
+                })
+            },
+            "tcp" => {
+                let addr = url.path().parse::<SocketAddr>()
+                    .map_err(|e| Error::new(ErrorKind::Other, e))?;
+
+                let mut runtime = Runtime::new().unwrap();
+                let stream = runtime.block_on(TcpStream::connect(&addr))?;
+                let (reader, writer) = stream.split();
+
+                Ok(BridgeConnector {
+                    bridge: Self::connect_rpc(&mut runtime, reader, writer)?,
+                    runtime: runtime,
+                })
+            },
+            _ => {
+                Err(Error::new(ErrorKind::Other, "invalid url scheme"))
+            }
+        }
+    }
+
+    fn connect_rpc<T, U>(runtime: &mut Runtime, reader: T, writer: U) -> Result<bridge::Client>
+        where T: ::std::io::Read + 'static,
+              U: ::std::io::Write + 'static,
+    {
         let network = Box::new(twoparty::VatNetwork::new(
             reader,
             std::io::BufWriter::new(writer),
@@ -40,10 +74,7 @@ impl BridgeConnector {
 
         runtime.spawn(rpc_system.map_err(|_e| ()));
 
-        Ok(BridgeConnector {
-            bridge: bridge,
-            runtime: runtime,
-        })
+        Ok(bridge)
     }
 
     pub fn read_registers(&mut self) -> Result<Vec<u8>> {

@@ -14,26 +14,28 @@ use flow_win32::win::{Windows, process::Process};
 use goblin::pe::{options::ParseOptions, PE};
 use pdb::{FallibleIterator, PdbInternalSectionOffset};
 
+use url::{Url, ParseError};
+
 fn main() {
     pretty_env_logger::init();
 
     let argv = App::new("flow-core")
         .version("0.1")
         .arg(
-            Arg::with_name("socket")
-                .short("s")
-                .long("socket")
-                .value_name("FILE")
-                .help("bridge unix socket file")
+            Arg::with_name("bridge-url")
+                .short("url")
+                .long("bridge-url")
+                .value_name("URL")
+                .help("bridge socket url")
                 .takes_value(true),
         )
         .get_matches();
 
     // this is just some test code
-    let socket = argv
-        .value_of("socket")
-        .unwrap_or("/tmp/qemu-connector-bridge");
-    let bridge = match BridgeConnector::connect(socket) {
+    let url = argv
+        .value_of("bridge-url")
+        .unwrap_or("unix:/tmp/qemu-connector-bridge");
+    let bridge = match BridgeConnector::connect(url) {
         Ok(s) => s,
         Err(e) => {
             println!("couldn't connect to bridge: {:?}", e);

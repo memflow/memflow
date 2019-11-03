@@ -1,14 +1,17 @@
 use libc_print::*;
 
 use std::convert::TryFrom;
-use std::io;
+use std::io::{self, Error, ErrorKind, Result};
+
+use std::net::SocketAddr;
+use url::Url;
 
 use tokio::io::AsyncRead;
-use tokio::net::UnixListener;
+use tokio::net::{UnixListener, TcpListener};
 use tokio::prelude::*;
 use tokio::runtime::current_thread;
 
-use capnp::{capability::Promise, Error};
+use capnp::{self, capability::Promise};
 use capnp_rpc::{pry, rpc_twoparty_capnp, twoparty, RpcSystem};
 
 use ::mem::{PhysicalRead, PhysicalWrite, VirtualRead, VirtualWrite};
@@ -29,7 +32,7 @@ impl bridge::Server for BridgeImpl {
         &mut self,
         params: bridge::PhysReadParams,
         mut results: bridge::PhysReadResults,
-    ) -> Promise<(), Error> {
+    ) -> Promise<(), capnp::Error> {
         let address = Address::from(pry!(params.get()).get_address());
         let length = Length::from(pry!(params.get()).get_length());
         let data = mem::Wrapper::new()
@@ -44,7 +47,7 @@ impl bridge::Server for BridgeImpl {
         &mut self,
         params: bridge::PhysWriteParams,
         mut results: bridge::PhysWriteResults,
-    ) -> Promise<(), Error> {
+    ) -> Promise<(), capnp::Error> {
         let address = Address::from(pry!(params.get()).get_address());
         let data = pry!(pry!(params.get()).get_data());
         let len = mem::Wrapper::new()
@@ -59,7 +62,7 @@ impl bridge::Server for BridgeImpl {
         &mut self,
         params: bridge::VirtReadParams,
         mut results: bridge::VirtReadResults,
-    ) -> Promise<(), Error> {
+    ) -> Promise<(), capnp::Error> {
         let ins = pry!(InstructionSet::try_from(pry!(params.get()).get_arch()));
         let dtb = Address::from(pry!(params.get()).get_dtb());
         let address = Address::from(pry!(params.get()).get_address());
@@ -76,7 +79,7 @@ impl bridge::Server for BridgeImpl {
         &mut self,
         params: bridge::VirtWriteParams,
         mut results: bridge::VirtWriteResults,
-    ) -> Promise<(), Error> {
+    ) -> Promise<(), capnp::Error> {
         let ins = pry!(InstructionSet::try_from(pry!(params.get()).get_arch()));
         let dtb = Address::from(pry!(params.get()).get_dtb());
         let address = Address::from(pry!(params.get()).get_address());
@@ -93,44 +96,82 @@ impl bridge::Server for BridgeImpl {
     fn read_registers(
         &mut self,
         params: bridge::ReadRegistersParams,
-        mut results: bridge::ReadRegistersResults,
-    ) -> Promise<(), Error> {
+        results: bridge::ReadRegistersResults,
+    ) -> Promise<(), capnp::Error> {
         // TODO:
         cpu::state().unwrap();
         Promise::ok(())
     }
 }
 
-pub fn listen(url: &str) -> io::Result<()> {
-    let listener = UnixListener::bind(url)?;
+fn listen_rpc<T, U>(bridge: &bridge::Client, reader: T, writer: U)
+    where T: ::std::io::Read + 'static,
+          U: ::std::io::Write + 'static,
+{
+    let network = twoparty::VatNetwork::new(
+        reader,
+        std::io::BufWriter::new(writer),
+        rpc_twoparty_capnp::Side::Server,
+        Default::default(),
+    );
 
-    let bridge = bridge::ToClient::new(BridgeImpl).into_client::<::capnp_rpc::Server>();
+    let rpc_system = RpcSystem::new(Box::new(network), Some(bridge.clone().client));
+    current_thread::spawn(rpc_system.map_err(|e| {
+        libc_eprintln!("error: {:?}", e);
+    }));
+}
 
-    current_thread::block_on_all(
-        listener
-            .incoming()
-            .map_err(|e| {
-                libc_eprintln!("client accept failed: {:?}", e);
-            })
-            .for_each(move |s| {
-                libc_eprintln!("client connected");
+pub fn listen(urlstr: &str) -> Result<()> {
+    // TODO: error convert
+    let url = Url::parse(urlstr)
+        .map_err(|e| Error::new(ErrorKind::Other, e))?;
 
-                //s.set_nodelay(true)?;
-                let (reader, writer) = s.split();
-                let network = twoparty::VatNetwork::new(
-                    reader,
-                    std::io::BufWriter::new(writer),
-                    rpc_twoparty_capnp::Side::Server,
-                    Default::default(),
-                );
+    match url.scheme() {
+        "unix" => {
+            let listener = UnixListener::bind(url.path())?;
+            let bridge = bridge::ToClient::new(BridgeImpl).into_client::<::capnp_rpc::Server>();
 
-                let rpc_system = RpcSystem::new(Box::new(network), Some(bridge.clone().client));
-                current_thread::spawn(rpc_system.map_err(|e| {
-                    libc_eprintln!("error: {:?}", e);
-                }));
-                Ok(())
-            }),
-    )
-    .map_err(|_e| io::Error::new(io::ErrorKind::Other, "unable to listen for connections"))
-    .and_then(|_v| Ok(()))
+            current_thread::block_on_all(
+                listener
+                    .incoming()
+                    .map_err(|e| {
+                        libc_eprintln!("client accept failed: {:?}", e);
+                    })
+                    .for_each(move |s| {
+                        libc_eprintln!("client connected");
+                        let (reader, writer) = s.split();
+                        listen_rpc(&bridge, reader, writer);
+                        Ok(())
+                    }),
+            )
+            .map_err(|_e| Error::new(ErrorKind::Other, "unable to listen for connections"))
+            .and_then(|_v| Ok(()))
+        },
+        "tcp" => {
+            let addr = url.path().parse::<SocketAddr>()
+                .map_err(|e| Error::new(ErrorKind::Other, e))?;
+            let listener = TcpListener::bind(&addr)?;
+            let bridge = bridge::ToClient::new(BridgeImpl).into_client::<::capnp_rpc::Server>();
+
+            current_thread::block_on_all(
+                listener
+                    .incoming()
+                    .map_err(|e| {
+                        libc_eprintln!("client accept failed: {:?}", e);
+                    })
+                    .for_each(move |s| {
+                        libc_eprintln!("client connected");
+                        //s.set_nodelay(true)?;
+                        let (reader, writer) = s.split();
+                        listen_rpc(&bridge, reader, writer);
+                        Ok(())
+                    }),
+            )
+            .map_err(|_e| Error::new(ErrorKind::Other, "unable to listen for connections"))
+            .and_then(|_v| Ok(()))
+        },
+        _ => {
+            Err(Error::new(ErrorKind::Other, "invalid url scheme"))
+        }
+    }
 }

@@ -73,6 +73,7 @@ pub struct Process<T: VirtualRead> {
     pub eprocess: Address,
 }
 
+// TODO: read/ret "ProcessInfo"
 impl<T: VirtualRead> Process<T> {
     pub fn new(win: &Windows<T>, eprocess: Address) -> Self {
         Process{

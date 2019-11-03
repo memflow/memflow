@@ -1,20 +1,10 @@
 use clap::{App, Arg};
 use pretty_env_logger;
-use std::io::{Error, ErrorKind, Result};
-use std::path::PathBuf;
 use std::rc::Rc;
 use std::cell::RefCell;
 
-use flow_core::address::{Address, Length};
-use flow_core::mem::VirtualRead;
 use flow_qemu::BridgeConnector;
 use flow_win32;
-use flow_win32::cache;
-use flow_win32::win::{Windows, process::Process};
-use goblin::pe::{options::ParseOptions, PE};
-use pdb::{FallibleIterator, PdbInternalSectionOffset};
-
-use url::{Url, ParseError};
 
 fn main() {
     pretty_env_logger::init();

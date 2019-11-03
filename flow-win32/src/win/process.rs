@@ -28,6 +28,11 @@ impl<'a, T: VirtualRead> Iterator for ProcessIterator<'a, T> {
     type Item = Process<T>;
 
     fn next(&mut self) -> Option<Process<T>> {
+        // is eprocess null (first iter, read err, sysproc)?
+        if self.eprocess.is_null() {
+            return None;
+        }
+
         // copy memory for the lifetime of this function
         let memcp = self.win.mem.clone();
         let memory = &mut memcp.borrow_mut();
@@ -44,57 +49,37 @@ impl<'a, T: VirtualRead> Iterator for ProcessIterator<'a, T> {
             self.win.start_block.arch,
             self.win.start_block.dtb,
             self.eprocess + _eprocess_links + _list_entry_blink).unwrap(); // TODO: convert to Option
-        if next.is_null() {
-            return None;
+        if !next.is_null() {
+            next -= _eprocess_links;
         }
-
-        next -= _eprocess_links;
+    
+        // if next process is 'system' again just null it
         if next == self.win.eprocess_base {
-            return None;
+            next = Address::null();
         }
 
+        // return the previous process and set 'next' for next iter
+        let cur = self.eprocess;
         self.eprocess = next;
 
-        // TODO: this loop will skip System process...
-        //None
-        Some(Process::new(self.win, ProcessRef::new(next)))
+        Some(Process::new(self.win, cur))
     }
-}
-
-pub struct ProcessRef {
-    pub eprocess: Address,
-}
-
-impl ProcessRef {
-    pub fn new(eprocess: Address) -> Self {
-        ProcessRef {
-            eprocess: eprocess,
-        }
-    }
-/*
-            println!("pid of process: {}", pid);
-
-            //let rust_id = unsafe { CStr::from_ptr(namebuf.as_ptr()) };
-
-            //let namecstr = CStr::from_bytes_with_nul(&namebuf).unwrap();
-            println!("name of process: {:?}", namebuf);
-*/
 }
 
 pub struct Process<T: VirtualRead> {
     pub mem: Rc<RefCell<T>>,
     pub start_block: StartBlock,
     pub kernel_pdb: Option<PDB>,
-    pub reference: ProcessRef,
+    pub eprocess: Address,
 }
 
 impl<T: VirtualRead> Process<T> {
-    pub fn new(win: &Windows<T>, reference: ProcessRef) -> Self {
+    pub fn new(win: &Windows<T>, eprocess: Address) -> Self {
         Process{
             mem: win.mem.clone(),
             start_block: win.start_block,
             kernel_pdb: win.kernel_pdb.clone(), // TODO: refcell + shared access?
-            reference: reference,
+            eprocess: eprocess,
         }
     }
 
@@ -109,7 +94,7 @@ impl<T: VirtualRead> Process<T> {
         Ok(memory.virt_read_i32(
             self.start_block.arch,
             self.start_block.dtb,
-            self.reference.eprocess + Length::from(_eprocess_pid))?)
+            self.eprocess + Length::from(_eprocess_pid))?)
     }
 
     pub fn get_name(&mut self) -> Result<String> {
@@ -123,7 +108,7 @@ impl<T: VirtualRead> Process<T> {
         Ok(memory.virt_read_cstr(
             self.start_block.arch,
             self.start_block.dtb,
-            self.reference.eprocess + Length::from(_eprocess_name),
+            self.eprocess + Length::from(_eprocess_name),
             Length::from(16))?)
     }
 }

@@ -15,19 +15,16 @@ use std::cell::RefCell;
 
 /*
 Options:
-- supply cr3
+- supply cr3 (dtb)
 - supply kernel hint
 - supply pdb
 - supply kernel offsets for basic structs (dumped windbg maybe)
 */
 
-// TODO: can we get rid of RefCell and just use Rc ?
 type Memory<T> = Rc<RefCell<T>>;
 
 // TODO: impl Windows {}
 pub fn init<T: PhysicalRead + VirtualRead>(mem: Memory<T>) -> Result<Windows<T>> {
-    // TODO: add options to supply valid dtb
-
     // copy rc and borrow it temporarily
     let memcp = mem.clone();
     let memory: &mut T = &mut memcp.borrow_mut();
@@ -39,7 +36,6 @@ pub fn init<T: PhysicalRead + VirtualRead>(mem: Memory<T>) -> Result<Windows<T>>
         start_block.arch, start_block.va, start_block.dtb
     );
 
-    // TODO: add option to supply a va hint
     // find ntoskrnl.exe base
     let kernel_base = kernel::ntos::find(memory, &start_block)?;
     info!("kernel_base={:x}", kernel_base);
@@ -49,8 +45,11 @@ pub fn init<T: PhysicalRead + VirtualRead>(mem: Memory<T>) -> Result<Windows<T>>
     info!("eprocess_base={:x}", eprocess_base);
 
     // TODO: add a module like sysproc/ntoskrnl/etc which will fetch pdb with various fallbacks and return early here
+    // TODO: create fallback thingie which implements hardcoded offsets
+    // TODO: create fallback which parses C struct from conf file + manual pdb
+    // TODO: add class wrapper to Windows struct
+
     // grab pdb
-    // TODO: new func or something in Windows impl
     let kernel_pdb = match cache::fetch_pdb_from_mem(memory, &start_block, kernel_base) {
         Ok(p) => {
             info!("valid kernel_pdb found: {:?}", p);
@@ -69,18 +68,4 @@ pub fn init<T: PhysicalRead + VirtualRead>(mem: Memory<T>) -> Result<Windows<T>>
         eprocess_base: eprocess_base,
         kernel_pdb: kernel_pdb,
     })
-
-    // TODO: create fallback thingie which implements hardcoded offsets
-    // TODO: create fallback which parses C struct from conf file + manual pdb
-    // TODO: add class wrapper to Windows struct
-    //let pdb = ; // TODO: add manual pdb option
-    //let class = types::Struct::from(pdb, "_EPROCESS").unwrap();
-
-    // PsLoadedModuleList / KDBG -> find
-
-    // pdb, winreg?
-
-    //pe::test_read_pe(mem, dtb, ntos)?;
-
-    // TODO: copy architecture and
 }

@@ -18,7 +18,7 @@ use byteorder::ReadBytesExt;
 use clap::ArgMatches;
 use duma;
 use goblin::pe::{debug::CodeviewPDB70DebugInfo, options::ParseOptions, PE};
-use uuid::{BytesError, Uuid};
+use uuid::{self, Uuid};
 
 fn cache_dir() -> Result<PathBuf> {
     let home = dirs::home_dir().ok_or_else(|| Error::new("unable to get home directory"))?;
@@ -96,7 +96,7 @@ fn download_pdb_cache(pdbname: &String, guid: &String) -> Result<PathBuf> {
 }
 
 // TODO: this function might be omitted in the future if this is merged to goblin internally
-fn generate_guid(codeview: &CodeviewPDB70DebugInfo) -> std::result::Result<String, BytesError> {
+fn generate_guid(codeview: &CodeviewPDB70DebugInfo) -> std::result::Result<String, uuid::Error> {
     let mut rdr = Cursor::new(codeview.signature);
     let uuid = Uuid::from_fields(
         rdr.read_u32::<LittleEndian>().unwrap_or_default(), // TODO: fix error handling

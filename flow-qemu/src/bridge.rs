@@ -28,10 +28,13 @@ impl BridgeConnector {
         let url = Url::parse(urlstr)
             .map_err(|e| Error::new(ErrorKind::Other, e))?;
 
+        let path = url.path().split(",").nth(0).ok_or_else(|| Error::new(ErrorKind::Other, "invalid url"))?;
+        let opts = url.path().split(",").skip(1).collect::<Vec<_>>();
+
         match url.scheme() {
             "unix" => {
                 let mut runtime = Runtime::new().unwrap();
-                let stream = runtime.block_on(UnixStream::connect(url.path()))?;
+                let stream = runtime.block_on(UnixStream::connect(path))?;
                 let (reader, writer) = stream.split();
 
                 Ok(BridgeConnector {
@@ -40,11 +43,17 @@ impl BridgeConnector {
                 })
             },
             "tcp" => {
-                let addr = url.path().parse::<SocketAddr>()
+                let addr = path.parse::<SocketAddr>()
                     .map_err(|e| Error::new(ErrorKind::Other, e))?;
 
                 let mut runtime = Runtime::new().unwrap();
                 let stream = runtime.block_on(TcpStream::connect(&addr))?;
+
+                if let Some(_) = opts.iter().filter(|&&o| o == "nodelay").nth(0) {
+                    info!("trying to set TCP_NODELAY on socket");
+                    stream.set_nodelay(true).unwrap();
+                }
+
                 let (reader, writer) = stream.split();
 
                 Ok(BridgeConnector {

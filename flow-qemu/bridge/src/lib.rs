@@ -25,7 +25,7 @@ mod bridge_capnp {
 }
 
 // <qemu:env name="BRIDGE_ADDRESS" value="unix:/tmp/qemu-connector-bridge-win10"/>
-// <qemu:env name="BRIDGE_ADDRESS" value="tcp:127.0.0.1:8181"/>
+// <qemu:env name="BRIDGE_ADDRESS" value="tcp:127.0.0.1:8181,nodelay"/>
 lazy_static! {
     static ref BRIDGE_ADDRESS: String = {
         env::var("BRIDGE_ADDRESS").unwrap_or_else(|_e| {

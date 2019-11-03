@@ -126,9 +126,12 @@ pub fn listen(urlstr: &str) -> Result<()> {
     let url = Url::parse(urlstr)
         .map_err(|e| Error::new(ErrorKind::Other, e))?;
 
+    let path = url.path().split(",").nth(0).ok_or_else(|| Error::new(ErrorKind::Other, "invalid url"))?;
+    let opts = url.path().split(",").skip(1).collect::<Vec<_>>();
+
     match url.scheme() {
         "unix" => {
-            let listener = UnixListener::bind(url.path())?;
+            let listener = UnixListener::bind(path)?;
             let bridge = bridge::ToClient::new(BridgeImpl).into_client::<::capnp_rpc::Server>();
 
             current_thread::block_on_all(
@@ -139,8 +142,10 @@ pub fn listen(urlstr: &str) -> Result<()> {
                     })
                     .for_each(move |s| {
                         libc_eprintln!("client connected");
+
                         let (reader, writer) = s.split();
                         listen_rpc(&bridge, reader, writer);
+
                         Ok(())
                     }),
             )
@@ -148,7 +153,7 @@ pub fn listen(urlstr: &str) -> Result<()> {
             .and_then(|_v| Ok(()))
         },
         "tcp" => {
-            let addr = url.path().parse::<SocketAddr>()
+            let addr = path.parse::<SocketAddr>()
                 .map_err(|e| Error::new(ErrorKind::Other, e))?;
             let listener = TcpListener::bind(&addr)?;
             let bridge = bridge::ToClient::new(BridgeImpl).into_client::<::capnp_rpc::Server>();
@@ -161,9 +166,15 @@ pub fn listen(urlstr: &str) -> Result<()> {
                     })
                     .for_each(move |s| {
                         libc_eprintln!("client connected");
-                        //s.set_nodelay(true)?;
+
+                        if let Some(_) = opts.iter().filter(|&&o| o == "nodelay").nth(0) {
+                            libc_eprintln!("trying to set TCP_NODELAY on socket");
+                            s.set_nodelay(true).unwrap();
+                        }
+
                         let (reader, writer) = s.split();
                         listen_rpc(&bridge, reader, writer);
+
                         Ok(())
                     }),
             )

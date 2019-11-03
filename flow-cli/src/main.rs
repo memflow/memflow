@@ -26,7 +26,7 @@ fn main() {
         .value_of("bridge-url")
         .unwrap_or("unix:/tmp/qemu-connector-bridge");
     let bridge = match Bridge::connect(url) {
-        Ok(s) => s,
+        Ok(br) => br,
         Err(e) => {
             println!("couldn't connect to bridge: {:?}", e);
             return;

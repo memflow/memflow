@@ -15,7 +15,7 @@ goblin = { git = "https://github.com/ko1N/goblin" }
 scroll = "0.9"
 pretty-hex = "0.*"
 clap = "2.*"
-uuid = "0.*" # remove this if goblin has this built in
+uuid = "0.8" # remove this if goblin has this built in
 duma = "*"
 dirs = "2.*"
 pdb = { git = "https://github.com/willglynn/pdb" }

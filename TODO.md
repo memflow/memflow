@@ -31,6 +31,9 @@ hex:
 qemu:
 - add option to access rpc via unix/udp/tcp
 
+ffi:
+- https://github.com/jimfleming/rust-ffi-complex-types
+
 cli:
 - add a feature to parse / edit xmls via the cli so we can make sure all vms are setup for memflow
   and we can resolve the socket url by vm name

@@ -45,6 +45,8 @@ fn main() {
     let bridgerc = Rc::new(RefCell::new(bridge));
     let mut win = flow_win32::init(bridgerc).unwrap();
 
+    //win.process_iter().for_each(|mut p| println!("{:?} {:?}", p.get_pid(), p.get_name()));
+
     let mut proc = win
         .process_iter()
         .filter_map(|mut p| {

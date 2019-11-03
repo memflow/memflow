@@ -62,6 +62,7 @@ impl ops::AddAssign<Length> for Address {
     }
 }
 
+// TODO: guarantee no underlfow
 // Address - Address => Length
 impl ops::Sub for Address {
     type Output = Length;
@@ -71,6 +72,7 @@ impl ops::Sub for Address {
     }
 }
 
+// TODO: guarantee no underlfow
 // Address - Length => Address
 impl ops::Sub<Length> for Address {
     type Output = Address;

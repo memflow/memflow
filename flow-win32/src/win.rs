@@ -1,5 +1,7 @@
 use crate::error::Result;
 
+use std::rc::Rc;
+use std::cell::RefCell;
 use log::{debug, trace};
 
 use address::{Address, Length};
@@ -10,11 +12,7 @@ use crate::kernel::StartBlock;
 pub mod types;
 pub mod process;
 
-use process::{ProcessRef, Process, ProcessIterator};
-
-// test
-use std::rc::Rc;
-use std::cell::RefCell;
+use process::{Process, ProcessIterator};
 
 // TODO: cache processes somewhat?
 #[derive(Clone)]

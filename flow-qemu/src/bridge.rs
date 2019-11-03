@@ -18,13 +18,14 @@ use address::{Address, Length};
 use arch::Architecture;
 use mem::{PhysicalRead, PhysicalWrite, VirtualRead, VirtualWrite};
 
-pub struct BridgeConnector {
+// rename -> Bridge {}
+pub struct Bridge {
     bridge: bridge::Client,
     runtime: Runtime,
 }
 
-impl BridgeConnector {
-    pub fn connect(urlstr: &str) -> Result<BridgeConnector> {
+impl Bridge {
+    pub fn connect(urlstr: &str) -> Result<Bridge> {
         let url = Url::parse(urlstr)
             .map_err(|e| Error::new(ErrorKind::Other, e))?;
 
@@ -33,16 +34,20 @@ impl BridgeConnector {
 
         match url.scheme() {
             "unix" => {
+                info!("trying to connect via unix -> {}", path);
+
                 let mut runtime = Runtime::new().unwrap();
                 let stream = runtime.block_on(UnixStream::connect(path))?;
                 let (reader, writer) = stream.split();
 
-                Ok(BridgeConnector {
+                Ok(Bridge {
                     bridge: Self::connect_rpc(&mut runtime, reader, writer)?,
                     runtime: runtime,
                 })
             },
             "tcp" => {
+                info!("trying to connect via tcp -> {}", path);
+
                 let addr = path.parse::<SocketAddr>()
                     .map_err(|e| Error::new(ErrorKind::Other, e))?;
 
@@ -56,7 +61,7 @@ impl BridgeConnector {
 
                 let (reader, writer) = stream.split();
 
-                Ok(BridgeConnector {
+                Ok(Bridge {
                     bridge: Self::connect_rpc(&mut runtime, reader, writer)?,
                     runtime: runtime,
                 })
@@ -95,7 +100,7 @@ impl BridgeConnector {
     }
 }
 
-impl PhysicalRead for BridgeConnector {
+impl PhysicalRead for Bridge {
     // physRead @0 (address :UInt64, length :UInt64) -> (data :Data);
     fn phys_read(&mut self, addr: Address, len: Length) -> Result<Vec<u8>> {
         trace!("phys_read({:?}, {:?})", addr, len);
@@ -114,7 +119,7 @@ impl PhysicalRead for BridgeConnector {
     }
 }
 
-impl PhysicalWrite for BridgeConnector {
+impl PhysicalWrite for Bridge {
     // physWrite @1 (address :UInt64, data: Data) -> (length :UInt64);
     fn phys_write(&mut self, addr: Address, data: &Vec<u8>) -> Result<Length> {
         trace!("phys_write({:?})", addr);
@@ -133,7 +138,7 @@ impl PhysicalWrite for BridgeConnector {
     }
 }
 
-impl BridgeConnector {
+impl Bridge {
     // virtRead @2 (arch: UInt8, dtb :UInt64, address :UInt64, length :UInt64) -> (data: Data);
     fn virt_read_chunk(
         &mut self,
@@ -184,7 +189,7 @@ impl BridgeConnector {
 //
 // TODO: split up sections greater than 32mb into multiple packets due to capnp limitations!
 //
-impl VirtualRead for BridgeConnector {
+impl VirtualRead for Bridge {
     fn virt_read(
         &mut self,
         arch: Architecture,
@@ -223,7 +228,7 @@ impl VirtualRead for BridgeConnector {
     }
 }
 
-impl VirtualWrite for BridgeConnector {
+impl VirtualWrite for Bridge {
     fn virt_write(
         &mut self,
         arch: Architecture,

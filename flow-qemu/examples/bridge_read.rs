@@ -2,7 +2,7 @@ use clap::{App, Arg};
 use std::time::Instant;
 
 use address::{Address, Length};
-use flow_qemu::BridgeConnector;
+use flow_qemu::Bridge;
 use mem::PhysicalRead;
 
 fn main() {
@@ -21,7 +21,7 @@ fn main() {
     let url = argv
         .value_of("bridge-url")
         .unwrap_or("unix:/tmp/qemu-connector-bridge");
-    let mut bridge = match BridgeConnector::connect(url) {
+    let mut bridge = match Bridge::connect(url) {
         Ok(s) => s,
         Err(e) => {
             println!("couldn't connect to bridge: {:?}", e);

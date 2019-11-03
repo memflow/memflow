@@ -3,7 +3,7 @@ use pretty_env_logger;
 use std::rc::Rc;
 use std::cell::RefCell;
 
-use flow_qemu::BridgeConnector;
+use flow_qemu::Bridge;
 use flow_win32;
 
 fn main() {
@@ -25,7 +25,7 @@ fn main() {
     let url = argv
         .value_of("bridge-url")
         .unwrap_or("unix:/tmp/qemu-connector-bridge");
-    let bridge = match BridgeConnector::connect(url) {
+    let bridge = match Bridge::connect(url) {
         Ok(s) => s,
         Err(e) => {
             println!("couldn't connect to bridge: {:?}", e);

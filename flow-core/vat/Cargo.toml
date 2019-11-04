@@ -1,5 +1,5 @@
 [package]
-name = "flow-va"
+name = "vat"
 version = "0.1.0"
 authors = ["ko1N <ko1N1337@gmail.com>"]
 edition = "2018"
@@ -11,8 +11,8 @@ x64-pae = []
 x86 = []
 
 [dependencies]
-address = { path = "../flow-core/address" }
-arch = { path = "../flow-core/arch" }
-mem = { path = "../flow-core/mem" }
+address = { path = "../address" }
+arch = { path = "../arch" }
+mem = { path = "../mem" }
 log = { version = "0.*", default-features = false }
 byteorder = "1.*"

@@ -8,7 +8,8 @@ edition = "2018"
 address = { path = "address" }
 arch = { path = "arch" }
 mem = { path = "mem" }
+vat = { path = "vat" }
 
 # integrate win32, linux, qemu, etc in core if applicable
 # integrate va in core as a subcrate?
-flow-win32 = { path = "../flow-win32" }
+#flow-win32 = { path = "../flow-win32" }

@@ -27,6 +27,6 @@ capnp-rpc = "0.10.0"
 address = { path = "../../flow-core/address" }
 arch = { path = "../../flow-core/arch" }
 mem = { path = "../../flow-core/mem" }
-flow-va = { path = "../../flow-va" }
+vat = { path = "../../flow-core/vat" }
 pretty_env_logger = "0.*"
 url = "2.1.0"

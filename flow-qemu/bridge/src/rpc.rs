@@ -17,8 +17,7 @@ use capnp_rpc::{pry, rpc_twoparty_capnp, twoparty, RpcSystem};
 use ::mem::{PhysicalRead, PhysicalWrite, VirtualRead, VirtualWrite};
 use address::{Address, Length};
 use arch::{Architecture, InstructionSet};
-
-use flow_va::VatImpl;
+use vat::VatImpl;
 
 use crate::bridge_capnp::bridge;
 use crate::cpu;

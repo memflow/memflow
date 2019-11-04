@@ -8,3 +8,4 @@ pub mod net;
 pub use address;
 pub use arch;
 pub use mem;
+pub use vat;

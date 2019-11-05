@@ -7,4 +7,4 @@ edition = "2018"
 [dependencies]
 address = { path = "../address" }
 arch = { path = "../arch" }
-byteorder = "1.*"
+byteorder = "1.3.2"

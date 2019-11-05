@@ -5,8 +5,8 @@ authors = ["ko1N <ko1N1337@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-clap = "2.*"
-pretty_env_logger = "0.*"
+clap = "2.33.0"
+pretty_env_logger = "0.3.1"
 flow-core = { path = "../flow-core" }
 flow-qemu = { path = "../flow-qemu" }
 flow-win32 = { path = "../flow-win32" }

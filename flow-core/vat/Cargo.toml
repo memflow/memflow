@@ -14,5 +14,5 @@ x86 = []
 address = { path = "../address" }
 arch = { path = "../arch" }
 mem = { path = "../mem" }
-log = { version = "0.*", default-features = false }
-byteorder = "1.*"
+log = { version = "0.4.8", default-features = false }
+byteorder = "1.3.2"

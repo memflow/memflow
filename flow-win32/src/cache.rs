@@ -27,7 +27,8 @@ fn cache_dir() -> Result<PathBuf> {
 }
 
 fn try_download_pdb(url: &String, filename: &String) -> Result<()> {
-    let url = duma::utils::parse_url(&format!("{}/{}", url, filename))?;
+    let url = duma::utils::parse_url(&format!("{}/{}", url, filename))
+        .map_err(|e| Error::new(e))?;
 
     println!("trying to download pdb from {:?}", url);
     duma::download::http_download(url, &ArgMatches::default(), "0.1")?;

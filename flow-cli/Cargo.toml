@@ -8,7 +8,7 @@ edition = "2018"
 clap = "2.33.0"
 pretty_env_logger = "0.3.1"
 flow-core = { path = "../flow-core" }
-flow-qemu = { path = "../flow-qemu" }
+flow-bridge = { path = "../flow-bridge" }
 flow-win32 = { path = "../flow-win32" }
 goblin = { git = "https://github.com/ko1N/goblin" }
 pdb = { git = "https://github.com/willglynn/pdb" }

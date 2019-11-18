@@ -3,7 +3,7 @@ use pretty_env_logger;
 use std::rc::Rc;
 use std::cell::RefCell;
 
-use flow_qemu::Bridge;
+use flow_bridge::client::Bridge;
 use flow_win32;
 
 fn main() {

@@ -18,13 +18,13 @@ use address::{Address, Length};
 use arch::Architecture;
 use mem::{PhysicalRead, PhysicalWrite, VirtualRead, VirtualWrite};
 
-pub struct Bridge {
+pub struct BridgeClient {
     bridge: bridge::Client,
     runtime: Runtime,
 }
 
-impl Bridge {
-    pub fn connect(urlstr: &str) -> Result<Bridge> {
+impl BridgeClient {
+    pub fn connect(urlstr: &str) -> Result<BridgeClient> {
         let url = Url::parse(urlstr)
             .map_err(|e| Error::new(ErrorKind::Other, e))?;
 
@@ -39,7 +39,7 @@ impl Bridge {
                 let stream = runtime.block_on(UnixStream::connect(path))?;
                 let (reader, writer) = stream.split();
 
-                Ok(Bridge {
+                Ok(BridgeClient {
                     bridge: Self::connect_rpc(&mut runtime, reader, writer)?,
                     runtime: runtime,
                 })
@@ -60,7 +60,7 @@ impl Bridge {
 
                 let (reader, writer) = stream.split();
 
-                Ok(Bridge {
+                Ok(BridgeClient {
                     bridge: Self::connect_rpc(&mut runtime, reader, writer)?,
                     runtime: runtime,
                 })
@@ -99,7 +99,7 @@ impl Bridge {
     }
 }
 
-impl PhysicalRead for Bridge {
+impl PhysicalRead for BridgeClient {
     // physRead @0 (address :UInt64, length :UInt64) -> (data :Data);
     fn phys_read(&mut self, addr: Address, len: Length) -> Result<Vec<u8>> {
         trace!("phys_read({:?}, {:?})", addr, len);
@@ -118,7 +118,7 @@ impl PhysicalRead for Bridge {
     }
 }
 
-impl PhysicalWrite for Bridge {
+impl PhysicalWrite for BridgeClient {
     // physWrite @1 (address :UInt64, data: Data) -> (length :UInt64);
     fn phys_write(&mut self, addr: Address, data: &Vec<u8>) -> Result<Length> {
         trace!("phys_write({:?})", addr);
@@ -137,7 +137,7 @@ impl PhysicalWrite for Bridge {
     }
 }
 
-impl Bridge {
+impl BridgeClient {
     // virtRead @2 (arch: UInt8, dtb :UInt64, address :UInt64, length :UInt64) -> (data: Data);
     fn virt_read_chunk(
         &mut self,
@@ -188,7 +188,7 @@ impl Bridge {
 //
 // TODO: split up sections greater than 32mb into multiple packets due to capnp limitations!
 //
-impl VirtualRead for Bridge {
+impl VirtualRead for BridgeClient {
     fn virt_read(
         &mut self,
         arch: Architecture,
@@ -227,7 +227,7 @@ impl VirtualRead for Bridge {
     }
 }
 
-impl VirtualWrite for Bridge {
+impl VirtualWrite for BridgeClient {
     fn virt_write(
         &mut self,
         arch: Architecture,

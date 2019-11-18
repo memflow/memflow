@@ -1,5 +1,5 @@
 [package]
-name = "flow-bridge"
+name = "bridge"
 version = "0.1.0"
 authors = ["ko1N <ko1N1337@gmail.com>"]
 edition = "2018"
@@ -12,10 +12,10 @@ libc-print = "0.1.11"
 tokio = "0.1.22"
 capnp = "0.10.3"
 capnp-rpc = "0.10.0"
-address = { path = "../flow-core/address" }
-arch = { path = "../flow-core/arch" }
-mem = { path = "../flow-core/mem" }
-vat = { path = "../flow-core/vat" }
+address = { path = "../address" }
+arch = { path = "../arch" }
+mem = { path = "../mem" }
+vat = { path = "../vat" }
 log = { version = "0.4.8", default-features = false }
 url = "2.1.0"
 

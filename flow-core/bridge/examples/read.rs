@@ -2,7 +2,7 @@ use clap::{App, Arg};
 use std::time::Instant;
 
 use address::{Address, Length};
-use flow_qemu::Bridge;
+use flow_bridge::client::Bridge;
 use mem::PhysicalRead;
 
 fn main() {

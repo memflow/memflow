@@ -9,3 +9,4 @@ pub use address;
 pub use arch;
 pub use mem;
 pub use vat;
+pub use bridge;

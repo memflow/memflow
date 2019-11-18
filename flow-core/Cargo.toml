@@ -9,6 +9,7 @@ address = { path = "address" }
 arch = { path = "arch" }
 mem = { path = "mem" }
 vat = { path = "vat" }
+bridge = { path = "bridge" }
 
 # integrate win32, linux, qemu, etc in core if applicable
 # integrate va in core as a subcrate?

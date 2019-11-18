@@ -6,8 +6,7 @@ members = [
     "flow-core/mem",
     "flow-core/vat",
     "flow-cli",
-    "flow-qemu",
-    "flow-qemu/bridge",
+    "flow-bridge",
     "flow-win32",
 ]
 default-members = [
@@ -17,7 +16,6 @@ default-members = [
     "flow-core/mem",
     "flow-core/vat",
     "flow-cli",
-    "flow-qemu",
-    "flow-qemu/bridge",
+    "flow-bridge",
     "flow-win32",
 ]

@@ -18,7 +18,6 @@ use address::{Address, Length};
 use arch::Architecture;
 use mem::{PhysicalRead, PhysicalWrite, VirtualRead, VirtualWrite};
 
-// rename -> Bridge {}
 pub struct Bridge {
     bridge: bridge::Client,
     runtime: Runtime,

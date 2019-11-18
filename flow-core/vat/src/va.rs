@@ -7,16 +7,16 @@ use mem::{PhysicalRead, PhysicalWrite, VirtualRead, VirtualWrite};
 use crate::VirtualAddressTranslation;
 
 // TODO: find a cleaner way to do this?
-pub struct VatImpl<T>(T);
+pub struct VatImpl<'a, T: PhysicalRead + VirtualAddressTranslation>(pub &'a mut T);
 
-impl<T: PhysicalRead + VirtualAddressTranslation> VatImpl<T> {
-    pub fn new(mem: T) -> Self {
+impl<'a, T: PhysicalRead + VirtualAddressTranslation> VatImpl<'a, T> {
+    pub fn new(mem: &'a mut T) -> Self {
         VatImpl { 0: mem }
     }
 }
 
 // TODO: recover from vtop failures if we request to much memory!
-impl<T: PhysicalRead + VirtualAddressTranslation> VirtualRead for VatImpl<T> {
+impl<'a, T: PhysicalRead + VirtualAddressTranslation> VirtualRead for VatImpl<'a, T> {
     fn virt_read(
         &mut self,
         arch: Architecture,
@@ -54,7 +54,7 @@ impl<T: PhysicalRead + VirtualAddressTranslation> VirtualRead for VatImpl<T> {
     }
 }
 
-impl<T: PhysicalRead + PhysicalWrite + VirtualAddressTranslation> VirtualWrite for VatImpl<T> {
+impl<'a, T: PhysicalRead + PhysicalWrite + VirtualAddressTranslation> VirtualWrite for VatImpl<'a, T> {
     fn virt_write(
         &mut self,
         arch: Architecture,

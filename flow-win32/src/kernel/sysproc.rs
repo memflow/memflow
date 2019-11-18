@@ -2,8 +2,8 @@ use crate::error::{Error, Result};
 
 use log::{info, trace, warn};
 
-use address::{Address, Length};
-use mem::{PhysicalRead, VirtualRead};
+use flow_core::address::{Address, Length};
+use flow_core::mem::{PhysicalRead, VirtualRead};
 
 use goblin::pe::options::ParseOptions;
 use goblin::pe::PE;

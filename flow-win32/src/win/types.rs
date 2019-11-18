@@ -1,11 +1,11 @@
-use log::{debug, trace};
+use log::{trace};
 
 use pdb::{self, FallibleIterator, Result};
 use std::collections::HashMap;
 use std::fs::File;
 use std::path::PathBuf;
 
-use address::{Length};
+use flow_core::address::{Length};
 
 mod data;
 use data::TypeSet;

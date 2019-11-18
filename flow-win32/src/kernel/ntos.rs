@@ -4,9 +4,9 @@ use log::{debug, info, trace, warn};
 
 use byteorder::{ByteOrder, LittleEndian};
 
-use address::{Address, Length};
-use arch::InstructionSet;
-use mem::{VirtualRead};
+use flow_core::address::{Address, Length};
+use flow_core::arch::{self, InstructionSet};
+use flow_core::mem::{VirtualRead};
 
 use goblin::pe::options::ParseOptions;
 use goblin::pe::PE;

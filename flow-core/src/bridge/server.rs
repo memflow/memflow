@@ -14,10 +14,10 @@ use tokio::runtime::current_thread;
 use capnp::{self, capability::Promise};
 use capnp_rpc::{pry, rpc_twoparty_capnp, twoparty, RpcSystem};
 
-use mem::{PhysicalRead, PhysicalWrite, VirtualRead, VirtualWrite};
-use address::{Address, Length};
-use arch::{Architecture, InstructionSet};
-use vat::{VirtualAddressTranslation, VatImpl};
+use crate::mem::{PhysicalRead, PhysicalWrite, VirtualRead, VirtualWrite};
+use crate::address::{Address, Length};
+use crate::arch::{Architecture, InstructionSet};
+use crate::vat::{VirtualAddressTranslation, VatImpl};
 
 use std::rc::Rc;
 use std::cell::RefCell;

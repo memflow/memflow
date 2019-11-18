@@ -276,7 +276,7 @@ impl ops::SubAssign for Length {
 #[cfg(test)]
 mod tests {
     use crate::address::Address;
-    use crate::length::Length;
+    use crate::address::Length;
 
     #[test]
     fn test_from() {

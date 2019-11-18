@@ -2,9 +2,9 @@ use crate::error::{Error, Result};
 
 use byteorder::{ByteOrder, LittleEndian};
 
-use address::{Address, Length};
-use arch::{self, Architecture, InstructionSet};
-use mem::PhysicalRead;
+use flow_core::address::{Address, Length};
+use flow_core::arch::{self, Architecture, InstructionSet};
+use flow_core::mem::PhysicalRead;
 
 // PROCESSOR_START_BLOCK
 #[derive(Debug, Copy, Clone)]

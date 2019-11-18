@@ -1,7 +1,7 @@
 use std::fmt;
 use std::ops;
 
-use crate::length::Length;
+use crate::address::Length;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Address(u64);
@@ -94,7 +94,7 @@ impl ops::SubAssign<Length> for Address {
 #[cfg(test)]
 mod tests {
     use crate::address::Address;
-    use crate::length::Length;
+    use crate::address::Length;
 
     #[test]
     fn test_from() {

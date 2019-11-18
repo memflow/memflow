@@ -1,19 +1,11 @@
 [workspace]
 members = [
     "flow-core",
-    "flow-core/address",
-    "flow-core/arch",
-    "flow-core/mem",
-    "flow-core/vat",
     "flow-win32",
     "flow-cli",
 ]
 default-members = [
     "flow-core",
-    "flow-core/address",
-    "flow-core/arch",
-    "flow-core/mem",
-    "flow-core/vat",
     "flow-win32",
     "flow-cli",
 ]

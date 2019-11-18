@@ -7,9 +7,9 @@ use masks::*;
 use byteorder::{ByteOrder, LittleEndian};
 use std::io::{Error, ErrorKind, Result};
 
-use address::Address;
-use arch::x64;
-use mem::PhysicalRead;
+use crate::address::Address;
+use crate::arch::x64;
+use crate::mem::PhysicalRead;
 
 // TODO: can we put this in a trait?
 fn read_address<T: PhysicalRead>(mem: &mut T, addr: Address) -> Result<Address> {

@@ -3,8 +3,8 @@ use std::io::Result;
 
 use byteorder::{BigEndian, ByteOrder, LittleEndian};
 
-use address::{Address, Length};
-use arch::{self, Architecture, InstructionSet};
+use crate::address::{Address, Length};
+use crate::arch::{self, Architecture, InstructionSet};
 
 use std::ffi::{CStr, CString};
 

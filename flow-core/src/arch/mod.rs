@@ -5,7 +5,7 @@ pub mod x86_pae;
 use std::convert::TryFrom;
 use std::io::{Error, ErrorKind, Result};
 
-use address::Length;
+use crate::address::Length;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum ByteOrder {

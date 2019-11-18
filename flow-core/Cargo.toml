@@ -4,12 +4,24 @@ version = "0.1.0"
 authors = ["ko1N <ko1N1337@gmail.com>"]
 edition = "2018"
 
+[build-dependencies]
+capnpc = "0.10.1"
+
 [dependencies]
-address = { path = "address" }
-arch = { path = "arch" }
-mem = { path = "mem" }
-vat = { path = "vat" }
-bridge = { path = "bridge" }
+byteorder = "1.3.2"
+log = { version = "0.4.8", default-features = false }
+libc-print = "0.1.11"
+tokio = "0.1.22"
+capnp = "0.10.3"
+capnp-rpc = "0.10.0"
+url = "2.1.0"
+
+# example deps
+clap = "2.33.0"
+
+[[example]]
+name = "read"
+path = "examples/read.rs"
 
 # integrate win32, linux, qemu, etc in core if applicable
 # integrate va in core as a subcrate?

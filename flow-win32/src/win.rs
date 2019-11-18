@@ -1,18 +1,15 @@
-use crate::error::Result;
-
 use std::rc::Rc;
 use std::cell::RefCell;
-use log::{debug, trace};
 
-use address::{Address, Length};
-use mem::{VirtualRead};
+use flow_core::address::{Address};
+use flow_core::mem::{VirtualRead};
 
 use crate::kernel::StartBlock;
 
 pub mod types;
 pub mod process;
 
-use process::{Process, ProcessIterator};
+use process::{ProcessIterator};
 
 // TODO: cache processes somewhat?
 #[derive(Clone)]

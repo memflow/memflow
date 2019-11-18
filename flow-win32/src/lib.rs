@@ -1,6 +1,6 @@
 use crate::error::Result;
 use log::info;
-use mem::{PhysicalRead, VirtualRead};
+use flow_core::mem::{PhysicalRead, VirtualRead};
 
 pub mod cache;
 pub mod error;

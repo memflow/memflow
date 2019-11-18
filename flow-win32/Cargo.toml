@@ -5,9 +5,7 @@ authors = ["ko1N <ko1N1337@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-address = { path = "../flow-core/address" }
-arch = { path = "../flow-core/arch" }
-mem = { path = "../flow-core/mem" }
+flow-core = { path = "../flow-core" }
 log = { version = "0.4.8", default-features = false }
 byteorder = "1.3.2"
 num = "0.2.0"

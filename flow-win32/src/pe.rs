@@ -2,8 +2,8 @@ use crate::error::Result;
 
 use log::info;
 
-use address::{Address, Length};
-use mem::{PhysicalRead, VirtualRead};
+use flow_core::address::{Address, Length};
+use flow_core::mem::{PhysicalRead, VirtualRead};
 
 use pretty_hex::*;
 

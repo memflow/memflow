@@ -3,8 +3,8 @@ use crate::error::Result;
 use crate::win::{Windows, types::PDB};
 use crate::kernel::StartBlock;
 
-use address::{Address, Length};
-use mem::{VirtualRead};
+use flow_core::address::{Address, Length};
+use flow_core::mem::{VirtualRead};
 
 use std::rc::Rc;
 use std::cell::RefCell;

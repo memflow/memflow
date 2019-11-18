@@ -13,9 +13,9 @@ pub use va::VatImpl;
 // TODO: replace by custom error results
 use std::io::Result;
 
-use address::Address;
-use arch::{Architecture, InstructionSet};
-use mem::PhysicalRead;
+use crate::address::Address;
+use crate::arch::{Architecture, InstructionSet};
+use crate::mem::PhysicalRead;
 
 pub trait VirtualAddressTranslation {
     fn vtop(&mut self, arch: Architecture, dtb: Address, addr: Address) -> Result<Address>;

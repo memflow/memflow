@@ -10,8 +10,8 @@ use std::io::Cursor;
 use std::path::PathBuf;
 
 use crate::kernel::StartBlock;
-use address::{Address, Length};
-use mem::VirtualRead;
+use flow_core::address::{Address, Length};
+use flow_core::mem::VirtualRead;
 
 use byteorder::LittleEndian;
 use byteorder::ReadBytesExt;

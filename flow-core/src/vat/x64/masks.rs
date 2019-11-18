@@ -77,7 +77,7 @@ macro_rules! pt_index_bits {
 
 #[cfg(test)]
 mod tests {
-    use crate::x64::masks::make_bit_mask;
+    use crate::vat::x64::masks::make_bit_mask;
 
     #[test]
     fn test_make_bit_mask() {

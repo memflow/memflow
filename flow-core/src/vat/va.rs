@@ -1,10 +1,10 @@
 use std::io::{Error, ErrorKind, Result};
 
-use address::{Address, Length};
-use arch::Architecture;
-use mem::{PhysicalRead, PhysicalWrite, VirtualRead, VirtualWrite};
+use crate::address::{Address, Length};
+use crate::arch::Architecture;
+use crate::mem::{PhysicalRead, PhysicalWrite, VirtualRead, VirtualWrite};
 
-use crate::VirtualAddressTranslation;
+use crate::vat::VirtualAddressTranslation;
 
 // TODO: find a cleaner way to do this?
 pub struct VatImpl<'a, T: PhysicalRead + VirtualAddressTranslation>(pub &'a mut T);

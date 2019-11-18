@@ -5,9 +5,8 @@ members = [
     "flow-core/arch",
     "flow-core/mem",
     "flow-core/vat",
-    "flow-cli",
-    "flow-bridge",
     "flow-win32",
+    "flow-cli",
 ]
 default-members = [
     "flow-core",
@@ -15,7 +14,6 @@ default-members = [
     "flow-core/arch",
     "flow-core/mem",
     "flow-core/vat",
-    "flow-cli",
-    "flow-bridge",
     "flow-win32",
+    "flow-cli",
 ]

@@ -25,23 +25,13 @@ use std::cell::RefCell;
 use crate::bridge_capnp::bridge;
 
 #[derive(Clone)]
-pub struct Server<T: PhysicalRead + PhysicalWrite> {
+pub struct BridgeServer<T: PhysicalRead + PhysicalWrite> {
     pub mem: Rc<RefCell<T>>,
 }
 
-/*
-    let server = Server::new()
-        .phys_read(reader)
-        .phys_write(writer)
-        .virt_read(reader)
-        .virt_write(writer)
-        .cpu_...()
-        .listen(url);
-*/
-
-impl<T: PhysicalRead + PhysicalWrite + 'static> Server<T> {
+impl<T: PhysicalRead + PhysicalWrite + 'static> BridgeServer<T> {
     pub fn new(mem: Rc<RefCell<T>>) -> Self {
-        Server{
+        BridgeServer{
             mem: mem,
         }
     }
@@ -118,7 +108,7 @@ impl<T: PhysicalRead + PhysicalWrite + 'static> Server<T> {
     }
 }
 
-impl<T: PhysicalRead + PhysicalWrite + 'static> bridge::Server for Server<T> {
+impl<T: PhysicalRead + PhysicalWrite + 'static> bridge::Server for BridgeServer<T> {
     // physRead @0 (address :UInt64, length :UInt64) -> (memory :MemoryRegion);
     fn phys_read(
         &mut self,

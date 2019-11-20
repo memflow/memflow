@@ -5,9 +5,12 @@ use std::net::SocketAddr;
 use url::Url;
 
 use tokio::io::AsyncRead;
-use tokio::net::{UnixStream, TcpStream};
+use tokio::net::TcpStream;
 use tokio::prelude::*;
 use tokio::runtime::current_thread::Runtime;
+
+#[cfg(any(unix))]
+use tokio::net::UnixStream;
 
 use capnp::capability::Promise;
 use capnp_rpc::{pry, rpc_twoparty_capnp, twoparty, RpcSystem};
@@ -23,6 +26,71 @@ pub struct BridgeClient {
     runtime: Runtime,
 }
 
+#[cfg(any(unix))]
+fn connect_unix(path: &str, opts: Vec<&str>) -> Result<BridgeClient> {
+    info!("trying to connect via unix -> {}", path);
+
+    let mut runtime = Runtime::new().unwrap();
+    let stream = runtime.block_on(UnixStream::connect(path))?;
+    let (reader, writer) = stream.split();
+
+    info!("unix connection established -> {}", path);
+
+    Ok(BridgeClient {
+        bridge: connect_rpc(&mut runtime, reader, writer)?,
+        runtime: runtime,
+    })
+}
+
+#[cfg(not(any(unix)))]
+fn connect_unix(path: &str, opts: Vec<&str>) -> Result<BridgeClient> {
+    Err(Error::new(ErrorKind::Other, "unix sockets are not supported on this os"))
+}
+
+fn connect_tcp(path: &str, opts: Vec<&str>) -> Result<BridgeClient> {
+    info!("trying to connect via tcp -> {}", path);
+
+    let addr = path.parse::<SocketAddr>()
+        .map_err(|e| Error::new(ErrorKind::Other, e))?;
+
+    let mut runtime = Runtime::new().unwrap();
+    let stream = runtime.block_on(TcpStream::connect(&addr))?;
+
+    info!("tcp connection established -> {}", path);
+
+    if let Some(_) = opts.iter().filter(|&&o| o == "nodelay").nth(0) {
+        info!("trying to set TCP_NODELAY on socket");
+        stream.set_nodelay(true).unwrap();
+    }
+
+    let (reader, writer) = stream.split();
+
+    Ok(BridgeClient {
+        bridge: connect_rpc(&mut runtime, reader, writer)?,
+        runtime: runtime,
+    })
+}
+
+
+fn connect_rpc<T, U>(runtime: &mut Runtime, reader: T, writer: U) -> Result<bridge::Client>
+where T: ::std::io::Read + 'static,
+      U: ::std::io::Write + 'static,
+{
+    let network = Box::new(twoparty::VatNetwork::new(
+        reader,
+        std::io::BufWriter::new(writer),
+        rpc_twoparty_capnp::Side::Client,
+        Default::default(),
+    ));
+
+    let mut rpc_system = RpcSystem::new(network, None);
+    let bridge: bridge::Client = rpc_system.bootstrap(rpc_twoparty_capnp::Side::Server);
+
+    runtime.spawn(rpc_system.map_err(|_e| ()));
+
+    Ok(bridge)
+}
+
 impl BridgeClient {
     pub fn connect(urlstr: &str) -> Result<BridgeClient> {
         let url = Url::parse(urlstr)
@@ -33,61 +101,15 @@ impl BridgeClient {
 
         match url.scheme() {
             "unix" => {
-                info!("trying to connect via unix -> {}", path);
-
-                let mut runtime = Runtime::new().unwrap();
-                let stream = runtime.block_on(UnixStream::connect(path))?;
-                let (reader, writer) = stream.split();
-
-                Ok(BridgeClient {
-                    bridge: Self::connect_rpc(&mut runtime, reader, writer)?,
-                    runtime: runtime,
-                })
+                connect_unix(path, opts)
             },
             "tcp" => {
-                info!("trying to connect via tcp -> {}", path);
-
-                let addr = path.parse::<SocketAddr>()
-                    .map_err(|e| Error::new(ErrorKind::Other, e))?;
-
-                let mut runtime = Runtime::new().unwrap();
-                let stream = runtime.block_on(TcpStream::connect(&addr))?;
-
-                if let Some(_) = opts.iter().filter(|&&o| o == "nodelay").nth(0) {
-                    info!("trying to set TCP_NODELAY on socket");
-                    stream.set_nodelay(true).unwrap();
-                }
-
-                let (reader, writer) = stream.split();
-
-                Ok(BridgeClient {
-                    bridge: Self::connect_rpc(&mut runtime, reader, writer)?,
-                    runtime: runtime,
-                })
+                connect_tcp(path, opts)
             },
             _ => {
                 Err(Error::new(ErrorKind::Other, "invalid url scheme"))
             }
         }
-    }
-
-    fn connect_rpc<T, U>(runtime: &mut Runtime, reader: T, writer: U) -> Result<bridge::Client>
-        where T: ::std::io::Read + 'static,
-              U: ::std::io::Write + 'static,
-    {
-        let network = Box::new(twoparty::VatNetwork::new(
-            reader,
-            std::io::BufWriter::new(writer),
-            rpc_twoparty_capnp::Side::Client,
-            Default::default(),
-        ));
-
-        let mut rpc_system = RpcSystem::new(network, None);
-        let bridge: bridge::Client = rpc_system.bootstrap(rpc_twoparty_capnp::Side::Server);
-
-        runtime.spawn(rpc_system.map_err(|_e| ()));
-
-        Ok(bridge)
     }
 
     pub fn read_registers(&mut self) -> Result<Vec<u8>> {

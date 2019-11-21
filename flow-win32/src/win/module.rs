@@ -14,15 +14,16 @@ use widestring::U16CString;
 
 use crate::win::process::Process;
 
-pub struct ModuleIterator<'a, T: VirtualRead> {
-    process: &'a mut Process<T>,
+pub struct ModuleIterator<T: VirtualRead> {
+    process: Rc<RefCell<Process<T>>>,
     first_module: Address,
     module_base: Address,
 }
 
-impl<'a, T: VirtualRead> ModuleIterator<'a, T> {
-    pub fn new(process: &'a mut Process<T>) -> Result<Self> {
-        let first_module = process.get_first_module()?;
+impl<T: VirtualRead> ModuleIterator<T> {
+    pub fn new(process: Rc<RefCell<Process<T>>>) -> Result<Self> {
+        let first_module = process.borrow_mut().get_first_module()?;
+        //let first_module = process.get_first_module()?;
         Ok(Self{
             process: process,
             first_module: first_module,
@@ -31,7 +32,7 @@ impl<'a, T: VirtualRead> ModuleIterator<'a, T> {
     }
 }
 
-impl<'a, T: VirtualRead> Iterator for ModuleIterator<'a, T> {
+impl<T: VirtualRead> Iterator for ModuleIterator<T> {
     type Item = Module<T>;
 
     fn next(&mut self) -> Option<Module<T>> {
@@ -40,17 +41,22 @@ impl<'a, T: VirtualRead> Iterator for ModuleIterator<'a, T> {
             return None;
         }
 
+        // borrow process
+        let process = &mut self.process.borrow_mut();
+
         // copy memory for the lifetime of this function
-        let dtb = self.process.get_dtb().unwrap(); // TODO: to option
+        let start_block = { process.win.borrow().start_block };
+        let dtb = process.get_dtb().unwrap(); // TODO: to option
 
-        let memcp = self.process.mem.clone();
-        let memory = &mut memcp.borrow_mut();
+        let _list_entry_blink = process.get_offset("_LIST_ENTRY", "Blink").unwrap(); // TODO: err -> option
 
-        let _list_entry_blink = self.process.get_offset("_LIST_ENTRY", "Blink").unwrap(); // TODO: err -> option
+        //let memcp = process.mem.clone();
+        let win = process.win.borrow();
+        let mem = &mut win.mem.borrow_mut();
 
         // read next module entry (list_entry is first element in module)
-        let mut next = memory.virt_read_addr(
-            self.process.start_block.arch,
+        let mut next = mem.virt_read_addr(
+            start_block.arch,
             dtb,
             self.module_base + _list_entry_blink).unwrap(); // TODO: convert to Option
     
@@ -63,37 +69,40 @@ impl<'a, T: VirtualRead> Iterator for ModuleIterator<'a, T> {
         let cur = self.module_base;
         self.module_base = next;
 
-        Some(Module::new(self.process, dtb, cur))
+        Some(Module::new(self.process.clone(), cur))
     }
 }
 
-// TODO: reference Process
 pub struct Module<T: VirtualRead> {
-    pub mem: Rc<RefCell<T>>,
-    pub start_block: StartBlock,
-    pub kernel_pdb: Option<PDB>, // TODO: refcell + shared access?
-    pub dtb: Address,
+    pub process: Rc<RefCell<Process<T>>>,
     pub module_base: Address,
 }
 
+impl<T: VirtualRead> Clone for Module<T>
+where
+    Rc<RefCell<Process<T>>>: Clone,
+    Address: Clone,
+{
+    fn clone(&self) -> Self {
+        Self {
+            process: self.process.clone(),
+            module_base: self.module_base.clone(),
+        }
+    }
+}
+
 impl<T: VirtualRead> Module<T> {
-    pub fn new(process: &Process<T>, dtb: Address, module_base: Address) -> Self {
+    pub fn new(process: Rc<RefCell<Process<T>>>, module_base: Address) -> Self {
         Self{
-            mem: process.mem.clone(),
-            start_block: process.start_block,
-            kernel_pdb: process.kernel_pdb.clone(),
-            dtb: dtb,
+            process: process,
             module_base: module_base,
         }
     }
 
     // TODO: macro? pub?
     pub fn get_offset(&mut self, strct: &str, field: &str) -> Result<Length> {
-        let mut _pdb = self.kernel_pdb.as_mut().ok_or_else(|| "kernel pdb not found")?;
-        let _strct = _pdb.get_struct(strct).ok_or_else(|| format!("{} not found", strct))?;
-        let _field = _strct.get_field(field).ok_or_else(|| format!("{} not found", field))?;
-        debug!("offset {}::{}={:x}", strct, field, _field.offset);
-        Ok(_field.offset)
+        let process = &mut self.process.borrow_mut();
+        process.get_offset(strct, field)
     }
 
     pub fn get_name(&mut self) -> Result<String> {
@@ -118,21 +127,26 @@ impl<T: VirtualRead> Module<T> {
 
         let offs = self.get_offset("_LDR_DATA_TABLE_ENTRY", "BaseDllName")?;
 
-        let memory = &mut self.mem.borrow_mut();
+        let process = &mut self.process.borrow_mut();
+        let start_block = { process.win.borrow().start_block };
+        let dtb = process.get_dtb()?;
+
+        let win = process.win.borrow();
+        let mem = &mut win.mem.borrow_mut();
 
         // TODO: x86 / wow64 version
         // if x64 && !wow64
         // TODO: access process
-        let length = memory.virt_read_u16(
-            self.start_block.arch,
-            self.dtb,
+        let length = mem.virt_read_u16(
+            start_block.arch,
+            dtb,
             self.module_base + offs + Length::from(0))?;
         if length == 0 {
             return Err(Error::new("unable to read unicode string length"));
         }
-        let buffer = memory.virt_read_addr(
-            self.start_block.arch,
-            self.dtb,
+        let buffer = mem.virt_read_addr(
+            start_block.arch,
+            dtb,
             self.module_base + offs + Length::from(8))?;
         if buffer.is_null() {
             return Err(Error::new("unable to read unicode string length"));
@@ -145,9 +159,9 @@ impl<T: VirtualRead> Module<T> {
         }
 
         // read buffer
-        let mut content = memory.virt_read(
-            self.start_block.arch,
-            self.dtb,
+        let mut content = mem.virt_read(
+            start_block.arch,
+            dtb,
             buffer,
             Length::from(length + 2))?;
         content[length as usize] = 0;

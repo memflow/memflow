@@ -35,9 +35,9 @@ fn main() {
 
     // os functionality should be located in core!
     let bridgerc = Rc::new(RefCell::new(bridge));
-    let mut win = flow_win32::init(bridgerc).unwrap();
+    let win = flow_win32::init(bridgerc).unwrap();
 
-    //win.process_iter().for_each(|mut p| println!("{:?} {:?}", p.get_pid(), p.get_name()));
+    win.process_iter().for_each(|mut p| println!("{:?} {:?}", p.get_pid(), p.get_name()));
 
     let mut proc = win
         .process_iter()
@@ -69,5 +69,5 @@ fn main() {
         .ok_or_else(|| "unable to find module in Calculator.exe")
         .unwrap();
 
-//    println!("mod: {:?}", module);
+    println!("mod: {:?}", module.clone().get_name());
 }

@@ -12,16 +12,16 @@ use std::cell::RefCell;
 
 use crate::win::module::ModuleIterator;
 
-pub struct ProcessIterator<'a, T: VirtualRead> {
-    win: &'a mut Windows<T>,
+pub struct ProcessIterator<T: VirtualRead> {
+    win: Rc<RefCell<Windows<T>>>,
     first_eprocess: Address,
     eprocess: Address,
 }
 
-impl<'a, T: VirtualRead> ProcessIterator<'a, T> {
-    pub fn new(win: &'a mut Windows<T>) -> Self {
-        let eprocess = win.eprocess_base;
-        Self{
+impl<T: VirtualRead> ProcessIterator<T> {
+    pub fn new(win: Rc<RefCell<Windows<T>>>) -> Self {
+        let eprocess = win.borrow().eprocess_base;
+        Self {
             win: win,
             first_eprocess: eprocess,
             eprocess: eprocess,
@@ -29,7 +29,7 @@ impl<'a, T: VirtualRead> ProcessIterator<'a, T> {
     }
 }
 
-impl<'a, T: VirtualRead> Iterator for ProcessIterator<'a, T> {
+impl<T: VirtualRead> Iterator for ProcessIterator<T> {
     type Item = Process<T>;
 
     fn next(&mut self) -> Option<Process<T>> {
@@ -39,20 +39,23 @@ impl<'a, T: VirtualRead> Iterator for ProcessIterator<'a, T> {
         }
 
         // copy memory for the lifetime of this function
-        let memcp = self.win.mem.clone();
-        let memory = &mut memcp.borrow_mut();
+        let win = self.win.borrow();
+        let start_block = win.start_block;
+        let kernel_pdb = &mut win.kernel_pdb.as_ref()?.borrow_mut();
+
+        let memory = &mut win.mem.borrow_mut();
 
         // resolve offsets
-        let _eprocess = self.win.kernel_pdb.clone()?.get_struct("_EPROCESS")?;
-        let _list_entry = self.win.kernel_pdb.clone()?.get_struct("_LIST_ENTRY")?;
-
+        let _eprocess = kernel_pdb.get_struct("_EPROCESS")?;
         let _eprocess_links = _eprocess.get_field("ActiveProcessLinks")?.offset;
+
+        let _list_entry = kernel_pdb.get_struct("_LIST_ENTRY")?;
         let _list_entry_blink = _list_entry.get_field("Blink")?.offset;
 
         // read next eprocess entry
         let mut next = memory.virt_read_addr(
-            self.win.start_block.arch,
-            self.win.start_block.dtb,
+            start_block.arch,
+            start_block.dtb,
             self.eprocess + _eprocess_links + _list_entry_blink).unwrap(); // TODO: convert to Option
         if !next.is_null() {
             next -= _eprocess_links;
@@ -67,31 +70,41 @@ impl<'a, T: VirtualRead> Iterator for ProcessIterator<'a, T> {
         let cur = self.eprocess;
         self.eprocess = next;
 
-        Some(Process::new(self.win, cur))
+        Some(Process::new(self.win.clone(), cur))
     }
 }
 
 pub struct Process<T: VirtualRead> {
-    pub mem: Rc<RefCell<T>>,
-    pub start_block: StartBlock,
-    pub kernel_pdb: Option<PDB>, // TODO: refcell + shared access?
+    pub win: Rc<RefCell<Windows<T>>>,
     pub eprocess: Address,
+}
+
+impl<T: VirtualRead> Clone for Process<T>
+where
+    Rc<RefCell<T>>: Clone,
+    Address: Clone,
+{
+    fn clone(&self) -> Self {
+        Self {
+            win: self.win.clone(),
+            eprocess: self.eprocess.clone(),
+        }
+    }
 }
 
 // TODO: read/ret "ProcessInfo"
 impl<T: VirtualRead> Process<T> {
-    pub fn new(win: &Windows<T>, eprocess: Address) -> Self {
+    pub fn new(win: Rc<RefCell<Windows<T>>>, eprocess: Address) -> Self {
         Self{
-            mem: win.mem.clone(),
-            start_block: win.start_block,
-            kernel_pdb: win.kernel_pdb.clone(),
+            win: win,
             eprocess: eprocess,
         }
     }
 
     // TODO: macro? pub?
     pub fn get_offset(&mut self, strct: &str, field: &str) -> Result<Length> {
-        let mut _pdb = self.kernel_pdb.as_mut().ok_or_else(|| "kernel pdb not found")?;
+        let win = &mut self.win.borrow_mut();
+        let mut _pdb = win.kernel_pdb.as_ref().ok_or_else(|| "kernel pdb not found")?.borrow_mut();
         let _strct = _pdb.get_struct(strct).ok_or_else(|| format!("{} not found", strct))?;
         let _field = _strct.get_field(field).ok_or_else(|| format!("{} not found", field))?;
         debug!("offset {}::{}={:x}", strct, field, _field.offset);
@@ -100,19 +113,23 @@ impl<T: VirtualRead> Process<T> {
 
     pub fn get_pid(&mut self) -> Result<i32> {
         let offs = self.get_offset("_EPROCESS", "UniqueProcessId")?;
-        let memory = &mut self.mem.borrow_mut();
-        Ok(memory.virt_read_i32(
-            self.start_block.arch,
-            self.start_block.dtb,
+        let win = self.win.borrow();
+        let start_block = win.start_block;
+        let mem = &mut win.mem.borrow_mut();
+        Ok(mem.virt_read_i32(
+            start_block.arch,
+            start_block.dtb,
             self.eprocess + offs)?)
     }
 
     pub fn get_name(&mut self) -> Result<String> {
         let offs = self.get_offset("_EPROCESS", "ImageFileName")?;
-        let memory = &mut self.mem.borrow_mut();
-        Ok(memory.virt_read_cstr(
-            self.start_block.arch,
-            self.start_block.dtb,
+        let win = self.win.borrow();
+        let start_block = win.start_block;
+        let mem = &mut win.mem.borrow_mut();
+        Ok(mem.virt_read_cstr(
+            start_block.arch,
+            start_block.dtb,
             self.eprocess + offs,
             Length::from(16))?)
     }
@@ -121,19 +138,23 @@ impl<T: VirtualRead> Process<T> {
     pub fn get_dtb(&mut self) -> Result<Address> {
         // _KPROCESS is the first entry in _EPROCESS
         let offs = self.get_offset("_KPROCESS", "DirectoryTableBase")?;
-        let memory = &mut self.mem.borrow_mut();
-        Ok(memory.virt_read_addr(
-            self.start_block.arch,
-            self.start_block.dtb,
+        let win = self.win.borrow();
+        let start_block = win.start_block;
+        let mem = &mut win.mem.borrow_mut();
+        Ok(mem.virt_read_addr(
+            start_block.arch,
+            start_block.dtb,
             self.eprocess + offs)?)
     }
 
     pub fn get_wow64(&mut self) -> Result<Address> {
         let offs = self.get_offset("_EPROCESS", "WoW64Process")?;
-        let memory = &mut self.mem.borrow_mut();
-        Ok(memory.virt_read_addr(
-            self.start_block.arch,
-            self.start_block.dtb,
+        let win = self.win.borrow();
+        let start_block = win.start_block;
+        let mem = &mut win.mem.borrow_mut();
+        Ok(mem.virt_read_addr(
+            start_block.arch,
+            start_block.dtb,
             self.eprocess + offs)?)
     }
 
@@ -145,24 +166,31 @@ impl<T: VirtualRead> Process<T> {
         let wow64 = self.get_wow64()?;
         info!("wow64={:x}", wow64);
 
+        let start_block = {
+            let win = self.win.borrow();
+            win.start_block
+        };
+
         let peb = match wow64.is_null() {
             true => {
                 // x64
                 info!("reading peb for x64 process");
                 let offs = self.get_offset("_EPROCESS", "Peb")?;
-                let memory = &mut self.mem.borrow_mut();
-                memory.virt_read_addr(
-                    self.start_block.arch,
-                    self.start_block.dtb,
+                let win = self.win.borrow();
+                let mem = &mut win.mem.borrow_mut();
+                mem.virt_read_addr(
+                    start_block.arch,
+                    start_block.dtb,
                     self.eprocess + offs)?
             },
             false => {
                 // wow64 (first entry in wow64 struct = peb)
                 info!("reading peb for wow64 process");
-                let memory = &mut self.mem.borrow_mut();
-                memory.virt_read_addr(
-                    self.start_block.arch,
-                    self.start_block.dtb,
+                let win = self.win.borrow();
+                let mem = &mut win.mem.borrow_mut();
+                mem.virt_read_addr(
+                    start_block.arch,
+                    start_block.dtb,
                     wow64)?
             },
         };
@@ -180,9 +208,10 @@ impl<T: VirtualRead> Process<T> {
         // read PPEB_LDR_DATA Ldr
         // addr_t peb_ldr = this->read_ptr(peb + this->mo_ldr);
         let peb_ldr = {
-            let memory = &mut self.mem.borrow_mut();
-            memory.virt_read_addr(
-                self.start_block.arch,
+            let win = self.win.borrow();
+            let mem = &mut win.mem.borrow_mut();
+            mem.virt_read_addr(
+                start_block.arch,
                 dtb,
                 peb + ldr_offs)?
         };
@@ -191,9 +220,10 @@ impl<T: VirtualRead> Process<T> {
         // loop LIST_ENTRY InLoadOrderModuleList
         // addr_t first_module = this->read_ptr(peb_ldr + this->mo_ldr_list);
         let first_module = {
-            let memory = &mut self.mem.borrow_mut();
-            memory.virt_read_addr(
-                self.start_block.arch,
+            let win = self.win.borrow();
+            let mem = &mut win.mem.borrow_mut();
+            mem.virt_read_addr(
+                start_block.arch,
                 dtb,
                 peb_ldr + ldr_list_offs)?
         };
@@ -201,7 +231,9 @@ impl<T: VirtualRead> Process<T> {
         Ok(first_module)
     }
 
-    pub fn module_iter(&mut self) -> Result<ModuleIterator<'_, T>> {
-        ModuleIterator::new(self)
+    // module_iter will explicitly clone self and feed it into an iterator
+    pub fn module_iter(&self) -> Result<ModuleIterator<T>> {
+        let rc = Rc::new(RefCell::new(self.clone()));
+        ModuleIterator::new(rc)
     }
 }

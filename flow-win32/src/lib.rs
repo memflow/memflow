@@ -53,7 +53,7 @@ pub fn init<T: PhysicalRead + VirtualRead>(mem: Memory<T>) -> Result<Windows<T>>
     let kernel_pdb = match cache::fetch_pdb_from_mem(memory, &start_block, kernel_base) {
         Ok(p) => {
             info!("valid kernel_pdb found: {:?}", p);
-            Some(PDB::new(p))
+            Some(Rc::new(RefCell::new(PDB::new(p))))
         },
         Err(e) => {
             info!("unable to fetch pdb for ntoskrnl: {:?}", e);

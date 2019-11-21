@@ -1,14 +1,14 @@
 use crate::error::{Error, Result};
 use log::debug;
 
-use crate::win::{Windows, types::PDB};
 use crate::kernel::StartBlock;
+use crate::win::{types::PDB, Windows};
 
 use flow_core::address::{Address, Length};
-use flow_core::mem::{VirtualRead};
+use flow_core::mem::VirtualRead;
 
-use std::rc::Rc;
 use std::cell::RefCell;
+use std::rc::Rc;
 
 use widestring::U16CString;
 
@@ -24,7 +24,7 @@ impl<T: VirtualRead> ModuleIterator<T> {
     pub fn new(process: Rc<RefCell<Process<T>>>) -> Result<Self> {
         let first_module = process.borrow_mut().get_first_module()?;
         //let first_module = process.get_first_module()?;
-        Ok(Self{
+        Ok(Self {
             process: process,
             first_module: first_module,
             module_base: first_module,
@@ -55,11 +55,10 @@ impl<T: VirtualRead> Iterator for ModuleIterator<T> {
         let mem = &mut win.mem.borrow_mut();
 
         // read next module entry (list_entry is first element in module)
-        let mut next = mem.virt_read_addr(
-            start_block.arch,
-            dtb,
-            self.module_base + _list_entry_blink).unwrap(); // TODO: convert to Option
-    
+        let mut next = mem
+            .virt_read_addr(start_block.arch, dtb, self.module_base + _list_entry_blink)
+            .unwrap(); // TODO: convert to Option
+
         // if next process is 'system' again just null it
         if next == self.first_module {
             next = Address::null();
@@ -93,7 +92,7 @@ where
 
 impl<T: VirtualRead> Module<T> {
     pub fn new(process: Rc<RefCell<Process<T>>>, module_base: Address) -> Self {
-        Self{
+        Self {
             process: process,
             module_base: module_base,
         }
@@ -140,14 +139,16 @@ impl<T: VirtualRead> Module<T> {
         let length = mem.virt_read_u16(
             start_block.arch,
             dtb,
-            self.module_base + offs + Length::from(0))?;
+            self.module_base + offs + Length::from(0),
+        )?;
         if length == 0 {
             return Err(Error::new("unable to read unicode string length"));
         }
         let buffer = mem.virt_read_addr(
             start_block.arch,
             dtb,
-            self.module_base + offs + Length::from(8))?;
+            self.module_base + offs + Length::from(8),
+        )?;
         if buffer.is_null() {
             return Err(Error::new("unable to read unicode string length"));
         }
@@ -159,17 +160,14 @@ impl<T: VirtualRead> Module<T> {
         }
 
         // read buffer
-        let mut content = mem.virt_read(
-            start_block.arch,
-            dtb,
-            buffer,
-            Length::from(length + 2))?;
+        let mut content = mem.virt_read(start_block.arch, dtb, buffer, Length::from(length + 2))?;
         content[length as usize] = 0;
         content[length as usize + 1] = 0;
 
         // TODO: check length % 2 == 0
 
-        let _content: Vec<u16> = unsafe { std::mem::transmute::<Vec<u8>, Vec<u16>>(content.into()) };
+        let _content: Vec<u16> =
+            unsafe { std::mem::transmute::<Vec<u8>, Vec<u16>>(content.into()) };
         Ok(U16CString::from_vec_with_nul(_content)?.to_string_lossy())
     }
 }

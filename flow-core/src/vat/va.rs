@@ -54,7 +54,9 @@ impl<'a, T: PhysicalRead + VirtualAddressTranslation> VirtualRead for VatImpl<'a
     }
 }
 
-impl<'a, T: PhysicalRead + PhysicalWrite + VirtualAddressTranslation> VirtualWrite for VatImpl<'a, T> {
+impl<'a, T: PhysicalRead + PhysicalWrite + VirtualAddressTranslation> VirtualWrite
+    for VatImpl<'a, T>
+{
     fn virt_write(
         &mut self,
         arch: Architecture,

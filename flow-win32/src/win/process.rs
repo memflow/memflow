@@ -1,14 +1,14 @@
 use crate::error::Result;
-use log::{info, debug};
+use log::{debug, info};
 
-use crate::win::{Windows, types::PDB};
 use crate::kernel::StartBlock;
+use crate::win::{types::PDB, Windows};
 
 use flow_core::address::{Address, Length};
-use flow_core::mem::{VirtualRead};
+use flow_core::mem::VirtualRead;
 
-use std::rc::Rc;
 use std::cell::RefCell;
+use std::rc::Rc;
 
 use crate::win::module::ModuleIterator;
 
@@ -53,14 +53,17 @@ impl<T: VirtualRead> Iterator for ProcessIterator<T> {
         let _list_entry_blink = _list_entry.get_field("Blink")?.offset;
 
         // read next eprocess entry
-        let mut next = memory.virt_read_addr(
-            start_block.arch,
-            start_block.dtb,
-            self.eprocess + _eprocess_links + _list_entry_blink).unwrap(); // TODO: convert to Option
+        let mut next = memory
+            .virt_read_addr(
+                start_block.arch,
+                start_block.dtb,
+                self.eprocess + _eprocess_links + _list_entry_blink,
+            )
+            .unwrap(); // TODO: convert to Option
         if !next.is_null() {
             next -= _eprocess_links;
         }
-    
+
         // if next process is 'system' again just null it
         if next == self.first_eprocess {
             next = Address::null();
@@ -95,7 +98,7 @@ where
 // TODO: read/ret "ProcessInfo"
 impl<T: VirtualRead> Process<T> {
     pub fn new(win: Rc<RefCell<Windows<T>>>, eprocess: Address) -> Self {
-        Self{
+        Self {
             win: win,
             eprocess: eprocess,
         }
@@ -104,9 +107,17 @@ impl<T: VirtualRead> Process<T> {
     // TODO: macro? pub?
     pub fn get_offset(&mut self, strct: &str, field: &str) -> Result<Length> {
         let win = &mut self.win.borrow_mut();
-        let mut _pdb = win.kernel_pdb.as_ref().ok_or_else(|| "kernel pdb not found")?.borrow_mut();
-        let _strct = _pdb.get_struct(strct).ok_or_else(|| format!("{} not found", strct))?;
-        let _field = _strct.get_field(field).ok_or_else(|| format!("{} not found", field))?;
+        let mut _pdb = win
+            .kernel_pdb
+            .as_ref()
+            .ok_or_else(|| "kernel pdb not found")?
+            .borrow_mut();
+        let _strct = _pdb
+            .get_struct(strct)
+            .ok_or_else(|| format!("{} not found", strct))?;
+        let _field = _strct
+            .get_field(field)
+            .ok_or_else(|| format!("{} not found", field))?;
         debug!("offset {}::{}={:x}", strct, field, _field.offset);
         Ok(_field.offset)
     }
@@ -116,10 +127,7 @@ impl<T: VirtualRead> Process<T> {
         let win = self.win.borrow();
         let start_block = win.start_block;
         let mem = &mut win.mem.borrow_mut();
-        Ok(mem.virt_read_i32(
-            start_block.arch,
-            start_block.dtb,
-            self.eprocess + offs)?)
+        Ok(mem.virt_read_i32(start_block.arch, start_block.dtb, self.eprocess + offs)?)
     }
 
     pub fn get_name(&mut self) -> Result<String> {
@@ -131,7 +139,8 @@ impl<T: VirtualRead> Process<T> {
             start_block.arch,
             start_block.dtb,
             self.eprocess + offs,
-            Length::from(16))?)
+            Length::from(16),
+        )?)
     }
 
     // TODO: dtb trait
@@ -141,10 +150,7 @@ impl<T: VirtualRead> Process<T> {
         let win = self.win.borrow();
         let start_block = win.start_block;
         let mem = &mut win.mem.borrow_mut();
-        Ok(mem.virt_read_addr(
-            start_block.arch,
-            start_block.dtb,
-            self.eprocess + offs)?)
+        Ok(mem.virt_read_addr(start_block.arch, start_block.dtb, self.eprocess + offs)?)
     }
 
     pub fn get_wow64(&mut self) -> Result<Address> {
@@ -152,10 +158,7 @@ impl<T: VirtualRead> Process<T> {
         let win = self.win.borrow();
         let start_block = win.start_block;
         let mem = &mut win.mem.borrow_mut();
-        Ok(mem.virt_read_addr(
-            start_block.arch,
-            start_block.dtb,
-            self.eprocess + offs)?)
+        Ok(mem.virt_read_addr(start_block.arch, start_block.dtb, self.eprocess + offs)?)
     }
 
     pub fn is_wow64(&mut self) -> Result<bool> {
@@ -178,21 +181,15 @@ impl<T: VirtualRead> Process<T> {
                 let offs = self.get_offset("_EPROCESS", "Peb")?;
                 let win = self.win.borrow();
                 let mem = &mut win.mem.borrow_mut();
-                mem.virt_read_addr(
-                    start_block.arch,
-                    start_block.dtb,
-                    self.eprocess + offs)?
-            },
+                mem.virt_read_addr(start_block.arch, start_block.dtb, self.eprocess + offs)?
+            }
             false => {
                 // wow64 (first entry in wow64 struct = peb)
                 info!("reading peb for wow64 process");
                 let win = self.win.borrow();
                 let mem = &mut win.mem.borrow_mut();
-                mem.virt_read_addr(
-                    start_block.arch,
-                    start_block.dtb,
-                    wow64)?
-            },
+                mem.virt_read_addr(start_block.arch, start_block.dtb, wow64)?
+            }
         };
         info!("peb={:x}", peb);
 
@@ -210,10 +207,7 @@ impl<T: VirtualRead> Process<T> {
         let peb_ldr = {
             let win = self.win.borrow();
             let mem = &mut win.mem.borrow_mut();
-            mem.virt_read_addr(
-                start_block.arch,
-                dtb,
-                peb + ldr_offs)?
+            mem.virt_read_addr(start_block.arch, dtb, peb + ldr_offs)?
         };
         info!("peb_ldr={:x}", peb_ldr);
 
@@ -222,10 +216,7 @@ impl<T: VirtualRead> Process<T> {
         let first_module = {
             let win = self.win.borrow();
             let mem = &mut win.mem.borrow_mut();
-            mem.virt_read_addr(
-                start_block.arch,
-                dtb,
-                peb_ldr + ldr_list_offs)?
+            mem.virt_read_addr(start_block.arch, dtb, peb_ldr + ldr_list_offs)?
         };
         info!("first_module={:x}", first_module);
         Ok(first_module)

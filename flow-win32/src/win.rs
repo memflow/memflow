@@ -1,16 +1,16 @@
-use std::rc::Rc;
 use std::cell::RefCell;
+use std::rc::Rc;
 
-use flow_core::address::{Address};
-use flow_core::mem::{VirtualRead};
+use flow_core::address::Address;
+use flow_core::mem::VirtualRead;
 
 use crate::kernel::StartBlock;
 
-pub mod types;
-pub mod process;
 pub mod module;
+pub mod process;
+pub mod types;
 
-use process::{ProcessIterator};
+use process::ProcessIterator;
 
 // TODO: cache processes somewhat?
 pub struct Windows<T: VirtualRead> {

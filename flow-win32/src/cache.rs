@@ -27,15 +27,21 @@ fn cache_dir() -> Result<PathBuf> {
 }
 
 fn try_download_pdb(url: &String, filename: &String) -> Result<()> {
-    let url = duma::utils::parse_url(&format!("{}/{}", url, filename))
-        .map_err(|e| Error::new(e))?;
+    let url =
+        duma::utils::parse_url(&format!("{}/{}", url, filename)).map_err(|e| Error::new(e))?;
 
     println!("trying to download pdb from {:?}", url);
     duma::download::http_download(url, &ArgMatches::default(), "0.1")?;
 
     // try to parse pdb
-    let file = File::open(filename).map_err(|e| { fs::remove_file(filename).ok(); e })?;
-    PDB::open(file).map_err(|e| { fs::remove_file(filename).ok(); e })?;
+    let file = File::open(filename).map_err(|e| {
+        fs::remove_file(filename).ok();
+        e
+    })?;
+    PDB::open(file).map_err(|e| {
+        fs::remove_file(filename).ok();
+        e
+    })?;
 
     Ok(())
 }
@@ -43,7 +49,10 @@ fn try_download_pdb(url: &String, filename: &String) -> Result<()> {
 fn download_pdb(pdbname: &String, guid: &String) -> Result<()> {
     info!("downloading pdb for {} with guid/age {}", pdbname, guid);
 
-    let base_url = format!("https://msdl.microsoft.com/download/symbols/{}/{}", pdbname, guid);
+    let base_url = format!(
+        "https://msdl.microsoft.com/download/symbols/{}/{}",
+        pdbname, guid
+    );
     match try_download_pdb(&base_url, pdbname) {
         Ok(_) => return Ok(()),
         Err(e) => warn!("unable to download pdb: {:?}", e),
@@ -128,7 +137,8 @@ pub fn fetch_pdb_from_pe(pe: &PE) -> Result<PathBuf> {
     download_pdb_cache(
         &String::from_utf8(codeview.filename.to_vec())
             .unwrap_or_default()
-            .trim_matches(char::from(0)).to_string(),
+            .trim_matches(char::from(0))
+            .to_string(),
         &generate_guid(&codeview).unwrap_or_default(),
     )
 }

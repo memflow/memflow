@@ -1,6 +1,6 @@
 use crate::error::Result;
-use log::info;
 use flow_core::mem::{PhysicalRead, VirtualRead};
+use log::info;
 
 pub mod cache;
 pub mod error;
@@ -8,10 +8,10 @@ pub mod kernel;
 pub mod pe;
 pub mod win;
 
-use win::{Windows, types::PDB};
+use win::{types::PDB, Windows};
 
-use std::rc::Rc;
 use std::cell::RefCell;
+use std::rc::Rc;
 
 /*
 Options:
@@ -54,7 +54,7 @@ pub fn init<T: PhysicalRead + VirtualRead>(mem: Memory<T>) -> Result<Windows<T>>
         Ok(p) => {
             info!("valid kernel_pdb found: {:?}", p);
             Some(Rc::new(RefCell::new(PDB::new(p))))
-        },
+        }
         Err(e) => {
             info!("unable to fetch pdb for ntoskrnl: {:?}", e);
             None

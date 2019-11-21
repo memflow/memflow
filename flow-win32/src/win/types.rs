@@ -1,11 +1,11 @@
-use log::{trace};
+use log::trace;
 
 use pdb::{self, FallibleIterator, Result};
 use std::collections::HashMap;
 use std::fs::File;
 use std::path::PathBuf;
 
-use flow_core::address::{Length};
+use flow_core::address::Length;
 
 mod data;
 use data::TypeSet;
@@ -100,7 +100,7 @@ pub struct PDB {
 
 impl PDB {
     pub fn new(file: PathBuf) -> Self {
-        PDB{
+        PDB {
             file: file,
             structs: HashMap::new(),
         }
@@ -119,6 +119,7 @@ impl PDB {
             }
             Err(e) => trace!("struct {} not found: {:?}", name, e),
         }
+
         None
     }
 }

@@ -1,7 +1,7 @@
 use clap::{App, Arg};
 use pretty_env_logger;
-use std::rc::Rc;
 use std::cell::RefCell;
+use std::rc::Rc;
 
 use flow_core::bridge::client::BridgeClient;
 use flow_win32;
@@ -37,7 +37,10 @@ fn main() {
     let bridgerc = Rc::new(RefCell::new(bridge));
     let win = flow_win32::init(bridgerc).unwrap();
 
-    win.process_iter().for_each(|mut p| println!("{:?} {:?}", p.get_pid(), p.get_name()));
+    win.process_iter()
+        .for_each(|mut p| println!("{:?} {:?}", p.get_pid(), p.get_name()));
+    win.process_iter()
+        .for_each(|mut p| println!("{:?} {:?}", p.get_pid(), p.get_name()));
 
     let mut process = win
         .process_iter()
@@ -52,12 +55,25 @@ fn main() {
         .ok_or_else(|| "unable to find Calculator.exe")
         .unwrap();
 
-    println!("found Calculator.exe: {:?} {:?} {:?}", process.get_pid(), process.get_name(), process.is_wow64());
+    println!(
+        "found Calculator.exe: {:?} {:?} {:?}",
+        process.get_pid(),
+        process.get_name(),
+        process.is_wow64()
+    );
 
-    process.module_iter().unwrap().for_each(|mut m| println!("{:?}", m.get_name()));
+    process
+        .module_iter()
+        .unwrap()
+        .for_each(|mut m| println!("{:?}", m.get_name()));
+    process
+        .module_iter()
+        .unwrap()
+        .for_each(|mut m| println!("{:?}", m.get_name()));
 
     let module = process
-        .module_iter().unwrap()
+        .module_iter()
+        .unwrap()
         .filter_map(|mut m| {
             if m.get_name().unwrap_or_default() == "Calculator.exe" {
                 Some(m)

@@ -39,7 +39,7 @@ fn main() {
 
     win.process_iter().for_each(|mut p| println!("{:?} {:?}", p.get_pid(), p.get_name()));
 
-    let mut proc = win
+    let mut process = win
         .process_iter()
         .filter_map(|mut p| {
             if p.get_name().unwrap_or_default() == "Calculator.exe" {
@@ -52,11 +52,11 @@ fn main() {
         .ok_or_else(|| "unable to find Calculator.exe")
         .unwrap();
 
-    println!("found Calculator.exe: {:?} {:?} {:?}", proc.get_pid(), proc.get_name(), proc.is_wow64());
+    println!("found Calculator.exe: {:?} {:?} {:?}", process.get_pid(), process.get_name(), process.is_wow64());
 
-    proc.module_iter().unwrap().for_each(|mut m| println!("{:?}", m.get_name()));
+    process.module_iter().unwrap().for_each(|mut m| println!("{:?}", m.get_name()));
 
-    let module = proc
+    let module = process
         .module_iter().unwrap()
         .filter_map(|mut m| {
             if m.get_name().unwrap_or_default() == "Calculator.exe" {

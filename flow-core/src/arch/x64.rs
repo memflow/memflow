@@ -1,5 +1,5 @@
-use crate::arch::ByteOrder;
 use crate::address::Length;
+use crate::arch::ByteOrder;
 
 pub fn byte_order() -> ByteOrder {
     ByteOrder::LittleEndian

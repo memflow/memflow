@@ -6,7 +6,7 @@ use byteorder::{ByteOrder, LittleEndian};
 
 use flow_core::address::{Address, Length};
 use flow_core::arch::{self, InstructionSet};
-use flow_core::mem::{VirtualRead};
+use flow_core::mem::VirtualRead;
 
 use goblin::pe::options::ParseOptions;
 use goblin::pe::PE;
@@ -14,10 +14,7 @@ use goblin::pe::PE;
 use crate::kernel::StartBlock;
 
 // TODO: -> Result<WinProcess>
-pub fn find<T: VirtualRead>(
-    mem: &mut T,
-    start_block: &StartBlock,
-) -> Result<Address> {
+pub fn find<T: VirtualRead>(mem: &mut T, start_block: &StartBlock) -> Result<Address> {
     if start_block.arch.instruction_set == InstructionSet::X64 {
         if !start_block.va.is_null() {
             match find_x64_with_va(mem, start_block) {
@@ -40,10 +37,7 @@ pub fn find<T: VirtualRead>(
     Err(Error::new("unable to find ntoskrnl.exe"))
 }
 
-fn find_x64_with_va<T: VirtualRead>(
-    mem: &mut T,
-    start_block: &StartBlock,
-) -> Result<Address> {
+fn find_x64_with_va<T: VirtualRead>(mem: &mut T, start_block: &StartBlock) -> Result<Address> {
     trace!(
         "find_x64_with_va: trying to find ntoskrnl.exe with va hint at {:x}",
         start_block.va.as_u64()

@@ -44,13 +44,17 @@ fn connect_unix(path: &str, opts: Vec<&str>) -> Result<BridgeClient> {
 
 #[cfg(not(any(unix)))]
 fn connect_unix(path: &str, opts: Vec<&str>) -> Result<BridgeClient> {
-    Err(Error::new(ErrorKind::Other, "unix sockets are not supported on this os"))
+    Err(Error::new(
+        ErrorKind::Other,
+        "unix sockets are not supported on this os",
+    ))
 }
 
 fn connect_tcp(path: &str, opts: Vec<&str>) -> Result<BridgeClient> {
     info!("trying to connect via tcp -> {}", path);
 
-    let addr = path.parse::<SocketAddr>()
+    let addr = path
+        .parse::<SocketAddr>()
         .map_err(|e| Error::new(ErrorKind::Other, e))?;
 
     let mut runtime = Runtime::new().unwrap();
@@ -71,10 +75,10 @@ fn connect_tcp(path: &str, opts: Vec<&str>) -> Result<BridgeClient> {
     })
 }
 
-
 fn connect_rpc<T, U>(runtime: &mut Runtime, reader: T, writer: U) -> Result<bridge::Client>
-where T: ::std::io::Read + 'static,
-      U: ::std::io::Write + 'static,
+where
+    T: ::std::io::Read + 'static,
+    U: ::std::io::Write + 'static,
 {
     let network = Box::new(twoparty::VatNetwork::new(
         reader,
@@ -93,22 +97,19 @@ where T: ::std::io::Read + 'static,
 
 impl BridgeClient {
     pub fn connect(urlstr: &str) -> Result<BridgeClient> {
-        let url = Url::parse(urlstr)
-            .map_err(|e| Error::new(ErrorKind::Other, e))?;
+        let url = Url::parse(urlstr).map_err(|e| Error::new(ErrorKind::Other, e))?;
 
-        let path = url.path().split(",").nth(0).ok_or_else(|| Error::new(ErrorKind::Other, "invalid url"))?;
+        let path = url
+            .path()
+            .split(",")
+            .nth(0)
+            .ok_or_else(|| Error::new(ErrorKind::Other, "invalid url"))?;
         let opts = url.path().split(",").skip(1).collect::<Vec<_>>();
 
         match url.scheme() {
-            "unix" => {
-                connect_unix(path, opts)
-            },
-            "tcp" => {
-                connect_tcp(path, opts)
-            },
-            _ => {
-                Err(Error::new(ErrorKind::Other, "invalid url scheme"))
-            }
+            "unix" => connect_unix(path, opts),
+            "tcp" => connect_tcp(path, opts),
+            _ => Err(Error::new(ErrorKind::Other, "invalid url scheme")),
         }
     }
 
@@ -125,7 +126,7 @@ impl PhysicalRead for BridgeClient {
     // physRead @0 (address :UInt64, length :UInt64) -> (data :Data);
     fn phys_read(&mut self, addr: Address, len: Length) -> Result<Vec<u8>> {
         trace!("phys_read({:?}, {:?})", addr, len);
-        
+
         let mut request = self.bridge.phys_read_request();
         request.get().set_address(addr.as_u64());
         request.get().set_length(len.as_u64());

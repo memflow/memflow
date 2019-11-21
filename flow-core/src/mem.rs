@@ -117,12 +117,18 @@ pub trait VirtualRead {
         ))
     }
 
-    fn virt_read_cstr(&mut self, arch: Architecture, dtb: Address, addr: Address, len: Length) -> Result<String> {
+    fn virt_read_cstr(
+        &mut self,
+        arch: Architecture,
+        dtb: Address,
+        addr: Address,
+        len: Length,
+    ) -> Result<String> {
         let mut r = self.virt_read(arch, dtb, addr, len)?;
         match r.iter().enumerate().filter(|(i, c)| **c == 0u8).nth(0) {
             Some((n, _)) => {
                 r.truncate(n);
-            },
+            }
             None => (),
         }
 

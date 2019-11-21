@@ -31,7 +31,7 @@ linux-native:
       - target/release/flow-cli
 
 linux-musl:
-  stage: build
+  stage: build_cross
   before_script:
     - sudo apt-get update
     - rustup update

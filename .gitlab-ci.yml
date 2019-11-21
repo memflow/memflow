@@ -27,35 +27,129 @@ linux-native:
     - cargo build --release
   artifacts:
     paths:
-      - target/release/libflow_core.rlib
-      - target/release/libflow_qemu.rlib
-      - target/release/libflow_qemu_bridge.rlib
       - target/release/flow-cli
 
 linux-musl:
   stage: build
   before_script:
     - sudo apt-get update
-    - sudo apt-get install -yq capnproto
     - rustup update
+    - sudo apt-get install -yq capnproto
   script:
     - rustc --version
     - cargo --version
     - cargo build --release --target x86_64-unknown-linux-musl
   artifacts:
     paths:
-      - target/x86_64-unknown-linux-musl/release/libflow_core.rlib
-      - target/x86_64-unknown-linux-musl/release/libflow_qemu.rlib
-      - target/x86_64-unknown-linux-musl/release/libflow_qemu_bridge.rlib
       - target/x86_64-unknown-linux-musl/release/flow-cli
+
+linux-gnu-armv6:
+  stage: build
+  before_script:
+    - sudo apt-get update
+    - rustup update
+    - sudo apt-get install -yq capnproto
+    - sudo apt-get install -yq gcc-arm-linux-gnueabi
+    - rustup target add arm-unknown-linux-gnueabi
+    - sudo chmod 777 /home/rust/.cargo/config
+    - echo "[target.arm-unknown-linux-gnueabi]" >> ~/.cargo/config
+    - echo "linker = \"/usr/bin/arm-linux-gnueabi-gcc\"" >> ~/.cargo/config
+    - echo "ar = \"/usr/arm-linux-gnueabi/bin/ar\"" >> ~/.cargo/config
+  script:
+    - rustc --version
+    - cargo --version
+    - cargo build --release --target arm-unknown-linux-gnueabi
+  artifacts:
+    paths:
+      - target/arm-unknown-linux-gnueabi/release/flow-cli
+
+linux-gnu-armv6hf:
+  stage: build
+  before_script:
+    - sudo apt-get update
+    - rustup update
+    - sudo apt-get install -yq capnproto
+    - sudo apt-get install -yq gcc-arm-linux-gnueabihf
+    - rustup target add arm-unknown-linux-gnueabihf
+    - sudo chmod 777 /home/rust/.cargo/config
+    - echo "[target.arm-unknown-linux-gnueabihf]" >> ~/.cargo/config
+    - echo "linker = \"/usr/bin/arm-linux-gnueabihf-gcc\"" >> ~/.cargo/config
+    - echo "ar = \"/usr/arm-linux-gnueabihf/bin/ar\"" >> ~/.cargo/config
+  script:
+    - rustc --version
+    - cargo --version
+    - cargo build --release --target arm-unknown-linux-gnueabihf
+  artifacts:
+    paths:
+      - target/arm-unknown-linux-gnueabihf/release/flow-cli
+
+linux-gnu-armv7hf:
+  stage: build
+  before_script:
+    - sudo apt-get update
+    - rustup update
+    - sudo apt-get install -yq capnproto
+    - sudo apt-get install -yq gcc-arm-linux-gnueabihf
+    - rustup target add armv7-unknown-linux-gnueabihf
+    - sudo chmod 777 /home/rust/.cargo/config
+    - echo "[target.armv7-unknown-linux-gnueabihf]" >> ~/.cargo/config
+    - echo "linker = \"/usr/bin/arm-linux-gnueabihf-gcc\"" >> ~/.cargo/config
+    - echo "ar = \"/usr/arm-linux-gnueabihf/bin/ar\"" >> ~/.cargo/config
+  script:
+    - rustc --version
+    - cargo --version
+    - cargo build --release --target armv7-unknown-linux-gnueabihf
+  artifacts:
+    paths:
+      - target/armv7-unknown-linux-gnueabihf/release/flow-cli
+
+linux-gnu-mips:
+  stage: build
+  before_script:
+    - sudo apt-get update
+    - rustup update
+    - sudo apt-get install -yq capnproto
+    - sudo apt-get install -yq gcc-mips-linux-gnu
+    - rustup target add mips-unknown-linux-gnu
+    - sudo chmod 777 /home/rust/.cargo/config
+    - echo "[target.mips-unknown-linux-gnu]" >> ~/.cargo/config
+    - echo "linker = \"/usr/bin/mips-linux-gnu-gcc\"" >> ~/.cargo/config
+    - echo "ar = \"/usr/mips-linux-gnu/bin/ar\"" >> ~/.cargo/config
+  script:
+    - rustc --version
+    - cargo --version
+    - cargo build --release --target mips-unknown-linux-gnu
+  artifacts:
+    paths:
+      - target/mips-unknown-linux-gnu/release/flow-cli
+
+linux-gnu-mipsel:
+  stage: build
+  before_script:
+    - sudo apt-get update
+    - rustup update
+    - sudo apt-get install -yq capnproto
+    - sudo apt-get install -yq gcc-mipsel-linux-gnu
+    - rustup target add mipsel-unknown-linux-gnu
+    - sudo chmod 777 /home/rust/.cargo/config
+    - echo "[target.mipsel-unknown-linux-gnu]" >> ~/.cargo/config
+    - echo "linker = \"/usr/bin/mipsel-linux-gnu-gcc\"" >> ~/.cargo/config
+    - echo "ar = \"/usr/mipsel-linux-gnu/bin/ar\"" >> ~/.cargo/config
+  script:
+    - rustc --version
+    - cargo --version
+    - cargo build --release --target mipsel-unknown-linux-gnu
+  artifacts:
+    paths:
+      - target/mipsel-unknown-linux-gnu/release/flow-cli
 
 windows-mingw-x64:
   stage: build
   before_script:
     - sudo apt-get update
+    - rustup update
     - sudo apt-get install -yq capnproto
     - sudo apt-get install -yq gcc-mingw-w64
-    - rustup update
     - rustup target add x86_64-pc-windows-gnu
     - sudo chmod 777 /home/rust/.cargo/config
     - echo "[target.x86_64-pc-windows-gnu]" >> ~/.cargo/config
@@ -67,7 +161,4 @@ windows-mingw-x64:
     - cargo build --release --target x86_64-pc-windows-gnu
   artifacts:
     paths:
-      - target/x86_64-pc-windows-gnu/release/libflow_core.rlib
-      - target/x86_64-pc-windows-gnu/release/libflow_qemu.rlib
-      - target/x86_64-pc-windows-gnu/release/libflow_qemu_bridge.rlib
       - target/x86_64-pc-windows-gnu/release/flow-cli.exe

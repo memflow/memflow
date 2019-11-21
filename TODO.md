@@ -1,5 +1,6 @@
 general:
 - replace println!() with appropiate log macros
+- pin rust version in ci
 
 va:
 - find a better way to encapsulate VatImpl

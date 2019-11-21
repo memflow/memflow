@@ -75,12 +75,28 @@ impl InstructionSet {
         match_instruction_set!(self, len_u32)
     }
 
+    pub fn len_u16(&self) -> Length {
+        match_instruction_set!(self, len_u16)
+    }
+
+    pub fn len_u8(&self) -> Length {
+        match_instruction_set!(self, len_u8)
+    }
+
     pub fn len_i64(&self) -> Length {
         match_instruction_set!(self, len_i64)
     }
 
     pub fn len_i32(&self) -> Length {
         match_instruction_set!(self, len_i32)
+    }
+
+    pub fn len_i16(&self) -> Length {
+        match_instruction_set!(self, len_i16)
+    }
+
+    pub fn len_i8(&self) -> Length {
+        match_instruction_set!(self, len_i8)
     }
 
     pub fn len_f32(&self) -> Length {

@@ -55,6 +55,12 @@ impl std::convert::From<&str> for Error {
     }
 }
 
+impl std::convert::From<String> for Error {
+    fn from(error: String) -> Self {
+        Self::new(error)
+    }
+}
+
 impl std::convert::From<std::io::Error> for Error {
     fn from(error: std::io::Error) -> Self {
         Self::new(error)
@@ -90,6 +96,12 @@ impl std::convert::From<failure::Error> for Error {
 
 impl std::convert::From<goblin::error::Error> for Error {
     fn from(error: goblin::error::Error) -> Self {
+        Self::new(error)
+    }
+}
+
+impl std::convert::From<widestring::MissingNulError<u16>> for Error {
+    fn from(error: widestring::MissingNulError<u16>) -> Self {
         Self::new(error)
     }
 }

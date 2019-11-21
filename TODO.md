@@ -13,6 +13,7 @@ qemu:
 
 win:
 - verify each stage and early abort (e.g. see if offsets can be probed from the pdb/struct parser)
+- pdb offset to c header dump thing
 
 download:
 - fork duma and add proper lib stuff (create a struct instead of argopts)

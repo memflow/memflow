@@ -37,6 +37,7 @@ linux-musl:
   before_script:
     - sudo apt-get update
     - sudo apt-get install -yq capnproto
+    - rustup update
   script:
     - rustc --version
     - cargo --version
@@ -54,6 +55,7 @@ windows-mingw-x64:
     - sudo apt-get update
     - sudo apt-get install -yq capnproto
     - sudo apt-get install -yq gcc-mingw-w64
+    - rustup update
     - rustup target add x86_64-pc-windows-gnu
     - sudo chmod 777 /home/rust/.cargo/config
     - echo "[target.x86_64-pc-windows-gnu]" >> ~/.cargo/config

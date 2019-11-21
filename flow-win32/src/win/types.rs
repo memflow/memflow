@@ -71,6 +71,7 @@ impl Struct {
         for class in &data.classes {
             // TODO: filter class?
             class.fields.iter().for_each(|f| {
+                //println!("found offset: {:?}", f.name.to_string().into_owned());
                 field_map.insert(
                     f.name.to_string().into_owned(),
                     Field {

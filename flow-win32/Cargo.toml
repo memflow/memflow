@@ -19,3 +19,4 @@ dirs = "2.0.2"
 pdb = { git = "https://github.com/willglynn/pdb" }
 url = "2.1.0"
 failure = { version = "0.1.6", features = [] }
+widestring = "0.4.0"

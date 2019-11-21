@@ -62,6 +62,20 @@ pub trait VirtualRead {
         ))
     }
 
+    fn virt_read_u16(&mut self, arch: Architecture, dtb: Address, addr: Address) -> Result<u16> {
+        let r = self.virt_read(arch, dtb, addr, arch.instruction_set.len_u16())?;
+        Ok(arch_read_type!(
+            arch.instruction_set.byte_order(),
+            read_u16,
+            &r
+        ))
+    }
+
+    fn virt_read_u8(&mut self, arch: Architecture, dtb: Address, addr: Address) -> Result<u8> {
+        let r = self.virt_read(arch, dtb, addr, arch.instruction_set.len_u8())?;
+        Ok(r[0])
+    }
+
     fn virt_read_i64(&mut self, arch: Architecture, dtb: Address, addr: Address) -> Result<i64> {
         let r = self.virt_read(arch, dtb, addr, arch.instruction_set.len_i64())?;
         Ok(arch_read_type!(
@@ -78,6 +92,20 @@ pub trait VirtualRead {
             read_i32,
             &r
         ))
+    }
+
+    fn virt_read_i16(&mut self, arch: Architecture, dtb: Address, addr: Address) -> Result<i16> {
+        let r = self.virt_read(arch, dtb, addr, arch.instruction_set.len_i16())?;
+        Ok(arch_read_type!(
+            arch.instruction_set.byte_order(),
+            read_i16,
+            &r
+        ))
+    }
+
+    fn virt_read_i8(&mut self, arch: Architecture, dtb: Address, addr: Address) -> Result<i8> {
+        let r = self.virt_read(arch, dtb, addr, arch.instruction_set.len_i8())?;
+        Ok(r[0] as i8)
     }
 
     fn virt_read_f32(&mut self, arch: Architecture, dtb: Address, addr: Address) -> Result<f32> {

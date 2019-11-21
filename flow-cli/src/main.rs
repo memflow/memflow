@@ -42,15 +42,32 @@ fn main() {
     let mut proc = win
         .process_iter()
         .filter_map(|mut p| {
-            if p.get_name().unwrap_or_default() == "svchost.exe" {
+            if p.get_name().unwrap_or_default() == "Calculator.exe" {
                 Some(p)
             } else {
                 None
             }
         })
         .nth(0)
-        .ok_or_else(|| "unable to find svchost.exe")
+        .ok_or_else(|| "unable to find Calculator.exe")
         .unwrap();
 
-    println!("found svchost.exe: {:?} {:?}", proc.get_pid(), proc.get_name());
+    println!("found Calculator.exe: {:?} {:?} {:?}", proc.get_pid(), proc.get_name(), proc.is_wow64());
+
+    proc.module_iter().unwrap().for_each(|mut m| println!("{:?}", m.get_name()));
+
+    let module = proc
+        .module_iter().unwrap()
+        .filter_map(|mut m| {
+            if m.get_name().unwrap_or_default() == "Calculator.exe" {
+                Some(m)
+            } else {
+                None
+            }
+        })
+        .nth(0)
+        .ok_or_else(|| "unable to find module in Calculator.exe")
+        .unwrap();
+
+//    println!("mod: {:?}", module);
 }

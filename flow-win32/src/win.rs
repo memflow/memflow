@@ -8,6 +8,7 @@ use crate::kernel::StartBlock;
 
 pub mod types;
 pub mod process;
+pub mod module;
 
 use process::{ProcessIterator};
 

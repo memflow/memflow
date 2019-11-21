@@ -2,7 +2,8 @@ image: "ekidd/rust-musl-builder:latest"
 
 stages:
   - test
-  - build
+  - build_native
+  - build_cross
 
 test:
   stage: test
@@ -16,7 +17,7 @@ test:
     - RUST_BACKTRACE=1 cargo test --all --verbose
 
 linux-native:
-  stage: build
+  stage: build_native
   image: "rust:latest"
   before_script:
     - apt-get update
@@ -44,7 +45,7 @@ linux-musl:
       - target/x86_64-unknown-linux-musl/release/flow-cli
 
 linux-gnu-armv6:
-  stage: build
+  stage: build_cross
   before_script:
     - sudo apt-get update
     - rustup update
@@ -64,7 +65,7 @@ linux-gnu-armv6:
       - target/arm-unknown-linux-gnueabi/release/flow-cli
 
 linux-gnu-armv6hf:
-  stage: build
+  stage: build_cross
   before_script:
     - sudo apt-get update
     - rustup update
@@ -84,7 +85,7 @@ linux-gnu-armv6hf:
       - target/arm-unknown-linux-gnueabihf/release/flow-cli
 
 linux-gnu-armv7hf:
-  stage: build
+  stage: build_cross
   before_script:
     - sudo apt-get update
     - rustup update
@@ -104,7 +105,7 @@ linux-gnu-armv7hf:
       - target/armv7-unknown-linux-gnueabihf/release/flow-cli
 
 windows-mingw-x64:
-  stage: build
+  stage: build_cross
   before_script:
     - sudo apt-get update
     - rustup update

@@ -44,6 +44,34 @@ pub trait VirtualRead {
         )))
     }
 
+    fn virt_read_addr32(
+        &mut self,
+        arch: Architecture,
+        dtb: Address,
+        addr: Address,
+    ) -> Result<Address> {
+        let r = self.virt_read(arch, dtb, addr, arch.instruction_set.len_u32())?;
+        Ok(Address::from(arch_read_type!(
+            arch.instruction_set.byte_order(),
+            read_u32,
+            &r
+        )))
+    }
+
+    fn virt_read_addr64(
+        &mut self,
+        arch: Architecture,
+        dtb: Address,
+        addr: Address,
+    ) -> Result<Address> {
+        let r = self.virt_read(arch, dtb, addr, arch.instruction_set.len_u64())?;
+        Ok(Address::from(arch_read_type!(
+            arch.instruction_set.byte_order(),
+            read_u64,
+            &r
+        )))
+    }
+
     fn virt_read_u64(&mut self, arch: Architecture, dtb: Address, addr: Address) -> Result<u64> {
         let r = self.virt_read(arch, dtb, addr, arch.instruction_set.len_u64())?;
         Ok(arch_read_type!(

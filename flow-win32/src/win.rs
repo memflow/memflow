@@ -6,9 +6,11 @@ use flow_core::mem::VirtualRead;
 
 use crate::kernel::StartBlock;
 
+pub mod read;
+pub mod types;
+
 pub mod module;
 pub mod process;
-pub mod types;
 
 use process::ProcessIterator;
 

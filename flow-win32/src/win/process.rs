@@ -1,4 +1,4 @@
-use crate::error::Result;
+use crate::error::{Error, Result};
 use log::{debug, info};
 
 use crate::kernel::StartBlock;
@@ -6,6 +6,7 @@ use crate::win::{types::PDB, Windows};
 
 use flow_core::address::{Address, Length};
 use flow_core::mem::VirtualRead;
+use flow_core::arch::{InstructionSet, Architecture};
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -165,6 +166,15 @@ impl<T: VirtualRead> Process<T> {
         Ok(!self.get_wow64()?.is_null())
     }
 
+    pub fn get_process_arch(&mut self) -> Result<Architecture> {
+        // TODO: if x64 && !wow64
+        if !self.is_wow64()? {
+            Ok(Architecture::from(InstructionSet::X64))
+        } else {
+            Ok(Architecture::from(InstructionSet::X86))
+        }
+    }
+
     pub fn get_first_module(&mut self) -> Result<Address> {
         let wow64 = self.get_wow64()?;
         info!("wow64={:x}", wow64);
@@ -195,32 +205,60 @@ impl<T: VirtualRead> Process<T> {
 
         // TODO: process.virt_read_addr based on wow64 or not
         // TODO: forward declare virtual read in process?
+        // TODO: use process architecture agnostic wrapper from here!
 
-        let dtb = self.get_dtb()?;
+        // process architecture agnostic offsets
+        let proc_arch = self.get_process_arch()?;
 
-        // TODO: move this print into get_offset or get_field
-        let ldr_offs = self.get_offset("_PEB", "Ldr")?;
-        let ldr_list_offs = self.get_offset("_PEB_LDR_DATA", "InLoadOrderModuleList")?;
+        let ldr_offs = match proc_arch.instruction_set {
+            InstructionSet::X64 => Length::from(0x18), // self.get_offset("_PEB", "Ldr")?,
+            InstructionSet::X86 => Length::from(0xC),
+            _ => return Err(Error::new("invalid process architecture")),
+        };
+
+        let ldr_list_offs = match proc_arch.instruction_set {
+            InstructionSet::X64 => Length::from(0x10), // self.get_offset("_PEB_LDR_DATA", "InLoadOrderModuleList")?,
+            InstructionSet::X86 => Length::from(0xC),
+            _ => return Err(Error::new("invalid process architecture")),
+        };
 
         // read PPEB_LDR_DATA Ldr
         // addr_t peb_ldr = this->read_ptr(peb + this->mo_ldr);
-        let peb_ldr = {
-            let win = self.win.borrow();
-            let mem = &mut win.mem.borrow_mut();
-            mem.virt_read_addr(start_block.arch, dtb, peb + ldr_offs)?
-        };
+        let peb_ldr = self.virt_read_addr(peb + ldr_offs)?;
         info!("peb_ldr={:x}", peb_ldr);
 
         // loop LIST_ENTRY InLoadOrderModuleList
         // addr_t first_module = this->read_ptr(peb_ldr + this->mo_ldr_list);
-        let first_module = {
-            let win = self.win.borrow();
-            let mem = &mut win.mem.borrow_mut();
-            mem.virt_read_addr(start_block.arch, dtb, peb_ldr + ldr_list_offs)?
-        };
+        let first_module = self.virt_read_addr(peb_ldr + ldr_list_offs)?;
         info!("first_module={:x}", first_module);
         Ok(first_module)
     }
+
+    // process agnostic wrappers
+    pub fn virt_read_addr(&mut self, addr: Address) -> Result<Address> {
+        let proc_arch = self.get_process_arch()?;
+        let dtb = self.get_dtb()?;
+        let win = self.win.borrow();
+        let mem = &mut win.mem.borrow_mut();
+        match proc_arch.instruction_set {
+            InstructionSet::X64 => {
+                Ok(mem.virt_read_addr64(
+                    win.start_block.arch,
+                    dtb,
+                    addr)?)
+            },
+            InstructionSet::X86 => {
+                Ok(mem.virt_read_addr32(
+                    win.start_block.arch,
+                    dtb,
+                    addr)?)
+            },
+            _ => {
+                Err(Error::new("invalid process architecture"))
+            }
+        }
+    }
+
 
     // module_iter will explicitly clone self and feed it into an iterator
     pub fn module_iter(&self) -> Result<ModuleIterator<T>> {

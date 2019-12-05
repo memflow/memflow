@@ -12,6 +12,18 @@ impl fmt::LowerHex for Address {
     }
 }
 
+impl From<i32> for Address {
+    fn from(item: i32) -> Self {
+        Self { 0: item as u64 }
+    }
+}
+
+impl From<u32> for Address {
+    fn from(item: u32) -> Self {
+        Self { 0: item as u64 }
+    }
+}
+
 impl From<u64> for Address {
     fn from(item: u64) -> Self {
         Self { 0: item }

@@ -36,32 +36,32 @@ fn main() {
     // os functionality should be located in core!
     let bridgerc = Rc::new(RefCell::new(bridge));
     let win = flow_win32::init(bridgerc).unwrap();
-
+/*
     win.process_iter()
         .for_each(|mut p| println!("{:?} {:?}", p.get_pid(), p.get_name()));
     win.process_iter()
         .for_each(|mut p| println!("{:?} {:?}", p.get_pid(), p.get_name()));
-
+*/
     let mut process = win
         .process_iter()
         .filter_map(|mut p| {
-            if p.get_name().unwrap_or_default() == "Calculator.exe" {
+            if p.get_name().unwrap_or_default() == "Steam.exe" {
                 Some(p)
             } else {
                 None
             }
         })
         .nth(0)
-        .ok_or_else(|| "unable to find Calculator.exe")
+        .ok_or_else(|| "unable to find Steam.exe")
         .unwrap();
 
     println!(
-        "found Calculator.exe: {:?} {:?} {:?}",
+        "found Steam.exe: {:?} {:?} {:?}",
         process.get_pid(),
         process.get_name(),
         process.is_wow64()
     );
-
+/*
     process
         .module_iter()
         .unwrap()
@@ -70,12 +70,12 @@ fn main() {
         .module_iter()
         .unwrap()
         .for_each(|mut m| println!("{:?}", m.get_name()));
-
+*/
     let module = process
         .module_iter()
         .unwrap()
         .filter_map(|mut m| {
-            if m.get_name().unwrap_or_default() == "Calculator.exe" {
+            if m.get_name().unwrap_or_default() == "Steam.exe" {
                 Some(m)
             } else {
                 None

@@ -5,17 +5,18 @@ use crate::kernel::StartBlock;
 use crate::win::{types::PDB, Windows};
 
 use flow_core::address::{Address, Length};
+use flow_core::arch::{self, Architecture, InstructionSet};
 use flow_core::mem::VirtualRead;
 
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use widestring::U16CString;
-
 use crate::win::process::Process;
+use crate::win::read::VirtualReadWin;
 
 pub struct ModuleIterator<T: VirtualRead> {
     process: Rc<RefCell<Process<T>>>,
+    process_arch: Architecture,
     first_module: Address,
     module_base: Address,
 }
@@ -23,9 +24,10 @@ pub struct ModuleIterator<T: VirtualRead> {
 impl<T: VirtualRead> ModuleIterator<T> {
     pub fn new(process: Rc<RefCell<Process<T>>>) -> Result<Self> {
         let first_module = process.borrow_mut().get_first_module()?;
-        //let first_module = process.get_first_module()?;
+        let arch = process.borrow_mut().get_process_arch()?;
         Ok(Self {
             process: process,
+            process_arch: arch,
             first_module: first_module,
             module_base: first_module,
         })
@@ -41,22 +43,18 @@ impl<T: VirtualRead> Iterator for ModuleIterator<T> {
             return None;
         }
 
-        // borrow process
         let process = &mut self.process.borrow_mut();
 
-        // copy memory for the lifetime of this function
-        let start_block = { process.win.borrow().start_block };
-        let dtb = process.get_dtb().unwrap(); // TODO: to option
-
-        let _list_entry_blink = process.get_offset("_LIST_ENTRY", "Blink").unwrap(); // TODO: err -> option
-
-        //let memcp = process.mem.clone();
-        let win = process.win.borrow();
-        let mem = &mut win.mem.borrow_mut();
+        //this is either 4 (x86) or 8 (x64)
+        let _list_entry_blink = match self.process_arch.instruction_set {
+            InstructionSet::X64 => Length::from(8),
+            InstructionSet::X86 => Length::from(4),
+            _ => return None,
+        };
 
         // read next module entry (list_entry is first element in module)
-        let mut next = mem
-            .virt_read_addr(start_block.arch, dtb, self.module_base + _list_entry_blink)
+        let mut next = process
+            .virt_read_addr(self.module_base + _list_entry_blink)
             .unwrap(); // TODO: convert to Option
 
         // if next process is 'system' again just null it
@@ -105,69 +103,29 @@ impl<T: VirtualRead> Module<T> {
     }
 
     pub fn get_name(&mut self) -> Result<String> {
-        /*
-        typedef struct _windows_unicode_string32 {
-            uint16_t length;
-            uint16_t maximum_length;
-            uint32_t pBuffer; // pointer to string contents
-        } __attribute__((packed)) win32_unicode_string_t;
-
-        typedef struct _windows_unicode_string64 {
-            uint16_t length;
-            uint16_t maximum_length;
-            uint32_t padding; // align pBuffer
-            uint64_t pBuffer; // pointer to string contents
-        } __attribute__((packed)) win64_unicode_string_t;
-        */
-
         // TODO: this is architecture dependent
         //let base_offs = process.get_offset("_LDR_DATA_TABLE_ENTRY", "DllBase")?;
         //let size_offs = process.get_offset("_LDR_DATA_TABLE_ENTRY", "SizeOfImage")?;
 
-        let offs = self.get_offset("_LDR_DATA_TABLE_ENTRY", "BaseDllName")?;
-
         let process = &mut self.process.borrow_mut();
-        let start_block = { process.win.borrow().start_block };
+        let cpu_arch = { process.win.borrow().start_block.arch };
+        let proc_arch = { process.get_process_arch()? };
         let dtb = process.get_dtb()?;
+
+        let offs = match proc_arch.instruction_set {
+            InstructionSet::X64 => Length::from(0x58), // self.get_offset("_LDR_DATA_TABLE_ENTRY", "BaseDllName")?,
+            InstructionSet::X86 => Length::from(0x2C),
+            _ => return Err(Error::new("invalid process architecture")),
+        };
 
         let win = process.win.borrow();
         let mem = &mut win.mem.borrow_mut();
 
-        // TODO: x86 / wow64 version
-        // if x64 && !wow64
-        // TODO: access process
-        let length = mem.virt_read_u16(
-            start_block.arch,
+        // x64 = x64 && !wow64
+        mem.virt_read_unicode_string(
+            cpu_arch,
+            proc_arch,
             dtb,
-            self.module_base + offs + Length::from(0),
-        )?;
-        if length == 0 {
-            return Err(Error::new("unable to read unicode string length"));
-        }
-        let buffer = mem.virt_read_addr(
-            start_block.arch,
-            dtb,
-            self.module_base + offs + Length::from(8),
-        )?;
-        if buffer.is_null() {
-            return Err(Error::new("unable to read unicode string length"));
-        }
-        // else ...
-
-        // buffer len > 4kb? ... abort
-        if length % 2 != 0 {
-            return Err(Error::new("unicode string length is not a multiple of two"));
-        }
-
-        // read buffer
-        let mut content = mem.virt_read(start_block.arch, dtb, buffer, Length::from(length + 2))?;
-        content[length as usize] = 0;
-        content[length as usize + 1] = 0;
-
-        // TODO: check length % 2 == 0
-
-        let _content: Vec<u16> =
-            unsafe { std::mem::transmute::<Vec<u8>, Vec<u16>>(content.into()) };
-        Ok(U16CString::from_vec_with_nul(_content)?.to_string_lossy())
+            self.module_base + offs)
     }
 }

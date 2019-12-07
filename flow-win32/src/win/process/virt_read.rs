@@ -35,3 +35,15 @@ impl<T: VirtualRead> ProcessRead for Process<T> {
         }
     }
 }
+
+pub trait ProcessReadChain {
+    // TODO: weak chain?
+    fn virt_read_addr_chain(&mut self, base_addr: Address, offsets: Vec<Length>) -> Result<Address>;
+}
+
+// TODO: more error checking?
+impl<T: ProcessRead> ProcessReadChain for T {
+    fn virt_read_addr_chain(&mut self, base_addr: Address, offsets: Vec<Length>) -> Result<Address> {
+        offsets.iter().try_fold(base_addr, |c, &a| self.virt_read_addr(c + a))
+    }
+}

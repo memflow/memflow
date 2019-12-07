@@ -2,7 +2,7 @@ use crate::error::{Error, Result};
 use log::debug;
 
 use crate::kernel::StartBlock;
-use crate::win::{types::PDB, Windows};
+use super::{types::PDB, Windows};
 
 use flow_core::address::{Address, Length};
 use flow_core::arch::{self, Architecture, InstructionSet};
@@ -11,8 +11,10 @@ use flow_core::mem::VirtualRead;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use crate::win::process::Process;
-use crate::win::read::VirtualReadWin;
+use super::process::Process;
+use super::unicode_string::VirtualReadUnicodeString;
+
+use super::process::virt_read::ProcessRead;
 
 pub struct ModuleIterator<T: VirtualRead> {
     process: Rc<RefCell<Process<T>>>,
@@ -97,9 +99,13 @@ impl<T: VirtualRead> Module<T> {
     }
 
     // TODO: macro? pub?
-    pub fn get_offset(&mut self, strct: &str, field: &str) -> Result<Length> {
+    fn get_offset(&mut self, strct: &str, field: &str) -> Result<Length> {
         let process = &mut self.process.borrow_mut();
         process.get_offset(strct, field)
+    }
+
+    pub fn get_module_base(self) -> Address {
+        self.module_base
     }
 
     pub fn get_name(&mut self) -> Result<String> {

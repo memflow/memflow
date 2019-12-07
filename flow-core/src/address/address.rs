@@ -122,8 +122,8 @@ mod tests {
             Address::from(0x1000)
         );
         assert_eq!(
-            Address::from(0xFFF12345).as_page_aligned(Length::from_b(0x10000)),
-            Address::from(0xFFF10000)
+            Address::from(0xFFF12345u64).as_page_aligned(Length::from_b(0x10000)),
+            Address::from(0xFFF10000u64)
         );
     }
 

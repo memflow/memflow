@@ -1,7 +1,11 @@
 use clap::{App, Arg};
 use std::time::Instant;
 
+#[macro_use]
+use flow_core::*;
+
 use flow_core::address::{Address, Length};
+
 use flow_core::bridge::client::BridgeClient;
 use flow_core::mem::PhysicalRead;
 
@@ -30,7 +34,7 @@ fn main() {
     };
 
     let mem = bridge
-        .phys_read(Address::from(0x1000), Length::from(8))
+        .phys_read(Address::from(0x1000), len!(8))
         .unwrap();
     println!("Received memory: {:?}", mem);
 
@@ -42,7 +46,7 @@ fn main() {
         //let r = bridge.read_memory(0x1000, 0x1000).unwrap();
         //bridge.write_memory(0x1000, &r).unwrap();
         bridge
-            .phys_read(Address::from(0x1000), Length::from(0x1000))
+            .phys_read(Address::from(0x1000), len!(0x1000))
             .unwrap();
 
         counter += 1;

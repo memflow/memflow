@@ -6,7 +6,7 @@ use flow_core::address::{Address, Length};
 
 use widestring::U16CString;
 
-pub trait VirtualReadWin {
+pub trait VirtualReadUnicodeString {
     fn virt_read_unicode_string(
         &mut self,
         cpu_arch: Architecture,
@@ -16,7 +16,7 @@ pub trait VirtualReadWin {
     ) -> Result<String>;
 }
 
-impl<T: VirtualRead> VirtualReadWin for T {
+impl<T: VirtualRead> VirtualReadUnicodeString for T {
     fn virt_read_unicode_string(
         &mut self,
         cpu_arch: Architecture,

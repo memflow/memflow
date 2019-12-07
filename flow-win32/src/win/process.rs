@@ -1,8 +1,10 @@
+pub mod virt_read;
+
 use crate::error::{Error, Result};
 use log::{debug, info};
 
 use crate::kernel::StartBlock;
-use crate::win::{types::PDB, Windows};
+use super::{types::PDB, Windows};
 
 use flow_core::address::{Address, Length};
 use flow_core::mem::VirtualRead;
@@ -11,7 +13,9 @@ use flow_core::arch::{InstructionSet, Architecture};
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use crate::win::module::ModuleIterator;
+use super::module::ModuleIterator;
+
+use virt_read::ProcessRead;
 
 pub struct ProcessIterator<T: VirtualRead> {
     win: Rc<RefCell<Windows<T>>>,
@@ -233,32 +237,6 @@ impl<T: VirtualRead> Process<T> {
         info!("first_module={:x}", first_module);
         Ok(first_module)
     }
-
-    // process agnostic wrappers
-    pub fn virt_read_addr(&mut self, addr: Address) -> Result<Address> {
-        let proc_arch = self.get_process_arch()?;
-        let dtb = self.get_dtb()?;
-        let win = self.win.borrow();
-        let mem = &mut win.mem.borrow_mut();
-        match proc_arch.instruction_set {
-            InstructionSet::X64 => {
-                Ok(mem.virt_read_addr64(
-                    win.start_block.arch,
-                    dtb,
-                    addr)?)
-            },
-            InstructionSet::X86 => {
-                Ok(mem.virt_read_addr32(
-                    win.start_block.arch,
-                    dtb,
-                    addr)?)
-            },
-            _ => {
-                Err(Error::new("invalid process architecture"))
-            }
-        }
-    }
-
 
     // module_iter will explicitly clone self and feed it into an iterator
     pub fn module_iter(&self) -> Result<ModuleIterator<T>> {

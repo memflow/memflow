@@ -3,6 +3,7 @@ pub const fn make_bit_mask(a: u32, b: u32) -> u64 {
     (0xffffffffffffffff >> (63 - b)) & !(((1 as u64) << a) - 1)
 }
 
+#[macro_export]
 macro_rules! get_bit {
     ($a:expr, $b:expr) => {
         ($a & ((1 as u64) << $b)) != 0

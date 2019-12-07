@@ -1,4 +1,6 @@
+#[macro_use]
 pub mod address;
+
 pub mod arch;
 pub mod mem;
 pub mod vat;

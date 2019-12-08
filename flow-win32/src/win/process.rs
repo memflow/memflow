@@ -144,7 +144,7 @@ impl<T: VirtualRead> Process<T> {
             start_block.arch,
             start_block.dtb,
             self.eprocess + offs,
-            Length::from(16),
+            16,
         )?)
     }
 

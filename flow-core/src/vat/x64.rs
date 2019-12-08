@@ -69,3 +69,15 @@ pub fn vtop<T: PhysicalRead>(mem: &mut T, dtb: Address, addr: Address) -> Result
         (pte.as_u64() & make_bit_mask(12, 51)) | (addr.as_u64() & make_bit_mask(0, 11)),
     ));
 }
+
+/*
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[bench]
+    fn bench_add_two(b: &mut Bencher) {
+        b.iter(|| vtop());
+    }
+}
+*/

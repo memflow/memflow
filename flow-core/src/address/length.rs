@@ -13,7 +13,7 @@ impl fmt::LowerHex for Length {
 // TODO: sort them by likeliness
 impl From<u16> for Length {
     fn from(item: u16) -> Self {
-        Self { 0: item as u64 }
+        Self { 0: u64::from(item) }
     }
 }
 
@@ -25,7 +25,7 @@ impl From<i16> for Length {
 
 impl From<u32> for Length {
     fn from(item: u32) -> Self {
-        Self { 0: item as u64 }
+        Self { 0: u64::from(item) }
     }
 }
 
@@ -135,7 +135,7 @@ impl ops::Add<u32> for Length {
 
     fn add(self, other: u32) -> Self {
         Self {
-            0: self.0 + (other as u64),
+            0: self.0 + (u64::from(other)),
         }
     }
 }
@@ -204,7 +204,7 @@ impl ops::AddAssign<i32> for Length {
 impl ops::AddAssign<u32> for Length {
     fn add_assign(&mut self, other: u32) {
         *self = Self {
-            0: self.0 + (other as u64),
+            0: self.0 + (u64::from(other)),
         }
     }
 }
@@ -262,7 +262,7 @@ impl ops::Sub<u32> for Length {
 
     fn sub(self, other: u32) -> Self {
         Self {
-            0: self.0 - (other as u64),
+            0: self.0 - (u64::from(other)),
         }
     }
 }

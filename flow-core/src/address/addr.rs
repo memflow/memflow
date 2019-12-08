@@ -20,7 +20,7 @@ impl From<i32> for Address {
 
 impl From<u32> for Address {
     fn from(item: u32) -> Self {
-        Self { 0: item as u64 }
+        Self { 0: u64::from(item) }
     }
 }
 

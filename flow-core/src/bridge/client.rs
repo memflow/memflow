@@ -62,7 +62,7 @@ fn connect_tcp(path: &str, opts: Vec<&str>) -> Result<BridgeClient> {
 
     info!("tcp connection established -> {}", path);
 
-    if let Some(_) = opts.iter().filter(|&&o| o == "nodelay").nth(0) {
+    if opts.iter().filter(|&&o| o == "nodelay").nth(0).is_some() {
         info!("trying to set TCP_NODELAY on socket");
         stream.set_nodelay(true).unwrap();
     }
@@ -101,10 +101,10 @@ impl BridgeClient {
 
         let path = url
             .path()
-            .split(",")
+            .split(',')
             .nth(0)
             .ok_or_else(|| Error::new(ErrorKind::Other, "invalid url"))?;
-        let opts = url.path().split(",").skip(1).collect::<Vec<_>>();
+        let opts = url.path().split(',').skip(1).collect::<Vec<_>>();
 
         match url.scheme() {
             "unix" => connect_unix(path, opts),
@@ -137,7 +137,7 @@ impl PhysicalRead for BridgeClient {
                 }),
             )
             .map_err(|_e| Error::new(ErrorKind::Other, "unable to read memory"))
-            .and_then(|v| Ok(v))
+            .and_then(Ok)
     }
 }
 
@@ -156,7 +156,7 @@ impl PhysicalWrite for BridgeClient {
                 }),
             )
             .map_err(|_e| Error::new(ErrorKind::Other, "unable to write memory"))
-            .and_then(|v| Ok(v))
+            .and_then(Ok)
     }
 }
 

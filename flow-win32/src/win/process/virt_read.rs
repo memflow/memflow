@@ -41,6 +41,7 @@ macro_rules! mem_call_vec_read {
 // addr, addr32, addr64, u64, u32, u16, u8, i64, i32, i16, i8, f32, cstr
 pub trait ProcessRead {
     fn virt_read_addr(&mut self, addr: Address) -> Result<Address>;
+    fn virt_read_vec_addr(&mut self, addr: Address, count: usize) -> Result<Vec<Address>>;
     fn virt_read_u64(&mut self, addr: Address) -> Result<u64>;
     fn virt_read_u32(&mut self, addr: Address) -> Result<u32>;
     fn virt_read_u16(&mut self, addr: Address) -> Result<u16>;
@@ -71,6 +72,32 @@ impl<T: VirtualRead> ProcessRead for Process<T> {
                     win.start_block.arch,
                     dtb,
                     addr)?)
+            },
+            _ => {
+                Err(Error::new("invalid process architecture"))
+            }
+        }
+    }
+
+    fn virt_read_vec_addr(&mut self, addr: Address, count: usize) -> Result<Vec<Address>> {
+        let proc_arch = self.get_process_arch()?;
+        let dtb = self.get_dtb()?;
+        let win = self.win.borrow();
+        let mem = &mut win.mem.borrow_mut();
+        match proc_arch.instruction_set {
+            InstructionSet::X64 => {
+                Ok(mem.virt_read_vec_addr64(
+                    win.start_block.arch,
+                    dtb,
+                    addr,
+                    count)?)
+            },
+            InstructionSet::X86 => {
+                Ok(mem.virt_read_vec_addr32(
+                    win.start_block.arch,
+                    dtb,
+                    addr,
+                    count)?)
             },
             _ => {
                 Err(Error::new("invalid process architecture"))

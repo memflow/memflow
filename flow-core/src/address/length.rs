@@ -10,8 +10,21 @@ impl fmt::LowerHex for Length {
     }
 }
 
+// TODO: sort them by likeliness
 impl From<u16> for Length {
     fn from(item: u16) -> Self {
+        Self { 0: item as u64 }
+    }
+}
+
+impl From<i16> for Length {
+    fn from(item: i16) -> Self {
+        Self { 0: item as u64 }
+    }
+}
+
+impl From<u32> for Length {
+    fn from(item: u32) -> Self {
         Self { 0: item as u64 }
     }
 }
@@ -28,6 +41,12 @@ impl From<u64> for Length {
     }
 }
 
+impl From<i64> for Length {
+    fn from(item: i64) -> Self {
+        Self { 0: item as u64 }
+    }
+}
+
 impl From<usize> for Length {
     fn from(item: usize) -> Self {
         Self { 0: item as u64 }
@@ -37,6 +56,10 @@ impl From<usize> for Length {
 impl Length {
     pub fn zero() -> Self {
         Length::from(0)
+    }
+
+    pub fn is_zero(&self) -> bool {
+        self.0 == 0
     }
 
     pub fn as_u64(&self) -> u64 {

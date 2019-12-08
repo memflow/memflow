@@ -26,9 +26,9 @@ impl<T: VirtualRead> ProcessIterator<T> {
     pub fn new(win: Rc<RefCell<Windows<T>>>) -> Self {
         let eprocess = win.borrow().eprocess_base;
         Self {
-            win: win,
+            win,
             first_eprocess: eprocess,
-            eprocess: eprocess,
+            eprocess,
         }
     }
 }
@@ -94,7 +94,7 @@ where
     fn clone(&self) -> Self {
         Self {
             win: self.win.clone(),
-            eprocess: self.eprocess.clone(),
+            eprocess: self.eprocess,
         }
     }
 }
@@ -102,10 +102,7 @@ where
 // TODO: read/ret "ProcessInfo"
 impl<T: VirtualRead> Process<T> {
     pub fn new(win: Rc<RefCell<Windows<T>>>, eprocess: Address) -> Self {
-        Self {
-            win: win,
-            eprocess: eprocess,
-        }
+        Self { win, eprocess }
     }
 
     // TODO: macro? pub?
@@ -182,22 +179,19 @@ impl<T: VirtualRead> Process<T> {
             win.start_block
         };
 
-        let peb = match wow64.is_null() {
-            true => {
-                // x64
-                info!("reading peb for x64 process");
-                let offs = self.get_offset("_EPROCESS", "Peb")?;
-                let win = self.win.borrow();
-                let mem = &mut win.mem.borrow_mut();
-                mem.virt_read_addr(start_block.arch, start_block.dtb, self.eprocess + offs)?
-            }
-            false => {
-                // wow64 (first entry in wow64 struct = peb)
-                info!("reading peb for wow64 process");
-                let win = self.win.borrow();
-                let mem = &mut win.mem.borrow_mut();
-                mem.virt_read_addr(start_block.arch, start_block.dtb, wow64)?
-            }
+        let peb = if wow64.is_null() {
+            // x64
+            info!("reading peb for x64 process");
+            let offs = self.get_offset("_EPROCESS", "Peb")?;
+            let win = self.win.borrow();
+            let mem = &mut win.mem.borrow_mut();
+            mem.virt_read_addr(start_block.arch, start_block.dtb, self.eprocess + offs)?
+        } else {
+            // wow64 (first entry in wow64 struct = peb)
+            info!("reading peb for wow64 process");
+            let win = self.win.borrow();
+            let mem = &mut win.mem.borrow_mut();
+            mem.virt_read_addr(start_block.arch, start_block.dtb, wow64)?
         };
         info!("peb={:x}", peb);
 

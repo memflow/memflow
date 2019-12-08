@@ -62,10 +62,10 @@ pub fn init<T: PhysicalRead + VirtualRead>(mem: Memory<T>) -> Result<Windows<T>>
     };
 
     Ok(Windows {
-        mem: mem,
-        start_block: start_block,
-        kernel_base: kernel_base,
-        eprocess_base: eprocess_base,
-        kernel_pdb: kernel_pdb,
+        mem,
+        start_block,
+        kernel_base,
+        eprocess_base,
+        kernel_pdb,
     })
 }

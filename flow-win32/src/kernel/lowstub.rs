@@ -47,12 +47,14 @@ pub fn find<T: PhysicalRead>(mem: &mut T) -> Result<StartBlock> {
     Err(Error::new("unable to find dtb"))
 }
 
-fn find_x64_lowstub(stub: &Vec<u8>) -> Result<StartBlock> {
+fn find_x64_lowstub(stub: &[u8]) -> Result<StartBlock> {
     stub.chunks_exact(arch::x64::page_size().as_usize())
         .skip(1)
-        .filter(|c| (0xffffffffffff00ff & LittleEndian::read_u64(&c)) == 0x00000001000600E9) // start bytes
-        .filter(|c| (0xfffff80000000003 & LittleEndian::read_u64(&c[0x70..])) == 0xfffff80000000000) // kernel entry
-        .filter(|c| (0xffffff0000000fff & LittleEndian::read_u64(&c[0xA0..])) == 0) // pml4
+        .filter(|c| (0xffff_ffff_ffff_00ff & LittleEndian::read_u64(&c)) == 0x0000_0001_0006_00E9) // start bytes
+        .filter(|c| {
+            (0xffff_f800_0000_0003 & LittleEndian::read_u64(&c[0x70..])) == 0xffff_f800_0000_0000
+        }) // kernel entry
+        .filter(|c| (0xffff_ff00_0000_0fff & LittleEndian::read_u64(&c[0xA0..])) == 0) // pml4
         .nth(0)
         .ok_or_else(|| Error::new("unable to find x64 dtb in lowstub < 1M"))
         .and_then(|c| {
@@ -94,7 +96,7 @@ fn _find_x64(_mem: &[u8]) -> Option<()> {
     None
 }
 
-fn find_x64(mem: &Vec<u8>) -> Result<StartBlock> {
+fn find_x64(mem: &[u8]) -> Result<StartBlock> {
     mem.chunks_exact(arch::x64::page_size().as_usize())
         .position(|c| _find_x64(c).is_some())
         .ok_or_else(|| Error::new("unable to find x64 dtb in lowstub < 16M"))
@@ -130,8 +132,8 @@ fn _find_x86_pae(mem: &[u8]) -> Option<()> {
         .filter(|c| c[0] != 0)
         .nth(0)
     {
-        Some(_c) => return None,
-        None => return Some(()),
+        Some(_c) => None,
+        None => Some(()),
     }
 
     /*
@@ -146,7 +148,7 @@ fn _find_x86_pae(mem: &[u8]) -> Option<()> {
     */
 }
 
-fn find_x86_pae(mem: &Vec<u8>) -> Result<StartBlock> {
+fn find_x86_pae(mem: &[u8]) -> Result<StartBlock> {
     mem.chunks_exact(arch::x86_pae::page_size().as_usize())
         .position(|c| _find_x86_pae(c).is_some())
         .ok_or_else(|| Error::new("unable to find x64_pae dtb in lowstub < 16M"))
@@ -180,7 +182,7 @@ fn _find_x86(_mem: &[u8]) -> Option<()> {
     None
 }
 
-fn find_x86(mem: &Vec<u8>) -> Result<StartBlock> {
+fn find_x86(mem: &[u8]) -> Result<StartBlock> {
     mem.chunks_exact(arch::x86::page_size().as_usize())
         .position(|c| _find_x86(c).is_some())
         .ok_or_else(|| Error::new("unable to find x86 dtb in lowstub < 16M"))

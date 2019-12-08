@@ -21,6 +21,15 @@ macro_rules! arch_read_type {
     };
 }
 
+macro_rules! arch_read_vec_type {
+    ($byte_order:expr, $elem_size:expr, $func:ident, $value:expr) => {
+        match $byte_order {
+            arch::ByteOrder::LittleEndian => $value.chunks($elem_size).into_iter().map(|v| LittleEndian::$func(v)).collect(),
+            arch::ByteOrder::BigEndian => $value.chunks($elem_size).into_iter().map(|v| BigEndian::$func(v)).collect(),
+        }
+    };
+}
+
 pub trait VirtualRead {
     fn virt_read(
         &mut self,
@@ -140,6 +149,17 @@ pub trait VirtualRead {
         let r = self.virt_read(arch, dtb, addr, arch.instruction_set.len_f32())?;
         Ok(arch_read_type!(
             arch.instruction_set.byte_order(),
+            read_f32,
+            &r
+        ))
+    }
+
+    // TODO: add more vec read helpers
+    fn virt_read_vec_f32(&mut self, arch: Architecture, dtb: Address, addr: Address, count: usize) -> Result<Vec<f32>> {
+        let r = self.virt_read(arch, dtb, addr, arch.instruction_set.len_f32() * count)?;
+        Ok(arch_read_vec_type!(
+            arch.instruction_set.byte_order(),
+            arch.instruction_set.len_f32().as_usize(),
             read_f32,
             &r
         ))

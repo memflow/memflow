@@ -6,8 +6,9 @@ use flow_core::arch::{InstructionSet, Architecture};
 
 use super::Process;
 
-macro_rules! mem_call {
-    ($sel:ident, $addr:expr, $func:ident) => {
+// TODO: rename mem_call_read
+macro_rules! mem_call_read {
+    ($sel:ident, $func:ident, $addr:expr) => {
         {
             let proc_arch = $sel.get_process_arch()?;
             let dtb = $sel.get_dtb()?;
@@ -17,6 +18,22 @@ macro_rules! mem_call {
                 win.start_block.arch,
                 dtb,
                 $addr)?)
+        }
+    };
+}
+
+macro_rules! mem_call_vec_read {
+    ($sel:ident, $func:ident, $addr:expr, $count:expr) => {
+        {
+            let proc_arch = $sel.get_process_arch()?;
+            let dtb = $sel.get_dtb()?;
+            let win = $sel.win.borrow();
+            let mem = &mut win.mem.borrow_mut();
+            Ok(mem.$func(
+                win.start_block.arch,
+                dtb,
+                $addr,
+                $count)?)
         }
     };
 }
@@ -33,6 +50,7 @@ pub trait ProcessRead {
     fn virt_read_i16(&mut self, addr: Address) -> Result<i16>;
     fn virt_read_i8(&mut self, addr: Address) -> Result<i8>;
     fn virt_read_f32(&mut self, addr: Address) -> Result<f32>;
+    fn virt_read_vec_f32(&mut self, addr: Address, count: usize) -> Result<Vec<f32>>;
 }
 
 impl<T: VirtualRead> ProcessRead for Process<T> {
@@ -61,39 +79,43 @@ impl<T: VirtualRead> ProcessRead for Process<T> {
     }
 
     fn virt_read_u64(&mut self, addr: Address) -> Result<u64> {
-        mem_call!(self, addr, virt_read_u64)
+        mem_call_read!(self, virt_read_u64, addr)
     }
 
     fn virt_read_u32(&mut self, addr: Address) -> Result<u32> {
-        mem_call!(self, addr, virt_read_u32)
+        mem_call_read!(self, virt_read_u32, addr)
     }
 
     fn virt_read_u16(&mut self, addr: Address) -> Result<u16> {
-        mem_call!(self, addr, virt_read_u16)
+        mem_call_read!(self, virt_read_u16, addr)
     }
 
     fn virt_read_u8(&mut self, addr: Address) -> Result<u8> {
-        mem_call!(self, addr, virt_read_u8)
+        mem_call_read!(self, virt_read_u8, addr)
     }
 
     fn virt_read_i64(&mut self, addr: Address) -> Result<i64> {
-        mem_call!(self, addr, virt_read_i64)
+        mem_call_read!(self, virt_read_i64, addr)
     }
 
     fn virt_read_i32(&mut self, addr: Address) -> Result<i32> {
-        mem_call!(self, addr, virt_read_i32)
+        mem_call_read!(self, virt_read_i32, addr)
     }
 
     fn virt_read_i16(&mut self, addr: Address) -> Result<i16> {
-        mem_call!(self, addr, virt_read_i16)
+        mem_call_read!(self, virt_read_i16, addr)
     }
 
     fn virt_read_i8(&mut self, addr: Address) -> Result<i8> {
-        mem_call!(self, addr, virt_read_i8)
+        mem_call_read!(self, virt_read_i8, addr)
     }
 
     fn virt_read_f32(&mut self, addr: Address) -> Result<f32> {
-        mem_call!(self, addr, virt_read_f32)
+        mem_call_read!(self, virt_read_f32, addr)
+    }
+
+    fn virt_read_vec_f32(&mut self, addr: Address, count: usize) -> Result<Vec<f32>> {
+        mem_call_vec_read!(self, virt_read_vec_f32, addr, count)
     }
 }
 

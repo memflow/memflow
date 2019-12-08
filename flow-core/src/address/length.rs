@@ -171,6 +171,17 @@ impl ops::Add<usize> for Length {
     }
 }
 
+// Length * usize = Length
+impl ops::Mul<usize> for Length {
+    type Output = Self;
+
+    fn mul(self, other: usize) -> Self {
+        Self {
+            0: self.0 * (other as u64),
+        }
+    }
+}
+
 // Length += Length
 impl ops::AddAssign for Length {
     fn add_assign(&mut self, other: Self) {

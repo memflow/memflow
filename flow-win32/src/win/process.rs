@@ -179,7 +179,7 @@ impl<T: VirtualRead> Process<T> {
         }
     }
 
-    pub fn get_first_module(&mut self) -> Result<Address> {
+    pub fn get_first_peb_entry(&mut self) -> Result<Address> {
         let wow64 = self.get_wow64()?;
         info!("wow64={:x}", wow64);
 

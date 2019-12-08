@@ -16,6 +16,27 @@ test:
     - cargo --version
     - RUST_BACKTRACE=1 cargo test --all --verbose
 
+audit:
+  stage: test
+  image: "rust:latest"
+  before_script:
+    - cargo install --force cargo-audit
+    - cargo generate-lockfile
+  script:
+    - rustc --version
+    - cargo --version
+    - cargo audit
+
+clippy:
+  stage: test
+  image: "rust:latest"
+  before_script:
+    - rustup component add clippy
+  script:
+    - rustc --version
+    - cargo --version
+    - cargo clippy --all-targets --all-features -- -D warnings
+
 linux-native:
   stage: build_native
   image: "rust:latest"

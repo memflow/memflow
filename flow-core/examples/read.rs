@@ -1,10 +1,8 @@
 use clap::{App, Arg};
 use std::time::Instant;
 
-#[macro_use]
-use flow_core::*;
-
 use flow_core::address::{Address, Length};
+use flow_core::*;
 
 use flow_core::bridge::client::BridgeClient;
 use flow_core::mem::PhysicalRead;

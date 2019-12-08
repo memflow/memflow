@@ -4,9 +4,9 @@ use std::io::Result;
 use byteorder::{BigEndian, ByteOrder, LittleEndian};
 
 use crate::address::{Address, Length};
-use crate::arch::{self, Architecture, InstructionSet};
+use crate::arch::{self, Architecture};
 
-use std::ffi::{CStr, CString};
+use std::ffi::CString;
 
 pub trait PhysicalRead {
     fn phys_read(&mut self, addr: Address, len: Length) -> Result<Vec<u8>>;
@@ -248,7 +248,7 @@ pub trait VirtualRead {
         len: usize,
     ) -> Result<String> {
         let mut r = self.virt_read(arch, dtb, addr, len!(len))?;
-        match r.iter().enumerate().filter(|(i, c)| **c == 0u8).nth(0) {
+        match r.iter().enumerate().filter(|(_i, c)| **c == 0u8).nth(0) {
             Some((n, _)) => {
                 r.truncate(n);
             }

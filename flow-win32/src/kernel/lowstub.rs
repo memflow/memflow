@@ -73,7 +73,7 @@ fn find_x64_lowstub(stub: &Vec<u8>) -> Result<StartBlock> {
 * 1: (4) valid PDPT entries with consecutive physical addresses of the PDPT.
 * 2: all zeroes for the rest of the page.
 */
-fn _find_x64(mem: &[u8]) -> Option<()> {
+fn _find_x64(_mem: &[u8]) -> Option<()> {
     /*
     DWORD c, i;
     BOOL fSelfRef = FALSE;
@@ -166,7 +166,7 @@ fn find_x86_pae(mem: &Vec<u8>) -> Result<StartBlock> {
 * 2: PDE[0] is a user-mode PDE pointing to a PT.
 * 3: a minimum number of supervisor-mode PDEs must exist.
 */
-fn _find_x86(mem: &[u8]) -> Option<()> {
+fn _find_x86(_mem: &[u8]) -> Option<()> {
     /*
     DWORD c, i;
     if((*(PDWORD)(pbPage + 0xc00) & 0xfffff003) != pa + 0x03) { return FALSE; } // self-referential entry exists

@@ -1,8 +1,8 @@
 use crate::error::{Error, Result};
 
-use flow_core::mem::VirtualRead;
-use flow_core::arch::{InstructionSet, Architecture};
 use flow_core::address::{Address, Length};
+use flow_core::arch::{Architecture, InstructionSet};
+use flow_core::mem::VirtualRead;
 
 use widestring::U16CString;
 
@@ -38,13 +38,9 @@ impl<T: VirtualRead> VirtualReadUnicodeString for T {
             uint64_t pBuffer; // pointer to string contents
         } __attribute__((packed)) win64_unicode_string_t;
         */
-    
+
         // length is always the first entry
-        let length = self.virt_read_u16(
-            cpu_arch,
-            dtb,
-            addr + Length::from(0),
-        )?;
+        let length = self.virt_read_u16(cpu_arch, dtb, addr + Length::from(0))?;
         if length == 0 {
             return Err(Error::new("unable to read unicode string length"));
         }
@@ -52,20 +48,8 @@ impl<T: VirtualRead> VirtualReadUnicodeString for T {
         // TODO: chek if length exceeds limit
         // buffer is either aligned at 4 or 8
         let buffer = match proc_arch.instruction_set {
-            InstructionSet::X64 => {
-                self.virt_read_addr64(
-                    cpu_arch,
-                    dtb,
-                    addr + Length::from(8),
-                )?
-            },
-            InstructionSet::X86 => {
-                self.virt_read_addr32(
-                    cpu_arch,
-                    dtb,
-                    addr + Length::from(4),
-                )?
-            },
+            InstructionSet::X64 => self.virt_read_addr64(cpu_arch, dtb, addr + Length::from(8))?,
+            InstructionSet::X86 => self.virt_read_addr32(cpu_arch, dtb, addr + Length::from(4))?,
             _ => {
                 return Err(Error::new("invalid proc_arch parameter"));
             }

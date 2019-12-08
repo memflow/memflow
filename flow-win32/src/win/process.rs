@@ -3,12 +3,12 @@ pub mod virt_read;
 use crate::error::{Error, Result};
 use log::{debug, info};
 
-use crate::kernel::StartBlock;
 use super::{types::PDB, Windows};
+use crate::kernel::StartBlock;
 
 use flow_core::address::{Address, Length};
+use flow_core::arch::{Architecture, InstructionSet};
 use flow_core::mem::VirtualRead;
-use flow_core::arch::{InstructionSet, Architecture};
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -140,12 +140,7 @@ impl<T: VirtualRead> Process<T> {
         let win = self.win.borrow();
         let start_block = win.start_block;
         let mem = &mut win.mem.borrow_mut();
-        Ok(mem.virt_read_cstr(
-            start_block.arch,
-            start_block.dtb,
-            self.eprocess + offs,
-            16,
-        )?)
+        Ok(mem.virt_read_cstr(start_block.arch, start_block.dtb, self.eprocess + offs, 16)?)
     }
 
     // TODO: dtb trait

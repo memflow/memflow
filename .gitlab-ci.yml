@@ -31,6 +31,8 @@ clippy:
   stage: test
   image: "rust:latest"
   before_script:
+    - apt-get update
+    - apt-get install -yq capnproto
     - rustup component add clippy
   script:
     - rustc --version

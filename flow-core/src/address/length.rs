@@ -309,7 +309,6 @@ impl ops::SubAssign for Length {
 
 #[cfg(test)]
 mod tests {
-    use crate::address::Address;
     use crate::address::Length;
 
     #[test]

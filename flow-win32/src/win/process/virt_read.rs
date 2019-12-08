@@ -1,7 +1,7 @@
 use crate::error::{Error, Result};
 
 use flow_core::address::{Address, Length};
-use flow_core::arch::{Architecture, InstructionSet};
+use flow_core::arch::InstructionSet;
 use flow_core::mem::VirtualRead;
 
 use super::Process;

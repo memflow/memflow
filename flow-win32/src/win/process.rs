@@ -3,8 +3,7 @@ pub mod virt_read;
 use crate::error::{Error, Result};
 use log::{debug, info};
 
-use super::{types::PDB, Windows};
-use crate::kernel::StartBlock;
+use super::Windows;
 
 use flow_core::address::{Address, Length};
 use flow_core::arch::{Architecture, InstructionSet};

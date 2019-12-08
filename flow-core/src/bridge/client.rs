@@ -1,4 +1,4 @@
-use log::{debug, info, trace};
+use log::{info, trace};
 
 use std::io::{Error, ErrorKind, Result};
 use std::net::SocketAddr;
@@ -27,7 +27,7 @@ pub struct BridgeClient {
 }
 
 #[cfg(any(unix))]
-fn connect_unix(path: &str, opts: Vec<&str>) -> Result<BridgeClient> {
+fn connect_unix(path: &str, _opts: Vec<&str>) -> Result<BridgeClient> {
     info!("trying to connect via unix -> {}", path);
 
     let mut runtime = Runtime::new().unwrap();

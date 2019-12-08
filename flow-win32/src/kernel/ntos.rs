@@ -69,7 +69,7 @@ fn find_x64_with_va<T: VirtualRead>(mem: &mut T, start_block: &StartBlock) -> Re
             .flat_map(|(i, c)| c.chunks_exact(8).map(move |c| (i, c)))
             .filter(|(_, c)| LittleEndian::read_u64(&c) == 0x45444F434C4F4F50) // POOLCODE
             .inspect(|(i, _)| trace!("find_x64_with_va: found potential POOLCODE flag at offset {:x}", i * arch::x64::page_size().as_usize()))
-            .filter(|(i, c)| {
+            .filter(|(i, _)| {
                 // try to probe pe header
                 let probe_addr = Address::from(va_base + (*i as u64) * arch::x64::page_size().as_u64());
                 let probe_buf = mem.virt_read(start_block.arch, start_block.dtb, probe_addr, Length::from_mb(32)).unwrap();
@@ -111,10 +111,10 @@ fn find_x64_with_va<T: VirtualRead>(mem: &mut T, start_block: &StartBlock) -> Re
     ))
 }
 
-fn find_x64<T: VirtualRead>(mem: &mut T) -> Result<Address> {
+fn find_x64<T: VirtualRead>(_mem: &mut T) -> Result<Address> {
     Err(Error::new("find_x64(): not implemented yet"))
 }
 
-fn find_x86<T: VirtualRead>(mem: &mut T) -> Result<Address> {
+fn find_x86<T: VirtualRead>(_mem: &mut T) -> Result<Address> {
     Err(Error::new("find_x86(): not implemented yet"))
 }

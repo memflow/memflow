@@ -76,7 +76,7 @@ pub fn find_in_section<T: PhysicalRead + VirtualRead>(
     pe_opts.resolve_rva = false;
 
     let header = PE::parse_with_opts(&header_buf, &pe_opts).unwrap(); // TODO: error
-    let sect = header
+    let _sect = header
         .sections
         .iter()
         .filter(|s| String::from_utf8(s.name.to_vec()).unwrap_or_default() == "ALMOSTRO")

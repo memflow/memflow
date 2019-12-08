@@ -1,7 +1,7 @@
 use libc_print::*;
 
 use std::convert::TryFrom;
-use std::io::{self, Error, ErrorKind, Result};
+use std::io::{Error, ErrorKind, Result};
 
 use std::net::SocketAddr;
 use url::Url;
@@ -20,7 +20,7 @@ use capnp_rpc::{pry, rpc_twoparty_capnp, twoparty, RpcSystem};
 use crate::address::{Address, Length};
 use crate::arch::{Architecture, InstructionSet};
 use crate::mem::{PhysicalRead, PhysicalWrite, VirtualRead, VirtualWrite};
-use crate::vat::{VatImpl, VirtualAddressTranslation};
+use crate::vat::VatImpl;
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -33,7 +33,7 @@ pub struct BridgeServer<T: PhysicalRead + PhysicalWrite> {
 }
 
 #[cfg(any(unix))]
-fn listen_unix<T>(bridge: &BridgeServer<T>, path: &str, opts: Vec<&str>) -> Result<()>
+fn listen_unix<T>(bridge: &BridgeServer<T>, path: &str, _opts: Vec<&str>) -> Result<()>
 where
     T: PhysicalRead + PhysicalWrite + 'static,
 {
@@ -248,8 +248,8 @@ impl<T: PhysicalRead + PhysicalWrite + 'static> bridge::Server for BridgeServer<
     // readRegisters @4 () -> (data: Data);
     fn read_registers(
         &mut self,
-        params: bridge::ReadRegistersParams,
-        results: bridge::ReadRegistersResults,
+        _params: bridge::ReadRegistersParams,
+        _results: bridge::ReadRegistersResults,
     ) -> Promise<(), capnp::Error> {
         // TODO:
         //cpu::state().unwrap();

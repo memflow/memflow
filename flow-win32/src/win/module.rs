@@ -1,15 +1,10 @@
 use crate::error::{Error, Result};
-use log::debug;
 
-use super::{types::PDB, Windows};
-use crate::kernel::StartBlock;
-
-#[macro_use]
 use flow_core::*;
 
 use flow_core::address::{Address, Length};
 
-use flow_core::arch::{self, Architecture, InstructionSet};
+use flow_core::arch::{Architecture, InstructionSet};
 use flow_core::mem::VirtualRead;
 
 use std::cell::RefCell;
@@ -111,12 +106,6 @@ impl<T: VirtualRead> Module<T> {
         }
     }
 
-    // TODO: macro? pub?
-    fn get_offset(&mut self, strct: &str, field: &str) -> Result<Length> {
-        let process = &mut self.process.borrow_mut();
-        process.get_offset(strct, field)
-    }
-
     // TODO: 0 should also result in an error
     pub fn get_base(&mut self) -> Result<Address> {
         if !self.module_base.is_null() {
@@ -124,9 +113,7 @@ impl<T: VirtualRead> Module<T> {
         }
 
         let process = &mut self.process.borrow_mut();
-        let cpu_arch = { process.win.borrow().start_block.arch };
         let proc_arch = { process.get_process_arch()? };
-        let dtb = process.get_dtb()?;
 
         self.module_base = match proc_arch.instruction_set {
             InstructionSet::X64 => addr!(process.virt_read_u64(self.peb_entry + len!(0x30))?), // self.get_offset("_LDR_DATA_TABLE_ENTRY", "DllBase")?
@@ -143,9 +130,7 @@ impl<T: VirtualRead> Module<T> {
         }
 
         let process = &mut self.process.borrow_mut();
-        let cpu_arch = { process.win.borrow().start_block.arch };
         let proc_arch = { process.get_process_arch()? };
-        let dtb = process.get_dtb()?;
 
         self.module_size = match proc_arch.instruction_set {
             InstructionSet::X64 => len!(process.virt_read_u64(self.peb_entry + len!(0x40))?), // self.get_offset("_LDR_DATA_TABLE_ENTRY", "SizeOfImage")?

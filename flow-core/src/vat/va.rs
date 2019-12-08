@@ -36,7 +36,7 @@ impl<'a, T: PhysicalRead + VirtualAddressTranslation> VirtualRead for VatImpl<'a
                 aligned_len = end - base;
             }
 
-            let pa = self.0.vtop(arch, dtb, base).unwrap_or(Address::null());
+            let pa = self.0.vtop(arch, dtb, base).unwrap_or_else(|_| Address::null());
             if !pa.is_null() {
                 let mem = self.0.phys_read(pa, aligned_len)?;
                 let start = (base - addr).as_usize();

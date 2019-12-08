@@ -47,7 +47,7 @@ impl TryFrom<u8> for InstructionSet {
 
 #[allow(dead_code)]
 impl InstructionSet {
-    pub fn as_u8(&self) -> u8 {
+    pub fn as_u8(self) -> u8 {
         match self {
             InstructionSet::X64 => 1,
             InstructionSet::X86Pae => 2,
@@ -55,51 +55,51 @@ impl InstructionSet {
         }
     }
 
-    pub fn byte_order(&self) -> ByteOrder {
+    pub fn byte_order(self) -> ByteOrder {
         match_instruction_set!(self, byte_order)
     }
 
-    pub fn page_size(&self) -> Length {
+    pub fn page_size(self) -> Length {
         match_instruction_set!(self, page_size)
     }
 
-    pub fn len_addr(&self) -> Length {
+    pub fn len_addr(self) -> Length {
         match_instruction_set!(self, len_addr)
     }
 
-    pub fn len_u64(&self) -> Length {
+    pub fn len_u64(self) -> Length {
         match_instruction_set!(self, len_u64)
     }
 
-    pub fn len_u32(&self) -> Length {
+    pub fn len_u32(self) -> Length {
         match_instruction_set!(self, len_u32)
     }
 
-    pub fn len_u16(&self) -> Length {
+    pub fn len_u16(self) -> Length {
         match_instruction_set!(self, len_u16)
     }
 
-    pub fn len_u8(&self) -> Length {
+    pub fn len_u8(self) -> Length {
         match_instruction_set!(self, len_u8)
     }
 
-    pub fn len_i64(&self) -> Length {
+    pub fn len_i64(self) -> Length {
         match_instruction_set!(self, len_i64)
     }
 
-    pub fn len_i32(&self) -> Length {
+    pub fn len_i32(self) -> Length {
         match_instruction_set!(self, len_i32)
     }
 
-    pub fn len_i16(&self) -> Length {
+    pub fn len_i16(self) -> Length {
         match_instruction_set!(self, len_i16)
     }
 
-    pub fn len_i8(&self) -> Length {
+    pub fn len_i8(self) -> Length {
         match_instruction_set!(self, len_i8)
     }
 
-    pub fn len_f32(&self) -> Length {
+    pub fn len_f32(self) -> Length {
         match_instruction_set!(self, len_f32)
     }
 }

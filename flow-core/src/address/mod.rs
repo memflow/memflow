@@ -1,8 +1,9 @@
-pub mod address;
+// TODO: rename addr to something useful or rename this crate?
+pub mod addr;
 pub mod length;
 
 // forward declares
-pub use crate::address::address::Address;
+pub use crate::address::addr::Address;
 pub use crate::address::length::Length;
 
 // macro declares

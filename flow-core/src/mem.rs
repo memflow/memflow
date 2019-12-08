@@ -248,11 +248,8 @@ pub trait VirtualRead {
         len: usize,
     ) -> Result<String> {
         let mut r = self.virt_read(arch, dtb, addr, len!(len))?;
-        match r.iter().enumerate().filter(|(_i, c)| **c == 0u8).nth(0) {
-            Some((n, _)) => {
-                r.truncate(n);
-            }
-            None => (),
+        if let Some((n, _)) = r.iter().enumerate().filter(|(_i, c)| **c == 0u8).nth(0) {
+            r.truncate(n);
         }
 
         let v = CString::new(r)?;
@@ -261,7 +258,7 @@ pub trait VirtualRead {
 }
 
 pub trait PhysicalWrite {
-    fn phys_write(&mut self, addr: Address, data: &Vec<u8>) -> Result<Length>;
+    fn phys_write(&mut self, addr: Address, data: &[u8]) -> Result<Length>;
 }
 
 macro_rules! arch_write_type {
@@ -279,7 +276,7 @@ pub trait VirtualWrite {
         arch: Architecture,
         dtb: Address,
         addr: Address,
-        data: &Vec<u8>,
+        data: &[u8],
     ) -> Result<Length>;
 
     fn virt_write_addr(

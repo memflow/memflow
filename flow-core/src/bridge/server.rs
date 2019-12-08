@@ -97,7 +97,7 @@ where
             .for_each(move |s| {
                 libc_eprintln!("client connected");
 
-                if let Some(_) = opts.iter().filter(|&&o| o == "nodelay").nth(0) {
+                if opts.iter().filter(|&&o| o == "nodelay").nth(0).is_some() {
                     libc_eprintln!("trying to set TCP_NODELAY on socket");
                     s.set_nodelay(true).unwrap();
                 }
@@ -132,7 +132,7 @@ where
 
 impl<T: PhysicalRead + PhysicalWrite + 'static> BridgeServer<T> {
     pub fn new(mem: Rc<RefCell<T>>) -> Self {
-        BridgeServer { mem: mem }
+        BridgeServer { mem }
     }
 
     pub fn listen(&self, urlstr: &str) -> Result<()> {
@@ -141,10 +141,10 @@ impl<T: PhysicalRead + PhysicalWrite + 'static> BridgeServer<T> {
 
         let path = url
             .path()
-            .split(",")
+            .split(',')
             .nth(0)
             .ok_or_else(|| Error::new(ErrorKind::Other, "invalid url"))?;
-        let opts = url.path().split(",").skip(1).collect::<Vec<_>>();
+        let opts = url.path().split(',').skip(1).collect::<Vec<_>>();
 
         // TODO: a cleaner way would be to split ServerBuilder / ServerImpl
         let selfcp = Self {

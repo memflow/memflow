@@ -204,9 +204,9 @@ pub trait VirtualRead {
         arch: Architecture,
         dtb: Address,
         addr: Address,
-        len: Length,
+        len: usize,
     ) -> Result<String> {
-        let mut r = self.virt_read(arch, dtb, addr, len)?;
+        let mut r = self.virt_read(arch, dtb, addr, len!(len))?;
         match r.iter().enumerate().filter(|(i, c)| **c == 0u8).nth(0) {
             Some((n, _)) => {
                 r.truncate(n);

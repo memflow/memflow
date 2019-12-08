@@ -15,7 +15,7 @@ macro_rules! mem_call_read {
             let win = $sel.win.borrow();
             let mem = &mut win.mem.borrow_mut();
             Ok(mem.$func(
-                win.start_block.arch,
+                proc_arch,
                 dtb,
                 $addr)?)
         }
@@ -30,7 +30,7 @@ macro_rules! mem_call_vec_read {
             let win = $sel.win.borrow();
             let mem = &mut win.mem.borrow_mut();
             Ok(mem.$func(
-                win.start_block.arch,
+                proc_arch,
                 dtb,
                 $addr,
                 $count)?)
@@ -42,6 +42,7 @@ macro_rules! mem_call_vec_read {
 pub trait ProcessRead {
     fn virt_read_addr(&mut self, addr: Address) -> Result<Address>;
     fn virt_read_vec_addr(&mut self, addr: Address, count: usize) -> Result<Vec<Address>>;
+
     fn virt_read_u64(&mut self, addr: Address) -> Result<u64>;
     fn virt_read_u32(&mut self, addr: Address) -> Result<u32>;
     fn virt_read_u16(&mut self, addr: Address) -> Result<u16>;
@@ -50,8 +51,11 @@ pub trait ProcessRead {
     fn virt_read_i32(&mut self, addr: Address) -> Result<i32>;
     fn virt_read_i16(&mut self, addr: Address) -> Result<i16>;
     fn virt_read_i8(&mut self, addr: Address) -> Result<i8>;
+
     fn virt_read_f32(&mut self, addr: Address) -> Result<f32>;
     fn virt_read_vec_f32(&mut self, addr: Address, count: usize) -> Result<Vec<f32>>;
+
+    fn virt_read_cstr(&mut self, addr: Address, count: usize) -> Result<String>;
 }
 
 impl<T: VirtualRead> ProcessRead for Process<T> {
@@ -143,6 +147,18 @@ impl<T: VirtualRead> ProcessRead for Process<T> {
 
     fn virt_read_vec_f32(&mut self, addr: Address, count: usize) -> Result<Vec<f32>> {
         mem_call_vec_read!(self, virt_read_vec_f32, addr, count)
+    }
+
+    fn virt_read_cstr(&mut self, addr: Address, len: usize) -> Result<String> {
+        let proc_arch = self.get_process_arch()?;
+        let dtb = self.get_dtb()?;
+        let win = self.win.borrow();
+        let mem = &mut win.mem.borrow_mut();
+        Ok(mem.virt_read_cstr(
+            proc_arch,
+            dtb,
+            addr,
+            len)?) // TODO: get rid of this Ok() wrap? (move error class to core!)
     }
 }
 

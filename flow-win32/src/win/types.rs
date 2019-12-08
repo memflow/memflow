@@ -82,9 +82,7 @@ impl Struct {
             });
         }
 
-        Ok(Struct {
-            field_map: field_map,
-        })
+        Ok(Struct { field_map })
     }
 
     pub fn get_field(&self, name: &str) -> Option<&Field> {
@@ -101,7 +99,7 @@ pub struct PDB {
 impl PDB {
     pub fn new(file: PathBuf) -> Self {
         PDB {
-            file: file,
+            file,
             structs: HashMap::new(),
         }
     }

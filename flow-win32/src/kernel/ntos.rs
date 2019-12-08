@@ -44,7 +44,7 @@ fn find_x64_with_va<T: VirtualRead>(mem: &mut T, start_block: &StartBlock) -> Re
     );
 
     // va was found previously
-    let mut va_base = start_block.va.as_u64() & !0x1fffff;
+    let mut va_base = start_block.va.as_u64() & !0x001f_ffff;
     while va_base + Length::from_mb(32).as_u64() > start_block.va.as_u64() {
         trace!("find_x64_with_va: probing at {:x}", va_base);
 
@@ -67,7 +67,7 @@ fn find_x64_with_va<T: VirtualRead>(mem: &mut T, start_block: &StartBlock) -> Re
             .filter(|(_, c)| LittleEndian::read_u16(&c) == 0x5a4d) // MZ
             .inspect(|(i, _)| trace!("find_x64_with_va: found potential MZ flag at offset {:x}", i * arch::x64::page_size().as_usize()))
             .flat_map(|(i, c)| c.chunks_exact(8).map(move |c| (i, c)))
-            .filter(|(_, c)| LittleEndian::read_u64(&c) == 0x45444F434C4F4F50) // POOLCODE
+            .filter(|(_, c)| LittleEndian::read_u64(&c) == 0x4544_4f43_4c4f_4f50) // POOLCODE
             .inspect(|(i, _)| trace!("find_x64_with_va: found potential POOLCODE flag at offset {:x}", i * arch::x64::page_size().as_usize()))
             .filter(|(i, _)| {
                 // try to probe pe header
@@ -89,7 +89,7 @@ fn find_x64_with_va<T: VirtualRead>(mem: &mut T, start_block: &StartBlock) -> Re
                 };
 
                 info!("find_x64_with_va: found pe header for {}", pe.name.unwrap_or_default());
-                return pe.name.unwrap_or_default() == "ntoskrnl.exe"
+                pe.name.unwrap_or_default() == "ntoskrnl.exe"
             })
             .nth(0)
             .ok_or_else(|| {

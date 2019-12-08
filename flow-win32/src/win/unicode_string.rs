@@ -70,8 +70,7 @@ impl<T: VirtualRead> VirtualReadUnicodeString for T {
 
         // TODO: check length % 2 == 0
 
-        let _content: Vec<u16> =
-            unsafe { std::mem::transmute::<Vec<u8>, Vec<u16>>(content.into()) };
+        let _content: Vec<u16> = unsafe { std::mem::transmute::<Vec<u8>, Vec<u16>>(content) };
         Ok(U16CString::from_vec_with_nul(_content)?.to_string_lossy())
     }
 }

@@ -27,9 +27,9 @@ impl<T: VirtualRead> ModuleIterator<T> {
         let first_peb_entry = process.borrow_mut().get_first_peb_entry()?;
         let arch = process.borrow_mut().get_process_arch()?;
         Ok(Self {
-            process: process,
+            process,
             process_arch: arch,
-            first_peb_entry: first_peb_entry,
+            first_peb_entry,
             peb_entry: first_peb_entry,
         })
     }
@@ -87,9 +87,9 @@ where
     fn clone(&self) -> Self {
         Self {
             process: self.process.clone(),
-            peb_entry: self.peb_entry.clone(),
-            module_base: self.module_base.clone(),
-            module_size: self.module_size.clone(),
+            peb_entry: self.peb_entry,
+            module_base: self.module_base,
+            module_size: self.module_size,
             module_name: self.module_name.clone(),
         }
     }
@@ -98,8 +98,8 @@ where
 impl<T: VirtualRead> Module<T> {
     pub fn new(process: Rc<RefCell<Process<T>>>, peb_entry: Address) -> Self {
         Self {
-            process: process,
-            peb_entry: peb_entry,
+            process,
+            peb_entry,
             module_base: addr!(0),
             module_size: len!(0),
             module_name: String::from(""),

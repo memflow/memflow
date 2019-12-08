@@ -26,9 +26,8 @@ fn cache_dir() -> Result<PathBuf> {
     Ok(cache)
 }
 
-fn try_download_pdb(url: &String, filename: &String) -> Result<()> {
-    let url =
-        duma::utils::parse_url(&format!("{}/{}", url, filename)).map_err(|e| Error::new(e))?;
+fn try_download_pdb(url: &str, filename: &str) -> Result<()> {
+    let url = duma::utils::parse_url(&format!("{}/{}", url, filename)).map_err(Error::new)?;
 
     println!("trying to download pdb from {:?}", url);
     duma::download::http_download(url, &ArgMatches::default(), "0.1")?;
@@ -46,7 +45,7 @@ fn try_download_pdb(url: &String, filename: &String) -> Result<()> {
     Ok(())
 }
 
-fn download_pdb(pdbname: &String, guid: &String) -> Result<()> {
+fn download_pdb(pdbname: &str, guid: &str) -> Result<()> {
     info!("downloading pdb for {} with guid/age {}", pdbname, guid);
 
     let base_url = format!(
@@ -74,7 +73,7 @@ fn download_pdb(pdbname: &String, guid: &String) -> Result<()> {
     Err(Error::new("unable to download a valid pdb"))
 }
 
-fn download_pdb_cache(pdbname: &String, guid: &String) -> Result<PathBuf> {
+fn download_pdb_cache(pdbname: &str, guid: &str) -> Result<PathBuf> {
     info!("fetching pdb for {} with guid/age {}", pdbname, guid);
 
     let cache_dir = cache_dir()?.join(pdbname);

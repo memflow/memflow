@@ -1,8 +1,8 @@
 use crate::error::{Error, Result};
 use log::debug;
 
-use crate::kernel::StartBlock;
 use super::{types::PDB, Windows};
+use crate::kernel::StartBlock;
 
 #[macro_use]
 use flow_core::*;
@@ -176,11 +176,8 @@ impl<T: VirtualRead> Module<T> {
 
         // x64 = x64 && !wow64
         // TODO: wrap virt_read_unicode_string in process::virt_read
-        self.module_name = mem.virt_read_unicode_string(
-            cpu_arch,
-            proc_arch,
-            dtb,
-            self.peb_entry + offs)?;
+        self.module_name =
+            mem.virt_read_unicode_string(cpu_arch, proc_arch, dtb, self.peb_entry + offs)?;
         Ok(self.module_name.clone())
     }
 }

@@ -36,12 +36,12 @@ fn main() {
     // os functionality should be located in core!
     let bridgerc = Rc::new(RefCell::new(bridge));
     let win = flow_win32::init(bridgerc).unwrap();
-/*
-    win.process_iter()
-        .for_each(|mut p| println!("{:?} {:?}", p.get_pid(), p.get_name()));
-    win.process_iter()
-        .for_each(|mut p| println!("{:?} {:?}", p.get_pid(), p.get_name()));
-*/
+    /*
+        win.process_iter()
+            .for_each(|mut p| println!("{:?} {:?}", p.get_pid(), p.get_name()));
+        win.process_iter()
+            .for_each(|mut p| println!("{:?} {:?}", p.get_pid(), p.get_name()));
+    */
     let mut process = win
         .process_iter()
         .filter_map(|mut p| {
@@ -61,16 +61,16 @@ fn main() {
         process.get_name(),
         process.is_wow64()
     );
-/*
-    process
-        .module_iter()
-        .unwrap()
-        .for_each(|mut m| println!("{:?}", m.get_name()));
-    process
-        .module_iter()
-        .unwrap()
-        .for_each(|mut m| println!("{:?}", m.get_name()));
-*/
+    /*
+        process
+            .module_iter()
+            .unwrap()
+            .for_each(|mut m| println!("{:?}", m.get_name()));
+        process
+            .module_iter()
+            .unwrap()
+            .for_each(|mut m| println!("{:?}", m.get_name()));
+    */
     let module = process
         .module_iter()
         .unwrap()

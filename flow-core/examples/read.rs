@@ -33,9 +33,7 @@ fn main() {
         }
     };
 
-    let mem = bridge
-        .phys_read(Address::from(0x1000), len!(8))
-        .unwrap();
+    let mem = bridge.phys_read(Address::from(0x1000), len!(8)).unwrap();
     println!("Received memory: {:?}", mem);
 
     //bridge.read_registers().unwrap();

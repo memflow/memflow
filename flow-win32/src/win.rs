@@ -6,8 +6,8 @@ use flow_core::mem::VirtualRead;
 
 use crate::kernel::StartBlock;
 
-pub mod unicode_string;
 pub mod types;
+pub mod unicode_string;
 
 pub mod module;
 pub mod process;

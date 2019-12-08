@@ -65,7 +65,7 @@ impl<'a, T: PhysicalRead + PhysicalWrite + VirtualAddressTranslation> VirtualWri
         arch: Architecture,
         dtb: Address,
         addr: Address,
-        data: &Vec<u8>,
+        data: &[u8],
     ) -> Result<Length> {
         let pa = self.0.vtop(arch, dtb, addr)?;
         if !pa.is_null() {

@@ -65,9 +65,9 @@ pub fn vtop<T: PhysicalRead>(mem: &mut T, dtb: Address, addr: Address) -> Result
     }
 
     trace!("found 4kb page");
-    return Ok(Address::from(
+    Ok(Address::from(
         (pte.as_u64() & make_bit_mask(12, 51)) | (addr.as_u64() & make_bit_mask(0, 11)),
-    ));
+    ))
 }
 
 /*

@@ -35,19 +35,19 @@ impl Address {
         Address { 0: 0 }
     }
 
-    pub fn is_null(&self) -> bool {
+    pub fn is_null(self) -> bool {
         self.0 == 0
     }
 
-    pub fn as_u64(&self) -> u64 {
+    pub fn as_u64(self) -> u64 {
         self.0
     }
 
-    pub fn as_usize(&self) -> usize {
+    pub fn as_usize(self) -> usize {
         self.0 as usize
     }
 
-    pub fn as_page_aligned(&self, page_size: Length) -> Address {
+    pub fn as_page_aligned(self, page_size: Length) -> Address {
         Address {
             0: self.0 & (!(page_size.as_u64() - 1)),
         }
@@ -122,8 +122,8 @@ mod tests {
             Address::from(0x1000)
         );
         assert_eq!(
-            Address::from(0xFFF12345u64).as_page_aligned(Length::from_b(0x10000)),
-            Address::from(0xFFF10000u64)
+            Address::from(0xFFF1_2345u64).as_page_aligned(Length::from_b(0x10000)),
+            Address::from(0xFFF1_0000u64)
         );
     }
 

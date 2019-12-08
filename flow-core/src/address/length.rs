@@ -58,15 +58,15 @@ impl Length {
         Length::from(0)
     }
 
-    pub fn is_zero(&self) -> bool {
+    pub fn is_zero(self) -> bool {
         self.0 == 0
     }
 
-    pub fn as_u64(&self) -> u64 {
+    pub fn as_u64(self) -> u64 {
         self.0
     }
 
-    pub fn as_usize(&self) -> usize {
+    pub fn as_usize(self) -> usize {
         self.0 as usize
     }
 

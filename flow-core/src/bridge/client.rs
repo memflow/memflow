@@ -38,7 +38,7 @@ fn connect_unix(path: &str, _opts: Vec<&str>) -> Result<BridgeClient> {
 
     Ok(BridgeClient {
         bridge: connect_rpc(&mut runtime, reader, writer)?,
-        runtime: runtime,
+        runtime,
     })
 }
 
@@ -71,7 +71,7 @@ fn connect_tcp(path: &str, opts: Vec<&str>) -> Result<BridgeClient> {
 
     Ok(BridgeClient {
         bridge: connect_rpc(&mut runtime, reader, writer)?,
-        runtime: runtime,
+        runtime,
     })
 }
 
@@ -143,7 +143,7 @@ impl PhysicalRead for BridgeClient {
 
 impl PhysicalWrite for BridgeClient {
     // physWrite @1 (address :UInt64, data: Data) -> (length :UInt64);
-    fn phys_write(&mut self, addr: Address, data: &Vec<u8>) -> Result<Length> {
+    fn phys_write(&mut self, addr: Address, data: &[u8]) -> Result<Length> {
         trace!("phys_write({:?})", addr);
 
         let mut request = self.bridge.phys_write_request();
@@ -181,7 +181,7 @@ impl BridgeClient {
                 }),
             )
             .map_err(|_e| Error::new(ErrorKind::Other, "unable to read memory"))
-            .and_then(|v| Ok(v))
+            .and_then(Ok)
     }
 
     // virtWrite @3 (arch: UInt8, dtb: UInt64, address :UInt64, data: Data) -> (length :UInt64);
@@ -190,7 +190,7 @@ impl BridgeClient {
         arch: Architecture,
         dtb: Address,
         addr: Address,
-        data: &Vec<u8>,
+        data: &[u8],
     ) -> Result<Length> {
         let mut request = self.bridge.virt_write_request();
         request.get().set_arch(arch.instruction_set.as_u8());
@@ -204,7 +204,7 @@ impl BridgeClient {
                 }),
             )
             .map_err(|_e| Error::new(ErrorKind::Other, "unable to write memory"))
-            .and_then(|v| Ok(v))
+            .and_then(Ok)
     }
 }
 
@@ -256,7 +256,7 @@ impl VirtualWrite for BridgeClient {
         arch: Architecture,
         dtb: Address,
         addr: Address,
-        data: &Vec<u8>,
+        data: &[u8],
     ) -> Result<Length> {
         // TODO: implement chunk logic
         trace!("virt_write({:?}, {:?}, {:?})", arch, dtb, addr);

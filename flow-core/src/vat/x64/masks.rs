@@ -1,6 +1,6 @@
 // bit mask macros
 pub const fn make_bit_mask(a: u32, b: u32) -> u64 {
-    (0xffffffffffffffff >> (63 - b)) & !(((1 as u64) << a) - 1)
+    (0xffff_ffff_ffff_ffff >> (63 - b)) & !(((1 as u64) << a) - 1)
 }
 
 #[macro_export]
@@ -36,13 +36,7 @@ macro_rules! is_prototype_page {
 #[macro_export]
 macro_rules! check_entry {
     ($a:expr) => {
-        if get_bit!($a, 0) {
-            true
-        } else if is_transition_page!($a) && !is_prototype_page!($a) {
-            true
-        } else {
-            false
-        }
+        get_bit!($a, 0) || (is_transition_page!($a) && !is_prototype_page!($a))
     };
 }
 
@@ -83,11 +77,11 @@ mod tests {
     #[test]
     fn test_make_bit_mask() {
         assert_eq!(make_bit_mask(0, 11), 0xfff);
-        assert_eq!(make_bit_mask(12, 20), 0x1ff000);
-        assert_eq!(make_bit_mask(21, 29), 0x3fe00000);
-        assert_eq!(make_bit_mask(30, 38), 0x7fc0000000);
-        assert_eq!(make_bit_mask(39, 47), 0xff8000000000);
-        assert_eq!(make_bit_mask(12, 51), 0xffffffffff000);
+        assert_eq!(make_bit_mask(12, 20), 0x001f_f000);
+        assert_eq!(make_bit_mask(21, 29), 0x3fe0_0000);
+        assert_eq!(make_bit_mask(30, 38), 0x007f_c000_0000);
+        assert_eq!(make_bit_mask(39, 47), 0xff80_0000_0000);
+        assert_eq!(make_bit_mask(12, 51), 0x000f_ffff_ffff_f000);
     }
 
     #[test]
@@ -97,25 +91,25 @@ mod tests {
 
     #[test]
     fn test_is_large_page() {
-        assert_eq!(is_large_page!(0x00000000000000F0), true);
-        assert_eq!(is_large_page!(0x0000000000000080), true);
-        assert_eq!(is_large_page!(0x0000000000000070), false);
-        assert_eq!(is_large_page!(0x0000000000000020), false);
+        assert_eq!(is_large_page!(0x0000_0000_0000_00F0), true);
+        assert_eq!(is_large_page!(0x0000_0000_0000_0080), true);
+        assert_eq!(is_large_page!(0x0000_0000_0000_0070), false);
+        assert_eq!(is_large_page!(0x0000_0000_0000_0020), false);
     }
 
     #[test]
     fn test_is_transition_page() {
-        assert_eq!(is_transition_page!(0x0000000000000F00), true);
-        assert_eq!(is_transition_page!(0x0000000000000800), true);
-        assert_eq!(is_transition_page!(0x0000000000000700), false);
-        assert_eq!(is_transition_page!(0x0000000000000200), false);
+        assert_eq!(is_transition_page!(0x0000_0000_0000_0F00), true);
+        assert_eq!(is_transition_page!(0x0000_0000_0000_0800), true);
+        assert_eq!(is_transition_page!(0x0000_0000_0000_0700), false);
+        assert_eq!(is_transition_page!(0x0000_0000_0000_0200), false);
     }
 
     #[test]
     fn test_is_prototype_page() {
-        assert_eq!(is_prototype_page!(0x0000000000000F00), true);
-        assert_eq!(is_prototype_page!(0x0000000000000800), false);
-        assert_eq!(is_prototype_page!(0x0000000000000700), true);
-        assert_eq!(is_prototype_page!(0x0000000000000200), false);
+        assert_eq!(is_prototype_page!(0x0000_0000_0000_0F00), true);
+        assert_eq!(is_prototype_page!(0x0000_0000_0000_0800), false);
+        assert_eq!(is_prototype_page!(0x0000_0000_0000_0700), true);
+        assert_eq!(is_prototype_page!(0x0000_0000_0000_0200), false);
     }
 }

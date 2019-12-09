@@ -24,8 +24,8 @@ pub struct ModuleIterator<T: VirtualRead> {
 
 impl<T: VirtualRead> ModuleIterator<T> {
     pub fn new(process: Rc<RefCell<Process<T>>>) -> Result<Self> {
-        let first_peb_entry = process.borrow_mut().get_first_peb_entry()?;
-        let arch = process.borrow_mut().get_process_arch()?;
+        let first_peb_entry = process.borrow_mut().first_peb_entry()?;
+        let arch = process.borrow_mut().arch()?;
         Ok(Self {
             process,
             process_arch: arch,
@@ -107,13 +107,13 @@ impl<T: VirtualRead> Module<T> {
     }
 
     // TODO: 0 should also result in an error
-    pub fn get_base(&mut self) -> Result<Address> {
+    pub fn base(&mut self) -> Result<Address> {
         if !self.module_base.is_null() {
             return Ok(self.module_base);
         }
 
         let process = &mut self.process.borrow_mut();
-        let proc_arch = { process.get_process_arch()? };
+        let proc_arch = { process.arch()? };
 
         self.module_base = match proc_arch.instruction_set {
             InstructionSet::X64 => addr!(process.virt_read_u64(self.peb_entry + len!(0x30))?), // self.get_offset("_LDR_DATA_TABLE_ENTRY", "DllBase")?
@@ -124,13 +124,13 @@ impl<T: VirtualRead> Module<T> {
     }
 
     // TODO: 0 should also result in an error
-    pub fn get_size(&mut self) -> Result<Length> {
+    pub fn size(&mut self) -> Result<Length> {
         if !self.module_size.is_zero() {
             return Ok(self.module_size);
         }
 
         let process = &mut self.process.borrow_mut();
-        let proc_arch = { process.get_process_arch()? };
+        let proc_arch = { process.arch()? };
 
         self.module_size = match proc_arch.instruction_set {
             InstructionSet::X64 => len!(process.virt_read_u64(self.peb_entry + len!(0x40))?), // self.get_offset("_LDR_DATA_TABLE_ENTRY", "SizeOfImage")?
@@ -140,15 +140,15 @@ impl<T: VirtualRead> Module<T> {
         Ok(self.module_size)
     }
 
-    pub fn get_name(&mut self) -> Result<String> {
+    pub fn name(&mut self) -> Result<String> {
         if self.module_name != "" {
             return Ok(self.module_name.clone());
         }
 
         let process = &mut self.process.borrow_mut();
         let cpu_arch = { process.win.borrow().start_block.arch };
-        let proc_arch = { process.get_process_arch()? };
-        let dtb = process.get_dtb()?;
+        let proc_arch = { process.arch()? };
+        let dtb = process.dtb()?;
 
         let offs = match proc_arch.instruction_set {
             InstructionSet::X64 => len!(0x58), // self.get_offset("_LDR_DATA_TABLE_ENTRY", "BaseDllName")?,

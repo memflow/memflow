@@ -45,7 +45,7 @@ fn main() {
     let mut process = win
         .process_iter()
         .filter_map(|mut p| {
-            if p.get_name().unwrap_or_default() == "Steam.exe" {
+            if p.name().unwrap_or_default() == "Steam.exe" {
                 Some(p)
             } else {
                 None
@@ -57,9 +57,9 @@ fn main() {
 
     println!(
         "found Steam.exe: {:?} {:?} {:?}",
-        process.get_pid(),
-        process.get_name(),
-        process.is_wow64()
+        process.pid(),
+        process.name(),
+        process.has_wow64()
     );
     /*
         process
@@ -75,7 +75,7 @@ fn main() {
         .module_iter()
         .unwrap()
         .filter_map(|mut m| {
-            if m.get_name().unwrap_or_default() == "Steam.exe" {
+            if m.name().unwrap_or_default() == "Steam.exe" {
                 Some(m)
             } else {
                 None
@@ -85,5 +85,5 @@ fn main() {
         .ok_or_else(|| "unable to find module in Calculator.exe")
         .unwrap();
 
-    println!("mod: {:?}", module.clone().get_name());
+    println!("mod: {:?}", module.clone().name());
 }

@@ -22,7 +22,7 @@ pub struct Struct {
 }
 
 impl Struct {
-    pub fn from(filename: PathBuf, class_name: &str) -> Result<Self> {
+    pub fn with(filename: PathBuf, class_name: &str) -> Result<Self> {
         let file = File::open(filename)?;
         let mut pdb = pdb::PDB::open(file)?;
 
@@ -85,7 +85,7 @@ impl Struct {
         Ok(Struct { field_map })
     }
 
-    pub fn get_field(&self, name: &str) -> Option<&Field> {
+    pub fn find_field(&self, name: &str) -> Option<&Field> {
         self.field_map.get(name)
     }
 }
@@ -104,13 +104,13 @@ impl PDB {
         }
     }
 
-    pub fn get_struct(&mut self, name: &str) -> Option<Struct> {
+    pub fn find_struct(&mut self, name: &str) -> Option<Struct> {
         match self.structs.get(name) {
             Some(s) => return Some(s.clone()),
             None => trace!("struct {} not found in cache", name),
         }
 
-        match Struct::from(self.file.clone(), name) {
+        match Struct::with(self.file.clone(), name) {
             Ok(s) => {
                 self.structs.insert(String::from(name), s.clone());
                 return Some(s);

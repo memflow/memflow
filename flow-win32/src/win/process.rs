@@ -50,11 +50,11 @@ impl<T: VirtualRead> Iterator for ProcessIterator<T> {
         let memory = &mut win.mem.borrow_mut();
 
         // resolve offsets
-        let _eprocess = kernel_pdb.get_struct("_EPROCESS")?;
-        let _eprocess_links = _eprocess.get_field("ActiveProcessLinks")?.offset;
+        let _eprocess = kernel_pdb.find_struct("_EPROCESS")?;
+        let _eprocess_links = _eprocess.find_field("ActiveProcessLinks")?.offset;
 
-        let _list_entry = kernel_pdb.get_struct("_LIST_ENTRY")?;
-        let _list_entry_blink = _list_entry.get_field("Blink")?.offset;
+        let _list_entry = kernel_pdb.find_struct("_LIST_ENTRY")?;
+        let _list_entry_blink = _list_entry.find_field("Blink")?.offset;
 
         // read next eprocess entry
         let mut next = memory
@@ -77,7 +77,7 @@ impl<T: VirtualRead> Iterator for ProcessIterator<T> {
         let cur = self.eprocess;
         self.eprocess = next;
 
-        Some(Process::new(self.win.clone(), cur))
+        Some(Process::with(self.win.clone(), cur))
     }
 }
 
@@ -101,12 +101,12 @@ where
 
 // TODO: read/ret "ProcessInfo"
 impl<T: VirtualRead> Process<T> {
-    pub fn new(win: Rc<RefCell<Windows<T>>>, eprocess: Address) -> Self {
+    pub fn with(win: Rc<RefCell<Windows<T>>>, eprocess: Address) -> Self {
         Self { win, eprocess }
     }
 
     // TODO: macro? pub?
-    pub fn get_offset(&mut self, strct: &str, field: &str) -> Result<Length> {
+    pub fn find_offset(&mut self, strct: &str, field: &str) -> Result<Length> {
         let win = &mut self.win.borrow_mut();
         let mut _pdb = win
             .kernel_pdb
@@ -114,25 +114,25 @@ impl<T: VirtualRead> Process<T> {
             .ok_or_else(|| "kernel pdb not found")?
             .borrow_mut();
         let _strct = _pdb
-            .get_struct(strct)
+            .find_struct(strct)
             .ok_or_else(|| format!("{} not found", strct))?;
         let _field = _strct
-            .get_field(field)
+            .find_field(field)
             .ok_or_else(|| format!("{} not found", field))?;
         debug!("offset {}::{}={:x}", strct, field, _field.offset);
         Ok(_field.offset)
     }
 
-    pub fn get_pid(&mut self) -> Result<i32> {
-        let offs = self.get_offset("_EPROCESS", "UniqueProcessId")?;
+    pub fn pid(&mut self) -> Result<i32> {
+        let offs = self.find_offset("_EPROCESS", "UniqueProcessId")?;
         let win = self.win.borrow();
         let start_block = win.start_block;
         let mem = &mut win.mem.borrow_mut();
         Ok(mem.virt_read_i32(start_block.arch, start_block.dtb, self.eprocess + offs)?)
     }
 
-    pub fn get_name(&mut self) -> Result<String> {
-        let offs = self.get_offset("_EPROCESS", "ImageFileName")?;
+    pub fn name(&mut self) -> Result<String> {
+        let offs = self.find_offset("_EPROCESS", "ImageFileName")?;
         let win = self.win.borrow();
         let start_block = win.start_block;
         let mem = &mut win.mem.borrow_mut();
@@ -140,38 +140,38 @@ impl<T: VirtualRead> Process<T> {
     }
 
     // TODO: dtb trait
-    pub fn get_dtb(&mut self) -> Result<Address> {
+    pub fn dtb(&mut self) -> Result<Address> {
         // _KPROCESS is the first entry in _EPROCESS
-        let offs = self.get_offset("_KPROCESS", "DirectoryTableBase")?;
+        let offs = self.find_offset("_KPROCESS", "DirectoryTableBase")?;
         let win = self.win.borrow();
         let start_block = win.start_block;
         let mem = &mut win.mem.borrow_mut();
         Ok(mem.virt_read_addr(start_block.arch, start_block.dtb, self.eprocess + offs)?)
     }
 
-    pub fn get_wow64(&mut self) -> Result<Address> {
-        let offs = self.get_offset("_EPROCESS", "WoW64Process")?;
+    pub fn wow64(&mut self) -> Result<Address> {
+        let offs = self.find_offset("_EPROCESS", "WoW64Process")?;
         let win = self.win.borrow();
         let start_block = win.start_block;
         let mem = &mut win.mem.borrow_mut();
         Ok(mem.virt_read_addr(start_block.arch, start_block.dtb, self.eprocess + offs)?)
     }
 
-    pub fn is_wow64(&mut self) -> Result<bool> {
-        Ok(!self.get_wow64()?.is_null())
+    pub fn has_wow64(&mut self) -> Result<bool> {
+        Ok(!self.wow64()?.is_null())
     }
 
-    pub fn get_process_arch(&mut self) -> Result<Architecture> {
+    pub fn arch(&mut self) -> Result<Architecture> {
         // TODO: if x64 && !wow64
-        if !self.is_wow64()? {
+        if !self.has_wow64()? {
             Ok(Architecture::from(InstructionSet::X64))
         } else {
             Ok(Architecture::from(InstructionSet::X86))
         }
     }
 
-    pub fn get_first_peb_entry(&mut self) -> Result<Address> {
-        let wow64 = self.get_wow64()?;
+    pub fn first_peb_entry(&mut self) -> Result<Address> {
+        let wow64 = self.wow64()?;
         info!("wow64={:x}", wow64);
 
         let start_block = {
@@ -182,7 +182,7 @@ impl<T: VirtualRead> Process<T> {
         let peb = if wow64.is_null() {
             // x64
             info!("reading peb for x64 process");
-            let offs = self.get_offset("_EPROCESS", "Peb")?;
+            let offs = self.find_offset("_EPROCESS", "Peb")?;
             let win = self.win.borrow();
             let mem = &mut win.mem.borrow_mut();
             mem.virt_read_addr(start_block.arch, start_block.dtb, self.eprocess + offs)?
@@ -200,7 +200,7 @@ impl<T: VirtualRead> Process<T> {
         // TODO: use process architecture agnostic wrapper from here!
 
         // process architecture agnostic offsets
-        let proc_arch = self.get_process_arch()?;
+        let proc_arch = self.arch()?;
 
         let ldr_offs = match proc_arch.instruction_set {
             InstructionSet::X64 => Length::from(0x18), // self.get_offset("_PEB", "Ldr")?,

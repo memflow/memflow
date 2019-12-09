@@ -1,5 +1,7 @@
 // TODO: custom error + result
 use std::io::Result;
+use std::mem;
+use std::ptr::copy_nonoverlapping;
 
 use byteorder::{BigEndian, ByteOrder, LittleEndian};
 
@@ -45,7 +47,19 @@ pub trait VirtualRead {
         dtb: Address,
         addr: Address,
         len: Length,
-    ) -> Result<Vec<u8>>;
+    ) -> Result<Vec<u8>>; // TODO: return [u8] ?
+
+    unsafe fn virt_read_raw<T>(
+        &mut self,
+        arch: Architecture,
+        dtb: Address,
+        addr: Address,
+    ) -> Result<T> {
+        let r = self.virt_read(arch, dtb, addr, len!(mem::size_of::<T>()))?;
+        let mut d = mem::MaybeUninit::<T>::uninit();
+        copy_nonoverlapping(r.as_ptr(), d.as_mut_ptr() as *mut u8, r.len());
+        Ok(d.assume_init())
+    }
 
     fn virt_read_addr(
         &mut self,

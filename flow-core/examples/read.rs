@@ -49,9 +49,9 @@ fn main() {
         if (counter % 10000) == 0 {
             let elapsed = start.elapsed().as_millis() as f64;
             if elapsed > 0.0 {
-                println!("{} reads/sec", (u64::from(counter)) / elapsed * 1000.0);
-                println!("{} reads/frame", (u64::from(counter)) / elapsed * 1000.0 / 60.0);
-                println!("{} ms/read", elapsed / (u64::from(counter)));
+                println!("{} reads/sec", (f64::from(counter)) / elapsed * 1000.0);
+                println!("{} reads/frame", (f64::from(counter)) / elapsed * 1000.0 / 60.0);
+                println!("{} ms/read", elapsed / (f64::from(counter)));
             }
         }
     }

@@ -1,4 +1,4 @@
-//use std::io::Result;
+use crate::error::{Error, Result};
 
 // TODO: custom error + result
 pub struct OperatingSystem {

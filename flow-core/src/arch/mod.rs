@@ -3,7 +3,7 @@ pub mod x86;
 pub mod x86_pae;
 
 use std::convert::TryFrom;
-use std::io::{Error, ErrorKind, Result};
+use crate::error::{Error, Result};
 
 use crate::address::Length;
 
@@ -33,14 +33,14 @@ macro_rules! match_instruction_set {
 
 // TODO: figure out a better way for this
 impl TryFrom<u8> for InstructionSet {
-    type Error = std::io::Error;
+    type Error = Error;
 
     fn try_from(value: u8) -> Result<Self> {
         match value {
             1 => Ok(InstructionSet::X64),
             2 => Ok(InstructionSet::X86Pae),
             3 => Ok(InstructionSet::X86),
-            _ => Err(Error::new(ErrorKind::Other, "Invalid InstructionSet value")),
+            _ => Err(Error::new("Invalid InstructionSet value")),
         }
     }
 }
@@ -117,4 +117,10 @@ impl From<InstructionSet> for Architecture {
             instruction_set: item,
         }
     }
+}
+
+// TODO: differnet traits for mut or not mut?
+// TODO: TryGetArchitecture
+pub trait GetArchitecture {
+    fn architecture(&mut self) -> Result<Architecture>;
 }

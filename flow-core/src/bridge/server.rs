@@ -1,7 +1,7 @@
 use libc_print::*;
 
 use std::convert::TryFrom;
-use std::io::{Error, ErrorKind, Result};
+use crate::error::{Error, Result};
 
 use std::net::SocketAddr;
 use url::Url;
@@ -59,7 +59,7 @@ where
                 Ok(())
             }),
     )
-    .map_err(|_e| Error::new(ErrorKind::Other, "unable to listen for connections"))
+    .map_err(|_e| Error::new("unable to listen for connections"))
     .and_then(|_v| Ok(()))
 }
 
@@ -68,10 +68,7 @@ fn listen_unix<T>(bridge: &BridgeServer<T>, path: &str, opts: Vec<&str>) -> Resu
 where
     T: PhysicalRead + PhysicalWrite + 'static,
 {
-    Err(Error::new(
-        ErrorKind::Other,
-        "unix sockets are not supported on this os",
-    ))
+    Err(Error::new("unix sockets are not supported on this os"))
 }
 
 fn listen_tcp<T>(bridge: &BridgeServer<T>, path: &str, opts: Vec<&str>) -> Result<()>
@@ -84,7 +81,7 @@ where
 
     let addr = path
         .parse::<SocketAddr>()
-        .map_err(|e| Error::new(ErrorKind::Other, e))?;
+        .map_err(|e| Error::new(e))?;
     let listener = TcpListener::bind(&addr)?;
     let bridge = bridge::ToClient::new(bridgecp).into_client::<::capnp_rpc::Server>();
 
@@ -108,7 +105,7 @@ where
                 Ok(())
             }),
     )
-    .map_err(|_e| Error::new(ErrorKind::Other, "unable to listen for connections"))
+    .map_err(|_e| Error::new("unable to listen for connections"))
     .and_then(|_v| Ok(()))
 }
 
@@ -137,13 +134,13 @@ impl<T: PhysicalRead + PhysicalWrite + 'static> BridgeServer<T> {
 
     pub fn listen(&self, urlstr: &str) -> Result<()> {
         // TODO: error convert
-        let url = Url::parse(urlstr).map_err(|e| Error::new(ErrorKind::Other, e))?;
+        let url = Url::parse(urlstr).map_err(|e| Error::new(e))?;
 
         let path = url
             .path()
             .split(',')
             .nth(0)
-            .ok_or_else(|| Error::new(ErrorKind::Other, "invalid url"))?;
+            .ok_or_else(|| Error::new("invalid url"))?;
         let opts = url.path().split(',').skip(1).collect::<Vec<_>>();
 
         // TODO: a cleaner way would be to split ServerBuilder / ServerImpl
@@ -154,7 +151,7 @@ impl<T: PhysicalRead + PhysicalWrite + 'static> BridgeServer<T> {
         match url.scheme() {
             "unix" => listen_unix(&selfcp, path, opts),
             "tcp" => listen_tcp(&selfcp, path, opts),
-            _ => Err(Error::new(ErrorKind::Other, "invalid url scheme")),
+            _ => Err(Error::new("invalid url scheme")),
         }
     }
 }
@@ -209,7 +206,7 @@ impl<T: PhysicalRead + PhysicalWrite + 'static> bridge::Server for BridgeServer<
         let memcp = self.mem.clone();
         let memory = &mut memcp.borrow_mut();
 
-        let ins = pry!(InstructionSet::try_from(pry!(params.get()).get_arch()));
+        let ins = pry!(InstructionSet::try_from(pry!(params.get()).get_arch()).map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e)));
         let dtb = Address::from(pry!(params.get()).get_dtb());
         let address = Address::from(pry!(params.get()).get_address());
         let length = Length::from(pry!(params.get()).get_length());
@@ -231,7 +228,7 @@ impl<T: PhysicalRead + PhysicalWrite + 'static> bridge::Server for BridgeServer<
         let memcp = self.mem.clone();
         let memory = &mut memcp.borrow_mut();
 
-        let ins = pry!(InstructionSet::try_from(pry!(params.get()).get_arch()));
+        let ins = pry!(InstructionSet::try_from(pry!(params.get()).get_arch()).map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e)));
         let dtb = Address::from(pry!(params.get()).get_dtb());
         let address = Address::from(pry!(params.get()).get_address());
         let data = pry!(pry!(params.get()).get_data());

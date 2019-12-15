@@ -1,6 +1,6 @@
 use log::{info, trace};
 
-use std::io::{Error, ErrorKind, Result};
+use crate::error::{Error, Result};
 use std::net::SocketAddr;
 use url::Url;
 
@@ -44,10 +44,7 @@ fn connect_unix(path: &str, _opts: Vec<&str>) -> Result<BridgeClient> {
 
 #[cfg(not(any(unix)))]
 fn connect_unix(path: &str, opts: Vec<&str>) -> Result<BridgeClient> {
-    Err(Error::new(
-        ErrorKind::Other,
-        "unix sockets are not supported on this os",
-    ))
+    Err(Error::new("unix sockets are not supported on this os"))
 }
 
 fn connect_tcp(path: &str, opts: Vec<&str>) -> Result<BridgeClient> {
@@ -55,7 +52,7 @@ fn connect_tcp(path: &str, opts: Vec<&str>) -> Result<BridgeClient> {
 
     let addr = path
         .parse::<SocketAddr>()
-        .map_err(|e| Error::new(ErrorKind::Other, e))?;
+        .map_err(|e| Error::new(e))?;
 
     let mut runtime = Runtime::new().unwrap();
     let stream = runtime.block_on(TcpStream::connect(&addr))?;
@@ -97,19 +94,19 @@ where
 
 impl BridgeClient {
     pub fn connect(urlstr: &str) -> Result<BridgeClient> {
-        let url = Url::parse(urlstr).map_err(|e| Error::new(ErrorKind::Other, e))?;
+        let url = Url::parse(urlstr).map_err(|e| Error::new(e))?;
 
         let path = url
             .path()
             .split(',')
             .nth(0)
-            .ok_or_else(|| Error::new(ErrorKind::Other, "invalid url"))?;
+            .ok_or_else(|| Error::new("invalid url"))?;
         let opts = url.path().split(',').skip(1).collect::<Vec<_>>();
 
         match url.scheme() {
             "unix" => connect_unix(path, opts),
             "tcp" => connect_tcp(path, opts),
-            _ => Err(Error::new(ErrorKind::Other, "invalid url scheme")),
+            _ => Err(Error::new("invalid url scheme")),
         }
     }
 
@@ -117,7 +114,7 @@ impl BridgeClient {
         let request = self.bridge.read_registers_request();
         self.runtime
             .block_on(request.send().promise.and_then(|_r| Promise::ok(())))
-            .map_err(|_e| Error::new(ErrorKind::Other, "unable to read registers"))
+            .map_err(|_e| Error::new("unable to read registers"))
             .and_then(|_v| Ok(Vec::new()))
     }
 }
@@ -136,7 +133,7 @@ impl PhysicalRead for BridgeClient {
                     Promise::ok(Vec::from(pry!(pry!(response.get()).get_data())))
                 }),
             )
-            .map_err(|_e| Error::new(ErrorKind::Other, "unable to read memory"))
+            .map_err(|_e| Error::new("unable to read memory"))
             .and_then(Ok)
     }
 }
@@ -155,7 +152,7 @@ impl PhysicalWrite for BridgeClient {
                     Promise::ok(Length::from(pry!(response.get()).get_length()))
                 }),
             )
-            .map_err(|_e| Error::new(ErrorKind::Other, "unable to write memory"))
+            .map_err(|_e| Error::new("unable to write memory"))
             .and_then(Ok)
     }
 }
@@ -180,7 +177,7 @@ impl BridgeClient {
                     Promise::ok(Vec::from(pry!(pry!(response.get()).get_data())))
                 }),
             )
-            .map_err(|_e| Error::new(ErrorKind::Other, "unable to read memory"))
+            .map_err(|_e| Error::new("unable to read memory"))
             .and_then(Ok)
     }
 
@@ -203,7 +200,7 @@ impl BridgeClient {
                     Promise::ok(Length::from(pry!(response.get()).get_length()))
                 }),
             )
-            .map_err(|_e| Error::new(ErrorKind::Other, "unable to write memory"))
+            .map_err(|_e| Error::new("unable to write memory"))
             .and_then(Ok)
     }
 }

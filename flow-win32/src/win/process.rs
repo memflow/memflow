@@ -1,4 +1,4 @@
-pub mod virt_read;
+//pub mod virt_read;
 
 use crate::error::{Error, Result};
 use log::{debug, info};
@@ -6,15 +6,15 @@ use log::{debug, info};
 use super::Windows;
 
 use flow_core::address::{Address, Length};
-use flow_core::arch::{Architecture, InstructionSet};
-use flow_core::mem::VirtualRead;
+use flow_core::arch::{Architecture, GetArchitecture, InstructionSet};
+use flow_core::mem::*;
 
 use std::cell::RefCell;
 use std::rc::Rc;
 
 use super::module::ModuleIterator;
 
-use virt_read::ProcessRead;
+//use virt_read::ProcessRead;
 
 pub struct ProcessIterator<T: VirtualRead> {
     win: Rc<RefCell<Windows<T>>>,
@@ -161,15 +161,6 @@ impl<T: VirtualRead> Process<T> {
         Ok(!self.wow64()?.is_null())
     }
 
-    pub fn arch(&mut self) -> Result<Architecture> {
-        // TODO: if x64 && !wow64
-        if !self.has_wow64()? {
-            Ok(Architecture::from(InstructionSet::X64))
-        } else {
-            Ok(Architecture::from(InstructionSet::X86))
-        }
-    }
-
     pub fn first_peb_entry(&mut self) -> Result<Address> {
         let wow64 = self.wow64()?;
         info!("wow64={:x}", wow64);
@@ -200,7 +191,7 @@ impl<T: VirtualRead> Process<T> {
         // TODO: use process architecture agnostic wrapper from here!
 
         // process architecture agnostic offsets
-        let proc_arch = self.arch()?;
+        let proc_arch = self.architecture()?;
 
         let ldr_offs = match proc_arch.instruction_set {
             InstructionSet::X64 => Length::from(0x18), // self.get_offset("_PEB", "Ldr")?,
@@ -230,5 +221,27 @@ impl<T: VirtualRead> Process<T> {
     pub fn module_iter(&self) -> Result<ModuleIterator<T>> {
         let rc = Rc::new(RefCell::new(self.clone()));
         ModuleIterator::new(rc)
+    }
+}
+
+impl<T: VirtualRead> GetArchitecture for Process<T> {
+    fn architecture(&mut self) -> flow_core::Result<Architecture> {
+        // TODO: if x64 && !wow64
+        if !self.has_wow64().map_err(|e| flow_core::Error::new(e))? {
+            Ok(Architecture::from(InstructionSet::X64))
+        } else {
+            Ok(Architecture::from(InstructionSet::X86))
+        }
+    }
+}
+
+// TODO: this is not entirely correct as it will use different VAT than required, split vat arch + type arch up again
+impl<T: VirtualRead> VirtualReadHelper for Process<T> {
+    fn virt_read(&mut self, addr: Address, len: Length) -> flow_core::Result<Vec<u8>> {
+        let proc_arch = self.architecture().map_err(|e| flow_core::Error::new(e))?;
+        let dtb = self.dtb().map_err(|e| flow_core::Error::new(e))?;
+        let win = self.win.borrow();
+        let mem = &mut win.mem.borrow_mut();
+        mem.virt_read(proc_arch, dtb, addr, len)
     }
 }

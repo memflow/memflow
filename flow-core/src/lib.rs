@@ -1,3 +1,7 @@
+pub mod error;
+// TODO: add more forward declares
+pub use error::{Error, Result};
+
 #[macro_use]
 pub mod address;
 

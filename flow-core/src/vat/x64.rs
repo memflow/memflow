@@ -5,7 +5,7 @@ mod masks;
 use masks::*;
 
 use byteorder::{ByteOrder, LittleEndian};
-use std::io::{Error, ErrorKind, Result};
+use crate::error::{Error, Result};
 
 use crate::address::Address;
 use crate::arch::x64;
@@ -23,7 +23,7 @@ pub fn vtop<T: PhysicalRead>(mem: &mut T, dtb: Address, addr: Address) -> Result
         Address::from((dtb.as_u64() & make_bit_mask(12, 51)) | pml4_index_bits!(addr.as_u64())),
     )?;
     if !check_entry!(pml4e.as_u64()) {
-        return Err(Error::new(ErrorKind::Other, "unable to read pml4e"));
+        return Err(Error::new("unable to read pml4e"));
     }
 
     let pdpte = read_address(
@@ -31,7 +31,7 @@ pub fn vtop<T: PhysicalRead>(mem: &mut T, dtb: Address, addr: Address) -> Result
         Address::from((pml4e.as_u64() & make_bit_mask(12, 51)) | pdpte_index_bits!(addr.as_u64())),
     )?;
     if !check_entry!(pdpte.as_u64()) {
-        return Err(Error::new(ErrorKind::Other, "unable to read pdpte"));
+        return Err(Error::new("unable to read pdpte"));
     }
 
     if is_large_page!(pdpte.as_u64()) {
@@ -46,7 +46,7 @@ pub fn vtop<T: PhysicalRead>(mem: &mut T, dtb: Address, addr: Address) -> Result
         Address::from((pdpte.as_u64() & make_bit_mask(12, 51)) | pd_index_bits!(addr.as_u64())),
     )?;
     if !check_entry!(pgd.as_u64()) {
-        return Err(Error::new(ErrorKind::Other, "unable to read pgd"));
+        return Err(Error::new("unable to read pgd"));
     }
 
     if is_large_page!(pgd.as_u64()) {
@@ -61,7 +61,7 @@ pub fn vtop<T: PhysicalRead>(mem: &mut T, dtb: Address, addr: Address) -> Result
         Address::from((pgd.as_u64() & make_bit_mask(12, 51)) | pt_index_bits!(addr.as_u64())),
     )?;
     if !check_entry!(pte.as_u64()) {
-        return Err(Error::new(ErrorKind::Other, "unable to read pte"));
+        return Err(Error::new("unable to read pte"));
     }
 
     trace!("found 4kb page");

@@ -36,7 +36,7 @@ pub fn find_exported<T: PhysicalRead + VirtualRead>(
     start_block: &StartBlock,
     ntos: Address,
 ) -> Result<Address> {
-    let reader = VirtualReader::with(mem, start_block.arch, start_block.dtb);
+    let mut reader = VirtualReader::with(mem, start_block.arch, start_block.dtb);
     let header_buf = reader.virt_read(ntos, Length::from_mb(32))?;
 
     let mut pe_opts = ParseOptions::default();

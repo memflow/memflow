@@ -4,8 +4,8 @@ use flow_core::*;
 
 use flow_core::address::{Address, Length};
 
-use flow_core::arch::{Architecture, InstructionSet};
-use flow_core::mem::VirtualRead;
+use flow_core::arch::{GetArchitecture, Architecture, InstructionSet};
+use flow_core::mem::{VirtualRead, VirtualReadHelperFuncs};
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -23,7 +23,7 @@ pub struct ModuleIterator<T: VirtualRead> {
 impl<T: VirtualRead> ModuleIterator<T> {
     pub fn new(process: Rc<RefCell<Process<T>>>) -> Result<Self> {
         let first_peb_entry = process.borrow_mut().first_peb_entry()?;
-        let arch = process.borrow_mut().arch()?;
+        let arch = process.borrow_mut().architecture()?;
         Ok(Self {
             process,
             process_arch: arch,
@@ -111,7 +111,7 @@ impl<T: VirtualRead> Module<T> {
         }
 
         let process = &mut self.process.borrow_mut();
-        let proc_arch = { process.arch()? };
+        let proc_arch = { process.architecture()? };
 
         self.module_base = match proc_arch.instruction_set {
             InstructionSet::X64 => addr!(process.virt_read_u64(self.peb_entry + len!(0x30))?), // self.get_offset("_LDR_DATA_TABLE_ENTRY", "DllBase")?
@@ -128,7 +128,7 @@ impl<T: VirtualRead> Module<T> {
         }
 
         let process = &mut self.process.borrow_mut();
-        let proc_arch = { process.arch()? };
+        let proc_arch = { process.architecture()? };
 
         self.module_size = match proc_arch.instruction_set {
             InstructionSet::X64 => len!(process.virt_read_u64(self.peb_entry + len!(0x40))?), // self.get_offset("_LDR_DATA_TABLE_ENTRY", "SizeOfImage")?
@@ -145,7 +145,7 @@ impl<T: VirtualRead> Module<T> {
 
         let process = &mut self.process.borrow_mut();
         let cpu_arch = { process.win.borrow().start_block.arch };
-        let proc_arch = { process.arch()? };
+        let proc_arch = { process.architecture()? };
         let dtb = process.dtb()?;
 
         let offs = match proc_arch.instruction_set {
@@ -154,13 +154,9 @@ impl<T: VirtualRead> Module<T> {
             _ => return Err(Error::new("invalid process architecture")),
         };
 
-        let win = process.win.borrow();
-        let mem = &mut win.mem.borrow_mut();
-
         // x64 = x64 && !wow64
-        // TODO: wrap virt_read_unicode_string in process::virt_read
         self.module_name =
-            mem.virt_read_unicode_string(cpu_arch, proc_arch, dtb, self.peb_entry + offs)?;
+            process.virt_read_unicode_string(self.peb_entry + offs)?;
         Ok(self.module_name.clone())
     }
 }

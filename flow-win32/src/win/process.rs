@@ -57,12 +57,8 @@ impl<T: VirtualRead> Iterator for ProcessIterator<T> {
         let _list_entry_blink = _list_entry.find_field("Blink")?.offset;
 
         // read next eprocess entry
-        let mut next = memory
-            .virt_read_addr(
-                start_block.arch,
-                start_block.dtb,
-                self.eprocess + _eprocess_links + _list_entry_blink,
-            )
+        let mut next = VirtualReader::with(&mut **memory, start_block.arch, start_block.dtb)
+            .virt_read_addr(self.eprocess + _eprocess_links + _list_entry_blink)
             .unwrap(); // TODO: convert to Option
         if !next.is_null() {
             next -= _eprocess_links;
@@ -128,7 +124,7 @@ impl<T: VirtualRead> Process<T> {
         let win = self.win.borrow();
         let start_block = win.start_block;
         let mem = &mut win.mem.borrow_mut();
-        Ok(mem.virt_read_i32(start_block.arch, start_block.dtb, self.eprocess + offs)?)
+        Ok(VirtualReader::with(&mut **mem, start_block.arch, start_block.dtb).virt_read_i32(self.eprocess + offs)?)
     }
 
     pub fn name(&mut self) -> Result<String> {
@@ -136,7 +132,7 @@ impl<T: VirtualRead> Process<T> {
         let win = self.win.borrow();
         let start_block = win.start_block;
         let mem = &mut win.mem.borrow_mut();
-        Ok(mem.virt_read_cstr(start_block.arch, start_block.dtb, self.eprocess + offs, 16)?)
+        Ok(VirtualReader::with(&mut **mem, start_block.arch, start_block.dtb).virt_read_cstr(self.eprocess + offs, 16)?)
     }
 
     // TODO: dtb trait
@@ -146,7 +142,7 @@ impl<T: VirtualRead> Process<T> {
         let win = self.win.borrow();
         let start_block = win.start_block;
         let mem = &mut win.mem.borrow_mut();
-        Ok(mem.virt_read_addr(start_block.arch, start_block.dtb, self.eprocess + offs)?)
+        Ok(VirtualReader::with(&mut **mem, start_block.arch, start_block.dtb).virt_read_addr(self.eprocess + offs)?)
     }
 
     pub fn wow64(&mut self) -> Result<Address> {
@@ -154,7 +150,7 @@ impl<T: VirtualRead> Process<T> {
         let win = self.win.borrow();
         let start_block = win.start_block;
         let mem = &mut win.mem.borrow_mut();
-        Ok(mem.virt_read_addr(start_block.arch, start_block.dtb, self.eprocess + offs)?)
+        Ok(VirtualReader::with(&mut **mem, start_block.arch, start_block.dtb).virt_read_addr(self.eprocess + offs)?)
     }
 
     pub fn has_wow64(&mut self) -> Result<bool> {
@@ -174,15 +170,11 @@ impl<T: VirtualRead> Process<T> {
             // x64
             info!("reading peb for x64 process");
             let offs = self.find_offset("_EPROCESS", "Peb")?;
-            let win = self.win.borrow();
-            let mem = &mut win.mem.borrow_mut();
-            mem.virt_read_addr(start_block.arch, start_block.dtb, self.eprocess + offs)?
+            self.virt_read_addr(self.eprocess + offs)?
         } else {
             // wow64 (first entry in wow64 struct = peb)
             info!("reading peb for wow64 process");
-            let win = self.win.borrow();
-            let mem = &mut win.mem.borrow_mut();
-            mem.virt_read_addr(start_block.arch, start_block.dtb, wow64)?
+            self.virt_read_addr(wow64)?
         };
         info!("peb={:x}", peb);
 
@@ -226,8 +218,13 @@ impl<T: VirtualRead> Process<T> {
 
 impl<T: VirtualRead> GetArchitecture for Process<T> {
     fn architecture(&mut self) -> flow_core::Result<Architecture> {
-        // TODO: if x64 && !wow64
-        if !self.has_wow64().map_err(|e| flow_core::Error::new(e))? {
+        let start_block = {
+            let win = self.win.borrow();
+            win.start_block
+        };
+        if start_block.arch.instruction_set == InstructionSet::X86 {
+            Ok(Architecture::from(InstructionSet::X86))
+        } else if !self.has_wow64().map_err(|e| flow_core::Error::new(e))? {
             Ok(Architecture::from(InstructionSet::X64))
         } else {
             Ok(Architecture::from(InstructionSet::X86))

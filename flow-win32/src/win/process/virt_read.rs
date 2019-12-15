@@ -9,7 +9,7 @@ use super::Process;
 // TODO: rename mem_call_read
 macro_rules! mem_call_read {
     ($sel:ident, $func:ident, $addr:expr) => {{
-        let proc_arch = $sel.arch()?;
+        let proc_arch = $sel.architecture()?;
         let dtb = $sel.dtb()?;
         let win = $sel.win.borrow();
         let mem = &mut win.mem.borrow_mut();
@@ -19,7 +19,7 @@ macro_rules! mem_call_read {
 
 macro_rules! mem_call_vec_read {
     ($sel:ident, $func:ident, $addr:expr, $count:expr) => {{
-        let proc_arch = $sel.arch()?;
+        let proc_arch = $sel.architecture()?;
         let dtb = $sel.dtb()?;
         let win = $sel.win.borrow();
         let mem = &mut win.mem.borrow_mut();
@@ -49,7 +49,7 @@ pub trait ProcessRead {
 
 impl<T: VirtualRead> ProcessRead for Process<T> {
     fn virt_read_addr(&mut self, addr: Address) -> Result<Address> {
-        let proc_arch = self.arch()?;
+        let proc_arch = self.architecture()?;
         let dtb = self.dtb()?;
         let win = self.win.borrow();
         let mem = &mut win.mem.borrow_mut();
@@ -61,7 +61,7 @@ impl<T: VirtualRead> ProcessRead for Process<T> {
     }
 
     fn virt_read_vec_addr(&mut self, addr: Address, count: usize) -> Result<Vec<Address>> {
-        let proc_arch = self.arch()?;
+        let proc_arch = self.architecture()?;
         let dtb = self.dtb()?;
         let win = self.win.borrow();
         let mem = &mut win.mem.borrow_mut();
@@ -117,7 +117,7 @@ impl<T: VirtualRead> ProcessRead for Process<T> {
     }
 
     fn virt_read_cstr(&mut self, addr: Address, len: usize) -> Result<String> {
-        let proc_arch = self.arch()?;
+        let proc_arch = self.architecture()?;
         let dtb = self.dtb()?;
         let win = self.win.borrow();
         let mem = &mut win.mem.borrow_mut();

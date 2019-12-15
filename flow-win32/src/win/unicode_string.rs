@@ -1,24 +1,20 @@
 use crate::error::{Error, Result};
 
 use flow_core::address::{Address, Length};
-use flow_core::arch::{GetArchitecture, Architecture, InstructionSet};
+use flow_core::arch::{InstructionSet, SystemArchitecture};
 use flow_core::mem::{VirtualReadHelper, VirtualReadHelperFuncs};
 
 use widestring::U16CString;
 
 pub trait VirtualReadUnicodeString {
-    fn virt_read_unicode_string(
-        &mut self,
-        addr: Address,
-    ) -> Result<String>;
+    fn virt_read_unicode_string(&mut self, addr: Address) -> Result<String>;
 }
 
 // TODO: split up cpu and proc arch in read_helper.rs
-impl<T: GetArchitecture + VirtualReadHelper + VirtualReadHelperFuncs> VirtualReadUnicodeString for T {
-    fn virt_read_unicode_string(
-        &mut self,
-        addr: Address,
-    ) -> Result<String> {
+impl<T: SystemArchitecture + VirtualReadHelper + VirtualReadHelperFuncs> VirtualReadUnicodeString
+    for T
+{
+    fn virt_read_unicode_string(&mut self, addr: Address) -> Result<String> {
         /*
         typedef struct _windows_unicode_string32 {
             uint16_t length;
@@ -34,7 +30,7 @@ impl<T: GetArchitecture + VirtualReadHelper + VirtualReadHelperFuncs> VirtualRea
         } __attribute__((packed)) win64_unicode_string_t;
         */
 
-        let arch = self.architecture()?;
+        let arch = self.arch()?;
 
         // length is always the first entry
         let length = self.virt_read_u16(addr + Length::from(0))?;

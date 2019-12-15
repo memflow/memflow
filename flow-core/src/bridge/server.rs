@@ -1,7 +1,7 @@
 use libc_print::*;
 
-use std::convert::TryFrom;
 use crate::error::{Error, Result};
+use std::convert::TryFrom;
 
 use std::net::SocketAddr;
 use url::Url;
@@ -79,9 +79,7 @@ where
         mem: bridge.mem.clone(),
     };
 
-    let addr = path
-        .parse::<SocketAddr>()
-        .map_err(|e| Error::new(e))?;
+    let addr = path.parse::<SocketAddr>().map_err(Error::new)?;
     let listener = TcpListener::bind(&addr)?;
     let bridge = bridge::ToClient::new(bridgecp).into_client::<::capnp_rpc::Server>();
 
@@ -134,7 +132,7 @@ impl<T: PhysicalRead + PhysicalWrite + 'static> BridgeServer<T> {
 
     pub fn listen(&self, urlstr: &str) -> Result<()> {
         // TODO: error convert
-        let url = Url::parse(urlstr).map_err(|e| Error::new(e))?;
+        let url = Url::parse(urlstr).map_err(Error::new)?;
 
         let path = url
             .path()
@@ -205,7 +203,8 @@ impl<T: PhysicalRead + PhysicalWrite + 'static> bridge::Server for BridgeServer<
     ) -> Promise<(), capnp::Error> {
         let memory = &mut self.mem.borrow_mut();
 
-        let ins = pry!(InstructionSet::try_from(pry!(params.get()).get_arch()).map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e)));
+        let ins = pry!(InstructionSet::try_from(pry!(params.get()).get_arch())
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e)));
         let dtb = Address::from(pry!(params.get()).get_dtb());
         let address = Address::from(pry!(params.get()).get_address());
         let length = Length::from(pry!(params.get()).get_length());
@@ -227,7 +226,8 @@ impl<T: PhysicalRead + PhysicalWrite + 'static> bridge::Server for BridgeServer<
         let memcp = self.mem.clone();
         let memory = &mut memcp.borrow_mut();
 
-        let ins = pry!(InstructionSet::try_from(pry!(params.get()).get_arch()).map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e)));
+        let ins = pry!(InstructionSet::try_from(pry!(params.get()).get_arch())
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e)));
         let dtb = Address::from(pry!(params.get()).get_dtb());
         let address = Address::from(pry!(params.get()).get_address());
         let data = pry!(pry!(params.get()).get_data());

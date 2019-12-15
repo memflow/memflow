@@ -9,11 +9,8 @@ pub mod arch;
 pub mod mem;
 pub mod vat;
 
-pub mod machine;
-pub mod os;
-
-pub mod cpu;
-pub mod net;
+//pub mod cpu;
+//pub mod net;
 
 // bridge
 // TODO: can we put this in bridge somehow?

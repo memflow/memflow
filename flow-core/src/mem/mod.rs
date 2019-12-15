@@ -4,28 +4,11 @@ pub mod write;
 pub mod write_helper;
 
 pub use read::{PhysicalRead, VirtualRead};
-pub use read_helper::{VirtualReadHelper, VirtualReadHelperFuncs, VirtualReadHelperChain, VirtualReader};
+pub use read_helper::{
+    TypeArchitecture, VirtualReadHelper, VirtualReadHelperChain, VirtualReadHelperFuncs,
+    VirtualReader,
+};
 pub use write::{PhysicalWrite, VirtualWrite};
-
-use crate::error::{Error, Result};
-use std::mem;
-use std::ptr::copy_nonoverlapping;
-
-use byteorder::{BigEndian, ByteOrder, LittleEndian};
-
-use crate::address::{Address, Length};
-use crate::arch::{self, Architecture};
-
-use std::ffi::CString;
-
-macro_rules! arch_write_type {
-    ($byte_order:expr, $func:ident, $buf:expr, $value:expr) => {
-        match $byte_order {
-            arch::ByteOrder::LittleEndian => LittleEndian::$func($buf, $value),
-            arch::ByteOrder::BigEndian => BigEndian::$func($buf, $value),
-        }
-    };
-}
 
 /*
 pub trait VirtualWrite {

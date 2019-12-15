@@ -50,9 +50,7 @@ fn connect_unix(path: &str, opts: Vec<&str>) -> Result<BridgeClient> {
 fn connect_tcp(path: &str, opts: Vec<&str>) -> Result<BridgeClient> {
     info!("trying to connect via tcp -> {}", path);
 
-    let addr = path
-        .parse::<SocketAddr>()
-        .map_err(|e| Error::new(e))?;
+    let addr = path.parse::<SocketAddr>().map_err(Error::new)?;
 
     let mut runtime = Runtime::new().unwrap();
     let stream = runtime.block_on(TcpStream::connect(&addr))?;
@@ -94,7 +92,7 @@ where
 
 impl BridgeClient {
     pub fn connect(urlstr: &str) -> Result<BridgeClient> {
-        let url = Url::parse(urlstr).map_err(|e| Error::new(e))?;
+        let url = Url::parse(urlstr).map_err(Error::new)?;
 
         let path = url
             .path()

@@ -1,12 +1,7 @@
-use crate::error::{Error, Result};
-
-use std::mem;
-use std::ptr::copy_nonoverlapping;
-
-use byteorder::{BigEndian, ByteOrder, LittleEndian};
+use crate::error::Result;
 
 use crate::address::{Address, Length};
-use crate::arch::{GetArchitecture, Architecture};
+use crate::arch::Architecture;
 
 pub trait PhysicalRead {
     fn phys_read(&mut self, addr: Address, len: Length) -> Result<Vec<u8>>;

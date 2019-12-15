@@ -1,4 +1,4 @@
-use crate::error::{Error, Result};
+use crate::error::Result;
 
 use crate::address::Address;
 use crate::mem::PhysicalRead;

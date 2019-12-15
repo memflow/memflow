@@ -4,7 +4,7 @@ use flow_core::*;
 
 use flow_core::address::{Address, Length};
 
-use flow_core::arch::{GetArchitecture, Architecture, InstructionSet};
+use flow_core::arch::{Architecture, InstructionSet, SystemArchitecture};
 use flow_core::mem::{VirtualRead, VirtualReadHelperFuncs};
 
 use std::cell::RefCell;
@@ -23,7 +23,7 @@ pub struct ModuleIterator<T: VirtualRead> {
 impl<T: VirtualRead> ModuleIterator<T> {
     pub fn new(process: Rc<RefCell<Process<T>>>) -> Result<Self> {
         let first_peb_entry = process.borrow_mut().first_peb_entry()?;
-        let arch = process.borrow_mut().architecture()?;
+        let arch = process.borrow_mut().arch()?;
         Ok(Self {
             process,
             process_arch: arch,
@@ -111,7 +111,7 @@ impl<T: VirtualRead> Module<T> {
         }
 
         let process = &mut self.process.borrow_mut();
-        let proc_arch = { process.architecture()? };
+        let proc_arch = { process.arch()? };
 
         self.module_base = match proc_arch.instruction_set {
             InstructionSet::X64 => addr!(process.virt_read_u64(self.peb_entry + len!(0x30))?), // self.get_offset("_LDR_DATA_TABLE_ENTRY", "DllBase")?
@@ -128,7 +128,7 @@ impl<T: VirtualRead> Module<T> {
         }
 
         let process = &mut self.process.borrow_mut();
-        let proc_arch = { process.architecture()? };
+        let proc_arch = { process.arch()? };
 
         self.module_size = match proc_arch.instruction_set {
             InstructionSet::X64 => len!(process.virt_read_u64(self.peb_entry + len!(0x40))?), // self.get_offset("_LDR_DATA_TABLE_ENTRY", "SizeOfImage")?
@@ -144,9 +144,7 @@ impl<T: VirtualRead> Module<T> {
         }
 
         let process = &mut self.process.borrow_mut();
-        let cpu_arch = { process.win.borrow().start_block.arch };
-        let proc_arch = { process.architecture()? };
-        let dtb = process.dtb()?;
+        let proc_arch = { process.arch()? };
 
         let offs = match proc_arch.instruction_set {
             InstructionSet::X64 => len!(0x58), // self.get_offset("_LDR_DATA_TABLE_ENTRY", "BaseDllName")?,
@@ -155,8 +153,7 @@ impl<T: VirtualRead> Module<T> {
         };
 
         // x64 = x64 && !wow64
-        self.module_name =
-            process.virt_read_unicode_string(self.peb_entry + offs)?;
+        self.module_name = process.virt_read_unicode_string(self.peb_entry + offs)?;
         Ok(self.module_name.clone())
     }
 }

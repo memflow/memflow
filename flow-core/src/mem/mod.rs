@@ -4,7 +4,7 @@ pub mod write;
 pub mod write_helper;
 
 pub use read::{PhysicalRead, VirtualRead};
-pub use read_helper::{VirtualReadHelper, VirtualReadHelperFuncs, VirtualReader};
+pub use read_helper::{VirtualReadHelper, VirtualReadHelperFuncs, VirtualReadHelperChain, VirtualReader};
 pub use write::{PhysicalWrite, VirtualWrite};
 
 use crate::error::{Error, Result};

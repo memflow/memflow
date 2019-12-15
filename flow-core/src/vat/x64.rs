@@ -4,8 +4,8 @@ use log::trace;
 mod masks;
 use masks::*;
 
-use byteorder::{ByteOrder, LittleEndian};
 use crate::error::{Error, Result};
+use byteorder::{ByteOrder, LittleEndian};
 
 use crate::address::Address;
 use crate::arch::x64;

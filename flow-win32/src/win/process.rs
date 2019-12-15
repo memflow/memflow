@@ -6,7 +6,7 @@ use log::{debug, info};
 use super::Windows;
 
 use flow_core::address::{Address, Length};
-use flow_core::arch::{Architecture, GetArchitecture, InstructionSet};
+use flow_core::arch::{Architecture, InstructionSet, SystemArchitecture};
 use flow_core::mem::*;
 
 use std::cell::RefCell;
@@ -119,38 +119,53 @@ impl<T: VirtualRead> Process<T> {
         Ok(_field.offset)
     }
 
+    // system arch = type arch
     pub fn pid(&mut self) -> Result<i32> {
         let offs = self.find_offset("_EPROCESS", "UniqueProcessId")?;
         let win = self.win.borrow();
         let start_block = win.start_block;
         let mem = &mut win.mem.borrow_mut();
-        Ok(VirtualReader::with(&mut **mem, start_block.arch, start_block.dtb).virt_read_i32(self.eprocess + offs)?)
+        Ok(
+            VirtualReader::with(&mut **mem, start_block.arch, start_block.dtb)
+                .virt_read_i32(self.eprocess + offs)?,
+        )
     }
 
+    // system arch = type arch
     pub fn name(&mut self) -> Result<String> {
         let offs = self.find_offset("_EPROCESS", "ImageFileName")?;
         let win = self.win.borrow();
         let start_block = win.start_block;
         let mem = &mut win.mem.borrow_mut();
-        Ok(VirtualReader::with(&mut **mem, start_block.arch, start_block.dtb).virt_read_cstr(self.eprocess + offs, 16)?)
+        Ok(
+            VirtualReader::with(&mut **mem, start_block.arch, start_block.dtb)
+                .virt_read_cstr(self.eprocess + offs, 16)?,
+        )
     }
 
-    // TODO: dtb trait
+    // system arch = type arch
     pub fn dtb(&mut self) -> Result<Address> {
         // _KPROCESS is the first entry in _EPROCESS
         let offs = self.find_offset("_KPROCESS", "DirectoryTableBase")?;
         let win = self.win.borrow();
         let start_block = win.start_block;
         let mem = &mut win.mem.borrow_mut();
-        Ok(VirtualReader::with(&mut **mem, start_block.arch, start_block.dtb).virt_read_addr(self.eprocess + offs)?)
+        Ok(
+            VirtualReader::with(&mut **mem, start_block.arch, start_block.dtb)
+                .virt_read_addr(self.eprocess + offs)?,
+        )
     }
 
+    // system arch = type arch
     pub fn wow64(&mut self) -> Result<Address> {
         let offs = self.find_offset("_EPROCESS", "WoW64Process")?;
         let win = self.win.borrow();
         let start_block = win.start_block;
         let mem = &mut win.mem.borrow_mut();
-        Ok(VirtualReader::with(&mut **mem, start_block.arch, start_block.dtb).virt_read_addr(self.eprocess + offs)?)
+        Ok(
+            VirtualReader::with(&mut **mem, start_block.arch, start_block.dtb)
+                .virt_read_addr(self.eprocess + offs)?,
+        )
     }
 
     pub fn has_wow64(&mut self) -> Result<bool> {
@@ -160,11 +175,6 @@ impl<T: VirtualRead> Process<T> {
     pub fn first_peb_entry(&mut self) -> Result<Address> {
         let wow64 = self.wow64()?;
         info!("wow64={:x}", wow64);
-
-        let start_block = {
-            let win = self.win.borrow();
-            win.start_block
-        };
 
         let peb = if wow64.is_null() {
             // x64
@@ -182,8 +192,11 @@ impl<T: VirtualRead> Process<T> {
         // TODO: forward declare virtual read in process?
         // TODO: use process architecture agnostic wrapper from here!
 
+        // from here on out we are in the process context
+        // we will be using the process type architecture now
+
         // process architecture agnostic offsets
-        let proc_arch = self.architecture()?;
+        let proc_arch = self.arch()?;
 
         let ldr_offs = match proc_arch.instruction_set {
             InstructionSet::X64 => Length::from(0x18), // self.get_offset("_PEB", "Ldr")?,
@@ -216,15 +229,22 @@ impl<T: VirtualRead> Process<T> {
     }
 }
 
-impl<T: VirtualRead> GetArchitecture for Process<T> {
-    fn architecture(&mut self) -> flow_core::Result<Architecture> {
+impl<T: VirtualRead> SystemArchitecture for Process<T> {
+    fn arch(&mut self) -> flow_core::Result<Architecture> {
+        let win = self.win.borrow();
+        Ok(win.start_block.arch)
+    }
+}
+
+impl<T: VirtualRead> TypeArchitecture for Process<T> {
+    fn type_arch(&mut self) -> flow_core::Result<Architecture> {
         let start_block = {
             let win = self.win.borrow();
             win.start_block
         };
         if start_block.arch.instruction_set == InstructionSet::X86 {
             Ok(Architecture::from(InstructionSet::X86))
-        } else if !self.has_wow64().map_err(|e| flow_core::Error::new(e))? {
+        } else if !self.has_wow64().map_err(flow_core::Error::new)? {
             Ok(Architecture::from(InstructionSet::X64))
         } else {
             Ok(Architecture::from(InstructionSet::X86))
@@ -235,8 +255,8 @@ impl<T: VirtualRead> GetArchitecture for Process<T> {
 // TODO: this is not entirely correct as it will use different VAT than required, split vat arch + type arch up again
 impl<T: VirtualRead> VirtualReadHelper for Process<T> {
     fn virt_read(&mut self, addr: Address, len: Length) -> flow_core::Result<Vec<u8>> {
-        let proc_arch = self.architecture().map_err(|e| flow_core::Error::new(e))?;
-        let dtb = self.dtb().map_err(|e| flow_core::Error::new(e))?;
+        let proc_arch = self.arch().map_err(flow_core::Error::new)?;
+        let dtb = self.dtb().map_err(flow_core::Error::new)?;
         let win = self.win.borrow();
         let mem = &mut win.mem.borrow_mut();
         mem.virt_read(proc_arch, dtb, addr, len)

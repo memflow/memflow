@@ -72,7 +72,9 @@ impl<'a, T: PhysicalRead + PhysicalWrite + VirtualAddressTranslation> VirtualWri
             self.0.phys_write(pa, data)
         } else {
             // TODO: add more debug info
-            Err(Error::new("virt_write(): unable to resolve physical address"))
+            Err(Error::new(
+                "virt_write(): unable to resolve physical address",
+            ))
         }
     }
 }

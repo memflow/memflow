@@ -10,7 +10,7 @@ pub mod x86;
 pub mod va;
 pub use va::VatImpl;
 
-use crate::error::{Error, Result};
+use crate::error::Result;
 
 use crate::address::Address;
 use crate::arch::{Architecture, InstructionSet};

@@ -156,7 +156,7 @@ impl<'a, R: MemoryReader<'a> + Arch> MemoryReaderHelper for R {
         &mut self,
         addr: Address,
     ) -> Result<Address> {
-        let arch = self.architecture();
+        let arch = self.arch();
         let r = self.as_bytes(addr, arch.instruction_set.len_u32())?;
         Ok(Address::from(arch_read_type!(
             arch.instruction_set.byte_order(),
@@ -170,7 +170,7 @@ impl<'a, R: MemoryReader<'a> + Arch> MemoryReaderHelper for R {
         addr: Address,
         count: usize,
     ) -> Result<Vec<Address>> {
-        let arch = self.architecture();
+        let arch = self.arch();
         let r = self.as_bytes(addr, arch.instruction_set.len_u32() * count)?;
         Ok(arch_read_vec_type!(
             arch.instruction_set.byte_order(),
@@ -188,7 +188,7 @@ impl<'a, R: MemoryReader<'a> + Arch> MemoryReaderHelper for R {
         &mut self,
         addr: Address,
     ) -> Result<Address> {
-        let arch = self.architecture();
+        let arch = self.arch();
         let r = self.as_bytes(addr, arch.instruction_set.len_u64())?;
         Ok(Address::from(arch_read_type!(
             arch.instruction_set.byte_order(),
@@ -202,7 +202,7 @@ impl<'a, R: MemoryReader<'a> + Arch> MemoryReaderHelper for R {
         addr: Address,
         count: usize,
     ) -> Result<Vec<Address>> {
-        let arch = self.architecture();
+        let arch = self.arch();
         let r = self.as_bytes(addr, arch.instruction_set.len_u64() * count)?;
         Ok(arch_read_vec_type!(
             arch.instruction_set.byte_order(),
@@ -217,7 +217,7 @@ impl<'a, R: MemoryReader<'a> + Arch> MemoryReaderHelper for R {
     }
 
     fn u64(&mut self, addr: Address) -> Result<u64> {
-        let arch = self.architecture();
+        let arch = self.arch();
         let r = self.as_bytes(addr, arch.instruction_set.len_u64())?;
         Ok(arch_read_type!(
             arch.instruction_set.byte_order(),
@@ -227,7 +227,7 @@ impl<'a, R: MemoryReader<'a> + Arch> MemoryReaderHelper for R {
     }
 
     fn u32(&mut self, addr: Address) -> Result<u32> {
-        let arch = self.architecture();
+        let arch = self.arch();
         let r = self.as_bytes(addr, arch.instruction_set.len_u32())?;
         Ok(arch_read_type!(
             arch.instruction_set.byte_order(),
@@ -237,7 +237,7 @@ impl<'a, R: MemoryReader<'a> + Arch> MemoryReaderHelper for R {
     }
 
     fn u16(&mut self, addr: Address) -> Result<u16> {
-        let arch = self.architecture();
+        let arch = self.arch();
         let r = self.as_bytes(addr, arch.instruction_set.len_u16())?;
         Ok(arch_read_type!(
             arch.instruction_set.byte_order(),
@@ -247,13 +247,13 @@ impl<'a, R: MemoryReader<'a> + Arch> MemoryReaderHelper for R {
     }
 
     fn u8(&mut self, addr: Address) -> Result<u8> {
-        let arch = self.architecture();
+        let arch = self.arch();
         let r = self.as_bytes(addr, arch.instruction_set.len_u8())?;
         Ok(r[0])
     }
 
     fn i64(&mut self, addr: Address) -> Result<i64> {
-        let arch = self.architecture();
+        let arch = self.arch();
         let r = self.as_bytes(addr, arch.instruction_set.len_i64())?;
         Ok(arch_read_type!(
             arch.instruction_set.byte_order(),
@@ -263,7 +263,7 @@ impl<'a, R: MemoryReader<'a> + Arch> MemoryReaderHelper for R {
     }
 
     fn i32(&mut self, addr: Address) -> Result<i32> {
-        let arch = self.architecture();
+        let arch = self.arch();
         let r = self.as_bytes(addr, arch.instruction_set.len_i32())?;
         Ok(arch_read_type!(
             arch.instruction_set.byte_order(),
@@ -273,7 +273,7 @@ impl<'a, R: MemoryReader<'a> + Arch> MemoryReaderHelper for R {
     }
 
     fn i16(&mut self, addr: Address) -> Result<i16> {
-        let arch = self.architecture();
+        let arch = self.arch();
         let r = self.as_bytes(addr, arch.instruction_set.len_i16())?;
         Ok(arch_read_type!(
             arch.instruction_set.byte_order(),
@@ -283,13 +283,13 @@ impl<'a, R: MemoryReader<'a> + Arch> MemoryReaderHelper for R {
     }
 
     fn i8(&mut self, addr: Address) -> Result<i8> {
-        let arch = self.architecture();
+        let arch = self.arch();
         let r = self.as_bytes(addr, arch.instruction_set.len_i8())?;
         Ok(r[0] as i8)
     }
 
     fn f32(&mut self, addr: Address) -> Result<f32> {
-        let arch = self.architecture();
+        let arch = self.arch();
         let r = self.as_bytes(addr, arch.instruction_set.len_f32())?;
         Ok(arch_read_type!(
             arch.instruction_set.byte_order(),
@@ -304,7 +304,7 @@ impl<'a, R: MemoryReader<'a> + Arch> MemoryReaderHelper for R {
         addr: Address,
         count: usize,
     ) -> Result<Vec<f32>> {
-        let arch = self.architecture();
+        let arch = self.arch();
         let r = self.as_bytes(addr, arch.instruction_set.len_f32() * count)?;
         Ok(arch_read_vec_type!(
             arch.instruction_set.byte_order(),

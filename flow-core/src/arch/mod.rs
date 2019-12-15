@@ -2,8 +2,8 @@ pub mod x64;
 pub mod x86;
 pub mod x86_pae;
 
-use std::convert::TryFrom;
 use crate::error::{Error, Result};
+use std::convert::TryFrom;
 
 use crate::address::Length;
 
@@ -120,7 +120,8 @@ impl From<InstructionSet> for Architecture {
 }
 
 // TODO: differnet traits for mut or not mut?
-// TODO: TryGetArchitecture
-pub trait GetArchitecture {
-    fn architecture(&mut self) -> Result<Architecture>;
+// TODO: TrySystemArchitecture
+// SystemArchitecture - implements system architecture func
+pub trait SystemArchitecture {
+    fn arch(&mut self) -> Result<Architecture>;
 }

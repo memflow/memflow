@@ -1,4 +1,4 @@
-use std::io::Result;
+use crate::error::{Error, Result};
 
 use crate::address::Address;
 use crate::mem::PhysicalRead;

@@ -3,7 +3,7 @@ use crate::error::{Error, Result};
 use log::{info, trace, warn};
 
 use flow_core::address::{Address, Length};
-use flow_core::mem::{PhysicalRead, VirtualRead};
+use flow_core::mem::*;
 
 use goblin::pe::options::ParseOptions;
 use goblin::pe::PE;
@@ -36,7 +36,8 @@ pub fn find_exported<T: PhysicalRead + VirtualRead>(
     start_block: &StartBlock,
     ntos: Address,
 ) -> Result<Address> {
-    let header_buf = mem.virt_read(start_block.arch, start_block.dtb, ntos, Length::from_mb(32))?;
+    let reader = VirtualReader::with(mem, start_block.arch, start_block.dtb);
+    let header_buf = reader.virt_read(ntos, Length::from_mb(32))?;
 
     let mut pe_opts = ParseOptions::default();
     pe_opts.resolve_rva = false;
@@ -54,7 +55,7 @@ pub fn find_exported<T: PhysicalRead + VirtualRead>(
     // read value again
     // TODO: fallback for 32bit
     // TODO: wrap error properly
-    let addr = mem.virt_read_addr(start_block.arch, start_block.dtb, sys_proc)?;
+    let addr = reader.virt_read_addr(sys_proc)?;
     Ok(addr)
 }
 

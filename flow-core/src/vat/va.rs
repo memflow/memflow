@@ -1,4 +1,4 @@
-use std::io::{Error, ErrorKind, Result};
+use crate::error::{Error, Result};
 
 use crate::address::{Address, Length};
 use crate::arch::Architecture;
@@ -72,10 +72,7 @@ impl<'a, T: PhysicalRead + PhysicalWrite + VirtualAddressTranslation> VirtualWri
             self.0.phys_write(pa, data)
         } else {
             // TODO: add more debug info
-            Err(Error::new(
-                ErrorKind::Other,
-                "virt_write(): unable to resolve physical address",
-            ))
+            Err(Error::new("virt_write(): unable to resolve physical address"))
         }
     }
 }

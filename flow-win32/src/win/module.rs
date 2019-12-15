@@ -13,8 +13,6 @@ use std::rc::Rc;
 use super::process::Process;
 use super::unicode_string::VirtualReadUnicodeString;
 
-use super::process::virt_read::ProcessRead;
-
 pub struct ModuleIterator<T: VirtualRead> {
     process: Rc<RefCell<Process<T>>>,
     process_arch: Architecture,

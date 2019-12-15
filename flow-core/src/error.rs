@@ -1,5 +1,3 @@
-use failure;
-use goblin;
 use std;
 use url;
 
@@ -67,12 +65,6 @@ impl std::convert::From<std::io::Error> for Error {
     }
 }
 
-impl std::convert::From<flow_core::Error> for Error {
-    fn from(error: flow_core::Error) -> Self {
-        Self::new(error)
-    }
-}
-
 // TODO: wait for try_trait to be stabilized
 /*
 impl std::convert::From<std::option::NoneError> for Error {
@@ -82,32 +74,14 @@ impl std::convert::From<std::option::NoneError> for Error {
 }
 */
 
-impl std::convert::From<pdb::Error> for Error {
-    fn from(error: pdb::Error) -> Self {
-        Self::new(error)
-    }
-}
-
 impl std::convert::From<url::ParseError> for Error {
     fn from(error: url::ParseError) -> Self {
         Self::new(error)
     }
 }
 
-impl std::convert::From<failure::Error> for Error {
-    fn from(error: failure::Error) -> Self {
-        Self::new(error)
-    }
-}
-
-impl std::convert::From<goblin::error::Error> for Error {
-    fn from(error: goblin::error::Error) -> Self {
-        Self::new(error)
-    }
-}
-
-impl std::convert::From<widestring::MissingNulError<u16>> for Error {
-    fn from(error: widestring::MissingNulError<u16>) -> Self {
+impl std::convert::From<std::ffi::NulError> for Error {
+    fn from(error: std::ffi::NulError) -> Self {
         Self::new(error)
     }
 }

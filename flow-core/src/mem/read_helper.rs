@@ -363,3 +363,22 @@ impl<T: VirtualReadHelper + GetArchitecture> VirtualReadHelperFuncs for T {
         Ok(String::from(v.to_string_lossy()))
     }
 }
+
+pub trait VirtualReadHelperChain {
+    // TODO: weak chain?
+    fn virt_read_addr_chain(&mut self, base_addr: Address, offsets: Vec<Length>)
+        -> Result<Address>;
+}
+
+// TODO: more error checking?
+impl<T: VirtualReadHelperFuncs> VirtualReadHelperChain for T {
+    fn virt_read_addr_chain(
+        &mut self,
+        base_addr: Address,
+        offsets: Vec<Length>,
+    ) -> Result<Address> {
+        offsets
+            .iter()
+            .try_fold(base_addr, |c, &a| self.virt_read_addr(c + a))
+    }
+}

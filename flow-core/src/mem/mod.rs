@@ -18,7 +18,6 @@ use crate::arch::{self, Architecture};
 
 use std::ffi::CString;
 
-
 macro_rules! arch_write_type {
     ($byte_order:expr, $func:ident, $buf:expr, $value:expr) => {
         match $byte_order {

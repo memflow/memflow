@@ -1,27 +1,22 @@
 use crate::error::{Error, Result};
 
 use flow_core::address::{Address, Length};
-use flow_core::arch::{Architecture, InstructionSet};
-use flow_core::mem::VirtualRead;
+use flow_core::arch::{GetArchitecture, Architecture, InstructionSet};
+use flow_core::mem::{VirtualReadHelper, VirtualReadHelperFuncs};
 
 use widestring::U16CString;
 
 pub trait VirtualReadUnicodeString {
     fn virt_read_unicode_string(
         &mut self,
-        cpu_arch: Architecture,
-        proc_arch: Architecture,
-        dtb: Address,
         addr: Address,
     ) -> Result<String>;
 }
 
-impl<T: VirtualRead> VirtualReadUnicodeString for T {
+// TODO: split up cpu and proc arch in read_helper.rs
+impl<T: GetArchitecture + VirtualReadHelper + VirtualReadHelperFuncs> VirtualReadUnicodeString for T {
     fn virt_read_unicode_string(
         &mut self,
-        cpu_arch: Architecture,
-        proc_arch: Architecture,
-        dtb: Address,
         addr: Address,
     ) -> Result<String> {
         /*
@@ -39,17 +34,19 @@ impl<T: VirtualRead> VirtualReadUnicodeString for T {
         } __attribute__((packed)) win64_unicode_string_t;
         */
 
+        let arch = self.architecture()?;
+
         // length is always the first entry
-        let length = self.virt_read_u16(cpu_arch, dtb, addr + Length::from(0))?;
+        let length = self.virt_read_u16(addr + Length::from(0))?;
         if length == 0 {
             return Err(Error::new("unable to read unicode string length"));
         }
 
         // TODO: chek if length exceeds limit
         // buffer is either aligned at 4 or 8
-        let buffer = match proc_arch.instruction_set {
-            InstructionSet::X64 => self.virt_read_addr64(cpu_arch, dtb, addr + Length::from(8))?,
-            InstructionSet::X86 => self.virt_read_addr32(cpu_arch, dtb, addr + Length::from(4))?,
+        let buffer = match arch.instruction_set {
+            InstructionSet::X64 => self.virt_read_addr64(addr + Length::from(8))?,
+            InstructionSet::X86 => self.virt_read_addr32(addr + Length::from(4))?,
             _ => {
                 return Err(Error::new("invalid proc_arch parameter"));
             }
@@ -64,7 +61,7 @@ impl<T: VirtualRead> VirtualReadUnicodeString for T {
         }
 
         // read buffer
-        let mut content = self.virt_read(cpu_arch, dtb, buffer, Length::from(length + 2))?;
+        let mut content = self.virt_read(buffer, Length::from(length + 2))?;
         content[length as usize] = 0;
         content[length as usize + 1] = 0;
 

@@ -203,8 +203,7 @@ impl<T: PhysicalRead + PhysicalWrite + 'static> bridge::Server for BridgeServer<
         params: bridge::VirtReadParams,
         mut results: bridge::VirtReadResults,
     ) -> Promise<(), capnp::Error> {
-        let memcp = self.mem.clone();
-        let memory = &mut memcp.borrow_mut();
+        let memory = &mut self.mem.borrow_mut();
 
         let ins = pry!(InstructionSet::try_from(pry!(params.get()).get_arch()).map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e)));
         let dtb = Address::from(pry!(params.get()).get_dtb());

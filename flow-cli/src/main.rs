@@ -5,6 +5,7 @@ use std::rc::Rc;
 
 use flow_core::bridge::client::BridgeClient;
 use flow_win32;
+use flow_win32::win::process::ProcessTrait; // TODO: import in flow_win32
 
 fn main() {
     pretty_env_logger::init();
@@ -36,6 +37,17 @@ fn main() {
     // os functionality should be located in core!
     let bridgerc = Rc::new(RefCell::new(bridge));
     let win = flow_win32::init(bridgerc).unwrap();
+
+    // parse kernel pe header -- start
+    let kernel_proc = win.kernel_process().unwrap();
+    kernel_proc
+        .module_iter()
+        .unwrap()
+        .for_each(|mut m| println!("{:?}", m.name()));
+
+    //println!("module_list: {:x}", module_list);
+    // parse kernel pe header -- end
+
     /*
         win.process_iter()
             .for_each(|mut p| println!("{:?} {:?}", p.get_pid(), p.get_name()));

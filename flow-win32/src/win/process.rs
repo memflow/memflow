@@ -1,5 +1,3 @@
-//pub mod virt_read;
-
 use crate::error::{Error, Result};
 use log::{debug, info};
 
@@ -13,8 +11,6 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use super::module::ModuleIterator;
-
-//use virt_read::ProcessRead;
 
 pub struct ProcessIterator<T: VirtualRead> {
     win: Rc<RefCell<Windows<T>>>,
@@ -77,6 +73,15 @@ impl<T: VirtualRead> Iterator for ProcessIterator<T> {
     }
 }
 
+pub trait ProcessTrait {
+    fn pid(&mut self) -> Result<i32>;
+    fn name(&mut self) -> Result<String>;
+    fn dtb(&mut self) -> Result<Address>;
+
+    fn first_peb_entry(&mut self) -> Result<Address>;
+    //fn module_iter(&self) -> Result<ModuleIterator<Self>>; // TODO: implement me
+}
+
 pub struct Process<T: VirtualRead> {
     pub win: Rc<RefCell<Windows<T>>>,
     pub eprocess: Address,
@@ -120,43 +125,6 @@ impl<T: VirtualRead> Process<T> {
     }
 
     // system arch = type arch
-    pub fn pid(&mut self) -> Result<i32> {
-        let offs = self.find_offset("_EPROCESS", "UniqueProcessId")?;
-        let win = self.win.borrow();
-        let start_block = win.start_block;
-        let mem = &mut win.mem.borrow_mut();
-        Ok(
-            VirtualReader::with(&mut **mem, start_block.arch, start_block.dtb)
-                .virt_read_i32(self.eprocess + offs)?,
-        )
-    }
-
-    // system arch = type arch
-    pub fn name(&mut self) -> Result<String> {
-        let offs = self.find_offset("_EPROCESS", "ImageFileName")?;
-        let win = self.win.borrow();
-        let start_block = win.start_block;
-        let mem = &mut win.mem.borrow_mut();
-        Ok(
-            VirtualReader::with(&mut **mem, start_block.arch, start_block.dtb)
-                .virt_read_cstr(self.eprocess + offs, 16)?,
-        )
-    }
-
-    // system arch = type arch
-    pub fn dtb(&mut self) -> Result<Address> {
-        // _KPROCESS is the first entry in _EPROCESS
-        let offs = self.find_offset("_KPROCESS", "DirectoryTableBase")?;
-        let win = self.win.borrow();
-        let start_block = win.start_block;
-        let mem = &mut win.mem.borrow_mut();
-        Ok(
-            VirtualReader::with(&mut **mem, start_block.arch, start_block.dtb)
-                .virt_read_addr(self.eprocess + offs)?,
-        )
-    }
-
-    // system arch = type arch
     pub fn wow64(&mut self) -> Result<Address> {
         let offs = self.find_offset("_EPROCESS", "WoW64Process")?;
         let win = self.win.borrow();
@@ -172,7 +140,52 @@ impl<T: VirtualRead> Process<T> {
         Ok(!self.wow64()?.is_null())
     }
 
-    pub fn first_peb_entry(&mut self) -> Result<Address> {
+    // module_iter will explicitly clone self and feed it into an iterator
+    pub fn module_iter(&self) -> Result<ModuleIterator<Process<T>>> {
+        let rc = Rc::new(RefCell::new(self.clone()));
+        ModuleIterator::new(rc)
+    }
+}
+
+impl<T: VirtualRead> ProcessTrait for Process<T> {
+    // system arch = type arch
+    fn pid(&mut self) -> Result<i32> {
+        let offs = self.find_offset("_EPROCESS", "UniqueProcessId")?;
+        let win = self.win.borrow();
+        let start_block = win.start_block;
+        let mem = &mut win.mem.borrow_mut();
+        Ok(
+            VirtualReader::with(&mut **mem, start_block.arch, start_block.dtb)
+                .virt_read_i32(self.eprocess + offs)?,
+        )
+    }
+
+    // system arch = type arch
+    fn name(&mut self) -> Result<String> {
+        let offs = self.find_offset("_EPROCESS", "ImageFileName")?;
+        let win = self.win.borrow();
+        let start_block = win.start_block;
+        let mem = &mut win.mem.borrow_mut();
+        Ok(
+            VirtualReader::with(&mut **mem, start_block.arch, start_block.dtb)
+                .virt_read_cstr(self.eprocess + offs, 16)?,
+        )
+    }
+
+    // system arch = type arch
+    fn dtb(&mut self) -> Result<Address> {
+        // _KPROCESS is the first entry in _EPROCESS
+        let offs = self.find_offset("_KPROCESS", "DirectoryTableBase")?;
+        let win = self.win.borrow();
+        let start_block = win.start_block;
+        let mem = &mut win.mem.borrow_mut();
+        Ok(
+            VirtualReader::with(&mut **mem, start_block.arch, start_block.dtb)
+                .virt_read_addr(self.eprocess + offs)?,
+        )
+    }
+
+    fn first_peb_entry(&mut self) -> Result<Address> {
         let wow64 = self.wow64()?;
         info!("wow64={:x}", wow64);
 
@@ -220,12 +233,6 @@ impl<T: VirtualRead> Process<T> {
         let first_module = self.virt_read_addr(peb_ldr + ldr_list_offs)?;
         info!("first_module={:x}", first_module);
         Ok(first_module)
-    }
-
-    // module_iter will explicitly clone self and feed it into an iterator
-    pub fn module_iter(&self) -> Result<ModuleIterator<T>> {
-        let rc = Rc::new(RefCell::new(self.clone()));
-        ModuleIterator::new(rc)
     }
 }
 

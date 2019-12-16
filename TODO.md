@@ -2,6 +2,9 @@ general:
 - replace println!() with appropiate log macros
 - pin rust version in ci
 
+mt reading:
+- use connection pool and automatically choose a free connection for the reader
+
 va:
 - find a better way to encapsulate VatImpl
 - add more tests to x64 vtop

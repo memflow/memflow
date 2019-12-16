@@ -5,23 +5,28 @@ use flow_core::*;
 use flow_core::address::{Address, Length};
 
 use flow_core::arch::{Architecture, InstructionSet, SystemArchitecture};
-use flow_core::mem::{VirtualRead, VirtualReadHelperFuncs};
+use flow_core::mem::*;
 
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use super::process::Process;
+use super::process::ProcessTrait;
 use super::unicode_string::VirtualReadUnicodeString;
 
-pub struct ModuleIterator<T: VirtualRead> {
-    process: Rc<RefCell<Process<T>>>,
+pub struct ModuleIterator<
+    T: ProcessTrait + SystemArchitecture + VirtualReadHelperFuncs + VirtualReadUnicodeString,
+> {
+    process: Rc<RefCell<T>>,
     process_arch: Architecture,
     first_peb_entry: Address,
     peb_entry: Address,
 }
 
-impl<T: VirtualRead> ModuleIterator<T> {
-    pub fn new(process: Rc<RefCell<Process<T>>>) -> Result<Self> {
+impl<T> ModuleIterator<T>
+where
+    T: ProcessTrait + SystemArchitecture + VirtualReadHelperFuncs + VirtualReadUnicodeString,
+{
+    pub fn new(process: Rc<RefCell<T>>) -> Result<Self> {
         let first_peb_entry = process.borrow_mut().first_peb_entry()?;
         let arch = process.borrow_mut().arch()?;
         Ok(Self {
@@ -33,7 +38,10 @@ impl<T: VirtualRead> ModuleIterator<T> {
     }
 }
 
-impl<T: VirtualRead> Iterator for ModuleIterator<T> {
+impl<T> Iterator for ModuleIterator<T>
+where
+    T: ProcessTrait + SystemArchitecture + VirtualReadHelperFuncs + VirtualReadUnicodeString,
+{
     type Item = Module<T>;
 
     fn next(&mut self) -> Option<Module<T>> {
@@ -69,17 +77,20 @@ impl<T: VirtualRead> Iterator for ModuleIterator<T> {
     }
 }
 
-pub struct Module<T: VirtualRead> {
-    pub process: Rc<RefCell<Process<T>>>,
+pub struct Module<
+    T: ProcessTrait + SystemArchitecture + VirtualReadHelperFuncs + VirtualReadUnicodeString,
+> {
+    pub process: Rc<RefCell<T>>,
     pub peb_entry: Address,
     pub module_base: Address,
     pub module_size: Length,
     pub module_name: String,
 }
 
-impl<T: VirtualRead> Clone for Module<T>
+impl<T> Clone for Module<T>
 where
-    Rc<RefCell<Process<T>>>: Clone,
+    T: ProcessTrait + SystemArchitecture + VirtualReadHelperFuncs + VirtualReadUnicodeString,
+    Rc<RefCell<T>>: Clone,
     Address: Clone,
 {
     fn clone(&self) -> Self {
@@ -93,8 +104,11 @@ where
     }
 }
 
-impl<T: VirtualRead> Module<T> {
-    pub fn new(process: Rc<RefCell<Process<T>>>, peb_entry: Address) -> Self {
+impl<T> Module<T>
+where
+    T: ProcessTrait + SystemArchitecture + VirtualReadHelperFuncs + VirtualReadUnicodeString,
+{
+    pub fn new(process: Rc<RefCell<T>>, peb_entry: Address) -> Self {
         Self {
             process,
             peb_entry,

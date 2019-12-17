@@ -1,3 +1,5 @@
+mod config;
+
 use clap::{App, AppSettings, Arg};
 use pretty_env_logger;
 use std::cell::RefCell;
@@ -28,6 +30,22 @@ fn main() {
                 .help("target operating system")
                 .takes_value(true),
         )
+        .arg(
+            Arg::with_name("config")
+                .short("cfg")
+                .long("config")
+                .value_name("Config")
+                .help("memflow config toml file")
+                .takes_value(true),
+        )
+        .arg(
+            Arg::with_name("machine")
+                .short("machine")
+                .long("machine")
+                .value_name("Machine")
+                .help("memflow config machine name")
+                .takes_value(true),
+        )
         .subcommand(
             App::new("kernel")
                 .about("os kernel specific options")
@@ -46,9 +64,33 @@ fn main() {
         )
         .get_matches();
 
-    // this is just some test code
-    let url = argv.value_of("url").unwrap_or("unix:/tmp/memflow-bridge");
-    let bridge = match BridgeClient::connect(url) {
+    // if url && os {} else { config set? else auto conf }
+    let (url, os) = {
+        if argv.is_present("url") {
+            (argv.value_of("url").unwrap().to_owned(), argv.value_of("os").unwrap_or_else(|| "win32").to_owned())
+        } else {
+            let machines = config::try_parse(
+                argv.value_of("config").unwrap_or_else(|| "memflow.toml")
+            ).unwrap().machine.unwrap(); // TODO: proper error handling / feedback
+
+            let machine = {
+                if argv.is_present("machine") {
+                    machines.iter()
+                        .filter(|m| m.name.as_ref().unwrap() == argv.value_of("machine").unwrap())
+                        .nth(0)
+                        .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::Other, "machine not found"))
+                } else if machines.len() == 1 {
+                    Ok(&machines[0])
+                } else {
+                    Err(std::io::Error::new(std::io::ErrorKind::Other, "no machine specified"))
+                }
+            }.unwrap();
+        
+            (machine.url.to_owned().unwrap(), String::from(machine.os.to_owned().unwrap_or_else(|| String::from("win32"))))
+        }
+    };
+    
+    let bridge = match BridgeClient::connect(url.as_str()) {
         Ok(br) => br,
         Err(e) => {
             println!("couldn't connect to bridge: {:?}", e);
@@ -56,10 +98,8 @@ fn main() {
         }
     };
 
-    // os functionality should be located in core!
     let bridgerc = Rc::new(RefCell::new(bridge));
-
-    let os = match argv.value_of("os").unwrap_or("win32") {
+    let os = match os.as_str() {
         "win32" => flow_win32::init(bridgerc),
         //"linux" => {},
         _ => Err(flow_win32::error::Error::new("invalid os")),

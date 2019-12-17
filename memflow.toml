@@ -1,0 +1,4 @@
+[[machine]]
+name = "workstation"
+url = "tcp:127.0.0.1:8181,nodelay"
+os = "win32"

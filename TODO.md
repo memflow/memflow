@@ -1,9 +1,18 @@
 general:
 - replace println!() with appropiate log macros
 - pin rust version in ci
+- key logger / reading
+- process emulator
 
 mt reading:
 - use connection pool and automatically choose a free connection for the reader
+
+cli:
+- create neatly wrapped cli with featrues such as:
+  - read memory / write memory
+  - daemon with multivm/client support + socket support for faster access to a vm
+  - try parsing a os -> read processes / parse pe stuff (exports, etc for use with grep)
+  - select process -> read modules / parse pe stuff (for use with grep)
 
 va:
 - find a better way to encapsulate VatImpl
@@ -11,9 +20,6 @@ va:
 - add ptov
 - move va into flow-core and use forward declares in core
 - could va serve as an entirely seperate crate (and we just provide the trait impls locally?)
-
-qemu:
-- create generic wrapper for network-bridge and create qemu impl for it
 
 win:
 - verify each stage and early abort (e.g. see if offsets can be probed from the pdb/struct parser)
@@ -35,9 +41,6 @@ pci/tlp:
 
 hex:
 - use m4b/hexplay for colored hex output
-
-qemu:
-- add option to access rpc via unix/udp/tcp
 
 ffi:
 - https://github.com/jimfleming/rust-ffi-complex-types

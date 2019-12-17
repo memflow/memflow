@@ -67,29 +67,47 @@ fn main() {
     // if url && os {} else { config set? else auto conf }
     let (url, os) = {
         if argv.is_present("url") {
-            (argv.value_of("url").unwrap().to_owned(), argv.value_of("os").unwrap_or_else(|| "win32").to_owned())
+            (
+                argv.value_of("url").unwrap().to_owned(),
+                argv.value_of("os").unwrap_or_else(|| "win32").to_owned(),
+            )
         } else {
-            let machines = config::try_parse(
-                argv.value_of("config").unwrap_or_else(|| "memflow.toml")
-            ).unwrap().machine.unwrap(); // TODO: proper error handling / feedback
+            let machines =
+                config::try_parse(argv.value_of("config").unwrap_or_else(|| "memflow.toml"))
+                    .unwrap()
+                    .machine
+                    .unwrap(); // TODO: proper error handling / feedback
 
             let machine = {
                 if argv.is_present("machine") {
-                    machines.iter()
+                    machines
+                        .iter()
                         .filter(|m| m.name.as_ref().unwrap() == argv.value_of("machine").unwrap())
                         .nth(0)
-                        .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::Other, "machine not found"))
+                        .ok_or_else(|| {
+                            std::io::Error::new(std::io::ErrorKind::Other, "machine not found")
+                        })
                 } else if machines.len() == 1 {
                     Ok(&machines[0])
                 } else {
-                    Err(std::io::Error::new(std::io::ErrorKind::Other, "no machine specified"))
+                    Err(std::io::Error::new(
+                        std::io::ErrorKind::Other,
+                        "no machine specified",
+                    ))
                 }
-            }.unwrap();
-        
-            (machine.url.to_owned().unwrap(), String::from(machine.os.to_owned().unwrap_or_else(|| String::from("win32"))))
+            }
+            .unwrap();
+
+            (
+                machine.url.to_owned().unwrap(),
+                machine
+                    .os
+                    .to_owned()
+                    .unwrap_or_else(|| String::from("win32")),
+            )
         }
     };
-    
+
     let bridge = match BridgeClient::connect(url.as_str()) {
         Ok(br) => br,
         Err(e) => {

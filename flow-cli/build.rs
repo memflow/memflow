@@ -10,8 +10,7 @@ fn main() {
 
     let yaml = load_yaml!("src/cli.yml");
     let mut app = App::from(yaml);
-    app.gen_completions(
-        "flow-cli",
-        Shell::Bash,
-        outdir);
+    app.gen_completions("flow-cli", Shell::Bash, outdir.clone());
+    app.gen_completions("flow-cli", Shell::Fish, outdir.clone());
+    app.gen_completions("flow-cli", Shell::Zsh, outdir.clone());
 }

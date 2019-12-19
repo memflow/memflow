@@ -1,6 +1,9 @@
 mod config;
 
-use clap::{App, AppSettings, Arg};
+#[macro_use]
+extern crate clap;
+use clap::App;
+
 use pretty_env_logger;
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -12,57 +15,8 @@ use flow_win32::win::process::ProcessTrait; // TODO: import in flow_win32
 fn main() {
     pretty_env_logger::init();
 
-    let argv = App::new("flow-core")
-        .version("0.1")
-        .arg(
-            Arg::with_name("url")
-                .short("url")
-                .long("url")
-                .value_name("URL")
-                .help("socket url")
-                .takes_value(true),
-        )
-        .arg(
-            Arg::with_name("os")
-                .short("os")
-                .long("os")
-                .value_name("OS")
-                .help("target operating system")
-                .takes_value(true),
-        )
-        .arg(
-            Arg::with_name("config")
-                .short("cfg")
-                .long("config")
-                .value_name("Config")
-                .help("memflow config toml file")
-                .takes_value(true),
-        )
-        .arg(
-            Arg::with_name("machine")
-                .short("machine")
-                .long("machine")
-                .value_name("Machine")
-                .help("memflow config machine name")
-                .takes_value(true),
-        )
-        .subcommand(
-            App::new("kernel")
-                .about("os kernel specific options")
-                .setting(AppSettings::SubcommandRequiredElseHelp)
-                .subcommand(
-                    App::new("module")
-                        .about("kernel module options")
-                        .subcommand(App::new("ls").about("lists loaded kernel modules")),
-                ),
-        )
-        .subcommand(
-            App::new("process")
-                .about("os process specific options")
-                .setting(AppSettings::SubcommandRequiredElseHelp)
-                .subcommand(App::new("ls").about("lists active processes")),
-        )
-        .get_matches();
+    let yaml = load_yaml!("cli.yml");
+    let argv = App::from(yaml).get_matches();
 
     // if url && os {} else { config set? else auto conf }
     let (url, os) = {
@@ -155,7 +109,7 @@ fn main() {
                 }
                 ("module", Some(module_matches)) => {
                     match module_matches.subcommand() {
-                        ("ls", Some(_)) => {
+                        ("ls", Some(process)) => {
                             println!("test1") // TODO: specify process name/pid
                         }
                         _ => println!("invalid command {:?}", module_matches),

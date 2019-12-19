@@ -1,0 +1,46 @@
+name: flow-cli
+version: "0.1"
+author: "ko1N"
+about: memflow cli interface
+
+args:
+    - url:
+        short: u
+        long: url
+        value_name: URL
+        help: bridge socket url
+        takes_value: true
+    - os:
+        short: o
+        long: os
+        help: target operating system
+        takes_value: true
+    - config:
+        short: c
+        long: config
+        help: sets the memflow config toml file
+        takes_value: true
+    - machine:
+        short: m
+        long: machine
+        help: when using a config file this will set the machine by its name
+        takes_value: true
+    - verbose:
+        short: v
+        multiple: true
+        help: sets the level of verbosity
+
+subcommands:
+    - kernel:
+        about: kernel interface
+        subcommands:
+            - module:
+                about: kernel module (driver) interface
+                subcommands:
+                    - ls:
+                        about: lists loaded kernel modules (drivers)
+    - process:
+        about: process interface
+        subcommands:
+            - ls:
+                about: lists all running processes

@@ -44,3 +44,5 @@ subcommands:
         subcommands:
             - ls:
                 about: lists all running processes
+    - keylog:
+        about: logs all pressed keys

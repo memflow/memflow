@@ -12,6 +12,9 @@ use flow_core::bridge::client::BridgeClient;
 use flow_win32;
 use flow_win32::win::process::ProcessTrait; // TODO: import in flow_win32
 
+// TODO: this is os agnostic and just temp?
+use flow_win32::keyboard::{Keyboard};
+
 fn main() {
     pretty_env_logger::init();
 
@@ -19,7 +22,7 @@ fn main() {
     let argv = App::from(yaml).get_matches();
 
     // if url && os {} else { config set? else auto conf }
-    let (url, os) = {
+    let (url, osname) = {
         if argv.is_present("url") {
             (
                 argv.value_of("url").unwrap().to_owned(),
@@ -71,7 +74,7 @@ fn main() {
     };
 
     let bridgerc = Rc::new(RefCell::new(bridge));
-    let os = match os.as_str() {
+    let os = match osname.as_str() {
         "win32" => flow_win32::init(bridgerc),
         //"linux" => {},
         _ => Err(flow_win32::error::Error::new("invalid os")),
@@ -117,6 +120,13 @@ fn main() {
                 }
                 _ => println!("invalid command {:?}", kernel_matches),
             }
+        }
+        ("keylog", Some(_)) => {
+            println!("keylogging");
+            let _kbd = Keyboard::with(&os).unwrap();
+            /*loop {
+                let kbs = kbd.state();
+            }*/
         }
         ("", None) => println!("no command specified"),
         _ => println!("invalid command {:?}", argv),

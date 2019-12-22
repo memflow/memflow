@@ -29,14 +29,16 @@ pub trait ProcessTrait {
         Self: Sized + SystemArchitecture + VirtualReadHelperFuncs + VirtualReadUnicodeString;
 }
 
-pub trait ProcessModuleHelper {
-    fn module(&self, name: &str) -> Result<Module<Self>>
-    where
-        Self: Sized
-            + ProcessTrait
-            + SystemArchitecture
-            + VirtualReadHelperFuncs
-            + VirtualReadUnicodeString;
+pub trait ProcessModuleHelper
+where
+    Self: Sized
+        + ProcessTrait
+        + SystemArchitecture
+        + VirtualReadHelperFuncs
+        + VirtualReadUnicodeString,
+{
+    fn first_module(&self) -> Result<Module<Self>>;
+    fn module(&self, name: &str) -> Result<Module<Self>>;
 }
 
 impl<T> ProcessModuleHelper for T
@@ -47,6 +49,13 @@ where
         + VirtualReadHelperFuncs
         + VirtualReadUnicodeString,
 {
+    fn first_module(&self) -> Result<Module<Self>> {
+        Ok(self
+            .module_iter()?
+            .nth(0)
+            .ok_or_else(|| "unable to read first module")?)
+    }
+
     fn module(&self, name: &str) -> Result<Module<Self>> {
         Ok(self
             .module_iter()?

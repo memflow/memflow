@@ -9,6 +9,42 @@ use pretty_hex::*;
 
 use crate::kernel::StartBlock;
 
+use goblin::pe::options::ParseOptions;
+use goblin::pe::PE;
+
+// these are some big pe read helpers
+// export_iter()
+// export(...)
+// section_iter()
+// section(...)
+
+pub fn find_export(buf: Vec<u8>, name: &str) -> Result<Address> {
+    let mut pe_opts = ParseOptions::default();
+    pe_opts.resolve_rva = false;
+    let pe = PE::parse_with_opts(&buf, &pe_opts)?;
+
+    /*
+     */
+    pe.sections.iter().for_each(|s| {
+        println!(
+            "section found: {}",
+            String::from_utf8(s.name.to_vec()).unwrap_or_default()
+        )
+    });
+    pe.exports
+        .iter()
+        .for_each(|e| println!("export found: {:?}", e));
+
+    Ok(Address::from(
+        pe.exports
+            .iter()
+            .filter(|e| e.name.unwrap_or_default() == name)
+            .nth(0)
+            .ok_or_else(|| "unable to find export")?
+            .offset,
+    )) // offset, rva, size?
+}
+
 // TODO: move this in a seperate crate as a elf/pe/macho helper for pa/va
 
 // TODO: we need both a physical and virtual reader, our use case is va though

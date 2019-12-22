@@ -30,6 +30,12 @@ impl From<u64> for Address {
     }
 }
 
+impl From<usize> for Address {
+    fn from(item: usize) -> Self {
+        Self { 0: item as u64 }
+    }
+}
+
 impl Address {
     pub fn null() -> Self {
         Address { 0: 0 }

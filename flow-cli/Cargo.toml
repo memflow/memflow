@@ -18,3 +18,4 @@ flow-win32 = { path = "../flow-win32" }
 goblin = { git = "https://github.com/ko1N/goblin" }
 pdb = { git = "https://github.com/willglynn/pdb" }
 url = "2.1.0"
+win_key_codes = "0.1.2"

@@ -13,7 +13,7 @@ use flow_win32;
 use flow_win32::win::process::ProcessTrait; // TODO: import in flow_win32
 
 // TODO: this is os agnostic and just temp?
-use flow_win32::keyboard::{Keyboard};
+use flow_win32::keyboard::Keyboard;
 
 fn main() {
     pretty_env_logger::init();
@@ -123,10 +123,15 @@ fn main() {
         }
         ("keylog", Some(_)) => {
             println!("keylogging");
-            let _kbd = Keyboard::with(&os).unwrap();
-            /*loop {
-                let kbs = kbd.state();
-            }*/
+            let mut kbd = Keyboard::with(&os).unwrap();
+            loop {
+                let kbs = kbd.state().unwrap();
+                if kbs.down(win_key_codes::VK_LBUTTON).unwrap() {
+                    println!("VK_LBUTTON down");
+                } else {
+                    println!("VK_LBUTTON up");
+                }
+            }
         }
         ("", None) => println!("no command specified"),
         _ => println!("invalid command {:?}", argv),

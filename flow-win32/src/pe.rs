@@ -4,6 +4,7 @@ use log::info;
 
 use flow_core::address::{Address, Length};
 use flow_core::mem::{PhysicalRead, VirtualRead};
+use flow_core::*;
 
 use pretty_hex::*;
 
@@ -18,30 +19,28 @@ use goblin::pe::PE;
 // section_iter()
 // section(...)
 
-pub fn find_export(buf: Vec<u8>, name: &str) -> Result<Address> {
+/*
+   pe.sections.iter().for_each(|s| {
+       println!(
+           "section found: {}",
+           String::from_utf8(s.name.to_vec()).unwrap_or_default()
+       )
+   });
+   pe.exports
+       .iter()
+       .for_each(|e| println!("export found: {:?}", e));
+*/
+pub fn find_export(buf: Vec<u8>, name: &str) -> Result<Length> {
     let mut pe_opts = ParseOptions::default();
     pe_opts.resolve_rva = false;
     let pe = PE::parse_with_opts(&buf, &pe_opts)?;
-
-    /*
-     */
-    pe.sections.iter().for_each(|s| {
-        println!(
-            "section found: {}",
-            String::from_utf8(s.name.to_vec()).unwrap_or_default()
-        )
-    });
-    pe.exports
-        .iter()
-        .for_each(|e| println!("export found: {:?}", e));
-
-    Ok(Address::from(
+    Ok(len!(
         pe.exports
             .iter()
             .filter(|e| e.name.unwrap_or_default() == name)
             .nth(0)
             .ok_or_else(|| "unable to find export")?
-            .offset,
+            .offset
     )) // offset, rva, size?
 }
 

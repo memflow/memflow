@@ -37,6 +37,50 @@ pub fn find<T: VirtualRead>(mem: &mut T, start_block: &StartBlock) -> Result<Add
     Err(Error::new("unable to find ntoskrnl.exe"))
 }
 
+fn probe_pe_header<T: VirtualRead>(
+    mem: &mut T,
+    start_block: &StartBlock,
+    probe_addr: Address,
+) -> Result<String> {
+    // TODO: after finding the poolcode we already found the proper ntoskrnl so we probably do not have to parse it any further?
+    // try to probe pe header
+    let probe_buf = mem
+        .virt_read(
+            start_block.arch,
+            start_block.dtb,
+            probe_addr,
+            Length::from_mb(32),
+        )
+        .unwrap();
+
+    let mut pe_opts = ParseOptions::default();
+    pe_opts.resolve_rva = false;
+
+    let pe = match PE::parse_with_opts(&probe_buf, &pe_opts) {
+        Ok(pe) => {
+            trace!("find_x64_with_va: found pe header:\n{:?}", pe);
+            pe
+        }
+        Err(e) => {
+            trace!(
+                "find_x64_with_va: potential pe header at offset {:x} could not be probed: {:?}",
+                probe_addr,
+                e
+            );
+            return Err(Error::from(e));
+        }
+    };
+
+    info!(
+        "find_x64_with_va: found pe header for {}",
+        pe.name.unwrap_or_default()
+    );
+    Ok(pe
+        .name
+        .ok_or_else(|| Error::new("pe name could not be parsed"))?
+        .to_owned())
+}
+
 fn find_x64_with_va<T: VirtualRead>(mem: &mut T, start_block: &StartBlock) -> Result<Address> {
     trace!(
         "find_x64_with_va: trying to find ntoskrnl.exe with va hint at {:x}",
@@ -65,39 +109,31 @@ fn find_x64_with_va<T: VirtualRead>(mem: &mut T, start_block: &StartBlock) -> Re
             .chunks_exact(arch::x64::page_size().as_usize())
             .enumerate()
             .filter(|(_, c)| LittleEndian::read_u16(&c) == 0x5a4d) // MZ
-            .inspect(|(i, _)| trace!("find_x64_with_va: found potential MZ flag at offset {:x}", i * arch::x64::page_size().as_usize()))
+            .inspect(|(i, _)| {
+                trace!(
+                    "find_x64_with_va: found potential MZ flag at offset {:x}",
+                    i * arch::x64::page_size().as_usize()
+                )
+            })
             .flat_map(|(i, c)| c.chunks_exact(8).map(move |c| (i, c)))
             .filter(|(_, c)| LittleEndian::read_u64(&c) == 0x4544_4f43_4c4f_4f50) // POOLCODE
-            .inspect(|(i, _)| trace!("find_x64_with_va: found potential POOLCODE flag at offset {:x}", i * arch::x64::page_size().as_usize()))
+            .inspect(|(i, _)| {
+                trace!(
+                    "find_x64_with_va: found potential POOLCODE flag at offset {:x}",
+                    i * arch::x64::page_size().as_usize()
+                )
+            })
             .filter(|(i, _)| {
-                // try to probe pe header
-                let probe_addr = Address::from(va_base + (*i as u64) * arch::x64::page_size().as_u64());
-                let probe_buf = mem.virt_read(start_block.arch, start_block.dtb, probe_addr, Length::from_mb(32)).unwrap();
-
-                let mut pe_opts = ParseOptions::default();
-                pe_opts.resolve_rva = false;
-
-                let pe = match PE::parse_with_opts(&probe_buf, &pe_opts) {
-                    Ok(pe) => {
-                        trace!("find_x64_with_va: found pe header:\n{:?}", pe);
-                        pe
-                    },
-                    Err(e) => {
-                        trace!("find_x64_with_va: potential pe header at offset {:x} could not be probed: {:?}", i * arch::x64::page_size().as_usize(), e);
-                        return false;
-                    }
-                };
-
-                info!("find_x64_with_va: found pe header for {}", pe.name.unwrap_or_default());
-                pe.name.unwrap_or_default() == "ntoskrnl.exe"
+                let probe_addr =
+                    Address::from(va_base + (*i as u64) * arch::x64::page_size().as_u64());
+                let name = probe_pe_header(mem, start_block, probe_addr).unwrap_or_default();
+                name == "ntoskrnl.exe"
             })
             .nth(0)
             .ok_or_else(|| {
                 Error::new("find_x64_with_va: unable to locate ntoskrnl.exe via va hint")
             })
-            .and_then(|(i, _)| {
-                Ok(va_base + i as u64 * arch::x64::page_size().as_u64())
-            });
+            .and_then(|(i, _)| Ok(va_base + i as u64 * arch::x64::page_size().as_u64()));
         match res {
             Ok(a) => return Ok(Address::from(a)),
             Err(e) => debug!("{:?}", e),

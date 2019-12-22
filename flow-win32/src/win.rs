@@ -13,15 +13,13 @@ use crate::kernel::StartBlock;
 pub mod types;
 pub mod unicode_string;
 
-pub mod kernel_process;
 pub mod module;
+pub use module::{Module, ModuleIterator};
 pub mod process;
+pub use process::{KernelProcess, ProcessIterator, ProcessTrait, UserProcess};
 
 use goblin::pe::options::ParseOptions;
 use goblin::pe::PE;
-
-pub use kernel_process::KernelProcess;
-pub use process::{Process, ProcessIterator, ProcessTrait}; // TODO: add forward declares
 
 // TODO: cache processes somewhat?
 pub struct Windows<T: VirtualRead> {

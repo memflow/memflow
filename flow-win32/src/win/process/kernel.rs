@@ -9,9 +9,8 @@ use flow_core::mem::*;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use super::process::ProcessTrait;
-
-use super::module::ModuleIterator;
+use crate::win::module::ModuleIterator;
+use crate::win::process::ProcessTrait;
 
 pub struct KernelProcess<T: VirtualRead> {
     pub win: Rc<RefCell<Windows<T>>>,
@@ -31,15 +30,10 @@ where
     }
 }
 
+// TODO: everything that implements module iter should get some help funcs (find_module, etc)
 impl<T: VirtualRead> KernelProcess<T> {
     pub fn with(win: Rc<RefCell<Windows<T>>>, module_list: Address) -> Self {
         Self { win, module_list }
-    }
-
-    // module_iter will explicitly clone self and feed it into an iterator
-    pub fn module_iter(&self) -> Result<ModuleIterator<KernelProcess<T>>> {
-        let rc = Rc::new(RefCell::new(self.clone()));
-        ModuleIterator::new(rc)
     }
 }
 
@@ -61,6 +55,12 @@ impl<T: VirtualRead> ProcessTrait for KernelProcess<T> {
 
     fn first_peb_entry(&mut self) -> Result<Address> {
         Ok(self.module_list)
+    }
+
+    // module_iter will explicitly clone self and feed it into an iterator
+    fn module_iter(&self) -> Result<ModuleIterator<KernelProcess<T>>> {
+        let rc = Rc::new(RefCell::new(self.clone()));
+        ModuleIterator::new(rc)
     }
 }
 

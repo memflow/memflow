@@ -1,3 +1,4 @@
+#[cfg(feature = "emulator")]
 pub mod emulator;
 
 use crate::address::Address;

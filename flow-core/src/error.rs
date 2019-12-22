@@ -86,6 +86,7 @@ impl std::convert::From<std::ffi::NulError> for Error {
     }
 }
 
+#[cfg(feature = "emulator")]
 impl std::convert::From<unicorn::Error> for Error {
     fn from(error: unicorn::Error) -> Self {
         Self::new(format!("unicorn error {:?}", error))

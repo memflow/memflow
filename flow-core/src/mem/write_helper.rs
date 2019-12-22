@@ -112,19 +112,6 @@ macro_rules! arch_write_type {
     };
 }
 
-/*
-let ta = self.type_arch()?;
-let v: Vec<u8> = data
-    .into_iter()
-    .flat_map(|v| {
-        let mut u = vec![0u8; ta.instruction_set.len_f32().as_usize()];
-        LittleEndian::write_f32(&mut u[..], v);
-        u
-    })
-    .collect();
-self.virt_write(addr, &v[..])
-*/
-
 macro_rules! arch_write_vec_type {
     ($byte_order:expr, $elem_size:expr, $func:ident, $value:expr) => {
         $value

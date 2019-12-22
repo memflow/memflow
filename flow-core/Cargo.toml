@@ -15,15 +15,15 @@ tokio = "0.1.22"
 capnp = "0.10.3"
 capnp-rpc = "0.10.0"
 url = "2.1.0"
-unicorn = "0.9.1" # TODO: optional feature
+unicorn = { version = "0.9.1", optional = true }
 
 # example deps
 clap = "2.33.0"
 
+[features]
+default = []
+emulator = ["unicorn"]
+
 [[example]]
 name = "read"
 path = "examples/read.rs"
-
-# integrate win32, linux, qemu, etc in core if applicable
-# integrate va in core as a subcrate?
-#flow-win32 = { path = "../flow-win32" }

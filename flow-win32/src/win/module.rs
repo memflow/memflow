@@ -110,3 +110,24 @@ where
         Ok(self.module_name.clone())
     }
 }
+
+/*
+impl Module<T>
+where T: ProcessTrait + SystemArchitecture + VirtualReadHelperFuncs + VirtualReadUnicodeString
+{
+    // export_iter()
+    // export(...)
+    // section_iter()
+    // section(...)
+    // signature(...)
+    // ...?
+
+    pub fn export(&self, name: &str) -> Result<()> {
+        // TODO: cache pe header
+    }
+
+    // TODO: implement caching
+    fn try_read_pe_header() -> Result<> {
+    }
+}
+*/

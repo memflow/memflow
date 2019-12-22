@@ -16,6 +16,7 @@ pub mod unicode_string;
 pub mod module;
 pub use module::{Module, ModuleIterator};
 pub mod process;
+use crate::win::process::ProcessModuleHelper;
 pub use process::{KernelProcess, ProcessIterator, ProcessTrait, UserProcess};
 
 use goblin::pe::options::ParseOptions;
@@ -80,5 +81,21 @@ impl<T: VirtualRead> Windows<T> {
     pub fn process_iter(&self) -> ProcessIterator<T> {
         let rc = Rc::new(RefCell::new(self.clone()));
         ProcessIterator::new(rc)
+    }
+
+    // TODO: check if first module matches process name / alive check?
+    pub fn process(&self, name: &str) -> Result<UserProcess<T>> {
+        Ok(self
+            .process_iter()
+            .filter_map(|mut m| {
+                if m.name().unwrap_or_default() == name {
+                    Some(m)
+                } else {
+                    None
+                }
+            })
+            .filter(|m| m.first_module().is_ok())
+            .nth(0)
+            .ok_or_else(|| "unable to find process")?)
     }
 }

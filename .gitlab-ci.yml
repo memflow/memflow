@@ -19,6 +19,7 @@ test:
 audit:
   stage: test
   image: "rust:latest"
+  allow_failure: true
   before_script:
     - cargo install --force cargo-audit
     - cargo generate-lockfile
@@ -30,6 +31,7 @@ audit:
 clippy:
   stage: test
   image: "rust:latest"
+  allow_failure: true
   before_script:
     - apt-get update
     - apt-get install -yq capnproto

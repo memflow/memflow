@@ -109,7 +109,7 @@ fn main() {
                 }
                 ("module", Some(module_matches)) => {
                     match module_matches.subcommand() {
-                        ("ls", Some(process)) => {
+                        ("ls", Some(_process)) => {
                             println!("test1") // TODO: specify process name/pid
                         }
                         _ => println!("invalid command {:?}", module_matches),

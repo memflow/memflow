@@ -1,3 +1,4 @@
+use std::default::Default;
 use std::fmt;
 use std::ops;
 
@@ -104,6 +105,12 @@ impl Length {
         Length {
             0: len * 1024 * 1024 * 1024 * 8,
         }
+    }
+}
+
+impl Default for Length {
+    fn default() -> Self {
+        Self::zero()
     }
 }
 

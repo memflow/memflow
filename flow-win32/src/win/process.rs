@@ -12,42 +12,31 @@ use crate::error::Result;
 use super::Windows;
 
 use flow_core::address::Address;
-use flow_core::arch::SystemArchitecture;
+use flow_core::arch::ArchitectureTrait;
 use flow_core::mem::*;
 
 use crate::win::module::{Module, ModuleIterator};
-use crate::win::unicode_string::VirtualReadUnicodeString;
 
-pub trait ProcessTrait {
-    fn pid(&mut self) -> Result<i32>;
-    fn name(&mut self) -> Result<String>;
-    fn dtb(&mut self) -> Result<Address>;
-
+pub trait ProcessModuleTrait {
     fn first_peb_entry(&mut self) -> Result<Address>;
     fn module_iter(&self) -> Result<ModuleIterator<Self>>
     where
-        Self: Sized + SystemArchitecture + VirtualReadHelperFuncs + VirtualReadUnicodeString;
+        Self: Sized + ArchitectureTrait + VirtualReadHelper + VirtualReadHelperFuncs;
 }
 
 pub trait ProcessModuleHelper
 where
-    Self: Sized
-        + ProcessTrait
-        + SystemArchitecture
-        + VirtualReadHelperFuncs
-        + VirtualReadUnicodeString,
+    Self:
+        Sized + ProcessModuleTrait + ArchitectureTrait + VirtualReadHelper + VirtualReadHelperFuncs,
 {
     fn first_module(&self) -> Result<Module<Self>>;
     fn module(&self, name: &str) -> Result<Module<Self>>;
+    fn containing_module(&self, addr: Address) -> Result<Module<Self>>;
 }
 
 impl<T> ProcessModuleHelper for T
 where
-    T: Sized
-        + ProcessTrait
-        + SystemArchitecture
-        + VirtualReadHelperFuncs
-        + VirtualReadUnicodeString,
+    T: Sized + ProcessModuleTrait + ArchitectureTrait + VirtualReadHelper + VirtualReadHelperFuncs,
 {
     fn first_module(&self) -> Result<Module<Self>> {
         Ok(self
@@ -68,5 +57,22 @@ where
             })
             .nth(0)
             .ok_or_else(|| "unable to find module")?)
+    }
+
+    fn containing_module(&self, addr: Address) -> Result<Module<Self>> {
+        Ok(self
+            .module_iter()?
+            .filter_map(|mut m| {
+                let base = m.base().unwrap_or_default();
+                let size = m.size().unwrap_or_default();
+
+                if base <= addr && addr <= base + size {
+                    Some(m)
+                } else {
+                    None
+                }
+            })
+            .nth(0)
+            .ok_or_else(|| "unable to find containing module")?)
     }
 }

@@ -1,7 +1,7 @@
 use crate::error::{Error, Result};
 
 use flow_core::address::{Address, Length};
-use flow_core::arch::{InstructionSet, SystemArchitecture};
+use flow_core::arch::{ArchitectureTrait, InstructionSet};
 use flow_core::mem::{VirtualReadHelper, VirtualReadHelperFuncs};
 
 use widestring::U16CString;
@@ -11,7 +11,7 @@ pub trait VirtualReadUnicodeString {
 }
 
 // TODO: split up cpu and proc arch in read_helper.rs
-impl<T: SystemArchitecture + VirtualReadHelper + VirtualReadHelperFuncs> VirtualReadUnicodeString
+impl<T: ArchitectureTrait + VirtualReadHelper + VirtualReadHelperFuncs> VirtualReadUnicodeString
     for T
 {
     fn virt_read_unicode_string(&mut self, addr: Address) -> Result<String> {

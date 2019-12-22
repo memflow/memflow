@@ -7,6 +7,7 @@ use std::rc::Rc;
 
 use flow_core::address::{Address, Length};
 use flow_core::mem::*;
+use flow_core::process::ProcessTrait;
 
 use crate::kernel::StartBlock;
 
@@ -17,7 +18,7 @@ pub mod module;
 pub use module::{Module, ModuleIterator};
 pub mod process;
 use crate::win::process::ProcessModuleHelper;
-pub use process::{KernelProcess, ProcessIterator, ProcessTrait, UserProcess};
+pub use process::{KernelProcess, ProcessIterator, ProcessModuleTrait, UserProcess};
 
 use goblin::pe::options::ParseOptions;
 use goblin::pe::PE;

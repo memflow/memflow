@@ -3,14 +3,15 @@ use crate::error::Result;
 use super::Windows;
 
 use flow_core::address::{Address, Length};
-use flow_core::arch::{Architecture, SystemArchitecture};
+use flow_core::arch::{Architecture, ArchitectureTrait};
 use flow_core::mem::*;
+use flow_core::process::ProcessTrait;
 
 use std::cell::RefCell;
 use std::rc::Rc;
 
 use crate::win::module::ModuleIterator;
-use crate::win::process::ProcessTrait;
+use crate::win::process::ProcessModuleTrait;
 
 pub struct KernelProcess<T: VirtualRead> {
     pub win: Rc<RefCell<Windows<T>>>,
@@ -38,21 +39,23 @@ impl<T: VirtualRead> KernelProcess<T> {
 }
 
 impl<T: VirtualRead> ProcessTrait for KernelProcess<T> {
-    fn pid(&mut self) -> Result<i32> {
+    fn pid(&mut self) -> flow_core::Result<i32> {
         Ok(0)
     }
 
     // system arch = type arch
-    fn name(&mut self) -> Result<String> {
+    fn name(&mut self) -> flow_core::Result<String> {
         Ok("ntoskrnl.exe".to_string())
     }
 
     // system arch = type arch
-    fn dtb(&mut self) -> Result<Address> {
+    fn dtb(&mut self) -> flow_core::Result<Address> {
         let win = self.win.borrow();
         Ok(win.start_block.dtb)
     }
+}
 
+impl<T: VirtualRead> ProcessModuleTrait for KernelProcess<T> {
     fn first_peb_entry(&mut self) -> Result<Address> {
         Ok(self.module_list)
     }
@@ -64,16 +67,16 @@ impl<T: VirtualRead> ProcessTrait for KernelProcess<T> {
     }
 }
 
-// rename SystemArchitecture -> ArchitectureTrait
-impl<T: VirtualRead> SystemArchitecture for KernelProcess<T> {
+// rename ArchitectureTrait -> ArchitectureTrait
+impl<T: VirtualRead> ArchitectureTrait for KernelProcess<T> {
     fn arch(&mut self) -> flow_core::Result<Architecture> {
         let win = self.win.borrow();
         Ok(win.start_block.arch)
     }
 }
 
-// rename TypeArchitecture -> TypeArchitectureTrait
-impl<T: VirtualRead> TypeArchitecture for KernelProcess<T> {
+// rename TypeArchitectureTrait -> TypeArchitectureTrait
+impl<T: VirtualRead> TypeArchitectureTrait for KernelProcess<T> {
     fn type_arch(&mut self) -> flow_core::Result<Architecture> {
         self.arch()
     }

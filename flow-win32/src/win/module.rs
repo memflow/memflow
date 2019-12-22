@@ -3,21 +3,18 @@ pub use iter::ModuleIterator;
 
 use crate::error::{Error, Result};
 
-use flow_core::*;
-
 use flow_core::address::{Address, Length};
-
-use flow_core::arch::{InstructionSet, SystemArchitecture};
-use flow_core::mem::*;
+use flow_core::arch::{ArchitectureTrait, InstructionSet};
+use flow_core::*;
 
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use crate::win::process::ProcessTrait;
+use crate::win::process::ProcessModuleTrait;
 use crate::win::unicode_string::VirtualReadUnicodeString;
 
 pub struct Module<
-    T: ProcessTrait + SystemArchitecture + VirtualReadHelperFuncs + VirtualReadUnicodeString,
+    T: ProcessModuleTrait + ArchitectureTrait + VirtualReadHelperFuncs + VirtualReadUnicodeString,
 > {
     pub process: Rc<RefCell<T>>,
     pub peb_entry: Address,
@@ -28,7 +25,7 @@ pub struct Module<
 
 impl<T> Clone for Module<T>
 where
-    T: ProcessTrait + SystemArchitecture + VirtualReadHelperFuncs + VirtualReadUnicodeString,
+    T: ProcessModuleTrait + ArchitectureTrait + VirtualReadHelperFuncs + VirtualReadUnicodeString,
     Rc<RefCell<T>>: Clone,
     Address: Clone,
 {
@@ -45,7 +42,7 @@ where
 
 impl<T> Module<T>
 where
-    T: ProcessTrait + SystemArchitecture + VirtualReadHelperFuncs + VirtualReadUnicodeString,
+    T: ProcessModuleTrait + ArchitectureTrait + VirtualReadHelperFuncs + VirtualReadUnicodeString,
 {
     pub fn new(process: Rc<RefCell<T>>, peb_entry: Address) -> Self {
         Self {
@@ -113,7 +110,7 @@ where
 
 /*
 impl Module<T>
-where T: ProcessTrait + SystemArchitecture + VirtualReadHelperFuncs + VirtualReadUnicodeString
+where T: ProcessModuleTrait + ArchitectureTrait + VirtualReadHelperFuncs + VirtualReadUnicodeString
 {
     // export_iter()
     // export(...)

@@ -6,9 +6,8 @@ use std::ptr::copy_nonoverlapping;
 use byteorder::{BigEndian, ByteOrder, LittleEndian};
 
 use crate::address::{Address, Length};
-use crate::arch::{self, Architecture, SystemArchitecture};
-
-use crate::mem::VirtualRead;
+use crate::arch::{self, Architecture, ArchitectureTrait};
+use crate::mem::*;
 
 use std::ffi::CString;
 
@@ -38,15 +37,9 @@ macro_rules! arch_read_vec_type {
     };
 }
 
-// VirtualReadHelper + SystemArchitecture will enable all read helpers
+// VirtualReadHelper + ArchitectureTrait will enable all read helpers
 pub trait VirtualReadHelper {
     fn virt_read(&mut self, addr: Address, len: Length) -> Result<Vec<u8>>;
-}
-
-// TODO: TryTypeArchitecture
-// TypeArchitecture - determines the architecture for virtual read types
-pub trait TypeArchitecture {
-    fn type_arch(&mut self) -> Result<Architecture>;
 }
 
 // VirtualReader will wrap all helper methods
@@ -82,13 +75,13 @@ impl<'a, T: VirtualRead> VirtualReader<'a, T> {
     }
 }
 
-impl<'a, T: VirtualRead> SystemArchitecture for VirtualReader<'a, T> {
+impl<'a, T: VirtualRead> ArchitectureTrait for VirtualReader<'a, T> {
     fn arch(&mut self) -> Result<Architecture> {
         Ok(self.sys_arch)
     }
 }
 
-impl<'a, T: VirtualRead> TypeArchitecture for VirtualReader<'a, T> {
+impl<'a, T: VirtualRead> TypeArchitectureTrait for VirtualReader<'a, T> {
     fn type_arch(&mut self) -> Result<Architecture> {
         Ok(self.type_arch)
     }
@@ -139,7 +132,9 @@ pub trait VirtualReadHelperFuncs {
     fn virt_read_cstr(&mut self, addr: Address, len: usize) -> Result<String>;
 }
 
-impl<T: VirtualReadHelper + SystemArchitecture + TypeArchitecture> VirtualReadHelperFuncs for T {
+impl<T: VirtualReadHelper + ArchitectureTrait + TypeArchitectureTrait> VirtualReadHelperFuncs
+    for T
+{
     unsafe fn virt_read_raw<U>(&mut self, addr: Address) -> Result<U> {
         let r = self.virt_read(addr, len!(mem::size_of::<U>()))?;
         let mut d = mem::MaybeUninit::<U>::uninit();
@@ -173,13 +168,7 @@ impl<T: VirtualReadHelper + SystemArchitecture + TypeArchitecture> VirtualReadHe
     }
 
     fn virt_read_addr32(&mut self, addr: Address) -> Result<Address> {
-        let ta = self.type_arch()?;
-        let r = self.virt_read(addr, ta.instruction_set.len_u32())?;
-        Ok(Address::from(arch_read_type!(
-            ta.instruction_set.byte_order(),
-            read_u32,
-            &r
-        )))
+        Ok(addr!(self.virt_read_u32(addr)?))
     }
 
     fn virt_read_vec_addr32(&mut self, addr: Address, count: usize) -> Result<Vec<Address>> {
@@ -198,13 +187,7 @@ impl<T: VirtualReadHelper + SystemArchitecture + TypeArchitecture> VirtualReadHe
     }
 
     fn virt_read_addr64(&mut self, addr: Address) -> Result<Address> {
-        let ta = self.type_arch()?;
-        let r = self.virt_read(addr, ta.instruction_set.len_u64())?;
-        Ok(Address::from(arch_read_type!(
-            ta.instruction_set.byte_order(),
-            read_u64,
-            &r
-        )))
+        Ok(addr!(self.virt_read_u64(addr)?))
     }
 
     fn virt_read_vec_addr64(&mut self, addr: Address, count: usize) -> Result<Vec<Address>> {

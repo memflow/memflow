@@ -120,8 +120,8 @@ impl From<InstructionSet> for Architecture {
 }
 
 // TODO: differnet traits for mut or not mut?
-// TODO: TrySystemArchitecture
-// SystemArchitecture - implements system architecture func
-pub trait SystemArchitecture {
+// TODO: TryArchitectureTrait
+// ArchitectureTrait - implements system architecture func
+pub trait ArchitectureTrait {
     fn arch(&mut self) -> Result<Architecture>;
 }

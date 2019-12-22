@@ -1,3 +1,4 @@
+use std::default::Default;
 use std::fmt;
 use std::ops;
 
@@ -45,6 +46,10 @@ impl Address {
         self.0 == 0
     }
 
+    pub fn as_u32(self) -> u32 {
+        self.0 as u32
+    }
+
     pub fn as_u64(self) -> u64 {
         self.0
     }
@@ -57,6 +62,12 @@ impl Address {
         Address {
             0: self.0 & (!(page_size.as_u64() - 1)),
         }
+    }
+}
+
+impl Default for Address {
+    fn default() -> Self {
+        Self::null()
     }
 }
 

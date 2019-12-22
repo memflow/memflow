@@ -9,8 +9,9 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use flow_core::bridge::client::BridgeClient;
+use flow_core::*;
 use flow_win32;
-use flow_win32::win::process::ProcessTrait; // TODO: import in flow_win32
+use flow_win32::win::process::ProcessModuleTrait; // TODO: import in flow_win32
 
 // TODO: this is os agnostic and just temp?
 use flow_win32::keyboard::Keyboard;

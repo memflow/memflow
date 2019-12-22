@@ -5,10 +5,17 @@ pub mod write_helper;
 
 pub use read::{PhysicalRead, VirtualRead};
 pub use read_helper::{
-    TypeArchitecture, VirtualReadHelper, VirtualReadHelperChain, VirtualReadHelperFuncs,
-    VirtualReader,
+    VirtualReadHelper, VirtualReadHelperChain, VirtualReadHelperFuncs, VirtualReader,
 };
 pub use write::{PhysicalWrite, VirtualWrite};
+
+use crate::arch::Architecture;
+use crate::Result;
+
+// TypeArchitectureTrait - determines the architecture for virtual read types
+pub trait TypeArchitectureTrait {
+    fn type_arch(&mut self) -> Result<Architecture>;
+}
 
 /*
 pub trait VirtualWrite {

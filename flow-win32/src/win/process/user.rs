@@ -4,14 +4,15 @@ use log::{debug, info};
 use super::Windows;
 
 use flow_core::address::{Address, Length};
-use flow_core::arch::{Architecture, InstructionSet, SystemArchitecture};
+use flow_core::arch::{Architecture, ArchitectureTrait, InstructionSet};
 use flow_core::mem::*;
+use flow_core::process::ProcessTrait;
 
 use std::cell::RefCell;
 use std::rc::Rc;
 
 use crate::win::module::ModuleIterator;
-use crate::win::process::ProcessTrait;
+use crate::win::process::ProcessModuleTrait;
 
 pub struct UserProcess<T: VirtualRead> {
     pub win: Rc<RefCell<Windows<T>>>,
@@ -74,8 +75,10 @@ impl<T: VirtualRead> UserProcess<T> {
 
 impl<T: VirtualRead> ProcessTrait for UserProcess<T> {
     // system arch = type arch
-    fn pid(&mut self) -> Result<i32> {
-        let offs = self.find_offset("_EPROCESS", "UniqueProcessId")?;
+    fn pid(&mut self) -> flow_core::Result<i32> {
+        let offs = self
+            .find_offset("_EPROCESS", "UniqueProcessId")
+            .map_err(flow_core::Error::new)?;
         let win = self.win.borrow();
         let start_block = win.start_block;
         let mem = &mut win.mem.borrow_mut();
@@ -86,8 +89,10 @@ impl<T: VirtualRead> ProcessTrait for UserProcess<T> {
     }
 
     // system arch = type arch
-    fn name(&mut self) -> Result<String> {
-        let offs = self.find_offset("_EPROCESS", "ImageFileName")?;
+    fn name(&mut self) -> flow_core::Result<String> {
+        let offs = self
+            .find_offset("_EPROCESS", "ImageFileName")
+            .map_err(flow_core::Error::new)?;
         let win = self.win.borrow();
         let start_block = win.start_block;
         let mem = &mut win.mem.borrow_mut();
@@ -98,9 +103,11 @@ impl<T: VirtualRead> ProcessTrait for UserProcess<T> {
     }
 
     // system arch = type arch
-    fn dtb(&mut self) -> Result<Address> {
+    fn dtb(&mut self) -> flow_core::Result<Address> {
         // _KPROCESS is the first entry in _EPROCESS
-        let offs = self.find_offset("_KPROCESS", "DirectoryTableBase")?;
+        let offs = self
+            .find_offset("_KPROCESS", "DirectoryTableBase")
+            .map_err(flow_core::Error::new)?;
         let win = self.win.borrow();
         let start_block = win.start_block;
         let mem = &mut win.mem.borrow_mut();
@@ -109,7 +116,9 @@ impl<T: VirtualRead> ProcessTrait for UserProcess<T> {
                 .virt_read_addr(self.eprocess + offs)?,
         )
     }
+}
 
+impl<T: VirtualRead> ProcessModuleTrait for UserProcess<T> {
     fn first_peb_entry(&mut self) -> Result<Address> {
         let wow64 = self.wow64()?;
         info!("wow64={:x}", wow64);
@@ -167,14 +176,14 @@ impl<T: VirtualRead> ProcessTrait for UserProcess<T> {
     }
 }
 
-impl<T: VirtualRead> SystemArchitecture for UserProcess<T> {
+impl<T: VirtualRead> ArchitectureTrait for UserProcess<T> {
     fn arch(&mut self) -> flow_core::Result<Architecture> {
         let win = self.win.borrow();
         Ok(win.start_block.arch)
     }
 }
 
-impl<T: VirtualRead> TypeArchitecture for UserProcess<T> {
+impl<T: VirtualRead> TypeArchitectureTrait for UserProcess<T> {
     fn type_arch(&mut self) -> flow_core::Result<Architecture> {
         let start_block = {
             let win = self.win.borrow();

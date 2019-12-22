@@ -1,8 +1,3 @@
-// let kbd = Keyboard::with(mem, ...)
-// let ks = kbd.keystate()
-// ks.get(VK_A)
-// kbd.set_keystate(...)
-
 use crate::error::{Error, Result};
 use crate::win::Windows;
 

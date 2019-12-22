@@ -1,13 +1,21 @@
 pub mod error;
-// TODO: add more forward declares
 pub use error::{Error, Result};
 
 #[macro_use]
 pub mod address;
+pub use address::{Address, Length};
 
 pub mod arch;
+pub use arch::{Architecture, ByteOrder, InstructionSet};
+
 pub mod mem;
+pub use mem::*;
+
 pub mod vat;
+pub use vat::{VatImpl, VirtualAddressTranslation};
+
+pub mod process;
+pub use process::ProcessTrait; // TODO: forward declare all relevant traits
 
 //pub mod cpu;
 //pub mod net;

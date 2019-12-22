@@ -2,7 +2,7 @@ use crate::error::Result;
 
 use flow_core::address::{Address, Length};
 
-use flow_core::arch::{Architecture, InstructionSet, SystemArchitecture};
+use flow_core::arch::{Architecture, ArchitectureTrait, InstructionSet};
 use flow_core::mem::*;
 
 use std::cell::RefCell;
@@ -10,11 +10,11 @@ use std::rc::Rc;
 
 use super::Module;
 
-use crate::win::process::ProcessTrait;
+use crate::win::process::ProcessModuleTrait;
 use crate::win::unicode_string::VirtualReadUnicodeString;
 
 pub struct ModuleIterator<
-    T: ProcessTrait + SystemArchitecture + VirtualReadHelperFuncs + VirtualReadUnicodeString,
+    T: ProcessModuleTrait + ArchitectureTrait + VirtualReadHelperFuncs + VirtualReadUnicodeString,
 > {
     process: Rc<RefCell<T>>,
     process_arch: Architecture,
@@ -24,7 +24,7 @@ pub struct ModuleIterator<
 
 impl<T> ModuleIterator<T>
 where
-    T: ProcessTrait + SystemArchitecture + VirtualReadHelperFuncs + VirtualReadUnicodeString,
+    T: ProcessModuleTrait + ArchitectureTrait + VirtualReadHelperFuncs + VirtualReadUnicodeString,
 {
     pub fn new(process: Rc<RefCell<T>>) -> Result<Self> {
         let first_peb_entry = process.borrow_mut().first_peb_entry()?;
@@ -40,7 +40,7 @@ where
 
 impl<T> Iterator for ModuleIterator<T>
 where
-    T: ProcessTrait + SystemArchitecture + VirtualReadHelperFuncs + VirtualReadUnicodeString,
+    T: ProcessModuleTrait + ArchitectureTrait + VirtualReadHelperFuncs + VirtualReadUnicodeString,
 {
     type Item = Module<T>;
 

@@ -15,6 +15,7 @@ tokio = "0.1.22"
 capnp = "0.10.3"
 capnp-rpc = "0.10.0"
 url = "2.1.0"
+unicorn = "0.9.1" # TODO: optional feature
 
 # example deps
 clap = "2.33.0"

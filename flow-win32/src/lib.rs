@@ -5,6 +5,7 @@ use log::info;
 pub mod cache;
 pub mod error;
 pub mod kernel;
+pub mod keyboard;
 pub mod pe;
 pub mod win;
 

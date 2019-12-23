@@ -92,3 +92,13 @@ impl<T: VirtualRead> VirtualReadHelper for KernelProcess<T> {
         mem.virt_read(proc_arch, dtb, addr, len)
     }
 }
+
+impl<T: VirtualRead + VirtualWrite> VirtualWriteHelper for KernelProcess<T> {
+    fn virt_write(&mut self, addr: Address, data: &[u8]) -> flow_core::Result<Length> {
+        let proc_arch = self.arch().map_err(flow_core::Error::new)?;
+        let dtb = self.dtb().map_err(flow_core::Error::new)?;
+        let win = self.win.borrow();
+        let mem = &mut win.mem.borrow_mut();
+        mem.virt_write(proc_arch, dtb, addr, data)
+    }
+}

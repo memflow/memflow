@@ -8,6 +8,9 @@ pub use read_helper::{
     VirtualReadHelper, VirtualReadHelperChain, VirtualReadHelperFuncs, VirtualReader,
 };
 pub use write::{PhysicalWrite, VirtualWrite};
+pub use write_helper::{
+    VirtualWriteHelper, VirtualWriteHelperFuncs, VirtualWriter
+};
 
 use crate::arch::Architecture;
 use crate::Result;

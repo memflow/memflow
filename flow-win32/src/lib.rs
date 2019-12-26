@@ -1,15 +1,18 @@
-use crate::error::Result;
 use flow_core::mem::{PhysicalRead, VirtualRead};
 use log::info;
 
 pub mod cache;
 pub mod error;
+pub use error::{Error, Result};
 pub mod kernel;
+pub use kernel::StartBlock;
 pub mod keyboard;
+pub use keyboard::{Keyboard, KeyboardState};
 pub mod pe;
 pub mod win;
+pub use win::Windows;
 
-use win::{types::PDB, Windows};
+use win::types::PDB;
 
 use std::cell::RefCell;
 use std::rc::Rc;

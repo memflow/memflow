@@ -5,6 +5,7 @@ use crate::error::{Error, Result};
 
 use flow_core::address::{Address, Length};
 use flow_core::arch::{ArchitectureTrait, InstructionSet};
+use flow_core::mem::*;
 use flow_core::*;
 
 use std::cell::RefCell;
@@ -12,6 +13,8 @@ use std::rc::Rc;
 
 use crate::win::process::ProcessModuleTrait;
 use crate::win::unicode_string::VirtualReadUnicodeString;
+
+use crate::pe;
 
 pub struct Module<
     T: ProcessModuleTrait + ArchitectureTrait + VirtualReadHelperFuncs + VirtualReadUnicodeString,
@@ -106,6 +109,25 @@ where
         self.module_name = process.virt_read_unicode_string(self.peb_entry + offs)?;
         Ok(self.module_name.clone())
     }
+}
+
+impl<T> Module<T>
+where
+    T: ProcessModuleTrait + ArchitectureTrait + VirtualReadHelper + VirtualReadHelperFuncs,
+{
+    // convenience wrappers (exports, sections, etc)
+    pub fn export(&mut self, name: &str) -> Result<Length> {
+        let base = self.base()?;
+        let size = self.size()?;
+
+        let process = &mut self.process.borrow_mut();
+        let buf = process.virt_read(base, size)?;
+        pe::find_export(buf, name)
+    }
+
+    // section
+
+    // ...?
 }
 
 /*

@@ -6,7 +6,7 @@ pub mod address;
 pub use address::{Address, Length};
 
 pub mod arch;
-pub use arch::{Architecture, ByteOrder, InstructionSet};
+pub use arch::{Architecture, ArchitectureTrait, ByteOrder, InstructionSet};
 
 pub mod mem;
 pub use mem::*;

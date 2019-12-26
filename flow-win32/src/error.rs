@@ -73,6 +73,12 @@ impl std::convert::From<flow_core::Error> for Error {
     }
 }
 
+impl std::convert::From<Error> for flow_core::Error {
+    fn from(error: Error) -> Self {
+        Self::new(error)
+    }
+}
+
 // TODO: wait for try_trait to be stabilized
 /*
 impl std::convert::From<std::option::NoneError> for Error {

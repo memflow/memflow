@@ -33,7 +33,7 @@ impl<T: VirtualRead> Keyboard<T> {
         let size = kernel_module.size()?;
 
         let buf = user_process.virt_read(base, size)?;
-        let export_addr = pe::find_export(buf, "gafAsyncKeyState")?;
+        let export_addr = pe::find_export_offset(buf, "gafAsyncKeyState")?;
 
         Ok(Self {
             user_process: user_process.clone(),

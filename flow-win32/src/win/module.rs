@@ -116,13 +116,17 @@ where
     T: ProcessModuleTrait + ArchitectureTrait + VirtualReadHelper + VirtualReadHelperFuncs,
 {
     // convenience wrappers (exports, sections, etc)
-    pub fn export(&mut self, name: &str) -> Result<Length> {
+    pub fn export_offset(&mut self, name: &str) -> Result<Length> {
         let base = self.base()?;
         let size = self.size()?;
 
         let process = &mut self.process.borrow_mut();
         let buf = process.virt_read(base, size)?;
-        pe::find_export(buf, name)
+        pe::find_export_offset(buf, name)
+    }
+
+    pub fn export(&mut self, name: &str) -> Result<Address> {
+        Ok(self.base()? + self.export_offset(name)?)
     }
 
     // section

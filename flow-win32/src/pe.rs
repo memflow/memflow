@@ -30,7 +30,7 @@ use goblin::pe::PE;
        .iter()
        .for_each(|e| println!("export found: {:?}", e));
 */
-pub fn find_export(buf: Vec<u8>, name: &str) -> Result<Length> {
+pub fn find_export_offset(buf: Vec<u8>, name: &str) -> Result<Length> {
     let mut pe_opts = ParseOptions::default();
     pe_opts.resolve_rva = false;
     let pe = PE::parse_with_opts(&buf, &pe_opts)?;
@@ -41,8 +41,24 @@ pub fn find_export(buf: Vec<u8>, name: &str) -> Result<Length> {
             .nth(0)
             .ok_or_else(|| "unable to find export")?
             .offset
-    )) // offset, rva, size?
+    ))
 }
+
+/*
+pub fn find_section_offset(buf: Vec<u8>, name: &str) -> Result<Length> {
+    let mut pe_opts = ParseOptions::default();
+    pe_opts.resolve_rva = false;
+    let pe = PE::parse_with_opts(&buf, &pe_opts)?;
+    Ok(len!(
+        pe.sections
+            .iter()
+            .filter(|s| s.name.unwrap_or_default() == name)
+            .nth(0)
+            .ok_or_else(|| "unable to find export")?
+            .
+    ))
+}
+*/
 
 // TODO: move this in a seperate crate as a elf/pe/macho helper for pa/va
 

@@ -1,5 +1,5 @@
 use crate::error::{Error, Result};
-use log::{debug, trace, info};
+use log::{debug, info, trace};
 
 use super::Windows;
 
@@ -76,8 +76,7 @@ impl<T: VirtualRead> UserProcess<T> {
 impl<T: VirtualRead> ProcessTrait for UserProcess<T> {
     // system arch = type arch
     fn pid(&mut self) -> flow_core::Result<i32> {
-        let offs = self
-            .find_offset("_EPROCESS", "UniqueProcessId")?;
+        let offs = self.find_offset("_EPROCESS", "UniqueProcessId")?;
         let win = self.win.borrow();
         let start_block = win.start_block;
         let mem = &mut win.mem.borrow_mut();
@@ -89,8 +88,7 @@ impl<T: VirtualRead> ProcessTrait for UserProcess<T> {
 
     // system arch = type arch
     fn name(&mut self) -> flow_core::Result<String> {
-        let offs = self
-            .find_offset("_EPROCESS", "ImageFileName")?;
+        let offs = self.find_offset("_EPROCESS", "ImageFileName")?;
         let win = self.win.borrow();
         let start_block = win.start_block;
         let mem = &mut win.mem.borrow_mut();
@@ -103,8 +101,7 @@ impl<T: VirtualRead> ProcessTrait for UserProcess<T> {
     // system arch = type arch
     fn dtb(&mut self) -> flow_core::Result<Address> {
         // _KPROCESS is the first entry in _EPROCESS
-        let offs = self
-            .find_offset("_KPROCESS", "DirectoryTableBase")?;
+        let offs = self.find_offset("_KPROCESS", "DirectoryTableBase")?;
         let win = self.win.borrow();
         let start_block = win.start_block;
         let mem = &mut win.mem.borrow_mut();

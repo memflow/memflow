@@ -1,4 +1,5 @@
 mod config;
+mod init;
 
 #[macro_use]
 extern crate clap;
@@ -8,9 +9,9 @@ use pretty_env_logger;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use flow_core::connector::bridge::client::BridgeClient;
-use flow_core::connector::qemu_procfs;
 use flow_core::*;
+use flow_core::connector::qemu_procfs;
+
 use flow_win32;
 use flow_win32::win::process::ProcessModuleTrait; // TODO: import in flow_win32
 
@@ -23,72 +24,13 @@ fn main() {
     let yaml = load_yaml!("cli.yml");
     let argv = App::from(yaml).get_matches();
 
-    // if url && os {} else { config set? else auto conf }
-    let (url, osname) = {
-        if argv.is_present("url") {
-            (
-                argv.value_of("url").unwrap().to_owned(),
-                argv.value_of("os").unwrap_or_else(|| "win32").to_owned(),
-            )
-        } else {
-            let machines =
-                config::try_parse(argv.value_of("config").unwrap_or_else(|| "memflow.toml"))
-                    .unwrap()
-                    .machine
-                    .unwrap(); // TODO: proper error handling / feedback
+    //let conn = init::init_connector(&argv).unwrap();
+    let conn = qemu_procfs::Memory::new().unwrap();
 
-            let machine = {
-                if argv.is_present("machine") {
-                    machines
-                        .iter()
-                        .filter(|m| m.name.as_ref().unwrap() == argv.value_of("machine").unwrap())
-                        .nth(0)
-                        .ok_or_else(|| {
-                            std::io::Error::new(std::io::ErrorKind::Other, "machine not found")
-                        })
-                } else if machines.len() == 1 {
-                    Ok(&machines[0])
-                } else {
-                    Err(std::io::Error::new(
-                        std::io::ErrorKind::Other,
-                        "no machine specified",
-                    ))
-                }
-            }
-            .unwrap();
-
-            (
-                machine.url.to_owned().unwrap(),
-                machine
-                    .os
-                    .to_owned()
-                    .unwrap_or_else(|| String::from("win32")),
-            )
-        }
-    };
-
-    // TODO: make this configurable via cli
-    let bridge = match qemu_procfs::Memory::new() {
-        Ok(br) => br,
-        Err(e) => {
-            println!("couldn't open memory read context: {:?}", e);
-            return;
-        }
-    };
-
-    /*
-    let bridge = match BridgeClient::connect(url.as_str()) {
-        Ok(br) => br,
-        Err(e) => {
-            println!("couldn't connect to bridge: {:?}", e);
-            return;
-        }
-    };
-    */
-
-    let bridgerc = Rc::new(RefCell::new(bridge));
-    let os = match osname.as_str() {
-        "win32" => flow_win32::init(bridgerc),
+    // TODO: osname from config/params?
+    let connrc = Rc::new(RefCell::new(conn));
+    let os = match argv.value_of("os").unwrap_or_else(|| "win32") {
+        "win32" => flow_win32::init(connrc),
         //"linux" => {},
         _ => Err(flow_win32::error::Error::new("invalid os")),
     }

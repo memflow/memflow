@@ -4,19 +4,19 @@ author: "ko1N"
 about: memflow cli interface
 
 args:
+    - connector:
+        short: c
+        long: connector
+        help: selects the connector type (bridge, qemu_procfs)
+        takes_value: true
     - url:
         short: u
         long: url
         value_name: URL
         help: bridge socket url
         takes_value: true
-    - os:
-        short: o
-        long: os
-        help: target operating system
-        takes_value: true
     - config:
-        short: c
+        short: cfg
         long: config
         help: sets the memflow config toml file
         takes_value: true

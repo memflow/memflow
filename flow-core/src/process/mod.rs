@@ -22,7 +22,9 @@ pub trait ModuleIterTrait {
 }
 */
 
+// TODO: Range impl for base to size?
 // TODO: add more?
+// TODO: maybe remove mut and fetch when module is loaded?
 pub trait ModuleTrait {
     fn base(&mut self) -> Result<Address>;
     fn size(&mut self) -> Result<Length>;

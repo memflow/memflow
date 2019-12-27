@@ -16,6 +16,7 @@ capnp = "0.10.3"
 capnp-rpc = "0.10.0"
 url = "2.1.0"
 procfs = "0.7.6"
+lazy_static = "1.4.0"
 unicorn = { version = "0.9.1", optional = true }
 
 # example deps

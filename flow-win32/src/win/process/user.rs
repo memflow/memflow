@@ -1,5 +1,5 @@
 use crate::error::{Error, Result};
-use log::{debug, info};
+use log::{debug, trace, info};
 
 use super::Windows;
 
@@ -52,7 +52,7 @@ impl<T: VirtualRead> UserProcess<T> {
         let _field = _strct
             .find_field(field)
             .ok_or_else(|| format!("{} not found", field))?;
-        debug!("offset {}::{}={:x}", strct, field, _field.offset);
+        trace!("offset found {}::{} = {:x}", strct, field, _field.offset);
         Ok(_field.offset)
     }
 
@@ -77,8 +77,7 @@ impl<T: VirtualRead> ProcessTrait for UserProcess<T> {
     // system arch = type arch
     fn pid(&mut self) -> flow_core::Result<i32> {
         let offs = self
-            .find_offset("_EPROCESS", "UniqueProcessId")
-            .map_err(flow_core::Error::new)?;
+            .find_offset("_EPROCESS", "UniqueProcessId")?;
         let win = self.win.borrow();
         let start_block = win.start_block;
         let mem = &mut win.mem.borrow_mut();
@@ -91,8 +90,7 @@ impl<T: VirtualRead> ProcessTrait for UserProcess<T> {
     // system arch = type arch
     fn name(&mut self) -> flow_core::Result<String> {
         let offs = self
-            .find_offset("_EPROCESS", "ImageFileName")
-            .map_err(flow_core::Error::new)?;
+            .find_offset("_EPROCESS", "ImageFileName")?;
         let win = self.win.borrow();
         let start_block = win.start_block;
         let mem = &mut win.mem.borrow_mut();
@@ -106,8 +104,7 @@ impl<T: VirtualRead> ProcessTrait for UserProcess<T> {
     fn dtb(&mut self) -> flow_core::Result<Address> {
         // _KPROCESS is the first entry in _EPROCESS
         let offs = self
-            .find_offset("_KPROCESS", "DirectoryTableBase")
-            .map_err(flow_core::Error::new)?;
+            .find_offset("_KPROCESS", "DirectoryTableBase")?;
         let win = self.win.borrow();
         let start_block = win.start_block;
         let mem = &mut win.mem.borrow_mut();
@@ -191,7 +188,7 @@ impl<T: VirtualRead> TypeArchitectureTrait for UserProcess<T> {
         };
         if start_block.arch.instruction_set == InstructionSet::X86 {
             Ok(Architecture::from(InstructionSet::X86))
-        } else if !self.has_wow64().map_err(flow_core::Error::new)? {
+        } else if !self.has_wow64()? {
             Ok(Architecture::from(InstructionSet::X64))
         } else {
             Ok(Architecture::from(InstructionSet::X86))
@@ -202,8 +199,8 @@ impl<T: VirtualRead> TypeArchitectureTrait for UserProcess<T> {
 // TODO: this is not entirely correct as it will use different VAT than required, split vat arch + type arch up again
 impl<T: VirtualRead> VirtualReadHelper for UserProcess<T> {
     fn virt_read(&mut self, addr: Address, len: Length) -> flow_core::Result<Vec<u8>> {
-        let proc_arch = self.arch().map_err(flow_core::Error::new)?;
-        let dtb = self.dtb().map_err(flow_core::Error::new)?;
+        let proc_arch = self.arch()?;
+        let dtb = self.dtb()?;
         let win = self.win.borrow();
         let mem = &mut win.mem.borrow_mut();
         mem.virt_read(proc_arch, dtb, addr, len)
@@ -212,8 +209,8 @@ impl<T: VirtualRead> VirtualReadHelper for UserProcess<T> {
 
 impl<T: VirtualRead + VirtualWrite> VirtualWriteHelper for UserProcess<T> {
     fn virt_write(&mut self, addr: Address, data: &[u8]) -> flow_core::Result<Length> {
-        let proc_arch = self.arch().map_err(flow_core::Error::new)?;
-        let dtb = self.dtb().map_err(flow_core::Error::new)?;
+        let proc_arch = self.arch()?;
+        let dtb = self.dtb()?;
         let win = self.win.borrow();
         let mem = &mut win.mem.borrow_mut();
         mem.virt_write(proc_arch, dtb, addr, data)

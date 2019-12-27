@@ -1,12 +1,17 @@
 use crate::error::{Error, Result};
 
-use crate::address::*;
 use crate::*;
+use crate::address::*;
 
 use procfs;
+use lazy_static::lazy_static;
 
 use std::fs::{File, OpenOptions};
 use std::io::{Read, Seek, SeekFrom, Write};
+
+lazy_static! {
+    static ref LENGTH_2GB: Length = Length::from_gb(2);
+}
 
 pub struct Memory {
     pub pid: i32,
@@ -51,27 +56,21 @@ impl Memory {
 
 impl PhysicalRead for Memory {
     fn phys_read(&mut self, addr: Address, len: Length) -> Result<Vec<u8>> {
-        let ofs = self.map.address.0 + addr.as_u64();
+        let ofs = self.map.address.0 + { if addr.as_u64() <= LENGTH_2GB.as_u64() { addr.as_u64() } else { addr.as_u64() - LENGTH_2GB.as_u64() } };
         self.file.seek(SeekFrom::Start(ofs))?;
 
         let mut buf = vec![0; len.as_usize()];
-        // TODO: read in page chunks to maximize the potentially read pages
-        match self.file.read(&mut buf) {
-            Ok(_) => (),
-            Err(_) => {},
-        }
-
+        let _ = self.file.read(&mut buf);
         Ok(buf)
     }
 }
 
 impl PhysicalWrite for Memory {
     fn phys_write(&mut self, addr: Address, data: &[u8]) -> Result<Length> {
-        let ofs = self.map.address.0 + addr.as_u64();
+        let ofs = self.map.address.0 + { if addr.as_u64() <= LENGTH_2GB.as_u64() { addr.as_u64() } else { addr.as_u64() - LENGTH_2GB.as_u64() } };
         self.file.seek(SeekFrom::Start(ofs))?;
 
-        // TODO: write in page chunks
-        self.file.write(data)?;
+        let _ = self.file.write(data);
         Ok(len!(data.len()))
     }
 }

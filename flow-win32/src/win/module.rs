@@ -131,7 +131,17 @@ where
 
     // section
 
-    // ...?
+    // signature
+
+    pub fn signature(&mut self, pattern: &str) -> Result<Length> {
+        let base = self.base()?;
+        let size = self.size()?;
+
+        let process = &mut self.process.borrow_mut();
+        let buf = process.virt_read(base, size)?;
+
+        Ok(Length::zero())
+    }
 }
 
 /*

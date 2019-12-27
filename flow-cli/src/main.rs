@@ -8,7 +8,8 @@ use pretty_env_logger;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use flow_core::bridge::client::BridgeClient;
+use flow_core::connector::bridge::client::BridgeClient;
+use flow_core::connector::qemu_procfs;
 use flow_core::*;
 use flow_win32;
 use flow_win32::win::process::ProcessModuleTrait; // TODO: import in flow_win32
@@ -66,6 +67,16 @@ fn main() {
         }
     };
 
+    // TODO: make this configurable via cli
+    let bridge = match qemu_procfs::Memory::new() {
+        Ok(br) => br,
+        Err(e) => {
+            println!("couldn't open memory read context: {:?}", e);
+            return;
+        }
+    };
+
+    /*
     let bridge = match BridgeClient::connect(url.as_str()) {
         Ok(br) => br,
         Err(e) => {
@@ -73,6 +84,7 @@ fn main() {
             return;
         }
     };
+    */
 
     let bridgerc = Rc::new(RefCell::new(bridge));
     let os = match osname.as_str() {

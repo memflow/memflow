@@ -1,5 +1,7 @@
 use crate::error::{Error, Result};
 
+use log::trace;
+
 use crate::address::{Address, Length};
 use crate::arch::Architecture;
 use crate::mem::{PhysicalRead, PhysicalWrite, VirtualRead, VirtualWrite};
@@ -48,6 +50,7 @@ impl<'a, T: PhysicalRead + VirtualAddressTranslation> VirtualRead for VatImpl<'a
                 });
             } else {
                 // skip
+                trace!("pa is null, skipping page");
             }
 
             base += aligned_len;

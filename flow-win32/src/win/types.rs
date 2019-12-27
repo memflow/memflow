@@ -113,6 +113,7 @@ impl PDB {
         match Struct::with(self.file.clone(), name) {
             Ok(s) => {
                 self.structs.insert(String::from(name), s.clone());
+                trace!("struct {} found: {:?}", name, s);
                 return Some(s);
             }
             Err(e) => trace!("struct {} not found: {:?}", name, e),

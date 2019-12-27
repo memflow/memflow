@@ -6,7 +6,7 @@ use toml;
 
 use serde_derive::Deserialize;
 
-use flow_core::bridge::client::BridgeClient;
+use flow_core::connector::bridge::client::BridgeClient;
 use flow_core::mem::*;
 use flow_core::{Error, Result};
 use flow_win32::win::Windows;

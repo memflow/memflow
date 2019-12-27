@@ -86,6 +86,12 @@ impl std::convert::From<std::ffi::NulError> for Error {
     }
 }
 
+impl std::convert::From<procfs::ProcError> for Error {
+    fn from(error: procfs::ProcError) -> Self {
+        Self::new(error)
+    }
+}
+
 #[cfg(feature = "emulator")]
 impl std::convert::From<unicorn::Error> for Error {
     fn from(error: unicorn::Error) -> Self {

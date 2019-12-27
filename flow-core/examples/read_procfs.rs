@@ -1,37 +1,20 @@
-use clap::{App, Arg};
 use std::time::Instant;
 
-use flow_core::address::{Address, Length};
 use flow_core::*;
-
-use flow_core::bridge::client::BridgeClient;
+use flow_core::address::{Address, Length};
 use flow_core::mem::PhysicalRead;
+use flow_core::connector::qemu_procfs;
 
 fn main() {
-    let argv = App::new("examples/bridge_read")
-        .version("0.1")
-        .arg(
-            Arg::with_name("bridge-url")
-                .short("url")
-                .long("bridge-url")
-                .value_name("URL")
-                .help("bridge socket url")
-                .takes_value(true),
-        )
-        .get_matches();
-
-    let url = argv
-        .value_of("bridge-url")
-        .unwrap_or("unix:/tmp/qemu-connector-bridge");
-    let mut bridge = match BridgeClient::connect(url) {
-        Ok(s) => s,
+    let mut conn = match qemu_procfs::Memory::new() {
+        Ok(br) => br,
         Err(e) => {
-            println!("couldn't connect to bridge: {:?}", e);
+            println!("couldn't open memory read context: {:?}", e);
             return;
         }
     };
 
-    let mem = bridge.phys_read(Address::from(0x1000), len!(8)).unwrap();
+    let mem = conn.phys_read(Address::from(0x1000), len!(8)).unwrap();
     println!("Received memory: {:?}", mem);
 
     //bridge.read_registers().unwrap();
@@ -41,7 +24,7 @@ fn main() {
     loop {
         //let r = bridge.read_memory(0x1000, 0x1000).unwrap();
         //bridge.write_memory(0x1000, &r).unwrap();
-        bridge
+        conn
             .phys_read(Address::from(0x1000), len!(0x1000))
             .unwrap();
 

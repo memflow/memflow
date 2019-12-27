@@ -1,7 +1,0 @@
-remote:
-  host: buildarch
-push:
-  compression: 1
-pull:
-  compression: 1
-  mode: serial

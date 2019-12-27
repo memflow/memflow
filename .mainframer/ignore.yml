@@ -1,5 +1,0 @@
-push:
-  - "target"
-  - "bridge"
-both:
-  - "/Cargo.lock"

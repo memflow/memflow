@@ -5,6 +5,8 @@ general:
 - process emulator
 - remove all map_err conversions from flow_core / flow_win32 and others (also in apex and others)
 - reduce amount of generic constraints and extend them in implementations (e.g. for virtual reading)
+- virt_read_len / virt_read_len32 / virt_read_len64
+- move cli into seperate project or inetgrate qemu into this project... < DECIDE >
 
 mt reading:
 - use connection pool and automatically choose a free connection for the reader

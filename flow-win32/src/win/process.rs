@@ -14,6 +14,7 @@ use super::Windows;
 use flow_core::address::Address;
 use flow_core::arch::ArchitectureTrait;
 use flow_core::mem::*;
+use flow_core::process::*;
 
 use crate::win::module::{Module, ModuleIterator};
 

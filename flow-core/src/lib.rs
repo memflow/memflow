@@ -15,7 +15,7 @@ pub mod vat;
 pub use vat::{VatImpl, VirtualAddressTranslation};
 
 pub mod process;
-pub use process::ProcessTrait; // TODO: forward declare all relevant traits
+pub use process::*;
 
 //pub mod cpu;
 //pub mod net;

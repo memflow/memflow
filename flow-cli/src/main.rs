@@ -5,13 +5,13 @@ mod init;
 extern crate clap;
 use clap::App;
 
-use simple_logger;
 use log::Level;
+use simple_logger;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use flow_core::*;
 use flow_core::connector::qemu_procfs;
+use flow_core::*;
 
 use flow_win32;
 use flow_win32::win::process::ProcessModuleTrait; // TODO: import in flow_win32

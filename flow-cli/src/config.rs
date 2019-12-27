@@ -15,7 +15,6 @@ use flow_win32::win::Windows;
 pub struct MachineConfig {
     pub name: Option<String>,
     pub url: Option<String>,
-    pub os: Option<String>,
 }
 
 #[derive(Clone, Deserialize)]

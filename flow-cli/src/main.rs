@@ -5,7 +5,8 @@ mod init;
 extern crate clap;
 use clap::App;
 
-use pretty_env_logger;
+use simple_logger;
+use log::Level;
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -19,10 +20,16 @@ use flow_win32::win::process::ProcessModuleTrait; // TODO: import in flow_win32
 use flow_win32::keyboard::Keyboard;
 
 fn main() {
-    pretty_env_logger::init();
-
     let yaml = load_yaml!("cli.yml");
     let argv = App::from(yaml).get_matches();
+
+    match argv.occurrences_of("verbose") {
+        1 => simple_logger::init_with_level(Level::Warn).unwrap(),
+        2 => simple_logger::init_with_level(Level::Info).unwrap(),
+        3 => simple_logger::init_with_level(Level::Debug).unwrap(),
+        4 => simple_logger::init_with_level(Level::Trace).unwrap(),
+        _ => simple_logger::init_with_level(Level::Error).unwrap(),
+    }
 
     //let conn = init::init_connector(&argv).unwrap();
     let conn = qemu_procfs::Memory::new().unwrap();

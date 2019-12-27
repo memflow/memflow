@@ -1,9 +1,9 @@
 use std::time::Instant;
 
-use flow_core::*;
 use flow_core::address::{Address, Length};
-use flow_core::mem::PhysicalRead;
 use flow_core::connector::qemu_procfs;
+use flow_core::mem::PhysicalRead;
+use flow_core::*;
 
 fn main() {
     let mut conn = match qemu_procfs::Memory::new() {
@@ -24,9 +24,7 @@ fn main() {
     loop {
         //let r = bridge.read_memory(0x1000, 0x1000).unwrap();
         //bridge.write_memory(0x1000, &r).unwrap();
-        conn
-            .phys_read(Address::from(0x1000), len!(0x1000))
-            .unwrap();
+        conn.phys_read(Address::from(0x1000), len!(0x1000)).unwrap();
 
         counter += 1;
         if (counter % 10000) == 0 {

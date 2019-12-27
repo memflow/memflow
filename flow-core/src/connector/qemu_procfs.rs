@@ -1,10 +1,12 @@
 use crate::error::{Error, Result};
 
-use crate::*;
-use crate::address::*;
+use log::info;
 
-use procfs;
+use crate::address::*;
+use crate::*;
+
 use lazy_static::lazy_static;
+use procfs;
 
 use std::fs::{File, OpenOptions};
 use std::io::{Read, Seek, SeekFrom, Write};
@@ -27,8 +29,7 @@ impl Memory {
             .filter(|p| p.stat.comm == "qemu-system-x86")
             .nth(0)
             .ok_or_else(|| Error::new("qemu process not found"))?;
-
-        println!("qemu found, pid: {}", prc.stat.pid);
+        info!("qemu process found {:?}", prc.stat);
 
         // find biggest mapping
         let mut maps = prc.maps()?;
@@ -38,9 +39,9 @@ impl Memory {
                 .unwrap()
         });
         let map = maps
-            .iter()
-            .nth(0)
+            .get(0)
             .ok_or_else(|| Error::new("qemu memory map could not be read"))?;
+        info!("qemu memory map found {:?}", map);
 
         let file = OpenOptions::new()
             .read(true)
@@ -56,7 +57,13 @@ impl Memory {
 
 impl PhysicalRead for Memory {
     fn phys_read(&mut self, addr: Address, len: Length) -> Result<Vec<u8>> {
-        let ofs = self.map.address.0 + { if addr.as_u64() <= LENGTH_2GB.as_u64() { addr.as_u64() } else { addr.as_u64() - LENGTH_2GB.as_u64() } };
+        let ofs = self.map.address.0 + {
+            if addr.as_u64() <= LENGTH_2GB.as_u64() {
+                addr.as_u64()
+            } else {
+                addr.as_u64() - LENGTH_2GB.as_u64()
+            }
+        };
         self.file.seek(SeekFrom::Start(ofs))?;
 
         let mut buf = vec![0; len.as_usize()];
@@ -67,7 +74,13 @@ impl PhysicalRead for Memory {
 
 impl PhysicalWrite for Memory {
     fn phys_write(&mut self, addr: Address, data: &[u8]) -> Result<Length> {
-        let ofs = self.map.address.0 + { if addr.as_u64() <= LENGTH_2GB.as_u64() { addr.as_u64() } else { addr.as_u64() - LENGTH_2GB.as_u64() } };
+        let ofs = self.map.address.0 + {
+            if addr.as_u64() <= LENGTH_2GB.as_u64() {
+                addr.as_u64()
+            } else {
+                addr.as_u64() - LENGTH_2GB.as_u64()
+            }
+        };
         self.file.seek(SeekFrom::Start(ofs))?;
 
         let _ = self.file.write(data);

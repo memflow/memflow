@@ -94,6 +94,9 @@ impl<'a, T: VirtualRead> VirtualReadHelper for VirtualReader<'a, T> {
 }
 
 pub trait VirtualReadHelperFuncs {
+    /// # Safety
+    ///
+    /// This function should be called with a valid memory region, otherwise it will lead to UB
     unsafe fn virt_read_raw<U>(&mut self, addr: Address) -> Result<U>;
 
     fn virt_read_addr(&mut self, addr: Address) -> Result<Address>;

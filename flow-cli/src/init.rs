@@ -2,8 +2,8 @@ use clap::ArgMatches;
 
 use crate::config;
 
-use flow_core::{Error, Result};
 use flow_core::mem::*;
+use flow_core::{Error, Result};
 
 use flow_core::connector::bridge::client::BridgeClient;
 use flow_core::connector::qemu_procfs;
@@ -17,7 +17,7 @@ pub fn init_connector(argv: &ArgMatches) -> Result<Connector> {
     match argv.value_of("connector").unwrap_or_else(|| "qemu_procfs") {
         "bridge" => Ok(Connector::Bridge(init_bridge_connector(argv)?)),
         "qemu_procfs" => Ok(Connector::QemuProcFS(qemu_procfs::Memory::new()?)),
-        _ => panic!("invalid connector type") // TODO: can clap restrict this?
+        _ => panic!("invalid connector type"), // TODO: can clap restrict this?
     }
 }
 

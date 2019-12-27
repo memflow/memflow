@@ -10,18 +10,15 @@ args:
         help: selects the connector type (bridge, qemu_procfs)
         takes_value: true
     - url:
-        short: u
         long: url
         value_name: URL
         help: bridge socket url
         takes_value: true
     - config:
-        short: cfg
         long: config
         help: sets the memflow config toml file
         takes_value: true
     - machine:
-        short: m
         long: machine
         help: when using a config file this will set the machine by its name
         takes_value: true

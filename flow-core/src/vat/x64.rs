@@ -17,6 +17,7 @@ fn read_address<T: PhysicalRead>(mem: &mut T, addr: Address) -> Result<Address> 
     Ok(Address::from(LittleEndian::read_u64(&a)))
 }
 
+#[allow(clippy::nonminimal_bool)]
 pub fn vtop<T: PhysicalRead>(mem: &mut T, dtb: Address, addr: Address) -> Result<Address> {
     let pml4e = read_address(
         mem,

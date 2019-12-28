@@ -4,7 +4,7 @@ pub use iter::*;
 pub mod export;
 pub use export::*;
 
-use crate::error::{Error, Result};
+use crate::error::Result;
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -151,22 +151,19 @@ where
         let mut pe_opts = ParseOptions::default();
         pe_opts.resolve_rva = false;
         let pe = PE::parse_with_opts(&buf, &pe_opts)?;
-        Ok(pe.exports
-                .iter()
-                .map(Export::from)
-                .collect::<Vec<Export>>())
+        Ok(pe.exports.iter().map(Export::from).collect::<Vec<Export>>())
     }
 
     // section
 
     // signature
 
-    pub fn signature(&mut self, pattern: &str) -> Result<Length> {
+    pub fn signature(&mut self, _pattern: &str) -> Result<Length> {
         let base = self.base()?;
         let size = self.size()?;
 
         let process = &mut self.process.borrow_mut();
-        let buf = process.virt_read(base, size)?;
+        let _buf = process.virt_read(base, size)?;
 
         Ok(Length::zero())
     }

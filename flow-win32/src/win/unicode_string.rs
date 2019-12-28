@@ -1,9 +1,10 @@
 use crate::error::{Error, Result};
 
 use flow_core::address::{Address, Length};
-use flow_core::arch::{ArchitectureTrait, InstructionSet};
+use flow_core::arch::{self, ArchitectureTrait, InstructionSet};
 use flow_core::mem::{VirtualReadHelper, VirtualReadHelperFuncs};
 
+use byteorder::{BigEndian, ByteOrder, LittleEndian};
 use widestring::U16CString;
 
 pub trait VirtualReadUnicodeString {
@@ -63,7 +64,13 @@ impl<T: ArchitectureTrait + VirtualReadHelper + VirtualReadHelperFuncs> VirtualR
 
         // TODO: check length % 2 == 0
 
-        let _content: Vec<u16> = unsafe { std::mem::transmute::<Vec<u8>, Vec<u16>>(content) };
-        Ok(U16CString::from_vec_with_nul(_content)?.to_string_lossy())
+        let content16 = content
+            .chunks_exact(2)
+            .map(|b| match arch.instruction_set.byte_order() {
+                arch::ByteOrder::LittleEndian => LittleEndian::read_u16(b),
+                arch::ByteOrder::BigEndian => BigEndian::read_u16(b),
+            })
+            .collect::<Vec<u16>>();
+        Ok(U16CString::from_vec_with_nul(content16)?.to_string_lossy())
     }
 }

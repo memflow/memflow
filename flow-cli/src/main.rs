@@ -1,4 +1,3 @@
-mod config;
 mod init;
 
 #[macro_use]
@@ -11,11 +10,6 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use flow_core::*;
-
-#[cfg(target_os = "linux")]
-use flow_core::connector::qemu_procfs;
-
-use flow_core::connector::bridge::client::BridgeClient;
 
 use flow_win32;
 use flow_win32::win::process::*;
@@ -36,7 +30,7 @@ fn main() {
     }
 
     // TODO: feature
-    let conn = init::init_bridge_connector(&argv).unwrap();
+    let conn = init::init_connector(&argv).unwrap();
 
     // TODO: osname from config/params?
     let connrc = Rc::new(RefCell::new(conn));
@@ -60,56 +54,61 @@ fn main() {
                                 println!("{}", name);
                             }
                         });
-                },
-                ("export", Some(export_matches)) => {
-                    match export_matches.subcommand() {
-                        ("ls", Some(ls_matches)) => {
-                            let prc = os.kernel_process().unwrap();
-                            let mut md = prc.module(ls_matches.value_of("module_name").unwrap()).unwrap();
-                            md.export_list().unwrap().iter().for_each(|e| {
-                                println!("0x{:x} 0x{:x} 0x{:x} {}", e.offset, e.rva, e.size, e.name);
-                            });
-                        },
-                        _ => println!("invalid command {:?}", export_matches),
+                }
+                ("export", Some(export_matches)) => match export_matches.subcommand() {
+                    ("ls", Some(ls_matches)) => {
+                        let prc = os.kernel_process().unwrap();
+                        let mut md = prc
+                            .module(ls_matches.value_of("module_name").unwrap())
+                            .unwrap();
+                        md.export_list().unwrap().iter().for_each(|e| {
+                            println!("0x{:x} 0x{:x} 0x{:x} {}", e.offset, e.rva, e.size, e.name);
+                        });
                     }
+                    _ => println!("invalid command {:?}", export_matches),
                 },
                 _ => println!("invalid command {:?}", module_matches),
             },
             _ => println!("invalid command {:?}", kernel_matches),
         },
-        ("process", Some(kernel_matches)) => {
-            match kernel_matches.subcommand() {
-                ("ls", Some(_)) => {
-                    os.process_iter().for_each(|mut p| {
-                        println!("{} {}", p.pid().unwrap(), p.name().unwrap());
+        ("process", Some(kernel_matches)) => match kernel_matches.subcommand() {
+            ("ls", Some(_)) => {
+                os.process_iter().for_each(|mut p| {
+                    println!("{} {}", p.pid().unwrap(), p.name().unwrap());
+                });
+            }
+            ("module", Some(module_matches)) => match module_matches.subcommand() {
+                ("ls", Some(ls_matches)) => {
+                    let prc = os
+                        .process(ls_matches.value_of("process_name").unwrap())
+                        .unwrap();
+                    prc.module_iter().unwrap().for_each(|mut m| {
+                        println!(
+                            "0x{:x} 0x{:x} {}",
+                            m.base().unwrap_or_default(),
+                            m.size().unwrap_or_default(),
+                            m.name().unwrap_or_else(|_| "{error}".to_owned())
+                        )
                     });
                 }
-                ("module", Some(module_matches)) => {
-                    match module_matches.subcommand() {
-                        ("ls", Some(ls_matches)) => {
-                            let prc = os.process(ls_matches.value_of("process_name").unwrap()).unwrap();
-                            prc.module_iter().unwrap().for_each(|mut m| {
-                                println!("0x{:x} 0x{:x} {}", m.base().unwrap_or_default(), m.size().unwrap_or_default(), m.name().unwrap_or_else(|_| "{error}".to_owned()))
-                            });
-                        },
-                        ("export", Some(export_matches)) => {
-                            match export_matches.subcommand() {
-                                ("ls", Some(ls_matches)) => {
-                                    let prc = os.process(ls_matches.value_of("process_name").unwrap()).unwrap();
-                                    let mut md = prc.module(ls_matches.value_of("module_name").unwrap()).unwrap();
-                                    md.export_list().unwrap().iter().for_each(|e| {
-                                        println!("0x{:x} 0x{:x} 0x{:x} {}", e.offset, e.rva, e.size, e.name);
-                                    });
-                                },
-                                _ => println!("invalid command {:?}", export_matches),
-                            }
-                        },
-                        _ => println!("invalid command {:?}", module_matches),
+                ("export", Some(export_matches)) => match export_matches.subcommand() {
+                    ("ls", Some(ls_matches)) => {
+                        let prc = os
+                            .process(ls_matches.value_of("process_name").unwrap())
+                            .unwrap();
+                        let mut md = prc
+                            .module(ls_matches.value_of("module_name").unwrap())
+                            .unwrap();
+                        md.export_list().unwrap().iter().for_each(|e| {
+                            println!("0x{:x} 0x{:x} 0x{:x} {}", e.offset, e.rva, e.size, e.name);
+                        });
                     }
-                }
-                _ => println!("invalid command {:?}", kernel_matches),
-            }
-        }
+                    _ => println!("invalid command {:?}", export_matches),
+                },
+                _ => println!("invalid command {:?}", module_matches),
+            },
+            _ => println!("invalid command {:?}", kernel_matches),
+        },
         ("keylog", Some(_)) => {
             println!("keylogging");
             let mut kbd = Keyboard::with(&os).unwrap();

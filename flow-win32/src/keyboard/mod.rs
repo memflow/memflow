@@ -36,7 +36,7 @@ impl<T: VirtualRead> Keyboard<T> {
         let export_addr = pe::find_export_offset(buf, "gafAsyncKeyState")?;
 
         Ok(Self {
-            user_process: user_process.clone(),
+            user_process,
             key_state_addr: base + export_addr,
         })
     }

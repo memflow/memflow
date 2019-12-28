@@ -18,7 +18,7 @@ use flow_core::connector::qemu_procfs;
 use flow_core::connector::bridge::client::BridgeClient;
 
 use flow_win32;
-use flow_win32::win::process::ProcessModuleTrait; // TODO: import in flow_win32
+use flow_win32::win::process::*;
 
 // TODO: this is os agnostic and just temp?
 use flow_win32::keyboard::Keyboard;
@@ -68,19 +68,30 @@ fn main() {
         ("process", Some(kernel_matches)) => {
             match kernel_matches.subcommand() {
                 ("ls", Some(_)) => {
-                    os.process_iter().for_each(|mut m| {
-                        if let Ok(pid) = m.pid() {
-                            if let Ok(name) = m.name() {
-                                println!("{} {}", pid, name);
-                            }
-                        }
+                    os.process_iter().for_each(|mut p| {
+                        println!("{} {}", p.pid().unwrap(), p.name().unwrap());
                     });
                 }
                 ("module", Some(module_matches)) => {
                     match module_matches.subcommand() {
-                        ("ls", Some(_process)) => {
-                            println!("test1") // TODO: specify process name/pid
-                        }
+                        ("ls", Some(ls_matches)) => {
+                            let prc = os.process(ls_matches.value_of("process_name").unwrap()).unwrap();
+                            prc.module_iter().unwrap().for_each(|mut m| {
+                                println!("0x{:x} 0x{:x} {}", m.base().unwrap_or_default(), m.size().unwrap_or_default(), m.name().unwrap_or_else(|_| "{error}".to_owned()))
+                            });
+                        },
+                        ("export", Some(export_matches)) => {
+                            match export_matches.subcommand() {
+                                ("ls", Some(ls_matches)) => {
+                                    let prc = os.process(ls_matches.value_of("process_name").unwrap()).unwrap();
+                                    let mut md = prc.module(ls_matches.value_of("module_name").unwrap()).unwrap();
+                                    md.export_list().unwrap().iter().for_each(|e| {
+                                        println!("0x{:x} 0x{:x} 0x{:x} {}", e.offset, e.rva, e.size, e.name);
+                                    });
+                                },
+                                _ => println!("invalid command {:?}", export_matches),
+                            }
+                        },
                         _ => println!("invalid command {:?}", module_matches),
                     }
                 }

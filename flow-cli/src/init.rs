@@ -5,9 +5,13 @@ use crate::config;
 use flow_core::mem::*;
 use flow_core::{Error, Result};
 
-use flow_core::connector::bridge::client::BridgeClient;
+// TODO: feature
+#[cfg(any(linux))]
 use flow_core::connector::qemu_procfs;
 
+use flow_core::connector::bridge::client::BridgeClient;
+
+/*
 pub enum Connector {
     Bridge(BridgeClient),
     QemuProcFS(qemu_procfs::Memory),
@@ -20,8 +24,17 @@ pub fn init_connector(argv: &ArgMatches) -> Result<Connector> {
         _ => panic!("invalid connector type"), // TODO: can clap restrict this?
     }
 }
+*/
 
-fn init_bridge_connector(argv: &ArgMatches) -> Result<BridgeClient> {
+// TODO: feature
+#[cfg(any(linux))]
+pub fn init_bridge_connector(argv: &ArgMatches) -> Result<qemu_procfs::Memory> {
+    qemu_procfs::Memory::new().unwrap()
+}
+
+// TODO: feature
+#[cfg(not(any(linux)))]
+pub fn init_bridge_connector(argv: &ArgMatches) -> Result<BridgeClient> {
     let url = {
         if argv.is_present("url") {
             argv.value_of("url").unwrap().to_owned()

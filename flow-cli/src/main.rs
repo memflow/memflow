@@ -10,8 +10,13 @@ use simple_logger;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use flow_core::connector::qemu_procfs;
 use flow_core::*;
+
+// TODO: feature
+#[cfg(any(linux))]
+use flow_core::connector::qemu_procfs;
+
+use flow_core::connector::bridge::client::BridgeClient;
 
 use flow_win32;
 use flow_win32::win::process::ProcessModuleTrait; // TODO: import in flow_win32
@@ -31,8 +36,8 @@ fn main() {
         _ => simple_logger::init_with_level(Level::Error).unwrap(),
     }
 
-    //let conn = init::init_connector(&argv).unwrap();
-    let conn = qemu_procfs::Memory::new().unwrap();
+    // TODO: feature
+    let conn = init::init_bridge_connector(&argv).unwrap();
 
     // TODO: osname from config/params?
     let connrc = Rc::new(RefCell::new(conn));

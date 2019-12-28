@@ -5,8 +5,7 @@ use crate::config;
 use flow_core::mem::*;
 use flow_core::{Error, Result};
 
-// TODO: feature
-#[cfg(any(linux))]
+#[cfg(target_os = "linux")]
 use flow_core::connector::qemu_procfs;
 
 use flow_core::connector::bridge::client::BridgeClient;
@@ -27,13 +26,13 @@ pub fn init_connector(argv: &ArgMatches) -> Result<Connector> {
 */
 
 // TODO: feature
-#[cfg(any(linux))]
+#[cfg(target_os = "linux")]
 pub fn init_bridge_connector(argv: &ArgMatches) -> Result<qemu_procfs::Memory> {
-    qemu_procfs::Memory::new().unwrap()
+    qemu_procfs::Memory::new()
 }
 
 // TODO: feature
-#[cfg(not(any(linux)))]
+#[cfg(not(target_os = "linux"))]
 pub fn init_bridge_connector(argv: &ArgMatches) -> Result<BridgeClient> {
     let url = {
         if argv.is_present("url") {

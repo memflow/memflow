@@ -12,8 +12,7 @@ use std::rc::Rc;
 
 use flow_core::*;
 
-// TODO: feature
-#[cfg(any(linux))]
+#[cfg(target_os = "linux")]
 use flow_core::connector::qemu_procfs;
 
 use flow_core::connector::bridge::client::BridgeClient;

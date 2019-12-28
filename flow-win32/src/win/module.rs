@@ -1,7 +1,13 @@
 pub mod iter;
-pub use iter::ModuleIterator;
+pub use iter::*;
+
+pub mod export;
+pub use export::*;
 
 use crate::error::{Error, Result};
+
+use std::cell::RefCell;
+use std::rc::Rc;
 
 use flow_core::address::{Address, Length};
 use flow_core::arch::{ArchitectureTrait, InstructionSet};
@@ -9,8 +15,8 @@ use flow_core::mem::*;
 use flow_core::process::ModuleTrait;
 use flow_core::*;
 
-use std::cell::RefCell;
-use std::rc::Rc;
+use goblin::pe::options::ParseOptions;
+use goblin::pe::PE;
 
 use crate::win::process::ProcessModuleTrait;
 use crate::win::unicode_string::VirtualReadUnicodeString;
@@ -133,6 +139,22 @@ where
 
     pub fn export(&mut self, name: &str) -> Result<Address> {
         Ok(self.base()? + self.export_offset(name)?)
+    }
+
+    pub fn export_list(&mut self) -> Result<Vec<Export>> {
+        let base = self.base()?;
+        let size = self.size()?;
+
+        let process = &mut self.process.borrow_mut();
+        let buf = process.virt_read(base, size)?;
+
+        let mut pe_opts = ParseOptions::default();
+        pe_opts.resolve_rva = false;
+        let pe = PE::parse_with_opts(&buf, &pe_opts)?;
+        Ok(pe.exports
+                .iter()
+                .map(Export::from)
+                .collect::<Vec<Export>>())
     }
 
     // section

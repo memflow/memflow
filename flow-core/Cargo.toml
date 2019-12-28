@@ -26,7 +26,11 @@ clap = "2.33.0"
 
 [features]
 default = []
-emulator = ["unicorn"]
+bridge = [] # enables the connector bridge (requires tokio)
+emulator = ["unicorn"] # enables the process emulator (requires unicorn engine)
+
+[target.'cfg(linux)'.features]
+qemu_procfs = [] # enables the qemu_procfs connector (requires procfs)
 
 [[example]]
 name = "read_bridge"

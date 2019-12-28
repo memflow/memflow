@@ -1,5 +1,5 @@
 use crate::error::{Error, Result};
-use log::{debug, info, trace};
+use log::{info, trace};
 
 use super::Windows;
 

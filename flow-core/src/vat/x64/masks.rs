@@ -25,7 +25,7 @@ macro_rules! is_transition_page {
     };
 }
 
-#[macro_export]
+#[allow(clippy::all)]
 macro_rules! is_prototype_page {
     ($a:expr) => {
         get_bit!($a, 10)

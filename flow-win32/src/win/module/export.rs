@@ -1,6 +1,6 @@
-use flow_core::*;
 use flow_core::address::Length;
 use flow_core::process::ExportTrait;
+use flow_core::*;
 
 // TODO: debug trait impl
 pub struct Export {

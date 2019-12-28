@@ -60,7 +60,19 @@ fn main() {
                                 println!("{}", name);
                             }
                         });
-                }
+                },
+                ("export", Some(export_matches)) => {
+                    match export_matches.subcommand() {
+                        ("ls", Some(ls_matches)) => {
+                            let prc = os.kernel_process().unwrap();
+                            let mut md = prc.module(ls_matches.value_of("module_name").unwrap()).unwrap();
+                            md.export_list().unwrap().iter().for_each(|e| {
+                                println!("0x{:x} 0x{:x} 0x{:x} {}", e.offset, e.rva, e.size, e.name);
+                            });
+                        },
+                        _ => println!("invalid command {:?}", export_matches),
+                    }
+                },
                 _ => println!("invalid command {:?}", module_matches),
             },
             _ => println!("invalid command {:?}", kernel_matches),

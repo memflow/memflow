@@ -102,7 +102,11 @@ fn main() {
             ("ls", Some(_)) => {
                 println!("pid name");
                 os.process_iter().for_each(|mut p| {
-                    println!("{} {}", p.pid().unwrap(), p.name().unwrap());
+                    println!(
+                        "{} {}",
+                        p.pid().unwrap_or_default(),
+                        m.name().unwrap_or_else(|_| "{error}".to_owned())
+                    );
                 });
             }
             ("module", Some(module_matches)) => match module_matches.subcommand() {

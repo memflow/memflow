@@ -42,15 +42,15 @@ impl<'a, T: PhysicalRead + VirtualAddressTranslation> VirtualRead for VatImpl<'a
                 .0
                 .vtop(arch, dtb, base)
                 .unwrap_or_else(|_| Address::null());
-            if !pa.is_null() {
+            if pa.is_null() {
+                // skip
+                trace!("pa is null, skipping page");
+            } else {
                 let mem = self.0.phys_read(pa, aligned_len)?;
                 let start = (base - addr).as_usize();
                 mem.iter().enumerate().for_each(|(i, b)| {
                     result[start + i] = *b;
                 });
-            } else {
-                // skip
-                trace!("pa is null, skipping page");
             }
 
             base += aligned_len;
@@ -71,13 +71,13 @@ impl<'a, T: PhysicalRead + PhysicalWrite + VirtualAddressTranslation> VirtualWri
         data: &[u8],
     ) -> Result<Length> {
         let pa = self.0.vtop(arch, dtb, addr)?;
-        if !pa.is_null() {
-            self.0.phys_write(pa, data)
-        } else {
+        if pa.is_null() {
             // TODO: add more debug info
             Err(Error::new(
                 "virt_write(): unable to resolve physical address",
             ))
+        } else {
+            self.0.phys_write(pa, data)
         }
     }
 }

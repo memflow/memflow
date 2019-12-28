@@ -62,7 +62,7 @@ where
         // read next module entry (list_entry is first element in module)
         let mut next = process
             .virt_read_addr(self.peb_entry + _list_entry_blink)
-            .unwrap(); // TODO: convert to Option
+            .ok()?;
 
         // if next process is 'system' again just null it
         if next == self.first_peb_entry {

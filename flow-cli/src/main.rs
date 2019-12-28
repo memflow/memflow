@@ -72,28 +72,26 @@ fn main() {
                     }
                     _ => println!("invalid command {:?}", export_matches),
                 },
-                ("section", Some(section_matches)) => {
-                    match section_matches.subcommand() {
-                        ("ls", Some(ls_matches)) => {
-                            let prc = os.kernel_process().unwrap();
-                            let mut md = prc
-                                .module(ls_matches.value_of("module_name").unwrap())
-                                .unwrap();
-                            println!("virtual_address virtual_size size_of_raw_data characteristics name");
-                            md.sections().unwrap().iter().for_each(|s| {
-                                println!(
-                                    "0x{:x} 0x{:x} 0x{:x} 0x{:x} {}",
-                                    s.virtual_address,
-                                    s.virtual_size,
-                                    s.size_of_raw_data,
-                                    s.characteristics,
-                                    s.name
-                                );
-                            });
-                        }
-                        _ => println!("invalid command {:?}", section_matches),
+                ("section", Some(section_matches)) => match section_matches.subcommand() {
+                    ("ls", Some(ls_matches)) => {
+                        let prc = os.kernel_process().unwrap();
+                        let mut md = prc
+                            .module(ls_matches.value_of("module_name").unwrap())
+                            .unwrap();
+                        println!("virt_addr virt_size size_of_raw_data characteristics name");
+                        md.sections().unwrap().iter().for_each(|s| {
+                            println!(
+                                "0x{:x} 0x{:x} 0x{:x} 0x{:x} {}",
+                                s.virt_addr,
+                                s.virt_size,
+                                s.size_of_raw_data,
+                                s.characteristics,
+                                s.name
+                            );
+                        });
                     }
-                }
+                    _ => println!("invalid command {:?}", section_matches),
+                },
                 _ => println!("invalid command {:?}", module_matches),
             },
             _ => println!("invalid command {:?}", kernel_matches),
@@ -105,7 +103,7 @@ fn main() {
                     println!(
                         "{} {}",
                         p.pid().unwrap_or_default(),
-                        m.name().unwrap_or_else(|_| "{error}".to_owned())
+                        p.name().unwrap_or_else(|_| "{error}".to_owned())
                     );
                 });
             }

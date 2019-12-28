@@ -41,5 +41,27 @@ subcommands:
         subcommands:
             - ls:
                 about: lists all running processes
+            - module:
+                subcommands:
+                    - ls:
+                        about: lists all modules within the given process
+                        args:
+                            - process_name:
+                                help: the name of the process thats being inspected
+                                index: 1
+                                required: true
+                    - export:
+                        subcommands:
+                            - ls:
+                                about: lists all module exports within the given process and module
+                                args:
+                                    - process_name:
+                                        help: the name of the process thats being inspected
+                                        index: 1
+                                        required: true
+                                    - module_name:
+                                        help: the name of the module thats being inspected
+                                        index: 2
+                                        required: true
     - keylog:
         about: logs all pressed keys

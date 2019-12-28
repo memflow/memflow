@@ -2,6 +2,7 @@ use flow_core::*;
 use flow_core::address::Length;
 use flow_core::process::ExportTrait;
 
+// TODO: debug trait impl
 pub struct Export {
     pub name: String,
     pub offset: Length,

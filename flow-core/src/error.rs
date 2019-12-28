@@ -86,6 +86,7 @@ impl std::convert::From<std::ffi::NulError> for Error {
     }
 }
 
+#[cfg(any(linux))]
 impl std::convert::From<procfs::ProcError> for Error {
     fn from(error: procfs::ProcError) -> Self {
         Self::new(error)

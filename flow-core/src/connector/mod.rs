@@ -1,4 +1,4 @@
 pub mod bridge;
-pub use bridge::*;
 
+#[cfg(any(linux))]
 pub mod qemu_procfs;

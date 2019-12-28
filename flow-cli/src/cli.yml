@@ -36,6 +36,15 @@ subcommands:
                 subcommands:
                     - ls:
                         about: lists loaded kernel modules (drivers)
+                    - export:
+                        subcommands:
+                            - ls:
+                                about: lists all module exports within the given kernel module
+                                args:
+                                    - module_name:
+                                        help: the name of the kernel module thats being inspected
+                                        index: 1
+                                        required: true
     - process:
         about: process interface
         subcommands:

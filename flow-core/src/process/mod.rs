@@ -30,3 +30,8 @@ pub trait ModuleTrait {
     fn size(&mut self) -> Result<Length>;
     fn name(&mut self) -> Result<String>;
 }
+
+pub trait ExportTrait {
+    fn name(&self) -> String;
+    fn offset(&self) -> Length;
+}

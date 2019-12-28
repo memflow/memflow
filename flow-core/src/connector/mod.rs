@@ -1,4 +1,4 @@
 pub mod bridge;
 
-#[cfg(any(linux))]
+#[cfg(target_os = "linux")]
 pub mod qemu_procfs;

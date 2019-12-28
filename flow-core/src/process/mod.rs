@@ -32,6 +32,12 @@ pub trait ModuleTrait {
 }
 
 pub trait ExportTrait {
-    fn name(&self) -> String;
+    fn name(&self) -> &str;
     fn offset(&self) -> Length;
+}
+
+pub trait SectionTrait {
+    fn name(&self) -> &str;
+    fn virt_addr(&self) -> Address;
+    fn virt_size(&self) -> Length;
 }

@@ -19,8 +19,8 @@ use flow_core::*;
 #[derive(Debug, Clone)]
 pub struct Section {
     pub name: String,
-    pub virtual_address: Address,
-    pub virtual_size: Length,
+    pub virt_addr: Address,
+    pub virt_size: Length,
     pub size_of_raw_data: Length,
     pub characteristics: u32,
 }
@@ -29,22 +29,24 @@ impl From<&goblin::pe::section_table::SectionTable> for Section {
     fn from(s: &goblin::pe::section_table::SectionTable) -> Self {
         Self {
             name: String::from_utf8(s.name.to_vec()).unwrap_or_default(),
-            virtual_address: addr!(s.virtual_address),
-            virtual_size: len!(s.virtual_size),
+            virt_addr: addr!(s.virtual_address),
+            virt_size: len!(s.virtual_size),
             size_of_raw_data: len!(s.size_of_raw_data),
             characteristics: s.characteristics,
         }
     }
 }
 
-/*
-impl ExportTrait for Export {
-    fn name(&self) -> String {
-        self.name.clone()
+impl SectionTrait for Section {
+    fn name(&self) -> &str {
+        self.name.as_str()
     }
 
-    fn offset(&self) -> Length {
-        self.offset
+    fn virt_addr(&self) -> Address {
+        self.virt_addr
+    }
+
+    fn virt_size(&self) -> Length {
+        self.virt_size
     }
 }
-*/

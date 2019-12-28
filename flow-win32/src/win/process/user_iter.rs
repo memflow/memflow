@@ -51,7 +51,7 @@ impl<T: VirtualRead> Iterator for ProcessIterator<T> {
         // read next eprocess entry
         let mut next = VirtualReader::with(&mut **memory, start_block.arch, start_block.dtb)
             .virt_read_addr(self.eprocess + _eprocess_links + _list_entry_blink)
-            .unwrap(); // TODO: convert to Option
+            .ok()?;
         if !next.is_null() {
             next -= _eprocess_links;
         }

@@ -23,8 +23,8 @@ impl<'a> From<&goblin::pe::export::Export<'a>> for Export {
 }
 
 impl ExportTrait for Export {
-    fn name(&self) -> String {
-        self.name.clone()
+    fn name(&self) -> &str {
+        self.name.as_str()
     }
 
     fn offset(&self) -> Length {

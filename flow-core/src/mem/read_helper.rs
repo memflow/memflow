@@ -305,7 +305,7 @@ impl<T: VirtualReadHelper + ArchitectureTrait + TypeArchitectureTrait> VirtualRe
 
     fn virt_read_cstr(&mut self, addr: Address, len: usize) -> Result<String> {
         let mut r = self.virt_read(addr, len!(len))?;
-        if let Some((n, _)) = r.iter().enumerate().filter(|(_i, c)| **c == 0u8).nth(0) {
+        if let Some((n, _)) = r.iter().enumerate().filter(|(_i, c)| **c == 0_u8).nth(0) {
             r.truncate(n);
         }
 

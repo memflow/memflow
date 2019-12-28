@@ -4,6 +4,9 @@ pub use iter::*;
 pub mod export;
 pub use export::*;
 
+pub mod section;
+pub use section::*;
+
 use crate::error::Result;
 
 use std::cell::RefCell;
@@ -141,7 +144,7 @@ where
         Ok(self.base()? + self.export_offset(name)?)
     }
 
-    pub fn export_list(&mut self) -> Result<Vec<Export>> {
+    pub fn exports(&mut self) -> Result<Vec<Export>> {
         let base = self.base()?;
         let size = self.size()?;
 
@@ -155,6 +158,43 @@ where
     }
 
     // section
+    pub fn section(&mut self, name: &str) -> Result<Section> {
+        // TODO: cache pe in this module?
+
+        let base = self.base()?;
+        let size = self.size()?;
+
+        let process = &mut self.process.borrow_mut();
+        let buf = process.virt_read(base, size)?;
+
+        let mut pe_opts = ParseOptions::default();
+        pe_opts.resolve_rva = false;
+        let pe = PE::parse_with_opts(&buf, &pe_opts)?;
+        Ok(pe
+            .sections
+            .iter()
+            .filter(|s| s.real_name.clone().unwrap_or_default() == name)
+            .map(Section::from)
+            .nth(0)
+            .ok_or_else(|| "unable to find section")?)
+    }
+
+    pub fn sections(&mut self) -> Result<Vec<Section>> {
+        let base = self.base()?;
+        let size = self.size()?;
+
+        let process = &mut self.process.borrow_mut();
+        let buf = process.virt_read(base, size)?;
+
+        let mut pe_opts = ParseOptions::default();
+        pe_opts.resolve_rva = false;
+        let pe = PE::parse_with_opts(&buf, &pe_opts)?;
+        Ok(pe
+            .sections
+            .iter()
+            .map(Section::from)
+            .collect::<Vec<Section>>())
+    }
 
     // signature
 

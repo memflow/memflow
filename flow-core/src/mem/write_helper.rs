@@ -117,7 +117,7 @@ macro_rules! arch_write_vec_type {
         $value
             .into_iter()
             .flat_map(|v| {
-                let mut u = vec![0u8; $elem_size.as_usize()];
+                let mut u = vec![0_u8; $elem_size.as_usize()];
                 match $byte_order {
                     arch::ByteOrder::LittleEndian => LittleEndian::$func(&mut u[..], v),
                     arch::ByteOrder::BigEndian => BigEndian::$func(&mut u[..], v),
@@ -174,7 +174,7 @@ impl<T: VirtualWriteHelper + ArchitectureTrait + TypeArchitectureTrait> VirtualW
 
     fn virt_write_u64(&mut self, addr: Address, data: u64) -> Result<Length> {
         let ta = self.type_arch()?;
-        let mut v = vec![0u8; ta.instruction_set.len_u64().as_usize()];
+        let mut v = vec![0_u8; ta.instruction_set.len_u64().as_usize()];
         arch_write_type!(
             addr,
             &mut v[..],
@@ -187,7 +187,7 @@ impl<T: VirtualWriteHelper + ArchitectureTrait + TypeArchitectureTrait> VirtualW
 
     fn virt_write_u32(&mut self, addr: Address, data: u32) -> Result<Length> {
         let ta = self.type_arch()?;
-        let mut v = vec![0u8; ta.instruction_set.len_u32().as_usize()];
+        let mut v = vec![0_u8; ta.instruction_set.len_u32().as_usize()];
         arch_write_type!(
             addr,
             &mut v[..],
@@ -200,7 +200,7 @@ impl<T: VirtualWriteHelper + ArchitectureTrait + TypeArchitectureTrait> VirtualW
 
     fn virt_write_u16(&mut self, addr: Address, data: u16) -> Result<Length> {
         let ta = self.type_arch()?;
-        let mut v = vec![0u8; ta.instruction_set.len_u16().as_usize()];
+        let mut v = vec![0_u8; ta.instruction_set.len_u16().as_usize()];
         arch_write_type!(
             addr,
             &mut v[..],
@@ -218,7 +218,7 @@ impl<T: VirtualWriteHelper + ArchitectureTrait + TypeArchitectureTrait> VirtualW
 
     fn virt_write_i64(&mut self, addr: Address, data: i64) -> Result<Length> {
         let ta = self.type_arch()?;
-        let mut v = vec![0u8; ta.instruction_set.len_i64().as_usize()];
+        let mut v = vec![0_u8; ta.instruction_set.len_i64().as_usize()];
         arch_write_type!(
             addr,
             &mut v[..],
@@ -231,7 +231,7 @@ impl<T: VirtualWriteHelper + ArchitectureTrait + TypeArchitectureTrait> VirtualW
 
     fn virt_write_i32(&mut self, addr: Address, data: i32) -> Result<Length> {
         let ta = self.type_arch()?;
-        let mut v = vec![0u8; ta.instruction_set.len_i32().as_usize()];
+        let mut v = vec![0_u8; ta.instruction_set.len_i32().as_usize()];
         arch_write_type!(
             addr,
             &mut v[..],
@@ -244,7 +244,7 @@ impl<T: VirtualWriteHelper + ArchitectureTrait + TypeArchitectureTrait> VirtualW
 
     fn virt_write_i16(&mut self, addr: Address, data: i16) -> Result<Length> {
         let ta = self.type_arch()?;
-        let mut v = vec![0u8; ta.instruction_set.len_i16().as_usize()];
+        let mut v = vec![0_u8; ta.instruction_set.len_i16().as_usize()];
         arch_write_type!(
             addr,
             &mut v[..],
@@ -262,7 +262,7 @@ impl<T: VirtualWriteHelper + ArchitectureTrait + TypeArchitectureTrait> VirtualW
 
     fn virt_write_f32(&mut self, addr: Address, data: f32) -> Result<Length> {
         let ta = self.type_arch()?;
-        let mut v = vec![0u8; ta.instruction_set.len_f32().as_usize()];
+        let mut v = vec![0_u8; ta.instruction_set.len_f32().as_usize()];
         arch_write_type!(
             addr,
             &mut v[..],

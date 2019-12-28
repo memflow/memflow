@@ -321,7 +321,7 @@ impl<'a, R: MemoryReader<'a> + Arch> MemoryReaderHelper for R {
         len: usize,
     ) -> Result<String> {
         let mut r = self.as_bytes(addr, len!(len))?;
-        if let Some((n, _)) = r.iter().enumerate().filter(|(_i, c)| **c == 0u8).nth(0) {
+        if let Some((n, _)) = r.iter().enumerate().filter(|(_i, c)| **c == 0_u8).nth(0) {
             r.truncate(n);
         }
 

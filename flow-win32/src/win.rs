@@ -17,10 +17,9 @@ pub mod unicode_string;
 pub use unicode_string::*;
 
 pub mod module;
-pub use module::{Module, ModuleIterator};
+pub use module::*;
 pub mod process;
-use crate::win::process::ProcessModuleHelper;
-pub use process::{KernelProcess, ProcessIterator, ProcessModuleTrait, UserProcess};
+pub use process::*;
 
 use goblin::pe::options::ParseOptions;
 use goblin::pe::PE;

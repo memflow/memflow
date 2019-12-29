@@ -1,0 +1,14 @@
+[package]
+name = "flow-ffi"
+version = "0.1.0"
+authors = ["ko1N <ko1N1337@gmail.com>"]
+edition = "2018"
+
+[lib]
+name = "memflow"
+crate-type = ["cdylib"]
+
+[dependencies]
+flow-core = { path = "../flow-core" }
+flow-win32 = { path = "../flow-win32" }
+libc = "0.2"

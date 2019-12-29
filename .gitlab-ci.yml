@@ -55,6 +55,19 @@ linux-native:
     paths:
       - target/release/flow-cli
 
+linux-native-ffi-example:
+  stage: build_native
+  image: "rust:latest"
+  before_script:
+    - apt-get update
+    - apt-get install -yq capnproto
+  script:
+    - rustc --version
+    - cargo --version
+    - cargo build --release
+    - cd bindings/c/
+    - gcc -g example.c -o example -Wl,-rpath,../../target/release -lmemflow -L./../../target/release
+
 linux-musl:
   stage: build_cross
   before_script:

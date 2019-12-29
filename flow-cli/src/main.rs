@@ -41,6 +41,8 @@ fn main() {
     }
     .unwrap();
 
+    // TODO: interactive/non-interactive mode switch
+
     match argv.subcommand() {
         ("kernel", Some(kernel_matches)) => match kernel_matches.subcommand() {
             ("module", Some(module_matches)) => match module_matches.subcommand() {

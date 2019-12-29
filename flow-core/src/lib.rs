@@ -28,3 +28,6 @@ mod bridge_capnp {
 }
 
 pub mod connector;
+
+pub mod ida_pattern;
+pub use ida_pattern::*;

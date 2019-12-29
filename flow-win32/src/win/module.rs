@@ -126,6 +126,7 @@ where
     }
 }
 
+// TODO: move exports + sections into ModuleTrait...
 impl<T> Module<T>
 where
     T: ProcessModuleTrait + ArchitectureTrait + VirtualReadHelper + VirtualReadHelperFuncs,
@@ -195,17 +196,36 @@ where
             .map(Section::from)
             .collect::<Vec<Section>>())
     }
+}
 
-    // signature
-
-    pub fn signature(&mut self, _pattern: &str) -> Result<Length> {
-        let base = self.base()?;
-        let size = self.size()?;
-
+// TODO: should we really forward declare or have a back ref?
+// TODO: think about forwarding dtb/typearch trait
+// TODO: forward declare virtual read functions
+impl<T> VirtualReadHelper for Module<T>
+where
+    T: ProcessModuleTrait
+        + ArchitectureTrait
+        + VirtualReadHelperFuncs
+        + VirtualReadUnicodeString
+        + VirtualReadHelper,
+{
+    fn virt_read(&mut self, addr: Address, len: Length) -> flow_core::Result<Vec<u8>> {
         let process = &mut self.process.borrow_mut();
-        let _buf = process.virt_read(base, size)?;
+        process.virt_read(addr, len)
+    }
+}
 
-        Ok(Length::zero())
+impl<T> VirtualWriteHelper for Module<T>
+where
+    T: ProcessModuleTrait
+        + ArchitectureTrait
+        + VirtualReadHelperFuncs
+        + VirtualReadUnicodeString
+        + VirtualWriteHelper,
+{
+    fn virt_write(&mut self, addr: Address, data: &[u8]) -> flow_core::Result<Length> {
+        let process = &mut self.process.borrow_mut();
+        process.virt_write(addr, data)
     }
 }
 

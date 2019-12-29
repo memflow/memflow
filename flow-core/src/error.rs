@@ -86,6 +86,12 @@ impl std::convert::From<std::ffi::NulError> for Error {
     }
 }
 
+impl std::convert::From<regex::Error> for Error {
+    fn from(error: regex::Error) -> Self {
+        Self::new(error)
+    }
+}
+
 #[cfg(target_os = "linux")]
 impl std::convert::From<procfs::ProcError> for Error {
     fn from(error: procfs::ProcError) -> Self {

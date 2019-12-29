@@ -3,6 +3,8 @@ pub mod emulator;
 
 use crate::address::{Address, Length};
 use crate::error::Result;
+use crate::ida_pattern::*;
+use crate::mem::*;
 
 // TODO: add more?
 pub trait ProcessTrait {
@@ -40,4 +42,23 @@ pub trait SectionTrait {
     fn name(&self) -> &str;
     fn virt_addr(&self) -> Address;
     fn virt_size(&self) -> Length;
+}
+
+pub trait FindSignatureTrait {
+    fn signature(&mut self, pattern: &str) -> Result<Length>;
+}
+
+impl<T> FindSignatureTrait for T
+where
+    T: ModuleTrait + VirtualReadHelper,
+{
+    fn signature(&mut self, pattern: &str) -> Result<Length> {
+        let base = self.base()?;
+        let size = self.size()?;
+
+        let buf = self.virt_read(base, size)?;
+        let m = pattern.try_match_ida_regex(&buf[..])?;
+
+        Ok(len!(m.0))
+    }
 }

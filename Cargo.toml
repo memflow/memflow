@@ -2,10 +2,12 @@
 members = [
     "flow-core",
     "flow-win32",
+    "flow-ffi",
     "flow-cli",
 ]
 default-members = [
     "flow-core",
     "flow-win32",
+    "flow-ffi",
     "flow-cli",
 ]

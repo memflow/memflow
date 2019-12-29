@@ -12,7 +12,9 @@ use flow_core::process::ProcessTrait;
 use crate::kernel::StartBlock;
 
 pub mod types;
+
 pub mod unicode_string;
+pub use unicode_string::*;
 
 pub mod module;
 pub use module::{Module, ModuleIterator};

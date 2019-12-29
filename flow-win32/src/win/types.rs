@@ -66,10 +66,8 @@ impl Struct {
             }
         }
 
-        // TODO: transform this to a hashmap
         let mut field_map = HashMap::new();
         for class in &data.classes {
-            // TODO: filter class?
             class.fields.iter().for_each(|f| {
                 //println!("found offset: {:?}", f.name.to_string().into_owned());
                 field_map.insert(

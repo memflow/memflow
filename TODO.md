@@ -7,6 +7,7 @@ general:
 - reduce amount of generic constraints and extend them in implementations (e.g. for virtual reading)
 - virt_read_len / virt_read_len32 / virt_read_len64
 - move cli into seperate project or inetgrate qemu into this project... < DECIDE >
+- move module implementations and helpers (exports, sections, signatures) into core by trait extensions
 
 mt reading:
 - use connection pool and automatically choose a free connection for the reader
@@ -17,6 +18,8 @@ cli:
   - daemon with multivm/client support + socket support for faster access to a vm
   - try parsing a os -> read processes / parse pe stuff (exports, etc for use with grep)
   - select process -> read modules / parse pe stuff (for use with grep)
+- add capstone to disassemble addresses/code
+- add sigscanner
 
 va:
 - find a better way to encapsulate VatImpl

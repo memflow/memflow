@@ -2,7 +2,6 @@ use crate::error::{Error, Result};
 
 use log::info;
 
-use crate::address::*;
 use crate::*;
 
 use lazy_static::lazy_static;

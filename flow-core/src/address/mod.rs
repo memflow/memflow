@@ -71,3 +71,10 @@ macro_rules! len_gib {
         Length::from_gib($a)
     };
 }
+
+#[macro_export]
+macro_rules! offs {
+    ($a:expr) => {
+        Offset::from($a)
+    };
+}

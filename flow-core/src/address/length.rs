@@ -2,6 +2,8 @@ use std::default::Default;
 use std::fmt;
 use std::ops;
 
+use super::Address;
+
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Length(u64);
 
@@ -54,6 +56,12 @@ impl From<usize> for Length {
     }
 }
 
+impl From<Address> for Length {
+    fn from(item: Address) -> Self {
+        Self { 0: item.as_u64() }
+    }
+}
+
 impl Length {
     pub fn zero() -> Self {
         Length::from(0)
@@ -61,6 +69,14 @@ impl Length {
 
     pub fn is_zero(self) -> bool {
         self.0 == 0
+    }
+
+    pub fn as_addr(self) -> Address {
+        Address::from(self)
+    }
+
+    pub fn as_u32(self) -> u32 {
+        self.0 as u32
     }
 
     pub fn as_u64(self) -> u64 {

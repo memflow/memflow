@@ -2,7 +2,7 @@ use std::default::Default;
 use std::fmt;
 use std::ops;
 
-use crate::address::Length;
+use super::Length;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Address(u64);
@@ -37,6 +37,12 @@ impl From<usize> for Address {
     }
 }
 
+impl From<Length> for Address {
+    fn from(item: Length) -> Self {
+        Self { 0: item.as_u64() }
+    }
+}
+
 impl Address {
     pub fn null() -> Self {
         Address { 0: 0 }
@@ -44,6 +50,10 @@ impl Address {
 
     pub fn is_null(self) -> bool {
         self.0 == 0
+    }
+
+    pub fn as_len(self) -> Length {
+        Length::from(self)
     }
 
     pub fn as_u32(self) -> u32 {

@@ -51,6 +51,11 @@ hex:
 
 ffi:
 - https://github.com/jimfleming/rust-ffi-complex-types
+c -> buck + makefiles + package config + installer
+js -> fix compilation + example
+python -> add example
+more languages ->
+move bindings into root folder
 
 cli:
 - add a feature to parse / edit xmls via the cli so we can make sure all vms are setup for memflow

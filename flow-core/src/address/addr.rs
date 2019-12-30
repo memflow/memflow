@@ -2,7 +2,7 @@ use std::default::Default;
 use std::fmt;
 use std::ops;
 
-use super::Length;
+use super::{Length, Offset};
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Address(u64);
@@ -130,10 +130,35 @@ impl ops::SubAssign<Length> for Address {
     }
 }
 
+// Address + Offset => Address
+impl ops::Add<Offset> for Address {
+    type Output = Address;
+
+    fn add(self, other: Offset) -> Address {
+        Address::from(if other.as_i64() >= 0 {
+            self.0 + other.as_i64() as u64
+        } else {
+            self.0 - other.as_i64().abs() as u64
+        })
+    }
+}
+
+// Address -= Offset
+impl ops::AddAssign<Offset> for Address {
+    fn add_assign(&mut self, other: Offset) {
+        *self = Self {
+            0: if other.as_i64() >= 0 {
+                self.0 + other.as_i64() as u64
+            } else {
+                self.0 - other.as_i64().abs() as u64
+            },
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::address::Address;
-    use crate::address::Length;
+    use super::*;
 
     #[test]
     fn test_from() {
@@ -160,5 +185,11 @@ mod tests {
 
         assert_eq!(Address::from(10) - Address::from(5), Length::from(5));
         assert_eq!(Address::from(100) - Length::from(5), Address::from(95));
+    }
+
+    #[test]
+    fn test_offset() {
+        assert_eq!(Address::from(10) + Offset::from(5), Address::from(15));
+        assert_eq!(Address::from(10) + Offset::from(-5), Address::from(5));
     }
 }

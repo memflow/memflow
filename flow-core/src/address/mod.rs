@@ -1,10 +1,12 @@
 // TODO: rename addr to something useful or rename this crate?
 pub mod addr;
 pub mod length;
+pub mod offset;
 
 // forward declares
-pub use crate::address::addr::Address;
-pub use crate::address::length::Length;
+pub use addr::*;
+pub use length::*;
+pub use offset::*;
 
 // macro declares
 #[macro_export]

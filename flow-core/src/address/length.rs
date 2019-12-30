@@ -13,6 +13,7 @@ impl fmt::LowerHex for Length {
     }
 }
 
+// TODO: from iXX should use .abs()
 // TODO: sort them by likeliness
 impl From<u16> for Length {
     fn from(item: u16) -> Self {

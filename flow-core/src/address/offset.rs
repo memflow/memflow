@@ -1,8 +1,5 @@
 use std::default::Default;
 use std::fmt;
-use std::ops;
-
-use super::{Address, Length};
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Offset(i64);

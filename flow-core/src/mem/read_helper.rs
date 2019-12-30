@@ -133,6 +133,7 @@ pub trait VirtualReadHelperFuncs {
     fn virt_read_vec_f32(&mut self, addr: Address, count: usize) -> Result<Vec<f32>>;
 
     fn virt_read_cstr(&mut self, addr: Address, len: usize) -> Result<String>;
+    fn virt_read_cstr_ptr(&mut self, addr: Address) -> Result<String>;
 }
 
 impl<T: VirtualReadHelper + ArchitectureTrait + TypeArchitectureTrait> VirtualReadHelperFuncs
@@ -311,6 +312,11 @@ impl<T: VirtualReadHelper + ArchitectureTrait + TypeArchitectureTrait> VirtualRe
 
         let v = CString::new(r)?;
         Ok(String::from(v.to_string_lossy()))
+    }
+
+    fn virt_read_cstr_ptr(&mut self, addr: Address) -> Result<String> {
+        let ptr = self.virt_read_addr(addr)?;
+        self.virt_read_cstr(ptr, Length::from_kb(2).as_usize())
     }
 }
 

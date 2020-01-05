@@ -1,5 +1,6 @@
 general:
 - replace println!() with appropiate log macros
+- derive macro for VirtualRead/Write when physical read/write exists
 - pin rust version in ci
 - key logger / reading
 - process emulator
@@ -8,6 +9,9 @@ general:
 - virt_read_len / virt_read_len32 / virt_read_len64
 - move cli into seperate project or inetgrate qemu into this project... < DECIDE >
 - move module implementations and helpers (exports, sections, signatures) into core by trait extensions
+- Process/Module Iteration -> Streaming Iterator
+  - https://docs.rs/streaming-iterator/0.1.5/streaming_iterator/
+  - https://lukaskalbertodt.github.io/2018/08/03/solving-the-generalized-streaming-iterator-problem-without-gats.html
 
 mt reading:
 - use connection pool and automatically choose a free connection for the reader

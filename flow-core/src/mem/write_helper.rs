@@ -128,8 +128,9 @@ macro_rules! arch_write_vec_type {
     };
 }
 
-impl<T: VirtualWriteHelper + ArchitectureTrait + TypeArchitectureTrait> VirtualWriteHelperFuncs
-    for T
+impl<T> VirtualWriteHelperFuncs for T
+where
+    T: VirtualWriteHelper + ArchitectureTrait + TypeArchitectureTrait,
 {
     /*unsafe fn virt_write_raw<U>(&mut self, addr: Address, data: U) -> Result<Length> {
         let s = mem::size_of::<U>();

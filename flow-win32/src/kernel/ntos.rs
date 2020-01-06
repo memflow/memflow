@@ -8,10 +8,9 @@ use flow_core::address::{Address, Length};
 use flow_core::arch::{self, InstructionSet};
 use flow_core::mem::VirtualRead;
 
-use goblin::pe::options::ParseOptions;
-use goblin::pe::PE;
-
 use crate::kernel::StartBlock;
+
+use pelite::PeView;
 
 // TODO: -> Result<WinProcess>
 pub fn find<T: VirtualRead>(mem: &mut T, start_block: &StartBlock) -> Result<Address> {
@@ -53,17 +52,14 @@ fn probe_pe_header<T: VirtualRead>(
         )
         .unwrap();
 
-    let mut pe_opts = ParseOptions::default();
-    pe_opts.resolve_rva = false;
-
-    let pe = match PE::parse_with_opts(&probe_buf, &pe_opts) {
+    let pe = match PeView::from_bytes(&probe_buf) {
         Ok(pe) => {
-            trace!("find_x64_with_va: found pe header:\n{:?}", pe);
+            trace!("probe_pe_header: found pe header.\n");
             pe
         }
         Err(e) => {
             trace!(
-                "find_x64_with_va: potential pe header at offset {:x} could not be probed: {:?}",
+                "probe_pe_header: potential pe header at offset {:x} could not be probed: {:?}",
                 probe_addr,
                 e
             );
@@ -71,14 +67,12 @@ fn probe_pe_header<T: VirtualRead>(
         }
     };
 
+    let name = pe.exports()?.dll_name()?.to_str()?;
     info!(
-        "find_x64_with_va: found pe header for {}",
-        pe.name.unwrap_or_default()
+        "probe_pe_header: found pe header for {}",
+        name
     );
-    Ok(pe
-        .name
-        .ok_or_else(|| Error::new("pe name could not be parsed"))?
-        .to_owned())
+    Ok(name.to_string())
 }
 
 fn find_x64_with_va<T: VirtualRead>(mem: &mut T, start_block: &StartBlock) -> Result<Address> {

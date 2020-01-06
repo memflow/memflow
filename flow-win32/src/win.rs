@@ -1,7 +1,5 @@
 use crate::error::{Error, Result};
 
-use log::info;
-
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -21,8 +19,9 @@ pub use module::*;
 pub mod process;
 pub use process::*;
 
-use goblin::pe::options::ParseOptions;
-use goblin::pe::PE;
+use crate::kernel::ntos;
+
+use pelite::{self, pe64::exports::Export, PeView};
 
 // TODO: cache processes somewhat?
 pub struct Windows<T: VirtualRead> {
@@ -58,23 +57,24 @@ impl<T: VirtualRead> Windows<T> {
         let clone = self.clone();
 
         let memory = &mut clone.mem.borrow_mut();
+
+        // fetch ntoskrnl
+        let header_buf =
+            ntos::try_fetch_pe_header(&mut **memory, &clone.start_block, clone.kernel_base)?;
+        let header = PeView::from_bytes(&header_buf)?;
+
+        // PsActiveProcessHead
+        let module_list = match header.get_export_by_name("PsLoadedModuleList")? {
+            Export::Symbol(s) => clone.kernel_base + Length::from(*s),
+            Export::Forward(_) => {
+                return Err(Error::new(
+                    "PsLoadedModuleList found but it was a forwarded export",
+                ))
+            }
+        };
+
         let mut reader =
             VirtualReader::with(&mut **memory, clone.start_block.arch, self.start_block.dtb);
-        let header_buf = reader.virt_read(clone.kernel_base, Length::from_mb(32))?;
-
-        let mut pe_opts = ParseOptions::default();
-        pe_opts.resolve_rva = false;
-
-        let header = PE::parse_with_opts(&header_buf, &pe_opts).unwrap(); // TODO: error
-        let module_list = header
-            .exports
-            .iter()
-            .filter(|e| e.name.unwrap_or_default() == "PsLoadedModuleList") // PsActiveProcessHead
-            .inspect(|e| info!("found eat entry: {:?}", e))
-            .nth(0)
-            .ok_or_else(|| Error::new("unable to find export PsLoadedModuleList"))
-            .and_then(|e| Ok(clone.kernel_base + Length::from(e.rva)))?;
-
         let addr = reader.virt_read_addr(module_list)?;
         let rc = Rc::new(RefCell::new(self.clone()));
         Ok(KernelProcess::with(rc, addr))

@@ -7,7 +7,7 @@ use flow_core::*;
 
 use crate::win::process::*;
 
-use crate::pe;
+use pelite::{self, pe64::exports::Export, PeView};
 
 pub struct Keyboard<T: VirtualRead> {
     user_process: UserProcess<T>,
@@ -33,11 +33,19 @@ impl<T: VirtualRead> Keyboard<T> {
         let size = kernel_module.size()?;
 
         let buf = user_process.virt_read(base, size)?;
-        let export_addr = pe::find_export_offset(buf, "gafAsyncKeyState")?;
+        let pe = PeView::from_bytes(&buf)?;
+        let export_addr = match pe.get_export_by_name("gafAsyncKeyState")? {
+            Export::Symbol(s) => base + Length::from(*s),
+            Export::Forward(_) => {
+                return Err(Error::new(
+                    "export gafAsyncKeyState found but it is forwarded",
+                ))
+            }
+        };
 
         Ok(Self {
             user_process,
-            key_state_addr: base + export_addr,
+            key_state_addr: export_addr,
         })
     }
 

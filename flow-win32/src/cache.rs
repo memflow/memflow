@@ -6,19 +6,25 @@ use log::info;
 use pdb::PDB;
 use std::fs;
 use std::fs::File;
-use std::io::Cursor;
 use std::path::PathBuf;
 
 use crate::kernel::StartBlock;
-use flow_core::address::{Address, Length};
+use flow_core::address::Address;
 use flow_core::mem::VirtualRead;
 
-use byteorder::LittleEndian;
-use byteorder::ReadBytesExt;
 use clap::ArgMatches;
 use duma;
-use goblin::pe::{debug::CodeviewPDB70DebugInfo, options::ParseOptions, PE};
 use uuid::{self, Uuid};
+
+use crate::kernel::ntos;
+
+use pelite::{
+    self,
+    image::GUID,
+    pe32,
+    pe64::{self, debug::CodeView},
+    PeView, Wrap,
+};
 
 fn cache_dir() -> Result<PathBuf> {
     let home = dirs::home_dir().ok_or_else(|| Error::new("unable to get home directory"))?;
@@ -104,41 +110,52 @@ fn download_pdb_cache(pdbname: &str, guid: &str) -> Result<PathBuf> {
     Ok(cache_file)
 }
 
-// TODO: this function might be omitted in the future if this is merged to goblin internally
-fn generate_guid(codeview: &CodeviewPDB70DebugInfo) -> std::result::Result<String, uuid::Error> {
-    let mut rdr = Cursor::new(codeview.signature);
+// TODO: this function might be omitted in the future if this is merged to pelite internally
+fn generate_guid(signature: GUID, age: u32) -> Result<String> {
     let uuid = Uuid::from_fields(
-        rdr.read_u32::<LittleEndian>().unwrap_or_default(), // TODO: fix error handling
-        rdr.read_u16::<LittleEndian>().unwrap_or_default(),
-        rdr.read_u16::<LittleEndian>().unwrap_or_default(),
-        &codeview.signature[8..],
+        signature.Data1,
+        signature.Data2,
+        signature.Data3,
+        &signature.Data4,
     )?;
 
     Ok(format!(
         "{}{:X}",
         uuid.to_simple().to_string().to_uppercase(),
-        codeview.age
+        age
     ))
 }
 
-pub fn fetch_pdb_from_pe(pe: &PE) -> Result<PathBuf> {
-    let debug = match pe.debug_data {
-        Some(d) => d,
-        None => return Err(Error::new("unable to read debug_data in pe header")),
+pub fn fetch_pdb_from_pe<'a, Pe32: pe32::Pe<'a>, Pe64: pe64::Pe<'a>>(
+    pe: &Wrap<Pe32, Pe64>,
+) -> Result<PathBuf> {
+    let debug = match pe.debug() {
+        Ok(d) => d,
+        Err(_) => return Err(Error::new("unable to read debug_data in pe header")),
     };
 
-    let codeview = match debug.codeview_pdb70_debug_info {
-        Some(c) => c,
-        None => return Err(Error::new("unable to read codeview in debug header")),
+    let code_view = debug
+        .iter()
+        .map(|e| e.entry())
+        .filter_map(std::result::Result::ok)
+        .filter(|&e| e.as_code_view().is_some())
+        .nth(0)
+        .ok_or_else(|| Error::new("unable to find codeview debug_data entry"))?
+        .as_code_view()
+        .unwrap();
+
+    let signature = match code_view {
+        CodeView::Cv70 { image, .. } => image.Signature,
+        CodeView::Cv20 { image, .. } => {
+            return Err(Error::new(
+                "invalid code_view entry version 2 found, expected 7",
+            ))
+        }
     };
 
-    // TODO: map error of generate_guid properly
     download_pdb_cache(
-        &String::from_utf8(codeview.filename.to_vec())
-            .unwrap_or_default()
-            .trim_matches(char::from(0))
-            .to_string(),
-        &generate_guid(&codeview).unwrap_or_default(),
+        code_view.pdb_file_name().to_str()?,
+        &generate_guid(signature, code_view.age())?,
     )
 }
 
@@ -147,19 +164,8 @@ pub fn fetch_pdb_from_mem<T: VirtualRead>(
     start_block: &StartBlock,
     kernel_base: Address,
 ) -> Result<PathBuf> {
-    let ntos_buf = mem
-        .virt_read(
-            start_block.arch,
-            start_block.dtb,
-            kernel_base,
-            Length::from_mb(32),
-        )
-        .unwrap();
+    let header_buf = ntos::try_fetch_pe_header(mem, start_block, kernel_base)?;
+    let header = PeView::from_bytes(&header_buf)?;
 
-    let mut pe_opts = ParseOptions::default();
-    pe_opts.resolve_rva = false;
-
-    let pe = PE::parse_with_opts(&ntos_buf, &pe_opts)?;
-
-    fetch_pdb_from_pe(&pe)
+    fetch_pdb_from_pe(&header)
 }

@@ -9,12 +9,11 @@ flow-core = { path = "../flow-core" }
 log = { version = "0.4.8", default-features = false }
 byteorder = "1.3.2"
 num = "0.2.0"
-goblin = { git = "https://github.com/ko1N/goblin" }
-pelite = "0.8"
+pelite = {git = "https://github.com/CasualX/pelite", branch = "features/relaxedview" }
 scroll = "0.9"
 pretty-hex = "0.1.1"
 clap = "2.33.0"
-uuid = "0.8" # remove this if goblin has this built in
+uuid = "0.8" # remove this if pelite has this built in
 duma = "0.1.0"
 dirs = "2.0.2"
 pdb = { git = "https://github.com/willglynn/pdb" }

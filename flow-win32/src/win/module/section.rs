@@ -25,17 +25,7 @@ pub struct Section {
     pub characteristics: u32,
 }
 
-impl From<&goblin::pe::section_table::SectionTable> for Section {
-    fn from(s: &goblin::pe::section_table::SectionTable) -> Self {
-        Self {
-            name: String::from_utf8(s.name.to_vec()).unwrap_or_default(),
-            virt_addr: addr!(s.virtual_address),
-            virt_size: len!(s.virtual_size),
-            size_of_raw_data: len!(s.size_of_raw_data),
-            characteristics: s.characteristics,
-        }
-    }
-}
+// TODO: with
 
 impl SectionTrait for Section {
     fn name(&self) -> &str {

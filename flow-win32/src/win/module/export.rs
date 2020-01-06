@@ -6,18 +6,16 @@ use flow_core::*;
 pub struct Export {
     pub name: String,
     pub offset: Length,
-    pub rva: Length,
-    pub size: Length,
+    //pub rva: Length,
+    //pub size: Length,
     // reexport
 }
 
-impl<'a> From<&goblin::pe::export::Export<'a>> for Export {
-    fn from(e: &goblin::pe::export::Export<'a>) -> Self {
+impl Export {
+    pub fn with(name: &str, offset: Length) -> Self {
         Self {
-            name: e.name.unwrap_or_default().to_owned(),
-            offset: len!(e.offset),
-            rva: len!(e.rva),
-            size: len!(e.size),
+            name: name.to_owned(),
+            offset,
         }
     }
 }

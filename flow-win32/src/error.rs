@@ -112,6 +112,18 @@ impl std::convert::From<goblin::error::Error> for Error {
     }
 }
 
+impl std::convert::From<pelite::Error> for Error {
+    fn from(error: pelite::Error) -> Self {
+        Self::new(error)
+    }
+}
+
+impl std::convert::From<std::str::Utf8Error> for Error {
+    fn from(error: std::str::Utf8Error) -> Self {
+        Self::new(error)
+    }
+}
+
 impl std::convert::From<widestring::MissingNulError<u16>> for Error {
     fn from(error: widestring::MissingNulError<u16>) -> Self {
         Self::new(error)

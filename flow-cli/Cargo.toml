@@ -15,6 +15,7 @@ serde_derive = "1.0"
 simple_logger = "1.0.1"
 log = "0.4.8"
 flow-core = { path = "../flow-core" }
+flow-derive = { path = "../flow-derive" }
 flow-win32 = { path = "../flow-win32" }
 goblin = { git = "https://github.com/ko1N/goblin" }
 pdb = { git = "https://github.com/willglynn/pdb" }

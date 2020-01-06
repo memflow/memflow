@@ -1,3 +1,4 @@
+mod derive;
 mod init;
 
 #[macro_use]
@@ -158,6 +159,23 @@ fn main() {
         ("", None) => println!("no command specified"),
         _ => println!("invalid command {:?}", argv),
     }
+
+    // derive test
+    let mut vrw = derive::VirtualReadWriteDerive {};
+    vrw.virt_read(
+        Architecture::from(InstructionSet::X64),
+        addr!(0),
+        addr!(0),
+        len!(0),
+    )
+    .unwrap();
+    vrw.virt_write(
+        Architecture::from(InstructionSet::X64),
+        addr!(0),
+        addr!(0),
+        &Vec::new(),
+    )
+    .unwrap();
 
     // parse kernel pe header -- start
     /*use flow_core::error::*;

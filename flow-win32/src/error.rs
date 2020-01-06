@@ -1,5 +1,4 @@
 use failure;
-use goblin;
 use std;
 use url;
 
@@ -106,12 +105,6 @@ impl std::convert::From<failure::Error> for Error {
     }
 }
 
-impl std::convert::From<goblin::error::Error> for Error {
-    fn from(error: goblin::error::Error) -> Self {
-        Self::new(error)
-    }
-}
-
 impl std::convert::From<pelite::Error> for Error {
     fn from(error: pelite::Error) -> Self {
         Self::new(error)
@@ -126,6 +119,13 @@ impl std::convert::From<std::str::Utf8Error> for Error {
 
 impl std::convert::From<widestring::MissingNulError<u16>> for Error {
     fn from(error: widestring::MissingNulError<u16>) -> Self {
+        Self::new(error)
+    }
+}
+
+// TODO: this might be removed if guid generation is in pelite
+impl std::convert::From<uuid::Error> for Error {
+    fn from(error: uuid::Error) -> Self {
         Self::new(error)
     }
 }

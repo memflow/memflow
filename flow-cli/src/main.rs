@@ -70,7 +70,7 @@ fn main() {
                             .unwrap();
                         println!("offset rva size name");
                         md.exports().unwrap().iter().for_each(|e| {
-                            println!("0x{:x} 0x{:x} 0x{:x} {}", e.offset, e.rva, e.size, e.name);
+                            println!("0x{:x} {}", e.offset, e.name);
                         });
                     }
                     _ => println!("invalid command {:?}", export_matches),
@@ -82,6 +82,7 @@ fn main() {
                             .module(ls_matches.value_of("module_name").unwrap())
                             .unwrap();
                         println!("virt_addr virt_size size_of_raw_data characteristics name");
+                        /*
                         md.sections().unwrap().iter().for_each(|s| {
                             println!(
                                 "0x{:x} 0x{:x} 0x{:x} 0x{:x} {}",
@@ -91,7 +92,7 @@ fn main() {
                                 s.characteristics,
                                 s.name
                             );
-                        });
+                        });*/
                     }
                     _ => println!("invalid command {:?}", section_matches),
                 },
@@ -135,7 +136,7 @@ fn main() {
                             .unwrap();
                         println!("offset rva size name");
                         md.exports().unwrap().iter().for_each(|e| {
-                            println!("0x{:x} 0x{:x} 0x{:x} {}", e.offset, e.rva, e.size, e.name);
+                            println!("0x{:x} {}", e.offset, e.name);
                         });
                     }
                     _ => println!("invalid command {:?}", export_matches),
@@ -161,6 +162,7 @@ fn main() {
     }
 
     // derive test
+    /*
     let mut vrw = derive::VirtualReadWriteDerive {};
     vrw.virt_read(
         Architecture::from(InstructionSet::X64),
@@ -176,6 +178,7 @@ fn main() {
         &Vec::new(),
     )
     .unwrap();
+    */
 
     // parse kernel pe header -- start
     /*use flow_core::error::*;

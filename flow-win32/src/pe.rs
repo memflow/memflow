@@ -10,9 +10,6 @@ use pretty_hex::*;
 
 use crate::kernel::StartBlock;
 
-use goblin::pe::options::ParseOptions;
-use goblin::pe::PE;
-
 // these are some big pe read helpers
 // export_iter()
 // export(...)
@@ -30,6 +27,7 @@ use goblin::pe::PE;
        .iter()
        .for_each(|e| println!("export found: {:?}", e));
 */
+/*
 pub fn find_export_offset(buf: Vec<u8>, name: &str) -> Result<Length> {
     let mut pe_opts = ParseOptions::default();
     pe_opts.resolve_rva = false;
@@ -43,6 +41,7 @@ pub fn find_export_offset(buf: Vec<u8>, name: &str) -> Result<Length> {
             .offset
     ))
 }
+*/
 
 /*
 pub fn find_section_offset(buf: Vec<u8>, name: &str) -> Result<Length> {

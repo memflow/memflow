@@ -7,7 +7,7 @@ pub use export::*;
 pub mod section;
 pub use section::*;
 
-use crate::error::Result;
+use crate::error::{Error, Result};
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -18,13 +18,10 @@ use flow_core::mem::*;
 use flow_core::process::ModuleTrait;
 use flow_core::*;
 
-use goblin::pe::options::ParseOptions;
-use goblin::pe::PE;
-
 use crate::win::process::ProcessModuleTrait;
 use crate::win::unicode_string::VirtualReadUnicodeString;
 
-use crate::pe;
+use pelite::{self, pe64::exports, PeView};
 
 pub struct Module<
     T: ProcessModuleTrait + ArchitectureTrait + VirtualReadHelperFuncs + VirtualReadUnicodeString,
@@ -138,7 +135,11 @@ where
 
         let process = &mut self.process.borrow_mut();
         let buf = process.virt_read(base, size)?;
-        pe::find_export_offset(buf, name)
+        let pe = PeView::from_bytes(&buf)?;
+        match pe.get_export_by_name(name)? {
+            exports::Export::Symbol(s) => Ok(Length::from(*s)),
+            exports::Export::Forward(_) => Err(Error::new("Export is forwarded")),
+        }
     }
 
     pub fn export(&mut self, name: &str) -> Result<Address> {
@@ -151,14 +152,27 @@ where
 
         let process = &mut self.process.borrow_mut();
         let buf = process.virt_read(base, size)?;
+        let pe = PeView::from_bytes(&buf)?;
 
-        let mut pe_opts = ParseOptions::default();
-        pe_opts.resolve_rva = false;
-        let pe = PE::parse_with_opts(&buf, &pe_opts)?;
-        Ok(pe.exports.iter().map(Export::from).collect::<Vec<Export>>())
+        Ok(pe
+            .exports()?
+            .by()?
+            .iter_names()
+            .filter(|(name, _)| name.is_ok())
+            .filter(|(_, e)| e.is_ok())
+            .filter(|(_, e)| e.unwrap().symbol().is_some())
+            .map(|(name, e)| {
+                Export::with(
+                    name.unwrap().to_str().unwrap_or_default(),
+                    Length::from(e.unwrap().symbol().unwrap()),
+                )
+            })
+            .collect::<Vec<Export>>())
     }
 
+    // TODO: port to pelite
     // section
+    /*
     pub fn section(&mut self, name: &str) -> Result<Section> {
         // TODO: cache pe in this module?
 
@@ -195,7 +209,7 @@ where
             .iter()
             .map(Section::from)
             .collect::<Vec<Section>>())
-    }
+    }*/
 }
 
 // TODO: should we really forward declare or have a back ref?

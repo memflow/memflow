@@ -5,10 +5,11 @@ use log::{info, trace, warn};
 use flow_core::address::{Address, Length};
 use flow_core::mem::*;
 
-use goblin::pe::options::ParseOptions;
-use goblin::pe::PE;
-
 use crate::kernel::StartBlock;
+
+use crate::kernel::ntos;
+
+use pelite::{self, pe64::exports::Export, PeView};
 
 pub fn find<T: PhysicalRead + VirtualRead>(
     mem: &mut T,
@@ -36,25 +37,25 @@ pub fn find_exported<T: PhysicalRead + VirtualRead>(
     start_block: &StartBlock,
     ntos: Address,
 ) -> Result<Address> {
-    let mut reader = VirtualReader::with(mem, start_block.arch, start_block.dtb);
-    let header_buf = reader.virt_read(ntos, Length::from_mb(32))?;
+    let header_buf = ntos::try_fetch_pe_header(mem, start_block, ntos)?;
+    let header = PeView::from_bytes(&header_buf)?;
 
-    let mut pe_opts = ParseOptions::default();
-    pe_opts.resolve_rva = false;
+    let sys_proc = match header.get_export_by_name("PsInitialSystemProcess")? {
+        // PsActiveProcessHead
+        Export::Symbol(s) => ntos + Length::from(*s),
+        Export::Forward(_) => {
+            return Err(Error::new(
+                "PsInitialSystemProcess found but it was a forwarded export",
+            ))
+        }
+    };
 
-    let header = PE::parse_with_opts(&header_buf, &pe_opts).unwrap(); // TODO: error
-    let sys_proc = header
-        .exports
-        .iter()
-        .filter(|e| e.name.unwrap_or_default() == "PsInitialSystemProcess") // PsActiveProcessHead
-        .inspect(|e| info!("found eat entry: {:?}", e))
-        .nth(0)
-        .ok_or_else(|| Error::new("unable to find export PsInitialSystemProcess"))
-        .and_then(|e| Ok(ntos + Length::from(e.rva)))?;
+    info!("PsInitialSystemProcess found at 0x{:x}", sys_proc);
 
     // read value again
     // TODO: fallback for 32bit
     // TODO: wrap error properly
+    let mut reader = VirtualReader::with(mem, start_block.arch, start_block.dtb);
     let addr = reader.virt_read_addr(sys_proc)?;
     Ok(addr)
 }
@@ -73,6 +74,7 @@ pub fn find_in_section<T: PhysicalRead + VirtualRead>(
 
     let header_buf = mem.virt_read(start_block.arch, start_block.dtb, ntos, Length::from_mb(32))?;
 
+    /*
     let mut pe_opts = ParseOptions::default();
     pe_opts.resolve_rva = false;
 
@@ -83,6 +85,7 @@ pub fn find_in_section<T: PhysicalRead + VirtualRead>(
         .filter(|s| String::from_utf8(s.name.to_vec()).unwrap_or_default() == "ALMOSTRO")
         .nth(0)
         .ok_or_else(|| Error::new("unable to find section ALMOSTRO"))?;
+    */
 
     Err(Error::new("not implemented yet"))
 }

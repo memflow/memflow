@@ -10,7 +10,7 @@ use flow_core::mem::VirtualRead;
 
 use crate::kernel::StartBlock;
 
-use pelite::PeView;
+use pelite::{self, PeView};
 
 // TODO: -> Result<WinProcess>
 pub fn find<T: VirtualRead>(mem: &mut T, start_block: &StartBlock) -> Result<Address> {
@@ -36,42 +36,75 @@ pub fn find<T: VirtualRead>(mem: &mut T, start_block: &StartBlock) -> Result<Add
     Err(Error::new("unable to find ntoskrnl.exe"))
 }
 
-fn probe_pe_header<T: VirtualRead>(
+pub fn try_fetch_pe_header<T: VirtualRead>(
     mem: &mut T,
     start_block: &StartBlock,
-    probe_addr: Address,
-) -> Result<String> {
-    // TODO: after finding the poolcode we already found the proper ntoskrnl so we probably do not have to parse it any further?
+    addr: Address,
+) -> Result<Vec<u8>> {
     // try to probe pe header
-    let probe_buf = mem
-        .virt_read(
-            start_block.arch,
-            start_block.dtb,
-            probe_addr,
-            Length::from_mb(32),
-        )
-        .unwrap();
+    let probe_buf = mem.virt_read(
+        start_block.arch,
+        start_block.dtb,
+        addr,
+        Length::from_kb(4), // initial header
+    )?;
 
-    let pe = match PeView::from_bytes(&probe_buf) {
+    let pe_probe = match PeView::from_bytes(&probe_buf) {
         Ok(pe) => {
-            trace!("probe_pe_header: found pe header.\n");
+            trace!("try_fetch_pe_header: found pe header.");
             pe
         }
         Err(e) => {
             trace!(
-                "probe_pe_header: potential pe header at offset {:x} could not be probed: {:?}",
-                probe_addr,
+                "try_fetch_pe_header: potential pe header at offset {:x} could not be probed: {:?}",
+                addr,
                 e
             );
             return Err(Error::from(e));
         }
     };
 
-    let name = pe.exports()?.dll_name()?.to_str()?;
+    let opt_header = pe_probe.optional_header();
+    let size_of_image = match opt_header {
+        pelite::Wrap::T32(opt32) => opt32.SizeOfImage,
+        pelite::Wrap::T64(opt64) => opt64.SizeOfImage,
+    };
     info!(
-        "probe_pe_header: found pe header for {}",
-        name
+        "try_fetch_pe_header: found pe header for image with a size of {} bytes.",
+        size_of_image
     );
+
+    Ok(mem.virt_read(
+        start_block.arch,
+        start_block.dtb,
+        addr,
+        Length::from(size_of_image), // full image size
+    )?)
+}
+
+// TODO: store pe size in windows struct so we can reference it later
+fn probe_pe_header<T: VirtualRead>(
+    mem: &mut T,
+    start_block: &StartBlock,
+    probe_addr: Address,
+) -> Result<String> {
+    // try to probe pe header
+    let pe_buf = try_fetch_pe_header(mem, start_block, probe_addr)?;
+
+    let pe = match PeView::from_bytes(&pe_buf) {
+        Ok(pe) => pe,
+        Err(e) => {
+            trace!(
+                    "probe_pe_header: potential pe header at offset {:x} could not be fully probed: {:?}",
+                    probe_addr,
+                    e
+                );
+            return Err(Error::from(e));
+        }
+    };
+
+    let name = pe.exports()?.dll_name()?.to_str()?;
+    info!("probe_pe_header: found pe header for {}", name);
     Ok(name.to_string())
 }
 

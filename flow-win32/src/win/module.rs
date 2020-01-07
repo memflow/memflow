@@ -176,6 +176,8 @@ where
     pub fn section(&mut self, name: &str) -> Result<Section> {
         // TODO: cache pe in this module?
 
+        // peview.section_headers().iter().find(|sect| sect.Name == *".text")
+
         let base = self.base()?;
         let size = self.size()?;
 

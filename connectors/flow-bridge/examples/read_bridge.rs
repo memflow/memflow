@@ -1,11 +1,8 @@
 use clap::{App, Arg};
 use std::time::Instant;
 
-use flow_core::address::{Address, Length};
 use flow_core::*;
-
-use flow_core::connector::bridge::client::BridgeClient;
-use flow_core::mem::PhysicalRead;
+use flow_bridge::BridgeClient;
 
 fn main() {
     let argv = App::new("examples/bridge_read")

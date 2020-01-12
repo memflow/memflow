@@ -1,0 +1,24 @@
+[package]
+name = "flow-bridge"
+version = "0.1.0"
+authors = ["ko1N <ko1N1337@gmail.com>"]
+edition = "2018"
+
+[build-dependencies]
+capnpc = "0.10.1"
+
+[dependencies]
+flow-core = { path = "../../flow-core" }
+tokio = "0.1.22"
+capnp = "0.10.3"
+capnp-rpc = "0.10.0"
+log = { version = "0.4.8", default-features = false }
+url = "2.1.0"
+libc-print = "0.1.11"
+
+[dev-dependencies]
+clap = "2.33.0"
+
+[[example]]
+name = "read_bridge"
+path = "examples/read_bridge.rs"

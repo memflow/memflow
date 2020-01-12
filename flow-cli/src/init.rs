@@ -5,10 +5,7 @@ use flow_core::Result;
 pub mod init_linux;
 
 #[cfg(target_os = "linux")]
-use flow_core::connector::qemu_procfs;
-
-#[cfg(target_os = "linux")]
-pub fn init_connector(argv: &ArgMatches) -> Result<qemu_procfs::Memory> {
+pub fn init_connector(argv: &ArgMatches) -> Result<flow_qemu_procfs::Memory> {
     init_linux::init_procfs_connector(argv)
 }
 

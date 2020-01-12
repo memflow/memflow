@@ -4,36 +4,15 @@ version = "0.1.0"
 authors = ["ko1N <ko1N1337@gmail.com>"]
 edition = "2018"
 
-[build-dependencies]
-capnpc = "0.10.1"
-
 [dependencies]
 byteorder = "1.3.2"
 log = { version = "0.4.8", default-features = false }
 libc-print = "0.1.11"
-tokio = "0.1.22"
-capnp = "0.10.3"
-capnp-rpc = "0.10.0"
-url = "2.1.0"
 lazy_static = "1.4.0"
 regex = "1.3.1"
 unicorn = { version = "0.9.1", optional = true }
-
-[target.'cfg(target_os = "linux")'.dependencies]
-procfs = "0.7.6"
-
-[dev-dependencies]
-clap = "2.33.0"
 
 [features]
 default = []
 bridge = [] # enables the connector bridge (requires tokio)
 emulator = ["unicorn"] # enables the process emulator (requires unicorn engine)
-
-[[example]]
-name = "read_bridge"
-path = "examples/read_bridge.rs"
-
-[[example]]
-name = "read_procfs"
-path = "examples/read_procfs.rs"

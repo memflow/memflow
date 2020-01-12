@@ -15,35 +15,7 @@ use flow_core::*;
 use flow_win32;
 use flow_win32::win::process::*;
 
-// TODO: this is os agnostic and just temp?
-use flow_win32::keyboard::Keyboard;
-
-fn main() {
-    let yaml = load_yaml!("cli.yml");
-    let argv = App::from(yaml).get_matches();
-
-    match argv.occurrences_of("verbose") {
-        1 => simple_logger::init_with_level(Level::Warn).unwrap(),
-        2 => simple_logger::init_with_level(Level::Info).unwrap(),
-        3 => simple_logger::init_with_level(Level::Debug).unwrap(),
-        4 => simple_logger::init_with_level(Level::Trace).unwrap(),
-        _ => simple_logger::init_with_level(Level::Error).unwrap(),
-    }
-
-    // TODO: feature
-    let conn = init::init_connector(&argv).unwrap();
-
-    // TODO: osname from config/params?
-    let connrc = Rc::new(RefCell::new(conn));
-    let os = match argv.value_of("os").unwrap_or_else(|| "win32") {
-        "win32" => flow_win32::init(connrc),
-        //"linux" => {},
-        _ => Err(flow_win32::error::Error::new("invalid os")),
-    }
-    .unwrap();
-
-    // TODO: interactive/non-interactive mode switch
-
+fn handle_argv<T: VirtualRead>(argv: &clap::ArgMatches, os: &flow_win32::Windows<T>) -> () {
     match argv.subcommand() {
         ("kernel", Some(kernel_matches)) => match kernel_matches.subcommand() {
             ("module", Some(module_matches)) => match module_matches.subcommand() {
@@ -145,21 +117,39 @@ fn main() {
             },
             _ => println!("invalid command {:?}", kernel_matches),
         },
-        ("keylog", Some(_)) => {
-            println!("keylogging");
-            let mut kbd = Keyboard::with(&os).unwrap();
-            loop {
-                let kbs = kbd.state().unwrap();
-                if kbs.down(win_key_codes::VK_LBUTTON).unwrap() {
-                    println!("VK_LBUTTON down");
-                } else {
-                    println!("VK_LBUTTON up");
-                }
-            }
-        }
         ("", None) => println!("no command specified"),
         _ => println!("invalid command {:?}", argv),
     }
+}
+
+fn main() {
+    let yaml = load_yaml!("cli.yml");
+    let argv = App::from(yaml).get_matches();
+
+    match argv.occurrences_of("verbose") {
+        1 => simple_logger::init_with_level(Level::Warn).unwrap(),
+        2 => simple_logger::init_with_level(Level::Info).unwrap(),
+        3 => simple_logger::init_with_level(Level::Debug).unwrap(),
+        4 => simple_logger::init_with_level(Level::Trace).unwrap(),
+        _ => simple_logger::init_with_level(Level::Error).unwrap(),
+    }
+
+    // TODO: command for connector?
+
+    // TODO: feature
+    let conn = init::init_connector(&argv).unwrap();
+
+    // TODO: osname from config/params?
+    let connrc = Rc::new(RefCell::new(conn));
+    let os = match argv.value_of("os").unwrap_or_else(|| "win32") {
+        "win32" => flow_win32::init(connrc),
+        //"linux" => {},
+        _ => Err(flow_win32::error::Error::new("invalid os")),
+    }
+    .unwrap();
+
+    // TODO: interactive/non-interactive mode switch
+    handle_argv(&argv, &os);
 
     // derive test
     /*

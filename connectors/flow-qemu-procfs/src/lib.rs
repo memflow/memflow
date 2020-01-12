@@ -1,8 +1,6 @@
-use crate::error::{Error, Result};
-
 use log::info;
 
-use crate::*;
+use flow_core::*;
 
 use lazy_static::lazy_static;
 use procfs;
@@ -22,7 +20,7 @@ pub struct Memory {
 
 impl Memory {
     pub fn new() -> Result<Self> {
-        let prcs = procfs::process::all_processes()?;
+        let prcs = procfs::process::all_processes().map_err(Error::new)?;
         let prc = prcs
             .iter()
             .filter(|p| p.stat.comm == "qemu-system-x86")
@@ -31,7 +29,7 @@ impl Memory {
         info!("qemu process found {:?}", prc.stat);
 
         // find biggest mapping
-        let mut maps = prc.maps()?;
+        let mut maps = prc.maps().map_err(Error::new)?;
         maps.sort_by(|b, a| {
             (a.address.1 - a.address.0)
                 .partial_cmp(&(b.address.1 - b.address.0))
@@ -108,5 +106,13 @@ impl VirtualWrite for Memory {
         data: &[u8],
     ) -> Result<Length> {
         VatImpl::new(self).virt_write(arch, dtb, addr, data)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn it_works() {
+        assert_eq!(2 + 2, 4);
     }
 }

@@ -1,0 +1,18 @@
+[package]
+name = "flow-qemu-procfs"
+version = "0.1.0"
+authors = ["ko1N <ko1N1337@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+flow-core = { path = "../../flow-core" }
+procfs = "0.7.6"
+log = { version = "0.4.8", default-features = false }
+lazy_static = "1.4.0"
+
+[dev-dependencies]
+clap = "2.33.0"
+
+[[example]]
+name = "read_procfs"
+path = "examples/read_procfs.rs"

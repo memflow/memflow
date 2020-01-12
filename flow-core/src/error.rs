@@ -1,5 +1,4 @@
 use std;
-use url;
 
 pub type Result<T> = std::result::Result<T, Error>;
 
@@ -74,12 +73,6 @@ impl std::convert::From<std::option::NoneError> for Error {
 }
 */
 
-impl std::convert::From<url::ParseError> for Error {
-    fn from(error: url::ParseError) -> Self {
-        Self::new(error)
-    }
-}
-
 impl std::convert::From<std::ffi::NulError> for Error {
     fn from(error: std::ffi::NulError) -> Self {
         Self::new(error)
@@ -88,13 +81,6 @@ impl std::convert::From<std::ffi::NulError> for Error {
 
 impl std::convert::From<regex::Error> for Error {
     fn from(error: regex::Error) -> Self {
-        Self::new(error)
-    }
-}
-
-#[cfg(target_os = "linux")]
-impl std::convert::From<procfs::ProcError> for Error {
-    fn from(error: procfs::ProcError) -> Self {
         Self::new(error)
     }
 }

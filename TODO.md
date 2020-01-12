@@ -16,6 +16,12 @@ general:
 mt reading:
 - use connection pool and automatically choose a free connection for the reader
 
+virt read/write:
+- read into fn phys_read(&mut self, addr: Address, dest: &mut [u8]) -> Result<()>;
+- read into generic type T and add a Pod trait for safe types
+  -> https://github.com/CasualX/pod/blob/master/zero_copy/src/lib.rs#L39
+  -> https://github.com/CasualX/pod/blob/master/zero_copy/src/buffer.rs#L4
+
 cli:
 - create neatly wrapped cli with featrues such as:
   - read memory / write memory

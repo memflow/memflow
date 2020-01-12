@@ -1,6 +1,6 @@
 use log::{info, trace};
 
-use crate::error::{Error, Result};
+use flow_core::error::{Error, Result};
 use std::net::SocketAddr;
 use url::Url;
 
@@ -15,11 +15,11 @@ use tokio::net::UnixStream;
 use capnp::capability::Promise;
 use capnp_rpc::{pry, rpc_twoparty_capnp, twoparty, RpcSystem};
 
-use crate::bridge_capnp::bridge;
+use flow_core::address::{Address, Length};
+use flow_core::arch::Architecture;
+use flow_core::mem::{PhysicalRead, PhysicalWrite, VirtualRead, VirtualWrite};
 
-use crate::address::{Address, Length};
-use crate::arch::Architecture;
-use crate::mem::{PhysicalRead, PhysicalWrite, VirtualRead, VirtualWrite};
+use crate::bridge_capnp::bridge;
 
 pub struct BridgeClient {
     bridge: bridge::Client,

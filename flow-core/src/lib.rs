@@ -22,12 +22,6 @@ pub use process::*;
 
 // bridge
 // TODO: can we put this in bridge somehow?
-#[allow(dead_code)]
-mod bridge_capnp {
-    include!(concat!(env!("OUT_DIR"), "/bridge_capnp.rs"));
-}
-
-pub mod connector;
 
 pub mod ida_pattern;
 pub use ida_pattern::*;

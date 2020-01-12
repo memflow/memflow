@@ -1,12 +1,9 @@
 use std::time::Instant;
 
-use flow_core::address::{Address, Length};
-use flow_core::connector::qemu_procfs;
-use flow_core::mem::PhysicalRead;
 use flow_core::*;
 
 fn main() {
-    let mut conn = match qemu_procfs::Memory::new() {
+    let mut conn = match flow_qemu_procfs::Memory::new() {
         Ok(br) => br,
         Err(e) => {
             println!("couldn't open memory read context: {:?}", e);

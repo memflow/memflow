@@ -1,6 +1,6 @@
 use libc_print::*;
 
-use crate::error::{Error, Result};
+use flow_core::error::{Error, Result};
 use std::convert::TryFrom;
 
 use std::net::SocketAddr;
@@ -17,10 +17,10 @@ use tokio::net::UnixListener;
 use capnp::{self, capability::Promise};
 use capnp_rpc::{pry, rpc_twoparty_capnp, twoparty, RpcSystem};
 
-use crate::address::{Address, Length};
-use crate::arch::{Architecture, InstructionSet};
-use crate::mem::{PhysicalRead, PhysicalWrite, VirtualRead, VirtualWrite};
-use crate::vat::VatImpl;
+use flow_core::address::{Address, Length};
+use flow_core::arch::{Architecture, InstructionSet};
+use flow_core::mem::{PhysicalRead, PhysicalWrite, VirtualRead, VirtualWrite};
+use flow_core::vat::VatImpl;
 
 use std::cell::RefCell;
 use std::rc::Rc;

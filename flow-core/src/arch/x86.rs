@@ -14,7 +14,7 @@ pub fn len_addr() -> Length {
 }
 
 pub fn len_u64() -> Length {
-    Length::from(4)
+    Length::from(8)
 }
 
 pub fn len_u32() -> Length {

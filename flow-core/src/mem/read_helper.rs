@@ -140,7 +140,7 @@ impl<T: VirtualReadHelper + ArchitectureTrait + TypeArchitectureTrait> VirtualRe
     for T
 {
     unsafe fn virt_read_raw<U>(&mut self, addr: Address) -> Result<U> {
-        let r = self.virt_read(addr, len!(mem::size_of::<U>()))?;
+        let r = self.virt_read(addr, Length::size_of::<U>())?;
         let mut d = mem::MaybeUninit::<U>::uninit();
         copy_nonoverlapping(r.as_ptr(), d.as_mut_ptr() as *mut u8, r.len());
         Ok(d.assume_init())
@@ -177,10 +177,10 @@ impl<T: VirtualReadHelper + ArchitectureTrait + TypeArchitectureTrait> VirtualRe
 
     fn virt_read_vec_addr32(&mut self, addr: Address, count: usize) -> Result<Vec<Address>> {
         let ta = self.type_arch()?;
-        let r = self.virt_read(addr, ta.instruction_set.len_u32() * count)?;
+        let r = self.virt_read(addr, Length::size_of::<u32>() * count)?;
         Ok(arch_read_vec_type!(
             ta.instruction_set.byte_order(),
-            ta.instruction_set.len_u32(),
+            Length::size_of::<u32>(),
             u32,
             read_u32,
             &r
@@ -196,10 +196,10 @@ impl<T: VirtualReadHelper + ArchitectureTrait + TypeArchitectureTrait> VirtualRe
 
     fn virt_read_vec_addr64(&mut self, addr: Address, count: usize) -> Result<Vec<Address>> {
         let ta = self.type_arch()?;
-        let r = self.virt_read(addr, ta.instruction_set.len_u64() * count)?;
+        let r = self.virt_read(addr, Length::size_of::<u64>() * count)?;
         Ok(arch_read_vec_type!(
             ta.instruction_set.byte_order(),
-            ta.instruction_set.len_u64(),
+            Length::size_of::<u64>(),
             u64,
             read_u64,
             &r
@@ -211,7 +211,7 @@ impl<T: VirtualReadHelper + ArchitectureTrait + TypeArchitectureTrait> VirtualRe
 
     fn virt_read_u64(&mut self, addr: Address) -> Result<u64> {
         let ta = self.type_arch()?;
-        let r = self.virt_read(addr, ta.instruction_set.len_u64())?;
+        let r = self.virt_read(addr, Length::size_of::<u64>())?;
         Ok(arch_read_type!(
             ta.instruction_set.byte_order(),
             read_u64,
@@ -221,7 +221,7 @@ impl<T: VirtualReadHelper + ArchitectureTrait + TypeArchitectureTrait> VirtualRe
 
     fn virt_read_u32(&mut self, addr: Address) -> Result<u32> {
         let ta = self.type_arch()?;
-        let r = self.virt_read(addr, ta.instruction_set.len_u32())?;
+        let r = self.virt_read(addr, Length::size_of::<u32>())?;
         Ok(arch_read_type!(
             ta.instruction_set.byte_order(),
             read_u32,
@@ -231,7 +231,7 @@ impl<T: VirtualReadHelper + ArchitectureTrait + TypeArchitectureTrait> VirtualRe
 
     fn virt_read_u16(&mut self, addr: Address) -> Result<u16> {
         let ta = self.type_arch()?;
-        let r = self.virt_read(addr, ta.instruction_set.len_u16())?;
+        let r = self.virt_read(addr, Length::size_of::<u16>())?;
         Ok(arch_read_type!(
             ta.instruction_set.byte_order(),
             read_u16,
@@ -240,14 +240,13 @@ impl<T: VirtualReadHelper + ArchitectureTrait + TypeArchitectureTrait> VirtualRe
     }
 
     fn virt_read_u8(&mut self, addr: Address) -> Result<u8> {
-        let ta = self.type_arch()?;
-        let r = self.virt_read(addr, ta.instruction_set.len_u8())?;
+        let r = self.virt_read(addr, Length::size_of::<u8>())?;
         Ok(r[0])
     }
 
     fn virt_read_i64(&mut self, addr: Address) -> Result<i64> {
         let ta = self.type_arch()?;
-        let r = self.virt_read(addr, ta.instruction_set.len_i64())?;
+        let r = self.virt_read(addr, Length::size_of::<i64>())?;
         Ok(arch_read_type!(
             ta.instruction_set.byte_order(),
             read_i64,
@@ -257,7 +256,7 @@ impl<T: VirtualReadHelper + ArchitectureTrait + TypeArchitectureTrait> VirtualRe
 
     fn virt_read_i32(&mut self, addr: Address) -> Result<i32> {
         let ta = self.type_arch()?;
-        let r = self.virt_read(addr, ta.instruction_set.len_i32())?;
+        let r = self.virt_read(addr, Length::size_of::<i32>())?;
         Ok(arch_read_type!(
             ta.instruction_set.byte_order(),
             read_i32,
@@ -267,7 +266,7 @@ impl<T: VirtualReadHelper + ArchitectureTrait + TypeArchitectureTrait> VirtualRe
 
     fn virt_read_i16(&mut self, addr: Address) -> Result<i16> {
         let ta = self.type_arch()?;
-        let r = self.virt_read(addr, ta.instruction_set.len_i16())?;
+        let r = self.virt_read(addr, Length::size_of::<i16>())?;
         Ok(arch_read_type!(
             ta.instruction_set.byte_order(),
             read_i16,
@@ -276,14 +275,13 @@ impl<T: VirtualReadHelper + ArchitectureTrait + TypeArchitectureTrait> VirtualRe
     }
 
     fn virt_read_i8(&mut self, addr: Address) -> Result<i8> {
-        let ta = self.type_arch()?;
-        let r = self.virt_read(addr, ta.instruction_set.len_i8())?;
+        let r = self.virt_read(addr, Length::size_of::<i8>())?;
         Ok(r[0] as i8)
     }
 
     fn virt_read_f32(&mut self, addr: Address) -> Result<f32> {
         let ta = self.type_arch()?;
-        let r = self.virt_read(addr, ta.instruction_set.len_f32())?;
+        let r = self.virt_read(addr, Length::size_of::<f32>())?;
         Ok(arch_read_type!(
             ta.instruction_set.byte_order(),
             read_f32,
@@ -294,10 +292,10 @@ impl<T: VirtualReadHelper + ArchitectureTrait + TypeArchitectureTrait> VirtualRe
     // TODO: add more vec read helpers
     fn virt_read_vec_f32(&mut self, addr: Address, count: usize) -> Result<Vec<f32>> {
         let ta = self.type_arch()?;
-        let r = self.virt_read(addr, ta.instruction_set.len_f32() * count)?;
+        let r = self.virt_read(addr, len!(mem::size_of::<f32>() * count))?;
         Ok(arch_read_vec_type!(
             ta.instruction_set.byte_order(),
-            ta.instruction_set.len_f32(),
+            Length::size_of::<f32>(),
             f32,
             read_f32,
             &r

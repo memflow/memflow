@@ -10,10 +10,18 @@ use flow_core::mem::VirtualRead;
 
 use crate::kernel::StartBlock;
 
-use pelite::{self, PeView};
+use pelite::{
+    self,
+    image::GUID,
+    pe32,
+    pe64::{self, debug::CodeView},
+    PeView, Wrap,
+};
+
+use uuid::{self, Uuid};
 
 // TODO: -> Result<WinProcess>
-pub fn find<T: VirtualRead>(mem: &mut T, start_block: &StartBlock) -> Result<Address> {
+pub fn find<T: VirtualRead>(mem: &mut T, start_block: &StartBlock) -> Result<(Address, Length)> {
     if start_block.arch.instruction_set == InstructionSet::X64 {
         if !start_block.va.is_null() {
             match find_x64_with_va(mem, start_block) {
@@ -36,11 +44,11 @@ pub fn find<T: VirtualRead>(mem: &mut T, start_block: &StartBlock) -> Result<Add
     Err(Error::new("unable to find ntoskrnl.exe"))
 }
 
-pub fn try_fetch_pe_header<T: VirtualRead>(
+pub fn try_fetch_pe_size<T: VirtualRead>(
     mem: &mut T,
     start_block: &StartBlock,
     addr: Address,
-) -> Result<Vec<u8>> {
+) -> Result<Length> {
     // try to probe pe header
     let probe_buf = mem.virt_read(
         start_block.arch,
@@ -51,12 +59,12 @@ pub fn try_fetch_pe_header<T: VirtualRead>(
 
     let pe_probe = match PeView::from_bytes(&probe_buf) {
         Ok(pe) => {
-            trace!("try_fetch_pe_header: found pe header.");
+            trace!("try_fetch_pe_size: found pe header.");
             pe
         }
         Err(e) => {
             trace!(
-                "try_fetch_pe_header: potential pe header at offset {:x} could not be probed: {:?}",
+                "try_fetch_pe_size: potential pe header at offset {:x} could not be probed: {:?}",
                 addr,
                 e
             );
@@ -70,16 +78,19 @@ pub fn try_fetch_pe_header<T: VirtualRead>(
         pelite::Wrap::T64(opt64) => opt64.SizeOfImage,
     };
     info!(
-        "try_fetch_pe_header: found pe header for image with a size of {} bytes.",
+        "try_fetch_pe_size: found pe header for image with a size of {} bytes.",
         size_of_image
     );
+    Ok(Length::from(size_of_image))
+}
 
-    Ok(mem.virt_read(
-        start_block.arch,
-        start_block.dtb,
-        addr,
-        Length::from(size_of_image), // full image size
-    )?)
+pub fn try_fetch_pe_header<T: VirtualRead>(
+    mem: &mut T,
+    start_block: &StartBlock,
+    addr: Address,
+) -> Result<Vec<u8>> {
+    let size_of_image = try_fetch_pe_size(mem, start_block, addr)?;
+    Ok(mem.virt_read(start_block.arch, start_block.dtb, addr, size_of_image)?)
 }
 
 // TODO: store pe size in windows struct so we can reference it later
@@ -108,7 +119,10 @@ fn probe_pe_header<T: VirtualRead>(
     Ok(name.to_string())
 }
 
-fn find_x64_with_va<T: VirtualRead>(mem: &mut T, start_block: &StartBlock) -> Result<Address> {
+fn find_x64_with_va<T: VirtualRead>(
+    mem: &mut T,
+    start_block: &StartBlock,
+) -> Result<(Address, Length)> {
     trace!(
         "find_x64_with_va: trying to find ntoskrnl.exe with va hint at {:x}",
         start_block.va.as_u64()
@@ -161,9 +175,16 @@ fn find_x64_with_va<T: VirtualRead>(mem: &mut T, start_block: &StartBlock) -> Re
                 Error::new("find_x64_with_va: unable to locate ntoskrnl.exe via va hint")
             })
             .and_then(|(i, _)| Ok(va_base + i as u64 * arch::x64::page_size().as_u64()));
+
         match res {
-            Ok(a) => return Ok(Address::from(a)),
-            Err(e) => debug!("{:?}", e),
+            Ok(a) => {
+                let addr = Address::from(a);
+                let size_of_image = try_fetch_pe_size(mem, start_block, addr)?;
+                return Ok((addr, size_of_image));
+            }
+            Err(e) => {
+                debug!("{:?}", e);
+            }
         }
 
         va_base -= Length::from_mb(2).as_u64();
@@ -174,10 +195,71 @@ fn find_x64_with_va<T: VirtualRead>(mem: &mut T, start_block: &StartBlock) -> Re
     ))
 }
 
-fn find_x64<T: VirtualRead>(_mem: &mut T) -> Result<Address> {
+fn find_x64<T: VirtualRead>(_mem: &mut T) -> Result<(Address, Length)> {
     Err(Error::new("find_x64(): not implemented yet"))
 }
 
-fn find_x86<T: VirtualRead>(_mem: &mut T) -> Result<Address> {
+fn find_x86<T: VirtualRead>(_mem: &mut T) -> Result<(Address, Length)> {
     Err(Error::new("find_x86(): not implemented yet"))
+}
+
+// TODO: this function might be omitted in the future if this is merged to pelite internally
+fn generate_guid(signature: GUID, age: u32) -> Result<String> {
+    let uuid = Uuid::from_fields(
+        signature.Data1,
+        signature.Data2,
+        signature.Data3,
+        &signature.Data4,
+    )?;
+
+    Ok(format!(
+        "{}{:X}",
+        uuid.to_simple().to_string().to_uppercase(),
+        age
+    ))
+}
+
+#[derive(Debug, Clone)]
+pub struct Win32GUID {
+    pub file_name: String,
+    pub guid: String,
+}
+
+pub fn find_guid<T: VirtualRead>(
+    mem: &mut T,
+    start_block: &StartBlock,
+    kernel_base: Address,
+    kernel_size: Length,
+) -> Result<Win32GUID> {
+    let pe_buf = mem.virt_read(start_block.arch, start_block.dtb, kernel_base, kernel_size)?;
+    let pe = PeView::from_bytes(&pe_buf)?;
+
+    let debug = match pe.debug() {
+        Ok(d) => d,
+        Err(_) => return Err(Error::new("unable to read debug_data in pe header")),
+    };
+
+    let code_view = debug
+        .iter()
+        .map(|e| e.entry())
+        .filter_map(std::result::Result::ok)
+        .filter(|&e| e.as_code_view().is_some())
+        .nth(0)
+        .ok_or_else(|| Error::new("unable to find codeview debug_data entry"))?
+        .as_code_view()
+        .unwrap();
+
+    let signature = match code_view {
+        CodeView::Cv70 { image, .. } => image.Signature,
+        CodeView::Cv20 { image, .. } => {
+            return Err(Error::new(
+                "invalid code_view entry version 2 found, expected 7",
+            ))
+        }
+    };
+
+    Ok(Win32GUID {
+        file_name: code_view.pdb_file_name().to_string(),
+        guid: generate_guid(signature, code_view.age())?,
+    })
 }

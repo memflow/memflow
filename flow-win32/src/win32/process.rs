@@ -1,21 +1,26 @@
-pub mod user;
-pub use user::UserProcess;
+//pub mod user;
+//pub use user::UserProcess;
 
-pub mod kernel;
-pub use kernel::KernelProcess;
+//pub mod kernel;
+//pub use kernel::KernelProcess;
 
-pub mod user_iter;
-pub use user_iter::ProcessIterator;
+//pub mod user_iter;
+//pub use user_iter::ProcessIterator;
+
+// new temp module (will replace all the above)
+pub mod win_user;
+pub use win_user::*;
 
 use crate::error::Result;
 
-use super::Windows;
+use super::Win32;
 
 use flow_core::address::Address;
 use flow_core::arch::ArchitectureTrait;
 use flow_core::mem::*;
 use flow_core::process::*;
 
+/*
 use crate::win::module::{Module, ModuleIterator};
 
 pub trait ProcessModuleTrait {
@@ -77,3 +82,4 @@ where
             .ok_or_else(|| "unable to find containing module")?)
     }
 }
+*/

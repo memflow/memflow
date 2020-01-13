@@ -7,12 +7,18 @@ use std::convert::TryFrom;
 
 use crate::address::Length;
 
+/// ByteOrder definitions
+///
+/// Identifies the byte order of a architecture
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum ByteOrder {
     LittleEndian,
     BigEndian,
 }
 
+/// InstructionSet definitions
+///
+/// Identifies a instruction set with properties
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum InstructionSet {
     X64,
@@ -31,7 +37,6 @@ macro_rules! match_instruction_set {
     };
 }
 
-// TODO: figure out a better way for this
 impl TryFrom<u8> for InstructionSet {
     type Error = Error;
 
@@ -66,46 +71,11 @@ impl InstructionSet {
     pub fn len_addr(self) -> Length {
         match_instruction_set!(self, len_addr)
     }
-
-    pub fn len_u64(self) -> Length {
-        match_instruction_set!(self, len_u64)
-    }
-
-    pub fn len_u32(self) -> Length {
-        match_instruction_set!(self, len_u32)
-    }
-
-    pub fn len_u16(self) -> Length {
-        match_instruction_set!(self, len_u16)
-    }
-
-    pub fn len_u8(self) -> Length {
-        match_instruction_set!(self, len_u8)
-    }
-
-    pub fn len_i64(self) -> Length {
-        match_instruction_set!(self, len_i64)
-    }
-
-    pub fn len_i32(self) -> Length {
-        match_instruction_set!(self, len_i32)
-    }
-
-    pub fn len_i16(self) -> Length {
-        match_instruction_set!(self, len_i16)
-    }
-
-    pub fn len_i8(self) -> Length {
-        match_instruction_set!(self, len_i8)
-    }
-
-    pub fn len_f32(self) -> Length {
-        match_instruction_set!(self, len_f32)
-    }
 }
 
-// TODO: do we gain anything from this wrap?
-// TODO: do we need any other fields?
+/// Architecture definition
+///
+/// Defines a target systems architecture
 #[derive(Debug, Copy, Clone)]
 pub struct Architecture {
     pub instruction_set: InstructionSet,
@@ -119,9 +89,11 @@ impl From<InstructionSet> for Architecture {
     }
 }
 
-// TODO: differnet traits for mut or not mut?
-// TODO: TryArchitectureTrait
-// ArchitectureTrait - implements system architecture func
+/// ArchitectureTrait
+///
+/// Implements the architecture property for a type
 pub trait ArchitectureTrait {
     fn arch(&mut self) -> Result<Architecture>;
 }
+
+// TODO: TryArchitectureTrait

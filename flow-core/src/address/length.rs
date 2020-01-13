@@ -123,6 +123,12 @@ impl Length {
             0: len * 1024 * 1024 * 1024 * 8,
         }
     }
+
+    pub fn size_of<T>() -> Self {
+        Length {
+            0: std::mem::size_of::<T>() as u64,
+        }
+    }
 }
 
 impl Default for Length {

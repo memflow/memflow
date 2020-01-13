@@ -1,8 +1,8 @@
 use clap::{App, Arg};
 use std::time::Instant;
 
-use flow_core::*;
 use flow_bridge::BridgeClient;
+use flow_core::*;
 
 fn main() {
     let argv = App::new("examples/bridge_read")

@@ -38,24 +38,6 @@ impl<T: VirtualRead> UserProcess<T> {
         Self { win, eprocess }
     }
 
-    // TODO: macro? pub?
-    pub fn find_offset(&mut self, strct: &str, field: &str) -> Result<Length> {
-        let win = &mut self.win.borrow_mut();
-        let mut _pdb = win
-            .kernel_pdb
-            .as_ref()
-            .ok_or_else(|| "kernel pdb not found")?
-            .borrow_mut();
-        let _strct = _pdb
-            .find_struct(strct)
-            .ok_or_else(|| format!("{} not found", strct))?;
-        let _field = _strct
-            .find_field(field)
-            .ok_or_else(|| format!("{} not found", field))?;
-        trace!("offset found {}::{} = {:x}", strct, field, _field.offset);
-        Ok(_field.offset)
-    }
-
     // system arch = type arch
     pub fn wow64(&mut self) -> Result<Address> {
         let offs = self.find_offset("_EPROCESS", "WoW64Process")?;

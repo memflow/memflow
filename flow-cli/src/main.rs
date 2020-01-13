@@ -6,15 +6,17 @@ extern crate clap;
 use clap::App;
 
 use log::Level;
-use simple_logger;
+//use simple_logger;
 use std::cell::RefCell;
 use std::rc::Rc;
 
 use flow_core::*;
 
 use flow_win32;
-use flow_win32::win::process::*;
+use flow_win32::*;
+//use flow_win32::win::process::*;
 
+/*
 fn handle_argv<T: VirtualRead>(argv: &clap::ArgMatches, os: &flow_win32::Windows<T>) -> () {
     match argv.subcommand() {
         ("kernel", Some(kernel_matches)) => match kernel_matches.subcommand() {
@@ -120,7 +122,7 @@ fn handle_argv<T: VirtualRead>(argv: &clap::ArgMatches, os: &flow_win32::Windows
         ("", None) => println!("no command specified"),
         _ => println!("invalid command {:?}", argv),
     }
-}
+}*/
 
 fn main() {
     let yaml = load_yaml!("cli.yml");
@@ -137,19 +139,31 @@ fn main() {
     // TODO: command for connector?
 
     // TODO: feature
-    let conn = init::init_connector(&argv).unwrap();
+    let mut conn = init::init_connector(&argv).unwrap();
 
     // TODO: osname from config/params?
-    let connrc = Rc::new(RefCell::new(conn));
+    //let connrc = Rc::new(RefCell::new(conn));
     let os = match argv.value_of("os").unwrap_or_else(|| "win32") {
-        "win32" => flow_win32::init(connrc),
+        "win32" => flow_win32::init(&mut conn),
         //"linux" => {},
         _ => Err(flow_win32::error::Error::new("invalid os")),
     }
     .unwrap();
 
+    let offsets = Win32Offsets::try_with_guid(&os.kernel_guid()).unwrap();
+    let eprocs = os.eprocess_list(&mut conn, &offsets).unwrap();
+    eprocs
+        .iter()
+        .map(|eproc| Win32UserProcess::try_with_eprocess(&mut conn, &os, &offsets, *eproc).unwrap())
+        .for_each(|p| println!("{:?} {:?}", p.pid(), p.name()));
+
+    let calc = Win32UserProcess::try_with_name(&mut conn, &os, &offsets, "Calculator.exe").unwrap();
+    println!("calc found: {}", calc.pid());
+
+    // init offsets with guid (+autodownload)
+
     // TODO: interactive/non-interactive mode switch
-    handle_argv(&argv, &os);
+    //handle_argv(&argv, &os);
 
     // derive test
     /*

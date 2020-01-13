@@ -8,9 +8,9 @@ use crate::mem::*;
 
 // TODO: add more?
 pub trait ProcessTrait {
-    fn pid(&mut self) -> Result<i32>;
-    fn name(&mut self) -> Result<String>;
-    fn dtb(&mut self) -> Result<Address>;
+    fn pid(&self) -> i32;
+    fn name(&self) -> String;
+    fn dtb(&self) -> Address;
 }
 
 // TODO: ProcessIterTrait

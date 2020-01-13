@@ -1,5 +1,7 @@
 use crate::error::Result;
 
+use std::mem;
+
 use byteorder::{BigEndian, ByteOrder, LittleEndian};
 
 use crate::address::{Address, Length};
@@ -133,7 +135,7 @@ where
     T: VirtualWriteHelper + ArchitectureTrait + TypeArchitectureTrait,
 {
     /*unsafe fn virt_write_raw<U>(&mut self, addr: Address, data: U) -> Result<Length> {
-        let s = mem::size_of::<U>();
+        let s = Length::size_of::<U>();
         let v = Vec::from(&data as *mut _ as *mut u8, s, s);
         self.virt_write(addr, &v)
     }*/
@@ -151,7 +153,7 @@ where
         let ta = self.type_arch()?;
         let v = arch_write_vec_type!(
             ta.instruction_set.byte_order(),
-            ta.instruction_set.len_u32(),
+            Length::size_of::<u32>(),
             write_u32,
             data.into_iter().map(Address::as_u32).collect::<Vec<u32>>()
         );
@@ -166,7 +168,7 @@ where
         let ta = self.type_arch()?;
         let v = arch_write_vec_type!(
             ta.instruction_set.byte_order(),
-            ta.instruction_set.len_u64(),
+            Length::size_of::<u64>(),
             write_u64,
             data.into_iter().map(Address::as_u64).collect::<Vec<u64>>()
         );
@@ -175,7 +177,7 @@ where
 
     fn virt_write_u64(&mut self, addr: Address, data: u64) -> Result<Length> {
         let ta = self.type_arch()?;
-        let mut v = vec![0_u8; ta.instruction_set.len_u64().as_usize()];
+        let mut v = vec![0_u8; mem::size_of::<u64>()];
         arch_write_type!(
             addr,
             &mut v[..],
@@ -188,7 +190,7 @@ where
 
     fn virt_write_u32(&mut self, addr: Address, data: u32) -> Result<Length> {
         let ta = self.type_arch()?;
-        let mut v = vec![0_u8; ta.instruction_set.len_u32().as_usize()];
+        let mut v = vec![0_u8; mem::size_of::<u32>()];
         arch_write_type!(
             addr,
             &mut v[..],
@@ -201,7 +203,7 @@ where
 
     fn virt_write_u16(&mut self, addr: Address, data: u16) -> Result<Length> {
         let ta = self.type_arch()?;
-        let mut v = vec![0_u8; ta.instruction_set.len_u16().as_usize()];
+        let mut v = vec![0_u8; mem::size_of::<u16>()];
         arch_write_type!(
             addr,
             &mut v[..],
@@ -219,7 +221,7 @@ where
 
     fn virt_write_i64(&mut self, addr: Address, data: i64) -> Result<Length> {
         let ta = self.type_arch()?;
-        let mut v = vec![0_u8; ta.instruction_set.len_i64().as_usize()];
+        let mut v = vec![0_u8; mem::size_of::<i64>()];
         arch_write_type!(
             addr,
             &mut v[..],
@@ -232,7 +234,7 @@ where
 
     fn virt_write_i32(&mut self, addr: Address, data: i32) -> Result<Length> {
         let ta = self.type_arch()?;
-        let mut v = vec![0_u8; ta.instruction_set.len_i32().as_usize()];
+        let mut v = vec![0_u8; mem::size_of::<i32>()];
         arch_write_type!(
             addr,
             &mut v[..],
@@ -245,7 +247,7 @@ where
 
     fn virt_write_i16(&mut self, addr: Address, data: i16) -> Result<Length> {
         let ta = self.type_arch()?;
-        let mut v = vec![0_u8; ta.instruction_set.len_i16().as_usize()];
+        let mut v = vec![0_u8; mem::size_of::<i16>()];
         arch_write_type!(
             addr,
             &mut v[..],
@@ -263,7 +265,7 @@ where
 
     fn virt_write_f32(&mut self, addr: Address, data: f32) -> Result<Length> {
         let ta = self.type_arch()?;
-        let mut v = vec![0_u8; ta.instruction_set.len_f32().as_usize()];
+        let mut v = vec![0_u8; mem::size_of::<f32>()];
         arch_write_type!(
             addr,
             &mut v[..],
@@ -279,7 +281,7 @@ where
         let ta = self.type_arch()?;
         let v = arch_write_vec_type!(
             ta.instruction_set.byte_order(),
-            ta.instruction_set.len_f32(),
+            Length::size_of::<f32>(),
             write_f32,
             data
         );

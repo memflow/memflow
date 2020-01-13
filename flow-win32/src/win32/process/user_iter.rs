@@ -43,7 +43,7 @@ impl<T: VirtualRead> Iterator for ProcessIterator<T> {
 
         // resolve offsets
         let _eprocess = kernel_pdb.find_struct("_EPROCESS")?;
-        let _eprocess_links = _eprocess.find_field("ActiveProcessLinks")?.offset;
+        let _eprocess_links = _eprocess.find_field("")?.offset;
 
         let _list_entry = kernel_pdb.find_struct("_LIST_ENTRY")?;
         let _list_entry_blink = _list_entry.find_field("Blink")?.offset;

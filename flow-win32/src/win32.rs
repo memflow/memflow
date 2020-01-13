@@ -1,6 +1,7 @@
 use crate::error::{Error, Result};
 
 use std::cell::RefCell;
+use std::path::PathBuf;
 use std::rc::Rc;
 
 use flow_core::address::{Address, Length};
@@ -9,50 +10,66 @@ use flow_core::process::ProcessTrait;
 
 use crate::kernel::StartBlock;
 
-pub mod types;
-
 pub mod unicode_string;
 pub use unicode_string::*;
 
-pub mod module;
-pub use module::*;
 pub mod process;
 pub use process::*;
+//pub mod module;
+//pub use module::*;
 
-use crate::kernel::ntos;
+use crate::kernel::ntos::Win32GUID;
+use crate::offsets::Win32Offsets;
 
 use pelite::{self, pe64::exports::Export, PeView};
 
-// TODO: cache processes somewhat?
-pub struct Windows<T: VirtualRead> {
-    pub mem: Rc<RefCell<T>>,
-
+#[derive(Debug, Clone)]
+pub struct Win32 {
     pub start_block: StartBlock,
-    pub kernel_base: Address,
-    pub eprocess_base: Address,
 
-    pub kernel_pdb: Option<Rc<RefCell<types::PDB>>>,
+    pub kernel_base: Address,
+    pub kernel_size: Length,
+    pub kernel_guid: Win32GUID,
+
+    pub eprocess_base: Address,
 }
 
-impl<T: VirtualRead> Clone for Windows<T>
-where
-    Rc<RefCell<T>>: Clone,
-    StartBlock: Clone,
-    Address: Clone,
-    Option<types::PDB>: Clone,
-{
-    fn clone(&self) -> Self {
-        Self {
-            mem: self.mem.clone(),
-            start_block: self.start_block,
-            kernel_base: self.kernel_base,
-            eprocess_base: self.eprocess_base,
-            kernel_pdb: self.kernel_pdb.clone(),
+impl Win32 {
+    // TODO: should this return a borrow?
+    pub fn kernel_guid(&self) -> Win32GUID {
+        self.kernel_guid.clone()
+    }
+
+    pub fn eprocess_list<T: VirtualRead>(
+        &self,
+        mem: &mut T,
+        offsets: &Win32Offsets,
+    ) -> Result<Vec<Address>> {
+        let mut reader = VirtualReader::with(mem, self.start_block.arch, self.start_block.dtb);
+
+        let mut eprocs = Vec::new();
+
+        let mut eprocess = self.eprocess_base;
+        loop {
+            let mut next = reader.virt_read_addr(eprocess + offsets.eproc_link + offsets.blink)?;
+            if next.is_null() {
+                break;
+            }
+            next -= offsets.eproc_link;
+
+            if next == self.eprocess_base {
+                break;
+            }
+            eprocs.push(next);
+            eprocess = next;
         }
+
+        Ok(eprocs)
     }
 }
 
-impl<T: VirtualRead> Windows<T> {
+/*
+impl<T: VirtualRead> Win32<T> {
     pub fn kernel_process(&self) -> Result<KernelProcess<T>> {
         let clone = self.clone();
 
@@ -101,3 +118,4 @@ impl<T: VirtualRead> Windows<T> {
             .ok_or_else(|| "unable to find process")?)
     }
 }
+*/

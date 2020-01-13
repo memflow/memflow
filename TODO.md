@@ -22,6 +22,9 @@ virt read/write:
   -> https://github.com/CasualX/pod/blob/master/zero_copy/src/lib.rs#L39
   -> https://github.com/CasualX/pod/blob/master/zero_copy/src/buffer.rs#L4
 
+processes:
+- instead of having process() funcs have a Win32Process::with(mem, win, "ProcessName.exe").unwrap(); or something similiar
+
 cli:
 - create neatly wrapped cli with featrues such as:
   - read memory / write memory
@@ -41,6 +44,7 @@ va:
 win:
 - verify each stage and early abort (e.g. see if offsets can be probed from the pdb/struct parser)
 - pdb offset to c header dump thing
+- have a WindowsOffsets struct which contains all needed offsets, then init it once (e.g. from pdb or from user) and then use it everywhere, have functions to fetch pdb handle and manually init it from pdb
 
 download:
 - fork duma and add proper lib stuff (create a struct instead of argopts)

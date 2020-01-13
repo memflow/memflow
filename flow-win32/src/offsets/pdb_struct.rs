@@ -3,7 +3,7 @@ use log::trace;
 use pdb::{self, FallibleIterator, Result};
 use std::collections::HashMap;
 use std::fs::File;
-use std::path::PathBuf;
+use std::path::Path;
 
 use flow_core::address::Length;
 
@@ -11,18 +11,18 @@ mod data;
 use data::TypeSet;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Field {
+pub struct PdbField {
     pub type_name: String,
     pub offset: Length,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Struct {
-    field_map: HashMap<String, Field>,
+pub struct PdbStruct {
+    field_map: HashMap<String, PdbField>,
 }
 
-impl Struct {
-    pub fn with(filename: PathBuf, class_name: &str) -> Result<Self> {
+impl PdbStruct {
+    pub fn with<P: AsRef<Path>>(filename: P, class_name: &str) -> Result<Self> {
         let file = File::open(filename)?;
         let mut pdb = pdb::PDB::open(file)?;
 
@@ -72,7 +72,7 @@ impl Struct {
                 //println!("found offset: {:?}", f.name.to_string().into_owned());
                 field_map.insert(
                     f.name.to_string().into_owned(),
-                    Field {
+                    PdbField {
                         type_name: f.type_name.clone(),
                         offset: Length::from(f.offset),
                     },
@@ -80,43 +80,10 @@ impl Struct {
             });
         }
 
-        Ok(Struct { field_map })
+        Ok(Self { field_map })
     }
 
-    pub fn find_field(&self, name: &str) -> Option<&Field> {
+    pub fn find_field(&self, name: &str) -> Option<&PdbField> {
         self.field_map.get(name)
-    }
-}
-
-#[derive(Clone)]
-pub struct PDB {
-    pub file: PathBuf,
-    pub structs: HashMap<String, Struct>,
-}
-
-impl PDB {
-    pub fn new(file: PathBuf) -> Self {
-        PDB {
-            file,
-            structs: HashMap::new(),
-        }
-    }
-
-    pub fn find_struct(&mut self, name: &str) -> Option<Struct> {
-        match self.structs.get(name) {
-            Some(s) => return Some(s.clone()),
-            None => trace!("struct {} not found in cache", name),
-        }
-
-        match Struct::with(self.file.clone(), name) {
-            Ok(s) => {
-                self.structs.insert(String::from(name), s.clone());
-                trace!("struct {} found: {:?}", name, s);
-                return Some(s);
-            }
-            Err(e) => trace!("struct {} not found: {:?}", name, e),
-        }
-
-        None
     }
 }

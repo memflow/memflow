@@ -122,7 +122,7 @@ impl<T: VirtualRead> ProcessModuleTrait for UserProcess<T> {
         let proc_arch = self.arch()?;
 
         let ldr_offs = match proc_arch.instruction_set {
-            InstructionSet::X64 => Length::from(0x18), // self.get_offset("_PEB", "Ldr")?,
+            InstructionSet::X64 => Length::from(0x18), // self.get_offset()?,
             InstructionSet::X86 => Length::from(0xC),
             _ => return Err(Error::new("invalid process architecture")),
         };

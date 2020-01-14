@@ -6,7 +6,7 @@ use std::rc::Rc;
 
 use flow_core::address::{Address, Length};
 use flow_core::mem::*;
-use flow_core::process::ProcessTrait;
+use flow_core::process::{OperatingSystem, ProcessTrait};
 
 use crate::kernel::StartBlock;
 
@@ -15,8 +15,9 @@ pub use unicode_string::*;
 
 pub mod process;
 pub use process::*;
-//pub mod module;
-//pub use module::*;
+
+pub mod module;
+pub use module::*;
 
 use crate::kernel::ntos::Win32GUID;
 use crate::offsets::Win32Offsets;
@@ -33,6 +34,9 @@ pub struct Win32 {
 
     pub eprocess_base: Address,
 }
+
+// TODO:
+impl OperatingSystem for Win32 {}
 
 impl Win32 {
     // TODO: should this return a borrow?
@@ -51,7 +55,8 @@ impl Win32 {
 
         let mut eprocess = self.eprocess_base;
         loop {
-            let mut next = reader.virt_read_addr(eprocess + offsets.eproc_link + offsets.blink)?;
+            let mut next =
+                reader.virt_read_addr(eprocess + offsets.eproc_link + offsets.list_blink)?;
             if next.is_null() {
                 break;
             }

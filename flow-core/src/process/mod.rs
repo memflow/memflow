@@ -3,14 +3,23 @@ pub mod emulator;
 
 use crate::address::{Address, Length};
 use crate::error::Result;
+use crate::arch::Architecture;
 use crate::ida_pattern::*;
 use crate::mem::*;
 
+// TODO:
+pub trait OperatingSystem {}
+
 // TODO: add more?
 pub trait ProcessTrait {
+    fn address(&self) -> Address;
+
     fn pid(&self) -> i32;
     fn name(&self) -> String;
     fn dtb(&self) -> Address;
+
+    fn sys_arch(&self) -> Architecture;
+    fn proc_arch(&self) -> Architecture;
 }
 
 // TODO: ProcessIterTrait
@@ -28,9 +37,12 @@ pub trait ModuleIterTrait {
 // TODO: add more?
 // TODO: maybe remove mut and fetch when module is loaded?
 pub trait ModuleTrait {
-    fn base(&mut self) -> Result<Address>;
-    fn size(&mut self) -> Result<Length>;
-    fn name(&mut self) -> Result<String>;
+    fn address(&self) -> Address;
+    fn parent_process(&self) -> Address;
+
+    fn base(&self) -> Address;
+    fn size(&self) -> Length;
+    fn name(&self) -> String;
 }
 
 pub trait ExportTrait {
@@ -53,8 +65,8 @@ where
     T: ModuleTrait + VirtualReadHelper,
 {
     fn signature(&mut self, pattern: &str) -> Result<Length> {
-        let base = self.base()?;
-        let size = self.size()?;
+        let base = self.base();
+        let size = self.size();
 
         let buf = self.virt_read(base, size)?;
         let m = pattern.try_match_ida_regex(&buf[..])?;

@@ -2,8 +2,8 @@
 pub mod emulator;
 
 use crate::address::{Address, Length};
-use crate::error::Result;
 use crate::arch::Architecture;
+use crate::error::Result;
 use crate::ida_pattern::*;
 use crate::mem::*;
 

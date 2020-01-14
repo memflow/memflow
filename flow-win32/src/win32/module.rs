@@ -20,9 +20,12 @@ use flow_core::mem::*;
 use flow_core::process::ModuleTrait;
 use flow_core::*;
 
-use crate::win32::{Win32, process::{Win32Process, Win32UserProcess}};
 use crate::offsets::Win32Offsets;
 use crate::win32::unicode_string::VirtualReadUnicodeString;
+use crate::win32::{
+    process::{Win32Process, Win32UserProcess},
+    Win32,
+};
 
 use pelite::{self, pe64::exports, PeView};
 
@@ -34,7 +37,6 @@ pub struct Win32Module {
     base: Address,
     size: Length,
     name: String,
-
     // exports
     // sections
 }
@@ -53,22 +55,34 @@ impl Win32Module {
         let mut proc_reader = VirtualReader::with(mem, process.sys_arch(), process.dtb());
 
         let base = match process.proc_arch().instruction_set {
-            InstructionSet::X64 => proc_reader.virt_read_addr64(peb_module + offsets.ldr_data_base_x64)?,
-            InstructionSet::X86 => proc_reader.virt_read_addr32(peb_module + offsets.ldr_data_base_x86)?,
+            InstructionSet::X64 => {
+                proc_reader.virt_read_addr64(peb_module + offsets.ldr_data_base_x64)?
+            }
+            InstructionSet::X86 => {
+                proc_reader.virt_read_addr32(peb_module + offsets.ldr_data_base_x86)?
+            }
             _ => return Err(Error::new("invalid architecture")),
         };
         trace!("base={:x}", base);
 
         let size = match process.proc_arch().instruction_set {
-            InstructionSet::X64 => Length::from(proc_reader.virt_read_u64(peb_module + offsets.ldr_data_size_x64)?),
-            InstructionSet::X86 => Length::from(proc_reader.virt_read_u32(peb_module + offsets.ldr_data_size_x86)?),
+            InstructionSet::X64 => {
+                Length::from(proc_reader.virt_read_u64(peb_module + offsets.ldr_data_size_x64)?)
+            }
+            InstructionSet::X86 => {
+                Length::from(proc_reader.virt_read_u32(peb_module + offsets.ldr_data_size_x86)?)
+            }
             _ => return Err(Error::new("invalid architecture")),
         };
         trace!("size={:x}", size);
 
         let name = match process.proc_arch().instruction_set {
-            InstructionSet::X64 => proc_reader.virt_read_unicode_string(peb_module + offsets.ldr_data_name_x64)?,
-            InstructionSet::X86 => proc_reader.virt_read_unicode_string(peb_module + offsets.ldr_data_name_x86)?,
+            InstructionSet::X64 => {
+                proc_reader.virt_read_unicode_string(peb_module + offsets.ldr_data_name_x64)?
+            }
+            InstructionSet::X86 => {
+                proc_reader.virt_read_unicode_string(peb_module + offsets.ldr_data_name_x86)?
+            }
             _ => return Err(Error::new("invalid architecture")),
         };
         trace!("name={}", name);
@@ -92,7 +106,8 @@ impl Win32Module {
         T: VirtualRead,
         U: ProcessTrait + Win32Process,
     {
-        process.peb_list(mem, offsets)?
+        process
+            .peb_list(mem, offsets)?
             .iter()
             .map(|peb| Win32Module::try_with_peb(mem, process, offsets, *peb))
             .filter_map(Result::ok)

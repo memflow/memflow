@@ -14,11 +14,24 @@ pub use win_user::*;
 use crate::error::Result;
 
 use super::Win32;
+use crate::offsets::Win32Offsets;
 
 use flow_core::address::Address;
 use flow_core::arch::ArchitectureTrait;
 use flow_core::mem::*;
 use flow_core::process::*;
+
+pub trait Win32Process {
+    fn wow64(&self) -> Address;
+    fn peb(&self) -> Address;
+    fn peb_module(&self) -> Address;
+
+    fn peb_list<T: VirtualRead>(
+        &self,
+        mem: &mut T,
+        offsets: &Win32Offsets,
+    ) -> Result<Vec<Address>>;
+}
 
 /*
 use crate::win::module::{Module, ModuleIterator};

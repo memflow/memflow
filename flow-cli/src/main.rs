@@ -154,11 +154,19 @@ fn main() {
     let eprocs = os.eprocess_list(&mut conn, &offsets).unwrap();
     eprocs
         .iter()
-        .map(|eproc| Win32UserProcess::try_with_eprocess(&mut conn, &os, &offsets, *eproc).unwrap())
+        .map(|eproc| Win32UserProcess::try_with_eprocess(&mut conn, &os, &offsets, *eproc))
+        .filter_map(std::result::Result::ok)
         .for_each(|p| println!("{:?} {:?}", p.pid(), p.name()));
 
     let calc = Win32UserProcess::try_with_name(&mut conn, &os, &offsets, "Calculator.exe").unwrap();
     println!("calc found: {}", calc.pid());
+
+    let pebs = calc.peb_list(&mut conn, &offsets).unwrap();
+    pebs
+    .iter()
+    .map(|peb| Win32Module::try_with_peb(&mut conn, &calc, &offsets, *peb))
+    .filter_map(std::result::Result::ok)
+    .for_each(|module| println!("{:?} {:?}", module.base(), module.name()));
 
     // init offsets with guid (+autodownload)
 

@@ -12,7 +12,7 @@ use flow_core::address::Length;
 
 #[derive(Debug, Clone)]
 pub struct Win32Offsets {
-    pub blink: Length,
+    pub list_blink: Length,
     pub eproc_link: Length,
 
     pub kproc_dtb: Length,
@@ -20,6 +20,18 @@ pub struct Win32Offsets {
     pub eproc_name: Length,
     pub eproc_peb: Length,
     pub eproc_wow64: Length,
+
+    pub peb_ldr_x86: Length,
+    pub peb_ldr_x64: Length,
+    pub ldr_list_x86: Length,
+    pub ldr_list_x64: Length,
+
+    pub ldr_data_base_x86: Length,
+    pub ldr_data_base_x64: Length,
+    pub ldr_data_size_x86: Length,
+    pub ldr_data_size_x64: Length,
+    pub ldr_data_name_x86: Length,
+    pub ldr_data_name_x64: Length,
 }
 
 // initialize from pdb -> open pdb by file / by guid
@@ -32,7 +44,7 @@ impl Win32Offsets {
         let kproc = PdbStruct::with(pdb_path, "_KPROCESS")?;
         let eproc = PdbStruct::with(pdb_path, "_EPROCESS")?;
 
-        let blink = list
+        let list_blink = list
             .find_field("Blink")
             .ok_or_else(|| Error::new("_LIST_ENTRY::Blink not found"))?
             .offset;
@@ -64,13 +76,23 @@ impl Win32Offsets {
         };
 
         Ok(Self {
-            blink,
+            list_blink,
             eproc_link,
             kproc_dtb,
             eproc_pid,
             eproc_name,
             eproc_peb,
             eproc_wow64,
+            peb_ldr_x86: Length::from(0xC),   // _PEB::Ldr
+            peb_ldr_x64: Length::from(0x18),  // _PEB::Ldr
+            ldr_list_x86: Length::from(0xC),  // _PEB_LDR_DATA::InLoadOrderModuleList
+            ldr_list_x64: Length::from(0x10), // _PEB_LDR_DATA::InLoadOrderModuleList
+            ldr_data_base_x86: Length::from(0x18), // _LDR_DATA_TABLE_ENTRY::DllBase
+            ldr_data_base_x64: Length::from(0x30), // _LDR_DATA_TABLE_ENTRY::DllBase
+            ldr_data_size_x86: Length::from(0x20), // _LDR_DATA_TABLE_ENTRY::SizeOfImage
+            ldr_data_size_x64: Length::from(0x40), // _LDR_DATA_TABLE_ENTRY::SizeOfImage
+            ldr_data_name_x86: Length::from(0x2C), // _LDR_DATA_TABLE_ENTRY::BaseDllName
+            ldr_data_name_x64: Length::from(0x58), // _LDR_DATA_TABLE_ENTRY::BaseDllName
         })
     }
 

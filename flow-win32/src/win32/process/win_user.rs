@@ -5,7 +5,7 @@ use crate::error::{Error, Result};
 use log::trace;
 
 use crate::offsets::Win32Offsets;
-use crate::win32::{Win32, process::Win32Process};
+use crate::win32::{process::Win32Process, Win32};
 
 use flow_core::address::Address;
 use flow_core::arch::{Architecture, InstructionSet};

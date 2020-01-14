@@ -162,11 +162,10 @@ fn main() {
     println!("calc found: {}", calc.pid());
 
     let pebs = calc.peb_list(&mut conn, &offsets).unwrap();
-    pebs
-    .iter()
-    .map(|peb| Win32Module::try_with_peb(&mut conn, &calc, &offsets, *peb))
-    .filter_map(std::result::Result::ok)
-    .for_each(|module| println!("{:?} {:?}", module.base(), module.name()));
+    pebs.iter()
+        .map(|peb| Win32Module::try_with_peb(&mut conn, &calc, &offsets, *peb))
+        .filter_map(std::result::Result::ok)
+        .for_each(|module| println!("{:?} {:?}", module.base(), module.name()));
 
     // init offsets with guid (+autodownload)
 

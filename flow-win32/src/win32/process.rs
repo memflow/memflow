@@ -26,11 +26,8 @@ pub trait Win32Process {
     fn peb(&self) -> Address;
     fn peb_module(&self) -> Address;
 
-    fn peb_list<T: VirtualRead>(
-        &self,
-        mem: &mut T,
-        offsets: &Win32Offsets,
-    ) -> Result<Vec<Address>>;
+    fn peb_list<T: VirtualRead>(&self, mem: &mut T, offsets: &Win32Offsets)
+        -> Result<Vec<Address>>;
 }
 
 /*

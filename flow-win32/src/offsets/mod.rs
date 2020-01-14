@@ -83,10 +83,10 @@ impl Win32Offsets {
             eproc_name,
             eproc_peb,
             eproc_wow64,
-            peb_ldr_x86: Length::from(0xC),   // _PEB::Ldr
-            peb_ldr_x64: Length::from(0x18),  // _PEB::Ldr
-            ldr_list_x86: Length::from(0xC),  // _PEB_LDR_DATA::InLoadOrderModuleList
-            ldr_list_x64: Length::from(0x10), // _PEB_LDR_DATA::InLoadOrderModuleList
+            peb_ldr_x86: Length::from(0xC),        // _PEB::Ldr
+            peb_ldr_x64: Length::from(0x18),       // _PEB::Ldr
+            ldr_list_x86: Length::from(0xC),       // _PEB_LDR_DATA::InLoadOrderModuleList
+            ldr_list_x64: Length::from(0x10),      // _PEB_LDR_DATA::InLoadOrderModuleList
             ldr_data_base_x86: Length::from(0x18), // _LDR_DATA_TABLE_ENTRY::DllBase
             ldr_data_base_x64: Length::from(0x30), // _LDR_DATA_TABLE_ENTRY::DllBase
             ldr_data_size_x86: Length::from(0x20), // _LDR_DATA_TABLE_ENTRY::SizeOfImage

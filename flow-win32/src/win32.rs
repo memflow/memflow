@@ -1,15 +1,3 @@
-use crate::error::{Error, Result};
-
-use std::cell::RefCell;
-use std::path::PathBuf;
-use std::rc::Rc;
-
-use flow_core::address::{Address, Length};
-use flow_core::mem::*;
-use flow_core::process::{OperatingSystem, ProcessTrait};
-
-use crate::kernel::StartBlock;
-
 pub mod unicode_string;
 pub use unicode_string::*;
 
@@ -19,7 +7,18 @@ pub use process::*;
 pub mod module;
 pub use module::*;
 
-use crate::kernel::ntos::Win32GUID;
+use crate::error::{Error, Result};
+use log::info;
+
+use std::cell::RefCell;
+use std::path::PathBuf;
+use std::rc::Rc;
+
+use flow_core::address::{Address, Length};
+use flow_core::mem::*;
+use flow_core::process::{OperatingSystem, ProcessTrait};
+
+use crate::kernel::{self, ntos::Win32GUID, StartBlock};
 use crate::offsets::Win32Offsets;
 
 use pelite::{self, pe64::exports::Export, PeView};
@@ -39,6 +38,43 @@ pub struct Win32 {
 impl OperatingSystem for Win32 {}
 
 impl Win32 {
+    pub fn try_with<T: PhysicalRead + VirtualRead>(mem: &mut T) -> Result<Self> {
+        /*
+        Options:
+        - supply cr3 (dtb)
+        - supply kernel hint
+        - supply pdb
+        - supply kernel offsets for basic structs (dumped windbg maybe)
+        */
+
+        // find start_block in lowstub base
+        let start_block = kernel::lowstub::find(mem)?;
+        info!(
+            "arch={:?} va={:x} dtb={:x}",
+            start_block.arch, start_block.va, start_block.dtb
+        );
+
+        // find ntoskrnl.exe base
+        let (kernel_base, kernel_size) = kernel::ntos::find(mem, &start_block)?;
+        info!("kernel_base={:x}", kernel_base);
+
+        // get ntoskrnl.exe guid
+        let kernel_guid = kernel::ntos::find_guid(mem, &start_block, kernel_base, kernel_size)?;
+        info!("kernel_guid={:?}", kernel_guid);
+
+        // find eprocess base
+        let eprocess_base = kernel::sysproc::find(mem, &start_block, kernel_base)?;
+        info!("eprocess_base={:x}", eprocess_base);
+
+        Ok(Self {
+            start_block,
+            kernel_base,
+            kernel_size,
+            kernel_guid,
+            eprocess_base,
+        })
+    }
+
     // TODO: should this return a borrow?
     pub fn kernel_guid(&self) -> Win32GUID {
         self.kernel_guid.clone()

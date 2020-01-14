@@ -144,7 +144,7 @@ fn main() {
     // TODO: osname from config/params?
     //let connrc = Rc::new(RefCell::new(conn));
     let os = match argv.value_of("os").unwrap_or_else(|| "win32") {
-        "win32" => flow_win32::init(&mut conn),
+        "win32" => Win32::try_with(&mut conn),
         //"linux" => {},
         _ => Err(flow_win32::error::Error::new("invalid os")),
     }
@@ -167,8 +167,6 @@ fn main() {
         .filter_map(std::result::Result::ok)
         .for_each(|module| println!("{:?} {:?}", module.base(), module.name()));
 
-    // init offsets with guid (+autodownload)
-
     // TODO: interactive/non-interactive mode switch
     //handle_argv(&argv, &os);
 
@@ -189,63 +187,5 @@ fn main() {
         &Vec::new(),
     )
     .unwrap();
-    */
-
-    // parse kernel pe header -- start
-    /*use flow_core::error::*;
-
-    */
-    //println!("module_list: {:x}", module_list);
-    // parse kernel pe header -- end
-
-    /*
-        win.process_iter()
-            .for_each(|mut p| println!("{:?} {:?}", p.get_pid(), p.get_name()));
-        win.process_iter()
-            .for_each(|mut p| println!("{:?} {:?}", p.get_pid(), p.get_name()));
-    */
-    /*
-    let mut process = win
-        .process_iter()
-        .filter_map(|mut p| {
-            if p.name().unwrap_or_default() == "Steam.exe" {
-                Some(p)
-            } else {
-                None
-            }
-        })
-        .nth(0)
-        .ok_or_else(|| "unable to find Steam.exe")
-        .unwrap();
-
-    println!(
-        "found Steam.exe: {:?} {:?} {:?}",
-        process.pid(),
-        process.name(),
-        process.has_wow64()
-    );
-        process
-            .module_iter()
-            .unwrap()
-            .for_each(|mut m| println!("{:?}", m.get_name()));
-        process
-            .module_iter()
-            .unwrap()
-            .for_each(|mut m| println!("{:?}", m.get_name()));
-    let module = process
-        .module_iter()
-        .unwrap()
-        .filter_map(|mut m| {
-            if m.name().unwrap_or_default() == "Steam.exe" {
-                Some(m)
-            } else {
-                None
-            }
-        })
-        .nth(0)
-        .ok_or_else(|| "unable to find module in Calculator.exe")
-        .unwrap();
-
-    println!("mod: {:?}", module.clone().name());
     */
 }

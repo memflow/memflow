@@ -325,11 +325,11 @@ impl<'a, T: VirtualMemoryTrait> VirtualMemory<'a, T> {
     }
 
     // write helpers
-    fn virt_write_addr32(&mut self, addr: Address, data: Address) -> Result<()> {
+    pub fn virt_write_addr32(&mut self, addr: Address, data: Address) -> Result<()> {
         self.virt_write_u32(addr, data.as_u32())
     }
 
-    fn virt_write_vec_addr32(&mut self, addr: Address, data: Vec<Address>) -> Result<()> {
+    pub fn virt_write_vec_addr32(&mut self, addr: Address, data: Vec<Address>) -> Result<()> {
         let v = arch_write_vec_type!(
             self.type_arch.instruction_set.byte_order(),
             Length::size_of::<u32>(),
@@ -339,11 +339,11 @@ impl<'a, T: VirtualMemoryTrait> VirtualMemory<'a, T> {
         self.virt_write(addr, &v[..])
     }
 
-    fn virt_write_addr64(&mut self, addr: Address, data: Address) -> Result<()> {
+    pub fn virt_write_addr64(&mut self, addr: Address, data: Address) -> Result<()> {
         self.virt_write_u64(addr, data.as_u64())
     }
 
-    fn virt_write_vec_addr64(&mut self, addr: Address, data: Vec<Address>) -> Result<()> {
+    pub fn virt_write_vec_addr64(&mut self, addr: Address, data: Vec<Address>) -> Result<()> {
         let v = arch_write_vec_type!(
             self.type_arch.instruction_set.byte_order(),
             Length::size_of::<u64>(),
@@ -353,7 +353,7 @@ impl<'a, T: VirtualMemoryTrait> VirtualMemory<'a, T> {
         self.virt_write(addr, &v[..])
     }
 
-    fn virt_write_u64(&mut self, addr: Address, data: u64) -> Result<()> {
+    pub fn virt_write_u64(&mut self, addr: Address, data: u64) -> Result<()> {
         let mut v = vec![0_u8; mem::size_of::<u64>()];
         arch_write_type!(
             addr,
@@ -365,7 +365,7 @@ impl<'a, T: VirtualMemoryTrait> VirtualMemory<'a, T> {
         self.virt_write(addr, &v)
     }
 
-    fn virt_write_u32(&mut self, addr: Address, data: u32) -> Result<()> {
+    pub fn virt_write_u32(&mut self, addr: Address, data: u32) -> Result<()> {
         let mut v = vec![0_u8; mem::size_of::<u32>()];
         arch_write_type!(
             addr,
@@ -377,7 +377,7 @@ impl<'a, T: VirtualMemoryTrait> VirtualMemory<'a, T> {
         self.virt_write(addr, &v)
     }
 
-    fn virt_write_u16(&mut self, addr: Address, data: u16) -> Result<()> {
+    pub fn virt_write_u16(&mut self, addr: Address, data: u16) -> Result<()> {
         let mut v = vec![0_u8; mem::size_of::<u16>()];
         arch_write_type!(
             addr,
@@ -389,12 +389,12 @@ impl<'a, T: VirtualMemoryTrait> VirtualMemory<'a, T> {
         self.virt_write(addr, &v)
     }
 
-    fn virt_write_u8(&mut self, addr: Address, data: u8) -> Result<()> {
+    pub fn virt_write_u8(&mut self, addr: Address, data: u8) -> Result<()> {
         let v = vec![data, 1];
         self.virt_write(addr, &v)
     }
 
-    fn virt_write_i64(&mut self, addr: Address, data: i64) -> Result<()> {
+    pub fn virt_write_i64(&mut self, addr: Address, data: i64) -> Result<()> {
         let mut v = vec![0_u8; mem::size_of::<i64>()];
         arch_write_type!(
             addr,
@@ -406,7 +406,7 @@ impl<'a, T: VirtualMemoryTrait> VirtualMemory<'a, T> {
         self.virt_write(addr, &v)
     }
 
-    fn virt_write_i32(&mut self, addr: Address, data: i32) -> Result<()> {
+    pub fn virt_write_i32(&mut self, addr: Address, data: i32) -> Result<()> {
         let mut v = vec![0_u8; mem::size_of::<i32>()];
         arch_write_type!(
             addr,
@@ -418,7 +418,7 @@ impl<'a, T: VirtualMemoryTrait> VirtualMemory<'a, T> {
         self.virt_write(addr, &v)
     }
 
-    fn virt_write_i16(&mut self, addr: Address, data: i16) -> Result<()> {
+    pub fn virt_write_i16(&mut self, addr: Address, data: i16) -> Result<()> {
         let mut v = vec![0_u8; mem::size_of::<i16>()];
         arch_write_type!(
             addr,
@@ -430,12 +430,12 @@ impl<'a, T: VirtualMemoryTrait> VirtualMemory<'a, T> {
         self.virt_write(addr, &v)
     }
 
-    fn virt_write_i8(&mut self, addr: Address, data: i8) -> Result<()> {
+    pub fn virt_write_i8(&mut self, addr: Address, data: i8) -> Result<()> {
         let v = vec![data as u8, 1];
         self.virt_write(addr, &v)
     }
 
-    fn virt_write_f32(&mut self, addr: Address, data: f32) -> Result<()> {
+    pub fn virt_write_f32(&mut self, addr: Address, data: f32) -> Result<()> {
         let mut v = vec![0_u8; mem::size_of::<f32>()];
         arch_write_type!(
             addr,
@@ -447,7 +447,7 @@ impl<'a, T: VirtualMemoryTrait> VirtualMemory<'a, T> {
         self.virt_write(addr, &v)
     }
 
-    fn virt_write_vec_f32(&mut self, addr: Address, data: Vec<f32>) -> Result<()> {
+    pub fn virt_write_vec_f32(&mut self, addr: Address, data: Vec<f32>) -> Result<()> {
         let v = arch_write_vec_type!(
             self.type_arch.instruction_set.byte_order(),
             Length::size_of::<f32>(),

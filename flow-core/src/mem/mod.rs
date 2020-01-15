@@ -1,8 +1,3 @@
-/*
-pub mod write_helper;
-pub use write_helper::*;
-*/
-
 use crate::address::{Address, Length};
 use crate::arch::{self, Architecture};
 use crate::Result;
@@ -86,6 +81,31 @@ macro_rules! arch_read_vec_type {
     };
 }
 
+macro_rules! arch_write_type {
+    ($addr:expr, $vec:expr, $byte_order:expr, $func:ident, $value:expr) => {
+        match $byte_order {
+            arch::ByteOrder::LittleEndian => LittleEndian::$func($vec, $value),
+            arch::ByteOrder::BigEndian => BigEndian::$func($vec, $value),
+        }
+    };
+}
+
+macro_rules! arch_write_vec_type {
+    ($byte_order:expr, $elem_size:expr, $func:ident, $value:expr) => {
+        $value
+            .into_iter()
+            .flat_map(|v| {
+                let mut u = vec![0_u8; $elem_size.as_usize()];
+                match $byte_order {
+                    arch::ByteOrder::LittleEndian => LittleEndian::$func(&mut u[..], v),
+                    arch::ByteOrder::BigEndian => BigEndian::$func(&mut u[..], v),
+                };
+                u
+            })
+            .collect::<Vec<u8>>()
+    };
+}
+
 impl<'a, T: VirtualMemoryTrait> VirtualMemory<'a, T> {
     pub fn with(mem: &'a mut T, sys_arch: Architecture, dtb: Address) -> Self {
         Self {
@@ -135,6 +155,7 @@ impl<'a, T: VirtualMemoryTrait> VirtualMemory<'a, T> {
     }
 
     // TODO: replace these with nice pod trait! :)
+    // read helpers
     pub fn virt_read_addr(&mut self, addr: Address) -> Result<Address> {
         let r = self.virt_read_ret(addr, self.type_arch.instruction_set.len_addr())?;
         Ok(Address::from(arch_read_type!(
@@ -267,7 +288,6 @@ impl<'a, T: VirtualMemoryTrait> VirtualMemory<'a, T> {
         ))
     }
 
-    // TODO: add more vec read helpers
     pub fn virt_read_vec_f32(&mut self, addr: Address, count: usize) -> Result<Vec<f32>> {
         let r = self.virt_read_ret(addr, len!(mem::size_of::<f32>() * count))?;
         Ok(arch_read_vec_type!(
@@ -302,5 +322,138 @@ impl<'a, T: VirtualMemoryTrait> VirtualMemory<'a, T> {
         offsets
             .iter()
             .try_fold(base_addr, |c, &a| self.virt_read_addr(c + a))
+    }
+
+    // write helpers
+    fn virt_write_addr32(&mut self, addr: Address, data: Address) -> Result<()> {
+        self.virt_write_u32(addr, data.as_u32())
+    }
+
+    fn virt_write_vec_addr32(&mut self, addr: Address, data: Vec<Address>) -> Result<()> {
+        let v = arch_write_vec_type!(
+            self.type_arch.instruction_set.byte_order(),
+            Length::size_of::<u32>(),
+            write_u32,
+            data.into_iter().map(Address::as_u32).collect::<Vec<u32>>()
+        );
+        self.virt_write(addr, &v[..])
+    }
+
+    fn virt_write_addr64(&mut self, addr: Address, data: Address) -> Result<()> {
+        self.virt_write_u64(addr, data.as_u64())
+    }
+
+    fn virt_write_vec_addr64(&mut self, addr: Address, data: Vec<Address>) -> Result<()> {
+        let v = arch_write_vec_type!(
+            self.type_arch.instruction_set.byte_order(),
+            Length::size_of::<u64>(),
+            write_u64,
+            data.into_iter().map(Address::as_u64).collect::<Vec<u64>>()
+        );
+        self.virt_write(addr, &v[..])
+    }
+
+    fn virt_write_u64(&mut self, addr: Address, data: u64) -> Result<()> {
+        let mut v = vec![0_u8; mem::size_of::<u64>()];
+        arch_write_type!(
+            addr,
+            &mut v[..],
+            self.type_arch.instruction_set.byte_order(),
+            write_u64,
+            data
+        );
+        self.virt_write(addr, &v)
+    }
+
+    fn virt_write_u32(&mut self, addr: Address, data: u32) -> Result<()> {
+        let mut v = vec![0_u8; mem::size_of::<u32>()];
+        arch_write_type!(
+            addr,
+            &mut v[..],
+            self.type_arch.instruction_set.byte_order(),
+            write_u32,
+            data
+        );
+        self.virt_write(addr, &v)
+    }
+
+    fn virt_write_u16(&mut self, addr: Address, data: u16) -> Result<()> {
+        let mut v = vec![0_u8; mem::size_of::<u16>()];
+        arch_write_type!(
+            addr,
+            &mut v[..],
+            self.type_arch.instruction_set.byte_order(),
+            write_u16,
+            data
+        );
+        self.virt_write(addr, &v)
+    }
+
+    fn virt_write_u8(&mut self, addr: Address, data: u8) -> Result<()> {
+        let v = vec![data, 1];
+        self.virt_write(addr, &v)
+    }
+
+    fn virt_write_i64(&mut self, addr: Address, data: i64) -> Result<()> {
+        let mut v = vec![0_u8; mem::size_of::<i64>()];
+        arch_write_type!(
+            addr,
+            &mut v[..],
+            self.type_arch.instruction_set.byte_order(),
+            write_i64,
+            data
+        );
+        self.virt_write(addr, &v)
+    }
+
+    fn virt_write_i32(&mut self, addr: Address, data: i32) -> Result<()> {
+        let mut v = vec![0_u8; mem::size_of::<i32>()];
+        arch_write_type!(
+            addr,
+            &mut v[..],
+            self.type_arch.instruction_set.byte_order(),
+            write_i32,
+            data
+        );
+        self.virt_write(addr, &v)
+    }
+
+    fn virt_write_i16(&mut self, addr: Address, data: i16) -> Result<()> {
+        let mut v = vec![0_u8; mem::size_of::<i16>()];
+        arch_write_type!(
+            addr,
+            &mut v[..],
+            self.type_arch.instruction_set.byte_order(),
+            write_i16,
+            data
+        );
+        self.virt_write(addr, &v)
+    }
+
+    fn virt_write_i8(&mut self, addr: Address, data: i8) -> Result<()> {
+        let v = vec![data as u8, 1];
+        self.virt_write(addr, &v)
+    }
+
+    fn virt_write_f32(&mut self, addr: Address, data: f32) -> Result<()> {
+        let mut v = vec![0_u8; mem::size_of::<f32>()];
+        arch_write_type!(
+            addr,
+            &mut v[..],
+            self.type_arch.instruction_set.byte_order(),
+            write_f32,
+            data
+        );
+        self.virt_write(addr, &v)
+    }
+
+    fn virt_write_vec_f32(&mut self, addr: Address, data: Vec<f32>) -> Result<()> {
+        let v = arch_write_vec_type!(
+            self.type_arch.instruction_set.byte_order(),
+            Length::size_of::<f32>(),
+            write_f32,
+            data
+        );
+        self.virt_write(addr, &v[..])
     }
 }

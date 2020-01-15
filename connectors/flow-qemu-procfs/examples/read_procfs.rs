@@ -15,13 +15,9 @@ fn main() {
     conn.phys_read(Address::from(0x1000), &mut mem).unwrap();
     println!("Received memory: {:?}", mem);
 
-    //bridge.read_registers().unwrap();
-
     let start = Instant::now();
     let mut counter = 0;
     loop {
-        //let r = bridge.read_memory(0x1000, 0x1000).unwrap();
-        //bridge.write_memory(0x1000, &r).unwrap();
         let mut buf = vec![0; 0x1000];
         conn.phys_read(Address::from(0x1000), &mut buf).unwrap();
 

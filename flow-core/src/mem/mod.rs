@@ -293,4 +293,14 @@ impl<'a, T: VirtualMemoryTrait> VirtualMemory<'a, T> {
         let ptr = self.virt_read_addr(addr)?;
         self.virt_read_cstr(ptr, Length::from_kb(2).as_usize())
     }
+
+    pub fn virt_read_addr_chain(
+        &mut self,
+        base_addr: Address,
+        offsets: Vec<Length>,
+    ) -> Result<Address> {
+        offsets
+            .iter()
+            .try_fold(base_addr, |c, &a| self.virt_read_addr(c + a))
+    }
 }

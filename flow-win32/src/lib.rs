@@ -4,10 +4,9 @@ pub use error::*;
 pub mod kernel;
 pub use kernel::*;
 
+// TODO: enable again
 //pub mod keyboard;
-//pub use keyboard::{Keyboard, KeyboardState};
-
-pub mod pe;
+//pub use keyboard::*;
 
 pub mod offsets;
 pub use offsets::*;

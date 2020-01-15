@@ -1,8 +1,8 @@
 use crate::error::{Error, Result};
 
 use flow_core::address::{Address, Length};
-use flow_core::arch::{self, ArchitectureTrait, InstructionSet};
-use flow_core::mem::{VirtualReadHelper, VirtualReadHelperFuncs};
+use flow_core::arch::{self, InstructionSet};
+use flow_core::mem::*;
 
 use byteorder::{BigEndian, ByteOrder, LittleEndian};
 use widestring::U16CString;
@@ -12,9 +12,7 @@ pub trait VirtualReadUnicodeString {
 }
 
 // TODO: split up cpu and proc arch in read_helper.rs
-impl<T: ArchitectureTrait + VirtualReadHelper + VirtualReadHelperFuncs> VirtualReadUnicodeString
-    for T
-{
+impl<'a, T: VirtualMemoryTrait> VirtualReadUnicodeString for VirtualMemory<'a, T> {
     fn virt_read_unicode_string(&mut self, addr: Address) -> Result<String> {
         /*
         typedef struct _windows_unicode_string32 {
@@ -31,8 +29,6 @@ impl<T: ArchitectureTrait + VirtualReadHelper + VirtualReadHelperFuncs> VirtualR
         } __attribute__((packed)) win64_unicode_string_t;
         */
 
-        let arch = self.arch()?;
-
         // length is always the first entry
         let length = self.virt_read_u16(addr + Length::from(0))?;
         if length == 0 {
@@ -41,7 +37,7 @@ impl<T: ArchitectureTrait + VirtualReadHelper + VirtualReadHelperFuncs> VirtualR
 
         // TODO: chek if length exceeds limit
         // buffer is either aligned at 4 or 8
-        let buffer = match arch.instruction_set {
+        let buffer = match self.type_arch().instruction_set {
             InstructionSet::X64 => self.virt_read_addr64(addr + Length::from(8))?,
             InstructionSet::X86 => self.virt_read_addr32(addr + Length::from(4))?,
             _ => {
@@ -58,7 +54,8 @@ impl<T: ArchitectureTrait + VirtualReadHelper + VirtualReadHelperFuncs> VirtualR
         }
 
         // read buffer
-        let mut content = self.virt_read(buffer, Length::from(length + 2))?;
+        let mut content = vec![0; Length::from(length + 2).as_usize()];
+        self.virt_read(buffer, &mut content)?;
         content[length as usize] = 0;
         content[length as usize + 1] = 0;
 
@@ -66,7 +63,7 @@ impl<T: ArchitectureTrait + VirtualReadHelper + VirtualReadHelperFuncs> VirtualR
 
         let content16 = content
             .chunks_exact(2)
-            .map(|b| match arch.instruction_set.byte_order() {
+            .map(|b| match self.type_arch().instruction_set.byte_order() {
                 arch::ByteOrder::LittleEndian => LittleEndian::read_u16(b),
                 arch::ByteOrder::BigEndian => BigEndian::read_u16(b),
             })

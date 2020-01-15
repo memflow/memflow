@@ -1,16 +1,14 @@
 use crate::error::{Error, Result};
-use crate::win::Windows;
+use crate::win32::*;
 
 use flow_core::address::{Address, Length};
 use flow_core::mem::*;
 use flow_core::*;
 
-use crate::win::process::*;
-
 use pelite::{self, pe64::exports::Export, PeView};
 
-pub struct Keyboard<T: VirtualRead> {
-    user_process: UserProcess<T>,
+pub struct Keyboard {
+    user_process: Win32UserProcess,
     key_state_addr: Address,
 }
 
@@ -18,8 +16,8 @@ pub struct KeyboardState {
     buffer: Vec<u8>,
 }
 
-impl<T: VirtualRead> Keyboard<T> {
-    pub fn with(win: &Windows<T>) -> Result<Self> {
+impl Keyboard {
+    pub fn with(win: &Win32) -> Result<Self> {
         let kernel_process = win.kernel_process()?;
         let mut kernel_module = kernel_process.module("win32kbase.sys")?;
 

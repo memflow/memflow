@@ -16,38 +16,34 @@ impl Memory {
     }
 }
 
-impl PhysicalRead for Memory {
-    fn phys_read(&mut self, addr: Address, len: Length) -> Result<Vec<u8>> {
-        Wrapper::new().phys_read(addr, len)
+impl PhysicalMemoryTrait for Memory {
+    fn phys_read(&mut self, addr: Address, out: &mut [u8]) -> Result<()> {
+        Wrapper::new().phys_read(addr, out)
     }
-}
 
-impl PhysicalWrite for Memory {
-    fn phys_write(&mut self, addr: Address, data: &[u8]) -> Result<Length> {
+    fn phys_write(&mut self, addr: Address, data: &[u8]) -> Result<()> {
         Wrapper::new().phys_write(addr, data)
     }
 }
 
-impl VirtualRead for Memory {
+impl VirtualMemoryTrait for Memory {
     fn virt_read(
         &mut self,
         arch: Architecture,
         dtb: Address,
         addr: Address,
-        len: Length,
-    ) -> Result<Vec<u8>> {
-        VatImpl::new(&mut Wrapper::new()).virt_read(arch, dtb, addr, len)
+        out: &mut [u8],
+    ) -> Result<()> {
+        VatImpl::new(&mut Wrapper::new()).virt_read(arch, dtb, addr, out)
     }
-}
 
-impl VirtualWrite for Memory {
     fn virt_write(
         &mut self,
         arch: Architecture,
         dtb: Address,
         addr: Address,
         data: &[u8],
-    ) -> Result<Length> {
+    ) -> Result<()> {
         VatImpl::new(&mut Wrapper::new()).virt_write(arch, dtb, addr, data)
     }
 }
@@ -77,25 +73,22 @@ impl Drop for Wrapper {
 //
 // TODO: proper error handling
 //
-impl PhysicalRead for Wrapper {
-    fn phys_read(&mut self, addr: Address, len: Length) -> Result<Vec<u8>> {
-        let mut l = len.as_usize() as c_ulonglong;
+impl PhysicalMemoryTrait for Wrapper {
+    fn phys_read(&mut self, addr: Address, out: &mut [u8]) -> Result<()> {
+        let mut l = out.len() as c_ulonglong;
         let mem = CPU_PHYSICAL_MEMORY_MAP.unwrap()(addr.as_u64(), &mut l, 0);
         if mem.is_null() {
             Err(Error::new("unable to read memory"))
         } else {
-            let mut buf: Vec<u8> = vec![0; l as usize];
             unsafe {
-                copy_nonoverlapping(mem, buf.as_mut_ptr() as *mut c_void, l as usize);
+                copy_nonoverlapping(mem, out.as_mut_ptr() as *mut c_void, l as usize);
             }
             CPU_PHYSICAL_MEMORY_UNMAP.unwrap()(mem, l, 0, l);
-            Ok(buf)
+            Ok(())
         }
     }
-}
 
-impl PhysicalWrite for Wrapper {
-    fn phys_write(&mut self, addr: Address, data: &[u8]) -> Result<Length> {
+    fn phys_write(&mut self, addr: Address, data: &[u8]) -> Result<()> {
         let mut l = data.len() as c_ulonglong;
         let mem = CPU_PHYSICAL_MEMORY_MAP.unwrap()(addr.as_u64(), &mut l, 1);
         if mem.is_null() {
@@ -105,7 +98,7 @@ impl PhysicalWrite for Wrapper {
                 copy_nonoverlapping(data.as_ptr() as *const c_void, mem, l as usize);
             }
             CPU_PHYSICAL_MEMORY_UNMAP.unwrap()(mem, l, 1, l);
-            Ok(Length::from(l as u64))
+            Ok(())
         }
     }
 }

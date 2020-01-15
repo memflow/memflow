@@ -1,197 +1,198 @@
 use crate::error::{Error, Result};
-use log::{info, trace};
+use log::trace;
 
-use super::Windows;
+use crate::offsets::Win32Offsets;
+use crate::win32::{process::Win32Process, Win32};
 
-use flow_core::address::{Address, Length};
-use flow_core::arch::{Architecture, ArchitectureTrait, InstructionSet};
+use flow_core::address::Address;
+use flow_core::arch::{Architecture, InstructionSet};
 use flow_core::mem::*;
-use flow_core::process::ProcessTrait;
+use flow_core::ProcessTrait;
 
-use std::cell::RefCell;
-use std::rc::Rc;
-
-use crate::win::module::ModuleIterator;
-use crate::win::process::ProcessModuleTrait;
-
-pub struct UserProcess<T: VirtualRead> {
-    pub win: Rc<RefCell<Windows<T>>>,
-    pub eprocess: Address,
+// TODO: put this in process/user.rs
+#[derive(Debug, Clone)]
+pub struct Win32UserProcess {
+    eprocess: Address,
+    pid: i32,
+    name: String,
+    dtb: Address,
+    wow64: Address,
+    peb: Address,
+    peb_module: Address,
+    sys_arch: Architecture,
+    proc_arch: Architecture,
 }
 
-impl<T: VirtualRead> Clone for UserProcess<T>
-where
-    Rc<RefCell<T>>: Clone,
-    Address: Clone,
-{
-    fn clone(&self) -> Self {
-        Self {
-            win: self.win.clone(),
-            eprocess: self.eprocess,
-        }
-    }
-}
+impl Win32UserProcess {
+    pub fn try_with_eprocess<T>(
+        mem: &mut T,
+        win: &Win32,
+        offsets: &Win32Offsets,
+        eprocess: Address,
+    ) -> Result<Self>
+    where
+        T: VirtualMemoryTrait,
+    {
+        let mut reader = VirtualMemory::with(mem, win.start_block.arch, win.start_block.dtb);
 
-// TODO: read/ret "ProcessInfo"
-impl<T: VirtualRead> UserProcess<T> {
-    pub fn with(win: Rc<RefCell<Windows<T>>>, eprocess: Address) -> Self {
-        Self { win, eprocess }
-    }
-
-    // system arch = type arch
-    pub fn wow64(&mut self) -> Result<Address> {
-        let offs = self.find_offset("_EPROCESS", "WoW64Process")?;
-        let win = self.win.borrow();
-        let start_block = win.start_block;
-        let mem = &mut win.mem.borrow_mut();
-        Ok(
-            VirtualReader::with(&mut **mem, start_block.arch, start_block.dtb)
-                .virt_read_addr(self.eprocess + offs)?,
-        )
-    }
-
-    pub fn has_wow64(&mut self) -> Result<bool> {
-        Ok(!self.wow64()?.is_null())
-    }
-}
-
-impl<T: VirtualRead> ProcessTrait for UserProcess<T> {
-    // system arch = type arch
-    fn pid(&mut self) -> flow_core::Result<i32> {
-        let offs = self.find_offset("_EPROCESS", "UniqueProcessId")?;
-        let win = self.win.borrow();
-        let start_block = win.start_block;
-        let mem = &mut win.mem.borrow_mut();
-        Ok(
-            VirtualReader::with(&mut **mem, start_block.arch, start_block.dtb)
-                .virt_read_i32(self.eprocess + offs)?,
-        )
-    }
-
-    // system arch = type arch
-    fn name(&mut self) -> flow_core::Result<String> {
-        let offs = self.find_offset("_EPROCESS", "ImageFileName")?;
-        let win = self.win.borrow();
-        let start_block = win.start_block;
-        let mem = &mut win.mem.borrow_mut();
-        Ok(
-            VirtualReader::with(&mut **mem, start_block.arch, start_block.dtb)
-                .virt_read_cstr(self.eprocess + offs, 16)?,
-        )
-    }
-
-    // system arch = type arch
-    fn dtb(&mut self) -> flow_core::Result<Address> {
-        // _KPROCESS is the first entry in _EPROCESS
-        let offs = self.find_offset("_KPROCESS", "DirectoryTableBase")?;
-        let win = self.win.borrow();
-        let start_block = win.start_block;
-        let mem = &mut win.mem.borrow_mut();
-        Ok(
-            VirtualReader::with(&mut **mem, start_block.arch, start_block.dtb)
-                .virt_read_addr(self.eprocess + offs)?,
-        )
-    }
-}
-
-impl<T: VirtualRead> ProcessModuleTrait for UserProcess<T> {
-    fn first_peb_entry(&mut self) -> Result<Address> {
-        let wow64 = self.wow64()?;
-        info!("wow64={:x}", wow64);
-
-        let peb = if wow64.is_null() {
-            // x64
-            info!("reading peb for x64 process");
-            let offs = self.find_offset("_EPROCESS", "Peb")?;
-            self.virt_read_addr(self.eprocess + offs)?
+        let pid = reader.virt_read_i32(eprocess + offsets.eproc_pid)?;
+        trace!("pid={}", pid);
+        let name = reader.virt_read_cstr(eprocess + offsets.eproc_name, 16)?;
+        trace!("name={}", name);
+        let dtb = reader.virt_read_addr(eprocess + offsets.kproc_dtb)?;
+        trace!("dtb={:x}", dtb);
+        let wow64 = if offsets.eproc_wow64.is_zero() {
+            Address::null()
         } else {
-            // wow64 (first entry in wow64 struct = peb)
-            info!("reading peb for wow64 process");
-            self.virt_read_addr(wow64)?
+            reader.virt_read_addr(eprocess + offsets.eproc_wow64)?
         };
-        info!("peb={:x}", peb);
+        trace!("wow64={:x}", wow64);
 
-        // TODO: process.virt_read_addr based on wow64 or not
-        // TODO: forward declare virtual read in process?
-        // TODO: use process architecture agnostic wrapper from here!
+        // read peb
+        let peb = if wow64.is_null() {
+            trace!("reading peb for x64 process");
+            reader.virt_read_addr(eprocess + offsets.eproc_peb)?
+        } else {
+            trace!("reading peb for wow64 process");
+            reader.virt_read_addr(wow64)?
+        };
+        trace!("peb={:x}", peb);
+
+        let sys_arch = win.start_block.arch;
+        trace!("sys_arch={:?}", sys_arch);
+        let proc_arch = Architecture::from(match sys_arch.instruction_set {
+            InstructionSet::X64 => {
+                if wow64.is_null() {
+                    InstructionSet::X64
+                } else {
+                    InstructionSet::X86
+                }
+            }
+            InstructionSet::X86Pae => InstructionSet::X86,
+            InstructionSet::X86 => InstructionSet::X86,
+            _ => return Err(Error::new("invalid architecture")),
+        });
+        trace!("proc_arch={:?}", proc_arch);
 
         // from here on out we are in the process context
         // we will be using the process type architecture now
-
-        // process architecture agnostic offsets
-        let proc_arch = self.arch()?;
-
-        let ldr_offs = match proc_arch.instruction_set {
-            InstructionSet::X64 => Length::from(0x18), // self.get_offset()?,
-            InstructionSet::X86 => Length::from(0xC),
-            _ => return Err(Error::new("invalid process architecture")),
+        let (peb_ldr_offs, ldr_list_offs) = match proc_arch.instruction_set {
+            InstructionSet::X64 => (offsets.peb_ldr_x64, offsets.ldr_list_x64),
+            InstructionSet::X86 => (offsets.peb_ldr_x86, offsets.ldr_list_x86),
+            _ => return Err(Error::new("invalid architecture")),
         };
+        trace!("peb_ldr_offs={:x}", peb_ldr_offs);
+        trace!("ldr_list_offs={:x}", ldr_list_offs);
 
-        let ldr_list_offs = match proc_arch.instruction_set {
-            InstructionSet::X64 => Length::from(0x10), // self.get_offset("_PEB_LDR_DATA", "InLoadOrderModuleList")?,
-            InstructionSet::X86 => Length::from(0xC),
-            _ => return Err(Error::new("invalid process architecture")),
+        // construct reader with process dtb
+        let mut proc_reader = VirtualMemory::with(mem, win.start_block.arch, dtb);
+        let peb_ldr = match proc_arch.instruction_set {
+            InstructionSet::X64 => proc_reader.virt_read_addr64(peb + peb_ldr_offs)?,
+            InstructionSet::X86 => proc_reader.virt_read_addr32(peb + peb_ldr_offs)?,
+            _ => return Err(Error::new("invalid architecture")),
         };
+        trace!("peb_ldr={:x}", peb_ldr);
 
-        // read PPEB_LDR_DATA Ldr
-        // addr_t peb_ldr = this->read_ptr(peb + this->mo_ldr);
-        let peb_ldr = self.virt_read_addr(peb + ldr_offs)?;
-        info!("peb_ldr={:x}", peb_ldr);
+        let peb_module = match proc_arch.instruction_set {
+            InstructionSet::X64 => proc_reader.virt_read_addr64(peb_ldr + ldr_list_offs)?,
+            InstructionSet::X86 => proc_reader.virt_read_addr32(peb_ldr + ldr_list_offs)?,
+            _ => return Err(Error::new("invalid architecture")),
+        };
+        trace!("peb_module={:x}", peb_module);
 
-        // loop LIST_ENTRY InLoadOrderModuleList
-        // addr_t first_module = this->read_ptr(peb_ldr + this->mo_ldr_list);
-        let first_module = self.virt_read_addr(peb_ldr + ldr_list_offs)?;
-        info!("first_module={:x}", first_module);
-        Ok(first_module)
+        Ok(Self {
+            eprocess,
+            pid,
+            name,
+            dtb,
+            wow64,
+            peb,
+            peb_module,
+            sys_arch,
+            proc_arch,
+        })
     }
 
-    // module_iter will explicitly clone self and feed it into an iterator
-    fn module_iter(&self) -> Result<ModuleIterator<UserProcess<T>>> {
-        let rc = Rc::new(RefCell::new(self.clone()));
-        ModuleIterator::new(rc)
+    pub fn try_with_name<T>(
+        mem: &mut T,
+        win: &Win32,
+        offsets: &Win32Offsets,
+        name: &str,
+    ) -> Result<Self>
+    where
+        T: VirtualMemoryTrait,
+    {
+        win.eprocess_list(mem, offsets)?
+            .iter()
+            .map(|eproc| Win32UserProcess::try_with_eprocess(mem, win, offsets, *eproc))
+            .filter_map(Result::ok)
+            .inspect(|p| trace!("{} {}", p.pid(), p.name()))
+            .filter(|p| p.name() == name)
+            .nth(0)
+            .ok_or_else(|| Error::new(format!("unable to find process {}", name)))
     }
 }
 
-impl<T: VirtualRead> ArchitectureTrait for UserProcess<T> {
-    fn arch(&mut self) -> flow_core::Result<Architecture> {
-        let win = self.win.borrow();
-        Ok(win.start_block.arch)
+impl Win32Process for Win32UserProcess {
+    fn wow64(&self) -> Address {
+        self.wow64
     }
-}
 
-impl<T: VirtualRead> TypeArchitectureTrait for UserProcess<T> {
-    fn type_arch(&mut self) -> flow_core::Result<Architecture> {
-        let start_block = {
-            let win = self.win.borrow();
-            win.start_block
-        };
-        if start_block.arch.instruction_set == InstructionSet::X86 {
-            Ok(Architecture::from(InstructionSet::X86))
-        } else if !self.has_wow64()? {
-            Ok(Architecture::from(InstructionSet::X64))
-        } else {
-            Ok(Architecture::from(InstructionSet::X86))
+    fn peb(&self) -> Address {
+        self.peb
+    }
+
+    fn peb_module(&self) -> Address {
+        self.peb_module
+    }
+
+    fn peb_list<T: VirtualMemoryTrait>(
+        &self,
+        mem: &mut T,
+        offsets: &Win32Offsets,
+    ) -> Result<Vec<Address>> {
+        let mut proc_reader = VirtualMemory::with(mem, self.sys_arch, self.dtb);
+
+        let mut pebs = Vec::new();
+
+        println!("self {:?}", self);
+
+        let mut peb_module = self.peb_module;
+        loop {
+            let next = proc_reader.virt_read_addr(peb_module + offsets.list_blink)?;
+            if next.is_null() || next == self.peb_module {
+                break;
+            }
+            pebs.push(next);
+            peb_module = next;
         }
+
+        Ok(pebs)
     }
 }
 
-// TODO: this is not entirely correct as it will use different VAT than required, split vat arch + type arch up again
-impl<T: VirtualRead> VirtualReadHelper for UserProcess<T> {
-    fn virt_read(&mut self, addr: Address, len: Length) -> flow_core::Result<Vec<u8>> {
-        let proc_arch = self.arch()?;
-        let dtb = self.dtb()?;
-        let win = self.win.borrow();
-        let mem = &mut win.mem.borrow_mut();
-        mem.virt_read(proc_arch, dtb, addr, len)
+impl ProcessTrait for Win32UserProcess {
+    fn address(&self) -> Address {
+        self.eprocess
     }
-}
 
-impl<T: VirtualRead + VirtualWrite> VirtualWriteHelper for UserProcess<T> {
-    fn virt_write(&mut self, addr: Address, data: &[u8]) -> flow_core::Result<Length> {
-        let proc_arch = self.arch()?;
-        let dtb = self.dtb()?;
-        let win = self.win.borrow();
-        let mem = &mut win.mem.borrow_mut();
-        mem.virt_write(proc_arch, dtb, addr, data)
+    fn pid(&self) -> i32 {
+        self.pid
+    }
+
+    fn name(&self) -> String {
+        self.name.clone()
+    }
+
+    fn dtb(&self) -> Address {
+        self.dtb
+    }
+
+    fn sys_arch(&self) -> Architecture {
+        self.sys_arch
+    }
+
+    fn proc_arch(&self) -> Architecture {
+        self.proc_arch
     }
 }

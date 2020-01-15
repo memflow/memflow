@@ -52,8 +52,8 @@ impl Memory {
     }
 }
 
-impl PhysicalRead for Memory {
-    fn phys_read(&mut self, addr: Address, len: Length) -> Result<Vec<u8>> {
+impl PhysicalMemoryTrait for Memory {
+    fn phys_read(&mut self, addr: Address, out: &mut [u8]) -> Result<()> {
         let ofs = self.map.address.0 + {
             if addr.as_u64() <= LENGTH_2GB.as_u64() {
                 addr.as_u64()
@@ -62,15 +62,11 @@ impl PhysicalRead for Memory {
             }
         };
         self.file.seek(SeekFrom::Start(ofs))?;
-
-        let mut buf = vec![0; len.as_usize()];
-        let _ = self.file.read(&mut buf);
-        Ok(buf)
+        let _ = self.file.read(out);
+        Ok(())
     }
-}
 
-impl PhysicalWrite for Memory {
-    fn phys_write(&mut self, addr: Address, data: &[u8]) -> Result<Length> {
+    fn phys_write(&mut self, addr: Address, data: &[u8]) -> Result<()> {
         let ofs = self.map.address.0 + {
             if addr.as_u64() <= LENGTH_2GB.as_u64() {
                 addr.as_u64()
@@ -81,38 +77,28 @@ impl PhysicalWrite for Memory {
         self.file.seek(SeekFrom::Start(ofs))?;
 
         let _ = self.file.write(data);
-        Ok(len!(data.len()))
+        Ok(())
     }
 }
 
-impl VirtualRead for Memory {
+impl VirtualMemoryTrait for Memory {
     fn virt_read(
         &mut self,
         arch: Architecture,
         dtb: Address,
         addr: Address,
-        len: Length,
-    ) -> Result<Vec<u8>> {
-        VatImpl::new(self).virt_read(arch, dtb, addr, len)
+        out: &mut [u8],
+    ) -> Result<()> {
+        VatImpl::new(self).virt_read(arch, dtb, addr, out)
     }
-}
 
-impl VirtualWrite for Memory {
     fn virt_write(
         &mut self,
         arch: Architecture,
         dtb: Address,
         addr: Address,
         data: &[u8],
-    ) -> Result<Length> {
+    ) -> Result<()> {
         VatImpl::new(self).virt_write(arch, dtb, addr, data)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
     }
 }

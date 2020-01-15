@@ -88,12 +88,3 @@ impl From<InstructionSet> for Architecture {
         }
     }
 }
-
-/// ArchitectureTrait
-///
-/// Implements the architecture property for a type
-pub trait ArchitectureTrait {
-    fn arch(&mut self) -> Result<Architecture>;
-}
-
-// TODO: TryArchitectureTrait

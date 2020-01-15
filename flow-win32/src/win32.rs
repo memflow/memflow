@@ -38,7 +38,7 @@ pub struct Win32 {
 impl OperatingSystem for Win32 {}
 
 impl Win32 {
-    pub fn try_with<T: PhysicalRead + VirtualRead>(mem: &mut T) -> Result<Self> {
+    pub fn try_with<T: PhysicalMemoryTrait + VirtualMemoryTrait>(mem: &mut T) -> Result<Self> {
         /*
         Options:
         - supply cr3 (dtb)
@@ -80,12 +80,12 @@ impl Win32 {
         self.kernel_guid.clone()
     }
 
-    pub fn eprocess_list<T: VirtualRead>(
+    pub fn eprocess_list<T: VirtualMemoryTrait>(
         &self,
         mem: &mut T,
         offsets: &Win32Offsets,
     ) -> Result<Vec<Address>> {
-        let mut reader = VirtualReader::with(mem, self.start_block.arch, self.start_block.dtb);
+        let mut reader = VirtualMemory::with(mem, self.start_block.arch, self.start_block.dtb);
 
         let mut eprocs = Vec::new();
 
@@ -110,7 +110,7 @@ impl Win32 {
 }
 
 /*
-impl<T: VirtualRead> Win32<T> {
+impl<T: VirtualMemoryTrait> Win32<T> {
     pub fn kernel_process(&self) -> Result<KernelProcess<T>> {
         let clone = self.clone();
 
@@ -132,31 +132,10 @@ impl<T: VirtualRead> Win32<T> {
         };
 
         let mut reader =
-            VirtualReader::with(&mut **memory, clone.start_block.arch, self.start_block.dtb);
+            VirtualMemory::with(&mut **memory, clone.start_block.arch, self.start_block.dtb);
         let addr = reader.virt_read_addr(module_list)?;
         let rc = Rc::new(RefCell::new(self.clone()));
         Ok(KernelProcess::with(rc, addr))
-    }
-
-    pub fn process_iter(&self) -> ProcessIterator<T> {
-        let rc = Rc::new(RefCell::new(self.clone()));
-        ProcessIterator::new(rc)
-    }
-
-    // TODO: check if first module matches process name / alive check?
-    pub fn process(&self, name: &str) -> Result<UserProcess<T>> {
-        Ok(self
-            .process_iter()
-            .filter_map(|mut m| {
-                if m.name().unwrap_or_default() == name {
-                    Some(m)
-                } else {
-                    None
-                }
-            })
-            .filter(|m| m.first_module().is_ok())
-            .nth(0)
-            .ok_or_else(|| "unable to find process")?)
     }
 }
 */

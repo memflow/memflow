@@ -14,13 +14,13 @@ use crate::error::Result;
 
 use crate::address::Address;
 use crate::arch::{Architecture, InstructionSet};
-use crate::mem::PhysicalRead;
+use crate::mem::PhysicalMemoryTrait;
 
 pub trait VirtualAddressTranslation {
     fn vtop(&mut self, arch: Architecture, dtb: Address, addr: Address) -> Result<Address>;
 }
 
-impl<T: PhysicalRead> VirtualAddressTranslation for T {
+impl<T: PhysicalMemoryTrait> VirtualAddressTranslation for T {
     // virtual -> physical
     fn vtop(&mut self, arch: Architecture, dtb: Address, addr: Address) -> Result<Address> {
         match arch.instruction_set {

@@ -1,4 +1,4 @@
-use log::{info, trace};
+use log::{debug, info, trace};
 
 use flow_core::error::{Error, Result};
 use std::net::SocketAddr;
@@ -17,7 +17,7 @@ use capnp_rpc::{pry, rpc_twoparty_capnp, twoparty, RpcSystem};
 
 use flow_core::address::{Address, Length};
 use flow_core::arch::Architecture;
-use flow_core::mem::{PhysicalRead, PhysicalWrite, VirtualRead, VirtualWrite};
+use flow_core::mem::*;
 
 use crate::bridge_capnp::bridge;
 
@@ -117,28 +117,30 @@ impl BridgeClient {
     }
 }
 
-impl PhysicalRead for BridgeClient {
+impl PhysicalMemoryTrait for BridgeClient {
     // physRead @0 (address :UInt64, length :UInt64) -> (data :Data);
-    fn phys_read(&mut self, addr: Address, len: Length) -> Result<Vec<u8>> {
-        trace!("phys_read({:?}, {:?})", addr, len);
+    fn phys_read(&mut self, addr: Address, out: &mut [u8]) -> Result<()> {
+        trace!("phys_read({:?}, {:?})", addr, out.len());
 
         let mut request = self.bridge.phys_read_request();
         request.get().set_address(addr.as_u64());
-        request.get().set_length(len.as_u64());
-        self.runtime
-            .block_on(
-                request.send().promise.and_then(|response| {
+        request.get().set_length(out.len() as u64);
+        let mem =
+            self.runtime
+                .block_on(request.send().promise.and_then(|response| {
                     Promise::ok(Vec::from(pry!(pry!(response.get()).get_data())))
-                }),
-            )
-            .map_err(|_e| Error::new("unable to read memory"))
-            .and_then(Ok)
+                }))
+                .map_err(|_e| Error::new("unable to read memory"))
+                .and_then(Ok)?;
+        // TODO: use new read method
+        mem.iter().enumerate().for_each(|(i, b)| {
+            out[i] = *b;
+        });
+        Ok(())
     }
-}
 
-impl PhysicalWrite for BridgeClient {
     // physWrite @1 (address :UInt64, data: Data) -> (length :UInt64);
-    fn phys_write(&mut self, addr: Address, data: &[u8]) -> Result<Length> {
+    fn phys_write(&mut self, addr: Address, data: &[u8]) -> Result<()> {
         trace!("phys_write({:?})", addr);
 
         let mut request = self.bridge.phys_write_request();
@@ -151,7 +153,8 @@ impl PhysicalWrite for BridgeClient {
                 }),
             )
             .map_err(|_e| Error::new("unable to write memory"))
-            .and_then(Ok)
+            .and_then(Ok)?;
+        Ok(())
     }
 }
 
@@ -206,55 +209,63 @@ impl BridgeClient {
 //
 // TODO: split up sections greater than 32mb into multiple packets due to capnp limitations!
 //
-impl VirtualRead for BridgeClient {
+impl VirtualMemoryTrait for BridgeClient {
     fn virt_read(
         &mut self,
         arch: Architecture,
         dtb: Address,
         addr: Address,
-        len: Length,
-    ) -> Result<Vec<u8>> {
-        trace!("virt_read({:?}, {:?}, {:?}, {:?})", arch, dtb, addr, len);
+        out: &mut [u8],
+    ) -> Result<()> {
+        trace!(
+            "virt_read({:?}, {:?}, {:?}, {:?})",
+            arch,
+            dtb,
+            addr,
+            out.len()
+        );
 
-        if len > Length::from_mb(32) {
+        if out.len() > Length::from_mb(32).as_usize() {
             info!("virt_read(): reading multiple 32mb chunks");
-            let mut result: Vec<u8> = vec![0; len.as_usize()];
 
             let mut base = addr;
-            let end = addr + len;
+            let end = addr + Length::from(out.len());
             while base < end {
                 let mut clamped_len = Length::from_mb(32);
                 if base + clamped_len > end {
                     clamped_len = end - base;
                 }
 
+                // TODO: improve this with new read method
                 info!("virt_read(): reading chunk at {:x}", base);
                 let mem = self.virt_read_chunk(arch, dtb, base, clamped_len)?;
                 let start = (base - addr).as_usize();
                 mem.iter().enumerate().for_each(|(i, b)| {
-                    result[start + i] = *b;
+                    out[start + i] = *b;
                 });
 
                 base += clamped_len;
             }
-
-            Ok(result)
         } else {
-            self.virt_read_chunk(arch, dtb, addr, len)
+            // TODO: improve with new read method
+            let mem = self.virt_read_chunk(arch, dtb, addr, Length::from(out.len()))?;
+            mem.iter().enumerate().for_each(|(i, b)| {
+                out[i] = *b;
+            });
         }
+        Ok(())
     }
-}
 
-impl VirtualWrite for BridgeClient {
     fn virt_write(
         &mut self,
         arch: Architecture,
         dtb: Address,
         addr: Address,
         data: &[u8],
-    ) -> Result<Length> {
+    ) -> Result<()> {
         // TODO: implement chunk logic
-        trace!("virt_write({:?}, {:?}, {:?})", arch, dtb, addr);
-        self.virt_write_chunk(arch, dtb, addr, data)
+        debug!("virt_write({:?}, {:?}, {:?})", arch, dtb, addr);
+        self.virt_write_chunk(arch, dtb, addr, data)?;
+        Ok(())
     }
 }

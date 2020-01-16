@@ -30,14 +30,15 @@ impl<'a, T: VirtualMemoryTrait> VirtualReadUnicodeString for VirtualMemory<'a, T
         */
 
         // length is always the first entry
-        let length = self.virt_read_u16(addr + Length::from(0))?;
+        let mut length = 0u16;
+        self.virt_read_pod(addr + Length::zero(), &mut length)?;
         if length == 0 {
             return Err(Error::new("unable to read unicode string length"));
         }
 
         // TODO: chek if length exceeds limit
         // buffer is either aligned at 4 or 8
-        let buffer = match self.type_arch().instruction_set {
+        let buffer = match self.proc_arch().instruction_set {
             InstructionSet::X64 => self.virt_read_addr64(addr + Length::from(8))?,
             InstructionSet::X86 => self.virt_read_addr32(addr + Length::from(4))?,
             _ => {
@@ -63,7 +64,7 @@ impl<'a, T: VirtualMemoryTrait> VirtualReadUnicodeString for VirtualMemory<'a, T
 
         let content16 = content
             .chunks_exact(2)
-            .map(|b| match self.type_arch().instruction_set.byte_order() {
+            .map(|b| match self.proc_arch().instruction_set.byte_order() {
                 arch::ByteOrder::LittleEndian => LittleEndian::read_u16(b),
                 arch::ByteOrder::BigEndian => BigEndian::read_u16(b),
             })

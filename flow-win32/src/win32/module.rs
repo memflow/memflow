@@ -48,7 +48,7 @@ impl Win32Module {
         T: VirtualMemoryTrait,
         U: ProcessTrait,
     {
-        let mut proc_reader = VirtualMemory::with(mem, process.sys_arch(), process.dtb());
+        let mut proc_reader = VirtualMemory::with_proc_arch(mem, process.sys_arch(), process.proc_arch(), process.dtb());
 
         let base = match process.proc_arch().instruction_set {
             InstructionSet::X64 => {
@@ -63,10 +63,14 @@ impl Win32Module {
 
         let size = match process.proc_arch().instruction_set {
             InstructionSet::X64 => {
-                Length::from(proc_reader.virt_read_u64(peb_module + offsets.ldr_data_size_x64)?)
+                let mut s = 0u64;
+                proc_reader.virt_read_pod(peb_module + offsets.ldr_data_size_x64, &mut s)?;
+                Length::from(s)
             }
             InstructionSet::X86 => {
-                Length::from(proc_reader.virt_read_u32(peb_module + offsets.ldr_data_size_x86)?)
+                let mut s = 0u32;
+                proc_reader.virt_read_pod(peb_module + offsets.ldr_data_size_x86, &mut s)?;
+                Length::from(s)
             }
             _ => return Err(Error::new("invalid architecture")),
         };

@@ -4,7 +4,7 @@ use log::trace;
 use crate::offsets::Win32Offsets;
 use crate::win32::{process::Win32Process, Win32};
 
-use flow_core::address::Address;
+use flow_core::address::{Address, Length};
 use flow_core::arch::{Architecture, InstructionSet};
 use flow_core::mem::*;
 use flow_core::ProcessTrait;
@@ -35,9 +35,10 @@ impl Win32UserProcess {
     {
         let mut reader = VirtualMemory::with(mem, win.start_block.arch, win.start_block.dtb);
 
-        let pid = reader.virt_read_i32(eprocess + offsets.eproc_pid)?;
+        let mut pid = 0i32;
+        reader.virt_read_pod(eprocess + offsets.eproc_pid, &mut pid)?;
         trace!("pid={}", pid);
-        let name = reader.virt_read_cstr(eprocess + offsets.eproc_name, 16)?;
+        let name = reader.virt_read_cstr(eprocess + offsets.eproc_name, Length::from(16))?;
         trace!("name={}", name);
         let dtb = reader.virt_read_addr(eprocess + offsets.kproc_dtb)?;
         trace!("dtb={:x}", dtb);

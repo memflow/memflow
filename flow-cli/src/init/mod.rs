@@ -9,11 +9,11 @@ use flow_derive::*;
 pub struct EmptyVirtualMemory {}
 
 impl PhysicalMemoryTrait for EmptyVirtualMemory {
-    fn phys_read(&mut self, _addr: Address, _out: &mut [u8]) -> Result<()> {
+    fn phys_read_raw(&mut self, _addr: Address, _out: &mut [u8]) -> Result<()> {
         Err(Error::new("phys_read not implemented"))
     }
 
-    fn phys_write(&mut self, _addr: Address, _data: &[u8]) -> Result<()> {
+    fn phys_write_raw(&mut self, _addr: Address, _data: &[u8]) -> Result<()> {
         Err(Error::new("phys_write not implemented"))
     }
 }

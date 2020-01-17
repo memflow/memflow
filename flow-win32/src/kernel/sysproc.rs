@@ -73,7 +73,7 @@ pub fn find_in_section<T: PhysicalMemoryTrait + VirtualMemoryTrait>(
     // ... check if its 32 or 64bit
 
     let mut header_buf = vec![0; Length::from_mb(32).as_usize()];
-    mem.virt_read(start_block.arch, start_block.dtb, ntos, &mut header_buf)?;
+    mem.virt_read_raw(start_block.arch, start_block.dtb, ntos, &mut header_buf)?;
 
     /*
     let mut pe_opts = ParseOptions::default();

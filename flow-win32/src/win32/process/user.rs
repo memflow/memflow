@@ -36,7 +36,7 @@ impl Win32UserProcess {
         let mut reader = VirtualMemory::with(mem, win.start_block.arch, win.start_block.dtb);
 
         let mut pid = 0i32;
-        reader.virt_read_pod(eprocess + offsets.eproc_pid, &mut pid)?;
+        reader.virt_read(eprocess + offsets.eproc_pid, &mut pid)?;
         trace!("pid={}", pid);
         let name = reader.virt_read_cstr(eprocess + offsets.eproc_name, Length::from(16))?;
         trace!("name={}", name);

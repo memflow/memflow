@@ -19,7 +19,7 @@ impl<'a, T: PhysicalMemoryTrait + VirtualAddressTranslation> VatImpl<'a, T> {
 
 // TODO: recover from vtop failures if we request to much memory!
 impl<'a, T: PhysicalMemoryTrait + VirtualAddressTranslation> VirtualMemoryTrait for VatImpl<'a, T> {
-    fn virt_read(
+    fn virt_read_raw(
         &mut self,
         arch: Architecture,
         dtb: Address,
@@ -45,7 +45,7 @@ impl<'a, T: PhysicalMemoryTrait + VirtualAddressTranslation> VirtualMemoryTrait 
                 trace!("pa is null, skipping page");
             } else {
                 let mut buf = vec![0; aligned_len.as_usize()];
-                self.0.phys_read(pa, &mut buf)?;
+                self.0.phys_read_raw(pa, &mut buf)?;
                 let start = (base - addr).as_usize();
                 buf.iter().enumerate().for_each(|(i, b)| {
                     out[start + i] = *b;
@@ -58,7 +58,7 @@ impl<'a, T: PhysicalMemoryTrait + VirtualAddressTranslation> VirtualMemoryTrait 
         Ok(())
     }
 
-    fn virt_write(
+    fn virt_write_raw(
         &mut self,
         arch: Architecture,
         dtb: Address,
@@ -72,7 +72,7 @@ impl<'a, T: PhysicalMemoryTrait + VirtualAddressTranslation> VirtualMemoryTrait 
                 "virt_write(): unable to resolve physical address",
             ))
         } else {
-            self.0.phys_write(pa, data)
+            self.0.phys_write_raw(pa, data)
         }
     }
 }

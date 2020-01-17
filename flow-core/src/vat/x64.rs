@@ -14,7 +14,7 @@ use crate::mem::PhysicalMemoryTrait;
 // TODO: can we put this in a trait?
 fn read_address<T: PhysicalMemoryTrait>(mem: &mut T, addr: Address) -> Result<Address> {
     let mut buf = vec![0; x64::len_addr().as_usize()];
-    mem.phys_read(addr, &mut buf)?;
+    mem.phys_read_raw(addr, &mut buf)?;
     Ok(Address::from(LittleEndian::read_u64(&buf)))
 }
 

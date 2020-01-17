@@ -12,14 +12,14 @@ fn main() {
     };
 
     let mut mem = vec![0; 8];
-    conn.phys_read(Address::from(0x1000), &mut mem).unwrap();
+    conn.phys_read_raw(Address::from(0x1000), &mut mem).unwrap();
     println!("Received memory: {:?}", mem);
 
     let start = Instant::now();
     let mut counter = 0;
     loop {
         let mut buf = vec![0; 0x1000];
-        conn.phys_read(Address::from(0x1000), &mut buf).unwrap();
+        conn.phys_read_raw(Address::from(0x1000), &mut buf).unwrap();
 
         counter += 1;
         if (counter % 10000) == 0 {

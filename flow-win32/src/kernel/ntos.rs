@@ -54,7 +54,7 @@ pub fn try_fetch_pe_size<T: VirtualMemoryTrait>(
 ) -> Result<Length> {
     // try to probe pe header
     let mut probe_buf = vec![0; Length::from_kb(4).as_usize()];
-    mem.virt_read(start_block.arch, start_block.dtb, addr, &mut probe_buf)?;
+    mem.virt_read_raw(start_block.arch, start_block.dtb, addr, &mut probe_buf)?;
 
     let pe_probe = match PeView::from_bytes(&probe_buf) {
         Ok(pe) => {
@@ -90,7 +90,7 @@ pub fn try_fetch_pe_header<T: VirtualMemoryTrait>(
 ) -> Result<Vec<u8>> {
     let size_of_image = try_fetch_pe_size(mem, start_block, addr)?;
     let mut buf = vec![0; size_of_image.as_usize()];
-    mem.virt_read(start_block.arch, start_block.dtb, addr, &mut buf)?;
+    mem.virt_read_raw(start_block.arch, start_block.dtb, addr, &mut buf)?;
     Ok(buf)
 }
 
@@ -135,7 +135,7 @@ fn find_x64_with_va<T: VirtualMemoryTrait>(
         trace!("find_x64_with_va: probing at {:x}", va_base);
 
         let mut buf = vec![0; Length::from_mb(2).as_usize()];
-        mem.virt_read(
+        mem.virt_read_raw(
             start_block.arch,
             start_block.dtb,
             Address::from(va_base),
@@ -228,7 +228,7 @@ pub fn find_guid<T: VirtualMemoryTrait>(
     kernel_size: Length,
 ) -> Result<Win32GUID> {
     let mut pe_buf = vec![0; kernel_size.as_usize()];
-    mem.virt_read(start_block.arch, start_block.dtb, kernel_base, &mut pe_buf)?;
+    mem.virt_read_raw(start_block.arch, start_block.dtb, kernel_base, &mut pe_buf)?;
 
     let pe = PeView::from_bytes(&pe_buf)?;
 

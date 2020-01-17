@@ -7,23 +7,23 @@ use std::ffi::CString;
 
 // generic traits
 pub trait PhysicalMemoryTrait {
-    fn phys_read(&mut self, addr: Address, out: &mut [u8]) -> Result<()>;
-    fn phys_write(&mut self, addr: Address, data: &[u8]) -> Result<()>;
+    fn phys_read_raw(&mut self, addr: Address, out: &mut [u8]) -> Result<()>;
+    fn phys_write_raw(&mut self, addr: Address, data: &[u8]) -> Result<()>;
 
     // TODO:
     // - check endianess here and return an error
     // - better would be to convert endianess with word alignment from addr
-    fn phys_read_pod<T: Pod>(&mut self, addr: Address, out: &mut T) -> Result<()> {
-        self.phys_read(addr, out.as_bytes_mut())
+    fn phys_read<T: Pod>(&mut self, addr: Address, out: &mut T) -> Result<()> {
+        self.phys_read_raw(addr, out.as_bytes_mut())
     }
 
-    fn phys_write_pod<T: Pod>(&mut self, addr: Address, data: &T) -> Result<()> {
-        self.phys_write(addr, data.as_bytes())
+    fn phys_write<T: Pod>(&mut self, addr: Address, data: &T) -> Result<()> {
+        self.phys_write_raw(addr, data.as_bytes())
     }
 }
 
 pub trait VirtualMemoryTrait {
-    fn virt_read(
+    fn virt_read_raw(
         &mut self,
         arch: Architecture,
         dtb: Address,
@@ -31,7 +31,7 @@ pub trait VirtualMemoryTrait {
         out: &mut [u8],
     ) -> Result<()>;
 
-    fn virt_write(
+    fn virt_write_raw(
         &mut self,
         arch: Architecture,
         dtb: Address,
@@ -42,7 +42,7 @@ pub trait VirtualMemoryTrait {
     // TODO:
     // - check endianess here and return an error
     // - better would be to convert endianess with word alignment from addr
-    fn virt_read_pod<T: Pod>(
+    fn virt_read<T: Pod>(
         &mut self,
         arch: Architecture,
         dtb: Address,
@@ -53,10 +53,10 @@ pub trait VirtualMemoryTrait {
         T: Pod,
         Self: Sized,
     {
-        self.virt_read(arch, dtb, addr, out.as_bytes_mut())
+        self.virt_read_raw(arch, dtb, addr, out.as_bytes_mut())
     }
 
-    fn virt_write_pod<T>(
+    fn virt_write<T>(
         &mut self,
         arch: Architecture,
         dtb: Address,
@@ -67,7 +67,7 @@ pub trait VirtualMemoryTrait {
         T: Pod,
         Self: Sized,
     {
-        self.virt_write(arch, dtb, addr, data.as_bytes())
+        self.virt_write_raw(arch, dtb, addr, data.as_bytes())
     }
 }
 
@@ -115,32 +115,32 @@ impl<'a, T: VirtualMemoryTrait> VirtualMemory<'a, T> {
     }
 
     // self.mem wrappers
-    pub fn virt_read(&mut self, addr: Address, out: &mut [u8]) -> Result<()> {
+    pub fn virt_read_raw(&mut self, addr: Address, out: &mut [u8]) -> Result<()> {
+        self.mem.virt_read_raw(self.sys_arch, self.dtb, addr, out)
+    }
+
+    pub fn virt_write_raw(&mut self, addr: Address, data: &[u8]) -> Result<()> {
+        self.mem.virt_write_raw(self.sys_arch, self.dtb, addr, data)
+    }
+
+    pub fn virt_read<U: Pod>(&mut self, addr: Address, out: &mut U) -> Result<()> {
         self.mem.virt_read(self.sys_arch, self.dtb, addr, out)
     }
 
-    pub fn virt_write(&mut self, addr: Address, data: &[u8]) -> Result<()> {
+    pub fn virt_write<U: Pod>(&mut self, addr: Address, data: &U) -> Result<()> {
         self.mem.virt_write(self.sys_arch, self.dtb, addr, data)
-    }
-
-    pub fn virt_read_pod<U: Pod>(&mut self, addr: Address, out: &mut U) -> Result<()> {
-        self.mem.virt_read_pod(self.sys_arch, self.dtb, addr, out)
-    }
-
-    pub fn virt_write_pod<U: Pod>(&mut self, addr: Address, data: &U) -> Result<()> {
-        self.mem.virt_write_pod(self.sys_arch, self.dtb, addr, data)
     }
 
     // custom read wrappers
     pub fn virt_read_addr32(&mut self, addr: Address) -> Result<Address> {
         let mut res = 0u32;
-        self.virt_read_pod(addr, &mut res)?;
+        self.virt_read(addr, &mut res)?;
         Ok(Address::from(res))
     }
 
     pub fn virt_read_addr64(&mut self, addr: Address) -> Result<Address> {
         let mut res = 0u64;
-        self.virt_read_pod(addr, &mut res)?;
+        self.virt_read(addr, &mut res)?;
         Ok(Address::from(res))
     }
 
@@ -155,7 +155,7 @@ impl<'a, T: VirtualMemoryTrait> VirtualMemory<'a, T> {
     // TODO: read into slice?
     pub fn virt_read_cstr(&mut self, addr: Address, len: Length) -> Result<String> {
         let mut buf = vec![0; len.as_usize()];
-        self.virt_read(addr, &mut buf)?;
+        self.virt_read_raw(addr, &mut buf)?;
         if let Some((n, _)) = buf.iter().enumerate().filter(|(_, c)| **c == 0_u8).nth(0) {
             buf.truncate(n);
         }

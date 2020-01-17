@@ -53,7 +53,7 @@ impl Memory {
 }
 
 impl PhysicalMemoryTrait for Memory {
-    fn phys_read(&mut self, addr: Address, out: &mut [u8]) -> Result<()> {
+    fn phys_read_raw(&mut self, addr: Address, out: &mut [u8]) -> Result<()> {
         let ofs = self.map.address.0 + {
             if addr.as_u64() <= LENGTH_2GB.as_u64() {
                 addr.as_u64()
@@ -66,7 +66,7 @@ impl PhysicalMemoryTrait for Memory {
         Ok(())
     }
 
-    fn phys_write(&mut self, addr: Address, data: &[u8]) -> Result<()> {
+    fn phys_write_raw(&mut self, addr: Address, data: &[u8]) -> Result<()> {
         let ofs = self.map.address.0 + {
             if addr.as_u64() <= LENGTH_2GB.as_u64() {
                 addr.as_u64()
@@ -82,23 +82,23 @@ impl PhysicalMemoryTrait for Memory {
 }
 
 impl VirtualMemoryTrait for Memory {
-    fn virt_read(
+    fn virt_read_raw(
         &mut self,
         arch: Architecture,
         dtb: Address,
         addr: Address,
         out: &mut [u8],
     ) -> Result<()> {
-        VatImpl::new(self).virt_read(arch, dtb, addr, out)
+        VatImpl::new(self).virt_read_raw(arch, dtb, addr, out)
     }
 
-    fn virt_write(
+    fn virt_write_raw(
         &mut self,
         arch: Architecture,
         dtb: Address,
         addr: Address,
         data: &[u8],
     ) -> Result<()> {
-        VatImpl::new(self).virt_write(arch, dtb, addr, data)
+        VatImpl::new(self).virt_write_raw(arch, dtb, addr, data)
     }
 }

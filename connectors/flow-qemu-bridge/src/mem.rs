@@ -34,7 +34,7 @@ impl VirtualMemoryTrait for Memory {
         addr: Address,
         out: &mut [u8],
     ) -> Result<()> {
-        VatImpl::new(&mut Wrapper::new()).virt_read(arch, dtb, addr, out)
+        VatImpl::new(&mut Wrapper::new()).virt_read_raw(arch, dtb, addr, out)
     }
 
     fn virt_write_raw(
@@ -44,7 +44,7 @@ impl VirtualMemoryTrait for Memory {
         addr: Address,
         data: &[u8],
     ) -> Result<()> {
-        VatImpl::new(&mut Wrapper::new()).virt_write(arch, dtb, addr, data)
+        VatImpl::new(&mut Wrapper::new()).virt_write_raw(arch, dtb, addr, data)
     }
 }
 

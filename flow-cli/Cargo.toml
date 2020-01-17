@@ -8,16 +8,22 @@ edition = "2018"
 clap = { version = "2.33.0", features = ["yaml"] }
 
 [dependencies]
+flow-core = { path = "../flow-core" }
+flow-derive = { path = "../flow-derive" }
+flow-win32 = { path = "../flow-win32" }
+flow-bridge = { path = "../connectors/flow-bridge", optional = true }
+flow-qemu-procfs = { path = "../connectors/flow-qemu-procfs", optional = true }
 clap = { version = "2.33.0", features = ["yaml"] }
 toml = "0.5"
 serde = "1.0.97"
 serde_derive = "1.0"
 simple_logger = "1.0.1"
 log = "0.4.8"
-flow-core = { path = "../flow-core" }
-flow-derive = { path = "../flow-derive" }
-flow-win32 = { path = "../flow-win32" }
-flow-qemu-procfs = { path = "../connectors/flow-qemu-procfs" }
 pdb = { git = "https://github.com/willglynn/pdb" }
 url = "2.1.0"
 win_key_codes = "0.1.2"
+
+[features]
+default = []
+connector-bridge = ["flow-bridge"]
+connector-qemu-procfs = ["flow-qemu-procfs"]

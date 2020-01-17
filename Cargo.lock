@@ -442,6 +442,7 @@ name = "flow-cli"
 version = "0.1.0"
 dependencies = [
  "clap 2.33.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "flow-bridge 0.1.0",
  "flow-core 0.1.0",
  "flow-derive 0.1.0",
  "flow-qemu-procfs 0.1.0",

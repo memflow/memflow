@@ -48,7 +48,12 @@ impl Win32Module {
         T: VirtualMemoryTrait,
         U: ProcessTrait,
     {
-        let mut proc_reader = VirtualMemory::with_proc_arch(mem, process.sys_arch(), process.proc_arch(), process.dtb());
+        let mut proc_reader = VirtualMemory::with_proc_arch(
+            mem,
+            process.sys_arch(),
+            process.proc_arch(),
+            process.dtb(),
+        );
 
         let base = match process.proc_arch().instruction_set {
             InstructionSet::X64 => {

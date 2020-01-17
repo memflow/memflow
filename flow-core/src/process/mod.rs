@@ -1,5 +1,5 @@
-#[cfg(feature = "emulator")]
-pub mod emulator;
+//#[cfg(feature = "emulator")]
+//pub mod emulator;
 
 use crate::address::{Address, Length};
 use crate::arch::Architecture;

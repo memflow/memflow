@@ -69,12 +69,12 @@ impl Win32Module {
         let size = match process.proc_arch().instruction_set {
             InstructionSet::X64 => {
                 let mut s = 0u64;
-                proc_reader.virt_read_pod(peb_module + offsets.ldr_data_size_x64, &mut s)?;
+                proc_reader.virt_read(peb_module + offsets.ldr_data_size_x64, &mut s)?;
                 Length::from(s)
             }
             InstructionSet::X86 => {
                 let mut s = 0u32;
-                proc_reader.virt_read_pod(peb_module + offsets.ldr_data_size_x86, &mut s)?;
+                proc_reader.virt_read(peb_module + offsets.ldr_data_size_x86, &mut s)?;
                 Length::from(s)
             }
             _ => return Err(Error::new("invalid architecture")),

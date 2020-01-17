@@ -31,7 +31,7 @@ impl<'a, T: VirtualMemoryTrait> VirtualReadUnicodeString for VirtualMemory<'a, T
 
         // length is always the first entry
         let mut length = 0u16;
-        self.virt_read_pod(addr + Length::zero(), &mut length)?;
+        self.virt_read(addr + Length::zero(), &mut length)?;
         if length == 0 {
             return Err(Error::new("unable to read unicode string length"));
         }
@@ -56,7 +56,7 @@ impl<'a, T: VirtualMemoryTrait> VirtualReadUnicodeString for VirtualMemory<'a, T
 
         // read buffer
         let mut content = vec![0; Length::from(length + 2).as_usize()];
-        self.virt_read(buffer, &mut content)?;
+        self.virt_read_raw(buffer, &mut content)?;
         content[length as usize] = 0;
         content[length as usize + 1] = 0;
 

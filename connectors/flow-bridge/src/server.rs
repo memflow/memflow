@@ -168,7 +168,7 @@ impl<T: PhysicalMemoryTrait + 'static> bridge::Server for BridgeServer<T> {
         let length = Length::from(pry!(params.get()).get_length());
 
         let mut data = vec![0; length.as_usize()];
-        memory.phys_read(address, &mut data).unwrap_or_else(|_| ());
+        memory.phys_read_raw(address, &mut data).unwrap_or_else(|_| ());
         results.get().set_data(&data);
 
         Promise::ok(())
@@ -187,7 +187,7 @@ impl<T: PhysicalMemoryTrait + 'static> bridge::Server for BridgeServer<T> {
         let data = pry!(pry!(params.get()).get_data());
 
         memory
-            .phys_write(address, &data.to_vec())
+            .phys_write_raw(address, &data.to_vec())
             .unwrap_or_else(|_| ());
         results.get().set_length(data.len() as u64);
 
@@ -210,7 +210,7 @@ impl<T: PhysicalMemoryTrait + 'static> bridge::Server for BridgeServer<T> {
 
         let mut data = vec![0; length.as_usize()];
         VatImpl::new(&mut **memory)
-            .virt_read(Architecture::from(ins), dtb, address, &mut data)
+            .virt_read_raw(Architecture::from(ins), dtb, address, &mut data)
             .unwrap_or_else(|_| ());
         results.get().set_data(&data);
 
@@ -233,7 +233,7 @@ impl<T: PhysicalMemoryTrait + 'static> bridge::Server for BridgeServer<T> {
         let data = pry!(pry!(params.get()).get_data());
 
         VatImpl::new(&mut **memory)
-            .virt_write(Architecture::from(ins), dtb, address, &data.to_vec())
+            .virt_write_raw(Architecture::from(ins), dtb, address, &data.to_vec())
             .unwrap_or_else(|_| ());
         results.get().set_length(data.len() as u64);
 

@@ -119,8 +119,8 @@ impl BridgeClient {
 
 impl PhysicalMemoryTrait for BridgeClient {
     // physRead @0 (address :UInt64, length :UInt64) -> (data :Data);
-    fn phys_read(&mut self, addr: Address, out: &mut [u8]) -> Result<()> {
-        trace!("phys_read({:?}, {:?})", addr, out.len());
+    fn phys_read_raw(&mut self, addr: Address, out: &mut [u8]) -> Result<()> {
+        trace!("phys_read_raw({:?}, {:?})", addr, out.len());
 
         let mut request = self.bridge.phys_read_request();
         request.get().set_address(addr.as_u64());
@@ -140,8 +140,8 @@ impl PhysicalMemoryTrait for BridgeClient {
     }
 
     // physWrite @1 (address :UInt64, data: Data) -> (length :UInt64);
-    fn phys_write(&mut self, addr: Address, data: &[u8]) -> Result<()> {
-        trace!("phys_write({:?})", addr);
+    fn phys_write_raw(&mut self, addr: Address, data: &[u8]) -> Result<()> {
+        trace!("phys_write_raw({:?})", addr);
 
         let mut request = self.bridge.phys_write_request();
         request.get().set_address(addr.as_u64());
@@ -210,7 +210,7 @@ impl BridgeClient {
 // TODO: split up sections greater than 32mb into multiple packets due to capnp limitations!
 //
 impl VirtualMemoryTrait for BridgeClient {
-    fn virt_read(
+    fn virt_read_raw(
         &mut self,
         arch: Architecture,
         dtb: Address,
@@ -218,7 +218,7 @@ impl VirtualMemoryTrait for BridgeClient {
         out: &mut [u8],
     ) -> Result<()> {
         trace!(
-            "virt_read({:?}, {:?}, {:?}, {:?})",
+            "virt_read_raw({:?}, {:?}, {:?}, {:?})",
             arch,
             dtb,
             addr,
@@ -226,7 +226,7 @@ impl VirtualMemoryTrait for BridgeClient {
         );
 
         if out.len() > Length::from_mb(32).as_usize() {
-            info!("virt_read(): reading multiple 32mb chunks");
+            info!("virt_read_raw(): reading multiple 32mb chunks");
 
             let mut base = addr;
             let end = addr + Length::from(out.len());
@@ -237,7 +237,7 @@ impl VirtualMemoryTrait for BridgeClient {
                 }
 
                 // TODO: improve this with new read method
-                info!("virt_read(): reading chunk at {:x}", base);
+                info!("virt_read_raw(): reading chunk at {:x}", base);
                 let mem = self.virt_read_chunk(arch, dtb, base, clamped_len)?;
                 let start = (base - addr).as_usize();
                 mem.iter().enumerate().for_each(|(i, b)| {
@@ -256,7 +256,7 @@ impl VirtualMemoryTrait for BridgeClient {
         Ok(())
     }
 
-    fn virt_write(
+    fn virt_write_raw(
         &mut self,
         arch: Architecture,
         dtb: Address,
@@ -264,7 +264,7 @@ impl VirtualMemoryTrait for BridgeClient {
         data: &[u8],
     ) -> Result<()> {
         // TODO: implement chunk logic
-        debug!("virt_write({:?}, {:?}, {:?})", arch, dtb, addr);
+        debug!("virt_write_raw({:?}, {:?}, {:?})", arch, dtb, addr);
         self.virt_write_chunk(arch, dtb, addr, data)?;
         Ok(())
     }

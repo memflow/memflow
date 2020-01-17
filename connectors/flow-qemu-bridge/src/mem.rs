@@ -17,17 +17,17 @@ impl Memory {
 }
 
 impl PhysicalMemoryTrait for Memory {
-    fn phys_read(&mut self, addr: Address, out: &mut [u8]) -> Result<()> {
-        Wrapper::new().phys_read(addr, out)
+    fn phys_read_raw(&mut self, addr: Address, out: &mut [u8]) -> Result<()> {
+        Wrapper::new().phys_read_raw(addr, out)
     }
 
-    fn phys_write(&mut self, addr: Address, data: &[u8]) -> Result<()> {
-        Wrapper::new().phys_write(addr, data)
+    fn phys_write_raw(&mut self, addr: Address, data: &[u8]) -> Result<()> {
+        Wrapper::new().phys_write_raw(addr, data)
     }
 }
 
 impl VirtualMemoryTrait for Memory {
-    fn virt_read(
+    fn virt_read_raw(
         &mut self,
         arch: Architecture,
         dtb: Address,
@@ -37,7 +37,7 @@ impl VirtualMemoryTrait for Memory {
         VatImpl::new(&mut Wrapper::new()).virt_read(arch, dtb, addr, out)
     }
 
-    fn virt_write(
+    fn virt_write_raw(
         &mut self,
         arch: Architecture,
         dtb: Address,
@@ -74,7 +74,7 @@ impl Drop for Wrapper {
 // TODO: proper error handling
 //
 impl PhysicalMemoryTrait for Wrapper {
-    fn phys_read(&mut self, addr: Address, out: &mut [u8]) -> Result<()> {
+    fn phys_read_raw(&mut self, addr: Address, out: &mut [u8]) -> Result<()> {
         let mut l = out.len() as c_ulonglong;
         let mem = CPU_PHYSICAL_MEMORY_MAP.unwrap()(addr.as_u64(), &mut l, 0);
         if mem.is_null() {
@@ -88,7 +88,7 @@ impl PhysicalMemoryTrait for Wrapper {
         }
     }
 
-    fn phys_write(&mut self, addr: Address, data: &[u8]) -> Result<()> {
+    fn phys_write_raw(&mut self, addr: Address, data: &[u8]) -> Result<()> {
         let mut l = data.len() as c_ulonglong;
         let mem = CPU_PHYSICAL_MEMORY_MAP.unwrap()(addr.as_u64(), &mut l, 1);
         if mem.is_null() {

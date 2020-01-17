@@ -17,24 +17,24 @@ pub fn virtual_memory_trait_derive(input: TokenStream) -> TokenStream {
 
     let expanded = quote! {
         impl crate::mem::VirtualMemoryTrait for #name {
-            fn virt_read(
+            fn virt_read_raw(
                 &mut self,
                 arch: Architecture,
                 dtb: Address,
                 addr: Address,
                 out: &mut [u8],
             ) -> Result<()> {
-                VatImpl::new(self).virt_read(arch, dtb, addr, out)
+                VatImpl::new(self).virt_read_raw(arch, dtb, addr, out)
             }
 
-            fn virt_write(
+            fn virt_write_raw(
                 &mut self,
                 arch: Architecture,
                 dtb: Address,
                 addr: Address,
                 data: &[u8],
             ) -> Result<()> {
-                VatImpl::new(self).virt_write(arch, dtb, addr, data)
+                VatImpl::new(self).virt_write_raw(arch, dtb, addr, data)
             }
         }
     };

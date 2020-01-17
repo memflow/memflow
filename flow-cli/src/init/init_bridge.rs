@@ -1,11 +1,13 @@
 use std::fs;
 
+use clap::ArgMatches;
+use serde_derive::Deserialize;
 use toml;
 
-use serde_derive::Deserialize;
+use flow_core::*;
 
-use flow_core::mem::*;
-use flow_core::{Error, Result};
+#[cfg(feature = "connector-bridge")]
+use flow_bridge::*;
 
 #[derive(Clone, Deserialize)]
 pub struct MachineConfig {
@@ -23,16 +25,16 @@ pub fn try_parse(file_name: &str) -> Result<Config> {
     Ok(toml::from_str::<Config>(&cfg).map_err(Error::new)?)
 }
 
-pub fn init_bridge_connector(argv: &ArgMatches) -> Result<BridgeClient> {
+#[cfg(feature = "connector-bridge")]
+pub fn init_bridge(argv: &ArgMatches) -> Result<BridgeClient> {
     let url = {
         if argv.is_present("url") {
             argv.value_of("url").unwrap().to_owned()
         } else {
-            let machines =
-                config::try_parse(argv.value_of("config").unwrap_or_else(|| "memflow.toml"))
-                    .unwrap()
-                    .machine
-                    .unwrap(); // TODO: proper error handling / feedback
+            let machines = try_parse(argv.value_of("config").unwrap_or_else(|| "memflow.toml"))
+                .unwrap()
+                .machine
+                .unwrap(); // TODO: proper error handling / feedback
 
             let machine = {
                 if argv.is_present("machine") {
@@ -59,4 +61,9 @@ pub fn init_bridge_connector(argv: &ArgMatches) -> Result<BridgeClient> {
     };
 
     BridgeClient::connect(url.as_str())
+}
+
+#[cfg(not(feature = "connector-bridge"))]
+pub fn init_bridge(argv: &ArgMatches) -> Result<super::EmptyVirtualMemory> {
+    Err(Error::new("connector bridge is not enabled"))
 }

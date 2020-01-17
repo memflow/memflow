@@ -48,17 +48,25 @@ pub trait VirtualMemoryTrait {
         dtb: Address,
         addr: Address,
         out: &mut T,
-    ) -> Result<()> {
+    ) -> Result<()>
+    where
+        T: Pod,
+        Self: Sized,
+    {
         self.virt_read(arch, dtb, addr, out.as_bytes_mut())
     }
 
-    fn virt_write_pod<T: Pod>(
+    fn virt_write_pod<T>(
         &mut self,
         arch: Architecture,
         dtb: Address,
         addr: Address,
         data: &T,
-    ) -> Result<()> {
+    ) -> Result<()>
+    where
+        T: Pod,
+        Self: Sized,
+    {
         self.virt_write(arch, dtb, addr, data.as_bytes())
     }
 }

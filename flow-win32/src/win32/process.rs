@@ -1,8 +1,8 @@
 pub mod user;
 pub use user::*;
 
-//pub mod kernel;
-//pub use kernel::KernelProcess;
+pub mod kernel;
+pub use kernel::*;
 
 use crate::error::Result;
 

@@ -9,7 +9,6 @@ use flow_core::arch::{Architecture, InstructionSet};
 use flow_core::mem::*;
 use flow_core::ProcessTrait;
 
-// TODO: put this in process/user.rs
 #[derive(Debug, Clone)]
 pub struct Win32UserProcess {
     eprocess: Address,
@@ -71,7 +70,7 @@ impl Win32UserProcess {
             }
             InstructionSet::X86Pae => InstructionSet::X86,
             InstructionSet::X86 => InstructionSet::X86,
-            _ => return Err(Error::new("invalid architecture")),
+            //_ => return Err(Error::new("invalid architecture")),
         });
         trace!("proc_arch={:?}", proc_arch);
 

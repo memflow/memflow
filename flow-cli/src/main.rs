@@ -58,10 +58,20 @@ where
         .for_each(|p| println!("{:?} {:?}", p.pid(), p.name()));
 
     let calc = Win32UserProcess::try_with_name(conn, &os, &offsets, "Calculator.exe").unwrap();
-    println!("calc found: {}", calc.pid());
+    println!("calc found: {:?}", calc);
 
     let pebs = calc.peb_list(conn, &offsets).unwrap();
     pebs.iter()
+        .map(|peb| Win32Module::try_with_peb(conn, &calc, &offsets, *peb))
+        .filter_map(std::result::Result::ok)
+        .for_each(|module| println!("{:?} {:?}", module.base(), module.name()));
+
+    let kernel = Win32KernelProcess::try_with(conn, &os, &offsets).unwrap();
+    println!("kernel found: {:?}", kernel);
+    kernel
+        .peb_list(conn, &offsets)
+        .unwrap()
+        .iter()
         .map(|peb| Win32Module::try_with_peb(conn, &calc, &offsets, *peb))
         .filter_map(std::result::Result::ok)
         .for_each(|module| println!("{:?} {:?}", module.base(), module.name()));

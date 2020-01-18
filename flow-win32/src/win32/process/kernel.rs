@@ -19,7 +19,7 @@ pub struct Win32KernelProcess {
 }
 
 impl Win32KernelProcess {
-    pub fn try_with<T>(mem: &mut T, win: &Win32, offsets: &Win32Offsets) -> Result<Self>
+    pub fn try_with<T>(mem: &mut T, win: &Win32) -> Result<Self>
     where
         T: VirtualMemoryTrait,
     {

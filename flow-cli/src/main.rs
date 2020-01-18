@@ -66,7 +66,7 @@ where
         .filter_map(std::result::Result::ok)
         .for_each(|module| println!("{:?} {:?}", module.base(), module.name()));
 
-    let kernel = Win32KernelProcess::try_with(conn, &os, &offsets).unwrap();
+    let kernel = Win32KernelProcess::try_with(conn, &os).unwrap();
     println!("kernel found: {:?}", kernel);
     kernel
         .peb_list(conn, &offsets)

@@ -1,104 +1,121 @@
-use crate::error::Result;
+use crate::error::{Error, Result};
 
-use super::Windows;
+use crate::offsets::Win32Offsets;
+use crate::win32::{process::Win32Process, Win32};
 
 use flow_core::address::{Address, Length};
-use flow_core::arch::{Architecture, ArchitectureTrait};
+use flow_core::arch::Architecture;
 use flow_core::mem::*;
-use flow_core::process::ProcessTrait;
+use flow_core::ProcessTrait;
 
-use std::cell::RefCell;
-use std::rc::Rc;
+use pelite::{self, pe64::exports::Export, PeView};
 
-use crate::win::module::ModuleIterator;
-use crate::win::process::ProcessModuleTrait;
-
-pub struct KernelProcess<T: VirtualMemoryTrait> {
-    pub win: Rc<RefCell<Windows<T>>>,
-    pub module_list: Address,
+#[derive(Debug, Clone)]
+pub struct Win32KernelProcess {
+    base: Address,
+    dtb: Address,
+    peb_module: Address,
+    sys_arch: Architecture,
 }
 
-impl<T: VirtualMemoryTrait> Clone for KernelProcess<T>
-where
-    Rc<RefCell<T>>: Clone,
-    Address: Clone,
-{
-    fn clone(&self) -> Self {
-        Self {
-            win: self.win.clone(),
-            module_list: self.module_list,
+impl Win32KernelProcess {
+    pub fn try_with<T>(mem: &mut T, win: &Win32, offsets: &Win32Offsets) -> Result<Self>
+    where
+        T: VirtualMemoryTrait,
+    {
+        let mut reader = VirtualMemory::with(mem, win.start_block.arch, win.start_block.dtb);
+
+        // TODO: move this to Win32::try_with() at one point
+
+        // read pe header
+        let mut pe_buf = vec![0; win.kernel_size.as_usize()];
+        reader.virt_read_raw(win.kernel_base, &mut pe_buf)?;
+
+        let pe = PeView::from_bytes(&pe_buf)?;
+
+        // find PsActiveProcessHead
+        let loaded_module_list = match pe.get_export_by_name("PsLoadedModuleList")? {
+            Export::Symbol(s) => win.kernel_base + Length::from(*s),
+            Export::Forward(_) => {
+                return Err(Error::new(
+                    "PsLoadedModuleList found but it was a forwarded export",
+                ))
+            }
+        };
+
+        let peb_module = reader.virt_read_addr(loaded_module_list)?;
+
+        Ok(Self {
+            base: win.kernel_base,
+            dtb: win.start_block.dtb,
+            peb_module,
+            sys_arch: win.start_block.arch,
+        })
+    }
+}
+
+impl Win32Process for Win32KernelProcess {
+    // TODO: does wow64 and peb really need to be in Win32Process
+    fn wow64(&self) -> Address {
+        Address::null()
+    }
+
+    // TODO: does peb really need to be exposed?
+    fn peb(&self) -> Address {
+        Address::null()
+    }
+
+    fn peb_module(&self) -> Address {
+        self.peb_module
+    }
+
+    fn peb_list<T: VirtualMemoryTrait>(
+        &self,
+        mem: &mut T,
+        offsets: &Win32Offsets,
+    ) -> Result<Vec<Address>> {
+        let mut proc_reader = VirtualMemory::with(mem, self.sys_arch, self.dtb);
+
+        let mut pebs = Vec::new();
+
+        println!("self {:?}", self);
+
+        let mut peb_module = self.peb_module;
+        loop {
+            let next = proc_reader.virt_read_addr(peb_module + offsets.list_blink)?;
+            if next.is_null() || next == self.peb_module {
+                break;
+            }
+            pebs.push(next);
+            peb_module = next;
         }
+
+        Ok(pebs)
     }
 }
 
-// TODO: everything that implements module iter should get some help funcs (find_module, etc)
-impl<T: VirtualMemoryTrait> KernelProcess<T> {
-    pub fn with(win: Rc<RefCell<Windows<T>>>, module_list: Address) -> Self {
-        Self { win, module_list }
-    }
-}
-
-impl<T: VirtualMemoryTrait> ProcessTrait for KernelProcess<T> {
-    fn pid(&mut self) -> flow_core::Result<i32> {
-        Ok(0)
+impl ProcessTrait for Win32KernelProcess {
+    fn address(&self) -> Address {
+        self.base
     }
 
-    // system arch = type arch
-    fn name(&mut self) -> flow_core::Result<String> {
-        Ok("ntoskrnl.exe".to_string())
+    fn pid(&self) -> i32 {
+        0
     }
 
-    // system arch = type arch
-    fn dtb(&mut self) -> flow_core::Result<Address> {
-        let win = self.win.borrow();
-        Ok(win.start_block.dtb)
-    }
-}
-
-impl<T: VirtualMemoryTrait> ProcessModuleTrait for KernelProcess<T> {
-    fn first_peb_entry(&mut self) -> Result<Address> {
-        Ok(self.module_list)
+    fn name(&self) -> String {
+        "ntoskrnl.exe".to_owned()
     }
 
-    // module_iter will explicitly clone self and feed it into an iterator
-    fn module_iter(&self) -> Result<ModuleIterator<KernelProcess<T>>> {
-        let rc = Rc::new(RefCell::new(self.clone()));
-        ModuleIterator::new(rc)
+    fn dtb(&self) -> Address {
+        self.dtb
     }
-}
 
-// rename ArchitectureTrait -> ArchitectureTrait
-impl<T: VirtualMemoryTrait> ArchitectureTrait for KernelProcess<T> {
-    fn arch(&mut self) -> flow_core::Result<Architecture> {
-        let win = self.win.borrow();
-        Ok(win.start_block.arch)
+    fn sys_arch(&self) -> Architecture {
+        self.sys_arch
     }
-}
 
-// rename TypeArchitectureTrait -> TypeArchitectureTrait
-impl<T: VirtualMemoryTrait> TypeArchitectureTrait for KernelProcess<T> {
-    fn type_arch(&mut self) -> flow_core::Result<Architecture> {
-        self.arch()
-    }
-}
-
-// TODO: this is not entirely correct as it will use different VAT than required, split vat arch + type arch up again
-impl<T: VirtualMemoryTrait> VirtualMemoryTraitHelper for KernelProcess<T> {
-    fn virt_read(&mut self, addr: Address, len: Length) -> flow_core::Result<Vec<u8>> {
-        let proc_arch = self.arch().map_err(flow_core::Error::new)?;
-        let dtb = self.dtb().map_err(flow_core::Error::new)?;
-        let win = self.win.borrow();
-        let mem = &mut win.mem.borrow_mut();
-        mem.virt_read(proc_arch, dtb, addr, len)
-    }
-}
-
-impl<T: VirtualMemoryTrait + VirtualWrite> VirtualWriteHelper for KernelProcess<T> {
-    fn virt_write(&mut self, addr: Address, data: &[u8]) -> flow_core::Result<Length> {
-        let proc_arch = self.arch().map_err(flow_core::Error::new)?;
-        let dtb = self.dtb().map_err(flow_core::Error::new)?;
-        let win = self.win.borrow();
-        let mem = &mut win.mem.borrow_mut();
-        mem.virt_write(proc_arch, dtb, addr, data)
+    fn proc_arch(&self) -> Architecture {
+        self.sys_arch
     }
 }

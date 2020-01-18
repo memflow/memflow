@@ -168,7 +168,9 @@ impl<T: PhysicalMemoryTrait + 'static> bridge::Server for BridgeServer<T> {
         let length = Length::from(pry!(params.get()).get_length());
 
         let mut data = vec![0; length.as_usize()];
-        memory.phys_read_raw(address, &mut data).unwrap_or_else(|_| ());
+        memory
+            .phys_read_raw(address, &mut data)
+            .unwrap_or_else(|_| ());
         results.get().set_data(&data);
 
         Promise::ok(())

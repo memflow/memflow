@@ -108,34 +108,3 @@ impl Win32 {
         Ok(eprocs)
     }
 }
-
-/*
-impl<T: VirtualMemoryTrait> Win32<T> {
-    pub fn kernel_process(&self) -> Result<KernelProcess<T>> {
-        let clone = self.clone();
-
-        let memory = &mut clone.mem.borrow_mut();
-
-        // fetch ntoskrnl
-        let header_buf =
-            ntos::try_fetch_pe_header(&mut **memory, &clone.start_block, clone.kernel_base)?;
-        let header = PeView::from_bytes(&header_buf)?;
-
-        // PsActiveProcessHead
-        let module_list = match header.get_export_by_name("PsLoadedModuleList")? {
-            Export::Symbol(s) => clone.kernel_base + Length::from(*s),
-            Export::Forward(_) => {
-                return Err(Error::new(
-                    "PsLoadedModuleList found but it was a forwarded export",
-                ))
-            }
-        };
-
-        let mut reader =
-            VirtualMemory::with(&mut **memory, clone.start_block.arch, self.start_block.dtb);
-        let addr = reader.virt_read_addr(module_list)?;
-        let rc = Rc::new(RefCell::new(self.clone()));
-        Ok(KernelProcess::with(rc, addr))
-    }
-}
-*/

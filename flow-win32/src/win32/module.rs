@@ -11,19 +11,10 @@ pub use section::*;
 use crate::error::{Error, Result};
 use log::trace;
 
-use std::cell::RefCell;
-use std::rc::Rc;
-
-use flow_core::address::{Address, Length};
-use flow_core::arch::{Architecture, InstructionSet};
-use flow_core::mem::*;
-use flow_core::process::ModuleTrait;
 use flow_core::*;
 
 use crate::offsets::Win32Offsets;
 use crate::win32::*;
-
-use pelite::{self, pe64::exports, PeView};
 
 #[derive(Debug, Clone)]
 pub struct Win32Module {

@@ -12,6 +12,7 @@ lazy_static! {
     static ref LENGTH_2GB: Length = Length::from_gb(2);
 }
 
+#[derive(VirtualMemoryTrait)]
 pub struct Memory {
     pub pid: i32,
     pub map: procfs::process::MemoryMap,
@@ -78,27 +79,5 @@ impl PhysicalMemoryTrait for Memory {
 
         let _ = self.file.write(data);
         Ok(())
-    }
-}
-
-impl VirtualMemoryTrait for Memory {
-    fn virt_read_raw(
-        &mut self,
-        arch: Architecture,
-        dtb: Address,
-        addr: Address,
-        out: &mut [u8],
-    ) -> Result<()> {
-        VatImpl::new(self).virt_read_raw(arch, dtb, addr, out)
-    }
-
-    fn virt_write_raw(
-        &mut self,
-        arch: Architecture,
-        dtb: Address,
-        addr: Address,
-        data: &[u8],
-    ) -> Result<()> {
-        VatImpl::new(self).virt_write_raw(arch, dtb, addr, data)
     }
 }

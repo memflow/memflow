@@ -64,6 +64,6 @@ pub fn init_bridge(argv: &ArgMatches) -> Result<BridgeClient> {
 }
 
 #[cfg(not(feature = "connector-bridge"))]
-pub fn init_bridge(argv: &ArgMatches) -> Result<super::EmptyVirtualMemory> {
+pub fn init_bridge(_argv: &ArgMatches) -> Result<super::EmptyVirtualMemory> {
     Err(Error::new("connector bridge is not enabled"))
 }

@@ -9,6 +9,7 @@ use crate::native::*;
 
 pub struct Memory;
 
+#[derive(VirtualMemoryTrait)]
 impl Memory {
     #[allow(dead_code)]
     pub fn new() -> Self {
@@ -23,28 +24,6 @@ impl PhysicalMemoryTrait for Memory {
 
     fn phys_write_raw(&mut self, addr: Address, data: &[u8]) -> Result<()> {
         Wrapper::new().phys_write_raw(addr, data)
-    }
-}
-
-impl VirtualMemoryTrait for Memory {
-    fn virt_read_raw(
-        &mut self,
-        arch: Architecture,
-        dtb: Address,
-        addr: Address,
-        out: &mut [u8],
-    ) -> Result<()> {
-        VatImpl::new(&mut Wrapper::new()).virt_read_raw(arch, dtb, addr, out)
-    }
-
-    fn virt_write_raw(
-        &mut self,
-        arch: Architecture,
-        dtb: Address,
-        addr: Address,
-        data: &[u8],
-    ) -> Result<()> {
-        VatImpl::new(&mut Wrapper::new()).virt_write_raw(arch, dtb, addr, data)
     }
 }
 

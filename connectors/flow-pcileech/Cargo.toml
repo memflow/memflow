@@ -6,6 +6,7 @@ edition = "2018"
 
 [dependencies]
 flow-core = { path = "../../flow-core" }
+flow-derive = { path = "../../flow-derive" }
 log = { version = "0.4.8", default-features = false }
 
 [dev-dependencies]

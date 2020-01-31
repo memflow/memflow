@@ -1,12 +1,13 @@
 use log::info;
 
 use flow_core::*;
+use flow_derive::*;
 
 // TODO: open usb device
+#[derive(VirtualMemoryTrait)]
 pub struct Memory {
 }
 
-#[derive(VirtualMemoryTrait)]
 impl Memory {
     pub fn new() -> Result<Self> {
         Ok(Self {

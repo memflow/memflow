@@ -478,6 +478,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "flow-pcileech"
+version = "0.1.0"
+dependencies = [
+ "clap 2.33.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "flow-core 0.1.0",
+ "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "flow-qemu-bridge"
 version = "0.1.0"
 dependencies = [

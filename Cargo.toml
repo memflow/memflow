@@ -8,6 +8,7 @@ members = [
     "connectors/flow-bridge",
     "connectors/flow-qemu-bridge",
     "connectors/flow-qemu-procfs",
+    "connectors/flow-pcileech",
 ]
 default-members = [
     "flow-core",

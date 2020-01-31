@@ -483,6 +483,7 @@ version = "0.1.0"
 dependencies = [
  "clap 2.33.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "flow-core 0.1.0",
+ "flow-derive 0.1.0",
  "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -493,6 +494,7 @@ dependencies = [
  "ctor 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)",
  "flow-bridge 0.1.0",
  "flow-core 0.1.0",
+ "flow-derive 0.1.0",
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.2.66 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc-print 0.1.11 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -506,6 +508,7 @@ version = "0.1.0"
 dependencies = [
  "clap 2.33.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "flow-core 0.1.0",
+ "flow-derive 0.1.0",
  "lazy_static 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "procfs 0.7.7 (registry+https://github.com/rust-lang/crates.io-index)",

@@ -1,6 +1,7 @@
 use log::info;
 
 use flow_core::*;
+use flow_derive::*;
 
 use lazy_static::lazy_static;
 use procfs;

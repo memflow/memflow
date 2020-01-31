@@ -4,12 +4,13 @@ use std::os::raw::{c_ulonglong, c_void};
 use std::ptr::copy_nonoverlapping;
 
 use flow_core::*;
+use flow_derive::*;
 
 use crate::native::*;
 
+#[derive(VirtualMemoryTrait)]
 pub struct Memory;
 
-#[derive(VirtualMemoryTrait)]
 impl Memory {
     #[allow(dead_code)]
     pub fn new() -> Self {

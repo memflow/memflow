@@ -1,5 +1,3 @@
-use log::trace;
-
 use pdb::{self, FallibleIterator, Result};
 use std::collections::HashMap;
 use std::fs::File;

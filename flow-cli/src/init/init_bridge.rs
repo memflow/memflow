@@ -20,6 +20,7 @@ pub struct Config {
     pub machine: Option<Vec<MachineConfig>>,
 }
 
+#[cfg(feature = "connector-bridge")]
 pub fn try_parse(file_name: &str) -> Result<Config> {
     let cfg = fs::read_to_string(file_name)?;
     Ok(toml::from_str::<Config>(&cfg).map_err(Error::new)?)

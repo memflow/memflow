@@ -10,13 +10,7 @@ use flow_core::mem::VirtualMemoryTrait;
 
 use crate::kernel::StartBlock;
 
-use pelite::{
-    self,
-    image::GUID,
-    pe32,
-    pe64::{self, debug::CodeView},
-    PeView, Wrap,
-};
+use pelite::{self, image::GUID, pe64::debug::CodeView, PeView};
 
 use uuid::{self, Uuid};
 

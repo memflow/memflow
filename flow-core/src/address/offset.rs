@@ -12,19 +12,19 @@ impl fmt::LowerHex for Offset {
 
 impl From<i64> for Offset {
     fn from(item: i64) -> Self {
-        Self { 0: item as i64 }
+        Self { 0: item }
     }
 }
 
 impl From<i32> for Offset {
     fn from(item: i32) -> Self {
-        Self { 0: item as i64 }
+        Self { 0: i64::from(item) }
     }
 }
 
 impl From<i16> for Offset {
     fn from(item: i16) -> Self {
-        Self { 0: item as i64 }
+        Self { 0: i64::from(item) }
     }
 }
 

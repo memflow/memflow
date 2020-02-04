@@ -7,21 +7,15 @@ pub use process::*;
 pub mod module;
 pub use module::*;
 
-use crate::error::{Error, Result};
+use crate::error::Result;
 use log::info;
-
-use std::cell::RefCell;
-use std::path::PathBuf;
-use std::rc::Rc;
 
 use flow_core::address::{Address, Length};
 use flow_core::mem::*;
-use flow_core::process::{OperatingSystem, ProcessTrait};
+use flow_core::process::OperatingSystem;
 
 use crate::kernel::{self, ntos::Win32GUID, StartBlock};
 use crate::offsets::Win32Offsets;
-
-use pelite::{self, pe64::exports::Export, PeView};
 
 #[derive(Debug, Clone)]
 pub struct Win32 {

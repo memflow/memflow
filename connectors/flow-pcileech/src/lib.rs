@@ -5,13 +5,11 @@ use flow_derive::*;
 
 // TODO: open usb device
 #[derive(VirtualMemoryTrait)]
-pub struct Memory {
-}
+pub struct Memory {}
 
 impl Memory {
     pub fn new() -> Result<Self> {
-        Ok(Self {
-        })
+        Ok(Self {})
     }
 }
 

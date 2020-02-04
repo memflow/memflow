@@ -13,11 +13,11 @@ pub trait PhysicalMemoryTrait {
     // TODO:
     // - check endianess here and return an error
     // - better would be to convert endianess with word alignment from addr
-    fn phys_read<T: Pod>(&mut self, addr: Address, out: &mut T) -> Result<()> {
+    fn phys_read<T: Pod + ?Sized>(&mut self, addr: Address, out: &mut T) -> Result<()> {
         self.phys_read_raw(addr, out.as_bytes_mut())
     }
 
-    fn phys_write<T: Pod>(&mut self, addr: Address, data: &T) -> Result<()> {
+    fn phys_write<T: Pod + ?Sized>(&mut self, addr: Address, data: &T) -> Result<()> {
         self.phys_write_raw(addr, data.as_bytes())
     }
 }
@@ -42,31 +42,23 @@ pub trait VirtualMemoryTrait {
     // TODO:
     // - check endianess here and return an error
     // - better would be to convert endianess with word alignment from addr
-    fn virt_read<T: Pod>(
+    fn virt_read<T: Pod + ?Sized>(
         &mut self,
         arch: Architecture,
         dtb: Address,
         addr: Address,
         out: &mut T,
-    ) -> Result<()>
-    where
-        T: Pod,
-        Self: Sized,
-    {
+    ) -> Result<()> {
         self.virt_read_raw(arch, dtb, addr, out.as_bytes_mut())
     }
 
-    fn virt_write<T>(
+    fn virt_write<T: Pod + ?Sized>(
         &mut self,
         arch: Architecture,
         dtb: Address,
         addr: Address,
         data: &T,
-    ) -> Result<()>
-    where
-        T: Pod,
-        Self: Sized,
-    {
+    ) -> Result<()> {
         self.virt_write_raw(arch, dtb, addr, data.as_bytes())
     }
 }
@@ -123,11 +115,11 @@ impl<'a, T: VirtualMemoryTrait> VirtualMemory<'a, T> {
         self.mem.virt_write_raw(self.sys_arch, self.dtb, addr, data)
     }
 
-    pub fn virt_read<U: Pod>(&mut self, addr: Address, out: &mut U) -> Result<()> {
+    pub fn virt_read<U: Pod + ?Sized>(&mut self, addr: Address, out: &mut U) -> Result<()> {
         self.mem.virt_read(self.sys_arch, self.dtb, addr, out)
     }
 
-    pub fn virt_write<U: Pod>(&mut self, addr: Address, data: &U) -> Result<()> {
+    pub fn virt_write<U: Pod + ?Sized>(&mut self, addr: Address, data: &U) -> Result<()> {
         self.mem.virt_write(self.sys_arch, self.dtb, addr, data)
     }
 

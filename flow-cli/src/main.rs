@@ -28,7 +28,7 @@ fn main() -> Result<()> {
             let mut conn = init_bridge::init_bridge(&argv).unwrap();
             run(&argv, &mut conn)
         }
-        "qemu-procfs" => {
+        "qemu_procfs" => {
             let mut conn = init_qemu_procfs::init_qemu_procfs().unwrap();
             run(&argv, &mut conn)
         }

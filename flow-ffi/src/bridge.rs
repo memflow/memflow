@@ -11,6 +11,24 @@ use flow_core::arch::*;
 use flow_core::connector::bridge::client::BridgeClient;
 use flow_core::mem::*;
 
+//
+//
+// new interface
+//
+//
+
+// bridge_client_connect
+// bridge_client_free
+// ...
+
+// qemu_procfs_init
+// qemu_procfs_free
+
+// win32_init(ctx) -> os
+// win32_eprocess_list(os)
+// win32_user_process_init(ctx, os, eproc) -> proc
+// win32_module_init(ctx, proc, peb) -> mod
+
 /// # Safety
 ///
 /// this function has to be called with an initialized cstring

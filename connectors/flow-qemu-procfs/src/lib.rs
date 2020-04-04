@@ -54,6 +54,7 @@ impl Memory {
     }
 }
 
+// TODO: evaluate use of memmap
 impl PhysicalMemoryTrait for Memory {
     fn phys_read_raw(&mut self, addr: Address, out: &mut [u8]) -> Result<()> {
         let ofs = self.map.address.0 + {

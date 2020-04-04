@@ -26,6 +26,6 @@ flow-bridge = { path = "../connectors/flow-bridge", optional = true }
 flow-qemu-procfs = { path = "../connectors/flow-qemu-procfs", optional = true }
 
 [features]
-default = []
+default = ["connector-qemu-procfs"]
 connector-bridge = ["flow-bridge"]
 connector-qemu-procfs = ["flow-qemu-procfs"]

@@ -8,7 +8,7 @@ pub fn init_qemu_procfs() -> Result<flow_qemu_procfs::Memory> {
 #[cfg(all(feature = "connector-qemu-procfs", not(target_os = "linux")))]
 pub fn init_qemu_procfs() -> Result<super::EmptyVirtualMemory> {
     Err(Error::new(
-        "connector qemu-procfs is not available on this system",
+        "connector qemu_procfs is not available on this system",
     ))
 }
 

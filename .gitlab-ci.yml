@@ -65,8 +65,8 @@ linux-native-ffi-example:
     - rustc --version
     - cargo --version
     - cargo build --release
-    - cd bindings/c/
-    - gcc -g example.c -o example -Wl,-rpath,../../target/release -lmemflow -L./../../target/release
+    - cd flow-ffi/bindings/c/
+    - gcc -g example.c -o example -Wl,-rpath,../../../target/release -lmemflow -L./../../../target/release
 
 linux-musl:
   stage: build_cross

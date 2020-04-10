@@ -14,8 +14,5 @@ pub trait Win32Process {
     fn peb(&self) -> Address;
     fn peb_module(&self) -> Address;
 
-    fn peb_list<T: VirtualMemoryTrait>(
-        &self,
-        mem: &mut T,
-    ) -> Result<Vec<Address>>;
+    fn peb_list<T: VirtualMemoryTrait>(&self, mem: &mut T) -> Result<Vec<Address>>;
 }

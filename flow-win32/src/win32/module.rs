@@ -46,11 +46,20 @@ impl Win32Module {
             process.dtb(),
         );
 
-        let (ldr_data_base, ldr_data_size, ldr_data_name) = match process.proc_arch().instruction_set {
-            InstructionSet::X64 => (offsets.ldr_data_base_x64, offsets.ldr_data_size_x64, offsets.ldr_data_name_x64),
-            InstructionSet::X86 => (offsets.ldr_data_base_x86, offsets.ldr_data_size_x86, offsets.ldr_data_name_x86),
-            _ => return Err(Error::new("invalid architecture")),
-        };
+        let (ldr_data_base, ldr_data_size, ldr_data_name) =
+            match process.proc_arch().instruction_set {
+                InstructionSet::X64 => (
+                    offsets.ldr_data_base_x64,
+                    offsets.ldr_data_size_x64,
+                    offsets.ldr_data_name_x64,
+                ),
+                InstructionSet::X86 => (
+                    offsets.ldr_data_base_x86,
+                    offsets.ldr_data_size_x86,
+                    offsets.ldr_data_name_x86,
+                ),
+                _ => return Err(Error::new("invalid architecture")),
+            };
         trace!("ldr_data_base={:x}", ldr_data_base);
         trace!("ldr_data_size={:x}", ldr_data_size);
         trace!("ldr_data_name={:x}", ldr_data_name);

@@ -57,15 +57,16 @@ where
         .filter_map(std::result::Result::ok)
         .for_each(|p| println!("{:?} {:?}", p.pid(), p.name()));
 
-    let calc = Win32UserProcess::try_with_name(conn, &os, &offsets, "Calculator.exe").unwrap();
-    println!("calc found: {:?}", calc);
+    let csgo = Win32UserProcess::try_with_name(conn, &os, &offsets, "csgo.exe").unwrap();
+    println!("csgo found: {:?}", csgo);
 
-    let pebs = calc.peb_list(conn, &offsets).unwrap();
+    let pebs = csgo.peb_list(conn).unwrap();
     pebs.iter()
-        .map(|peb| Win32Module::try_with_peb(conn, &calc, &offsets, *peb))
+        .map(|peb| Win32Module::try_with_peb(conn, &csgo, &offsets, *peb))
         .filter_map(std::result::Result::ok)
         .for_each(|module| println!("{:?} {:?}", module.base(), module.name()));
 
+    /*
     let kernel = Win32KernelProcess::try_with(conn, &os).unwrap();
     println!("kernel found: {:?}", kernel);
     kernel
@@ -75,6 +76,7 @@ where
         .map(|peb| Win32Module::try_with_peb(conn, &calc, &offsets, *peb))
         .filter_map(std::result::Result::ok)
         .for_each(|module| println!("{:?} {:?}", module.base(), module.name()));
+        */
 
     Ok(())
 }

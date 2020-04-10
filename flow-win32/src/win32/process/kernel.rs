@@ -69,25 +69,19 @@ impl Win32Process for Win32KernelProcess {
         self.peb_module
     }
 
-    fn peb_list<T: VirtualMemoryTrait>(
-        &self,
-        mem: &mut T,
-        offsets: &Win32Offsets,
-    ) -> Result<Vec<Address>> {
+    fn peb_list<T: VirtualMemoryTrait>(&self, mem: &mut T) -> Result<Vec<Address>> {
         let mut proc_reader = VirtualMemory::with(mem, self.sys_arch, self.dtb);
 
         let mut pebs = Vec::new();
 
-        println!("self {:?}", self);
-
-        let mut peb_module = self.peb_module;
+        let list_start = self.peb_module;
+        let mut list_entry = list_start;
         loop {
-            let next = proc_reader.virt_read_addr(peb_module + offsets.list_blink)?;
-            if next.is_null() || next == self.peb_module {
+            pebs.push(list_entry);
+            list_entry = proc_reader.virt_read_addr(list_entry)?;
+            if list_entry.is_null() || list_entry == self.peb_module {
                 break;
             }
-            pebs.push(next);
-            peb_module = next;
         }
 
         Ok(pebs)

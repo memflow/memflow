@@ -42,15 +42,20 @@ impl Win32UserProcess {
         let dtb = reader.virt_read_addr(eprocess + offsets.kproc_dtb)?;
         trace!("dtb={:x}", dtb);
         let wow64 = if offsets.eproc_wow64.is_zero() {
+            trace!("eproc_wow64=null; skipping wow64 detection");
             Address::null()
         } else {
+            trace!(
+                "eproc_wow64=${:x}; trying to read wow64 pointer",
+                offsets.eproc_wow64
+            );
             reader.virt_read_addr(eprocess + offsets.eproc_wow64)?
         };
         trace!("wow64={:x}", wow64);
 
         // read peb
         let peb = if wow64.is_null() {
-            trace!("reading peb for x64 process");
+            trace!("reading peb for native process");
             reader.virt_read_addr(eprocess + offsets.eproc_peb)?
         } else {
             trace!("reading peb for wow64 process");
@@ -85,19 +90,12 @@ impl Win32UserProcess {
         trace!("ldr_list_offs={:x}", ldr_list_offs);
 
         // construct reader with process dtb
-        let mut proc_reader = VirtualMemory::with(mem, win.start_block.arch, dtb);
-        let peb_ldr = match proc_arch.instruction_set {
-            InstructionSet::X64 => proc_reader.virt_read_addr64(peb + peb_ldr_offs)?,
-            InstructionSet::X86 => proc_reader.virt_read_addr32(peb + peb_ldr_offs)?,
-            _ => return Err(Error::new("invalid architecture")),
-        };
+        let mut proc_reader =
+            VirtualMemory::with_proc_arch(mem, win.start_block.arch, proc_arch, dtb);
+        let peb_ldr = proc_reader.virt_read_addr(peb + peb_ldr_offs)?;
         trace!("peb_ldr={:x}", peb_ldr);
 
-        let peb_module = match proc_arch.instruction_set {
-            InstructionSet::X64 => proc_reader.virt_read_addr64(peb_ldr + ldr_list_offs)?,
-            InstructionSet::X86 => proc_reader.virt_read_addr32(peb_ldr + ldr_list_offs)?,
-            _ => return Err(Error::new("invalid architecture")),
-        };
+        let peb_module = proc_reader.virt_read_addr(peb_ldr + ldr_list_offs)?;
         trace!("peb_module={:x}", peb_module);
 
         Ok(Self {
@@ -146,25 +144,20 @@ impl Win32Process for Win32UserProcess {
         self.peb_module
     }
 
-    fn peb_list<T: VirtualMemoryTrait>(
-        &self,
-        mem: &mut T,
-        offsets: &Win32Offsets,
-    ) -> Result<Vec<Address>> {
-        let mut proc_reader = VirtualMemory::with(mem, self.sys_arch, self.dtb);
+    fn peb_list<T: VirtualMemoryTrait>(&self, mem: &mut T) -> Result<Vec<Address>> {
+        let mut proc_reader =
+            VirtualMemory::with_proc_arch(mem, self.sys_arch, self.proc_arch, self.dtb);
 
         let mut pebs = Vec::new();
 
-        println!("self {:?}", self);
-
-        let mut peb_module = self.peb_module;
+        let list_start = self.peb_module;
+        let mut list_entry = list_start;
         loop {
-            let next = proc_reader.virt_read_addr(peb_module + offsets.list_blink)?;
-            if next.is_null() || next == self.peb_module {
+            pebs.push(list_entry);
+            list_entry = proc_reader.virt_read_addr(list_entry)?;
+            if list_entry.is_null() || list_entry == self.peb_module {
                 break;
             }
-            pebs.push(next);
-            peb_module = next;
         }
 
         Ok(pebs)

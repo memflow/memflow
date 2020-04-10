@@ -17,8 +17,9 @@ pub trait ProcessTrait {
     fn sys_arch(&self) -> Architecture;
     fn proc_arch(&self) -> Architecture;
 
+    // virt_mem() - creates a VirtualMemory wrapper with system and process architecture
     fn virt_mem<'a, T: VirtualMemoryTrait>(&self, mem: &'a mut T) -> VirtualMemory<'a, T> {
-        VirtualMemory::with(mem, self.sys_arch(), self.dtb())
+        VirtualMemory::with_proc_arch(mem, self.sys_arch(), self.proc_arch(), self.dtb())
     }
 }
 

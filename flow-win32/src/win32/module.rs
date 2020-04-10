@@ -16,6 +16,8 @@ use flow_core::*;
 use crate::offsets::Win32Offsets;
 use crate::win32::*;
 
+use pelite::{self, image::GUID, pe64::debug::CodeView, PeView};
+
 #[derive(Debug, Clone)]
 pub struct Win32Module {
     peb_module: Address,
@@ -121,6 +123,52 @@ impl Win32Module {
             .filter(|p| p.name() == name)
             .nth(0)
             .ok_or_else(|| Error::new(format!("unable to find process {}", name)))
+    }
+
+    // read_image() - reads the entire image into memory
+    pub fn read_image<T, U>(&self, mem: &mut T, process: &U) -> Result<Vec<u8>>
+    where
+        T: VirtualMemoryTrait,
+        U: ProcessTrait + Win32Process,
+    {
+        let mut proc_reader = VirtualMemory::with_proc_arch(
+            mem,
+            process.sys_arch(),
+            process.proc_arch(),
+            process.dtb(),
+        );
+
+        let mut probe_buf = vec![0; Length::from_kb(4).as_usize()];
+        proc_reader.virt_read_raw(self.base, &mut probe_buf)?;
+
+        let pe_probe = match PeView::from_bytes(&probe_buf) {
+            Ok(pe) => {
+                trace!("found pe header.");
+                pe
+            }
+            Err(e) => {
+                trace!(
+                    "pe header at offset {:x} could not be probed: {:?}",
+                    self.base,
+                    e
+                );
+                return Err(Error::from(e));
+            }
+        };
+
+        let opt_header = pe_probe.optional_header();
+        let size_of_image = match opt_header {
+            pelite::Wrap::T32(opt32) => opt32.SizeOfImage,
+            pelite::Wrap::T64(opt64) => opt64.SizeOfImage,
+        };
+        if size_of_image == 0 {
+            return Err(Error::new("unable to read size_of_image"));
+        }
+        info!("found pe header with a size of {} bytes.", size_of_image);
+
+        let mut buf = vec![0; size_of_image as usize];
+        proc_reader.virt_read_raw(self.base, &mut buf)?;
+        Ok(buf)
     }
 }
 

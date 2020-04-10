@@ -83,20 +83,19 @@ impl Win32 {
 
         let mut eprocs = Vec::new();
 
-        let mut eprocess = self.eprocess_base;
-        loop {
-            let mut next =
-                reader.virt_read_addr(eprocess + offsets.eproc_link + offsets.list_blink)?;
-            if next.is_null() {
-                break;
-            }
-            next -= offsets.eproc_link;
+        let list_start = self.eprocess_base + offsets.eproc_link;
+        let mut list_entry = list_start;
+        //let mut next_list_entry = reader.virt_read_addr(list_start + offsets.list_blink)?;
 
-            if next == self.eprocess_base {
+        loop {
+            let eprocess = list_entry - offsets.eproc_link;
+            eprocs.push(eprocess);
+
+            // read next list entry
+            list_entry = reader.virt_read_addr(list_entry + offsets.list_blink)?;
+            if list_entry.is_null() || list_entry == list_start {
                 break;
             }
-            eprocs.push(next);
-            eprocess = next;
         }
 
         Ok(eprocs)

@@ -6,8 +6,6 @@ pub use kernel::*;
 
 use crate::error::Result;
 
-use crate::offsets::Win32Offsets;
-
 use flow_core::address::Address;
 use flow_core::mem::VirtualMemoryTrait;
 
@@ -19,6 +17,5 @@ pub trait Win32Process {
     fn peb_list<T: VirtualMemoryTrait>(
         &self,
         mem: &mut T,
-        offsets: &Win32Offsets,
     ) -> Result<Vec<Address>>;
 }

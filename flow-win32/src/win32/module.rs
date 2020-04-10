@@ -46,26 +46,27 @@ impl Win32Module {
             process.dtb(),
         );
 
-        let base = match process.proc_arch().instruction_set {
-            InstructionSet::X64 => {
-                proc_reader.virt_read_addr64(peb_module + offsets.ldr_data_base_x64)?
-            }
-            InstructionSet::X86 => {
-                proc_reader.virt_read_addr32(peb_module + offsets.ldr_data_base_x86)?
-            }
+        let (ldr_data_base, ldr_data_size, ldr_data_name) = match process.proc_arch().instruction_set {
+            InstructionSet::X64 => (offsets.ldr_data_base_x64, offsets.ldr_data_size_x64, offsets.ldr_data_name_x64),
+            InstructionSet::X86 => (offsets.ldr_data_base_x86, offsets.ldr_data_size_x86, offsets.ldr_data_name_x86),
             _ => return Err(Error::new("invalid architecture")),
         };
+        trace!("ldr_data_base={:x}", ldr_data_base);
+        trace!("ldr_data_size={:x}", ldr_data_size);
+        trace!("ldr_data_name={:x}", ldr_data_name);
+
+        let base = proc_reader.virt_read_addr(peb_module + ldr_data_base)?;
         trace!("base={:x}", base);
 
         let size = match process.proc_arch().instruction_set {
             InstructionSet::X64 => {
                 let mut s = 0u64;
-                proc_reader.virt_read(peb_module + offsets.ldr_data_size_x64, &mut s)?;
+                proc_reader.virt_read(peb_module + ldr_data_size, &mut s)?;
                 Length::from(s)
             }
             InstructionSet::X86 => {
                 let mut s = 0u32;
-                proc_reader.virt_read(peb_module + offsets.ldr_data_size_x86, &mut s)?;
+                proc_reader.virt_read(peb_module + ldr_data_size, &mut s)?;
                 Length::from(s)
             }
             _ => return Err(Error::new("invalid architecture")),
@@ -103,7 +104,7 @@ impl Win32Module {
         U: ProcessTrait + Win32Process,
     {
         process
-            .peb_list(mem, offsets)?
+            .peb_list(mem)?
             .iter()
             .map(|peb| Win32Module::try_with_peb(mem, process, offsets, *peb))
             .filter_map(Result::ok)

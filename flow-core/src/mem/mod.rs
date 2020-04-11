@@ -145,6 +145,7 @@ impl<'a, T: VirtualMemoryTrait> VirtualMemory<'a, T> {
     }
 
     // TODO: read into slice?
+    // TODO: if len is shorter than string truncate it!
     pub fn virt_read_cstr(&mut self, addr: Address, len: Length) -> Result<String> {
         let mut buf = vec![0; len.as_usize()];
         self.virt_read_raw(addr, &mut buf)?;
@@ -156,6 +157,7 @@ impl<'a, T: VirtualMemoryTrait> VirtualMemory<'a, T> {
     }
 
     // TODO: read into slice?
+    // TODO: if len is shorter than string truncate it!
     pub fn virt_read_cstr_ptr(&mut self, addr: Address) -> Result<String> {
         let ptr = self.virt_read_addr(addr)?;
         self.virt_read_cstr(ptr, Length::from_kb(2))

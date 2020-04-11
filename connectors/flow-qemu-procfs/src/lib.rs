@@ -20,6 +20,22 @@ pub struct Memory {
     file: File,
 }
 
+impl Clone for Memory {
+    fn clone(&self) -> Self {
+        let new_file = OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open(format!("/proc/{}/mem", self.pid))
+            .unwrap(); // TODO: might panic
+
+        Self {
+            pid: self.pid,
+            map: self.map.clone(),
+            file: new_file,
+        }
+    }
+}
+
 impl Memory {
     pub fn new() -> Result<Self> {
         let prcs = procfs::process::all_processes().map_err(Error::new)?;

@@ -94,6 +94,15 @@ impl<'a, T: VirtualMemoryTrait> VirtualMemory<'a, T> {
         }
     }
 
+    pub fn clone_with(&self, mem: &'a mut T) -> Self {
+        Self {
+            mem,
+            sys_arch: self.sys_arch.clone(),
+            proc_arch: self.proc_arch.clone(),
+            dtb: self.dtb.clone(),
+        }
+    }
+
     pub fn sys_arch(&self) -> Architecture {
         self.sys_arch
     }

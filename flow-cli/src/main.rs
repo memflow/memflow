@@ -38,7 +38,7 @@ fn main() -> Result<()> {
 
 fn run<T>(argv: &ArgMatches, conn: &mut T) -> Result<()>
 where
-    T: PhysicalMemoryTrait + VirtualMemoryTrait,
+    T: AccessPhysicalMemory + AccessVirtualMemory,
 {
     // TODO: osname from config/params?
     //let connrc = Rc::new(RefCell::new(conn));

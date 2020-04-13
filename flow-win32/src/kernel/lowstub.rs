@@ -4,7 +4,7 @@ use byteorder::{ByteOrder, LittleEndian};
 
 use flow_core::address::{Address, Length};
 use flow_core::arch::{self, Architecture, InstructionSet};
-use flow_core::mem::PhysicalMemoryTrait;
+use flow_core::mem::AccessPhysicalMemory;
 
 // PROCESSOR_START_BLOCK
 #[derive(Debug, Copy, Clone)]
@@ -15,10 +15,10 @@ pub struct StartBlock {
 }
 
 // bcdedit /set firstmegabytepolicyuseall
-pub fn find<T: PhysicalMemoryTrait>(mem: &mut T) -> Result<StartBlock> {
+pub fn find<T: AccessPhysicalMemory>(mem: &mut T) -> Result<StartBlock> {
     // read low 1mb stub
     let mut low1m = vec![0; Length::from_mb(1).as_usize()];
-    mem.phys_read_raw(Address::from(0), &mut low1m)?;
+    mem.phys_read_raw_into(Address::from(0), &mut low1m)?;
 
     // find x64 dtb in low stub < 1M
     match find_x64_lowstub(&low1m) {
@@ -29,7 +29,7 @@ pub fn find<T: PhysicalMemoryTrait>(mem: &mut T) -> Result<StartBlock> {
     // TODO: append instead of read twice?
     // read low 16mb stub
     let mut low16m = vec![0; Length::from_mb(16).as_usize()];
-    mem.phys_read_raw(Address::from(0), &mut low16m)?;
+    mem.phys_read_raw_into(Address::from(0), &mut low16m)?;
 
     match find_x64(&low16m) {
         Ok(d) => return Ok(d),

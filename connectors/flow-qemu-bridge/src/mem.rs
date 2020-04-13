@@ -8,7 +8,7 @@ use flow_derive::*;
 
 use crate::native::*;
 
-#[derive(VirtualMemoryTrait)]
+#[derive(AccessVirtualMemory)]
 pub struct Memory;
 
 impl Memory {
@@ -18,9 +18,9 @@ impl Memory {
     }
 }
 
-impl PhysicalMemoryTrait for Memory {
-    fn phys_read_raw(&mut self, addr: Address, out: &mut [u8]) -> Result<()> {
-        Wrapper::new().phys_read_raw(addr, out)
+impl AccessPhysicalMemory for Memory {
+    fn phys_read_raw_into(&mut self, addr: Address, out: &mut [u8]) -> Result<()> {
+        Wrapper::new().phys_read_raw_into(addr, out)
     }
 
     fn phys_write_raw(&mut self, addr: Address, data: &[u8]) -> Result<()> {
@@ -53,8 +53,8 @@ impl Drop for Wrapper {
 //
 // TODO: proper error handling
 //
-impl PhysicalMemoryTrait for Wrapper {
-    fn phys_read_raw(&mut self, addr: Address, out: &mut [u8]) -> Result<()> {
+impl AccessPhysicalMemory for Wrapper {
+    fn phys_read_raw_into(&mut self, addr: Address, out: &mut [u8]) -> Result<()> {
         let mut l = out.len() as c_ulonglong;
         let mem = CPU_PHYSICAL_MEMORY_MAP.unwrap()(addr.as_u64(), &mut l, 0);
         if mem.is_null() {

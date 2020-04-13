@@ -32,7 +32,7 @@ pub struct Win32 {
 impl OperatingSystem for Win32 {}
 
 impl Win32 {
-    pub fn try_with<T: PhysicalMemoryTrait + VirtualMemoryTrait>(mem: &mut T) -> Result<Self> {
+    pub fn try_with<T: AccessPhysicalMemory + AccessVirtualMemory>(mem: &mut T) -> Result<Self> {
         /*
         Options:
         - supply cr3 (dtb)
@@ -74,12 +74,13 @@ impl Win32 {
         self.kernel_guid.clone()
     }
 
-    pub fn eprocess_list<T: VirtualMemoryTrait>(
+    pub fn eprocess_list<T: AccessVirtualMemory>(
         &self,
         mem: &mut T,
         offsets: &Win32Offsets,
     ) -> Result<Vec<Address>> {
-        let mut reader = VirtualMemory::with(mem, self.start_block.arch, self.start_block.dtb);
+        let mut reader =
+            VirtualMemoryContext::with(mem, self.start_block.arch, self.start_block.dtb);
 
         let mut eprocs = Vec::new();
 

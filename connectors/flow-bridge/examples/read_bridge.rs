@@ -30,7 +30,7 @@ fn main() {
 
     let mut mem = vec![0; 8];
     bridge
-        .phys_read_raw(Address::from(0x1000), &mut mem)
+        .phys_read_raw_into(Address::from(0x1000), &mut mem)
         .unwrap();
     println!("Received memory: {:?}", mem);
 
@@ -39,7 +39,7 @@ fn main() {
     loop {
         let mut buf = vec![0; 0x1000];
         bridge
-            .phys_read_raw(Address::from(0x1000), &mut buf)
+            .phys_read_raw_into(Address::from(0x1000), &mut buf)
             .unwrap();
 
         counter += 1;

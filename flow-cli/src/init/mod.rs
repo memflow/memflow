@@ -5,11 +5,11 @@ pub mod init_qemu_procfs;
 use flow_core::*;
 use flow_derive::*;
 
-#[derive(VirtualMemoryTrait)]
+#[derive(AccessVirtualMemory)]
 pub struct EmptyVirtualMemory {}
 
-impl PhysicalMemoryTrait for EmptyVirtualMemory {
-    fn phys_read_raw(&mut self, _addr: Address, _out: &mut [u8]) -> Result<()> {
+impl AccessPhysicalMemory for EmptyVirtualMemory {
+    fn phys_read_raw_into(&mut self, _addr: Address, _out: &mut [u8]) -> Result<()> {
         Err(Error::new("phys_read not implemented"))
     }
 

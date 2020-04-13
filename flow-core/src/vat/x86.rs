@@ -1,9 +1,9 @@
 use crate::error::Result;
 
 use crate::address::Address;
-use crate::mem::PhysicalMemoryTrait;
+use crate::mem::AccessPhysicalMemory;
 
-pub fn vtop<T: PhysicalMemoryTrait>(
+pub fn vtop<T: AccessPhysicalMemory>(
     _mem: &mut T,
     _dtb: Address,
     _addr: Address,

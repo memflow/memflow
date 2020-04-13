@@ -38,10 +38,10 @@ impl Win32Module {
         peb_module: Address,
     ) -> Result<Self>
     where
-        T: VirtualMemoryTrait,
+        T: AccessVirtualMemory,
         U: ProcessTrait,
     {
-        let mut proc_reader = VirtualMemory::with_proc_arch(
+        let mut proc_reader = VirtualMemoryContext::with_proc_arch(
             mem,
             process.sys_arch(),
             process.proc_arch(),
@@ -72,12 +72,12 @@ impl Win32Module {
         let size = match process.proc_arch().instruction_set {
             InstructionSet::X64 => {
                 let mut s = 0u64;
-                proc_reader.virt_read(peb_module + ldr_data_size, &mut s)?;
+                proc_reader.virt_read_into(peb_module + ldr_data_size, &mut s)?;
                 Length::from(s)
             }
             InstructionSet::X86 => {
                 let mut s = 0u32;
-                proc_reader.virt_read(peb_module + ldr_data_size, &mut s)?;
+                proc_reader.virt_read_into(peb_module + ldr_data_size, &mut s)?;
                 Length::from(s)
             }
             _ => return Err(Error::new("invalid architecture")),
@@ -111,7 +111,7 @@ impl Win32Module {
         name: &str,
     ) -> Result<Self>
     where
-        T: VirtualMemoryTrait,
+        T: AccessVirtualMemory,
         U: ProcessTrait + Win32Process,
     {
         process
@@ -128,10 +128,10 @@ impl Win32Module {
     // read_image() - reads the entire image into memory
     pub fn read_image<T, U>(&self, mem: &mut T, process: &U) -> Result<Vec<u8>>
     where
-        T: VirtualMemoryTrait,
+        T: AccessVirtualMemory,
         U: ProcessTrait + Win32Process,
     {
-        let mut proc_reader = VirtualMemory::with_proc_arch(
+        let mut proc_reader = VirtualMemoryContext::with_proc_arch(
             mem,
             process.sys_arch(),
             process.proc_arch(),
@@ -139,7 +139,7 @@ impl Win32Module {
         );
 
         let mut probe_buf = vec![0; Length::from_kb(4).as_usize()];
-        proc_reader.virt_read_raw(self.base, &mut probe_buf)?;
+        proc_reader.virt_read_raw_into(self.base, &mut probe_buf)?;
 
         let pe_probe = match PeView::from_bytes(&probe_buf) {
             Ok(pe) => {
@@ -167,7 +167,7 @@ impl Win32Module {
         info!("found pe header with a size of {} bytes.", size_of_image);
 
         let mut buf = vec![0; size_of_image as usize];
-        proc_reader.virt_read_raw(self.base, &mut buf)?;
+        proc_reader.virt_read_raw_into(self.base, &mut buf)?;
         Ok(buf)
     }
 }

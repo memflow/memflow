@@ -11,7 +11,7 @@ use crate::kernel::ntos;
 
 use pelite::{self, pe64::exports::Export, PeView};
 
-pub fn find<T: PhysicalMemoryTrait + VirtualMemoryTrait>(
+pub fn find<T: AccessPhysicalMemory + AccessVirtualMemory>(
     mem: &mut T,
     start_block: &StartBlock,
     ntos: Address,
@@ -32,7 +32,7 @@ pub fn find<T: PhysicalMemoryTrait + VirtualMemoryTrait>(
 }
 
 // find from exported symbol
-pub fn find_exported<T: PhysicalMemoryTrait + VirtualMemoryTrait>(
+pub fn find_exported<T: AccessPhysicalMemory + AccessVirtualMemory>(
     mem: &mut T,
     start_block: &StartBlock,
     ntos: Address,
@@ -55,7 +55,7 @@ pub fn find_exported<T: PhysicalMemoryTrait + VirtualMemoryTrait>(
     // read value again
     // TODO: fallback for 32bit
     // TODO: wrap error properly
-    let mut reader = VirtualMemory::with(mem, start_block.arch, start_block.dtb);
+    let mut reader = VirtualMemoryContext::with(mem, start_block.arch, start_block.dtb);
     let addr = reader.virt_read_addr(sys_proc)?;
     Ok(addr)
 }
@@ -63,7 +63,7 @@ pub fn find_exported<T: PhysicalMemoryTrait + VirtualMemoryTrait>(
 // scan in pdb
 
 // scan in section
-pub fn find_in_section<T: PhysicalMemoryTrait + VirtualMemoryTrait>(
+pub fn find_in_section<T: AccessPhysicalMemory + AccessVirtualMemory>(
     mem: &mut T,
     start_block: &StartBlock,
     ntos: Address,
@@ -73,7 +73,7 @@ pub fn find_in_section<T: PhysicalMemoryTrait + VirtualMemoryTrait>(
     // ... check if its 32 or 64bit
 
     let mut header_buf = vec![0; Length::from_mb(32).as_usize()];
-    mem.virt_read_raw(start_block.arch, start_block.dtb, ntos, &mut header_buf)?;
+    mem.virt_read_raw_into(start_block.arch, start_block.dtb, ntos, &mut header_buf)?;
 
     /*
     let mut pe_opts = ParseOptions::default();

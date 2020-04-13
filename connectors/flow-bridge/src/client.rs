@@ -117,10 +117,10 @@ impl BridgeClient {
     }
 }
 
-impl PhysicalMemoryTrait for BridgeClient {
+impl AccessPhysicalMemory for BridgeClient {
     // physRead @0 (address :UInt64, length :UInt64) -> (data :Data);
-    fn phys_read_raw(&mut self, addr: Address, out: &mut [u8]) -> Result<()> {
-        trace!("phys_read_raw({:?}, {:?})", addr, out.len());
+    fn phys_read_raw_into(&mut self, addr: Address, out: &mut [u8]) -> Result<()> {
+        trace!("phys_read_raw_into({:?}, {:?})", addr, out.len());
 
         let mut request = self.bridge.phys_read_request();
         request.get().set_address(addr.as_u64());
@@ -209,8 +209,8 @@ impl BridgeClient {
 //
 // TODO: split up sections greater than 32mb into multiple packets due to capnp limitations!
 //
-impl VirtualMemoryTrait for BridgeClient {
-    fn virt_read_raw(
+impl AccessVirtualMemory for BridgeClient {
+    fn virt_read_raw_into(
         &mut self,
         arch: Architecture,
         dtb: Address,
@@ -218,7 +218,7 @@ impl VirtualMemoryTrait for BridgeClient {
         out: &mut [u8],
     ) -> Result<()> {
         trace!(
-            "virt_read_raw({:?}, {:?}, {:?}, {:?})",
+            "virt_read_raw_into({:?}, {:?}, {:?}, {:?})",
             arch,
             dtb,
             addr,
@@ -226,7 +226,7 @@ impl VirtualMemoryTrait for BridgeClient {
         );
 
         if out.len() > Length::from_mb(32).as_usize() {
-            info!("virt_read_raw(): reading multiple 32mb chunks");
+            info!("virt_read_raw_into(): reading multiple 32mb chunks");
 
             let mut base = addr;
             let end = addr + Length::from(out.len());
@@ -237,7 +237,7 @@ impl VirtualMemoryTrait for BridgeClient {
                 }
 
                 // TODO: improve this with new read method
-                info!("virt_read_raw(): reading chunk at {:x}", base);
+                info!("virt_read_raw_into(): reading chunk at {:x}", base);
                 let mem = self.virt_read_chunk(arch, dtb, base, clamped_len)?;
                 let start = (base - addr).as_usize();
                 mem.iter().enumerate().for_each(|(i, b)| {

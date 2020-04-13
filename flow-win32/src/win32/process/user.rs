@@ -30,12 +30,12 @@ impl Win32UserProcess {
         eprocess: Address,
     ) -> Result<Self>
     where
-        T: VirtualMemoryTrait,
+        T: AccessVirtualMemory,
     {
-        let mut reader = VirtualMemory::with(mem, win.start_block.arch, win.start_block.dtb);
+        let mut reader = VirtualMemoryContext::with(mem, win.start_block.arch, win.start_block.dtb);
 
         let mut pid = 0i32;
-        reader.virt_read(eprocess + offsets.eproc_pid, &mut pid)?;
+        reader.virt_read_into(eprocess + offsets.eproc_pid, &mut pid)?;
         trace!("pid={}", pid);
         let name = reader.virt_read_cstr(eprocess + offsets.eproc_name, Length::from(16))?;
         trace!("name={}", name);
@@ -91,7 +91,7 @@ impl Win32UserProcess {
 
         // construct reader with process dtb
         let mut proc_reader =
-            VirtualMemory::with_proc_arch(mem, win.start_block.arch, proc_arch, dtb);
+            VirtualMemoryContext::with_proc_arch(mem, win.start_block.arch, proc_arch, dtb);
         let peb_ldr = proc_reader.virt_read_addr(peb + peb_ldr_offs)?;
         trace!("peb_ldr={:x}", peb_ldr);
 
@@ -118,7 +118,7 @@ impl Win32UserProcess {
         name: &str,
     ) -> Result<Self>
     where
-        T: VirtualMemoryTrait,
+        T: AccessVirtualMemory,
     {
         win.eprocess_list(mem, offsets)?
             .iter()
@@ -144,9 +144,9 @@ impl Win32Process for Win32UserProcess {
         self.peb_module
     }
 
-    fn peb_list<T: VirtualMemoryTrait>(&self, mem: &mut T) -> Result<Vec<Address>> {
+    fn peb_list<T: AccessVirtualMemory>(&self, mem: &mut T) -> Result<Vec<Address>> {
         let mut proc_reader =
-            VirtualMemory::with_proc_arch(mem, self.sys_arch, self.proc_arch, self.dtb);
+            VirtualMemoryContext::with_proc_arch(mem, self.sys_arch, self.proc_arch, self.dtb);
 
         let mut pebs = Vec::new();
 

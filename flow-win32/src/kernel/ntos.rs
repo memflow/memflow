@@ -6,7 +6,7 @@ use byteorder::{ByteOrder, LittleEndian};
 
 use flow_core::address::{Address, Length};
 use flow_core::arch::{self, InstructionSet};
-use flow_core::mem::VirtualMemoryTrait;
+use flow_core::mem::AccessVirtualMemory;
 
 use crate::kernel::StartBlock;
 
@@ -15,7 +15,7 @@ use pelite::{self, image::GUID, pe64::debug::CodeView, PeView};
 use uuid::{self, Uuid};
 
 // TODO: -> Result<WinProcess>
-pub fn find<T: VirtualMemoryTrait>(
+pub fn find<T: AccessVirtualMemory>(
     mem: &mut T,
     start_block: &StartBlock,
 ) -> Result<(Address, Length)> {
@@ -41,14 +41,14 @@ pub fn find<T: VirtualMemoryTrait>(
     Err(Error::new("unable to find ntoskrnl.exe"))
 }
 
-pub fn try_fetch_pe_size<T: VirtualMemoryTrait>(
+pub fn try_fetch_pe_size<T: AccessVirtualMemory>(
     mem: &mut T,
     start_block: &StartBlock,
     addr: Address,
 ) -> Result<Length> {
     // try to probe pe header
     let mut probe_buf = vec![0; Length::from_kb(4).as_usize()];
-    mem.virt_read_raw(start_block.arch, start_block.dtb, addr, &mut probe_buf)?;
+    mem.virt_read_raw_into(start_block.arch, start_block.dtb, addr, &mut probe_buf)?;
 
     let pe_probe = match PeView::from_bytes(&probe_buf) {
         Ok(pe) => {
@@ -77,19 +77,19 @@ pub fn try_fetch_pe_size<T: VirtualMemoryTrait>(
     Ok(Length::from(size_of_image))
 }
 
-pub fn try_fetch_pe_header<T: VirtualMemoryTrait>(
+pub fn try_fetch_pe_header<T: AccessVirtualMemory>(
     mem: &mut T,
     start_block: &StartBlock,
     addr: Address,
 ) -> Result<Vec<u8>> {
     let size_of_image = try_fetch_pe_size(mem, start_block, addr)?;
     let mut buf = vec![0; size_of_image.as_usize()];
-    mem.virt_read_raw(start_block.arch, start_block.dtb, addr, &mut buf)?;
+    mem.virt_read_raw_into(start_block.arch, start_block.dtb, addr, &mut buf)?;
     Ok(buf)
 }
 
 // TODO: store pe size in windows struct so we can reference it later
-fn probe_pe_header<T: VirtualMemoryTrait>(
+fn probe_pe_header<T: AccessVirtualMemory>(
     mem: &mut T,
     start_block: &StartBlock,
     probe_addr: Address,
@@ -114,7 +114,7 @@ fn probe_pe_header<T: VirtualMemoryTrait>(
     Ok(name.to_string())
 }
 
-fn find_x64_with_va<T: VirtualMemoryTrait>(
+fn find_x64_with_va<T: AccessVirtualMemory>(
     mem: &mut T,
     start_block: &StartBlock,
 ) -> Result<(Address, Length)> {
@@ -129,7 +129,7 @@ fn find_x64_with_va<T: VirtualMemoryTrait>(
         trace!("find_x64_with_va: probing at {:x}", va_base);
 
         let mut buf = vec![0; Length::from_mb(2).as_usize()];
-        mem.virt_read_raw(
+        mem.virt_read_raw_into(
             start_block.arch,
             start_block.dtb,
             Address::from(va_base),
@@ -185,11 +185,11 @@ fn find_x64_with_va<T: VirtualMemoryTrait>(
     ))
 }
 
-fn find_x64<T: VirtualMemoryTrait>(_mem: &mut T) -> Result<(Address, Length)> {
+fn find_x64<T: AccessVirtualMemory>(_mem: &mut T) -> Result<(Address, Length)> {
     Err(Error::new("find_x64(): not implemented yet"))
 }
 
-fn find_x86<T: VirtualMemoryTrait>(_mem: &mut T) -> Result<(Address, Length)> {
+fn find_x86<T: AccessVirtualMemory>(_mem: &mut T) -> Result<(Address, Length)> {
     Err(Error::new("find_x86(): not implemented yet"))
 }
 
@@ -215,14 +215,14 @@ pub struct Win32GUID {
     pub guid: String,
 }
 
-pub fn find_guid<T: VirtualMemoryTrait>(
+pub fn find_guid<T: AccessVirtualMemory>(
     mem: &mut T,
     start_block: &StartBlock,
     kernel_base: Address,
     kernel_size: Length,
 ) -> Result<Win32GUID> {
     let mut pe_buf = vec![0; kernel_size.as_usize()];
-    mem.virt_read_raw(start_block.arch, start_block.dtb, kernel_base, &mut pe_buf)?;
+    mem.virt_read_raw_into(start_block.arch, start_block.dtb, kernel_base, &mut pe_buf)?;
 
     let pe = PeView::from_bytes(&pe_buf)?;
 

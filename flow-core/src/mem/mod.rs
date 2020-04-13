@@ -2,28 +2,47 @@ use crate::address::{Address, Length};
 use crate::arch::{Architecture, InstructionSet};
 use crate::Result;
 
-use dataview::Pod;
 use std::ffi::CString;
+use std::mem::MaybeUninit;
+
+use dataview::Pod;
+
+// TODO:
+// - check endianess here and return an error
+// - better would be to convert endianess with word alignment from addr
 
 // generic traits
-pub trait PhysicalMemoryTrait {
-    fn phys_read_raw(&mut self, addr: Address, out: &mut [u8]) -> Result<()>;
-    fn phys_write_raw(&mut self, addr: Address, data: &[u8]) -> Result<()>;
+pub trait AccessPhysicalMemory {
+    // read
+    fn phys_read_raw_into(&mut self, addr: Address, out: &mut [u8]) -> Result<()>;
 
-    // TODO:
-    // - check endianess here and return an error
-    // - better would be to convert endianess with word alignment from addr
-    fn phys_read<T: Pod + ?Sized>(&mut self, addr: Address, out: &mut T) -> Result<()> {
-        self.phys_read_raw(addr, out.as_bytes_mut())
+    fn phys_read_into<T: Pod + ?Sized>(&mut self, addr: Address, out: &mut T) -> Result<()> {
+        self.phys_read_raw_into(addr, out.as_bytes_mut())
     }
+
+    fn phys_read_raw(&mut self, addr: Address, len: Length) -> Result<Vec<u8>> {
+        let mut buf = vec![0u8; len.as_usize()];
+        self.phys_read_raw_into(addr, &mut *buf)?;
+        Ok(buf)
+    }
+
+    fn phys_read<T: Pod + Sized>(&mut self, addr: Address) -> Result<T> {
+        let mut obj: T = unsafe { MaybeUninit::uninit().assume_init() };
+        self.phys_read_into(addr, &mut obj)?;
+        Ok(obj)
+    }
+
+    // write
+    fn phys_write_raw(&mut self, addr: Address, data: &[u8]) -> Result<()>;
 
     fn phys_write<T: Pod + ?Sized>(&mut self, addr: Address, data: &T) -> Result<()> {
         self.phys_write_raw(addr, data.as_bytes())
     }
 }
 
-pub trait VirtualMemoryTrait {
-    fn virt_read_raw(
+pub trait AccessVirtualMemory {
+    // read
+    fn virt_read_raw_into(
         &mut self,
         arch: Architecture,
         dtb: Address,
@@ -31,6 +50,40 @@ pub trait VirtualMemoryTrait {
         out: &mut [u8],
     ) -> Result<()>;
 
+    fn virt_read_into<T: Pod + ?Sized>(
+        &mut self,
+        arch: Architecture,
+        dtb: Address,
+        addr: Address,
+        out: &mut T,
+    ) -> Result<()> {
+        self.virt_read_raw_into(arch, dtb, addr, out.as_bytes_mut())
+    }
+
+    fn virt_read_raw(
+        &mut self,
+        arch: Architecture,
+        dtb: Address,
+        addr: Address,
+        len: Length,
+    ) -> Result<Vec<u8>> {
+        let mut buf = vec![0u8; len.as_usize()];
+        self.virt_read_raw_into(arch, dtb, addr, &mut *buf)?;
+        Ok(buf)
+    }
+
+    fn virt_read<T: Pod + Sized>(
+        &mut self,
+        arch: Architecture,
+        dtb: Address,
+        addr: Address,
+    ) -> Result<T> {
+        let mut obj: T = unsafe { MaybeUninit::uninit().assume_init() };
+        self.virt_read_into(arch, dtb, addr, &mut obj)?;
+        Ok(obj)
+    }
+
+    // write
     fn virt_write_raw(
         &mut self,
         arch: Architecture,
@@ -38,19 +91,6 @@ pub trait VirtualMemoryTrait {
         addr: Address,
         data: &[u8],
     ) -> Result<()>;
-
-    // TODO:
-    // - check endianess here and return an error
-    // - better would be to convert endianess with word alignment from addr
-    fn virt_read<T: Pod + ?Sized>(
-        &mut self,
-        arch: Architecture,
-        dtb: Address,
-        addr: Address,
-        out: &mut T,
-    ) -> Result<()> {
-        self.virt_read_raw(arch, dtb, addr, out.as_bytes_mut())
-    }
 
     fn virt_write<T: Pod + ?Sized>(
         &mut self,
@@ -63,14 +103,14 @@ pub trait VirtualMemoryTrait {
     }
 }
 
-pub struct VirtualMemory<'a, T: VirtualMemoryTrait> {
+pub struct VirtualMemoryContext<'a, T: AccessVirtualMemory> {
     mem: &'a mut T,
     sys_arch: Architecture,
     proc_arch: Architecture,
     dtb: Address,
 }
 
-impl<'a, T: VirtualMemoryTrait> VirtualMemory<'a, T> {
+impl<'a, T: AccessVirtualMemory> VirtualMemoryContext<'a, T> {
     pub fn with(mem: &'a mut T, sys_arch: Architecture, dtb: Address) -> Self {
         Self {
             mem,
@@ -107,16 +147,25 @@ impl<'a, T: VirtualMemoryTrait> VirtualMemory<'a, T> {
     }
 
     // self.mem wrappers
-    pub fn virt_read_raw(&mut self, addr: Address, out: &mut [u8]) -> Result<()> {
-        self.mem.virt_read_raw(self.sys_arch, self.dtb, addr, out)
+    pub fn virt_read_raw_into(&mut self, addr: Address, out: &mut [u8]) -> Result<()> {
+        self.mem
+            .virt_read_raw_into(self.sys_arch, self.dtb, addr, out)
+    }
+
+    pub fn virt_read_into<U: Pod + ?Sized>(&mut self, addr: Address, out: &mut U) -> Result<()> {
+        self.mem.virt_read_into(self.sys_arch, self.dtb, addr, out)
+    }
+
+    pub fn virt_read_raw(&mut self, addr: Address, len: Length) -> Result<Vec<u8>> {
+        self.mem.virt_read_raw(self.sys_arch, self.dtb, addr, len)
+    }
+
+    pub fn virt_read<U: Pod + Sized>(&mut self, addr: Address) -> Result<U> {
+        self.mem.virt_read(self.sys_arch, self.dtb, addr)
     }
 
     pub fn virt_write_raw(&mut self, addr: Address, data: &[u8]) -> Result<()> {
         self.mem.virt_write_raw(self.sys_arch, self.dtb, addr, data)
-    }
-
-    pub fn virt_read<U: Pod + ?Sized>(&mut self, addr: Address, out: &mut U) -> Result<()> {
-        self.mem.virt_read(self.sys_arch, self.dtb, addr, out)
     }
 
     pub fn virt_write<U: Pod + ?Sized>(&mut self, addr: Address, data: &U) -> Result<()> {
@@ -126,13 +175,13 @@ impl<'a, T: VirtualMemoryTrait> VirtualMemory<'a, T> {
     // custom read wrappers
     pub fn virt_read_addr32(&mut self, addr: Address) -> Result<Address> {
         let mut res = 0u32;
-        self.virt_read(addr, &mut res)?;
+        self.virt_read_into(addr, &mut res)?;
         Ok(Address::from(res))
     }
 
     pub fn virt_read_addr64(&mut self, addr: Address) -> Result<Address> {
         let mut res = 0u64;
-        self.virt_read(addr, &mut res)?;
+        self.virt_read_into(addr, &mut res)?;
         Ok(Address::from(res))
     }
 
@@ -148,7 +197,7 @@ impl<'a, T: VirtualMemoryTrait> VirtualMemory<'a, T> {
     // TODO: if len is shorter than string truncate it!
     pub fn virt_read_cstr(&mut self, addr: Address, len: Length) -> Result<String> {
         let mut buf = vec![0; len.as_usize()];
-        self.virt_read_raw(addr, &mut buf)?;
+        self.virt_read_raw_into(addr, &mut buf)?;
         if let Some((n, _)) = buf.iter().enumerate().filter(|(_, c)| **c == 0_u8).nth(0) {
             buf.truncate(n);
         }

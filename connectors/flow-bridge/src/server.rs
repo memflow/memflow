@@ -28,14 +28,14 @@ use std::rc::Rc;
 use crate::bridge_capnp::bridge;
 
 #[derive(Clone)]
-pub struct BridgeServer<T: PhysicalMemoryTrait> {
+pub struct BridgeServer<T: AccessPhysicalMemory> {
     pub mem: Rc<RefCell<T>>,
 }
 
 #[cfg(any(unix))]
 fn listen_unix<T>(bridge: &BridgeServer<T>, path: &str, _opts: Vec<&str>) -> Result<()>
 where
-    T: PhysicalMemoryTrait + 'static,
+    T: AccessPhysicalMemory + 'static,
 {
     let bridgecp = BridgeServer::<T> {
         mem: bridge.mem.clone(),
@@ -66,14 +66,14 @@ where
 #[cfg(not(any(unix)))]
 fn listen_unix<T>(bridge: &BridgeServer<T>, path: &str, opts: Vec<&str>) -> Result<()>
 where
-    T: PhysicalMemoryTrait + 'static,
+    T: AccessPhysicalMemory + 'static,
 {
     Err(Error::new("unix sockets are not supported on this os"))
 }
 
 fn listen_tcp<T>(bridge: &BridgeServer<T>, path: &str, opts: Vec<&str>) -> Result<()>
 where
-    T: PhysicalMemoryTrait + 'static,
+    T: AccessPhysicalMemory + 'static,
 {
     let bridgecp = BridgeServer::<T> {
         mem: bridge.mem.clone(),
@@ -125,7 +125,7 @@ where
     }));
 }
 
-impl<T: PhysicalMemoryTrait + 'static> BridgeServer<T> {
+impl<T: AccessPhysicalMemory + 'static> BridgeServer<T> {
     pub fn new(mem: Rc<RefCell<T>>) -> Self {
         BridgeServer { mem }
     }
@@ -154,7 +154,7 @@ impl<T: PhysicalMemoryTrait + 'static> BridgeServer<T> {
     }
 }
 
-impl<T: PhysicalMemoryTrait + 'static> bridge::Server for BridgeServer<T> {
+impl<T: AccessPhysicalMemory + 'static> bridge::Server for BridgeServer<T> {
     // physRead @0 (address :UInt64, length :UInt64) -> (memory :MemoryRegion);
     fn phys_read(
         &mut self,
@@ -169,7 +169,7 @@ impl<T: PhysicalMemoryTrait + 'static> bridge::Server for BridgeServer<T> {
 
         let mut data = vec![0; length.as_usize()];
         memory
-            .phys_read_raw(address, &mut data)
+            .phys_read_raw_into(address, &mut data)
             .unwrap_or_else(|_| ());
         results.get().set_data(&data);
 
@@ -212,7 +212,7 @@ impl<T: PhysicalMemoryTrait + 'static> bridge::Server for BridgeServer<T> {
 
         let mut data = vec![0; length.as_usize()];
         VatImpl::new(&mut **memory)
-            .virt_read_raw(Architecture::from(ins), dtb, address, &mut data)
+            .virt_read_raw_into(Architecture::from(ins), dtb, address, &mut data)
             .unwrap_or_else(|_| ());
         results.get().set_data(&data);
 

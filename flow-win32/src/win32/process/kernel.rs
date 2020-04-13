@@ -21,15 +21,15 @@ pub struct Win32KernelProcess {
 impl Win32KernelProcess {
     pub fn try_with<T>(mem: &mut T, win: &Win32) -> Result<Self>
     where
-        T: VirtualMemoryTrait,
+        T: AccessVirtualMemory,
     {
-        let mut reader = VirtualMemory::with(mem, win.start_block.arch, win.start_block.dtb);
+        let mut reader = VirtualMemoryContext::with(mem, win.start_block.arch, win.start_block.dtb);
 
         // TODO: move this to Win32::try_with() at one point
 
         // read pe header
         let mut pe_buf = vec![0; win.kernel_size.as_usize()];
-        reader.virt_read_raw(win.kernel_base, &mut pe_buf)?;
+        reader.virt_read_raw_into(win.kernel_base, &mut pe_buf)?;
 
         let pe = PeView::from_bytes(&pe_buf)?;
 
@@ -69,8 +69,8 @@ impl Win32Process for Win32KernelProcess {
         self.peb_module
     }
 
-    fn peb_list<T: VirtualMemoryTrait>(&self, mem: &mut T) -> Result<Vec<Address>> {
-        let mut proc_reader = VirtualMemory::with(mem, self.sys_arch, self.dtb);
+    fn peb_list<T: AccessVirtualMemory>(&self, mem: &mut T) -> Result<Vec<Address>> {
+        let mut proc_reader = VirtualMemoryContext::with(mem, self.sys_arch, self.dtb);
 
         let mut pebs = Vec::new();
 

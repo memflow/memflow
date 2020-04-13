@@ -9,17 +9,19 @@ use crate::mem::*;
 use crate::vat::VirtualAddressTranslation;
 
 // TODO: find a cleaner way to do this?
-pub struct VatImpl<'a, T: PhysicalMemoryTrait + VirtualAddressTranslation>(pub &'a mut T);
+pub struct VatImpl<'a, T: AccessPhysicalMemory + VirtualAddressTranslation>(pub &'a mut T);
 
-impl<'a, T: PhysicalMemoryTrait + VirtualAddressTranslation> VatImpl<'a, T> {
+impl<'a, T: AccessPhysicalMemory + VirtualAddressTranslation> VatImpl<'a, T> {
     pub fn new(mem: &'a mut T) -> Self {
         VatImpl { 0: mem }
     }
 }
 
 // TODO: recover from vtop failures if we request to much memory!
-impl<'a, T: PhysicalMemoryTrait + VirtualAddressTranslation> VirtualMemoryTrait for VatImpl<'a, T> {
-    fn virt_read_raw(
+impl<'a, T: AccessPhysicalMemory + VirtualAddressTranslation> AccessVirtualMemory
+    for VatImpl<'a, T>
+{
+    fn virt_read_raw_into(
         &mut self,
         arch: Architecture,
         dtb: Address,
@@ -45,7 +47,7 @@ impl<'a, T: PhysicalMemoryTrait + VirtualAddressTranslation> VirtualMemoryTrait 
                 trace!("pa is null, skipping page");
             } else {
                 let mut buf = vec![0; aligned_len.as_usize()];
-                self.0.phys_read_raw(pa, &mut buf)?;
+                self.0.phys_read_raw_into(pa, &mut buf)?;
                 let start = (base - addr).as_usize();
                 buf.iter().enumerate().for_each(|(i, b)| {
                     out[start + i] = *b;

@@ -9,22 +9,22 @@ use proc_macro::TokenStream;
 use quote::quote;
 use syn::DeriveInput;
 
-#[proc_macro_derive(VirtualMemoryTrait)]
+#[proc_macro_derive(AccessVirtualMemory)]
 pub fn virtual_memory_trait_derive(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
 
     let name = &input.ident;
 
     let expanded = quote! {
-        impl crate::mem::VirtualMemoryTrait for #name {
-            fn virt_read_raw(
+        impl crate::mem::AccessVirtualMemory for #name {
+            fn virt_read_raw_into(
                 &mut self,
                 arch: Architecture,
                 dtb: Address,
                 addr: Address,
                 out: &mut [u8],
             ) -> Result<()> {
-                VatImpl::new(self).virt_read_raw(arch, dtb, addr, out)
+                VatImpl::new(self).virt_read_raw_into(arch, dtb, addr, out)
             }
 
             fn virt_write_raw(

@@ -1,4 +1,7 @@
 general:
+- move keyboard functionality in seperate crate
+- move unicorn engine functionality in seperate crate
+
 - replace println!() with appropiate log macros
 - derive macro for VirtualRead/Write when physical read/write exists
 - pin rust version in ci

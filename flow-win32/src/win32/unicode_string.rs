@@ -12,7 +12,7 @@ pub trait VirtualReadUnicodeString {
 }
 
 // TODO: split up cpu and proc arch in read_helper.rs
-impl<'a, T: VirtualMemoryTrait> VirtualReadUnicodeString for VirtualMemory<'a, T> {
+impl<'a, T: AccessVirtualMemory> VirtualReadUnicodeString for VirtualMemoryContext<'a, T> {
     fn virt_read_unicode_string(&mut self, addr: Address) -> Result<String> {
         /*
         typedef struct _windows_unicode_string32 {
@@ -31,7 +31,7 @@ impl<'a, T: VirtualMemoryTrait> VirtualReadUnicodeString for VirtualMemory<'a, T
 
         // length is always the first entry
         let mut length = 0u16;
-        self.virt_read(addr + Length::zero(), &mut length)?;
+        self.virt_read_into(addr + Length::zero(), &mut length)?;
         if length == 0 {
             return Err(Error::new("unable to read unicode string length"));
         }
@@ -56,7 +56,7 @@ impl<'a, T: VirtualMemoryTrait> VirtualReadUnicodeString for VirtualMemory<'a, T
 
         // read buffer
         let mut content = vec![0; Length::from(length + 2).as_usize()];
-        self.virt_read_raw(buffer, &mut content)?;
+        self.virt_read_raw_into(buffer, &mut content)?;
         content[length as usize] = 0;
         content[length as usize + 1] = 0;
 

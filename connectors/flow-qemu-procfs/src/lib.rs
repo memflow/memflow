@@ -13,7 +13,7 @@ lazy_static! {
     static ref LENGTH_2GB: Length = Length::from_gb(2);
 }
 
-#[derive(VirtualMemoryTrait)]
+#[derive(AccessVirtualMemory)]
 pub struct Memory {
     pub pid: i32,
     pub map: procfs::process::MemoryMap,
@@ -71,8 +71,8 @@ impl Memory {
 }
 
 // TODO: evaluate use of memmap
-impl PhysicalMemoryTrait for Memory {
-    fn phys_read_raw(&mut self, addr: Address, out: &mut [u8]) -> Result<()> {
+impl AccessPhysicalMemory for Memory {
+    fn phys_read_raw_into(&mut self, addr: Address, out: &mut [u8]) -> Result<()> {
         let ofs = self.map.address.0 + {
             if addr.as_u64() <= LENGTH_2GB.as_u64() {
                 addr.as_u64()

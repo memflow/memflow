@@ -4,7 +4,7 @@ use flow_core::*;
 use flow_derive::*;
 
 // TODO: open usb device
-#[derive(VirtualMemoryTrait)]
+#[derive(AccessVirtualMemory)]
 pub struct Memory {}
 
 impl Memory {
@@ -13,8 +13,8 @@ impl Memory {
     }
 }
 
-impl PhysicalMemoryTrait for Memory {
-    fn phys_read_raw(&mut self, addr: Address, out: &mut [u8]) -> Result<()> {
+impl AccessPhysicalMemory for Memory {
+    fn phys_read_raw_into(&mut self, addr: Address, out: &mut [u8]) -> Result<()> {
         Ok(())
     }
 

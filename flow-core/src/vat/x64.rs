@@ -9,17 +9,17 @@ use byteorder::{ByteOrder, LittleEndian};
 
 use crate::address::Address;
 use crate::arch::x64;
-use crate::mem::PhysicalMemoryTrait;
+use crate::mem::AccessPhysicalMemory;
 
 // TODO: can we put this in a trait?
-fn read_address<T: PhysicalMemoryTrait>(mem: &mut T, addr: Address) -> Result<Address> {
+fn read_address<T: AccessPhysicalMemory>(mem: &mut T, addr: Address) -> Result<Address> {
     let mut buf = vec![0; x64::len_addr().as_usize()];
-    mem.phys_read_raw(addr, &mut buf)?;
+    mem.phys_read_raw_into(addr, &mut buf)?;
     Ok(Address::from(LittleEndian::read_u64(&buf)))
 }
 
 #[allow(clippy::nonminimal_bool)]
-pub fn vtop<T: PhysicalMemoryTrait>(mem: &mut T, dtb: Address, addr: Address) -> Result<Address> {
+pub fn vtop<T: AccessPhysicalMemory>(mem: &mut T, dtb: Address, addr: Address) -> Result<Address> {
     let pml4e = read_address(
         mem,
         Address::from((dtb.as_u64() & make_bit_mask(12, 51)) | pml4_index_bits!(addr.as_u64())),

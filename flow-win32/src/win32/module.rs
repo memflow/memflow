@@ -131,6 +131,8 @@ impl Win32Module {
         T: AccessVirtualMemory,
         U: ProcessTrait + Win32Process,
     {
+        // TODO: probing is totally unnecessary here because we know base + size already...
+
         let mut proc_reader = VirtualMemoryContext::with_proc_arch(
             mem,
             process.sys_arch(),

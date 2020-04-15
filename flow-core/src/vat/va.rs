@@ -31,9 +31,9 @@ impl<'a, T: AccessPhysicalMemory + VirtualAddressTranslation> AccessVirtualMemor
         let mut base = addr;
         let end = addr + Length::from(out.len());
         while base < end {
-            let mut aligned_len = (addr + Length::from_kb(4))
+            let mut aligned_len = (base + Length::from_kb(4))
                 .as_page_aligned(arch.instruction_set.page_size())
-                - addr;
+                - base;
             if base + aligned_len > end {
                 aligned_len = end - base;
             }
@@ -46,9 +46,11 @@ impl<'a, T: AccessPhysicalMemory + VirtualAddressTranslation> AccessVirtualMemor
                 // skip
                 trace!("pa is null, skipping page");
             } else {
+                // TODO: improve allocations
                 let mut buf = vec![0; aligned_len.as_usize()];
                 self.0.phys_read_raw_into(pa, &mut buf)?;
                 let start = (base - addr).as_usize();
+                // TODO: improve speed
                 buf.iter().enumerate().for_each(|(i, b)| {
                     out[start + i] = *b;
                 });
@@ -60,6 +62,7 @@ impl<'a, T: AccessPhysicalMemory + VirtualAddressTranslation> AccessVirtualMemor
         Ok(())
     }
 
+    // TODO: see above
     fn virt_write_raw(
         &mut self,
         arch: Architecture,

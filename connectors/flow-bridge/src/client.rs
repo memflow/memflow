@@ -133,6 +133,7 @@ impl AccessPhysicalMemory for BridgeClient {
                 .map_err(|_e| Error::new("unable to read memory"))
                 .and_then(Ok)?;
         // TODO: use new read method
+        // TODO: speedup and prevent loop!
         mem.iter().enumerate().for_each(|(i, b)| {
             out[i] = *b;
         });

@@ -30,6 +30,10 @@ impl<'a, T: AccessPhysicalMemory + VirtualAddressTranslation> AccessVirtualMemor
     ) -> Result<()> {
         let mut base = addr;
         let end = addr + Length::from(out.len());
+
+        // pre-allocate buffer
+        let mut buf = vec![0; Length::from_kb(4).as_usize()];
+
         while base < end {
             let mut aligned_len = (base + Length::from_kb(4))
                 .as_page_aligned(arch.instruction_set.page_size())
@@ -46,14 +50,16 @@ impl<'a, T: AccessPhysicalMemory + VirtualAddressTranslation> AccessVirtualMemor
                 // skip
                 trace!("pa is null, skipping page");
             } else {
-                // TODO: improve allocations
-                let mut buf = vec![0; aligned_len.as_usize()];
-                self.0.phys_read_raw_into(pa, &mut buf)?;
-                let start = (base - addr).as_usize();
-                // TODO: improve speed
-                buf.iter().enumerate().for_each(|(i, b)| {
-                    out[start + i] = *b;
-                });
+                self.0
+                    .phys_read_raw_into(pa, &mut buf[..aligned_len.as_usize()])?;
+                let offset = (base - addr).as_usize();
+                unsafe {
+                    std::ptr::copy_nonoverlapping(
+                        buf.as_ptr(),
+                        out[offset..].as_mut_ptr(),
+                        aligned_len.as_usize(),
+                    );
+                }
             }
 
             base += aligned_len;

@@ -1,5 +1,5 @@
 general:
-- move keyboard functionality in seperate crate
+- remove ida pattern functionality and use something similiar to casualhackers statemachine for patterns
 - move unicorn engine functionality in seperate crate
 
 - replace println!() with appropiate log macros

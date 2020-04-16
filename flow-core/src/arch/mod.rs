@@ -5,7 +5,8 @@ pub mod x86_pae;
 use crate::error::{Error, Result};
 use std::convert::TryFrom;
 
-use crate::address::Length;
+use crate::address::{Address, Length};
+use crate::mem::AccessPhysicalMemory;
 
 /// ByteOrder definitions
 ///
@@ -21,6 +22,7 @@ pub enum ByteOrder {
 /// Identifies a instruction set with properties
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum InstructionSet {
+    Null,
     X64,
     X86Pae,
     X86,
@@ -30,6 +32,7 @@ pub enum InstructionSet {
 macro_rules! match_instruction_set {
     ($value:expr, $func:ident) => {
         match $value {
+            InstructionSet::Null => x64::$func(), // TODO: zero everything out
             InstructionSet::X64 => x64::$func(),
             InstructionSet::X86Pae => x86_pae::$func(),
             InstructionSet::X86 => x86::$func(),
@@ -42,6 +45,7 @@ impl TryFrom<u8> for InstructionSet {
 
     fn try_from(value: u8) -> Result<Self> {
         match value {
+            0 => Ok(InstructionSet::Null),
             1 => Ok(InstructionSet::X64),
             2 => Ok(InstructionSet::X86Pae),
             3 => Ok(InstructionSet::X86),
@@ -54,6 +58,7 @@ impl TryFrom<u8> for InstructionSet {
 impl InstructionSet {
     pub fn as_u8(self) -> u8 {
         match self {
+            InstructionSet::Null => 0,
             InstructionSet::X64 => 1,
             InstructionSet::X86Pae => 2,
             InstructionSet::X86 => 3,
@@ -71,7 +76,23 @@ impl InstructionSet {
     pub fn len_addr(self) -> Length {
         match_instruction_set!(self, len_addr)
     }
+
+    pub fn vtop<T: AccessPhysicalMemory>(
+        self,
+        mem: &mut T,
+        dtb: Address,
+        addr: Address,
+    ) -> Result<Address> {
+        match self {
+            InstructionSet::Null => Ok(addr),
+            InstructionSet::X64 => x64::vtop(mem, dtb, addr),
+            InstructionSet::X86Pae => x86_pae::vtop(mem, dtb, addr),
+            InstructionSet::X86 => x86::vtop(mem, dtb, addr),
+        }
+    }
 }
+
+// TODO: should architecture and ins set really be split up?
 
 /// Architecture definition
 ///

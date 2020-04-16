@@ -1,5 +1,9 @@
+pub mod vat;
+pub use vat::*;
+
 use crate::address::{Address, Length};
 use crate::arch::{Architecture, InstructionSet};
+use crate::error::Error;
 use crate::Result;
 
 use std::ffi::CString;
@@ -187,6 +191,7 @@ impl<'a, T: AccessVirtualMemory> VirtualMemoryContext<'a, T> {
 
     pub fn virt_read_addr(&mut self, addr: Address) -> Result<Address> {
         match self.proc_arch.instruction_set {
+            InstructionSet::Null => return Err(Error::new("invalid instruction set")),
             InstructionSet::X86 => self.virt_read_addr32(addr),
             InstructionSet::X86Pae => self.virt_read_addr32(addr),
             InstructionSet::X64 => self.virt_read_addr64(addr),

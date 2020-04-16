@@ -1,13 +1,3 @@
-/*
-pub mod iter;
-pub use iter::*;
-
-pub mod export;
-pub use export::*;
-
-pub mod section;
-pub use section::*;
-*/
 use crate::error::{Error, Result};
 use log::trace;
 
@@ -16,7 +6,7 @@ use flow_core::*;
 use crate::offsets::Win32Offsets;
 use crate::win32::*;
 
-use pelite::{self, image::GUID, pe64::debug::CodeView, PeView};
+use pelite::{self, PeView};
 
 #[derive(Debug, Clone)]
 pub struct Win32Module {

@@ -33,6 +33,7 @@ impl std::fmt::Display for Error {
 
 // This is important for other errors to wrap this one.
 impl std::error::Error for Error {
+    #[allow(deprecated)]
     fn description(&self) -> &str {
         self.error.description()
     }

@@ -43,7 +43,7 @@ fn connect_unix(path: &str, _opts: Vec<&str>) -> Result<BridgeClient> {
 }
 
 #[cfg(not(any(unix)))]
-fn connect_unix(path: &str, opts: Vec<&str>) -> Result<BridgeClient> {
+fn connect_unix(_path: &str, _opts: Vec<&str>) -> Result<BridgeClient> {
     Err(Error::new("unix sockets are not supported on this os"))
 }
 

@@ -5,6 +5,10 @@ use crate::arch::ByteOrder;
 
 use crate::mem::AccessPhysicalMemory;
 
+pub fn bits() -> u8 {
+    32
+}
+
 pub fn byte_order() -> ByteOrder {
     ByteOrder::LittleEndian
 }

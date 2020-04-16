@@ -11,6 +11,10 @@ use crate::address::{Address, Length};
 use crate::arch;
 use crate::mem::AccessPhysicalMemory;
 
+pub fn bits() -> u8 {
+    64
+}
+
 pub fn byte_order() -> arch::ByteOrder {
     arch::ByteOrder::LittleEndian
 }

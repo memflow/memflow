@@ -82,13 +82,9 @@ mod tests {
     use crate::arch::Architecture;
     use crate::error::*;
 
-    pub struct VirtualMemoryMock<'a> {
-        pub buf: &'a [u8],
-    }
-
-    impl<'a> AccessPhysicalMemory for VirtualMemoryMock<'a> {
+    impl AccessPhysicalMemory for Vec<u8> {
         fn phys_read_raw_into(&mut self, addr: Address, out: &mut [u8]) -> Result<()> {
-            out.copy_from_slice(&self.buf[addr.as_usize()..(addr.as_usize() + out.len())]);
+            out.copy_from_slice(&self[addr.as_usize()..(addr.as_usize() + out.len())]);
             Ok(())
         }
 
@@ -97,7 +93,7 @@ mod tests {
         }
     }
 
-    impl<'a> AccessVirtualMemory for VirtualMemoryMock<'a> {
+    impl AccessVirtualMemory for Vec<u8> {
         fn virt_read_raw_into(
             &mut self,
             arch: Architecture,
@@ -120,18 +116,15 @@ mod tests {
     }
 
     #[test]
-    fn test_virt_read() {
-        // TODO
-        let mut buf = vec![0u8; 16 * 0x1000];
+    fn test_virt_read_small() {
+        let mut buf = vec![0u8; 256];
         for i in 0..buf.len() {
             buf[i] = i as u8;
         }
 
-        let mut va = VirtualMemoryMock { buf: &buf };
-
         let mut out = vec![0u8; buf.len()];
-        va.virt_read_into(
-            Architecture::from(Architecture::Null),
+        buf.virt_read_into(
+            Architecture::Null,
             Address::from(0),
             Address::from(0),
             &mut out[..],
@@ -139,4 +132,41 @@ mod tests {
         .unwrap();
         assert_eq!(buf, out);
     }
+
+    #[test]
+    fn test_virt_read_medium() {
+        let mut buf = vec![0u8; 0x1000];
+        for i in 0..buf.len() {
+            buf[i] = i as u8;
+        }
+
+        let mut out = vec![0u8; buf.len()];
+        buf.virt_read_into(
+            Architecture::Null,
+            Address::from(0),
+            Address::from(0),
+            &mut out[..],
+        )
+        .unwrap();
+        assert_eq!(buf, out);
+    }
+
+    #[test]
+    fn test_virt_read_big() {
+        let mut buf = vec![0u8; 16 * 0x1000];
+        for i in 0..buf.len() {
+            buf[i] = i as u8;
+        }
+
+        let mut out = vec![0u8; buf.len()];
+        buf.virt_read_into(
+            Architecture::Null,
+            Address::from(0),
+            Address::from(0),
+            &mut out[..],
+        )
+        .unwrap();
+        assert_eq!(buf, out);
+    }
+
 }

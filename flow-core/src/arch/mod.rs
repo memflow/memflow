@@ -53,6 +53,15 @@ impl Architecture {
         }
     }
 
+    pub fn bits(self) -> u8 {
+        match self {
+            Architecture::Null => x64::bits(),
+            Architecture::X64 => x64::bits(),
+            Architecture::X86Pae => x86_pae::bits(),
+            Architecture::X86 => x86::bits(),
+        }
+    }
+
     pub fn byte_order(self) -> ByteOrder {
         match self {
             Architecture::Null => x64::byte_order(),

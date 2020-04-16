@@ -57,6 +57,13 @@ impl<T: ProcessTrait + ArchitectureTrait> Emulator<T> {
         // TODO: unicorn::arch_supported()
         // uc_open()
         let arch = self.process.arch()?;
+        /*
+        match self.proc_arch.bits() {
+            64 =>self.virt_read_addr64(addr),
+            32 => self.virt_read_addr32(addr),
+            _ => return Err(Error::new("invalid instruction set")),
+        }
+        */
         let _emu = match arch {
             Architecture::X64 => CpuX86::new(unicorn::Mode::MODE_64).map_err(Error::from),
             Architecture::X86 => CpuX86::new(unicorn::Mode::MODE_32).map_err(Error::from),

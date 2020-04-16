@@ -38,12 +38,10 @@ impl<'a, T: AccessVirtualMemory> VirtualReadUnicodeString for VirtualMemoryConte
 
         // TODO: chek if length exceeds limit
         // buffer is either aligned at 4 or 8
-        let buffer = match self.proc_arch() {
-            Architecture::X64 => self.virt_read_addr64(addr + Length::from(8))?,
-            Architecture::X86 => self.virt_read_addr32(addr + Length::from(4))?,
-            _ => {
-                return Err(Error::new("invalid proc_arch parameter"));
-            }
+        let buffer = match self.proc_arch().bits() {
+            64 => self.virt_read_addr64(addr + Length::from(8))?,
+            32 => self.virt_read_addr32(addr + Length::from(4))?,
+            _ => { return Err(Error::new("invalid proc_arch parameter")); }
         };
         if buffer.is_null() {
             return Err(Error::new("unable to read unicode string length"));

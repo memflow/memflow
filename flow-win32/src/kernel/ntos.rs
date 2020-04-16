@@ -19,7 +19,7 @@ pub fn find<T: AccessVirtualMemory>(
     mem: &mut T,
     start_block: &StartBlock,
 ) -> Result<(Address, Length)> {
-    if start_block.arch == Architecture::X64 {
+    if start_block.arch.bits() == 64 {
         if !start_block.va.is_null() {
             match find_x64_with_va(mem, start_block) {
                 Ok(b) => return Ok(b),
@@ -31,7 +31,7 @@ pub fn find<T: AccessVirtualMemory>(
             Ok(b) => return Ok(b),
             Err(e) => warn!("{}", e),
         }
-    } else {
+    } else if start_block.arch.bits() == 32 {
         match find_x86(mem) {
             Ok(b) => return Ok(b),
             Err(e) => println!("Error: {}", e),

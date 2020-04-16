@@ -190,11 +190,10 @@ impl<'a, T: AccessVirtualMemory> VirtualMemoryContext<'a, T> {
     }
 
     pub fn virt_read_addr(&mut self, addr: Address) -> Result<Address> {
-        match self.proc_arch {
-            Architecture::Null => return Err(Error::new("invalid instruction set")),
-            Architecture::X86 => self.virt_read_addr32(addr),
-            Architecture::X86Pae => self.virt_read_addr32(addr),
-            Architecture::X64 => self.virt_read_addr64(addr),
+        match self.proc_arch.bits() {
+            64 =>self.virt_read_addr64(addr),
+            32 => self.virt_read_addr32(addr),
+            _ => return Err(Error::new("invalid instruction set")),
         }
     }
 

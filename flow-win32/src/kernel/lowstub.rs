@@ -3,7 +3,7 @@ use crate::error::{Error, Result};
 use byteorder::{ByteOrder, LittleEndian};
 
 use flow_core::address::{Address, Length};
-use flow_core::arch::{self, Architecture, InstructionSet};
+use flow_core::arch::{self, Architecture};
 use flow_core::mem::AccessPhysicalMemory;
 
 // PROCESSOR_START_BLOCK
@@ -61,7 +61,7 @@ fn find_x64_lowstub(stub: &[u8]) -> Result<StartBlock> {
         .ok_or_else(|| Error::new("unable to find x64 dtb in lowstub < 1M"))
         .and_then(|c| {
             Ok(StartBlock {
-                arch: Architecture::from(InstructionSet::X64),
+                arch: Architecture::from(Architecture::X64),
                 va: Address::from(LittleEndian::read_u64(&c[0x70..])),
                 dtb: Address::from(LittleEndian::read_u64(&c[0xA0..])),
             })
@@ -104,7 +104,7 @@ fn find_x64(mem: &[u8]) -> Result<StartBlock> {
         .ok_or_else(|| Error::new("unable to find x64 dtb in lowstub < 16M"))
         .and_then(|i| {
             Ok(StartBlock {
-                arch: Architecture::from(InstructionSet::X64),
+                arch: Architecture::from(Architecture::X64),
                 va: Address::from(0),
                 dtb: Address::from((i as u64) * arch::x64::page_size().as_u64()),
             })
@@ -156,7 +156,7 @@ fn find_x86_pae(mem: &[u8]) -> Result<StartBlock> {
         .ok_or_else(|| Error::new("unable to find x64_pae dtb in lowstub < 16M"))
         .and_then(|i| {
             Ok(StartBlock {
-                arch: Architecture::from(InstructionSet::X86Pae),
+                arch: Architecture::from(Architecture::X86Pae),
                 va: Address::from(0),
                 dtb: Address::from((i as u64) * arch::x86_pae::page_size().as_u64()),
             })
@@ -190,7 +190,7 @@ fn find_x86(mem: &[u8]) -> Result<StartBlock> {
         .ok_or_else(|| Error::new("unable to find x86 dtb in lowstub < 16M"))
         .and_then(|i| {
             Ok(StartBlock {
-                arch: Architecture::from(InstructionSet::X86),
+                arch: Architecture::from(Architecture::X86),
                 va: Address::from(0),
                 dtb: Address::from((i as u64) * arch::x86::page_size().as_u64()),
             })

@@ -1,7 +1,7 @@
 use crate::error::{Error, Result};
 
 use flow_core::address::{Address, Length};
-use flow_core::arch::{self, InstructionSet};
+use flow_core::arch::{self, Architecture};
 use flow_core::mem::*;
 
 use byteorder::{BigEndian, ByteOrder, LittleEndian};
@@ -38,9 +38,9 @@ impl<'a, T: AccessVirtualMemory> VirtualReadUnicodeString for VirtualMemoryConte
 
         // TODO: chek if length exceeds limit
         // buffer is either aligned at 4 or 8
-        let buffer = match self.proc_arch().instruction_set {
-            InstructionSet::X64 => self.virt_read_addr64(addr + Length::from(8))?,
-            InstructionSet::X86 => self.virt_read_addr32(addr + Length::from(4))?,
+        let buffer = match self.proc_arch() {
+            Architecture::X64 => self.virt_read_addr64(addr + Length::from(8))?,
+            Architecture::X86 => self.virt_read_addr32(addr + Length::from(4))?,
             _ => {
                 return Err(Error::new("invalid proc_arch parameter"));
             }
@@ -64,7 +64,7 @@ impl<'a, T: AccessVirtualMemory> VirtualReadUnicodeString for VirtualMemoryConte
 
         let content16 = content
             .chunks_exact(2)
-            .map(|b| match self.proc_arch().instruction_set.byte_order() {
+            .map(|b| match self.proc_arch().byte_order() {
                 arch::ByteOrder::LittleEndian => LittleEndian::read_u16(b),
                 arch::ByteOrder::BigEndian => BigEndian::read_u16(b),
             })

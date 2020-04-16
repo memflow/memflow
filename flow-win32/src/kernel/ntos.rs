@@ -5,7 +5,7 @@ use log::{debug, info, trace, warn};
 use byteorder::{ByteOrder, LittleEndian};
 
 use flow_core::address::{Address, Length};
-use flow_core::arch::{self, InstructionSet};
+use flow_core::arch::{self, Architecture};
 use flow_core::mem::AccessVirtualMemory;
 
 use crate::kernel::StartBlock;
@@ -19,7 +19,7 @@ pub fn find<T: AccessVirtualMemory>(
     mem: &mut T,
     start_block: &StartBlock,
 ) -> Result<(Address, Length)> {
-    if start_block.arch.instruction_set == InstructionSet::X64 {
+    if start_block.arch == Architecture::X64 {
         if !start_block.va.is_null() {
             match find_x64_with_va(mem, start_block) {
                 Ok(b) => return Ok(b),

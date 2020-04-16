@@ -24,7 +24,7 @@ Emulator::with(process) -> Emulator
 */
 
 use crate::address::Address;
-use crate::arch::{ArchitectureTrait, InstructionSet};
+use crate::arch::ArchitectureTrait;
 use crate::process::ProcessTrait;
 use crate::{Error, Result};
 
@@ -57,9 +57,9 @@ impl<T: ProcessTrait + ArchitectureTrait> Emulator<T> {
         // TODO: unicorn::arch_supported()
         // uc_open()
         let arch = self.process.arch()?;
-        let _emu = match arch.instruction_set {
-            InstructionSet::X64 => CpuX86::new(unicorn::Mode::MODE_64).map_err(Error::from),
-            InstructionSet::X86 => CpuX86::new(unicorn::Mode::MODE_32).map_err(Error::from),
+        let _emu = match arch {
+            Architecture::X64 => CpuX86::new(unicorn::Mode::MODE_64).map_err(Error::from),
+            Architecture::X86 => CpuX86::new(unicorn::Mode::MODE_32).map_err(Error::from),
             // TODO: add more
             _ => Err(Error::new("unsupported process architecture")),
         }?;

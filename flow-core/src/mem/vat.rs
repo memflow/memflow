@@ -28,7 +28,7 @@ impl<'a, T: AccessPhysicalMemory> AccessVirtualMemory for VatImpl<'a, T> {
         let end = base + Length::from(out.len());
 
         // pre-allocate buffer
-        let page_size = arch.instruction_set.page_size();
+        let page_size = arch.page_size();
         let mut buf = vec![0u8; page_size.as_usize()];
 
         while base < end {
@@ -37,7 +37,7 @@ impl<'a, T: AccessPhysicalMemory> AccessVirtualMemory for VatImpl<'a, T> {
                 aligned_len = end - base;
             }
 
-            let pa = arch.instruction_set.vtop(self.0, dtb, base);
+            let pa = arch.vtop(self.0, dtb, base);
             if let Ok(pa) = pa {
                 self.0
                     .phys_read_raw_into(pa, &mut buf[..aligned_len.as_usize()])?;
@@ -63,7 +63,7 @@ impl<'a, T: AccessPhysicalMemory> AccessVirtualMemory for VatImpl<'a, T> {
         addr: Address,
         data: &[u8],
     ) -> Result<()> {
-        let pa = arch.instruction_set.vtop(self.0, dtb, addr)?;
+        let pa = arch.vtop(self.0, dtb, addr)?;
         if pa.is_null() {
             // TODO: add more debug info
             Err(Error::new(
@@ -79,7 +79,7 @@ impl<'a, T: AccessPhysicalMemory> AccessVirtualMemory for VatImpl<'a, T> {
 mod tests {
     use super::{AccessPhysicalMemory, AccessVirtualMemory, VatImpl};
     use crate::address::Address;
-    use crate::arch::{Architecture, InstructionSet};
+    use crate::arch::Architecture;
     use crate::error::*;
 
     pub struct VirtualMemoryMock<'a> {
@@ -131,7 +131,7 @@ mod tests {
 
         let mut out = vec![0u8; buf.len()];
         va.virt_read_into(
-            Architecture::from(InstructionSet::Null),
+            Architecture::from(Architecture::Null),
             Address::from(0),
             Address::from(0),
             &mut out[..],

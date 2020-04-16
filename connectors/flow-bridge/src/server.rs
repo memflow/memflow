@@ -18,7 +18,7 @@ use capnp::{self, capability::Promise};
 use capnp_rpc::{pry, rpc_twoparty_capnp, twoparty, RpcSystem};
 
 use flow_core::address::{Address, Length};
-use flow_core::arch::{Architecture, InstructionSet};
+use flow_core::arch::Architecture;
 use flow_core::mem::*;
 use flow_core::vat::VatImpl;
 
@@ -204,7 +204,7 @@ impl<T: AccessPhysicalMemory + 'static> bridge::Server for BridgeServer<T> {
     ) -> Promise<(), capnp::Error> {
         let memory = &mut self.mem.borrow_mut();
 
-        let ins = pry!(InstructionSet::try_from(pry!(params.get()).get_arch())
+        let ins = pry!(Architecture::try_from(pry!(params.get()).get_arch())
             .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e)));
         let dtb = Address::from(pry!(params.get()).get_dtb());
         let address = Address::from(pry!(params.get()).get_address());
@@ -228,7 +228,7 @@ impl<T: AccessPhysicalMemory + 'static> bridge::Server for BridgeServer<T> {
         let memcp = self.mem.clone();
         let memory = &mut memcp.borrow_mut();
 
-        let ins = pry!(InstructionSet::try_from(pry!(params.get()).get_arch())
+        let ins = pry!(Architecture::try_from(pry!(params.get()).get_arch())
             .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e)));
         let dtb = Address::from(pry!(params.get()).get_dtb());
         let address = Address::from(pry!(params.get()).get_address());

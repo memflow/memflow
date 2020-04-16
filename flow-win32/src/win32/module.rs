@@ -39,13 +39,13 @@ impl Win32Module {
         );
 
         let (ldr_data_base, ldr_data_size, ldr_data_name) =
-            match process.proc_arch().instruction_set {
-                InstructionSet::X64 => (
+            match process.proc_arch() {
+                Architecture::X64 => (
                     offsets.ldr_data_base_x64,
                     offsets.ldr_data_size_x64,
                     offsets.ldr_data_name_x64,
                 ),
-                InstructionSet::X86 => (
+                Architecture::X86 => (
                     offsets.ldr_data_base_x86,
                     offsets.ldr_data_size_x86,
                     offsets.ldr_data_name_x86,
@@ -59,13 +59,13 @@ impl Win32Module {
         let base = proc_reader.virt_read_addr(peb_module + ldr_data_base)?;
         trace!("base={:x}", base);
 
-        let size = match process.proc_arch().instruction_set {
-            InstructionSet::X64 => {
+        let size = match process.proc_arch() {
+            Architecture::X64 => {
                 let mut s = 0u64;
                 proc_reader.virt_read_into(peb_module + ldr_data_size, &mut s)?;
                 Length::from(s)
             }
-            InstructionSet::X86 => {
+            Architecture::X86 => {
                 let mut s = 0u32;
                 proc_reader.virt_read_into(peb_module + ldr_data_size, &mut s)?;
                 Length::from(s)
@@ -74,11 +74,11 @@ impl Win32Module {
         };
         trace!("size={:x}", size);
 
-        let name = match process.proc_arch().instruction_set {
-            InstructionSet::X64 => {
+        let name = match process.proc_arch() {
+            Architecture::X64 => {
                 proc_reader.virt_read_unicode_string(peb_module + offsets.ldr_data_name_x64)?
             }
-            InstructionSet::X86 => {
+            Architecture::X86 => {
                 proc_reader.virt_read_unicode_string(peb_module + offsets.ldr_data_name_x86)?
             }
             _ => return Err(Error::new("invalid architecture")),

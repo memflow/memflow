@@ -116,7 +116,7 @@ pub unsafe extern "C" fn bridge_virt_read(
     let bridgecp = _bridge.clone();
     let bridge = &mut bridgecp.borrow_mut();
 
-    let _ins = match InstructionSet::try_from(ins) {
+    let _ins = match Architecture::try_from(ins) {
         Ok(a) => a,
         Err(_e) => {
             return 0;

@@ -5,7 +5,7 @@ use crate::offsets::Win32Offsets;
 use crate::win32::{process::Win32Process, Win32};
 
 use flow_core::address::{Address, Length};
-use flow_core::arch::{Architecture, InstructionSet};
+use flow_core::arch::Architecture;
 use flow_core::mem::*;
 use flow_core::ProcessTrait;
 
@@ -65,25 +65,25 @@ impl Win32UserProcess {
 
         let sys_arch = win.start_block.arch;
         trace!("sys_arch={:?}", sys_arch);
-        let proc_arch = Architecture::from(match sys_arch.instruction_set {
-            InstructionSet::X64 => {
+        let proc_arch = Architecture::from(match sys_arch {
+            Architecture::X64 => {
                 if wow64.is_null() {
-                    InstructionSet::X64
+                    Architecture::X64
                 } else {
-                    InstructionSet::X86
+                    Architecture::X86
                 }
             }
-            InstructionSet::X86Pae => InstructionSet::X86,
-            InstructionSet::X86 => InstructionSet::X86,
+            Architecture::X86Pae => Architecture::X86,
+            Architecture::X86 => Architecture::X86,
             _ => return Err(Error::new("invalid architecture")),
         });
         trace!("proc_arch={:?}", proc_arch);
 
         // from here on out we are in the process context
         // we will be using the process type architecture now
-        let (peb_ldr_offs, ldr_list_offs) = match proc_arch.instruction_set {
-            InstructionSet::X64 => (offsets.peb_ldr_x64, offsets.ldr_list_x64),
-            InstructionSet::X86 => (offsets.peb_ldr_x86, offsets.ldr_list_x86),
+        let (peb_ldr_offs, ldr_list_offs) = match proc_arch {
+            Architecture::X64 => (offsets.peb_ldr_x64, offsets.ldr_list_x64),
+            Architecture::X86 => (offsets.peb_ldr_x86, offsets.ldr_list_x86),
             _ => return Err(Error::new("invalid architecture")),
         };
         trace!("peb_ldr_offs={:x}", peb_ldr_offs);

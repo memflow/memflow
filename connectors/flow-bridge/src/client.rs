@@ -169,7 +169,7 @@ impl BridgeClient {
         len: Length,
     ) -> Result<Vec<u8>> {
         let mut request = self.bridge.virt_read_request();
-        request.get().set_arch(arch.instruction_set.as_u8());
+        request.get().set_arch(arch.as_u8());
         request.get().set_dtb(dtb.as_u64());
         request.get().set_address(addr.as_u64());
         request.get().set_length(len.as_u64());
@@ -192,7 +192,7 @@ impl BridgeClient {
         data: &[u8],
     ) -> Result<Length> {
         let mut request = self.bridge.virt_write_request();
-        request.get().set_arch(arch.instruction_set.as_u8());
+        request.get().set_arch(arch.as_u8());
         request.get().set_dtb(dtb.as_u64());
         request.get().set_address(addr.as_u64());
         request.get().set_data(data);

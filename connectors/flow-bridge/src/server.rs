@@ -64,7 +64,7 @@ where
 }
 
 #[cfg(not(any(unix)))]
-fn listen_unix<T>(bridge: &BridgeServer<T>, path: &str, opts: Vec<&str>) -> Result<()>
+fn listen_unix<T>(_bridge: &BridgeServer<T>, _path: &str, _opts: Vec<&str>) -> Result<()>
 where
     T: AccessPhysicalMemory + 'static,
 {

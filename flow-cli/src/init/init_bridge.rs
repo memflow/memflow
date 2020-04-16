@@ -1,8 +1,5 @@
-use std::fs;
-
 use clap::ArgMatches;
 use serde_derive::Deserialize;
-use toml;
 
 use flow_core::*;
 
@@ -22,7 +19,7 @@ pub struct Config {
 
 #[cfg(feature = "connector-bridge")]
 pub fn try_parse(file_name: &str) -> Result<Config> {
-    let cfg = fs::read_to_string(file_name)?;
+    let cfg = std::fs::read_to_string(file_name)?;
     Ok(toml::from_str::<Config>(&cfg).map_err(Error::new)?)
 }
 

@@ -7,7 +7,7 @@ edition = "2018"
 [dependencies]
 flow-core = { path = "../../flow-core" }
 flow-derive = { path = "../../flow-derive" }
-procfs = "0.7.6"
+procfs = "0.7.8"
 log = { version = "0.4.8", default-features = false }
 lazy_static = "1.4.0"
 

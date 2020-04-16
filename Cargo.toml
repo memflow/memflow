@@ -16,4 +16,5 @@ default-members = [
     "flow-win32",
     #"flow-ffi",
     "flow-cli",
+    "connectors/flow-bridge",
 ]

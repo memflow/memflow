@@ -11,9 +11,6 @@ pub use arch::*;
 pub mod mem;
 pub use mem::*;
 
-pub mod vat;
-pub use vat::*;
-
 pub mod process;
 pub use process::*;
 

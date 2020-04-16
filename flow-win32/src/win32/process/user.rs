@@ -75,7 +75,7 @@ impl Win32UserProcess {
             }
             InstructionSet::X86Pae => InstructionSet::X86,
             InstructionSet::X86 => InstructionSet::X86,
-            //_ => return Err(Error::new("invalid architecture")),
+            _ => return Err(Error::new("invalid architecture")),
         });
         trace!("proc_arch={:?}", proc_arch);
 

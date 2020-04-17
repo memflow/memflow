@@ -1,7 +1,7 @@
 use crate::error::{Error, Result};
 
 use flow_core::address::{Address, Length};
-use flow_core::arch::{self, Architecture};
+use flow_core::arch;
 use flow_core::mem::*;
 
 use byteorder::{BigEndian, ByteOrder, LittleEndian};

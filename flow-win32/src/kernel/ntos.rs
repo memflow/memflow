@@ -5,7 +5,7 @@ use log::{debug, info, trace, warn};
 use byteorder::{ByteOrder, LittleEndian};
 
 use flow_core::address::{Address, Length};
-use flow_core::arch::{self, Architecture};
+use flow_core::arch;
 use flow_core::mem::AccessVirtualMemory;
 
 use crate::kernel::StartBlock;

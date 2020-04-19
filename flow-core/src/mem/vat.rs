@@ -168,5 +168,4 @@ mod tests {
         .unwrap();
         assert_eq!(buf, out);
     }
-
 }

@@ -4,6 +4,8 @@ use std::io::{self, Write};
 use flow_core::*;
 use flow_win32::*;
 
+use pelite::{self, PeView};
+
 pub struct Win32Interface<'a, T>
 where
     T: AccessPhysicalMemory + AccessVirtualMemory,
@@ -13,6 +15,8 @@ where
     pub offsets: Win32Offsets,
 
     pub user_process: Option<Win32UserProcess>,
+
+    pub module: Option<Win32Module>,
 }
 
 impl<'a, T> Win32Interface<'a, T>
@@ -27,6 +31,7 @@ where
             os,
             offsets,
             user_process: None,
+            module: None,
         })
     }
 
@@ -57,12 +62,39 @@ where
                 name: "module",
                 description: "",
                 func: None,
-                subcmds: vec![Command {
-                    name: "ls",
-                    description: "",
-                    func: Some(Self::module_ls),
-                    subcmds: Vec::new(),
-                }],
+                subcmds: vec![
+                    Command {
+                        name: "ls",
+                        description: "",
+                        func: Some(Self::module_ls),
+                        subcmds: Vec::new(),
+                    },
+                    Command {
+                        name: "open",
+                        description: "",
+                        func: Some(Self::module_open),
+                        subcmds: Vec::new(),
+                    },
+                ],
+            },
+            Command {
+                name: "pe",
+                description: "",
+                func: None,
+                subcmds: vec![
+                    Command {
+                        name: "exports",
+                        description: "",
+                        func: Some(Self::pe_exports),
+                        subcmds: Vec::new(),
+                    },
+                    Command {
+                        name: "imports",
+                        description: "",
+                        func: Some(Self::pe_imports),
+                        subcmds: Vec::new(),
+                    },
+                ],
             },
         ];
 
@@ -133,15 +165,17 @@ where
             Ok(p) => {
                 println!("successfully opened process '{}': {:?}", args[1], p);
                 self.user_process = Some(p);
+                self.module = None;
             }
             Err(e) => {
                 println!("unable to open process '{}': {}", args[1], e.description());
                 self.user_process = None;
+                self.module = None;
             }
         }
     }
 
-    fn module_ls(&mut self, args: Vec<&str>) {
+    fn module_ls(&mut self, _args: Vec<&str>) {
         if !self.user_process.is_some() {
             println!("no process opened. use process open 'name' to open a process");
             return;
@@ -162,8 +196,96 @@ where
                 )
             })
             .filter_map(std::result::Result::ok)
-            .for_each(|module| println!("{:x} {}", module.base(), module.name()));
+            .for_each(|module| {
+                println!(
+                    "{:x} - {:x} + {:x} -> {}",
+                    module.base(),
+                    module.base(),
+                    module.size(),
+                    module.name()
+                )
+            });
     }
+
+    fn module_open(&mut self, args: Vec<&str>) {
+        if !self.user_process.is_some() {
+            println!("no process opened. use process open 'name' to open a process first");
+            return;
+        }
+
+        if args.len() < 1 {
+            println!("unable to open module: module name not specified");
+            return;
+        }
+
+        let mods = Win32Module::try_with_name(
+            self.mem,
+            self.user_process.as_ref().unwrap(),
+            &self.offsets,
+            args[1],
+        );
+        match mods {
+            Ok(m) => {
+                println!("successfully opened module '{}': {:?}", args[1], m);
+                self.module = Some(m);
+            }
+            Err(e) => {
+                println!("unable to open module '{}': {}", args[1], e.description());
+                self.module = None;
+            }
+        }
+    }
+
+    fn pe_exports(&mut self, _args: Vec<&str>) {
+        if !self.user_process.is_some() {
+            println!("no process opened. use process open 'name' to open a process");
+            return;
+        }
+
+        if !self.module.is_some() {
+            println!("no module opened. use module open 'name' to open a module");
+            return;
+        }
+
+        let mut virt_mem = self.user_process.as_ref().unwrap().virt_mem(self.mem);
+        let module_buf = virt_mem
+            .virt_read_raw(
+                self.module.as_ref().unwrap().base(),
+                self.module.as_ref().unwrap().size(),
+            )
+            .unwrap();
+        let pe = PeView::from_bytes(&module_buf).unwrap();
+        let exports = pe.exports().unwrap();
+
+        exports
+            .by()
+            .unwrap()
+            .names()
+            .iter()
+            .zip(exports.by().unwrap().functions())
+            .for_each(|(&name_rva, function_rva)| {
+                let name_it = pe.derva_c_str(name_rva).unwrap().as_ref();
+                println!(
+                    "{:x} + {:x} -> {}",
+                    self.module.as_ref().unwrap().base(),
+                    function_rva,
+                    std::str::from_utf8(name_it).unwrap()
+                );
+            });
+
+        /*
+        let export_addr = match pe.get_export_by_name("gafAsyncKeyState")? {
+            Export::Symbol(s) => kernel_module.base() + Length::from(*s),
+            Export::Forward(_) => {
+                return Err(flow_win32::Error::new(
+                    "export gafAsyncKeyState found but it is forwarded",
+                ))
+            }
+        };
+        */
+    }
+
+    fn pe_imports(&mut self, _args: Vec<&str>) {}
 }
 
 struct Command<'a, T> {

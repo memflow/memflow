@@ -243,7 +243,7 @@ pub fn find_guid<T: AccessVirtualMemory>(
 
     let signature = match code_view {
         CodeView::Cv70 { image, .. } => image.Signature,
-        CodeView::Cv20 { image: _, .. } => {
+        CodeView::Cv20 { .. } => {
             return Err(Error::new(
                 "invalid code_view entry version 2 found, expected 7",
             ))

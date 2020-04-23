@@ -53,12 +53,12 @@ fn download_pdb(guid: &Win32GUID) -> Result<()> {
         Err(e) => warn!("unable to download pdb: {:?}", e),
     }
 
-    let mut pdbname2 = String::from(guid.file_name.clone());
-    pdbname2.truncate(pdbname2.len() - 1);
-    pdbname2.push('_');
-    match try_download_pdb(&base_url, &pdbname2) {
+    let mut pdbname = guid.file_name.clone();
+    pdbname.truncate(pdbname.len() - 1);
+    pdbname.push('_');
+    match try_download_pdb(&base_url, &pdbname) {
         Ok(_) => return Ok(()),
-        Err(e) => warn!("could not fetch {}: {:?}", pdbname2, e),
+        Err(e) => warn!("could not fetch {}: {:?}", pdbname, e),
     }
 
     match try_download_pdb(&base_url, &"file.ptr".to_string()) {

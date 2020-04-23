@@ -139,3 +139,7 @@ CPUX86State *env = &cpu->env;
 ..
 env->regs[R_EAX],
 env->regs[R_EBX],
+
+
+2020:
+https://github.com/SamuelTulach/efi-memory/

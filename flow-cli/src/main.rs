@@ -6,13 +6,12 @@ use cli::*;
 
 #[macro_use]
 extern crate clap;
-use clap::{App, ArgMatches};
+use clap::App;
 
 use log::Level;
 
 use flow_core::*;
 use flow_core::{Error, Result};
-use flow_win32::*;
 
 fn main() -> Result<()> {
     let yaml = load_yaml!("cli.yml");

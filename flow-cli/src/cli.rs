@@ -111,12 +111,12 @@ where
             }
             // Not sure how to handle ctrl-c events, Rust’s read_line is a bit weird in this regard
             // I basically get an empty string as opposed to a newline when you just press enter.
-            if line.len() == 0 {
+            if line.is_empty() {
                 break;
             }
             // If you press enter without any input, just retry without evaluating.
             let line = line.trim();
-            if line.len() > 0 {
+            if !line.is_empty() {
                 execute_command(self, &cmds, line);
 
                 //println!("<<< {}", line);
@@ -155,7 +155,7 @@ where
     }
 
     fn process_open(&mut self, args: Vec<&str>) {
-        if args.len() < 1 {
+        if args.is_empty() {
             println!("unable to open process: no process id or process name specified");
             return;
         }
@@ -176,7 +176,7 @@ where
     }
 
     fn module_ls(&mut self, _args: Vec<&str>) {
-        if !self.user_process.is_some() {
+        if self.user_process.is_none() {
             println!("no process opened. use process open 'name' to open a process");
             return;
         }
@@ -208,12 +208,12 @@ where
     }
 
     fn module_open(&mut self, args: Vec<&str>) {
-        if !self.user_process.is_some() {
+        if self.user_process.is_none() {
             println!("no process opened. use process open 'name' to open a process first");
             return;
         }
 
-        if args.len() < 1 {
+        if args.is_empty() {
             println!("unable to open module: module name not specified");
             return;
         }
@@ -237,12 +237,12 @@ where
     }
 
     fn pe_exports(&mut self, _args: Vec<&str>) {
-        if !self.user_process.is_some() {
+        if self.user_process.is_none() {
             println!("no process opened. use process open 'name' to open a process");
             return;
         }
 
-        if !self.module.is_some() {
+        if self.module.is_none() {
             println!("no module opened. use module open 'name' to open a module");
             return;
         }
@@ -295,17 +295,17 @@ struct Command<'a, T> {
     pub subcmds: Vec<Command<'a, T>>,
 }
 
-fn execute_command<T>(selfptr: &mut T, cmds: &Vec<Command<T>>, line: &str) {
-    let tokens = line.split(" ").collect::<Vec<_>>();
+fn execute_command<T>(selfptr: &mut T, cmds: &[Command<T>], line: &str) {
+    let tokens = line.split(' ').collect::<Vec<_>>();
     match find_command(selfptr, cmds, tokens) {
-        Ok(cmd) => (),
+        Ok(_) => (),
         Err(e) => println!("error: {}", e.description()),
     };
 }
 
 fn find_command<'a, T>(
     selfptr: &mut T,
-    cmds: &'a Vec<Command<'a, T>>,
+    cmds: &'a [Command<'a, T>],
     input: Vec<&str>,
 ) -> flow_core::Result<()> {
     for cmd in cmds {
@@ -313,19 +313,17 @@ fn find_command<'a, T>(
             if cmd.func.is_some() {
                 (cmd.func.unwrap())(selfptr, input);
                 return Ok(());
+            } else if input.len() > 1 {
+                return find_command(selfptr, &cmd.subcmds, input[1..].to_vec());
             } else {
-                if input.len() > 1 {
-                    return find_command(selfptr, &cmd.subcmds, input[1..].to_vec());
-                } else {
-                    return Err(flow_core::Error::new(format!(
-                        "sub command not found. valid sub commands: {}",
-                        cmd.subcmds
-                            .iter()
-                            .map(|c| c.name)
-                            .collect::<Vec<&str>>()
-                            .join(", ")
-                    )));
-                }
+                return Err(flow_core::Error::new(format!(
+                    "sub command not found. valid sub commands: {}",
+                    cmd.subcmds
+                        .iter()
+                        .map(|c| c.name)
+                        .collect::<Vec<&str>>()
+                        .join(", ")
+                )));
             }
         }
     }

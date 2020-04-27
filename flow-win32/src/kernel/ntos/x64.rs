@@ -22,7 +22,7 @@ pub fn find_with_va<T: AccessVirtualMemory>(
 
     // va was found previously
     let mut va_base = start_block.va.as_u64() & !0x0001_ffff;
-    while va_base + Length::from_mb(4).as_u64() > start_block.va.as_u64() {
+    while va_base + Length::from_mb(16).as_u64() > start_block.va.as_u64() {
         debug!("find_x64_with_va: probing at {:x}", va_base);
 
         let mut buf = vec![0; Length::from_mb(2).as_usize()];

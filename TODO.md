@@ -1,3 +1,5 @@
+- mouse handler + keyboard handler
+
 general:
 - remove ida pattern functionality and use something similiar to casualhackers statemachine for patterns
 - move unicorn engine functionality in seperate crate
@@ -143,3 +145,9 @@ env->regs[R_EBX],
 
 2020:
 https://github.com/SamuelTulach/efi-memory/
+- hooking lib
+- hibernation file connector
+- pcileech connector
+- process simulator
+- demo with driver exploit
+- demo with uefi

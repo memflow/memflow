@@ -1,6 +1,6 @@
 use crate::error::{Error, Result};
 
-use log::{info, trace, warn};
+use log::{debug, info, warn};
 
 use flow_core::address::{Address, Length};
 use flow_core::mem::*;
@@ -16,7 +16,7 @@ pub fn find<T: AccessPhysicalMemory + AccessVirtualMemory>(
     start_block: &StartBlock,
     ntos: Address,
 ) -> Result<Address> {
-    trace!("trying to find system eprocess");
+    debug!("trying to find system eprocess");
 
     match find_exported(mem, start_block, ntos) {
         Ok(e) => return Ok(e),
@@ -37,7 +37,7 @@ pub fn find_exported<T: AccessPhysicalMemory + AccessVirtualMemory>(
     start_block: &StartBlock,
     ntos: Address,
 ) -> Result<Address> {
-    let header_buf = ntos::try_fetch_pe_header(mem, start_block, ntos)?;
+    let header_buf = ntos::pe::try_fetch_pe_header(mem, start_block, ntos)?;
     let header = PeView::from_bytes(&header_buf)?;
 
     let sys_proc = match header.get_export_by_name("PsInitialSystemProcess")? {

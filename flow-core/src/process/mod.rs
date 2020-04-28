@@ -7,7 +7,7 @@ use crate::mem::*;
 
 pub trait OperatingSystem {}
 
-pub trait Process {
+pub trait OsProcess {
     fn address(&self) -> Address;
 
     fn pid(&self) -> i32;
@@ -24,7 +24,7 @@ pub trait Process {
 }
 
 // TODO: Range impl for base to size?
-pub trait Module {
+pub trait OsProcessModule {
     fn address(&self) -> Address;
     fn parent_process(&self) -> Address;
 
@@ -34,6 +34,7 @@ pub trait Module {
 }
 
 // TODO: refactor? or something
+/*
 pub trait ExportTrait {
     fn name(&self) -> &str;
     fn offset(&self) -> Length;
@@ -44,3 +45,4 @@ pub trait SectionTrait {
     fn virt_addr(&self) -> Address;
     fn virt_size(&self) -> Length;
 }
+*/

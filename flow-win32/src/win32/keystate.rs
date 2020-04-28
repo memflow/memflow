@@ -2,7 +2,7 @@ use super::{Win32, Win32Module, Win32Offsets, Win32Process};
 use crate::error::{Error, Result};
 
 use flow_core::mem::AccessVirtualMemory;
-use flow_core::process::{Module, Process};
+use flow_core::process::{OsProcess, OsProcessModule};
 use flow_core::{Address, Length};
 
 use log::debug;

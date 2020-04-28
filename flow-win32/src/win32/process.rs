@@ -5,7 +5,7 @@ use crate::win32::Win32;
 use flow_core::address::{Address, Length};
 use flow_core::arch::Architecture;
 use flow_core::mem::{AccessVirtualMemory, VirtualMemoryContext};
-use flow_core::Process;
+use flow_core::OsProcess;
 
 use log::trace;
 use pelite::{self, pe64::exports::Export, PeView};
@@ -199,7 +199,7 @@ impl Win32Process {
     }
 }
 
-impl Process for Win32Process {
+impl OsProcess for Win32Process {
     fn address(&self) -> Address {
         self.address
     }

@@ -151,3 +151,15 @@ https://github.com/SamuelTulach/efi-memory/
 - process simulator
 - demo with driver exploit
 - demo with uefi
+- use pelite style pattern parser (put the parser in a seperate lib + upstream?)
+- hyperv/vbox/vmware connectors?
+- optional ept hooking support?
+- cpu struct 'framework' (like virtmem/read)
+-
+
+- reclass plugin system
+- gdb server stub in cli
+- debug processes in vm (cli)
+- breakpoints, etc in processes
+- vm debugging/singlestep?
+- uefi bootloader example , uefi hypervisor

@@ -21,16 +21,12 @@ pub struct Win32Module {
 }
 
 impl Win32Module {
-    pub fn try_with_peb<T, U>(
+    pub fn try_with_peb<T: AccessVirtualMemory>(
         mem: &mut T,
-        process: &U,
+        process: &Win32Process,
         offsets: &Win32Offsets,
         peb_module: Address,
-    ) -> Result<Self>
-    where
-        T: AccessVirtualMemory,
-        U: ProcessTrait + Win32Process,
-    {
+    ) -> Result<Self> {
         let mut proc_reader = VirtualMemoryContext::with_proc_arch(
             mem,
             process.sys_arch(),
@@ -89,16 +85,12 @@ impl Win32Module {
         })
     }
 
-    pub fn try_with_name<T, U>(
+    pub fn try_with_name<T: AccessVirtualMemory>(
         mem: &mut T,
-        process: &U,
+        process: &Win32Process,
         offsets: &Win32Offsets,
         name: &str,
-    ) -> Result<Self>
-    where
-        T: AccessVirtualMemory,
-        U: ProcessTrait + Win32Process,
-    {
+    ) -> Result<Self> {
         process
             .peb_list(mem)?
             .iter()
@@ -111,11 +103,11 @@ impl Win32Module {
     }
 
     // read_image() - reads the entire image into memory
-    pub fn read_image<T, U>(&self, mem: &mut T, process: &U) -> Result<Vec<u8>>
-    where
-        T: AccessVirtualMemory,
-        U: ProcessTrait + Win32Process,
-    {
+    pub fn read_image<T: AccessVirtualMemory>(
+        &self,
+        mem: &mut T,
+        process: &Win32Process,
+    ) -> Result<Vec<u8>> {
         // TODO: probing is totally unnecessary here because we know base + size already...
 
         let mut proc_reader = VirtualMemoryContext::with_proc_arch(

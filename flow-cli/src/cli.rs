@@ -14,7 +14,7 @@ where
     pub os: Win32,
     pub offsets: Win32Offsets,
 
-    pub user_process: Option<Win32UserProcess>,
+    pub process: Option<Win32Process>,
 
     pub module: Option<Win32Module>,
 }
@@ -30,7 +30,7 @@ where
             mem,
             os,
             offsets,
-            user_process: None,
+            process: None,
             module: None,
         })
     }
@@ -147,9 +147,7 @@ where
         let eprocs = self.os.eprocess_list(self.mem, &self.offsets).unwrap();
         eprocs
             .iter()
-            .map(|eproc| {
-                Win32UserProcess::try_with_eprocess(self.mem, &self.os, &self.offsets, *eproc)
-            })
+            .map(|eproc| Win32Process::try_with_eprocess(self.mem, &self.os, &self.offsets, *eproc))
             .filter_map(std::result::Result::ok)
             .for_each(|p| println!("{} {}", p.pid(), p.name()));
     }
@@ -160,28 +158,28 @@ where
             return;
         }
 
-        let procs = Win32UserProcess::try_with_name(self.mem, &self.os, &self.offsets, args[1]);
+        let procs = Win32Process::try_with_name(self.mem, &self.os, &self.offsets, args[1]);
         match procs {
             Ok(p) => {
                 println!("successfully opened process '{}': {:?}", args[1], p);
-                self.user_process = Some(p);
+                self.process = Some(p);
                 self.module = None;
             }
             Err(e) => {
                 println!("unable to open process '{}': {}", args[1], e.description());
-                self.user_process = None;
+                self.process = None;
                 self.module = None;
             }
         }
     }
 
     fn module_ls(&mut self, _args: Vec<&str>) {
-        if self.user_process.is_none() {
+        if self.process.is_none() {
             println!("no process opened. use process open 'name' to open a process");
             return;
         }
 
-        self.user_process
+        self.process
             .as_ref()
             .unwrap()
             .peb_list(self.mem)
@@ -190,7 +188,7 @@ where
             .map(|peb| {
                 Win32Module::try_with_peb(
                     self.mem,
-                    self.user_process.as_ref().unwrap(),
+                    self.process.as_ref().unwrap(),
                     &self.offsets,
                     *peb,
                 )
@@ -208,7 +206,7 @@ where
     }
 
     fn module_open(&mut self, args: Vec<&str>) {
-        if self.user_process.is_none() {
+        if self.process.is_none() {
             println!("no process opened. use process open 'name' to open a process first");
             return;
         }
@@ -220,7 +218,7 @@ where
 
         let mods = Win32Module::try_with_name(
             self.mem,
-            self.user_process.as_ref().unwrap(),
+            self.process.as_ref().unwrap(),
             &self.offsets,
             args[1],
         );
@@ -237,7 +235,7 @@ where
     }
 
     fn pe_exports(&mut self, _args: Vec<&str>) {
-        if self.user_process.is_none() {
+        if self.process.is_none() {
             println!("no process opened. use process open 'name' to open a process");
             return;
         }
@@ -247,7 +245,7 @@ where
             return;
         }
 
-        let mut virt_mem = self.user_process.as_ref().unwrap().virt_mem(self.mem);
+        let mut virt_mem = self.process.as_ref().unwrap().virt_mem(self.mem);
         let module_buf = virt_mem
             .virt_read_raw(
                 self.module.as_ref().unwrap().base(),

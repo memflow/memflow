@@ -163,3 +163,22 @@ https://github.com/SamuelTulach/efi-memory/
 - breakpoints, etc in processes
 - vm debugging/singlestep?
 - uefi bootloader example , uefi hypervisor
+
+- replace ida pattern parser with casualx's pattern parser
+- make capnproto optional
+- get rid of or fork duma
+
+- rework flow_bridge to use little memory allocations (see va read)
+- implement flow_bridge write
+
+- rename ProcessTrait to Process
+- rename ModuleTrait to Module -> or remove them both
+
+cli todo:
+- read exports/imports, disassemble code/addresses
+- read/write memory
+
+win32 todo:
+- second process after System is broken somehow?
+- user supplied cr3 or va hint in win32 construction
+- win32 offsets should be constructed from rekall profiles

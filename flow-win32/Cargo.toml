@@ -21,3 +21,12 @@ pdb = { git = "https://github.com/willglynn/pdb" }
 url = "2.1.0"
 failure = { version = "0.1.6", features = [] }
 widestring = "0.4.0"
+
+[dev_dependencies]
+simple_logger = "1.0.1"
+flow-qemu-procfs = { path = "../connectors/flow-qemu-procfs" }
+win_key_codes = "0.1.2"
+
+[[example]]
+name = "read_keys"
+path = "examples/read_keys.rs"

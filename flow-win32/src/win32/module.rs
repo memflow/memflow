@@ -151,7 +151,7 @@ impl Win32Module {
     }
 }
 
-impl ModuleTrait for Win32Module {
+impl Module for Win32Module {
     fn address(&self) -> Address {
         self.peb_module
     }

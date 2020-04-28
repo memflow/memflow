@@ -25,13 +25,13 @@ Emulator::with(process) -> Emulator
 
 use crate::address::Address;
 use crate::arch::ArchitectureTrait;
-use crate::process::ProcessTrait;
+use crate::process::Process;
 use crate::{Error, Result};
 
 use unicorn::CpuX86;
 
 // TODO: module iteration should be relocated to flow_core somehow
-pub struct Emulator<T: ProcessTrait + ArchitectureTrait> {
+pub struct Emulator<T: Process + ArchitectureTrait> {
     process: T,
     // set_params_fn
     // get_result_fn
@@ -44,7 +44,7 @@ pub struct EmulationResult {
     // ...
 }
 
-impl<T: ProcessTrait + ArchitectureTrait> Emulator<T> {
+impl<T: Process + ArchitectureTrait> Emulator<T> {
     pub fn with(process: T) -> Self {
         Self { process }
     }

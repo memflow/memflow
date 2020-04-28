@@ -171,9 +171,6 @@ https://github.com/SamuelTulach/efi-memory/
 - rework flow_bridge to use little memory allocations (see va read)
 - implement flow_bridge write
 
-- rename ProcessTrait to Process
-- rename ModuleTrait to Module -> or remove them both
-
 cli todo:
 - read exports/imports, disassemble code/addresses
 - read/write memory

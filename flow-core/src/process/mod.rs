@@ -7,7 +7,7 @@ use crate::mem::*;
 
 pub trait OperatingSystem {}
 
-pub trait ProcessTrait {
+pub trait Process {
     fn address(&self) -> Address;
 
     fn pid(&self) -> i32;
@@ -24,7 +24,7 @@ pub trait ProcessTrait {
 }
 
 // TODO: Range impl for base to size?
-pub trait ModuleTrait {
+pub trait Module {
     fn address(&self) -> Address;
     fn parent_process(&self) -> Address;
 

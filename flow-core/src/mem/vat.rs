@@ -4,83 +4,71 @@ use log::trace;
 
 use crate::address::{Address, Length};
 use crate::arch::Architecture;
-use crate::mem::*;
+use crate::mem::AccessPhysicalMemory;
 
-// TODO: find a cleaner way to do this?
-pub struct VatImpl<'a, T: AccessPhysicalMemory>(pub &'a mut T);
+#[allow(unused)]
+pub fn virt_read_raw_into<T: AccessPhysicalMemory>(
+    mem: &mut T,
+    arch: Architecture,
+    dtb: Address,
+    addr: Address,
+    out: &mut [u8],
+) -> Result<()> {
+    let mut base = addr;
+    let end = base + Length::from(out.len());
 
-impl<'a, T: AccessPhysicalMemory> VatImpl<'a, T> {
-    pub fn new(mem: &'a mut T) -> Self {
-        VatImpl { 0: mem }
+    // pre-allocate buffer
+    let page_size = arch.page_size();
+    let mut buf = vec![0u8; page_size.as_usize()];
+
+    while base < end {
+        let mut aligned_len = (base + page_size).as_page_aligned(page_size) - base;
+        if base + aligned_len > end {
+            aligned_len = end - base;
+        }
+
+        let pa = arch.vtop(mem, dtb, base);
+        if let Ok(pa) = pa {
+            mem.phys_read_raw_into(pa, &mut buf[..aligned_len.as_usize()])?;
+            let offset = (base - addr).as_usize();
+            out[offset..(offset + aligned_len.as_usize())]
+                .copy_from_slice(&buf[..aligned_len.as_usize()]);
+        } else {
+            // skip
+            trace!("pa is null, skipping page");
+        }
+
+        base += aligned_len;
     }
+
+    Ok(())
 }
 
-// TODO: recover from vtop failures if we request to much memory!
-impl<'a, T: AccessPhysicalMemory> AccessVirtualMemory for VatImpl<'a, T> {
-    fn virt_read_raw_into(
-        &mut self,
-        arch: Architecture,
-        dtb: Address,
-        addr: Address,
-        out: &mut [u8],
-    ) -> Result<()> {
-        let mut base = addr;
-        let end = base + Length::from(out.len());
-
-        // pre-allocate buffer
-        let page_size = arch.page_size();
-        let mut buf = vec![0u8; page_size.as_usize()];
-
-        while base < end {
-            let mut aligned_len = (base + page_size).as_page_aligned(page_size) - base;
-            if base + aligned_len > end {
-                aligned_len = end - base;
-            }
-
-            let pa = arch.vtop(self.0, dtb, base);
-            if let Ok(pa) = pa {
-                self.0
-                    .phys_read_raw_into(pa, &mut buf[..aligned_len.as_usize()])?;
-                let offset = (base - addr).as_usize();
-                out[offset..(offset + aligned_len.as_usize())]
-                    .copy_from_slice(&buf[..aligned_len.as_usize()]);
-            } else {
-                // skip
-                trace!("pa is null, skipping page");
-            }
-
-            base += aligned_len;
-        }
-
-        Ok(())
-    }
-
-    // TODO: see above
-    fn virt_write_raw(
-        &mut self,
-        arch: Architecture,
-        dtb: Address,
-        addr: Address,
-        data: &[u8],
-    ) -> Result<()> {
-        let pa = arch.vtop(self.0, dtb, addr)?;
-        if pa.is_null() {
-            // TODO: add more debug info
-            Err(Error::new(
-                "virt_write(): unable to resolve physical address",
-            ))
-        } else {
-            self.0.phys_write_raw(pa, data)
-        }
+#[allow(unused)]
+pub fn virt_write_raw<T: AccessPhysicalMemory>(
+    mem: &mut T,
+    arch: Architecture,
+    dtb: Address,
+    addr: Address,
+    data: &[u8],
+) -> Result<()> {
+    let pa = arch.vtop(mem, dtb, addr)?;
+    if pa.is_null() {
+        // TODO: add more debug info
+        Err(Error::new(
+            "virt_write(): unable to resolve physical address",
+        ))
+    } else {
+        mem.phys_write_raw(pa, data)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{AccessPhysicalMemory, AccessVirtualMemory, VatImpl};
+    use super::*;
     use crate::address::Address;
     use crate::arch::Architecture;
-    use crate::error::*;
+    use crate::mem::AccessVirtualMemory;
 
     impl AccessPhysicalMemory for Vec<u8> {
         fn phys_read_raw_into(&mut self, addr: Address, out: &mut [u8]) -> Result<()> {
@@ -101,7 +89,7 @@ mod tests {
             addr: Address,
             out: &mut [u8],
         ) -> Result<()> {
-            VatImpl::new(self).virt_read_raw_into(arch, dtb, addr, out)
+            virt_read_raw_into(self, arch, dtb, addr, out)
         }
 
         fn virt_write_raw(
@@ -111,7 +99,7 @@ mod tests {
             addr: Address,
             data: &[u8],
         ) -> Result<()> {
-            VatImpl::new(self).virt_write_raw(arch, dtb, addr, data)
+            virt_write_raw(self, arch, dtb, addr, data)
         }
     }
 

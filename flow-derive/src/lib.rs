@@ -24,7 +24,7 @@ pub fn virtual_memory_trait_derive(input: TokenStream) -> TokenStream {
                 addr: Address,
                 out: &mut [u8],
             ) -> Result<()> {
-                VatImpl::new(self).virt_read_raw_into(arch, dtb, addr, out)
+                vat::virt_read_raw_into(self, arch, dtb, addr, out)
             }
 
             fn virt_write_raw(
@@ -34,7 +34,7 @@ pub fn virtual_memory_trait_derive(input: TokenStream) -> TokenStream {
                 addr: Address,
                 data: &[u8],
             ) -> Result<()> {
-                VatImpl::new(self).virt_write_raw(arch, dtb, addr, data)
+                vat::virt_write_raw(self, arch, dtb, addr, data)
             }
         }
     };

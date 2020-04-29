@@ -20,7 +20,7 @@ use capnp_rpc::{pry, rpc_twoparty_capnp, twoparty, RpcSystem};
 use flow_core::address::{Address, Length};
 use flow_core::arch::Architecture;
 use flow_core::mem::*;
-use flow_core::vat::VatImpl;
+use flow_core::vat;
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -211,9 +211,14 @@ impl<T: AccessPhysicalMemory + 'static> bridge::Server for BridgeServer<T> {
         let length = Length::from(pry!(params.get()).get_length());
 
         let mut data = vec![0; length.as_usize()];
-        VatImpl::new(&mut **memory)
-            .virt_read_raw_into(Architecture::from(ins), dtb, address, &mut data)
-            .unwrap_or_else(|_| ());
+        vat::virt_read_raw_into(
+            &mut **memory,
+            Architecture::from(ins),
+            dtb,
+            address,
+            &mut data,
+        )
+        .unwrap_or_else(|_| ());
         results.get().set_data(&data);
 
         Promise::ok(())
@@ -234,9 +239,14 @@ impl<T: AccessPhysicalMemory + 'static> bridge::Server for BridgeServer<T> {
         let address = Address::from(pry!(params.get()).get_address());
         let data = pry!(pry!(params.get()).get_data());
 
-        VatImpl::new(&mut **memory)
-            .virt_write_raw(Architecture::from(ins), dtb, address, &data.to_vec())
-            .unwrap_or_else(|_| ());
+        vat::virt_write_raw(
+            &mut **memory,
+            Architecture::from(ins),
+            dtb,
+            address,
+            &data.to_vec(),
+        )
+        .unwrap_or_else(|_| ());
         results.get().set_length(data.len() as u64);
 
         Promise::ok(())

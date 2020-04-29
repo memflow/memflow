@@ -19,7 +19,6 @@ pub fn virt_read_raw_into<T: AccessPhysicalMemory>(
 
     // pre-allocate buffer
     let page_size = arch.page_size();
-    let mut buf = vec![0u8; page_size.as_usize()];
 
     while base < end {
         let mut aligned_len = (base + page_size).as_page_aligned(page_size) - base;
@@ -29,10 +28,8 @@ pub fn virt_read_raw_into<T: AccessPhysicalMemory>(
 
         let pa = arch.vtop(mem, dtb, base);
         if let Ok(pa) = pa {
-            mem.phys_read_raw_into(pa, &mut buf[..aligned_len.as_usize()])?;
             let offset = (base - addr).as_usize();
-            out[offset..(offset + aligned_len.as_usize())]
-                .copy_from_slice(&buf[..aligned_len.as_usize()]);
+            mem.phys_read_raw_into(pa, &mut out[offset..(offset + aligned_len.as_usize())])?;
         } else {
             // skip
             trace!("pa is null, skipping page");

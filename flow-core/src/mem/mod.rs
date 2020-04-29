@@ -1,5 +1,4 @@
 pub mod vat;
-pub use vat::*;
 
 use crate::address::{Address, Length};
 use crate::arch::Architecture;

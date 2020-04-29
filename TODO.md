@@ -171,6 +171,8 @@ https://github.com/SamuelTulach/efi-memory/
 - rework flow_bridge to use little memory allocations (see va read)
 - implement flow_bridge write
 
+- VatImpl doesnt have to be a type and we can just implement functions for it
+
 cli todo:
 - read exports/imports, disassemble code/addresses
 - read/write memory

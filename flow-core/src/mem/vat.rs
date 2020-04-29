@@ -14,30 +14,32 @@ pub fn virt_read_raw_into<T: AccessPhysicalMemory>(
     addr: Address,
     out: &mut [u8],
 ) -> Result<()> {
-    let mut base = addr;
-    let end = base + Length::from(out.len());
-
-    // pre-allocate buffer
     let page_size = arch.page_size();
+    if out.len() < page_size.as_usize() {
+        let pa = arch.vtop(mem, dtb, addr)?;
+        mem.phys_read_raw_into(pa, out)?;
+    } else {
+        let mut base = addr;
+        let end = base + Length::from(out.len());
 
-    while base < end {
-        let mut aligned_len = (base + page_size).as_page_aligned(page_size) - base;
-        if base + aligned_len > end {
-            aligned_len = end - base;
+        while base < end {
+            let mut aligned_len = (base + page_size).as_page_aligned(page_size) - base;
+            if base + aligned_len > end {
+                aligned_len = end - base;
+            }
+
+            let pa = arch.vtop(mem, dtb, base);
+            if let Ok(pa) = pa {
+                let offset = (base - addr).as_usize();
+                mem.phys_read_raw_into(pa, &mut out[offset..(offset + aligned_len.as_usize())])?;
+            } else {
+                // skip
+                trace!("pa is null, skipping page");
+            }
+
+            base += aligned_len;
         }
-
-        let pa = arch.vtop(mem, dtb, base);
-        if let Ok(pa) = pa {
-            let offset = (base - addr).as_usize();
-            mem.phys_read_raw_into(pa, &mut out[offset..(offset + aligned_len.as_usize())])?;
-        } else {
-            // skip
-            trace!("pa is null, skipping page");
-        }
-
-        base += aligned_len;
     }
-
     Ok(())
 }
 

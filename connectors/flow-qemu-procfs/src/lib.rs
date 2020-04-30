@@ -3,15 +3,12 @@ use log::info;
 use flow_core::*;
 use flow_derive::*;
 
-use lazy_static::lazy_static;
 use procfs;
 
 use std::fs::{File, OpenOptions};
 use std::io::{Read, Seek, SeekFrom, Write};
 
-lazy_static! {
-    static ref LENGTH_2GB: Length = Length::from_gb(2);
-}
+const LENGTH_2GB: Length = Length::from_gb(2);
 
 #[derive(AccessVirtualMemory)]
 pub struct Memory {

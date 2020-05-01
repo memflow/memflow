@@ -3,7 +3,7 @@ use crate::error::Result;
 use crate::address::{Address, Length};
 use crate::arch::ByteOrder;
 
-use crate::mem::AccessPhysicalMemory;
+use crate::mem::{AccessPhysicalMemory, PageType};
 
 pub fn bits() -> u8 {
     32
@@ -25,7 +25,7 @@ pub fn vtop<T: AccessPhysicalMemory>(
     _mem: &mut T,
     _dtb: Address,
     _addr: Address,
-) -> Result<Address> {
+) -> Result<(Address, PageType)> {
     println!("x86::vtop() not implemented yet");
-    Ok(Address::from(0))
+    Ok((Address::from(0), PageType::NONE))
 }

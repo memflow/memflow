@@ -1,15 +1,20 @@
 use super::*;
 use crate::address::Address;
 use crate::arch::Architecture;
-use crate::mem::AccessVirtualMemory;
+use crate::mem::{AccessVirtualMemory, PageType};
 
 impl AccessPhysicalMemory for Vec<u8> {
-    fn phys_read_raw_into(&mut self, addr: Address, out: &mut [u8]) -> Result<()> {
+    fn phys_read_raw_into(
+        &mut self,
+        addr: Address,
+        _page_type: PageType,
+        out: &mut [u8],
+    ) -> Result<()> {
         out.copy_from_slice(&self[addr.as_usize()..(addr.as_usize() + out.len())]);
         Ok(())
     }
 
-    fn phys_write_raw(&mut self, _addr: Address, _data: &[u8]) -> Result<()> {
+    fn phys_write_raw(&mut self, _addr: Address, _page_type: PageType, _data: &[u8]) -> Result<()> {
         Err(Error::new("phys_write not implemented"))
     }
 }

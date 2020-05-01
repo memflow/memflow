@@ -3,6 +3,7 @@ extern crate flow_qemu_procfs;
 extern crate flow_win32;
 extern crate rand;
 
+use flow_core::mem::{cache::TimedCache, PageType};
 use flow_core::{Length, OsProcess, OsProcessModule};
 use flow_qemu_procfs::Memory;
 use flow_win32::{Win32, Win32Module, Win32Offsets, Win32Process};
@@ -11,7 +12,7 @@ use std::io::Write;
 use std::time::{Duration, Instant};
 
 fn rwtest(
-    mem: &mut Memory,
+    mem: &mut Memory<TimedCache>,
     proc: &Win32Process,
     module: &dyn OsProcessModule,
     chunk_sizes: &[usize],
@@ -83,7 +84,12 @@ fn rwtest(
 }
 
 fn main() -> flow_core::Result<()> {
-    let mut mem = Memory::new()?;
+    let mut mem = Memory::new(TimedCache::new(
+        100,
+        0x200,
+        Length::from_kb(4),
+        PageType::READ_ONLY | PageType::PAGE_TABLE,
+    ))?;
     let os = Win32::try_with(&mut mem)?;
     let offsets = Win32Offsets::try_with_guid(&os.kernel_guid())?;
 

@@ -1,3 +1,4 @@
+
 [workspace]
 members = [
     "flow-core",
@@ -12,7 +13,7 @@ members = [
 ]
 default-members = [
     "flow-core",
-    "flow-derive",
+    #"flow-derive",
     "flow-win32",
     #"flow-ffi",
     "flow-cli",

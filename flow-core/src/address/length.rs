@@ -64,11 +64,11 @@ impl From<Address> for Length {
 }
 
 impl Length {
-    pub fn zero() -> Self {
-        Length::from(0)
+    pub const fn zero() -> Self {
+        Length { 0: 0 }
     }
 
-    pub fn is_zero(&self) -> bool {
+    pub const fn is_zero(&self) -> bool {
         self.0 == 0
     }
 
@@ -76,55 +76,55 @@ impl Length {
         Address::from(self.0)
     }
 
-    pub fn as_u32(&self) -> u32 {
+    pub const fn as_u32(&self) -> u32 {
         self.0 as u32
     }
 
-    pub fn as_u64(&self) -> u64 {
+    pub const fn as_u64(&self) -> u64 {
         self.0
     }
 
-    pub fn as_usize(&self) -> usize {
+    pub const fn as_usize(&self) -> usize {
         self.0 as usize
     }
 
-    pub fn from_b(len: u64) -> Self {
+    pub const fn from_b(len: u64) -> Self {
         Length { 0: len }
     }
 
-    pub fn from_kb(len: u64) -> Self {
+    pub const fn from_kb(len: u64) -> Self {
         Length { 0: len * 1024 }
     }
 
-    pub fn from_kib(len: u64) -> Self {
+    pub const fn from_kib(len: u64) -> Self {
         Length { 0: len * 1024 * 8 }
     }
 
-    pub fn from_mb(len: u64) -> Self {
+    pub const fn from_mb(len: u64) -> Self {
         Length {
             0: len * 1024 * 1024,
         }
     }
 
-    pub fn from_mib(len: u64) -> Self {
+    pub const fn from_mib(len: u64) -> Self {
         Length {
             0: len * 1024 * 1024 * 8,
         }
     }
 
-    pub fn from_gb(len: u64) -> Self {
+    pub const fn from_gb(len: u64) -> Self {
         Length {
             0: len * 1024 * 1024 * 1024,
         }
     }
 
-    pub fn from_gib(len: u64) -> Self {
+    pub const fn from_gib(len: u64) -> Self {
         Length {
             0: len * 1024 * 1024 * 1024 * 8,
         }
     }
 
-    pub fn size_of<T>() -> Self {
+    pub const fn size_of<T>() -> Self {
         Length {
             0: std::mem::size_of::<T>() as u64,
         }

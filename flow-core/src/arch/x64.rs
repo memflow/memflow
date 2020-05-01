@@ -9,7 +9,7 @@ use byteorder::{ByteOrder, LittleEndian};
 
 use crate::address::{Address, Length};
 use crate::arch;
-use crate::mem::AccessPhysicalMemory;
+use crate::mem::{AccessPhysicalMemory, PageType};
 
 pub fn bits() -> u8 {
     64
@@ -27,15 +27,19 @@ pub fn len_addr() -> Length {
     Length::from(8)
 }
 
-fn read_address<T: AccessPhysicalMemory>(mem: &mut T, addr: Address) -> Result<Address> {
+fn read_pt_address<T: AccessPhysicalMemory>(mem: &mut T, addr: Address) -> Result<Address> {
     let mut buf = vec![0; len_addr().as_usize()];
-    mem.phys_read_raw_into(addr, &mut buf)?;
+    mem.phys_read_raw_into(addr, PageType::PAGE_TABLE, &mut buf)?;
     Ok(Address::from(LittleEndian::read_u64(&buf)))
 }
 
 #[allow(clippy::nonminimal_bool)]
-pub fn vtop<T: AccessPhysicalMemory>(mem: &mut T, dtb: Address, addr: Address) -> Result<Address> {
-    let pml4e = read_address(
+pub fn vtop<T: AccessPhysicalMemory>(
+    mem: &mut T,
+    dtb: Address,
+    addr: Address,
+) -> Result<(Address, PageType)> {
+    let pml4e = read_pt_address(
         mem,
         Address::from((dtb.as_u64() & make_bit_mask(12, 51)) | pml4_index_bits!(addr.as_u64())),
     )?;
@@ -43,7 +47,7 @@ pub fn vtop<T: AccessPhysicalMemory>(mem: &mut T, dtb: Address, addr: Address) -
         return Err(Error::new("unable to read pml4e"));
     }
 
-    let pdpte = read_address(
+    let pdpte = read_pt_address(
         mem,
         Address::from((pml4e.as_u64() & make_bit_mask(12, 51)) | pdpte_index_bits!(addr.as_u64())),
     )?;
@@ -53,12 +57,15 @@ pub fn vtop<T: AccessPhysicalMemory>(mem: &mut T, dtb: Address, addr: Address) -
 
     if is_large_page!(pdpte.as_u64()) {
         trace!("found 1gb page");
-        return Ok(Address::from(
-            (pdpte.as_u64() & make_bit_mask(30, 51)) | (addr.as_u64() & make_bit_mask(0, 29)),
+        return Ok((
+            Address::from(
+                (pdpte.as_u64() & make_bit_mask(30, 51)) | (addr.as_u64() & make_bit_mask(0, 29)),
+            ),
+            PageType::from_writeable_bit(is_writeable_page!(pdpte.as_u64())),
         ));
     }
 
-    let pgd = read_address(
+    let pgd = read_pt_address(
         mem,
         Address::from((pdpte.as_u64() & make_bit_mask(12, 51)) | pd_index_bits!(addr.as_u64())),
     )?;
@@ -68,12 +75,15 @@ pub fn vtop<T: AccessPhysicalMemory>(mem: &mut T, dtb: Address, addr: Address) -
 
     if is_large_page!(pgd.as_u64()) {
         trace!("found 2mb page");
-        return Ok(Address::from(
-            (pgd.as_u64() & make_bit_mask(21, 51)) | (addr.as_u64() & make_bit_mask(0, 20)),
+        return Ok((
+            Address::from(
+                (pgd.as_u64() & make_bit_mask(21, 51)) | (addr.as_u64() & make_bit_mask(0, 20)),
+            ),
+            PageType::from_writeable_bit(is_writeable_page!(pgd.as_u64())),
         ));
     }
 
-    let pte = read_address(
+    let pte = read_pt_address(
         mem,
         Address::from((pgd.as_u64() & make_bit_mask(12, 51)) | pt_index_bits!(addr.as_u64())),
     )?;
@@ -82,8 +92,11 @@ pub fn vtop<T: AccessPhysicalMemory>(mem: &mut T, dtb: Address, addr: Address) -
     }
 
     trace!("found 4kb page");
-    Ok(Address::from(
-        (pte.as_u64() & make_bit_mask(12, 51)) | (addr.as_u64() & make_bit_mask(0, 11)),
+    Ok((
+        Address::from(
+            (pte.as_u64() & make_bit_mask(12, 51)) | (addr.as_u64() & make_bit_mask(0, 11)),
+        ),
+        PageType::from_writeable_bit(is_writeable_page!(pte.as_u64())),
     ))
 }
 

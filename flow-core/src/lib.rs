@@ -2,6 +2,9 @@ pub mod error;
 pub use error::*;
 
 #[macro_use]
+extern crate bitflags;
+
+#[macro_use]
 pub mod address;
 pub use address::*;
 

@@ -27,10 +27,9 @@ pub fn virt_read_raw_into<T: AccessPhysicalMemory>(
             aligned_len = end - base;
         }
 
-        let pa = arch.vtop(mem, dtb, base);
-        if let Ok(pa) = pa {
+        if let Ok((pa, pt)) = arch.vtop(mem, dtb, base) {
             let offset = (base - addr).as_usize();
-            mem.phys_read_raw_into(pa, &mut out[offset..(offset + aligned_len.as_usize())])?;
+            mem.phys_read_raw_into(pa, pt, &mut out[offset..(offset + aligned_len.as_usize())])?;
         } else {
             // skip
             trace!("pa is null, skipping page");
@@ -49,13 +48,13 @@ pub fn virt_write_raw<T: AccessPhysicalMemory>(
     addr: Address,
     data: &[u8],
 ) -> Result<()> {
-    let pa = arch.vtop(mem, dtb, addr)?;
+    let (pa, pt) = arch.vtop(mem, dtb, addr)?;
     if pa.is_null() {
         // TODO: add more debug info
         Err(Error::new(
             "virt_write(): unable to resolve physical address",
         ))
     } else {
-        mem.phys_write_raw(pa, data)
+        mem.phys_write_raw(pa, pt, data)
     }
 }

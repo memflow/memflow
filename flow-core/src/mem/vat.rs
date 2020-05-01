@@ -1,3 +1,6 @@
+#[cfg(test)]
+mod tests;
+
 use crate::error::{Error, Result};
 
 use log::trace;
@@ -15,30 +18,25 @@ pub fn virt_read_raw_into<T: AccessPhysicalMemory>(
     out: &mut [u8],
 ) -> Result<()> {
     let page_size = arch.page_size();
-    if out.len() < page_size.as_usize() {
-        let pa = arch.vtop(mem, dtb, addr)?;
-        mem.phys_read_raw_into(pa, out)?;
-    } else {
-        let mut base = addr;
-        let end = base + Length::from(out.len());
+    let mut base = addr;
+    let end = base + Length::from(out.len());
 
-        while base < end {
-            let mut aligned_len = (base + page_size).as_page_aligned(page_size) - base;
-            if base + aligned_len > end {
-                aligned_len = end - base;
-            }
-
-            let pa = arch.vtop(mem, dtb, base);
-            if let Ok(pa) = pa {
-                let offset = (base - addr).as_usize();
-                mem.phys_read_raw_into(pa, &mut out[offset..(offset + aligned_len.as_usize())])?;
-            } else {
-                // skip
-                trace!("pa is null, skipping page");
-            }
-
-            base += aligned_len;
+    while base < end {
+        let mut aligned_len = (base + page_size).as_page_aligned(page_size) - base;
+        if base + aligned_len > end {
+            aligned_len = end - base;
         }
+
+        let pa = arch.vtop(mem, dtb, base);
+        if let Ok(pa) = pa {
+            let offset = (base - addr).as_usize();
+            mem.phys_read_raw_into(pa, &mut out[offset..(offset + aligned_len.as_usize())])?;
+        } else {
+            // skip
+            trace!("pa is null, skipping page");
+        }
+
+        base += aligned_len;
     }
     Ok(())
 }
@@ -59,100 +57,5 @@ pub fn virt_write_raw<T: AccessPhysicalMemory>(
         ))
     } else {
         mem.phys_write_raw(pa, data)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::address::Address;
-    use crate::arch::Architecture;
-    use crate::mem::AccessVirtualMemory;
-
-    impl AccessPhysicalMemory for Vec<u8> {
-        fn phys_read_raw_into(&mut self, addr: Address, out: &mut [u8]) -> Result<()> {
-            out.copy_from_slice(&self[addr.as_usize()..(addr.as_usize() + out.len())]);
-            Ok(())
-        }
-
-        fn phys_write_raw(&mut self, _addr: Address, _data: &[u8]) -> Result<()> {
-            Err(Error::new("phys_write not implemented"))
-        }
-    }
-
-    impl AccessVirtualMemory for Vec<u8> {
-        fn virt_read_raw_into(
-            &mut self,
-            arch: Architecture,
-            dtb: Address,
-            addr: Address,
-            out: &mut [u8],
-        ) -> Result<()> {
-            virt_read_raw_into(self, arch, dtb, addr, out)
-        }
-
-        fn virt_write_raw(
-            &mut self,
-            arch: Architecture,
-            dtb: Address,
-            addr: Address,
-            data: &[u8],
-        ) -> Result<()> {
-            virt_write_raw(self, arch, dtb, addr, data)
-        }
-    }
-
-    #[test]
-    fn test_virt_read_small() {
-        let mut buf = vec![0u8; 256];
-        for i in 0..buf.len() {
-            buf[i] = i as u8;
-        }
-
-        let mut out = vec![0u8; buf.len()];
-        buf.virt_read_into(
-            Architecture::Null,
-            Address::from(0),
-            Address::from(0),
-            &mut out[..],
-        )
-        .unwrap();
-        assert_eq!(buf, out);
-    }
-
-    #[test]
-    fn test_virt_read_medium() {
-        let mut buf = vec![0u8; 0x1000];
-        for i in 0..buf.len() {
-            buf[i] = i as u8;
-        }
-
-        let mut out = vec![0u8; buf.len()];
-        buf.virt_read_into(
-            Architecture::Null,
-            Address::from(0),
-            Address::from(0),
-            &mut out[..],
-        )
-        .unwrap();
-        assert_eq!(buf, out);
-    }
-
-    #[test]
-    fn test_virt_read_big() {
-        let mut buf = vec![0u8; 16 * 0x1000];
-        for i in 0..buf.len() {
-            buf[i] = i as u8;
-        }
-
-        let mut out = vec![0u8; buf.len()];
-        buf.virt_read_into(
-            Architecture::Null,
-            Address::from(0),
-            Address::from(0),
-            &mut out[..],
-        )
-        .unwrap();
-        assert_eq!(buf, out);
     }
 }

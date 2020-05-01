@@ -2,11 +2,13 @@
 pub mod addr;
 pub mod length;
 pub mod offset;
+pub mod pointer32;
 
 // forward declares
 pub use addr::*;
 pub use length::*;
 pub use offset::*;
+pub use pointer32::*;
 
 // macro declares
 #[macro_export]

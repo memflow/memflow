@@ -48,27 +48,27 @@ impl Address {
         Address { 0: 0 }
     }
 
-    pub fn is_null(self) -> bool {
+    pub fn is_null(&self) -> bool {
         self.0 == 0
     }
 
-    pub fn as_len(self) -> Length {
-        Length::from(self)
+    pub fn as_len(&self) -> Length {
+        Length::from(self.0)
     }
 
-    pub fn as_u32(self) -> u32 {
+    pub fn as_u32(&self) -> u32 {
         self.0 as u32
     }
 
-    pub fn as_u64(self) -> u64 {
+    pub fn as_u64(&self) -> u64 {
         self.0
     }
 
-    pub fn as_usize(self) -> usize {
+    pub fn as_usize(&self) -> usize {
         self.0 as usize
     }
 
-    pub fn as_page_aligned(self, page_size: Length) -> Address {
+    pub fn as_page_aligned(&self, page_size: Length) -> Address {
         Address {
             0: self.0 & (!(page_size.as_u64() - 1)),
         }

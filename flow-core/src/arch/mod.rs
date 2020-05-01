@@ -6,7 +6,7 @@ use crate::error::{Error, Result};
 use std::convert::TryFrom;
 
 use crate::address::{Address, Length};
-use crate::mem::AccessPhysicalMemory;
+use crate::mem::{AccessPhysicalMemory, PageType};
 
 /// ByteOrder definitions
 ///
@@ -94,9 +94,9 @@ impl Architecture {
         mem: &mut T,
         dtb: Address,
         addr: Address,
-    ) -> Result<Address> {
+    ) -> Result<(Address, PageType)> {
         match self {
-            Architecture::Null => Ok(addr),
+            Architecture::Null => Ok((addr, PageType::NONE)),
             Architecture::X64 => x64::vtop(mem, dtb, addr),
             Architecture::X86Pae => x86_pae::vtop(mem, dtb, addr),
             Architecture::X86 => x86::vtop(mem, dtb, addr),

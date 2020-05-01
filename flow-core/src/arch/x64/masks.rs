@@ -25,6 +25,13 @@ macro_rules! is_transition_page {
     };
 }
 
+#[macro_export]
+macro_rules! is_writeable_page {
+    ($a:expr) => {
+        get_bit!($a, 1)
+    };
+}
+
 #[allow(clippy::all)]
 macro_rules! is_prototype_page {
     ($a:expr) => {

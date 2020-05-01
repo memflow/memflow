@@ -1,3 +1,4 @@
+pub mod cache;
 pub mod vat;
 
 use crate::address::{Address, Length};
@@ -10,6 +11,36 @@ use std::mem::MaybeUninit;
 
 use dataview::Pod;
 
+bitflags! {
+    pub struct PageType: u8 {
+        const NONE = 0;
+        const PAGE_TABLE = 1;
+        const WRITEABLE = 2;
+        const READ_ONLY = 3;
+    }
+}
+
+impl PageType {
+    pub fn from_writeable_bit(writeable: bool) -> Self {
+        match writeable {
+            true => PageType::WRITEABLE,
+            false => PageType::READ_ONLY,
+        }
+    }
+}
+
+pub trait MemCache {
+    fn cached_read<F: FnMut(Address, &mut [u8]) -> Result<()>>(
+        &mut self,
+        start: Address,
+        page_type: PageType,
+        out: &mut [u8],
+        read_fn: F,
+    ) -> Result<usize>;
+    fn cache_page(&mut self, addr: Address, page_type: PageType, src: &[u8]);
+    fn invalidate_pages(&mut self, addr: Address, page_type: PageType, src: &[u8]);
+}
+
 // TODO:
 // - check endianess here and return an error
 // - better would be to convert endianess with word alignment from addr
@@ -17,29 +48,49 @@ use dataview::Pod;
 // generic traits
 pub trait AccessPhysicalMemory {
     // read
-    fn phys_read_raw_into(&mut self, addr: Address, out: &mut [u8]) -> Result<()>;
+    fn phys_read_raw_into(
+        &mut self,
+        addr: Address,
+        page_type: PageType,
+        out: &mut [u8],
+    ) -> Result<()>;
 
-    fn phys_read_into<T: Pod + ?Sized>(&mut self, addr: Address, out: &mut T) -> Result<()> {
-        self.phys_read_raw_into(addr, out.as_bytes_mut())
+    fn phys_read_into<T: Pod + ?Sized>(
+        &mut self,
+        addr: Address,
+        page_type: PageType,
+        out: &mut T,
+    ) -> Result<()> {
+        self.phys_read_raw_into(addr, page_type, out.as_bytes_mut())
     }
 
-    fn phys_read_raw(&mut self, addr: Address, len: Length) -> Result<Vec<u8>> {
+    fn phys_read_raw(
+        &mut self,
+        addr: Address,
+        page_type: PageType,
+        len: Length,
+    ) -> Result<Vec<u8>> {
         let mut buf = vec![0u8; len.as_usize()];
-        self.phys_read_raw_into(addr, &mut *buf)?;
+        self.phys_read_raw_into(addr, page_type, &mut *buf)?;
         Ok(buf)
     }
 
-    fn phys_read<T: Pod + Sized>(&mut self, addr: Address) -> Result<T> {
+    fn phys_read<T: Pod + Sized>(&mut self, page_type: PageType, addr: Address) -> Result<T> {
         let mut obj: T = unsafe { MaybeUninit::uninit().assume_init() };
-        self.phys_read_into(addr, &mut obj)?;
+        self.phys_read_into(addr, page_type, &mut obj)?;
         Ok(obj)
     }
 
     // write
-    fn phys_write_raw(&mut self, addr: Address, data: &[u8]) -> Result<()>;
+    fn phys_write_raw(&mut self, addr: Address, page_type: PageType, data: &[u8]) -> Result<()>;
 
-    fn phys_write<T: Pod + ?Sized>(&mut self, addr: Address, data: &T) -> Result<()> {
-        self.phys_write_raw(addr, data.as_bytes())
+    fn phys_write<T: Pod + ?Sized>(
+        &mut self,
+        addr: Address,
+        page_type: PageType,
+        data: &T,
+    ) -> Result<()> {
+        self.phys_write_raw(addr, page_type, data.as_bytes())
     }
 }
 

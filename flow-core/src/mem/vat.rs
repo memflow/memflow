@@ -5,6 +5,8 @@ use log::trace;
 use crate::address::{Address, Length};
 use crate::arch::Architecture;
 use crate::mem::AccessPhysicalMemory;
+#[cfg(test)]
+use crate::mem::PageType;
 
 #[allow(unused)]
 pub fn virt_read_raw_into<T: AccessPhysicalMemory>(
@@ -16,8 +18,8 @@ pub fn virt_read_raw_into<T: AccessPhysicalMemory>(
 ) -> Result<()> {
     let page_size = arch.page_size();
     if out.len() < page_size.as_usize() {
-        let pa = arch.vtop(mem, dtb, addr)?;
-        mem.phys_read_raw_into(pa, out)?;
+        let (pa, pt) = arch.vtop(mem, dtb, addr)?;
+        mem.phys_read_raw_into(pa, pt, out)?;
     } else {
         let mut base = addr;
         let end = base + Length::from(out.len());
@@ -28,10 +30,13 @@ pub fn virt_read_raw_into<T: AccessPhysicalMemory>(
                 aligned_len = end - base;
             }
 
-            let pa = arch.vtop(mem, dtb, base);
-            if let Ok(pa) = pa {
+            if let Ok((pa, pt)) = arch.vtop(mem, dtb, base) {
                 let offset = (base - addr).as_usize();
-                mem.phys_read_raw_into(pa, &mut out[offset..(offset + aligned_len.as_usize())])?;
+                mem.phys_read_raw_into(
+                    pa,
+                    pt,
+                    &mut out[offset..(offset + aligned_len.as_usize())],
+                )?;
             } else {
                 // skip
                 trace!("pa is null, skipping page");
@@ -51,14 +56,14 @@ pub fn virt_write_raw<T: AccessPhysicalMemory>(
     addr: Address,
     data: &[u8],
 ) -> Result<()> {
-    let pa = arch.vtop(mem, dtb, addr)?;
+    let (pa, pt) = arch.vtop(mem, dtb, addr)?;
     if pa.is_null() {
         // TODO: add more debug info
         Err(Error::new(
             "virt_write(): unable to resolve physical address",
         ))
     } else {
-        mem.phys_write_raw(pa, data)
+        mem.phys_write_raw(pa, pt, data)
     }
 }
 
@@ -70,12 +75,22 @@ mod tests {
     use crate::mem::AccessVirtualMemory;
 
     impl AccessPhysicalMemory for Vec<u8> {
-        fn phys_read_raw_into(&mut self, addr: Address, out: &mut [u8]) -> Result<()> {
+        fn phys_read_raw_into(
+            &mut self,
+            addr: Address,
+            _page_type: PageType,
+            out: &mut [u8],
+        ) -> Result<()> {
             out.copy_from_slice(&self[addr.as_usize()..(addr.as_usize() + out.len())]);
             Ok(())
         }
 
-        fn phys_write_raw(&mut self, _addr: Address, _data: &[u8]) -> Result<()> {
+        fn phys_write_raw(
+            &mut self,
+            _addr: Address,
+            _page_type: PageType,
+            _data: &[u8],
+        ) -> Result<()> {
             Err(Error::new("phys_write not implemented"))
         }
     }

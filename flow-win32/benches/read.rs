@@ -8,20 +8,25 @@ extern crate flow_qemu_procfs;
 extern crate flow_win32;
 extern crate rand;
 
+use flow_core::mem::cache::TimedCache;
+use flow_core::mem::PageType;
+use flow_core::Length;
 use flow_core::{OsProcess, OsProcessModule};
 use flow_qemu_procfs::Memory;
 use flow_win32::{Win32, Win32Module, Win32Offsets, Win32Process};
+use rand::prelude::*;
 use rand::{prng::XorShiftRng as CurRng, Rng, SeedableRng};
+use std::time::Duration;
 
 fn rwtest(
-    mem: &mut Memory,
+    mem: &mut Memory<TimedCache>,
     proc: &Win32Process,
     module: &dyn OsProcessModule,
     chunk_sizes: &[usize],
     chunk_counts: &[usize],
     read_size: usize,
 ) {
-    let mut rng = CurRng::seed_from_u64(0);
+    let mut rng = CurRng::from_rng(thread_rng()).unwrap();
 
     for i in chunk_sizes {
         for o in chunk_counts {
@@ -49,42 +54,50 @@ fn rwtest(
     }
 }
 
-fn initialize_ctx() -> flow_core::Result<(Memory, Win32Process, Win32Module)> {
-    let mut mem = Memory::new()?;
-    let os = Win32::try_with(&mut mem)?;
-    let offsets = Win32Offsets::try_with_guid(&os.kernel_guid())?;
+fn initialize_ctx() -> flow_core::Result<(Memory<TimedCache>, Win32Process, Win32Module)> {
+    let mut mem = Memory::new(TimedCache::new(
+        1000,
+        0x200,
+        Length::from_kb(4),
+        PageType::PAGE_TABLE | PageType::READ_ONLY,
+    ))
+    .unwrap();
+    let os = Win32::try_with(&mut mem).unwrap();
+    let offsets = Win32Offsets::try_with_guid(&os.kernel_guid()).unwrap();
 
-    let mut rng = CurRng::seed_from_u64(0);
+    let mut rng = CurRng::from_rng(thread_rng()).unwrap();
 
-    let proc_list = os.eprocess_list(&mut mem, &offsets)?;
+    let proc_list = os.eprocess_list(&mut mem, &offsets).unwrap();
 
-    for _ in 0..1000 {
-        let proc = Win32Process::try_with_eprocess(
-            &mut mem,
-            &os,
-            &offsets,
-            proc_list[rng.gen_range(0, proc_list.len())],
-        )?;
+    for i in -100..(proc_list.len() as isize) {
+        let idx = if i >= 0 {
+            i as usize
+        } else {
+            rng.gen_range(0, proc_list.len())
+        };
 
-        let mod_list: Vec<Win32Module> = proc
-            .peb_list(&mut mem)?
-            .iter()
-            .filter_map(|&x| {
-                if let Ok(module) = Win32Module::try_with_peb(&mut mem, &proc, &offsets, x) {
-                    if module.size() > 0x1000.into() {
-                        Some(module)
+        if let Ok(proc) = Win32Process::try_with_eprocess(&mut mem, &os, &offsets, proc_list[idx]) {
+            let mod_list: Vec<Win32Module> = proc
+                .peb_list(&mut mem)
+                .unwrap_or_default()
+                .iter()
+                .filter_map(|&x| {
+                    if let Ok(module) = Win32Module::try_with_peb(&mut mem, &proc, &offsets, x) {
+                        if module.size() > 0x1000.into() {
+                            Some(module)
+                        } else {
+                            None
+                        }
                     } else {
                         None
                     }
-                } else {
-                    None
-                }
-            })
-            .collect();
+                })
+                .collect();
 
-        if mod_list.len() > 0 {
-            let tmod = &mod_list[rng.gen_range(0, mod_list.len())];
-            return Ok((mem, proc, tmod.clone()));
+            if mod_list.len() > 0 {
+                let tmod = &mod_list[rng.gen_range(0, mod_list.len())];
+                return Ok((mem, proc, tmod.clone()));
+            }
         }
     }
 

@@ -1,8 +1,9 @@
+use flow_core::mem::cache::TimedCache;
 use flow_core::*;
 
 #[cfg(all(target_os = "linux", feature = "connector-qemu-procfs"))]
-pub fn init_qemu_procfs() -> Result<flow_qemu_procfs::Memory> {
-    flow_qemu_procfs::Memory::new()
+pub fn init_qemu_procfs() -> Result<flow_qemu_procfs::Memory<TimedCache>> {
+    flow_qemu_procfs::Memory::new(TimedCache::none_cache())
 }
 
 #[cfg(all(feature = "connector-qemu-procfs", not(target_os = "linux")))]

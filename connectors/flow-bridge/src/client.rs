@@ -119,7 +119,7 @@ impl BridgeClient {
 
 impl AccessPhysicalMemory for BridgeClient {
     // physRead @0 (address :UInt64, length :UInt64) -> (data :Data);
-    fn phys_read_raw_into(&mut self, addr: Address, out: &mut [u8]) -> Result<()> {
+    fn phys_read_raw_into(&mut self, addr: Address, _: PageType, out: &mut [u8]) -> Result<()> {
         trace!("phys_read_raw_into({:?}, {:?})", addr, out.len());
 
         let mut request = self.bridge.phys_read_request();
@@ -141,7 +141,7 @@ impl AccessPhysicalMemory for BridgeClient {
     }
 
     // physWrite @1 (address :UInt64, data: Data) -> (length :UInt64);
-    fn phys_write_raw(&mut self, addr: Address, data: &[u8]) -> Result<()> {
+    fn phys_write_raw(&mut self, addr: Address, _: PageType, data: &[u8]) -> Result<()> {
         trace!("phys_write_raw({:?})", addr);
 
         let mut request = self.bridge.phys_write_request();

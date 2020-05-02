@@ -4,14 +4,8 @@ use std::ops;
 
 use super::Address;
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Length(u64);
-
-impl fmt::LowerHex for Length {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:x}", self.0)
-    }
-}
 
 // TODO: from iXX should use .abs()
 // TODO: sort them by likeliness
@@ -337,9 +331,32 @@ impl ops::SubAssign for Length {
     }
 }
 
+impl fmt::Debug for Length {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:x}", self.0)
+    }
+}
+impl fmt::UpperHex for Length {
+    #[inline(always)]
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:X}", self.0)
+    }
+}
+impl fmt::LowerHex for Length {
+    #[inline(always)]
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:x}", self.0)
+    }
+}
+impl fmt::Display for Length {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:x}", self.0)
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::address::Length;
+    use super::*;
 
     #[test]
     fn test_from() {

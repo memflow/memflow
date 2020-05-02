@@ -3,8 +3,6 @@ mod tests;
 
 use crate::error::{Error, Result};
 
-use log::trace;
-
 use crate::address::{Address, Length};
 use crate::arch::Architecture;
 use crate::mem::AccessPhysicalMemory;
@@ -28,8 +26,8 @@ pub fn virt_read_raw_into<T: AccessPhysicalMemory>(
     let mut base = addr;
 
     let mut thing = |buf: &mut [u8]| -> Result<()> {
-        if let Ok((pa, pt)) = arch.vtop(mem, dtb, base) {
-            mem.phys_read_raw_into(pa, pt, buf)?;
+        if let Ok(tr) = arch.virt_to_phys(mem, dtb, base) {
+            mem.phys_read_raw_into(tr.address, tr.page.page_type, buf)?;
         }
         base += Length::from(buf.len());
         Ok(())
@@ -51,13 +49,13 @@ pub fn virt_write_raw<T: AccessPhysicalMemory>(
     addr: Address,
     data: &[u8],
 ) -> Result<()> {
-    let (pa, pt) = arch.vtop(mem, dtb, addr)?;
-    if pa.is_null() {
+    let tr = arch.virt_to_phys(mem, dtb, addr)?;
+    if tr.address.is_null() {
         // TODO: add more debug info
         Err(Error::new(
             "virt_write(): unable to resolve physical address",
         ))
     } else {
-        mem.phys_write_raw(pa, pt, data)
+        mem.phys_write_raw(tr.address, tr.page.page_type, data)
     }
 }

@@ -12,7 +12,7 @@ fn main() {
     };
 
     let mut mem = vec![0; 8];
-    conn.phys_read_raw_into(Address::from(0x1000), mem::PageType::NONE, &mut mem)
+    conn.phys_read_raw_into(Address::from(0x1000), PageType::UNKNOWN, &mut mem)
         .unwrap();
     println!("Received memory: {:?}", mem);
 
@@ -20,7 +20,7 @@ fn main() {
     let mut counter = 0;
     loop {
         let mut buf = vec![0; 0x1000];
-        conn.phys_read_raw_into(Address::from(0x1000), mem::PageType::NONE, &mut buf)
+        conn.phys_read_raw_into(Address::from(0x1000), mem::PageType::UNKNOWN, &mut buf)
             .unwrap();
 
         counter += 1;

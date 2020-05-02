@@ -1,9 +1,7 @@
 use crate::error::{Error, Result};
 use crate::kernel::StartBlock;
 
-use byteorder::{ByteOrder, LittleEndian};
-
-use flow_core::address::{Address, Length};
+use flow_core::address::Address;
 use flow_core::arch::{self, Architecture};
 
 // see _find_x64

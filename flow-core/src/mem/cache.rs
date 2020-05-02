@@ -94,8 +94,8 @@ impl MemCache for TimedCache {
                 out.split_at_mut(std::cmp::min(page_up.as_usize(), out.len()));
 
             for b in [start_buf, end_buf].iter_mut() {
-                let mut page_iter = b.chunks_mut(self.page_size.as_usize());
-                while let Some(chunk) = page_iter.next() {
+                let page_iter = b.chunks_mut(self.page_size.as_usize());
+                for chunk in page_iter {
                     let page = match self.try_page_with_time(cur_addr.into(), instant) {
                         Err((page, address, time)) => {
                             read_fn(cur_page, page)?;

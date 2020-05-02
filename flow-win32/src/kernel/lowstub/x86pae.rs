@@ -24,8 +24,7 @@ fn _find(mem: &[u8]) -> Option<()> {
         .to_vec()
         .chunks_exact(8)
         .skip(3) // >= 0x20
-        .filter(|c| c[0] != 0)
-        .nth(0)
+        .find(|c| c[0] != 0)
     {
         Some(_c) => None,
         None => Some(()),

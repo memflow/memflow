@@ -1,7 +1,6 @@
 use std::{thread, time};
 
 use log::Level;
-use simple_logger;
 
 use flow_core::address::Length;
 use flow_core::mem::{cache::TimedCache, PageType};

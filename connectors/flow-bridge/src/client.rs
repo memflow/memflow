@@ -57,7 +57,7 @@ fn connect_tcp(path: &str, opts: Vec<&str>) -> Result<BridgeClient> {
 
     info!("tcp connection established -> {}", path);
 
-    if opts.iter().filter(|&&o| o == "nodelay").nth(0).is_some() {
+    if opts.iter().any(|&o| o == "nodelay") {
         info!("trying to set TCP_NODELAY on socket");
         stream.set_nodelay(true).unwrap();
     }
@@ -97,7 +97,7 @@ impl BridgeClient {
         let path = url
             .path()
             .split(',')
-            .nth(0)
+            .next()
             .ok_or_else(|| Error::new("invalid url"))?;
         let opts = url.path().split(',').skip(1).collect::<Vec<_>>();
 

@@ -162,8 +162,7 @@ impl Win32Process {
             .map(|eproc| Win32Process::try_with_eprocess(mem, win, offsets, *eproc))
             .filter_map(Result::ok)
             .inspect(|p| trace!("{} {}", p.pid(), p.name()))
-            .filter(|p| p.name() == name)
-            .nth(0)
+            .find(|p| p.name() == name)
             .ok_or_else(|| Error::new(format!("unable to find process {}", name)))
     }
 

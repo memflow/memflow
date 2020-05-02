@@ -24,9 +24,10 @@ bitflags! {
 
 impl PageType {
     pub fn from_writeable_bit(writeable: bool) -> Self {
-        match writeable {
-            true => PageType::WRITEABLE,
-            false => PageType::READ_ONLY,
+        if writeable {
+            PageType::WRITEABLE
+        } else {
+            PageType::READ_ONLY
         }
     }
 }
@@ -77,6 +78,11 @@ pub trait AccessPhysicalMemory {
         Ok(buf)
     }
 
+    /// # Safety
+    ///
+    /// this function will overwrite the contents of 'obj' so we can just allocate an unitialized memory section.
+    /// this function should only be used with [repr(C)] structs.
+    #[allow(clippy::uninit_assumed_init)]
     fn phys_read<T: Pod + Sized>(&mut self, page_type: PageType, addr: Address) -> Result<T> {
         let mut obj: T = unsafe { MaybeUninit::uninit().assume_init() };
         self.phys_read_into(addr, page_type, &mut obj)?;
@@ -128,6 +134,11 @@ pub trait AccessVirtualMemory {
         Ok(buf)
     }
 
+    /// # Safety
+    ///
+    /// this function will overwrite the contents of 'obj' so we can just allocate an unitialized memory section.
+    /// this function should only be used with [repr(C)] structs.
+    #[allow(clippy::uninit_assumed_init)]
     fn virt_read<T: Pod + Sized>(
         &mut self,
         arch: Architecture,
@@ -254,7 +265,7 @@ impl<'a, T: AccessVirtualMemory> VirtualMemoryContext<'a, T> {
     pub fn virt_read_cstr(&mut self, addr: Address, len: Length) -> Result<String> {
         let mut buf = vec![0; len.as_usize()];
         self.virt_read_raw_into(addr, &mut buf)?;
-        if let Some((n, _)) = buf.iter().enumerate().filter(|(_, c)| **c == 0_u8).nth(0) {
+        if let Some((n, _)) = buf.iter().enumerate().find(|(_, c)| **c == 0_u8) {
             buf.truncate(n);
         }
         let v = CString::new(buf)?;

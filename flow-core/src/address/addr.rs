@@ -48,27 +48,27 @@ impl Address {
         Address { 0: 0 }
     }
 
-    pub const fn is_null(&self) -> bool {
+    pub const fn is_null(self) -> bool {
         self.0 == 0
     }
 
-    pub fn as_len(&self) -> Length {
+    pub fn as_len(self) -> Length {
         Length::from(self.0)
     }
 
-    pub const fn as_u32(&self) -> u32 {
+    pub const fn as_u32(self) -> u32 {
         self.0 as u32
     }
 
-    pub const fn as_u64(&self) -> u64 {
+    pub const fn as_u64(self) -> u64 {
         self.0
     }
 
-    pub const fn as_usize(&self) -> usize {
+    pub const fn as_usize(self) -> usize {
         self.0 as usize
     }
 
-    pub const fn as_page_aligned(&self, page_size: Length) -> Address {
+    pub const fn as_page_aligned(self, page_size: Length) -> Address {
         Address {
             0: self.0 & (!(page_size.as_u64() - 1)),
         }
@@ -131,6 +131,7 @@ impl ops::SubAssign<Length> for Address {
 }
 
 // Address + Offset => Address
+#[allow(clippy::suspicious_op_assign_impl, clippy::suspicious_arithmetic_impl)]
 impl ops::Add<Offset> for Address {
     type Output = Address;
 
@@ -144,6 +145,7 @@ impl ops::Add<Offset> for Address {
 }
 
 // Address -= Offset
+#[allow(clippy::suspicious_op_assign_impl, clippy::suspicious_arithmetic_impl)]
 impl ops::AddAssign<Offset> for Address {
     fn add_assign(&mut self, other: Offset) {
         *self = Self {

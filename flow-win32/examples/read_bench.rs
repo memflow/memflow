@@ -28,7 +28,7 @@ fn rwtest(
         print!(", x{:02x} mb/s, x{:02x} calls/s", *i, *i);
     }
 
-    println!("");
+    println!();
 
     let start = Instant::now();
     let mut ttdur = Duration::new(0, 0);
@@ -67,12 +67,12 @@ fn rwtest(
 
             print!(
                 ", {:8.2}, {:11.2}",
-                (done_size / 0x100000) as f64 / total_time,
+                (done_size / 0x0010_0000) as f64 / total_time,
                 calls as f64 / total_time
             );
             std::io::stdout().flush().expect("");
         }
-        println!("");
+        println!();
     }
 
     let total_dur = start.elapsed();
@@ -121,7 +121,7 @@ fn main() -> flow_core::Result<()> {
             })
             .collect();
 
-        if mod_list.len() > 0 {
+        if !mod_list.is_empty() {
             let tmod = &mod_list[rng.gen_range(0, mod_list.len())];
             println!(
                 "Found test module {} ({:x}) in {}",
@@ -136,7 +136,7 @@ fn main() -> flow_core::Result<()> {
                 tmod,
                 &[0x10000, 0x1000, 0x100, 0x10, 0x8],
                 &[32, 8, 1],
-                0x100000 * 32,
+                0x0010_0000 * 32,
             );
 
             break;

@@ -73,7 +73,7 @@ impl Length {
     }
 
     pub fn as_addr(self) -> Address {
-        Address::from(self)
+        Address::from(self.0)
     }
 
     pub const fn as_u32(self) -> u32 {

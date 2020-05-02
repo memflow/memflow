@@ -3,12 +3,9 @@ use crate::kernel::StartBlock;
 
 use log::{debug, info};
 
-use byteorder::{ByteOrder, LittleEndian};
-
-use pelite::{self, image::GUID, pe64::debug::CodeView, PeView};
+use pelite::{self, PeView};
 
 use flow_core::address::{Address, Length};
-use flow_core::arch::{self, Architecture};
 use flow_core::mem::AccessVirtualMemory;
 
 // TODO: store pe size in windows struct so we can reference it later

@@ -3,8 +3,6 @@ use log::info;
 use flow_core::*;
 use flow_derive::*;
 
-use procfs;
-
 use std::fs::{File, OpenOptions};
 use std::io::{Read, Seek, SeekFrom, Write};
 
@@ -40,8 +38,7 @@ impl<T: mem::MemCache + Clone> Memory<T> {
         let prcs = procfs::process::all_processes().map_err(Error::new)?;
         let prc = prcs
             .iter()
-            .filter(|p| p.stat.comm == "qemu-system-x86")
-            .nth(0)
+            .find(|p| p.stat.comm == "qemu-system-x86")
             .ok_or_else(|| Error::new("qemu process not found"))?;
         info!("qemu process found {:?}", prc.stat);
 

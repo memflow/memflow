@@ -19,10 +19,11 @@ pub struct KeyboardState {
 }
 
 impl Keyboard {
-    pub fn with<T>(mem: &mut T, win: &Win32, offsets: &Win32Offsets) -> Result<Self>
-    where
-        T: AccessVirtualMemory,
-    {
+    pub fn with<T: AccessVirtualMemory>(
+        mem: &mut T,
+        win: &Win32,
+        offsets: &Win32Offsets,
+    ) -> Result<Self> {
         let kernel_process = Win32Process::try_from_kernel(mem, win)?;
         debug!("found kernel_process: {:?}", kernel_process);
         let kernel_module =
@@ -56,15 +57,22 @@ impl Keyboard {
         })
     }
 
-    pub fn state<T>(&self, mem: &mut T) -> Result<KeyboardState>
-    where
-        T: AccessVirtualMemory,
-    {
+    pub fn state<T: AccessVirtualMemory>(&self, mem: &mut T) -> Result<KeyboardState> {
         let mut virt_mem = self.user_process.virt_mem(mem);
         let buffer: [u8; 256 * 2 / 8] = virt_mem.virt_read(self.key_state_addr)?;
         Ok(KeyboardState {
             buffer: Box::new(buffer),
         })
+    }
+
+    pub fn set_state<T: AccessVirtualMemory>(
+        &self,
+        mem: &mut T,
+        state: &KeyboardState,
+    ) -> Result<()> {
+        let mut virt_mem = self.user_process.virt_mem(mem);
+        virt_mem.virt_write(self.key_state_addr, &*state.buffer)?;
+        Ok(())
     }
 }
 
@@ -89,12 +97,40 @@ macro_rules! is_key_down {
     };
 }
 
+// #define IS_KEY_LOCKED(ks, vk) (((ks)[GET_KS_BYTE(vk)] & GET_KS_LOCK_BIT(vk)) ? TRUE : FALSE)
+
+// #define SET_KEY_DOWN(ks, vk, down) (ks)[GET_KS_BYTE(vk)] = ((down) ? \
+//                                                              ((ks)[GET_KS_BYTE(vk)] | GET_KS_DOWN_BIT(vk)) : \
+//                                                              ((ks)[GET_KS_BYTE(vk)] & ~GET_KS_DOWN_BIT(vk)))
+macro_rules! set_key_down {
+    ($ks:expr, $vk:expr) => {
+        $ks[get_ks_byte!($vk) as usize] = $ks[get_ks_byte!($vk) as usize] | get_ks_down_bit!($vk)
+    };
+}
+macro_rules! set_key_up {
+    ($ks:expr, $vk:expr) => {
+        $ks[get_ks_byte!($vk) as usize] = $ks[get_ks_byte!($vk) as usize] & !get_ks_down_bit!($vk)
+    };
+}
+
+//#define SET_KEY_LOCKED(ks, vk, down) (ks)[GET_KS_BYTE(vk)] = ((down) ? \
+//                                                              ((ks)[GET_KS_BYTE(vk)] | GET_KS_LOCK_BIT(vk)) : \
+//                                                              ((ks)[GET_KS_BYTE(vk)] & ~GET_KS_LOCK_BIT(vk)))
+
 impl KeyboardState {
     pub fn down(&self, vk: i32) -> Result<bool> {
         if vk < 0 || vk > 256 {
             Err(Error::new("invalid key"))
         } else {
             Ok(is_key_down!(self.buffer, vk))
+        }
+    }
+
+    pub fn set_down(&mut self, vk: i32, down: bool) {
+        if down {
+            set_key_down!(self.buffer, vk);
+        } else {
+            set_key_up!(self.buffer, vk);
         }
     }
 }

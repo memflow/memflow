@@ -8,8 +8,8 @@ extern crate flow_qemu_procfs;
 extern crate flow_win32;
 extern crate rand;
 
-use flow_core::mem::{PageType, TimedCache};
-use flow_core::{Length, OsProcess, OsProcessModule};
+use flow_core::mem::TimedCache;
+use flow_core::{OsProcess, OsProcessModule};
 
 use flow_qemu_procfs::Memory;
 
@@ -55,13 +55,7 @@ fn rwtest(
 }
 
 fn initialize_ctx() -> flow_core::Result<(Memory<TimedCache>, Win32Process, Win32Module)> {
-    let mut mem = Memory::new(TimedCache::new(
-        1000,
-        0x200,
-        Length::from_kb(4),
-        PageType::PAGE_TABLE | PageType::READ_ONLY,
-    ))
-    .unwrap();
+    let mut mem = Memory::new(TimedCache::default()).unwrap();
     let os = Win32::try_with(&mut mem).unwrap();
     let offsets = Win32Offsets::try_with_guid(&os.kernel_guid()).unwrap();
 

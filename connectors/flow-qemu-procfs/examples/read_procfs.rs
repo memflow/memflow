@@ -3,7 +3,7 @@ use std::time::Instant;
 use flow_core::*;
 
 fn main() {
-    let mut conn = match flow_qemu_procfs::Memory::new(mem::cache::TimedCache::none_cache()) {
+    let mut conn = match flow_qemu_procfs::Memory::new(mem::NO_CACHE) {
         Ok(br) => br,
         Err(e) => {
             println!("couldn't open memory read context: {:?}", e);

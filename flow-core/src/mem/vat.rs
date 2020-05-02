@@ -19,8 +19,13 @@ pub fn virt_read_raw_into<T: AccessPhysicalMemory>(
     let aligned_len = (addr + page_size).as_page_aligned(page_size) - addr;
 
     if aligned_len.as_usize() >= out.len() {
-        let tr = arch.virt_to_phys(mem, dtb, addr)?;
-        mem.phys_read_raw_into(tr.address, tr.page.page_type, out)?;
+        if let Ok(tr) = arch.virt_to_phys(mem, dtb, addr) {
+            mem.phys_read_raw_into(tr.address, tr.page.page_type, out)?;
+        } else {
+            for v in out.iter_mut() {
+                *v = 0u8;
+            }
+        }
     } else {
         let mut base = addr;
 
@@ -31,6 +36,10 @@ pub fn virt_read_raw_into<T: AccessPhysicalMemory>(
             for chunk in i.chunks_mut(page_size.as_usize()) {
                 if let Ok(tr) = arch.virt_to_phys(mem, dtb, base) {
                     mem.phys_read_raw_into(tr.address, tr.page.page_type, chunk)?;
+                } else {
+                    for v in chunk.iter_mut() {
+                        *v = 0u8;
+                    }
                 }
                 base += Length::from(chunk.len());
             }
@@ -52,8 +61,9 @@ pub fn virt_write_raw<T: AccessPhysicalMemory>(
     let aligned_len = (addr + page_size).as_page_aligned(page_size) - addr;
 
     if aligned_len.as_usize() >= data.len() {
-        let tr = arch.virt_to_phys(mem, dtb, addr)?;
-        mem.phys_write_raw(tr.address, tr.page.page_type, data)?;
+        if let Ok(tr) = arch.virt_to_phys(mem, dtb, addr) {
+            mem.phys_write_raw(tr.address, tr.page.page_type, data)?;
+        }
     } else {
         let mut base = addr;
 

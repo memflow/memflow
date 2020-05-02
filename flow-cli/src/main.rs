@@ -28,12 +28,16 @@ fn main() -> Result<()> {
     match argv.value_of("connector").unwrap_or_else(|| "bridge") {
         "bridge" => {
             let mut conn = init_bridge::init_bridge(&argv).unwrap();
-            let mut win32 = Win32Interface::with(&mut conn)?;
+            let mut cache = TimedCache::default();
+            let mut mem = CachedMemoryAccess::with(&mut conn, &mut cache);
+            let mut win32 = Win32Interface::with(&mut mem)?;
             win32.run()
         }
         "qemu_procfs" => {
             let mut conn = init_qemu_procfs::init_qemu_procfs().unwrap();
-            let mut win32 = Win32Interface::with(&mut conn)?;
+            let mut cache = TimedCache::default();
+            let mut mem = CachedMemoryAccess::with(&mut conn, &mut cache);
+            let mut win32 = Win32Interface::with(&mut mem)?;
             win32.run()
         }
         _ => Err(Error::new("the connector requested does not exist")),

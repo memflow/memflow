@@ -10,7 +10,7 @@ extern crate rand;
 
 use flow_core::address::Address;
 use flow_core::arch::Architecture;
-use flow_core::mem::{AccessPhysicalMemory, AccessVirtualMemory, TimedCache};
+use flow_core::mem::{AccessPhysicalMemory, AccessVirtualMemory, CachedMemoryAccess, TimedCache};
 
 use flow_qemu_procfs::Memory;
 
@@ -86,12 +86,10 @@ fn vat_test<T: AccessVirtualMemory + AccessPhysicalMemory>(
     bench.bytes = (translations * 8) as u64;
 }
 
-fn create_mem() -> Memory<TimedCache> {
-    Memory::new(TimedCache::default()).unwrap()
-}
-
 fn translate_module(bench: &mut Bencher) {
-    let mut mem = create_mem();
+    let mut mem_sys = Memory::new().unwrap();
+    let mut cache = TimedCache::default();
+    let mut mem = CachedMemoryAccess::with(&mut mem_sys, &mut cache);
     let (proc, tmod) = find_module(&mut mem).unwrap();
     vat_test(
         bench,
@@ -105,7 +103,9 @@ fn translate_module(bench: &mut Bencher) {
 }
 
 fn translate_module_smallrange(bench: &mut Bencher) {
-    let mut mem = create_mem();
+    let mut mem_sys = Memory::new().unwrap();
+    let mut cache = TimedCache::default();
+    let mut mem = CachedMemoryAccess::with(&mut mem_sys, &mut cache);
     let (proc, tmod) = find_module(&mut mem).unwrap();
     vat_test(
         bench,
@@ -119,7 +119,9 @@ fn translate_module_smallrange(bench: &mut Bencher) {
 }
 
 fn translate_range(bench: &mut Bencher, range_start: u64, range_end: u64) {
-    let mut mem = create_mem();
+    let mut mem_sys = Memory::new().unwrap();
+    let mut cache = TimedCache::default();
+    let mut mem = CachedMemoryAccess::with(&mut mem_sys, &mut cache);
     let (proc, _) = find_module(&mut mem).unwrap();
     vat_test(
         bench,

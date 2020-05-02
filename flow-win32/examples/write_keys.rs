@@ -25,7 +25,7 @@ pub fn write_string<T: AccessVirtualMemory>(
 pub fn main() {
     simple_logger::init_with_level(Level::Debug).unwrap();
 
-    let mut mem = flow_qemu_procfs::Memory::new(mem::NO_CACHE).unwrap();
+    let mut mem = flow_qemu_procfs::Memory::new().unwrap();
 
     let win = Win32::try_with(&mut mem).unwrap();
     let offsets = Win32Offsets::try_with_guid(&win.kernel_guid()).unwrap();

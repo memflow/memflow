@@ -17,34 +17,28 @@ pub fn virt_read_raw_into<T: AccessPhysicalMemory>(
     out: &mut [u8],
 ) -> Result<()> {
     let page_size = arch.page_size();
-    if out.len() < page_size.as_usize() {
-        let (pa, pt) = arch.vtop(mem, dtb, addr)?;
-        mem.phys_read_raw_into(pa, pt, out)?;
-    } else {
-        let mut base = addr;
-        let end = base + Length::from(out.len());
+    let aligned_len = std::cmp::min(
+        (addr + page_size).as_page_aligned(page_size) - addr,
+        Length::from(out.len()),
+    );
 
-        while base < end {
-            let mut aligned_len = (base + page_size).as_page_aligned(page_size) - base;
-            if base + aligned_len > end {
-                aligned_len = end - base;
-            }
+    let (mut start_buf, mut end_buf) = out.split_at_mut(aligned_len.as_usize());
 
-            if let Ok((pa, pt)) = arch.vtop(mem, dtb, base) {
-                let offset = (base - addr).as_usize();
-                mem.phys_read_raw_into(
-                    pa,
-                    pt,
-                    &mut out[offset..(offset + aligned_len.as_usize())],
-                )?;
-            } else {
-                // skip
-                trace!("pa is null, skipping page");
-            }
+    let mut base = addr;
 
-            base += aligned_len;
+    let mut thing = |buf: &mut [u8]| -> Result<()> {
+        if let Ok((pa, pt)) = arch.vtop(mem, dtb, base) {
+            mem.phys_read_raw_into(pa, pt, buf)?;
         }
-    }
+        base += Length::from(buf.len());
+        Ok(())
+    };
+
+    thing(start_buf)?;
+    end_buf
+        .chunks_mut(page_size.as_usize())
+        .try_for_each(thing)?;
+
     Ok(())
 }
 

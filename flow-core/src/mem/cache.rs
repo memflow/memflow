@@ -32,7 +32,7 @@ impl TimedCache {
     }
 
     pub fn none_cache() -> Self {
-        Self::new(0, 0, 0.into(), PageType::NONE)
+        Self::new(0, 0, 0.into(), PageType::UNKNOWN)
     }
 
     fn page_index(&self, addr: Address) -> usize {
@@ -77,7 +77,7 @@ impl MemCache for TimedCache {
         out: &mut [u8],
         mut read_fn: F,
     ) -> Result<usize, Error> {
-        if (self.page_mask & page_type) == PageType::NONE {
+        if (self.page_mask & page_type) == PageType::UNKNOWN {
             read_fn(start, out)?;
             Ok(out.len())
         } else {
@@ -119,7 +119,7 @@ impl MemCache for TimedCache {
     }
 
     fn cache_page(&mut self, addr: Address, page_type: PageType, src: &[u8]) {
-        if self.page_mask & page_type != PageType::NONE {
+        if self.page_mask & page_type != PageType::UNKNOWN {
             let page_index = self.page_index(addr);
             self.page_from_index(page_index).copy_from_slice(src);
             self.address[page_index] = addr;
@@ -128,7 +128,7 @@ impl MemCache for TimedCache {
     }
 
     fn invalidate_pages(&mut self, mut addr: Address, page_type: PageType, src: &[u8]) {
-        if self.page_mask & page_type != PageType::NONE {
+        if self.page_mask & page_type != PageType::UNKNOWN {
             addr = addr.as_page_aligned(self.page_size);
             for i in (0..src.len()).step_by(self.page_size.as_usize()) {
                 let cur_addr = addr + Length::from(i);

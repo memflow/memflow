@@ -169,7 +169,7 @@ impl<T: AccessPhysicalMemory + 'static> bridge::Server for BridgeServer<T> {
 
         let mut data = vec![0; length.as_usize()];
         memory
-            .phys_read_raw_into(address, PageType::NONE, &mut data)
+            .phys_read_raw_into(address, PageType::UNKNOWN, &mut data)
             .unwrap_or_else(|_| ());
         results.get().set_data(&data);
 
@@ -189,7 +189,7 @@ impl<T: AccessPhysicalMemory + 'static> bridge::Server for BridgeServer<T> {
         let data = pry!(pry!(params.get()).get_data());
 
         memory
-            .phys_write_raw(address, PageType::NONE, &data.to_vec())
+            .phys_write_raw(address, PageType::UNKNOWN, &data.to_vec())
             .unwrap_or_else(|_| ());
         results.get().set_length(data.len() as u64);
 

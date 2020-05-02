@@ -4,11 +4,11 @@ use crate::kernel::StartBlock;
 
 use byteorder::{ByteOrder, LittleEndian};
 use dataview::Pod;
-use log::{debug, trace};
+use log::debug;
 use pelite::image::IMAGE_DOS_HEADER;
 
 use flow_core::address::{Address, Length};
-use flow_core::arch::{self, Architecture};
+use flow_core::arch;
 use flow_core::mem::AccessVirtualMemory;
 
 pub fn find_with_va<T: AccessVirtualMemory>(

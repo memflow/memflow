@@ -42,6 +42,16 @@ impl TryFrom<u8> for Architecture {
     }
 }
 
+pub struct Page {
+    pub page_type: PageType,
+    // TODO: others...
+}
+
+pub struct PhysicalTranslation {
+    pub address: Address,
+    pub page: Page,
+}
+
 #[allow(dead_code)]
 impl Architecture {
     pub fn as_u8(self) -> u8 {
@@ -89,17 +99,22 @@ impl Architecture {
         }
     }
 
-    pub fn vtop<T: AccessPhysicalMemory>(
+    pub fn virt_to_phys<T: AccessPhysicalMemory>(
         self,
         mem: &mut T,
         dtb: Address,
         addr: Address,
-    ) -> Result<(Address, PageType)> {
+    ) -> Result<PhysicalTranslation> {
         match self {
-            Architecture::Null => Ok((addr, PageType::NONE)),
-            Architecture::X64 => x64::vtop(mem, dtb, addr),
-            Architecture::X86Pae => x86_pae::vtop(mem, dtb, addr),
-            Architecture::X86 => x86::vtop(mem, dtb, addr),
+            Architecture::Null => Ok(PhysicalTranslation {
+                address: addr,
+                page: Page {
+                    page_type: PageType::UNKNOWN,
+                },
+            }),
+            Architecture::X64 => x64::virt_to_phys(mem, dtb, addr),
+            Architecture::X86Pae => x86_pae::virt_to_phys(mem, dtb, addr),
+            Architecture::X86 => x86::virt_to_phys(mem, dtb, addr),
         }
     }
 }

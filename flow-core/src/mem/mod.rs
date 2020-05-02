@@ -1,6 +1,8 @@
 pub mod cache;
 pub mod vat;
 
+pub use cache::*;
+
 use crate::address::{Address, Length};
 use crate::arch::Architecture;
 use crate::error::Error;
@@ -13,7 +15,7 @@ use dataview::Pod;
 
 bitflags! {
     pub struct PageType: u8 {
-        const NONE = 0;
+        const UNKNOWN = 0;
         const PAGE_TABLE = 1;
         const WRITEABLE = 2;
         const READ_ONLY = 3;
@@ -243,7 +245,7 @@ impl<'a, T: AccessVirtualMemory> VirtualMemoryContext<'a, T> {
         match self.proc_arch.bits() {
             64 => self.virt_read_addr64(addr),
             32 => self.virt_read_addr32(addr),
-            _ => return Err(Error::new("invalid instruction set")),
+            _ => Err(Error::new("invalid instruction set")),
         }
     }
 

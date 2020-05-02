@@ -1,9 +1,10 @@
-use crate::error::Result;
+use crate::error::{Error, Result};
 
+use super::PhysicalTranslation;
 use crate::address::{Address, Length};
 use crate::arch::ByteOrder;
 
-use crate::mem::{AccessPhysicalMemory, PageType};
+use crate::mem::AccessPhysicalMemory;
 
 pub fn bits() -> u8 {
     32
@@ -21,11 +22,11 @@ pub fn len_addr() -> Length {
     Length::from(4)
 }
 
-pub fn vtop<T: AccessPhysicalMemory>(
+pub fn virt_to_phys<T: AccessPhysicalMemory>(
     _mem: &mut T,
     _dtb: Address,
     _addr: Address,
-) -> Result<(Address, PageType)> {
+) -> Result<PhysicalTranslation> {
     println!("x86_pae::vtop() not implemented yet");
-    Ok((Address::from(0), PageType::NONE))
+    Err(Error::new("x86_pae::vtop() not implemented yet"))
 }

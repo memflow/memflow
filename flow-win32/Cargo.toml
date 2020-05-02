@@ -26,7 +26,25 @@ widestring = "0.4.0"
 simple_logger = "1.0.1"
 flow-qemu-procfs = { path = "../connectors/flow-qemu-procfs" }
 win_key_codes = "0.1.2"
+rand = "0.5"
+bencher = "0.1.5"
+
+[[bench]]
+name = "read"
+harness = false
+
+[[bench]]
+name = "vat"
+harness = false
 
 [[example]]
 name = "read_keys"
 path = "examples/read_keys.rs"
+
+[[example]]
+name = "write_keys"
+path = "examples/write_keys.rs"
+
+[[example]]
+name = "read_bench"
+path = "examples/read_bench.rs"

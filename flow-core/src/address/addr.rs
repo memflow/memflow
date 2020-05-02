@@ -4,14 +4,8 @@ use std::ops;
 
 use super::{Length, Offset};
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Address(u64);
-
-impl fmt::LowerHex for Address {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:x}", self.0)
-    }
-}
 
 impl From<i32> for Address {
     fn from(item: i32) -> Self {
@@ -44,31 +38,31 @@ impl From<Length> for Address {
 }
 
 impl Address {
-    pub fn null() -> Self {
+    pub const fn null() -> Self {
         Address { 0: 0 }
     }
 
-    pub fn is_null(self) -> bool {
+    pub const fn is_null(self) -> bool {
         self.0 == 0
     }
 
     pub fn as_len(self) -> Length {
-        Length::from(self)
+        Length::from(self.0)
     }
 
-    pub fn as_u32(self) -> u32 {
+    pub const fn as_u32(self) -> u32 {
         self.0 as u32
     }
 
-    pub fn as_u64(self) -> u64 {
+    pub const fn as_u64(self) -> u64 {
         self.0
     }
 
-    pub fn as_usize(self) -> usize {
+    pub const fn as_usize(self) -> usize {
         self.0 as usize
     }
 
-    pub fn as_page_aligned(self, page_size: Length) -> Address {
+    pub const fn as_page_aligned(self, page_size: Length) -> Address {
         Address {
             0: self.0 & (!(page_size.as_u64() - 1)),
         }
@@ -131,6 +125,7 @@ impl ops::SubAssign<Length> for Address {
 }
 
 // Address + Offset => Address
+#[allow(clippy::suspicious_op_assign_impl, clippy::suspicious_arithmetic_impl)]
 impl ops::Add<Offset> for Address {
     type Output = Address;
 
@@ -144,6 +139,7 @@ impl ops::Add<Offset> for Address {
 }
 
 // Address -= Offset
+#[allow(clippy::suspicious_op_assign_impl, clippy::suspicious_arithmetic_impl)]
 impl ops::AddAssign<Offset> for Address {
     fn add_assign(&mut self, other: Offset) {
         *self = Self {
@@ -153,6 +149,29 @@ impl ops::AddAssign<Offset> for Address {
                 self.0 - other.as_i64().abs() as u64
             },
         }
+    }
+}
+
+impl fmt::Debug for Address {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:x}", self.0)
+    }
+}
+impl fmt::UpperHex for Address {
+    #[inline(always)]
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:X}", self.0)
+    }
+}
+impl fmt::LowerHex for Address {
+    #[inline(always)]
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:x}", self.0)
+    }
+}
+impl fmt::Display for Address {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:x}", self.0)
     }
 }
 

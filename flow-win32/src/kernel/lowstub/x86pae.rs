@@ -1,9 +1,7 @@
 use crate::error::{Error, Result};
 use crate::kernel::StartBlock;
 
-use byteorder::{ByteOrder, LittleEndian};
-
-use flow_core::address::{Address, Length};
+use flow_core::address::Address;
 use flow_core::arch::{self, Architecture};
 
 // see _find_x64
@@ -26,8 +24,7 @@ fn _find(mem: &[u8]) -> Option<()> {
         .to_vec()
         .chunks_exact(8)
         .skip(3) // >= 0x20
-        .filter(|c| c[0] != 0)
-        .nth(0)
+        .find(|c| c[0] != 0)
     {
         Some(_c) => None,
         None => Some(()),

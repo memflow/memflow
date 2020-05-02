@@ -4,14 +4,8 @@ use std::ops;
 
 use super::Address;
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Length(u64);
-
-impl fmt::LowerHex for Length {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:x}", self.0)
-    }
-}
 
 // TODO: from iXX should use .abs()
 // TODO: sort them by likeliness
@@ -64,67 +58,67 @@ impl From<Address> for Length {
 }
 
 impl Length {
-    pub fn zero() -> Self {
-        Length::from(0)
+    pub const fn zero() -> Self {
+        Length { 0: 0 }
     }
 
-    pub fn is_zero(self) -> bool {
+    pub const fn is_zero(self) -> bool {
         self.0 == 0
     }
 
     pub fn as_addr(self) -> Address {
-        Address::from(self)
+        Address::from(self.0)
     }
 
-    pub fn as_u32(self) -> u32 {
+    pub const fn as_u32(self) -> u32 {
         self.0 as u32
     }
 
-    pub fn as_u64(self) -> u64 {
+    pub const fn as_u64(self) -> u64 {
         self.0
     }
 
-    pub fn as_usize(self) -> usize {
+    pub const fn as_usize(self) -> usize {
         self.0 as usize
     }
 
-    pub fn from_b(len: u64) -> Self {
+    pub const fn from_b(len: u64) -> Self {
         Length { 0: len }
     }
 
-    pub fn from_kb(len: u64) -> Self {
+    pub const fn from_kb(len: u64) -> Self {
         Length { 0: len * 1024 }
     }
 
-    pub fn from_kib(len: u64) -> Self {
+    pub const fn from_kib(len: u64) -> Self {
         Length { 0: len * 1024 * 8 }
     }
 
-    pub fn from_mb(len: u64) -> Self {
+    pub const fn from_mb(len: u64) -> Self {
         Length {
             0: len * 1024 * 1024,
         }
     }
 
-    pub fn from_mib(len: u64) -> Self {
+    pub const fn from_mib(len: u64) -> Self {
         Length {
             0: len * 1024 * 1024 * 8,
         }
     }
 
-    pub fn from_gb(len: u64) -> Self {
+    pub const fn from_gb(len: u64) -> Self {
         Length {
             0: len * 1024 * 1024 * 1024,
         }
     }
 
-    pub fn from_gib(len: u64) -> Self {
+    pub const fn from_gib(len: u64) -> Self {
         Length {
             0: len * 1024 * 1024 * 1024 * 8,
         }
     }
 
-    pub fn size_of<T>() -> Self {
+    pub const fn size_of<T>() -> Self {
         Length {
             0: std::mem::size_of::<T>() as u64,
         }
@@ -337,9 +331,32 @@ impl ops::SubAssign for Length {
     }
 }
 
+impl fmt::Debug for Length {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:x}", self.0)
+    }
+}
+impl fmt::UpperHex for Length {
+    #[inline(always)]
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:X}", self.0)
+    }
+}
+impl fmt::LowerHex for Length {
+    #[inline(always)]
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:x}", self.0)
+    }
+}
+impl fmt::Display for Length {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:x}", self.0)
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::address::Length;
+    use super::*;
 
     #[test]
     fn test_from() {

@@ -112,7 +112,7 @@ mod tests {
 
     #[bench]
     fn bench_add_two(b: &mut Bencher) {
-        b.iter(|| vtop());
+        b.iter(|| virt_to_phys());
     }
 }
 */

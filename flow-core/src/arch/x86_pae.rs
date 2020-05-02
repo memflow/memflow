@@ -27,6 +27,6 @@ pub fn virt_to_phys<T: AccessPhysicalMemory>(
     _dtb: Address,
     _addr: Address,
 ) -> Result<PhysicalTranslation> {
-    println!("x86_pae::vtop() not implemented yet");
-    Err(Error::new("x86_pae::vtop() not implemented yet"))
+    println!("x86_pae::virt_to_phys() not implemented yet");
+    Err(Error::new("x86_pae::virt_to_phys() not implemented yet"))
 }

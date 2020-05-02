@@ -65,8 +65,7 @@ pub fn find_guid<T: AccessVirtualMemory>(
         .iter()
         .map(|e| e.entry())
         .filter_map(std::result::Result::ok)
-        .filter(|&e| e.as_code_view().is_some())
-        .nth(0)
+        .find(|&e| e.as_code_view().is_some())
         .ok_or_else(|| Error::new("unable to find codeview debug_data entry"))?
         .as_code_view()
         .unwrap();

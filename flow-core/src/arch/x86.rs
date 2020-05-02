@@ -1,4 +1,4 @@
-use crate::error::{Result, Error};
+use crate::error::{Error, Result};
 
 use super::PhysicalTranslation;
 use crate::address::{Address, Length};
@@ -27,6 +27,6 @@ pub fn virt_to_phys<T: AccessPhysicalMemory>(
     _dtb: Address,
     _addr: Address,
 ) -> Result<PhysicalTranslation> {
-    println!("x86::vtop() not implemented yet");
-    Err(Error::new("x86::vtop() not implemented yet"))
+    println!("x86::virt_to_phys() not implemented yet");
+    Err(Error::new("x86::virt_to_phys() not implemented yet"))
 }

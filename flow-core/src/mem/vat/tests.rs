@@ -44,8 +44,8 @@ impl AccessVirtualMemory for Vec<u8> {
 #[test]
 fn test_virt_read_small() {
     let mut buf = vec![0u8; 256];
-    for i in 0..buf.len() {
-        buf[i] = i as u8;
+    for (i, item) in buf.iter_mut().enumerate() {
+        *item = i as u8;
     }
 
     let mut out = vec![0u8; buf.len()];
@@ -63,8 +63,8 @@ fn test_virt_read_small() {
 #[test]
 fn test_virt_read_small_shifted() {
     let mut buf = vec![0u8; 256];
-    for i in 0..buf.len() {
-        buf[i] = i as u8;
+    for (i, item) in buf.iter_mut().enumerate() {
+        *item = i as u8;
     }
 
     let mut out = vec![0u8; buf.len() - 128];
@@ -82,8 +82,8 @@ fn test_virt_read_small_shifted() {
 #[test]
 fn test_virt_read_medium() {
     let mut buf = vec![0u8; 0x1000];
-    for i in 0..buf.len() {
-        buf[i] = i as u8;
+    for (i, item) in buf.iter_mut().enumerate() {
+        *item = i as u8;
     }
 
     let mut out = vec![0u8; buf.len()];
@@ -101,8 +101,8 @@ fn test_virt_read_medium() {
 #[test]
 fn test_virt_read_medium_shifted() {
     let mut buf = vec![0u8; 0x1000];
-    for i in 0..buf.len() {
-        buf[i] = i as u8;
+    for (i, item) in buf.iter_mut().enumerate() {
+        *item = i as u8;
     }
 
     let mut out = vec![0u8; buf.len() - 0x100];
@@ -120,8 +120,8 @@ fn test_virt_read_medium_shifted() {
 #[test]
 fn test_virt_read_big() {
     let mut buf = vec![0u8; 16 * 0x1000];
-    for i in 0..buf.len() {
-        buf[i] = i as u8;
+    for (i, item) in buf.iter_mut().enumerate() {
+        *item = i as u8;
     }
 
     let mut out = vec![0u8; buf.len()];
@@ -139,8 +139,8 @@ fn test_virt_read_big() {
 #[test]
 fn test_virt_read_big_shifted() {
     let mut buf = vec![0u8; 16 * 0x1000];
-    for i in 0..buf.len() {
-        buf[i] = i as u8;
+    for (i, item) in buf.iter_mut().enumerate() {
+        *item = i as u8;
     }
 
     let mut out = vec![0u8; buf.len() - 0x100];

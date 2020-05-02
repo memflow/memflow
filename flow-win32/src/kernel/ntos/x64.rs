@@ -56,13 +56,12 @@ pub fn find_with_va<T: AccessVirtualMemory>(
                     i * arch::x64::page_size().as_usize()
                 )
             })
-            .filter(|(i, _, _)| {
+            .find(|(i, _, _)| {
                 let probe_addr =
                     Address::from(va_base + (*i as u64) * arch::x64::page_size().as_u64());
                 let name = probe_pe_header(mem, start_block, probe_addr).unwrap_or_default();
                 name == "ntoskrnl.exe"
             })
-            .nth(0)
             .ok_or_else(|| {
                 Error::new("find_x64_with_va: unable to locate ntoskrnl.exe via va hint")
             })

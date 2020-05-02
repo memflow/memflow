@@ -97,8 +97,7 @@ impl Win32Module {
             .map(|peb| Win32Module::try_with_peb(mem, process, offsets, *peb))
             .filter_map(Result::ok)
             .inspect(|p| trace!("{:x} {}", p.base(), p.name()))
-            .filter(|p| p.name() == name)
-            .nth(0)
+            .find(|p| p.name() == name)
             .ok_or_else(|| Error::new(format!("unable to find process {}", name)))
     }
 

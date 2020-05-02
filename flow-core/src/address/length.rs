@@ -68,23 +68,23 @@ impl Length {
         Length { 0: 0 }
     }
 
-    pub const fn is_zero(&self) -> bool {
+    pub const fn is_zero(self) -> bool {
         self.0 == 0
     }
 
-    pub fn as_addr(&self) -> Address {
+    pub fn as_addr(self) -> Address {
         Address::from(self.0)
     }
 
-    pub const fn as_u32(&self) -> u32 {
+    pub const fn as_u32(self) -> u32 {
         self.0 as u32
     }
 
-    pub const fn as_u64(&self) -> u64 {
+    pub const fn as_u64(self) -> u64 {
         self.0
     }
 
-    pub const fn as_usize(&self) -> usize {
+    pub const fn as_usize(self) -> usize {
         self.0 as usize
     }
 

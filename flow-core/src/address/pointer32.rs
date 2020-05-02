@@ -29,18 +29,18 @@ impl<T: ?Sized> Pointer32<T> {
         Pointer32::NULL
     }
 
-    pub fn is_null(&self) -> bool {
+    pub fn is_null(self) -> bool {
         self.address == 0
     }
 
-    pub const fn into_raw(&self) -> u32 {
+    pub const fn into_raw(self) -> u32 {
         self.address
     }
 }
 
 impl<T: Pod + ?Sized> Pointer32<T> {
     pub fn deref_into<U: AccessVirtualMemory>(
-        &self,
+        self,
         mem: &mut VirtualMemoryContext<U>,
         out: &mut T,
     ) -> Result<()> {
@@ -49,7 +49,7 @@ impl<T: Pod + ?Sized> Pointer32<T> {
 }
 
 impl<T: Pod + Sized> Pointer32<T> {
-    pub fn deref<U: AccessVirtualMemory>(&self, mem: &mut VirtualMemoryContext<U>) -> Result<T> {
+    pub fn deref<U: AccessVirtualMemory>(self, mem: &mut VirtualMemoryContext<U>) -> Result<T> {
         mem.virt_read(Address::from(self.address))
     }
 }

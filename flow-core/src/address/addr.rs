@@ -53,7 +53,7 @@ impl Address {
     }
 
     pub fn as_len(self) -> Length {
-        Length::from(self)
+        Length::from(self.0)
     }
 
     pub const fn as_u32(self) -> u32 {
@@ -131,6 +131,7 @@ impl ops::SubAssign<Length> for Address {
 }
 
 // Address + Offset => Address
+#[allow(clippy::suspicious_op_assign_impl, clippy::suspicious_arithmetic_impl)]
 impl ops::Add<Offset> for Address {
     type Output = Address;
 
@@ -144,6 +145,7 @@ impl ops::Add<Offset> for Address {
 }
 
 // Address -= Offset
+#[allow(clippy::suspicious_op_assign_impl, clippy::suspicious_arithmetic_impl)]
 impl ops::AddAssign<Offset> for Address {
     fn add_assign(&mut self, other: Offset) {
         *self = Self {

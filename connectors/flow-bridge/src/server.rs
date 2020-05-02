@@ -92,7 +92,7 @@ where
             .for_each(move |s| {
                 libc_eprintln!("client connected");
 
-                if opts.iter().filter(|&&o| o == "nodelay").nth(0).is_some() {
+                if opts.iter().any(|&o| o == "nodelay") {
                     libc_eprintln!("trying to set TCP_NODELAY on socket");
                     s.set_nodelay(true).unwrap();
                 }
@@ -137,7 +137,7 @@ impl<T: AccessPhysicalMemory + 'static> BridgeServer<T> {
         let path = url
             .path()
             .split(',')
-            .nth(0)
+            .next()
             .ok_or_else(|| Error::new("invalid url"))?;
         let opts = url.path().split(',').skip(1).collect::<Vec<_>>();
 
@@ -169,7 +169,7 @@ impl<T: AccessPhysicalMemory + 'static> bridge::Server for BridgeServer<T> {
 
         let mut data = vec![0; length.as_usize()];
         memory
-            .phys_read_raw_into(address, PageType::NONE, &mut data)
+            .phys_read_raw_into(address, PageType::UNKNOWN, &mut data)
             .unwrap_or_else(|_| ());
         results.get().set_data(&data);
 
@@ -189,7 +189,7 @@ impl<T: AccessPhysicalMemory + 'static> bridge::Server for BridgeServer<T> {
         let data = pry!(pry!(params.get()).get_data());
 
         memory
-            .phys_write_raw(address, PageType::NONE, &data.to_vec())
+            .phys_write_raw(address, PageType::UNKNOWN, &data.to_vec())
             .unwrap_or_else(|_| ());
         results.get().set_length(data.len() as u64);
 
@@ -211,14 +211,7 @@ impl<T: AccessPhysicalMemory + 'static> bridge::Server for BridgeServer<T> {
         let length = Length::from(pry!(params.get()).get_length());
 
         let mut data = vec![0; length.as_usize()];
-        vat::virt_read_raw_into(
-            &mut **memory,
-            Architecture::from(ins),
-            dtb,
-            address,
-            &mut data,
-        )
-        .unwrap_or_else(|_| ());
+        vat::virt_read_raw_into(&mut **memory, ins, dtb, address, &mut data).unwrap_or_else(|_| ());
         results.get().set_data(&data);
 
         Promise::ok(())
@@ -239,14 +232,8 @@ impl<T: AccessPhysicalMemory + 'static> bridge::Server for BridgeServer<T> {
         let address = Address::from(pry!(params.get()).get_address());
         let data = pry!(pry!(params.get()).get_data());
 
-        vat::virt_write_raw(
-            &mut **memory,
-            Architecture::from(ins),
-            dtb,
-            address,
-            &data.to_vec(),
-        )
-        .unwrap_or_else(|_| ());
+        vat::virt_write_raw(&mut **memory, ins, dtb, address, &data.to_vec())
+            .unwrap_or_else(|_| ());
         results.get().set_length(data.len() as u64);
 
         Promise::ok(())

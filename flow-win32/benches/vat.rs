@@ -10,15 +10,15 @@ extern crate rand;
 
 use flow_core::address::{Address, Length};
 use flow_core::arch::Architecture;
-use flow_core::mem::cache::TimedCache;
-use flow_core::mem::PageType;
-use flow_core::mem::{AccessPhysicalMemory, AccessVirtualMemory};
-use flow_core::{OsProcess, OsProcessModule};
+use flow_core::mem::{AccessPhysicalMemory, AccessVirtualMemory, PageType, TimedCache};
+
 use flow_qemu_procfs::Memory;
+
+use flow_core::{OsProcess, OsProcessModule};
 use flow_win32::{Win32, Win32Module, Win32Offsets, Win32Process};
+
 use rand::prelude::*;
 use rand::{prng::XorShiftRng as CurRng, Rng, SeedableRng};
-use std::time::Duration;
 
 fn find_module<T: AccessPhysicalMemory + AccessVirtualMemory>(
     mem: &mut T,
@@ -55,7 +55,7 @@ fn find_module<T: AccessPhysicalMemory + AccessVirtualMemory>(
                 })
                 .collect();
 
-            if mod_list.len() > 0 {
+            if !mod_list.is_empty() {
                 let tmod = &mod_list[rng.gen_range(0, mod_list.len())];
                 return Ok((proc, tmod.clone()));
             }
@@ -79,7 +79,7 @@ fn vat_test<T: AccessVirtualMemory + AccessPhysicalMemory>(
     bench.iter(|| {
         for _ in 0..translations {
             let vaddr: Address = rng.gen_range(range_start, range_end).into();
-            let _thing = arch.vtop(mem, dtb, vaddr);
+            let _thing = arch.virt_to_phys(mem, dtb, vaddr);
         }
     });
 

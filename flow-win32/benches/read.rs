@@ -8,7 +8,7 @@ extern crate flow_qemu_procfs;
 extern crate flow_win32;
 extern crate rand;
 
-use flow_core::mem::TimedCache;
+use flow_core::mem::{AccessVirtualMemory, CachedMemoryAccess, TimedCache};
 use flow_core::{OsProcess, OsProcessModule};
 
 use flow_qemu_procfs::Memory;
@@ -18,8 +18,8 @@ use flow_win32::{Win32, Win32Module, Win32Offsets, Win32Process};
 use rand::prelude::*;
 use rand::{prng::XorShiftRng as CurRng, Rng, SeedableRng};
 
-fn rwtest(
-    mem: &mut Memory<TimedCache>,
+fn rwtest<T: AccessVirtualMemory>(
+    mem: &mut T,
     proc: &Win32Process,
     module: &dyn OsProcessModule,
     chunk_sizes: &[usize],
@@ -54,8 +54,9 @@ fn rwtest(
     }
 }
 
-fn initialize_ctx() -> flow_core::Result<(Memory<TimedCache>, Win32Process, Win32Module)> {
-    let mut mem = Memory::new(TimedCache::default()).unwrap();
+fn initialize_ctx() -> flow_core::Result<(Memory, Win32Process, Win32Module)> {
+    let mut mem = Memory::new().unwrap();
+
     let os = Win32::try_with(&mut mem).unwrap();
     let offsets = Win32Offsets::try_with_guid(&os.kernel_guid()).unwrap();
 
@@ -99,7 +100,9 @@ fn initialize_ctx() -> flow_core::Result<(Memory<TimedCache>, Win32Process, Win3
 }
 
 fn read_test(bench: &mut Bencher, chunk_size: usize, chunks: usize) {
-    let (mut mem, proc, tmod) = initialize_ctx().unwrap();
+    let (mut mem_sys, proc, tmod) = initialize_ctx().unwrap();
+    let mut cache = TimedCache::default();
+    let mut mem = CachedMemoryAccess::with(&mut mem_sys, &mut cache);
 
     bench.iter(|| {
         rwtest(&mut mem, &proc, &tmod, &[chunk_size], &[chunks], chunk_size);

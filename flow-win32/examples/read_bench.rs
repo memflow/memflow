@@ -6,7 +6,7 @@ extern crate rand;
 use std::io::Write;
 use std::time::{Duration, Instant};
 
-use flow_core::mem::TimedCache;
+use flow_core::{AccessVirtualMemory, CachedMemoryAccess, TimedCache};
 use flow_core::{OsProcess, OsProcessModule};
 use flow_win32::{Win32, Win32Module, Win32Offsets, Win32Process};
 
@@ -14,8 +14,8 @@ use flow_qemu_procfs::Memory;
 
 use rand::{prng::XorShiftRng as CurRng, Rng, SeedableRng};
 
-fn rwtest(
-    mem: &mut Memory<TimedCache>,
+fn rwtest<T: AccessVirtualMemory>(
+    mem: &mut T,
     proc: &Win32Process,
     module: &dyn OsProcessModule,
     chunk_sizes: &[usize],
@@ -87,7 +87,10 @@ fn rwtest(
 }
 
 fn main() -> flow_core::Result<()> {
-    let mut mem = Memory::new(TimedCache::default())?;
+    let mut mem_sys = Memory::new()?;
+    let mut cache = TimedCache::default();
+    let mut mem = CachedMemoryAccess::with(&mut mem_sys, &mut cache);
+
     let os = Win32::try_with(&mut mem)?;
     let offsets = Win32Offsets::try_with_guid(&os.kernel_guid())?;
 

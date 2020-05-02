@@ -1,9 +1,10 @@
+use super::{CacheEntry, PageCache, PageType};
 use crate::address::{Address, Length};
-use crate::mem::{PageCache, PageType};
-use crate::Error;
+use crate::{Error, Result};
 
 use coarsetime::{Duration, Instant};
 
+// the set page_size must be smaller than the target's page_size, otherwise this would trigger UB
 #[derive(Clone)]
 pub struct TimedCache {
     address: Box<[Address]>,
@@ -32,7 +33,8 @@ impl TimedCache {
     }
 
     fn page_index(&self, addr: Address) -> usize {
-        (addr.as_usize() / self.page_size.as_usize()) % self.address.len()
+        (addr.as_page_aligned(self.page_size).as_usize() / self.page_size.as_usize())
+            % self.address.len()
     }
 
     fn page_and_info_from_index(&mut self, idx: usize) -> (&mut [u8], &mut Address, &mut Instant) {
@@ -53,7 +55,7 @@ impl TimedCache {
         &mut self,
         addr: Address,
         time: Instant,
-    ) -> Result<&mut [u8], (&mut [u8], &mut Address, &mut Instant)> {
+    ) -> std::result::Result<&mut [u8], (&mut [u8], &mut Address, &mut Instant)> {
         let page_index = self.page_index(addr);
         if self.address[page_index] == addr.as_page_aligned(self.page_size)
             && time.duration_since(self.time[page_index]) <= self.cache_time
@@ -77,73 +79,43 @@ impl Default for TimedCache {
 }
 
 impl PageCache for TimedCache {
-    fn cached_read<F: FnMut(Address, &mut [u8]) -> Result<(), Error>>(
-        &mut self,
-        start: Address,
-        page_type: PageType,
-        out: &mut [u8],
-        mut read_fn: F,
-    ) -> Result<usize, Error> {
-        if (self.page_mask & page_type) == PageType::UNKNOWN {
-            read_fn(start, out)?;
-            Ok(out.len())
+    fn cached_page(&mut self, addr: Address, page_type: PageType) -> Result<CacheEntry> {
+        // TODO: optimize internal functions
+        if (self.page_mask & page_type).is_empty() {
+            Err(Error::new("page is not cached"))
         } else {
-            let mut cur_addr = start.as_u64();
-
-            let page_mask = self.page_size.as_u64() - 1;
-            let page_up = self.page_size + ((cur_addr - 1) & !page_mask) - cur_addr;
-            let mut cur_page: Address = (start.as_u64() & !page_mask).into();
-
-            let instant = Instant::now();
-            let mut read = 0;
-
-            let (start_buf, end_buf) =
-                out.split_at_mut(std::cmp::min(page_up.as_usize(), out.len()));
-
-            for b in [start_buf, end_buf].iter_mut() {
-                let page_iter = b.chunks_mut(self.page_size.as_usize());
-                for chunk in page_iter {
-                    let page = match self.try_page_with_time(cur_addr.into(), instant) {
-                        Err((page, address, time)) => {
-                            read_fn(cur_page, page)?;
-                            *address = cur_page;
-                            *time = instant;
-                            page
-                        }
-                        Ok(page) => page,
-                    };
-                    let copy_start = (cur_addr & page_mask) as usize;
-                    chunk.copy_from_slice(&page[copy_start..(copy_start + chunk.len())]);
-                    read += chunk.len();
-
-                    cur_addr += chunk.len() as u64;
-                    cur_page += self.page_size;
-                }
+            let page_size = self.page_size;
+            let aligned_addr = addr.as_page_aligned(page_size);
+            match self.try_page_with_time(addr, Instant::now()) {
+                Ok(page) => Ok(CacheEntry {
+                    valid: true,
+                    address: aligned_addr,
+                    buf: page,
+                }),
+                Err((page, _, _)) => Ok(CacheEntry {
+                    valid: false,
+                    address: aligned_addr,
+                    buf: page,
+                }),
             }
-
-            Ok(read)
         }
     }
 
-    fn cache_page(&mut self, addr: Address, page_type: PageType, src: &[u8]) {
-        if self.page_mask & page_type != PageType::UNKNOWN {
-            let page_index = self.page_index(addr);
-            self.page_from_index(page_index).copy_from_slice(src);
-            self.address[page_index] = addr;
-            self.time[page_index] = Instant::now();
+    fn validate_page(&mut self, addr: Address, page_type: PageType) {
+        if !(self.page_mask & page_type).is_empty() {
+            let idx = self.page_index(addr);
+            let aligned_addr = addr.as_page_aligned(self.page_size);
+            let page_info = self.page_and_info_from_index(idx);
+            *page_info.1 = aligned_addr;
+            *page_info.2 = Instant::now();
         }
     }
 
-    fn invalidate_pages(&mut self, mut addr: Address, page_type: PageType, src: &[u8]) {
-        if self.page_mask & page_type != PageType::UNKNOWN {
-            addr = addr.as_page_aligned(self.page_size);
-            for i in (0..src.len()).step_by(self.page_size.as_usize()) {
-                let cur_addr = addr + Length::from(i);
-                let page_index = self.page_index(cur_addr);
-                if self.address[page_index].as_page_aligned(self.page_size) == cur_addr {
-                    self.address[page_index] = Address::from(!0_u64);
-                }
-            }
+    fn invalidate_page(&mut self, addr: Address, page_type: PageType) {
+        if !(self.page_mask & page_type).is_empty() {
+            let idx = self.page_index(addr);
+            let page_info = self.page_and_info_from_index(idx);
+            *page_info.1 = Address::null();
         }
     }
 }

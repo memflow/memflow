@@ -3,7 +3,7 @@ use std::time::Instant;
 use flow_core::*;
 
 fn main() {
-    let mut conn = match flow_qemu_procfs::Memory::new() {
+    let mut conn = match flow_qemu_procfs::Memory::new(mem::cache::TimedCache::none_cache()) {
         Ok(br) => br,
         Err(e) => {
             println!("couldn't open memory read context: {:?}", e);
@@ -12,7 +12,7 @@ fn main() {
     };
 
     let mut mem = vec![0; 8];
-    conn.phys_read_raw_into(Address::from(0x1000), &mut mem)
+    conn.phys_read_raw_into(Address::from(0x1000), mem::PageType::NONE, &mut mem)
         .unwrap();
     println!("Received memory: {:?}", mem);
 
@@ -20,7 +20,7 @@ fn main() {
     let mut counter = 0;
     loop {
         let mut buf = vec![0; 0x1000];
-        conn.phys_read_raw_into(Address::from(0x1000), &mut buf)
+        conn.phys_read_raw_into(Address::from(0x1000), mem::PageType::NONE, &mut buf)
             .unwrap();
 
         counter += 1;

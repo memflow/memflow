@@ -5,7 +5,8 @@ authors = ["ko1N <ko1N1337@gmail.com>"]
 edition = "2018"
 
 [lib]
-name = "flow_derive"
+test = false
+bench = false
 proc-macro = true
 
 [dependencies]

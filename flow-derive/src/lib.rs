@@ -15,8 +15,10 @@ pub fn virtual_memory_trait_derive(input: TokenStream) -> TokenStream {
 
     let name = &input.ident;
 
+    let (impl_generics, type_generics, _) = input.generics.split_for_impl();
+
     let expanded = quote! {
-        impl crate::mem::AccessVirtualMemory for #name {
+        impl #impl_generics crate::mem::AccessVirtualMemory for #name #type_generics {
             fn virt_read_raw_into(
                 &mut self,
                 arch: Architecture,

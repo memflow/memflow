@@ -38,8 +38,7 @@ pub fn init_bridge(argv: &ArgMatches) -> Result<BridgeClient> {
                 if argv.is_present("machine") {
                     machines
                         .iter()
-                        .filter(|m| m.name.as_ref().unwrap() == argv.value_of("machine").unwrap())
-                        .nth(0)
+                        .find(|m| m.name.as_ref().unwrap() == argv.value_of("machine").unwrap())
                         .ok_or_else(|| {
                             std::io::Error::new(std::io::ErrorKind::Other, "machine not found")
                         })

@@ -4,11 +4,11 @@ use crate::kernel::StartBlock;
 
 use byteorder::{ByteOrder, LittleEndian};
 use dataview::Pod;
-use log::{debug, trace};
+use log::debug;
 use pelite::image::IMAGE_DOS_HEADER;
 
 use flow_core::address::{Address, Length};
-use flow_core::arch::{self, Architecture};
+use flow_core::arch;
 use flow_core::mem::AccessVirtualMemory;
 
 pub fn find_with_va<T: AccessVirtualMemory>(
@@ -56,13 +56,12 @@ pub fn find_with_va<T: AccessVirtualMemory>(
                     i * arch::x64::page_size().as_usize()
                 )
             })
-            .filter(|(i, _, _)| {
+            .find(|(i, _, _)| {
                 let probe_addr =
                     Address::from(va_base + (*i as u64) * arch::x64::page_size().as_u64());
                 let name = probe_pe_header(mem, start_block, probe_addr).unwrap_or_default();
                 name == "ntoskrnl.exe"
             })
-            .nth(0)
             .ok_or_else(|| {
                 Error::new("find_x64_with_va: unable to locate ntoskrnl.exe via va hint")
             })

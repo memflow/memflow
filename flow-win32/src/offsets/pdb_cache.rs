@@ -1,7 +1,6 @@
 use crate::error::{Error, Result};
 use log::warn;
 
-use dirs;
 use log::info;
 use pdb::PDB;
 use std::fs;
@@ -9,7 +8,6 @@ use std::fs::File;
 use std::path::PathBuf;
 
 use clap::ArgMatches;
-use duma;
 
 use crate::kernel::ntos::Win32GUID;
 

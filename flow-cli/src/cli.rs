@@ -1,4 +1,3 @@
-use std::error::Error;
 use std::io::{self, Write};
 
 use flow_core::*;
@@ -166,7 +165,7 @@ where
                 self.module = None;
             }
             Err(e) => {
-                println!("unable to open process '{}': {}", args[1], e.description());
+                println!("unable to open process '{}': {:?}", args[1], e);
                 self.process = None;
                 self.module = None;
             }
@@ -228,7 +227,7 @@ where
                 self.module = Some(m);
             }
             Err(e) => {
-                println!("unable to open module '{}': {}", args[1], e.description());
+                println!("unable to open module '{}': {:?}", args[1], e);
                 self.module = None;
             }
         }
@@ -297,7 +296,7 @@ fn execute_command<T>(selfptr: &mut T, cmds: &[Command<T>], line: &str) {
     let tokens = line.split(' ').collect::<Vec<_>>();
     match find_command(selfptr, cmds, tokens) {
         Ok(_) => (),
-        Err(e) => println!("error: {}", e.description()),
+        Err(e) => println!("error: {:?}", e),
     };
 }
 

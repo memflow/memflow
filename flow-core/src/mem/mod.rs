@@ -1,4 +1,7 @@
+pub mod cache;
 pub mod vat;
+
+pub use cache::*;
 
 use crate::address::{Address, Length};
 use crate::arch::Architecture;
@@ -10,6 +13,25 @@ use std::mem::MaybeUninit;
 
 use dataview::Pod;
 
+bitflags! {
+    pub struct PageType: u8 {
+        const UNKNOWN = 0;
+        const PAGE_TABLE = 1;
+        const WRITEABLE = 2;
+        const READ_ONLY = 3;
+    }
+}
+
+impl PageType {
+    pub fn from_writeable_bit(writeable: bool) -> Self {
+        if writeable {
+            PageType::WRITEABLE
+        } else {
+            PageType::READ_ONLY
+        }
+    }
+}
+
 // TODO:
 // - check endianess here and return an error
 // - better would be to convert endianess with word alignment from addr
@@ -17,29 +39,54 @@ use dataview::Pod;
 // generic traits
 pub trait AccessPhysicalMemory {
     // read
-    fn phys_read_raw_into(&mut self, addr: Address, out: &mut [u8]) -> Result<()>;
+    fn phys_read_raw_into(
+        &mut self,
+        addr: Address,
+        page_type: PageType,
+        out: &mut [u8],
+    ) -> Result<()>;
 
-    fn phys_read_into<T: Pod + ?Sized>(&mut self, addr: Address, out: &mut T) -> Result<()> {
-        self.phys_read_raw_into(addr, out.as_bytes_mut())
+    fn phys_read_into<T: Pod + ?Sized>(
+        &mut self,
+        addr: Address,
+        page_type: PageType,
+        out: &mut T,
+    ) -> Result<()> {
+        self.phys_read_raw_into(addr, page_type, out.as_bytes_mut())
     }
 
-    fn phys_read_raw(&mut self, addr: Address, len: Length) -> Result<Vec<u8>> {
+    fn phys_read_raw(
+        &mut self,
+        addr: Address,
+        page_type: PageType,
+        len: Length,
+    ) -> Result<Vec<u8>> {
         let mut buf = vec![0u8; len.as_usize()];
-        self.phys_read_raw_into(addr, &mut *buf)?;
+        self.phys_read_raw_into(addr, page_type, &mut *buf)?;
         Ok(buf)
     }
 
-    fn phys_read<T: Pod + Sized>(&mut self, addr: Address) -> Result<T> {
+    /// # Safety
+    ///
+    /// this function will overwrite the contents of 'obj' so we can just allocate an unitialized memory section.
+    /// this function should only be used with [repr(C)] structs.
+    #[allow(clippy::uninit_assumed_init)]
+    fn phys_read<T: Pod + Sized>(&mut self, page_type: PageType, addr: Address) -> Result<T> {
         let mut obj: T = unsafe { MaybeUninit::uninit().assume_init() };
-        self.phys_read_into(addr, &mut obj)?;
+        self.phys_read_into(addr, page_type, &mut obj)?;
         Ok(obj)
     }
 
     // write
-    fn phys_write_raw(&mut self, addr: Address, data: &[u8]) -> Result<()>;
+    fn phys_write_raw(&mut self, addr: Address, page_type: PageType, data: &[u8]) -> Result<()>;
 
-    fn phys_write<T: Pod + ?Sized>(&mut self, addr: Address, data: &T) -> Result<()> {
-        self.phys_write_raw(addr, data.as_bytes())
+    fn phys_write<T: Pod + ?Sized>(
+        &mut self,
+        addr: Address,
+        page_type: PageType,
+        data: &T,
+    ) -> Result<()> {
+        self.phys_write_raw(addr, page_type, data.as_bytes())
     }
 }
 
@@ -75,6 +122,11 @@ pub trait AccessVirtualMemory {
         Ok(buf)
     }
 
+    /// # Safety
+    ///
+    /// this function will overwrite the contents of 'obj' so we can just allocate an unitialized memory section.
+    /// this function should only be used with [repr(C)] structs.
+    #[allow(clippy::uninit_assumed_init)]
     fn virt_read<T: Pod + Sized>(
         &mut self,
         arch: Architecture,
@@ -192,7 +244,7 @@ impl<'a, T: AccessVirtualMemory> VirtualMemoryContext<'a, T> {
         match self.proc_arch.bits() {
             64 => self.virt_read_addr64(addr),
             32 => self.virt_read_addr32(addr),
-            _ => return Err(Error::new("invalid instruction set")),
+            _ => Err(Error::new("invalid instruction set")),
         }
     }
 
@@ -201,7 +253,7 @@ impl<'a, T: AccessVirtualMemory> VirtualMemoryContext<'a, T> {
     pub fn virt_read_cstr(&mut self, addr: Address, len: Length) -> Result<String> {
         let mut buf = vec![0; len.as_usize()];
         self.virt_read_raw_into(addr, &mut buf)?;
-        if let Some((n, _)) = buf.iter().enumerate().filter(|(_, c)| **c == 0_u8).nth(0) {
+        if let Some((n, _)) = buf.iter().enumerate().find(|(_, c)| **c == 0_u8) {
             buf.truncate(n);
         }
         let v = CString::new(buf)?;

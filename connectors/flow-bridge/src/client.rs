@@ -57,7 +57,7 @@ fn connect_tcp(path: &str, opts: Vec<&str>) -> Result<BridgeClient> {
 
     info!("tcp connection established -> {}", path);
 
-    if opts.iter().filter(|&&o| o == "nodelay").nth(0).is_some() {
+    if opts.iter().any(|&o| o == "nodelay") {
         info!("trying to set TCP_NODELAY on socket");
         stream.set_nodelay(true).unwrap();
     }
@@ -97,7 +97,7 @@ impl BridgeClient {
         let path = url
             .path()
             .split(',')
-            .nth(0)
+            .next()
             .ok_or_else(|| Error::new("invalid url"))?;
         let opts = url.path().split(',').skip(1).collect::<Vec<_>>();
 
@@ -119,7 +119,7 @@ impl BridgeClient {
 
 impl AccessPhysicalMemory for BridgeClient {
     // physRead @0 (address :UInt64, length :UInt64) -> (data :Data);
-    fn phys_read_raw_into(&mut self, addr: Address, out: &mut [u8]) -> Result<()> {
+    fn phys_read_raw_into(&mut self, addr: Address, _: PageType, out: &mut [u8]) -> Result<()> {
         trace!("phys_read_raw_into({:?}, {:?})", addr, out.len());
 
         let mut request = self.bridge.phys_read_request();
@@ -141,7 +141,7 @@ impl AccessPhysicalMemory for BridgeClient {
     }
 
     // physWrite @1 (address :UInt64, data: Data) -> (length :UInt64);
-    fn phys_write_raw(&mut self, addr: Address, data: &[u8]) -> Result<()> {
+    fn phys_write_raw(&mut self, addr: Address, _: PageType, data: &[u8]) -> Result<()> {
         trace!("phys_write_raw({:?})", addr);
 
         let mut request = self.bridge.phys_write_request();

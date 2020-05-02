@@ -1,5 +1,3 @@
-use log::info;
-
 use flow_core::*;
 use flow_derive::*;
 
@@ -14,11 +12,21 @@ impl Memory {
 }
 
 impl AccessPhysicalMemory for Memory {
-    fn phys_read_raw_into(&mut self, addr: Address, out: &mut [u8]) -> Result<()> {
+    fn phys_read_raw_into(
+        &mut self,
+        _addr: Address,
+        _page_type: mem::PageType,
+        _out: &mut [u8],
+    ) -> Result<()> {
         Ok(())
     }
 
-    fn phys_write_raw(&mut self, addr: Address, data: &[u8]) -> Result<()> {
+    fn phys_write_raw(
+        &mut self,
+        _addr: Address,
+        _page_type: mem::PageType,
+        _data: &[u8],
+    ) -> Result<()> {
         Ok(())
     }
 }

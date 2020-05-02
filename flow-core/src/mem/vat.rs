@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests;
 
-use crate::error::{Error, Result};
+use crate::error::Result;
 
 use crate::address::{Address, Length};
 use crate::arch::Architecture;
@@ -48,13 +48,27 @@ pub fn virt_write_raw<T: AccessPhysicalMemory>(
     addr: Address,
     data: &[u8],
 ) -> Result<()> {
-    let tr = arch.virt_to_phys(mem, dtb, addr)?;
-    if tr.address.is_null() {
-        // TODO: add more debug info
-        Err(Error::new(
-            "virt_write(): unable to resolve physical address",
-        ))
+    let page_size = arch.page_size();
+    let aligned_len = (addr + page_size).as_page_aligned(page_size) - addr;
+
+    if aligned_len.as_usize() >= data.len() {
+        let tr = arch.virt_to_phys(mem, dtb, addr)?;
+        mem.phys_write_raw(tr.address, tr.page.page_type, data)?;
     } else {
-        mem.phys_write_raw(tr.address, tr.page.page_type, data)
+        let mut base = addr;
+
+        let (mut start_buf, mut end_buf) =
+            data.split_at(std::cmp::min(aligned_len.as_usize(), data.len()));
+
+        for i in [start_buf, end_buf].iter_mut() {
+            for chunk in i.chunks(page_size.as_usize()) {
+                if let Ok(tr) = arch.virt_to_phys(mem, dtb, base) {
+                    mem.phys_write_raw(tr.address, tr.page.page_type, chunk)?;
+                }
+                base += Length::from(chunk.len());
+            }
+        }
     }
+
+    Ok(())
 }

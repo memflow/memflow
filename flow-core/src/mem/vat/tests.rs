@@ -14,8 +14,9 @@ impl AccessPhysicalMemory for Vec<u8> {
         Ok(())
     }
 
-    fn phys_write_raw(&mut self, _addr: Address, _page_type: PageType, _data: &[u8]) -> Result<()> {
-        Err(Error::new("phys_write not implemented"))
+    fn phys_write_raw(&mut self, addr: Address, _page_type: PageType, data: &[u8]) -> Result<()> {
+        self[addr.as_usize()..(addr.as_usize() + data.len())].copy_from_slice(&data);
+        Ok(())
     }
 }
 
@@ -61,6 +62,24 @@ fn test_virt_read_small() {
 }
 
 #[test]
+fn test_virt_write_small() {
+    let mut buf = vec![0u8; 256];
+    let mut input = vec![0u8; buf.len()];
+    for (i, item) in input.iter_mut().enumerate() {
+        *item = i as u8;
+    }
+    buf.virt_write(
+        Architecture::Null,
+        Address::from(0),
+        Address::from(0),
+        &input[..],
+    )
+    .unwrap();
+    assert_eq!(buf.len(), input.len());
+    assert_eq!(buf, input);
+}
+
+#[test]
 fn test_virt_read_small_shifted() {
     let mut buf = vec![0u8; 256];
     for (i, item) in buf.iter_mut().enumerate() {
@@ -77,6 +96,24 @@ fn test_virt_read_small_shifted() {
     .unwrap();
     assert_eq!(buf[128..].to_vec().len(), out.len());
     assert_eq!(buf[128..].to_vec(), out);
+}
+
+#[test]
+fn test_virt_write_small_shifted() {
+    let mut buf = vec![0u8; 256];
+    let mut input = vec![0u8; buf.len() - 128];
+    for (i, item) in input.iter_mut().enumerate() {
+        *item = i as u8;
+    }
+    buf.virt_write(
+        Architecture::Null,
+        Address::from(0),
+        Address::from(128),
+        &input[..],
+    )
+    .unwrap();
+    assert_eq!(buf[128..].to_vec().len(), input.len());
+    assert_eq!(buf[128..].to_vec(), input);
 }
 
 #[test]
@@ -99,6 +136,24 @@ fn test_virt_read_medium() {
 }
 
 #[test]
+fn test_virt_write_medium() {
+    let mut buf = vec![0u8; 0x1000];
+    let mut input = vec![0u8; buf.len()];
+    for (i, item) in input.iter_mut().enumerate() {
+        *item = i as u8;
+    }
+    buf.virt_write(
+        Architecture::Null,
+        Address::from(0),
+        Address::from(0),
+        &input[..],
+    )
+    .unwrap();
+    assert_eq!(buf.len(), input.len());
+    assert_eq!(buf, input);
+}
+
+#[test]
 fn test_virt_read_medium_shifted() {
     let mut buf = vec![0u8; 0x1000];
     for (i, item) in buf.iter_mut().enumerate() {
@@ -115,6 +170,24 @@ fn test_virt_read_medium_shifted() {
     .unwrap();
     assert_eq!(buf[0x100..].to_vec().len(), out.len());
     assert_eq!(buf[0x100..].to_vec(), out);
+}
+
+#[test]
+fn test_virt_write_medium_shifted() {
+    let mut buf = vec![0u8; 0x1000];
+    let mut input = vec![0u8; buf.len() - 0x100];
+    for (i, item) in input.iter_mut().enumerate() {
+        *item = i as u8;
+    }
+    buf.virt_write(
+        Architecture::Null,
+        Address::from(0),
+        Address::from(0x100),
+        &input[..],
+    )
+    .unwrap();
+    assert_eq!(buf[0x100..].to_vec().len(), input.len());
+    assert_eq!(buf[0x100..].to_vec(), input);
 }
 
 #[test]
@@ -137,6 +210,24 @@ fn test_virt_read_big() {
 }
 
 #[test]
+fn test_virt_write_big() {
+    let mut buf = vec![0u8; 16 * 0x1000];
+    let mut input = vec![0u8; buf.len()];
+    for (i, item) in input.iter_mut().enumerate() {
+        *item = i as u8;
+    }
+    buf.virt_write(
+        Architecture::Null,
+        Address::from(0),
+        Address::from(0),
+        &input[..],
+    )
+    .unwrap();
+    assert_eq!(buf.len(), input.len());
+    assert_eq!(buf, input);
+}
+
+#[test]
 fn test_virt_read_big_shifted() {
     let mut buf = vec![0u8; 16 * 0x1000];
     for (i, item) in buf.iter_mut().enumerate() {
@@ -153,4 +244,22 @@ fn test_virt_read_big_shifted() {
     .unwrap();
     assert_eq!(buf[0x100..].to_vec().len(), out.len());
     assert_eq!(buf[0x100..].to_vec(), out);
+}
+
+#[test]
+fn test_virt_write_big_shifted() {
+    let mut buf = vec![0u8; 16 * 0x1000];
+    let mut input = vec![0u8; buf.len() - 0x100];
+    for (i, item) in input.iter_mut().enumerate() {
+        *item = i as u8;
+    }
+    buf.virt_write(
+        Architecture::Null,
+        Address::from(0),
+        Address::from(0x100),
+        &input[..],
+    )
+    .unwrap();
+    assert_eq!(buf[0x100..].to_vec().len(), input.len());
+    assert_eq!(buf[0x100..].to_vec(), input);
 }

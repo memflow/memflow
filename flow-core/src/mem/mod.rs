@@ -32,18 +32,6 @@ impl PageType {
     }
 }
 
-pub trait MemCache {
-    fn cached_read<F: FnMut(Address, &mut [u8]) -> Result<()>>(
-        &mut self,
-        start: Address,
-        page_type: PageType,
-        out: &mut [u8],
-        read_fn: F,
-    ) -> Result<usize>;
-    fn cache_page(&mut self, addr: Address, page_type: PageType, src: &[u8]);
-    fn invalidate_pages(&mut self, addr: Address, page_type: PageType, src: &[u8]);
-}
-
 // TODO:
 // - check endianess here and return an error
 // - better would be to convert endianess with word alignment from addr

@@ -8,9 +8,9 @@ extern crate flow_qemu_procfs;
 extern crate flow_win32;
 extern crate rand;
 
-use flow_core::address::{Address, Length};
+use flow_core::address::Address;
 use flow_core::arch::Architecture;
-use flow_core::mem::{AccessPhysicalMemory, AccessVirtualMemory, PageType, TimedCache};
+use flow_core::mem::{AccessPhysicalMemory, AccessVirtualMemory, TimedCache};
 
 use flow_qemu_procfs::Memory;
 
@@ -87,13 +87,7 @@ fn vat_test<T: AccessVirtualMemory + AccessPhysicalMemory>(
 }
 
 fn create_mem() -> Memory<TimedCache> {
-    Memory::new(TimedCache::new(
-        100,
-        0x200,
-        Length::from_kb(4),
-        PageType::PAGE_TABLE | PageType::READ_ONLY,
-    ))
-    .unwrap()
+    Memory::new(TimedCache::default()).unwrap()
 }
 
 fn translate_module(bench: &mut Bencher) {

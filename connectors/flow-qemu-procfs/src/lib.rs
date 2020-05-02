@@ -9,14 +9,14 @@ use std::io::{Read, Seek, SeekFrom, Write};
 const LENGTH_2GB: Length = Length::from_gb(2);
 
 #[derive(AccessVirtualMemory)]
-pub struct Memory<T: mem::MemCache + Clone> {
+pub struct Memory<T: mem::PageCache + Clone> {
     pub pid: i32,
     pub map: procfs::process::MemoryMap,
     file: File,
     cache: T,
 }
 
-impl<T: mem::MemCache + Clone> Clone for Memory<T> {
+impl<T: mem::PageCache + Clone> Clone for Memory<T> {
     fn clone(&self) -> Self {
         let new_file = OpenOptions::new()
             .read(true)
@@ -33,7 +33,7 @@ impl<T: mem::MemCache + Clone> Clone for Memory<T> {
     }
 }
 
-impl<T: mem::MemCache + Clone> Memory<T> {
+impl<T: mem::PageCache + Clone> Memory<T> {
     pub fn new(cache: T) -> Result<Self> {
         let prcs = procfs::process::all_processes().map_err(Error::new)?;
         let prc = prcs
@@ -68,7 +68,7 @@ impl<T: mem::MemCache + Clone> Memory<T> {
 }
 
 // TODO: evaluate use of memmap
-impl<T: mem::MemCache + Clone> AccessPhysicalMemory for Memory<T> {
+impl<T: mem::PageCache + Clone> AccessPhysicalMemory for Memory<T> {
     fn phys_read_raw_into(
         &mut self,
         addr: Address,

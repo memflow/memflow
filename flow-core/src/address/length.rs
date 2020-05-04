@@ -58,6 +58,8 @@ impl From<Address> for Length {
 }
 
 impl Length {
+    pub const ZERO: Length = Length { 0: 0 };
+
     pub const fn zero() -> Self {
         Length { 0: 0 }
     }

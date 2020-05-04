@@ -5,8 +5,8 @@ pub mod x86_pae;
 use crate::error::{Error, Result};
 use std::convert::TryFrom;
 
-use crate::address::{Address, Length};
-use crate::mem::{AccessPhysicalMemory, PageType};
+use crate::address::{Address, Length, PhysicalAddress};
+use crate::mem::AccessPhysicalMemory;
 
 /// ByteOrder definitions
 ///
@@ -40,16 +40,6 @@ impl TryFrom<u8> for Architecture {
             _ => Err(Error::new("Invalid Architecture value")),
         }
     }
-}
-
-pub struct Page {
-    pub page_type: PageType,
-    // TODO: others...
-}
-
-pub struct PhysicalTranslation {
-    pub address: Address,
-    pub page: Page,
 }
 
 #[allow(dead_code)]
@@ -104,14 +94,9 @@ impl Architecture {
         mem: &mut T,
         dtb: Address,
         addr: Address,
-    ) -> Result<PhysicalTranslation> {
+    ) -> Result<PhysicalAddress> {
         match self {
-            Architecture::Null => Ok(PhysicalTranslation {
-                address: addr,
-                page: Page {
-                    page_type: PageType::UNKNOWN,
-                },
-            }),
+            Architecture::Null => Ok(PhysicalAddress::from(addr)),
             Architecture::X64 => x64::virt_to_phys(mem, dtb, addr),
             Architecture::X86Pae => x86_pae::virt_to_phys(mem, dtb, addr),
             Architecture::X86 => x86::virt_to_phys(mem, dtb, addr),

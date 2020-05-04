@@ -5,10 +5,9 @@ use masks::*;
 use crate::error::{Error, Result};
 use byteorder::{ByteOrder, LittleEndian};
 
-use super::{Page, PhysicalTranslation};
-use crate::address::{Address, Length};
+use crate::address::{Address, Length, Page, PageType, PhysicalAddress};
 use crate::arch;
-use crate::mem::{AccessPhysicalMemory, PageType};
+use crate::mem::AccessPhysicalMemory;
 
 pub fn bits() -> u8 {
     64
@@ -26,9 +25,21 @@ pub fn len_addr() -> Length {
     Length::from(8)
 }
 
+// assume a 4kb page-table page for pt reads
 fn read_pt_address<T: AccessPhysicalMemory>(mem: &mut T, addr: Address) -> Result<Address> {
     let mut buf = vec![0; len_addr().as_usize()];
-    mem.phys_read_raw_into(addr, PageType::PAGE_TABLE, &mut buf)?;
+    let page_size = Length::from_kb(4);
+    mem.phys_read_raw_into(
+        PhysicalAddress {
+            address: addr,
+            page: Some(Page {
+                page_type: PageType::PAGE_TABLE,
+                page_base: addr.as_page_aligned(page_size),
+                page_size: page_size,
+            }),
+        },
+        &mut buf,
+    )?;
     Ok(Address::from(LittleEndian::read_u64(&buf)))
 }
 
@@ -37,7 +48,7 @@ pub fn virt_to_phys<T: AccessPhysicalMemory>(
     mem: &mut T,
     dtb: Address,
     addr: Address,
-) -> Result<PhysicalTranslation> {
+) -> Result<PhysicalAddress> {
     let pml4e = read_pt_address(
         mem,
         Address::from((dtb.as_u64() & make_bit_mask(12, 51)) | pml4_index_bits!(addr.as_u64())),
@@ -56,13 +67,17 @@ pub fn virt_to_phys<T: AccessPhysicalMemory>(
 
     if is_large_page!(pdpte.as_u64()) {
         //trace!("found 1gb page");
-        return Ok(PhysicalTranslation {
-            address: Address::from(
-                (pdpte.as_u64() & make_bit_mask(30, 51)) | (addr.as_u64() & make_bit_mask(0, 29)),
-            ),
-            page: Page {
+        let addr = Address::from(
+            (pdpte.as_u64() & make_bit_mask(30, 51)) | (addr.as_u64() & make_bit_mask(0, 29)),
+        );
+        let page_size = Length::from_gb(1);
+        return Ok(PhysicalAddress {
+            address: addr,
+            page: Some(Page {
                 page_type: PageType::from_writeable_bit(is_writeable_page!(pdpte.as_u64())),
-            },
+                page_base: addr.as_page_aligned(page_size),
+                page_size: page_size,
+            }),
         });
     }
 
@@ -76,13 +91,17 @@ pub fn virt_to_phys<T: AccessPhysicalMemory>(
 
     if is_large_page!(pgd.as_u64()) {
         //trace!("found 2mb page");
-        return Ok(PhysicalTranslation {
-            address: Address::from(
-                (pgd.as_u64() & make_bit_mask(21, 51)) | (addr.as_u64() & make_bit_mask(0, 20)),
-            ),
-            page: Page {
+        let addr = Address::from(
+            (pgd.as_u64() & make_bit_mask(21, 51)) | (addr.as_u64() & make_bit_mask(0, 20)),
+        );
+        let page_size = Length::from_mb(2);
+        return Ok(PhysicalAddress {
+            address: addr,
+            page: Some(Page {
                 page_type: PageType::from_writeable_bit(is_writeable_page!(pgd.as_u64())),
-            },
+                page_base: addr.as_page_aligned(page_size),
+                page_size: page_size,
+            }),
         });
     }
 
@@ -95,14 +114,18 @@ pub fn virt_to_phys<T: AccessPhysicalMemory>(
     }
 
     //trace!("found 4kb page");
-    Ok(PhysicalTranslation {
-        address: Address::from(
-            (pte.as_u64() & make_bit_mask(12, 51)) | (addr.as_u64() & make_bit_mask(0, 11)),
-        ),
-        page: Page {
+    let addr = Address::from(
+        (pte.as_u64() & make_bit_mask(12, 51)) | (addr.as_u64() & make_bit_mask(0, 11)),
+    );
+    let page_size = Length::from_kb(4);
+    return Ok(PhysicalAddress {
+        address: addr,
+        page: Some(Page {
             page_type: PageType::from_writeable_bit(is_writeable_page!(pte.as_u64())),
-        },
-    })
+            page_base: addr.as_page_aligned(page_size),
+            page_size: page_size,
+        }),
+    });
 }
 
 /*

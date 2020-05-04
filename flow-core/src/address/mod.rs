@@ -2,6 +2,10 @@
 pub mod addr;
 pub mod length;
 pub mod offset;
+
+pub mod page;
+pub mod phys_addr;
+
 pub mod pointer32;
 pub mod pointer64;
 
@@ -9,6 +13,10 @@ pub mod pointer64;
 pub use addr::*;
 pub use length::*;
 pub use offset::*;
+
+pub use page::*;
+pub use phys_addr::*;
+
 pub use pointer32::*;
 pub use pointer64::*;
 

@@ -4,27 +4,8 @@ pub mod timed_cache;
 pub use cached_memory_access::*;
 pub use timed_cache::*;
 
+use crate::address::{Length, Address, PageType};
 use crate::error::Result;
-use crate::{Address, Length};
-
-bitflags! {
-    pub struct PageType: u8 {
-        const UNKNOWN = 0b0000_0001;
-        const PAGE_TABLE = 0b0000_0010;
-        const WRITEABLE = 0b0000_0100;
-        const READ_ONLY = 0b0000_1000;
-    }
-}
-
-impl PageType {
-    pub fn from_writeable_bit(writeable: bool) -> Self {
-        if writeable {
-            PageType::WRITEABLE
-        } else {
-            PageType::READ_ONLY
-        }
-    }
-}
 
 // TODO: overhaul this mess, we should not throw with mutable memory around like this
 pub struct CacheEntry<'a> {

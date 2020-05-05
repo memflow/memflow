@@ -50,7 +50,7 @@ impl<'a, T: AccessPhysicalMemory> AccessPhysicalMemory for CachedMemoryAccess<'a
             }
         } else {
             // page is not cacheable (no page info)
-            return self.mem.phys_read_raw_into(addr, out);
+            self.mem.phys_read_raw_into(addr, out)
         }
     }
 

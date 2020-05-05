@@ -35,7 +35,7 @@ fn read_pt_address<T: AccessPhysicalMemory>(mem: &mut T, addr: Address) -> Resul
             page: Some(Page {
                 page_type: PageType::PAGE_TABLE,
                 page_base: addr.as_page_aligned(page_size),
-                page_size: page_size,
+                page_size,
             }),
         },
         &mut buf,
@@ -76,7 +76,7 @@ pub fn virt_to_phys<T: AccessPhysicalMemory>(
             page: Some(Page {
                 page_type: PageType::from_writeable_bit(is_writeable_page!(pdpte.as_u64())),
                 page_base: addr.as_page_aligned(page_size),
-                page_size: page_size,
+                page_size,
             }),
         });
     }
@@ -100,7 +100,7 @@ pub fn virt_to_phys<T: AccessPhysicalMemory>(
             page: Some(Page {
                 page_type: PageType::from_writeable_bit(is_writeable_page!(pgd.as_u64())),
                 page_base: addr.as_page_aligned(page_size),
-                page_size: page_size,
+                page_size,
             }),
         });
     }
@@ -118,14 +118,14 @@ pub fn virt_to_phys<T: AccessPhysicalMemory>(
         (pte.as_u64() & make_bit_mask(12, 51)) | (addr.as_u64() & make_bit_mask(0, 11)),
     );
     let page_size = Length::from_kb(4);
-    return Ok(PhysicalAddress {
+    Ok(PhysicalAddress {
         address: addr,
         page: Some(Page {
             page_type: PageType::from_writeable_bit(is_writeable_page!(pte.as_u64())),
             page_base: addr.as_page_aligned(page_size),
-            page_size: page_size,
+            page_size,
         }),
-    });
+    })
 }
 
 /*

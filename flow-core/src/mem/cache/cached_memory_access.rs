@@ -5,7 +5,7 @@ use super::PageCache;
 use crate::address::{Address, PhysicalAddress};
 use crate::arch::Architecture;
 use crate::mem::{AccessPhysicalMemory, AccessVirtualMemory};
-use crate::page_chunks::PageChunksMut;
+use crate::page_chunks::{PageChunks, PageChunksMut};
 use crate::vat;
 
 // TODO: derive virtual reads here
@@ -29,7 +29,11 @@ impl<'a, T: AccessPhysicalMemory> AccessPhysicalMemory for CachedMemoryAccess<'a
             match self.cache.cached_page_type(page.page_type) {
                 Err(_) => self.mem.phys_read_raw_into(addr, out),
                 Ok(_) => {
-                    for (paddr, chunk) in PageChunksMut::create_from(out, addr.address, std::cmp::min(page.page_size, self.cache.page_size())) {
+                    for (paddr, chunk) in PageChunksMut::create_from(
+                        out,
+                        addr.address,
+                        self.cache.page_size(), /* std::cmp::min(page.page_size, self.cache.page_size())*/
+                    ) {
                         let cached_page = self.cache.cached_page(paddr);
                         // read into page buffer and set addr
                         if !cached_page.is_valid() {
@@ -62,7 +66,9 @@ impl<'a, T: AccessPhysicalMemory> AccessPhysicalMemory for CachedMemoryAccess<'a
     fn phys_write_raw(&mut self, addr: PhysicalAddress, data: &[u8]) -> Result<()> {
         // TODO: implement writeback to cache
         if let Some(page) = addr.page {
-            self.cache.invalidate_page(addr.address, page.page_type);
+            for (paddr, _) in PageChunks::create_from(data, addr.address, self.cache.page_size()) {
+                self.cache.invalidate_page(paddr, page.page_type);
+            }
         }
         self.mem.phys_write_raw(addr, data)
     }

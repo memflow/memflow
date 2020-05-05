@@ -4,7 +4,7 @@ pub mod timed_cache;
 pub use cached_memory_access::*;
 pub use timed_cache::*;
 
-use crate::address::{Length, Address, PageType};
+use crate::address::{Address, Length, PageType};
 use crate::error::Result;
 
 // TODO: overhaul this mess, we should not throw with mutable memory around like this

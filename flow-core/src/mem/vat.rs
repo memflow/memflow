@@ -3,8 +3,9 @@ mod tests;
 
 use crate::error::Result;
 
-use crate::address::{Address, Length};
+use crate::address::Address;
 use crate::arch::Architecture;
+use crate::iter::page_chunks::{PageChunks, PageChunksMut};
 use crate::mem::AccessPhysicalMemory;
 
 #[allow(unused)]
@@ -15,33 +16,12 @@ pub fn virt_read_raw_into<T: AccessPhysicalMemory>(
     addr: Address,
     out: &mut [u8],
 ) -> Result<()> {
-    let page_size = arch.page_size();
-    let aligned_len = (addr + page_size).as_page_aligned(page_size) - addr;
-
-    if aligned_len.as_usize() >= out.len() {
-        if let Ok(paddr) = arch.virt_to_phys(mem, dtb, addr) {
-            mem.phys_read_raw_into(paddr, out)?;
+    for (vaddr, chunk) in PageChunksMut::create_from(out, addr, arch.page_size()) {
+        if let Ok(paddr) = arch.virt_to_phys(mem, dtb, vaddr) {
+            mem.phys_read_raw_into(paddr, chunk)?;
         } else {
-            for v in out.iter_mut() {
+            for v in chunk.iter_mut() {
                 *v = 0u8;
-            }
-        }
-    } else {
-        let mut base = addr;
-
-        let (mut start_buf, mut end_buf) =
-            out.split_at_mut(std::cmp::min(aligned_len.as_usize(), out.len()));
-
-        for i in [start_buf, end_buf].iter_mut() {
-            for chunk in i.chunks_mut(page_size.as_usize()) {
-                if let Ok(paddr) = arch.virt_to_phys(mem, dtb, base) {
-                    mem.phys_read_raw_into(paddr, chunk)?;
-                } else {
-                    for v in chunk.iter_mut() {
-                        *v = 0u8;
-                    }
-                }
-                base += Length::from(chunk.len());
             }
         }
     }
@@ -57,26 +37,9 @@ pub fn virt_write_raw<T: AccessPhysicalMemory>(
     addr: Address,
     data: &[u8],
 ) -> Result<()> {
-    let page_size = arch.page_size();
-    let aligned_len = (addr + page_size).as_page_aligned(page_size) - addr;
-
-    if aligned_len.as_usize() >= data.len() {
-        if let Ok(paddr) = arch.virt_to_phys(mem, dtb, addr) {
-            mem.phys_write_raw(paddr, data)?;
-        }
-    } else {
-        let mut base = addr;
-
-        let (mut start_buf, mut end_buf) =
-            data.split_at(std::cmp::min(aligned_len.as_usize(), data.len()));
-
-        for i in [start_buf, end_buf].iter_mut() {
-            for chunk in i.chunks(page_size.as_usize()) {
-                if let Ok(paddr) = arch.virt_to_phys(mem, dtb, base) {
-                    mem.phys_write_raw(paddr, chunk)?;
-                }
-                base += Length::from(chunk.len());
-            }
+    for (vaddr, chunk) in PageChunks::create_from(data, addr, arch.page_size()) {
+        if let Ok(paddr) = arch.virt_to_phys(mem, dtb, vaddr) {
+            mem.phys_write_raw(paddr, chunk)?;
         }
     }
 

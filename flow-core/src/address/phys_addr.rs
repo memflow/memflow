@@ -59,10 +59,6 @@ impl PhysicalAddress {
     pub const fn as_usize(&self) -> usize {
         self.address.as_usize()
     }
-
-    pub const fn as_page_aligned(&self, page_size: Length) -> Address {
-        self.address.as_page_aligned(page_size)
-    }
 }
 
 impl Default for PhysicalAddress {

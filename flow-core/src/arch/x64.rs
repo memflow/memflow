@@ -67,15 +67,15 @@ pub fn virt_to_phys<T: AccessPhysicalMemory>(
 
     if is_large_page!(pdpte.as_u64()) {
         //trace!("found 1gb page");
-        let addr = Address::from(
+        let phys_addr = Address::from(
             (pdpte.as_u64() & make_bit_mask(30, 51)) | (addr.as_u64() & make_bit_mask(0, 29)),
         );
         let page_size = Length::from_gb(1);
         return Ok(PhysicalAddress {
-            address: addr,
+            address: phys_addr,
             page: Some(Page {
                 page_type: PageType::from_writeable_bit(is_writeable_page!(pdpte.as_u64())),
-                page_base: addr.as_page_aligned(page_size),
+                page_base: phys_addr.as_page_aligned(page_size),
                 page_size,
             }),
         });
@@ -91,15 +91,15 @@ pub fn virt_to_phys<T: AccessPhysicalMemory>(
 
     if is_large_page!(pgd.as_u64()) {
         //trace!("found 2mb page");
-        let addr = Address::from(
+        let phys_addr = Address::from(
             (pgd.as_u64() & make_bit_mask(21, 51)) | (addr.as_u64() & make_bit_mask(0, 20)),
         );
         let page_size = Length::from_mb(2);
         return Ok(PhysicalAddress {
-            address: addr,
+            address: phys_addr,
             page: Some(Page {
                 page_type: PageType::from_writeable_bit(is_writeable_page!(pgd.as_u64())),
-                page_base: addr.as_page_aligned(page_size),
+                page_base: phys_addr.as_page_aligned(page_size),
                 page_size,
             }),
         });
@@ -114,15 +114,15 @@ pub fn virt_to_phys<T: AccessPhysicalMemory>(
     }
 
     //trace!("found 4kb page");
-    let addr = Address::from(
+    let phys_addr = Address::from(
         (pte.as_u64() & make_bit_mask(12, 51)) | (addr.as_u64() & make_bit_mask(0, 11)),
     );
     let page_size = Length::from_kb(4);
     Ok(PhysicalAddress {
-        address: addr,
+        address: phys_addr,
         page: Some(Page {
             page_type: PageType::from_writeable_bit(is_writeable_page!(pte.as_u64())),
-            page_base: addr.as_page_aligned(page_size),
+            page_base: phys_addr.as_page_aligned(page_size),
             page_size,
         }),
     })

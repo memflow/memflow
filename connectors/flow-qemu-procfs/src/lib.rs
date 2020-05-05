@@ -66,12 +66,7 @@ impl Memory {
 
 // TODO: evaluate use of memmap
 impl AccessPhysicalMemory for Memory {
-    fn phys_read_raw_into(
-        &mut self,
-        addr: Address,
-        _page_type: PageType,
-        out: &mut [u8],
-    ) -> Result<()> {
+    fn phys_read_raw_into(&mut self, addr: PhysicalAddress, out: &mut [u8]) -> Result<()> {
         let ofs = self.map.address.0 + {
             if addr.as_u64() <= LENGTH_2GB.as_u64() {
                 addr.as_u64()
@@ -84,7 +79,7 @@ impl AccessPhysicalMemory for Memory {
         Ok(())
     }
 
-    fn phys_write_raw(&mut self, addr: Address, _page_type: PageType, data: &[u8]) -> Result<()> {
+    fn phys_write_raw(&mut self, addr: PhysicalAddress, data: &[u8]) -> Result<()> {
         let ofs = self.map.address.0 + {
             if addr.as_u64() <= LENGTH_2GB.as_u64() {
                 addr.as_u64()

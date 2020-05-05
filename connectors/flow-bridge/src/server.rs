@@ -17,7 +17,7 @@ use tokio::net::UnixListener;
 use capnp::{self, capability::Promise};
 use capnp_rpc::{pry, rpc_twoparty_capnp, twoparty, RpcSystem};
 
-use flow_core::address::{Address, Length};
+use flow_core::address::{Address, Length, PhysicalAddress};
 use flow_core::arch::Architecture;
 use flow_core::mem::*;
 use flow_core::vat;
@@ -164,12 +164,12 @@ impl<T: AccessPhysicalMemory + 'static> bridge::Server for BridgeServer<T> {
         let memcp = self.mem.clone();
         let memory = &mut memcp.borrow_mut();
 
-        let address = Address::from(pry!(params.get()).get_address());
+        let address = PhysicalAddress::from(Address::from(pry!(params.get()).get_address()));
         let length = Length::from(pry!(params.get()).get_length());
 
         let mut data = vec![0; length.as_usize()];
         memory
-            .phys_read_raw_into(address, PageType::UNKNOWN, &mut data)
+            .phys_read_raw_into(address, &mut data)
             .unwrap_or_else(|_| ());
         results.get().set_data(&data);
 
@@ -185,11 +185,11 @@ impl<T: AccessPhysicalMemory + 'static> bridge::Server for BridgeServer<T> {
         let memcp = self.mem.clone();
         let memory = &mut memcp.borrow_mut();
 
-        let address = Address::from(pry!(params.get()).get_address());
+        let address = PhysicalAddress::from(Address::from(pry!(params.get()).get_address()));
         let data = pry!(pry!(params.get()).get_data());
 
         memory
-            .phys_write_raw(address, PageType::UNKNOWN, &data.to_vec())
+            .phys_write_raw(address, &data.to_vec())
             .unwrap_or_else(|_| ());
         results.get().set_length(data.len() as u64);
 

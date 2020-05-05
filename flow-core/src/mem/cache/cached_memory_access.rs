@@ -31,7 +31,8 @@ impl<'a, T: AccessPhysicalMemory> AccessPhysicalMemory for CachedMemoryAccess<'a
                 Ok(cached_page) => {
                     // read into page buffer and set addr
                     if !cached_page.is_valid() {
-                        self.mem.phys_read_raw_into(addr, cached_page.buf)?;
+                        self.mem
+                            .phys_read_raw_into(cached_page.address.into(), cached_page.buf)?;
                     }
 
                     // copy page into out buffer
@@ -41,9 +42,8 @@ impl<'a, T: AccessPhysicalMemory> AccessPhysicalMemory for CachedMemoryAccess<'a
 
                     // update update page if it wasnt valid before
                     // this is done here due to borrowing constraints
-                    let cached_addr = cached_page.address;
                     if !cached_page.is_valid() {
-                        self.cache.validate_page(cached_addr, page.page_type);
+                        self.cache.validate_page(addr.address, page.page_type);
                     }
                     Ok(())
                 }

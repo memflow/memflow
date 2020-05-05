@@ -36,27 +36,31 @@ impl PhysicalAddress {
         }
     }
 
-    pub const fn is_null(self) -> bool {
+    pub const fn is_null(&self) -> bool {
         self.address.is_null()
     }
 
-    pub fn as_len(self) -> Length {
+    pub fn as_addr(&self) -> Address {
+        self.address
+    }
+
+    pub fn as_len(&self) -> Length {
         self.address.as_len()
     }
 
-    pub const fn as_u32(self) -> u32 {
+    pub const fn as_u32(&self) -> u32 {
         self.address.as_u32()
     }
 
-    pub const fn as_u64(self) -> u64 {
+    pub const fn as_u64(&self) -> u64 {
         self.address.as_u64()
     }
 
-    pub const fn as_usize(self) -> usize {
+    pub const fn as_usize(&self) -> usize {
         self.address.as_usize()
     }
 
-    pub const fn as_page_aligned(self, page_size: Length) -> Address {
+    pub const fn as_page_aligned(&self, page_size: Length) -> Address {
         self.address.as_page_aligned(page_size)
     }
 }

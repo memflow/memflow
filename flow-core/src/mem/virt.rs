@@ -1,4 +1,4 @@
-use crate::address::{Address, Length};
+use crate::address::{Address, Length, Page};
 use crate::arch::Architecture;
 use crate::Result;
 
@@ -23,6 +23,8 @@ pub trait AccessVirtualMemory {
         addr: Address,
         data: &[u8],
     ) -> Result<()>;
+
+    fn virt_page_info(&mut self, arch: Architecture, dtb: Address, addr: Address) -> Result<Page>;
 
     // read helpers
     fn virt_read_into<T: Pod + ?Sized>(

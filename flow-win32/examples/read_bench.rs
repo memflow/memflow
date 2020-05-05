@@ -6,7 +6,7 @@ extern crate rand;
 use std::io::Write;
 use std::time::{Duration, Instant};
 
-use flow_core::{AccessVirtualMemory, CachedMemoryAccess, TimedCache};
+use flow_core::{AccessPhysicalMemory, AccessVirtualMemory, CachedMemoryAccess, TimedCache};
 use flow_core::{OsProcess, OsProcessModule};
 use flow_win32::{Win32, Win32Module, Win32Offsets, Win32Process};
 
@@ -86,31 +86,27 @@ fn rwtest<T: AccessVirtualMemory>(
     );
 }
 
-fn main() -> flow_core::Result<()> {
-    let mut mem_sys = Memory::new()?;
-    let mut cache = TimedCache::default();
-    let mut mem = CachedMemoryAccess::with(&mut mem_sys, &mut cache);
-
-    let os = Win32::try_with(&mut mem)?;
+fn read_bench<T: AccessPhysicalMemory + AccessVirtualMemory>(mem: &mut T) -> flow_core::Result<()> {
+    let os = Win32::try_with(mem)?;
     let offsets = Win32Offsets::try_with_guid(&os.kernel_guid())?;
 
     let mut rng = CurRng::seed_from_u64(0);
 
-    let proc_list = os.eprocess_list(&mut mem, &offsets)?;
+    let proc_list = os.eprocess_list(mem, &offsets)?;
 
     loop {
         let proc = Win32Process::try_with_eprocess(
-            &mut mem,
+            mem,
             &os,
             &offsets,
             proc_list[rng.gen_range(0, proc_list.len())],
         )?;
 
         let mod_list: Vec<Win32Module> = proc
-            .peb_list(&mut mem)?
+            .peb_list(mem)?
             .iter()
             .filter_map(|&x| {
-                if let Ok(module) = Win32Module::try_with_peb(&mut mem, &proc, &offsets, x) {
+                if let Ok(module) = Win32Module::try_with_peb(mem, &proc, &offsets, x) {
                     if module.size() > 0x1000.into() {
                         Some(module)
                     } else {
@@ -132,7 +128,7 @@ fn main() -> flow_core::Result<()> {
             );
 
             rwtest(
-                &mut mem,
+                mem,
                 &proc,
                 tmod,
                 &[0x10000, 0x1000, 0x100, 0x10, 0x8],
@@ -143,6 +139,21 @@ fn main() -> flow_core::Result<()> {
             break;
         }
     }
+
+    Ok(())
+}
+
+fn main() -> flow_core::Result<()> {
+    let mut mem_sys = Memory::new()?;
+
+    println!("Benchmarking uncached reads:");
+    read_bench(&mut mem_sys).unwrap();
+
+    println!();
+    println!("Benchmarking cached reads:");
+    let mut cache = TimedCache::default();
+    let mut mem_cached = CachedMemoryAccess::with(&mut mem_sys, &mut cache);
+    read_bench(&mut mem_cached).unwrap();
 
     Ok(())
 }

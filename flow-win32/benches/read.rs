@@ -99,44 +99,94 @@ fn initialize_ctx() -> flow_core::Result<(Memory, Win32Process, Win32Module)> {
     Err("No module found!".into())
 }
 
-fn read_test(bench: &mut Bencher, chunk_size: usize, chunks: usize) {
+fn read_test(bench: &mut Bencher, chunk_size: usize, chunks: usize, enable_cache: bool) {
     let (mut mem_sys, proc, tmod) = initialize_ctx().unwrap();
     let mut cache = TimedCache::default();
-    let mut mem = CachedMemoryAccess::with(&mut mem_sys, &mut cache);
+    let mut mem_cache = CachedMemoryAccess::with(&mut mem_sys, &mut cache);
 
-    bench.iter(|| {
-        rwtest(&mut mem, &proc, &tmod, &[chunk_size], &[chunks], chunk_size);
-    });
+    if enable_cache {
+        bench.iter(|| {
+            rwtest(
+                &mut mem_cache,
+                &proc,
+                &tmod,
+                &[chunk_size],
+                &[chunks],
+                chunk_size,
+            );
+        });
+    } else {
+        bench.iter(|| {
+            rwtest(
+                &mut mem_sys,
+                &proc,
+                &tmod,
+                &[chunk_size],
+                &[chunks],
+                chunk_size,
+            );
+        });
+    }
 
     bench.bytes = chunk_size as u64;
 }
 
 fn read_0x8_x1(bench: &mut Bencher) {
-    read_test(bench, 8, 1);
+    read_test(bench, 8, 1, false);
 }
 
 fn read_0x10_x1(bench: &mut Bencher) {
-    read_test(bench, 0x10, 1);
+    read_test(bench, 0x10, 1, false);
 }
 
 fn read_0x100_x1(bench: &mut Bencher) {
-    read_test(bench, 0x100, 1);
+    read_test(bench, 0x100, 1, false);
 }
 
 fn read_0x1000_x1(bench: &mut Bencher) {
-    read_test(bench, 0x1000, 1);
+    read_test(bench, 0x1000, 1, false);
 }
 
 fn read_0x10000_x1(bench: &mut Bencher) {
-    read_test(bench, 0x10000, 1);
+    read_test(bench, 0x10000, 1, false);
 }
 
 benchmark_group!(
-    benches,
+    bench_nocache,
     read_0x8_x1,
     read_0x10_x1,
     read_0x100_x1,
     read_0x1000_x1,
     read_0x10000_x1
 );
-benchmark_main!(benches);
+
+fn read_cache_0x8_x1(bench: &mut Bencher) {
+    read_test(bench, 8, 1, true);
+}
+
+fn read_cache_0x10_x1(bench: &mut Bencher) {
+    read_test(bench, 0x10, 1, true);
+}
+
+fn read_cache_0x100_x1(bench: &mut Bencher) {
+    read_test(bench, 0x100, 1, true);
+}
+
+fn read_cache_0x1000_x1(bench: &mut Bencher) {
+    read_test(bench, 0x1000, 1, true);
+}
+
+fn read_cache_0x10000_x1(bench: &mut Bencher) {
+    read_test(bench, 0x10000, 1, true);
+}
+
+benchmark_group!(
+    bench_cache,
+    read_cache_0x8_x1,
+    read_cache_0x10_x1,
+    read_cache_0x100_x1,
+    read_cache_0x1000_x1,
+    read_cache_0x10000_x1
+);
+
+benchmark_main!(bench_nocache, bench_cache);

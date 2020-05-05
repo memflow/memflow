@@ -2,7 +2,7 @@ use crate::error::Result;
 
 use super::PageCache;
 
-use crate::address::{Address, PhysicalAddress};
+use crate::address::{Address, Page, PhysicalAddress};
 use crate::arch::Architecture;
 use crate::mem::{AccessPhysicalMemory, AccessVirtualMemory};
 use crate::page_chunks::PageChunksMut;
@@ -29,7 +29,11 @@ impl<'a, T: AccessPhysicalMemory> AccessPhysicalMemory for CachedMemoryAccess<'a
             match self.cache.cached_page_type(page.page_type) {
                 Err(_) => self.mem.phys_read_raw_into(addr, out),
                 Ok(_) => {
-                    for (paddr, chunk) in PageChunksMut::create_from(out, addr.address, std::cmp::min(page.page_size, self.cache.page_size())) {
+                    for (paddr, chunk) in PageChunksMut::create_from(
+                        out,
+                        addr.address,
+                        std::cmp::min(page.page_size, self.cache.page_size()),
+                    ) {
                         let cached_page = self.cache.cached_page(paddr);
                         // read into page buffer and set addr
                         if !cached_page.is_valid() {
@@ -91,5 +95,9 @@ where
         data: &[u8],
     ) -> Result<()> {
         vat::virt_write_raw(self, arch, dtb, addr, data)
+    }
+
+    fn virt_page_info(&mut self, arch: Architecture, dtb: Address, addr: Address) -> Result<Page> {
+        vat::virt_page_info(self, arch, dtb, addr)
     }
 }

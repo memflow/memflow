@@ -35,6 +35,10 @@ impl AccessVirtualMemory for Vec<u8> {
     ) -> Result<()> {
         virt_write_raw(self, arch, dtb, addr, data)
     }
+
+    fn virt_page_info(&mut self, arch: Architecture, dtb: Address, addr: Address) -> Result<Page> {
+        virt_page_info(self, arch, dtb, addr)
+    }
 }
 
 #[test]

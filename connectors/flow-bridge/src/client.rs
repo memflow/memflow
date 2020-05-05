@@ -15,7 +15,7 @@ use tokio::net::UnixStream;
 use capnp::capability::Promise;
 use capnp_rpc::{pry, rpc_twoparty_capnp, twoparty, RpcSystem};
 
-use flow_core::address::{Address, Length, PhysicalAddress};
+use flow_core::address::{Address, Length, Page, PhysicalAddress};
 use flow_core::arch::Architecture;
 use flow_core::mem::*;
 
@@ -268,5 +268,15 @@ impl AccessVirtualMemory for BridgeClient {
         debug!("virt_write_raw({:?}, {:?}, {:?})", arch, dtb, addr);
         self.virt_write_chunk(arch, dtb, addr, data)?;
         Ok(())
+    }
+
+    fn virt_page_info(
+        &mut self,
+        _arch: Architecture,
+        _dtb: Address,
+        _addr: Address,
+    ) -> Result<Page> {
+        // TODO:
+        Err(Error::new("not implemented yet"))
     }
 }

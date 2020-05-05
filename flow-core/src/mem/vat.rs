@@ -1,9 +1,9 @@
 #[cfg(test)]
 mod tests;
 
-use crate::error::Result;
+use crate::error::{Error, Result};
 
-use crate::address::{Address, Length};
+use crate::address::{Address, Length, Page};
 use crate::arch::Architecture;
 use crate::mem::AccessPhysicalMemory;
 
@@ -81,4 +81,17 @@ pub fn virt_write_raw<T: AccessPhysicalMemory>(
     }
 
     Ok(())
+}
+
+#[allow(unused)]
+pub fn virt_page_info<T: AccessPhysicalMemory>(
+    mem: &mut T,
+    arch: Architecture,
+    dtb: Address,
+    addr: Address,
+) -> Result<Page> {
+    let paddr = arch.virt_to_phys(mem, dtb, addr)?;
+    Ok(paddr
+        .page
+        .ok_or_else(|| Error::new("page info not found"))?)
 }

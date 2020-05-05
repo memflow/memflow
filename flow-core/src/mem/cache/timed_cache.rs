@@ -79,25 +79,32 @@ impl Default for TimedCache {
 }
 
 impl PageCache for TimedCache {
-    fn cached_page(&mut self, addr: Address, page_type: PageType) -> Result<CacheEntry> {
-        // TODO: optimize internal functions
+    fn page_size(&mut self) -> Length {
+        self.page_size
+    }
+
+    fn cached_page_type(&mut self, page_type: PageType) -> Result<()> {
         if (self.page_mask & page_type).is_empty() {
             Err(Error::new("page is not cached"))
         } else {
-            let page_size = self.page_size;
-            let aligned_addr = addr.as_page_aligned(page_size);
-            match self.try_page_with_time(addr, Instant::now()) {
-                Ok(page) => Ok(CacheEntry {
-                    valid: true,
-                    address: aligned_addr,
-                    buf: page,
-                }),
-                Err((page, _, _)) => Ok(CacheEntry {
-                    valid: false,
-                    address: aligned_addr,
-                    buf: page,
-                }),
-            }
+            Ok(())
+        }
+    }
+
+    fn cached_page(&mut self, addr: Address) -> CacheEntry {
+        let page_size = self.page_size;
+        let aligned_addr = addr.as_page_aligned(page_size);
+        match self.try_page_with_time(addr, Instant::now()) {
+            Ok(page) => CacheEntry {
+                valid: true,
+                address: aligned_addr,
+                buf: page,
+            },
+            Err((page, _, _)) => CacheEntry {
+                valid: false,
+                address: aligned_addr,
+                buf: page,
+            },
         }
     }
 

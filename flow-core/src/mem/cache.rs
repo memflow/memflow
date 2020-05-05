@@ -5,7 +5,7 @@ pub use cached_memory_access::*;
 pub use timed_cache::*;
 
 use crate::error::Result;
-use crate::Address;
+use crate::{Address, Length};
 
 bitflags! {
     pub struct PageType: u8 {
@@ -52,7 +52,9 @@ impl<'a> CacheEntry<'a> {
 }
 
 pub trait PageCache {
-    fn cached_page(&mut self, addr: Address, page_type: PageType) -> Result<CacheEntry>;
+    fn page_size(&mut self) -> Length;
+    fn cached_page_type(&mut self, page_type: PageType) -> Result<()>;
+    fn cached_page(&mut self, addr: Address) -> CacheEntry;
     fn validate_page(&mut self, addr: Address, page_type: PageType);
     fn invalidate_page(&mut self, addr: Address, page_type: PageType);
 }

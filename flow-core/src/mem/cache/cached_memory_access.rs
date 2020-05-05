@@ -1,6 +1,7 @@
 use super::*;
 use crate::arch::Architecture;
 use crate::mem::{AccessPhysicalMemory, AccessVirtualMemory};
+use crate::page_chunks::PageChunksMut;
 use crate::vat;
 
 // TODO: derive virtual reads here
@@ -25,29 +26,38 @@ impl<'a, T: AccessPhysicalMemory> AccessPhysicalMemory for CachedMemoryAccess<'a
         out: &mut [u8],
     ) -> Result<()> {
         // try read from cache or fall back
-        let cached_page = self.cache.cached_page(addr, page_type);
-        match cached_page {
-            Err(_) => self.mem.phys_read_raw_into(addr, page_type, out),
-            Ok(cached_page) => {
-                // read into page buffer and set addr
-                if !cached_page.is_valid() {
-                    self.mem
-                        .phys_read_raw_into(cached_page.address, page_type, cached_page.buf)?;
-                }
+        match self.cache.cached_page_type(page_type) {
+            Err(_) => {
+                self.mem.phys_read_raw_into(addr, page_type, out)?;
+            }
+            Ok(_) => {
+                for (paddr, chunk) in PageChunksMut::create_from(out, addr, self.cache.page_size())
+                {
+                    let cached_page = self.cache.cached_page(paddr);
+                    // read into page buffer and set addr
+                    if !cached_page.is_valid() {
+                        self.mem.phys_read_raw_into(
+                            cached_page.address,
+                            page_type,
+                            cached_page.buf,
+                        )?;
+                    }
 
-                // copy page into out buffer
-                let start = (addr - cached_page.address).as_usize();
-                out.copy_from_slice(&cached_page.buf[start..(start + out.len())]);
+                    // copy page into out buffer
+                    let start = (paddr - cached_page.address).as_usize();
+                    chunk.copy_from_slice(&cached_page.buf[start..(start + chunk.len())]);
 
-                // update update page if it wasnt valid before
-                // this is done here due to borrowing constraints
-                let cached_addr = cached_page.address;
-                if !cached_page.is_valid() {
-                    self.cache.validate_page(cached_addr, page_type);
+                    // update update page if it wasnt valid before
+                    // this is done here due to borrowing constraints
+                    let cached_addr = cached_page.address;
+                    if !cached_page.is_valid() {
+                        self.cache.validate_page(cached_addr, page_type);
+                    }
                 }
-                Ok(())
             }
         }
+
+        Ok(())
     }
 
     fn phys_write_raw(&mut self, addr: Address, page_type: PageType, data: &[u8]) -> Result<()> {

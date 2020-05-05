@@ -64,7 +64,7 @@ impl Address {
 
     pub const fn as_page_aligned(self, page_size: Length) -> Address {
         Address {
-            0: self.0 & (!(page_size.as_u64() - 1)),
+            0: self.0 - self.0 % page_size.as_u64(),
         }
     }
 }

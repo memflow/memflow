@@ -1,6 +1,7 @@
 use super::{CacheEntry, PageCache, PageType};
 use crate::address::{Address, Length};
 use crate::{Error, Result};
+use std::alloc::{alloc_zeroed, Layout};
 
 use coarsetime::{Duration, Instant};
 
@@ -22,10 +23,17 @@ impl TimedCache {
         page_size: Length,
         page_mask: PageType,
     ) -> Self {
+
+        let layout = Layout::from_size_align(cache_size * page_size.as_usize(), page_size.as_usize()).unwrap();
+
+        let cache = unsafe {
+            Box::from_raw(std::slice::from_raw_parts_mut(alloc_zeroed(layout), layout.size()))
+        };
+
         Self {
             address: vec![(!0_u64).into(); cache_size].into_boxed_slice(),
             time: vec![Instant::now(); cache_size].into_boxed_slice(),
-            cache: vec![0; cache_size * page_size.as_usize()].into_boxed_slice(),
+            cache,
             cache_time: Duration::from_millis(cache_time_millis),
             page_size,
             page_mask,

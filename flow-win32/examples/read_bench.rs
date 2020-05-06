@@ -7,7 +7,7 @@ use std::io::Write;
 use std::time::{Duration, Instant};
 
 use flow_core::{AccessPhysicalMemory, AccessVirtualMemory, CachedMemoryAccess, TimedCache};
-use flow_core::{OsProcess, OsProcessModule};
+use flow_core::{Length, OsProcess, OsProcessModule, PageType};
 use flow_win32::{Win32, Win32Module, Win32Offsets, Win32Process};
 
 use flow_qemu_procfs::Memory;
@@ -86,8 +86,10 @@ fn rwtest<T: AccessVirtualMemory>(
     );
 }
 
-fn read_bench<T: AccessPhysicalMemory + AccessVirtualMemory>(mem: &mut T) -> flow_core::Result<()> {
-    let os = Win32::try_with(mem)?;
+fn read_bench<T: AccessPhysicalMemory + AccessVirtualMemory>(
+    mem: &mut T,
+    os: Win32,
+) -> flow_core::Result<()> {
     let offsets = Win32Offsets::try_with_guid(&os.kernel_guid())?;
 
     let mut rng = CurRng::seed_from_u64(0);
@@ -145,15 +147,21 @@ fn read_bench<T: AccessPhysicalMemory + AccessVirtualMemory>(mem: &mut T) -> flo
 
 fn main() -> flow_core::Result<()> {
     let mut mem_sys = Memory::new()?;
+    let os = Win32::try_with(&mut mem_sys)?;
 
     println!("Benchmarking uncached reads:");
-    read_bench(&mut mem_sys).unwrap();
+    read_bench(&mut mem_sys, os.clone()).unwrap();
 
     println!();
     println!("Benchmarking cached reads:");
-    let mut cache = TimedCache::default();
+    let mut cache = TimedCache::new(
+        os.start_block.arch,
+        Length::from_mb(32),
+        Duration::from_millis(1000).into(),
+        PageType::PAGE_TABLE | PageType::READ_ONLY,
+    );
     let mut mem_cached = CachedMemoryAccess::with(&mut mem_sys, &mut cache);
-    read_bench(&mut mem_cached).unwrap();
+    read_bench(&mut mem_cached, os).unwrap();
 
     Ok(())
 }

@@ -26,35 +26,33 @@ impl<'a, T: AccessPhysicalMemory> AccessPhysicalMemory for CachedMemoryAccess<'a
     fn phys_read_raw_into(&mut self, addr: PhysicalAddress, out: &mut [u8]) -> Result<()> {
         if let Some(page) = addr.page {
             // try read from cache or fall back
-            match self.cache.cached_page_type(page.page_type) {
-                Err(_) => self.mem.phys_read_raw_into(addr, out),
-                Ok(_) => {
-                    for (paddr, chunk) in PageChunksMut::create_from(
-                        out,
-                        addr.address,
-                        self.cache.page_size(), /* std::cmp::min(page.page_size, self.cache.page_size())*/
-                    ) {
-                        let cached_page = self.cache.cached_page(paddr);
-                        // read into page buffer and set addr
-                        if !cached_page.is_valid() {
-                            self.mem
-                                .phys_read_raw_into(cached_page.address.into(), cached_page.buf)?;
-                        }
-
-                        // copy page into out buffer
-                        // TODO: reowkr this logic, no comptuations needed
-                        let start = (paddr - cached_page.address).as_usize();
-                        chunk.copy_from_slice(&cached_page.buf[start..(start + chunk.len())]);
-
-                        // update update page if it wasnt valid before
-                        // this is done here due to borrowing constraints
-                        if !cached_page.is_valid() {
-                            self.cache.validate_page(paddr, page.page_type);
-                        }
+            if self.cache.is_cached_page_type(page.page_type) {
+                for (paddr, chunk) in PageChunksMut::create_from(
+                    out,
+                    addr.address,
+                    self.cache.page_size(), /* std::cmp::min(page.page_size, self.cache.page_size())*/
+                ) {
+                    let cached_page = self.cache.cached_page_mut(paddr);
+                    // read into page buffer and set addr
+                    if !cached_page.is_valid() {
+                        self.mem
+                            .phys_read_raw_into(cached_page.address.into(), cached_page.buf)?;
                     }
-                    Ok(())
+
+                    // copy page into out buffer
+                    // TODO: reowkr this logic, no comptuations needed
+                    let start = (paddr - cached_page.address).as_usize();
+                    chunk.copy_from_slice(&cached_page.buf[start..(start + chunk.len())]);
+
+                    // update update page if it wasnt valid before
+                    // this is done here due to borrowing constraints
+                    if !cached_page.is_valid() {
+                        self.cache.validate_page(paddr, page.page_type);
+                    }
                 }
-            }?;
+            } else {
+                self.mem.phys_read_raw_into(addr, out)?
+            }
         } else {
             // page is not cacheable (no page info)
             self.mem.phys_read_raw_into(addr, out)?;

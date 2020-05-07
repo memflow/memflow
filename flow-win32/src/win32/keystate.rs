@@ -71,7 +71,7 @@ impl Keyboard {
         state: &KeyboardState,
     ) -> Result<()> {
         let mut virt_mem = self.user_process.virt_mem(mem);
-        virt_mem.virt_write(self.key_state_addr, &*state.buffer)?;
+        virt_mem.virt_write_from(self.key_state_addr, &*state.buffer)?;
         Ok(())
     }
 }

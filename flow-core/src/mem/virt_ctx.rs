@@ -69,12 +69,14 @@ impl<'a, T: AccessVirtualMemory> VirtualMemoryContext<'a, T> {
         self.mem.virt_read(self.sys_arch, self.dtb, addr)
     }
 
-    pub fn virt_write_raw(&mut self, addr: Address, data: &[u8]) -> Result<()> {
-        self.mem.virt_write_raw(self.sys_arch, self.dtb, addr, data)
+    pub fn virt_write_raw_from(&mut self, addr: Address, data: &[u8]) -> Result<()> {
+        self.mem
+            .virt_write_raw_from(self.sys_arch, self.dtb, addr, data)
     }
 
-    pub fn virt_write<U: Pod + ?Sized>(&mut self, addr: Address, data: &U) -> Result<()> {
-        self.mem.virt_write(self.sys_arch, self.dtb, addr, data)
+    pub fn virt_write_from<U: Pod + ?Sized>(&mut self, addr: Address, data: &U) -> Result<()> {
+        self.mem
+            .virt_write_from(self.sys_arch, self.dtb, addr, data)
     }
 
     // custom read wrappers

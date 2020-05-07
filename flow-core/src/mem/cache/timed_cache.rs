@@ -3,7 +3,7 @@ use crate::address::{Address, Length};
 use crate::arch::Architecture;
 use std::alloc::{alloc_zeroed, Layout};
 
-use coarsetime::{Duration, Instant};
+pub use coarsetime::{Duration, Instant};
 
 // the set page_size must be smaller than the target's page_size, otherwise this would trigger UB
 #[derive(Clone)]

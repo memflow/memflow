@@ -93,7 +93,7 @@ fn translate_module(bench: &mut Bencher) {
     let (os, proc, tmod) = find_module(&mut mem_sys).unwrap();
     let mut cache = TimedCache::new(
         os.start_block.arch,
-        Length::from_mb(32),
+        Length::from_mb(2),
         Duration::from_millis(1000).into(),
         PageType::PAGE_TABLE | PageType::READ_ONLY,
     );
@@ -114,7 +114,7 @@ fn translate_module_smallrange(bench: &mut Bencher) {
     let (os, proc, tmod) = find_module(&mut mem_sys).unwrap();
     let mut cache = TimedCache::new(
         os.start_block.arch,
-        Length::from_mb(32),
+        Length::from_mb(2),
         Duration::from_millis(1000).into(),
         PageType::PAGE_TABLE | PageType::READ_ONLY,
     );

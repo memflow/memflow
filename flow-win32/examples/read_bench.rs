@@ -156,7 +156,7 @@ fn main() -> flow_core::Result<()> {
     println!("Benchmarking cached reads:");
     let mut cache = TimedCache::new(
         os.start_block.arch,
-        Length::from_mb(32),
+        Length::from_mb(2),
         Duration::from_millis(1000).into(),
         PageType::PAGE_TABLE | PageType::READ_ONLY,
     );

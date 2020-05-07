@@ -309,7 +309,12 @@ fn test_cached_mem() {
 
     assert_eq!(buf_nocache, test_buf);
 
-    let mut cache = TimedCache::default();
+    let mut cache = TimedCache::new(
+        arch,
+        Length::from_mb(2),
+        coarsetime::Duration::from_millis(100),
+        PageType::PAGE_TABLE | PageType::READ_ONLY,
+    );
     let mut mem_cache = CachedMemoryAccess::with(&mut mem, &mut cache);
     let mut buf_cache = vec![0_u8; buf_nocache.len()];
     mem_cache

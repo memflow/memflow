@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 #[macro_use]
 extern crate bencher;
 
@@ -14,7 +16,7 @@ use flow_core::mem::{AccessPhysicalMemory, AccessVirtualMemory, CachedMemoryAcce
 
 use flow_qemu_procfs::Memory;
 
-use flow_core::{OsProcess, OsProcessModule};
+use flow_core::{Length, OsProcess, OsProcessModule, PageType};
 use flow_win32::{Win32, Win32Module, Win32Offsets, Win32Process};
 
 use rand::prelude::*;
@@ -22,7 +24,7 @@ use rand::{prng::XorShiftRng as CurRng, Rng, SeedableRng};
 
 fn find_module<T: AccessPhysicalMemory + AccessVirtualMemory>(
     mem: &mut T,
-) -> flow_core::Result<(Win32Process, Win32Module)> {
+) -> flow_core::Result<(Win32, Win32Process, Win32Module)> {
     let os = Win32::try_with(mem)?;
     let offsets = Win32Offsets::try_with_guid(&os.kernel_guid())?;
 
@@ -57,7 +59,7 @@ fn find_module<T: AccessPhysicalMemory + AccessVirtualMemory>(
 
             if !mod_list.is_empty() {
                 let tmod = &mod_list[rng.gen_range(0, mod_list.len())];
-                return Ok((proc, tmod.clone()));
+                return Ok((os, proc, tmod.clone()));
             }
         }
     }
@@ -88,9 +90,14 @@ fn vat_test<T: AccessVirtualMemory + AccessPhysicalMemory>(
 
 fn translate_module(bench: &mut Bencher) {
     let mut mem_sys = Memory::new().unwrap();
-    let mut cache = TimedCache::default();
+    let (os, proc, tmod) = find_module(&mut mem_sys).unwrap();
+    let mut cache = TimedCache::new(
+        os.start_block.arch,
+        Length::from_mb(32),
+        Duration::from_millis(1000).into(),
+        PageType::PAGE_TABLE | PageType::READ_ONLY,
+    );
     let mut mem = CachedMemoryAccess::with(&mut mem_sys, &mut cache);
-    let (proc, tmod) = find_module(&mut mem).unwrap();
     vat_test(
         bench,
         &mut mem,
@@ -104,9 +111,14 @@ fn translate_module(bench: &mut Bencher) {
 
 fn translate_module_smallrange(bench: &mut Bencher) {
     let mut mem_sys = Memory::new().unwrap();
-    let mut cache = TimedCache::default();
+    let (os, proc, tmod) = find_module(&mut mem_sys).unwrap();
+    let mut cache = TimedCache::new(
+        os.start_block.arch,
+        Length::from_mb(32),
+        Duration::from_millis(1000).into(),
+        PageType::PAGE_TABLE | PageType::READ_ONLY,
+    );
     let mut mem = CachedMemoryAccess::with(&mut mem_sys, &mut cache);
-    let (proc, tmod) = find_module(&mut mem).unwrap();
     vat_test(
         bench,
         &mut mem,
@@ -120,9 +132,14 @@ fn translate_module_smallrange(bench: &mut Bencher) {
 
 fn translate_range(bench: &mut Bencher, range_start: u64, range_end: u64) {
     let mut mem_sys = Memory::new().unwrap();
-    let mut cache = TimedCache::default();
+    let (os, proc, _) = find_module(&mut mem_sys).unwrap();
+    let mut cache = TimedCache::new(
+        os.start_block.arch,
+        Length::from_mb(32),
+        Duration::from_millis(1000).into(),
+        PageType::PAGE_TABLE | PageType::READ_ONLY,
+    );
     let mut mem = CachedMemoryAccess::with(&mut mem_sys, &mut cache);
-    let (proc, _) = find_module(&mut mem).unwrap();
     vat_test(
         bench,
         &mut mem,

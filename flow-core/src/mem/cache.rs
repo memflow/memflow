@@ -5,7 +5,6 @@ pub use cached_memory_access::*;
 pub use timed_cache::*;
 
 use crate::address::{Address, Length, PageType};
-use crate::error::Result;
 
 // TODO: overhaul this mess, we should not throw with mutable memory around like this
 pub struct CacheEntry<'a> {
@@ -33,9 +32,11 @@ impl<'a> CacheEntry<'a> {
 }
 
 pub trait PageCache {
-    fn page_size(&mut self) -> Length;
-    fn cached_page_type(&mut self, page_type: PageType) -> Result<()>;
-    fn cached_page(&mut self, addr: Address) -> CacheEntry;
+    fn page_size(&self) -> Length;
+    fn is_cached_page_type(&self, page_type: PageType) -> bool;
+
+    fn cached_page_mut(&mut self, addr: Address) -> CacheEntry;
+
     fn validate_page(&mut self, addr: Address, page_type: PageType);
     fn invalidate_page(&mut self, addr: Address, page_type: PageType);
 }

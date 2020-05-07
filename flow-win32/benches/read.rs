@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 #[macro_use]
 extern crate bencher;
 
@@ -9,7 +11,7 @@ extern crate flow_win32;
 extern crate rand;
 
 use flow_core::mem::{AccessVirtualMemory, CachedMemoryAccess, TimedCache};
-use flow_core::{OsProcess, OsProcessModule};
+use flow_core::{Length, OsProcess, OsProcessModule, PageType};
 
 use flow_qemu_procfs::Memory;
 
@@ -54,7 +56,7 @@ fn rwtest<T: AccessVirtualMemory>(
     }
 }
 
-fn initialize_ctx() -> flow_core::Result<(Memory, Win32Process, Win32Module)> {
+fn initialize_ctx() -> flow_core::Result<(Memory, Win32, Win32Process, Win32Module)> {
     let mut mem = Memory::new().unwrap();
 
     let os = Win32::try_with(&mut mem).unwrap();
@@ -91,7 +93,7 @@ fn initialize_ctx() -> flow_core::Result<(Memory, Win32Process, Win32Module)> {
 
             if !mod_list.is_empty() {
                 let tmod = &mod_list[rng.gen_range(0, mod_list.len())];
-                return Ok((mem, proc, tmod.clone()));
+                return Ok((mem, os, proc, tmod.clone()));
             }
         }
     }
@@ -100,9 +102,14 @@ fn initialize_ctx() -> flow_core::Result<(Memory, Win32Process, Win32Module)> {
 }
 
 fn read_test(bench: &mut Bencher, chunk_size: usize, chunks: usize, enable_cache: bool) {
-    let (mut mem_sys, proc, tmod) = initialize_ctx().unwrap();
-    let mut cache = TimedCache::default();
-    let mut mem_cache = CachedMemoryAccess::with(&mut mem_sys, &mut cache);
+    let (mut mem, os, proc, tmod) = initialize_ctx().unwrap();
+    let mut cache = TimedCache::new(
+        os.start_block.arch,
+        Length::from_mb(32),
+        Duration::from_millis(1000).into(),
+        PageType::PAGE_TABLE | PageType::READ_ONLY,
+    );
+    let mut mem_cache = CachedMemoryAccess::with(&mut mem, &mut cache);
 
     if enable_cache {
         bench.iter(|| {
@@ -117,14 +124,7 @@ fn read_test(bench: &mut Bencher, chunk_size: usize, chunks: usize, enable_cache
         });
     } else {
         bench.iter(|| {
-            rwtest(
-                &mut mem_sys,
-                &proc,
-                &tmod,
-                &[chunk_size],
-                &[chunks],
-                chunk_size,
-            );
+            rwtest(&mut mem, &proc, &tmod, &[chunk_size], &[chunks], chunk_size);
         });
     }
 

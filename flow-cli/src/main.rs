@@ -9,9 +9,12 @@ extern crate clap;
 use clap::App;
 
 use log::Level;
+use std::time::Duration;
 
 use flow_core::*;
 use flow_core::{Error, Result};
+
+use flow_win32::*;
 
 fn main() -> Result<()> {
     let yaml = load_yaml!("cli.yml");
@@ -28,16 +31,32 @@ fn main() -> Result<()> {
     match argv.value_of("connector").unwrap_or_else(|| "bridge") {
         "bridge" => {
             let mut conn = init_bridge::init_bridge(&argv).unwrap();
-            let mut cache = TimedCache::default();
+            let os = Win32::try_with(&mut conn)?;
+
+            let mut cache = TimedCache::new(
+                os.start_block.arch,
+                Length::from_mb(32),
+                Duration::from_millis(1000).into(),
+                PageType::PAGE_TABLE | PageType::READ_ONLY,
+            );
             let mut mem = CachedMemoryAccess::with(&mut conn, &mut cache);
-            let mut win32 = Win32Interface::with(&mut mem)?;
+
+            let mut win32 = Win32Interface::with(&mut mem, os)?;
             win32.run()
         }
         "qemu_procfs" => {
             let mut conn = init_qemu_procfs::init_qemu_procfs().unwrap();
-            let mut cache = TimedCache::default();
+            let os = Win32::try_with(&mut conn)?;
+
+            let mut cache = TimedCache::new(
+                os.start_block.arch,
+                Length::from_mb(32),
+                Duration::from_millis(1000).into(),
+                PageType::PAGE_TABLE | PageType::READ_ONLY,
+            );
             let mut mem = CachedMemoryAccess::with(&mut conn, &mut cache);
-            let mut win32 = Win32Interface::with(&mut mem)?;
+
+            let mut win32 = Win32Interface::with(&mut mem, os)?;
             win32.run()
         }
         _ => Err(Error::new("the connector requested does not exist")),

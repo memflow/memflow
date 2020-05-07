@@ -1,6 +1,6 @@
 use super::{CacheEntry, PageCache, PageType};
 use crate::address::{Address, Length};
-use crate::{Error, Result};
+use crate::arch::Architecture;
 use std::alloc::{alloc_zeroed, Layout};
 
 use coarsetime::{Duration, Instant};
@@ -13,18 +13,21 @@ pub struct TimedCache {
     cache: Box<[u8]>,
     cache_time: Duration,
     page_size: Length,
-    page_mask: PageType,
+    page_type_mask: PageType,
 }
 
 impl TimedCache {
     pub fn new(
-        cache_time_millis: u64,
-        cache_size: usize,
-        page_size: Length,
-        page_mask: PageType,
+        arch: Architecture,
+        size: Length,
+        duration: Duration,
+        page_type_mask: PageType,
     ) -> Self {
+        let page_size = arch.page_size();
+        let cache_entries = size.as_usize() / page_size.as_usize();
+
         let layout =
-            Layout::from_size_align(cache_size * page_size.as_usize(), page_size.as_usize())
+            Layout::from_size_align(cache_entries * page_size.as_usize(), page_size.as_usize())
                 .unwrap();
 
         let cache = unsafe {
@@ -35,12 +38,12 @@ impl TimedCache {
         };
 
         Self {
-            address: vec![(!0_u64).into(); cache_size].into_boxed_slice(),
-            time: vec![Instant::now(); cache_size].into_boxed_slice(),
+            address: vec![(!0_u64).into(); cache_entries].into_boxed_slice(),
+            time: vec![Instant::now(); cache_entries].into_boxed_slice(),
             cache,
-            cache_time: Duration::from_millis(cache_time_millis),
+            cache_time: duration,
             page_size,
-            page_mask,
+            page_type_mask,
         }
     }
 
@@ -79,31 +82,16 @@ impl TimedCache {
     }
 }
 
-impl Default for TimedCache {
-    fn default() -> Self {
-        Self::new(
-            1000,
-            0x200,
-            Length::from_kb(4),
-            PageType::PAGE_TABLE | PageType::READ_ONLY,
-        )
-    }
-}
-
 impl PageCache for TimedCache {
-    fn page_size(&mut self) -> Length {
+    fn page_size(&self) -> Length {
         self.page_size
     }
 
-    fn cached_page_type(&mut self, page_type: PageType) -> Result<()> {
-        if (self.page_mask & page_type).is_empty() {
-            Err(Error::new("page is not cached"))
-        } else {
-            Ok(())
-        }
+    fn is_cached_page_type(&self, page_type: PageType) -> bool {
+        self.page_type_mask.contains(page_type)
     }
 
-    fn cached_page(&mut self, addr: Address) -> CacheEntry {
+    fn cached_page_mut(&mut self, addr: Address) -> CacheEntry {
         let page_size = self.page_size;
         let aligned_addr = addr.as_page_aligned(page_size);
         match self.try_page_with_time(addr, Instant::now()) {
@@ -121,7 +109,7 @@ impl PageCache for TimedCache {
     }
 
     fn validate_page(&mut self, addr: Address, page_type: PageType) {
-        if self.page_mask.contains(page_type) {
+        if self.page_type_mask.contains(page_type) {
             let idx = self.page_index(addr);
             let aligned_addr = addr.as_page_aligned(self.page_size);
             let page_info = self.page_and_info_from_index(idx);
@@ -131,7 +119,7 @@ impl PageCache for TimedCache {
     }
 
     fn invalidate_page(&mut self, addr: Address, page_type: PageType) {
-        if self.page_mask.contains(page_type) {
+        if self.page_type_mask.contains(page_type) {
             let idx = self.page_index(addr);
             let page_info = self.page_and_info_from_index(idx);
             *page_info.1 = Address::null();

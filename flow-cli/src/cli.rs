@@ -22,8 +22,7 @@ impl<'a, T> Win32Interface<'a, T>
 where
     T: AccessPhysicalMemory + AccessVirtualMemory,
 {
-    pub fn with(mem: &'a mut T) -> flow_core::Result<Self> {
-        let os = Win32::try_with(mem)?;
+    pub fn with(mem: &'a mut T, os: Win32) -> flow_core::Result<Self> {
         let offsets = Win32Offsets::try_with_guid(&os.kernel_guid())?;
         Ok(Self {
             mem,

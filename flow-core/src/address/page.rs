@@ -19,7 +19,7 @@ impl PageType {
     }
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub struct Page {
     pub page_type: PageType,
     pub page_base: Address,

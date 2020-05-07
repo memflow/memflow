@@ -1,7 +1,7 @@
 use super::{Address, Length, Page};
 
 // PhysicalAddress - represents a physical address with additional paging info
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub struct PhysicalAddress {
     pub address: Address,
     pub page: Option<Page>,

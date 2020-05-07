@@ -93,7 +93,7 @@ impl Length {
     }
 
     pub const fn from_kib(len: u64) -> Self {
-        Length { 0: len * 1024 * 8 }
+        Length { 0: len * 1024 / 8 }
     }
 
     pub const fn from_mb(len: u64) -> Self {
@@ -104,7 +104,7 @@ impl Length {
 
     pub const fn from_mib(len: u64) -> Self {
         Length {
-            0: len * 1024 * 1024 * 8,
+            0: len * 1024 * 1024 / 8,
         }
     }
 
@@ -116,7 +116,7 @@ impl Length {
 
     pub const fn from_gib(len: u64) -> Self {
         Length {
-            0: len * 1024 * 1024 * 1024 * 8,
+            0: len * 1024 * 1024 * 1024 / 8,
         }
     }
 
@@ -367,16 +367,16 @@ mod tests {
         assert_eq!(Length::from(4321).as_usize(), 4321);
         assert_eq!(Length::from_b(500), Length::from(500));
         assert_eq!(Length::from_kb(20), Length::from(20 * 1024));
-        assert_eq!(Length::from_kib(123), Length::from(123 * 1024 * 8));
+        assert_eq!(Length::from_kib(123), Length::from(123 * 1024 / 8));
         assert_eq!(Length::from_mb(20), Length::from(20 * 1024 * 1024));
-        assert_eq!(Length::from_mib(52), Length::from(52 * 1024 * 1024 * 8));
+        assert_eq!(Length::from_mib(52), Length::from(52 * 1024 * 1024 / 8));
         assert_eq!(
             Length::from_gb(20),
             Length::from(20u64 * 1024 * 1024 * 1024)
         );
         assert_eq!(
             Length::from_gib(52),
-            Length::from(52u64 * 1024 * 1024 * 1024 * 8)
+            Length::from(52u64 * 1024 * 1024 * 1024 / 8)
         );
     }
 

@@ -1,4 +1,7 @@
 
+[profile.bench]
+debug = true
+
 [workspace]
 members = [
     "flow-core",

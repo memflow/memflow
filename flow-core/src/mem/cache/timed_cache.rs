@@ -23,11 +23,15 @@ impl TimedCache {
         page_size: Length,
         page_mask: PageType,
     ) -> Self {
-
-        let layout = Layout::from_size_align(cache_size * page_size.as_usize(), page_size.as_usize()).unwrap();
+        let layout =
+            Layout::from_size_align(cache_size * page_size.as_usize(), page_size.as_usize())
+                .unwrap();
 
         let cache = unsafe {
-            Box::from_raw(std::slice::from_raw_parts_mut(alloc_zeroed(layout), layout.size()))
+            Box::from_raw(std::slice::from_raw_parts_mut(
+                alloc_zeroed(layout),
+                layout.size(),
+            ))
         };
 
         Self {

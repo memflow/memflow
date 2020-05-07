@@ -95,7 +95,10 @@ pub fn try_get_pdb(guid: &Win32GUID) -> Result<PathBuf> {
             guid.file_name,
             cache_file.to_str().unwrap_or_default()
         );
-        fs::rename(guid.file_name.clone(), &cache_file)?;
+        if !fs::rename(guid.file_name.clone(), &cache_file).is_ok() {
+            fs::copy(guid.file_name.clone(), &cache_file)?;
+            fs::remove_file(guid.file_name.clone())?;
+        }
     }
 
     Ok(cache_file)

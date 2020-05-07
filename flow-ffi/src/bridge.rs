@@ -139,4 +139,4 @@ pub unsafe extern "C" fn bridge_virt_read(
     }
 }
 
-// fn virt_write(&mut self, arch: Architecture, dtb: Address, addr: Address, data: &Vec<u8>) -> Result<Length>
+// fn virt_write_from(&mut self, arch: Architecture, dtb: Address, addr: Address, data: &Vec<u8>) -> Result<Length>

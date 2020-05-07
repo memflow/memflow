@@ -325,6 +325,44 @@ fn test_cached_mem() {
 }
 
 #[test]
+fn test_writeback() {
+    let mut mem = TestMemory::new(Length::from_mb(16));
+    let virt_size = Length::from_mb(8);
+    let mut buf_start = vec![0_u8; 64];
+    for (i, item) in buf_start.iter_mut().enumerate() {
+        *item = (i % 256) as u8;
+    }
+    let (dtb, virt_base) = mem.alloc_dtb(virt_size, &buf_start);
+    let arch = Architecture::from(Architecture::X64);
+
+    let mut cache = TimedCache::new(
+        arch,
+        Length::from_mb(2),
+        coarsetime::Duration::from_secs(100),
+        PageType::PAGE_TABLE | PageType::READ_ONLY,
+    );
+
+    let mut mem = CachedMemoryAccess::with(&mut mem, &mut cache);
+
+    let mut buf_1 = vec![0_u8; 64];
+    mem.virt_read_into(arch, dtb, virt_base, buf_1.as_mut_slice())
+        .unwrap();
+
+    assert_eq!(buf_start, buf_1);
+    buf_1[16..20].copy_from_slice(&[255, 255, 255, 255]);
+
+    mem.virt_write_from(arch, dtb, virt_base + Length::from(16), &buf_1[16..20])
+        .unwrap();
+
+    let mut buf_2 = vec![0_u8; 64];
+    mem.virt_read_into(arch, dtb, virt_base, buf_2.as_mut_slice())
+        .unwrap();
+
+    assert_eq!(buf_1, buf_2);
+    assert_ne!(buf_2, buf_start);
+}
+
+#[test]
 fn test_vtop() {
     let mut mem = TestMemory::new(Length::from_mb(512));
     let virt_size = Length::from_mb(8);
@@ -378,7 +416,7 @@ fn test_virt_write_small() {
         *item = i as u8;
     }
     let (dtb, virt_base) = mem.alloc_dtb(input.len().into(), &input);
-    mem.virt_write(Architecture::X64, dtb, virt_base, &input[..])
+    mem.virt_write_from(Architecture::X64, dtb, virt_base, &input[..])
         .unwrap();
     mem.virt_read_into(Architecture::X64, dtb, virt_base, &mut buf[..])
         .unwrap();
@@ -416,7 +454,7 @@ fn test_virt_write_small_shifted() {
         *item = i as u8;
     }
     let (dtb, virt_base) = mem.alloc_dtb(input.len().into(), &input);
-    mem.virt_write(
+    mem.virt_write_from(
         Architecture::X64,
         dtb,
         virt_base + Length::from(128),
@@ -459,7 +497,7 @@ fn test_virt_write_medium() {
         *item = i as u8;
     }
     let (dtb, virt_base) = mem.alloc_dtb(input.len().into(), &input);
-    mem.virt_write(Architecture::X64, dtb, virt_base, &input[..])
+    mem.virt_write_from(Architecture::X64, dtb, virt_base, &input[..])
         .unwrap();
     mem.virt_read_into(Architecture::X64, dtb, virt_base, &mut buf[..])
         .unwrap();
@@ -497,7 +535,7 @@ fn test_virt_write_medium_shifted() {
         *item = i as u8;
     }
     let (dtb, virt_base) = mem.alloc_dtb(input.len().into(), &input);
-    mem.virt_write(
+    mem.virt_write_from(
         Architecture::X64,
         dtb,
         virt_base + Length::from(0x100),
@@ -540,7 +578,7 @@ fn test_virt_write_big() {
         *item = i as u8;
     }
     let (dtb, virt_base) = mem.alloc_dtb(input.len().into(), &input);
-    mem.virt_write(Architecture::X64, dtb, virt_base, &input[..])
+    mem.virt_write_from(Architecture::X64, dtb, virt_base, &input[..])
         .unwrap();
     mem.virt_read_into(Architecture::X64, dtb, virt_base, &mut buf[..])
         .unwrap();
@@ -578,7 +616,7 @@ fn test_virt_write_big_shifted() {
         *item = i as u8;
     }
     let (dtb, virt_base) = mem.alloc_dtb(input.len().into(), &input);
-    mem.virt_write(
+    mem.virt_write_from(
         Architecture::X64,
         dtb,
         virt_base + Length::from(0x100),

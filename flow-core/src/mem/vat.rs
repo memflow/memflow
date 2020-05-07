@@ -30,7 +30,7 @@ pub fn virt_read_raw_into<T: AccessPhysicalMemory>(
 }
 
 #[allow(unused)]
-pub fn virt_write_raw<T: AccessPhysicalMemory>(
+pub fn virt_write_raw_from<T: AccessPhysicalMemory>(
     mem: &mut T,
     arch: Architecture,
     dtb: Address,

@@ -3,7 +3,7 @@ use std::time::Duration;
 #[macro_use]
 extern crate bencher;
 
-use bencher::Bencher;
+use bencher::{black_box, Bencher};
 
 extern crate flow_core;
 extern crate flow_qemu_procfs;
@@ -12,7 +12,10 @@ extern crate rand;
 
 use flow_core::address::Address;
 use flow_core::arch::Architecture;
-use flow_core::mem::{AccessPhysicalMemory, AccessVirtualMemory, CachedMemoryAccess, TimedCache};
+use flow_core::mem::{
+    AccessPhysicalMemory, AccessVirtualMemory, CachedMemoryAccess, CachedVAT, TimedCache, TimedTLB,
+    VirtualAddressTranslator,
+};
 
 use flow_qemu_procfs::Memory;
 
@@ -67,70 +70,40 @@ fn find_module<T: AccessPhysicalMemory + AccessVirtualMemory>(
     Err("No module found!".into())
 }
 
-fn vat_test<T: AccessVirtualMemory + AccessPhysicalMemory>(
+fn vat_test<T: AccessVirtualMemory + AccessPhysicalMemory + VirtualAddressTranslator>(
     bench: &mut Bencher,
-    mem: &mut T,
+    mut mem: T,
     range_start: u64,
     range_end: u64,
     translations: usize,
     dtb: Address,
     arch: Architecture,
+    use_tlb: bool,
 ) {
     let mut rng = CurRng::from_rng(thread_rng()).unwrap();
 
-    bench.iter(|| {
-        for _ in 0..translations {
-            let vaddr: Address = rng.gen_range(range_start, range_end).into();
-            let _thing = arch.virt_to_phys(mem, dtb, vaddr);
-        }
-    });
+    if use_tlb {
+        let tlb = TimedTLB::new(2048.into(), Duration::from_millis(1000).into());
+        let mut mem = CachedVAT::with(mem, tlb);
+        bench.iter(|| {
+            for _ in 0..translations {
+                let vaddr: Address = rng.gen_range(range_start, range_end).into();
+                let _thing = mem.virt_to_phys(arch, dtb, vaddr);
+            }
+        });
+    } else {
+        bench.iter(|| {
+            for _ in black_box(0..translations) {
+                let vaddr: Address = rng.gen_range(range_start, range_end).into();
+                let _thing = mem.virt_to_phys(arch, dtb, vaddr);
+            }
+        });
+    }
 
     bench.bytes = (translations * 8) as u64;
 }
 
-fn translate_module(bench: &mut Bencher) {
-    let mut mem_sys = Memory::new().unwrap();
-    let (os, proc, tmod) = find_module(&mut mem_sys).unwrap();
-    let cache = TimedCache::new(
-        os.start_block.arch,
-        Length::from_mb(2),
-        Duration::from_millis(1000).into(),
-        PageType::PAGE_TABLE | PageType::READ_ONLY,
-    );
-    let mut mem = CachedMemoryAccess::with(mem_sys, cache);
-    vat_test(
-        bench,
-        &mut mem,
-        tmod.base().as_u64(),
-        tmod.base().as_u64() + tmod.size().as_u64(),
-        0x100,
-        proc.dtb(),
-        proc.sys_arch(),
-    );
-}
-
-fn translate_module_smallrange(bench: &mut Bencher) {
-    let mut mem_sys = Memory::new().unwrap();
-    let (os, proc, tmod) = find_module(&mut mem_sys).unwrap();
-    let cache = TimedCache::new(
-        os.start_block.arch,
-        Length::from_mb(2),
-        Duration::from_millis(1000).into(),
-        PageType::PAGE_TABLE | PageType::READ_ONLY,
-    );
-    let mut mem = CachedMemoryAccess::with(mem_sys, cache);
-    vat_test(
-        bench,
-        &mut mem,
-        tmod.base().as_u64(),
-        tmod.base().as_u64() + 0x2000,
-        0x100,
-        proc.dtb(),
-        proc.sys_arch(),
-    );
-}
-
-fn translate_range(bench: &mut Bencher, range_start: u64, range_end: u64) {
+fn translate_range(bench: &mut Bencher, range_start: u64, range_end: u64, use_tlb: bool) {
     let mut mem_sys = Memory::new().unwrap();
     let (os, proc, _) = find_module(&mut mem_sys).unwrap();
     let cache = TimedCache::new(
@@ -139,26 +112,127 @@ fn translate_range(bench: &mut Bencher, range_start: u64, range_end: u64) {
         Duration::from_millis(1000).into(),
         PageType::PAGE_TABLE | PageType::READ_ONLY,
     );
-    let mut mem = CachedMemoryAccess::with(mem_sys, cache);
+    let mem = CachedMemoryAccess::with(mem_sys, cache);
     vat_test(
         bench,
-        &mut mem,
+        mem,
         range_start,
         range_end,
         0x100,
         proc.dtb(),
         proc.sys_arch(),
+        use_tlb,
     );
 }
 
-fn translate_allmem(bench: &mut Bencher) {
-    translate_range(bench, 0, !0);
+fn translate_notlb_module(bench: &mut Bencher) {
+    let mut mem_sys = Memory::new().unwrap();
+    let (os, proc, tmod) = find_module(&mut mem_sys).unwrap();
+    let cache = TimedCache::new(
+        os.start_block.arch,
+        Length::from_mb(2),
+        Duration::from_millis(1000).into(),
+        PageType::PAGE_TABLE | PageType::READ_ONLY,
+    );
+    let mem = CachedMemoryAccess::with(mem_sys, cache);
+    vat_test(
+        bench,
+        mem,
+        tmod.base().as_u64(),
+        tmod.base().as_u64() + tmod.size().as_u64(),
+        0x100,
+        proc.dtb(),
+        proc.sys_arch(),
+        false,
+    );
+}
+
+fn translate_notlb_module_smallrange(bench: &mut Bencher) {
+    let mut mem_sys = Memory::new().unwrap();
+    let (os, proc, tmod) = find_module(&mut mem_sys).unwrap();
+    let cache = TimedCache::new(
+        os.start_block.arch,
+        Length::from_mb(2),
+        Duration::from_millis(1000).into(),
+        PageType::PAGE_TABLE | PageType::READ_ONLY,
+    );
+    let mem = CachedMemoryAccess::with(mem_sys, cache);
+    vat_test(
+        bench,
+        mem,
+        tmod.base().as_u64(),
+        tmod.base().as_u64() + 0x2000,
+        0x100,
+        proc.dtb(),
+        proc.sys_arch(),
+        false,
+    );
+}
+
+fn translate_notlb_allmem(bench: &mut Bencher) {
+    translate_range(bench, 0, !0, false);
 }
 
 benchmark_group!(
-    benches,
-    translate_module,
-    translate_module_smallrange,
-    translate_allmem
+    translate_notlb,
+    translate_notlb_module,
+    translate_notlb_module_smallrange,
+    translate_notlb_allmem
 );
-benchmark_main!(benches);
+
+fn translate_tlb_module(bench: &mut Bencher) {
+    let mut mem_sys = Memory::new().unwrap();
+    let (os, proc, tmod) = find_module(&mut mem_sys).unwrap();
+    let cache = TimedCache::new(
+        os.start_block.arch,
+        Length::from_mb(2),
+        Duration::from_millis(1000).into(),
+        PageType::PAGE_TABLE | PageType::READ_ONLY,
+    );
+    let mem = CachedMemoryAccess::with(mem_sys, cache);
+    vat_test(
+        bench,
+        mem,
+        tmod.base().as_u64(),
+        tmod.base().as_u64() + tmod.size().as_u64(),
+        0x100,
+        proc.dtb(),
+        proc.sys_arch(),
+        true,
+    );
+}
+
+fn translate_tlb_module_smallrange(bench: &mut Bencher) {
+    let mut mem_sys = Memory::new().unwrap();
+    let (os, proc, tmod) = find_module(&mut mem_sys).unwrap();
+    let cache = TimedCache::new(
+        os.start_block.arch,
+        Length::from_mb(2),
+        Duration::from_millis(1000).into(),
+        PageType::PAGE_TABLE | PageType::READ_ONLY,
+    );
+    let mem = CachedMemoryAccess::with(mem_sys, cache);
+    vat_test(
+        bench,
+        mem,
+        tmod.base().as_u64(),
+        tmod.base().as_u64() + 0x2000,
+        0x100,
+        proc.dtb(),
+        proc.sys_arch(),
+        true,
+    );
+}
+
+fn translate_tlb_allmem(bench: &mut Bencher) {
+    translate_range(bench, 0, !0, true);
+}
+
+benchmark_group!(
+    translate_tlb,
+    translate_tlb_module,
+    translate_tlb_module_smallrange,
+    translate_tlb_allmem
+);
+
+benchmark_main!(translate_notlb, translate_tlb);

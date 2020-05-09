@@ -29,6 +29,11 @@ impl PhysicalAddress {
         page: None,
     };
 
+    pub const INVALID: PhysicalAddress = PhysicalAddress {
+        address: Address::INVALID,
+        page: None,
+    };
+
     pub const fn null() -> Self {
         Self {
             address: Address::null(),

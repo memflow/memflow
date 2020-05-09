@@ -9,6 +9,25 @@ use proc_macro::TokenStream;
 use quote::quote;
 use syn::DeriveInput;
 
+#[proc_macro_derive(VirtualAddressTranslator)]
+pub fn virtual_translator_trait_derive(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as DeriveInput);
+
+    let name = &input.ident;
+
+    let (impl_generics, type_generics, _) = input.generics.split_for_impl();
+
+    let expanded = quote! {
+        impl #impl_generics crate::mem::VirtualAddressTranslator for #name #type_generics {
+            fn virt_to_phys(&mut self, arch: Architecture, dtb: Address, vaddr: Address) -> Result<PhysicalAddress> {
+                arch.virt_to_phys(self, dtb, vaddr)
+            }
+        }
+    };
+
+    TokenStream::from(expanded)
+}
+
 #[proc_macro_derive(AccessVirtualMemory)]
 pub fn virtual_memory_trait_derive(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);

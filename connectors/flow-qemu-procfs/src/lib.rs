@@ -8,7 +8,7 @@ use std::io::{Read, Seek, SeekFrom, Write};
 
 const LENGTH_2GB: Length = Length::from_gb(2);
 
-#[derive(AccessVirtualMemory)]
+#[derive(AccessVirtualMemory, VirtualAddressTranslator)]
 pub struct Memory {
     pub pid: i32,
     pub map: procfs::process::MemoryMap,

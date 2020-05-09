@@ -5,7 +5,7 @@ pub mod init_qemu_procfs;
 use flow_core::*;
 use flow_derive::*;
 
-#[derive(AccessVirtualMemory)]
+#[derive(VirtualAddressTranslator, AccessVirtualMemory)]
 pub struct EmptyVirtualMemory {}
 
 impl AccessPhysicalMemory for EmptyVirtualMemory {

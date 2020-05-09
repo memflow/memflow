@@ -154,13 +154,13 @@ fn main() -> flow_core::Result<()> {
 
     println!();
     println!("Benchmarking cached reads:");
-    let mut cache = TimedCache::new(
+    let cache = TimedCache::new(
         os.start_block.arch,
         Length::from_mb(2),
         Duration::from_millis(1000).into(),
         PageType::PAGE_TABLE | PageType::READ_ONLY,
     );
-    let mut mem_cached = CachedMemoryAccess::with(&mut mem_sys, &mut cache);
+    let mut mem_cached = CachedMemoryAccess::with(mem_sys, cache);
     read_bench(&mut mem_cached, os).unwrap();
 
     Ok(())

@@ -9,6 +9,7 @@ use crate::page_chunks::{PageChunks, PageChunksMut};
 use crate::vat;
 
 // TODO: derive virtual reads here
+#[derive(VirtualAddressTranslator)]
 pub struct CachedMemoryAccess<T: AccessPhysicalMemory, Q: PageCache> {
     mem: T,
     cache: Q,
@@ -86,7 +87,7 @@ impl<T: AccessPhysicalMemory, Q: PageCache> AccessPhysicalMemory for CachedMemor
 // forward AccessVirtualMemory trait fncs if memory has them implemented
 impl<T, Q> AccessVirtualMemory for CachedMemoryAccess<T, Q>
 where
-    T: AccessPhysicalMemory + AccessVirtualMemory,
+    T: AccessPhysicalMemory,
     Q: PageCache,
 {
     fn virt_read_raw_into(

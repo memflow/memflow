@@ -2,7 +2,7 @@ use flow_core::*;
 use flow_derive::*;
 
 // TODO: open usb device
-#[derive(AccessVirtualMemory)]
+#[derive(AccessVirtualMemory, VirtualAddressTranslator)]
 pub struct Memory {}
 
 impl Memory {

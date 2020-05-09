@@ -39,6 +39,7 @@ impl From<Length> for Address {
 
 impl Address {
     pub const NULL: Address = Address { 0: 0 };
+    pub const INVALID: Address = Address { 0: !0 };
 
     pub const fn null() -> Self {
         Address { 0: 0 }

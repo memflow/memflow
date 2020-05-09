@@ -1,3 +1,6 @@
+#[macro_use]
+extern crate flow_derive;
+
 pub mod error;
 pub use error::*;
 

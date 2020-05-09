@@ -6,5 +6,6 @@ pub mod virt_ctx;
 
 pub use cache::*;
 pub use phys::*;
+pub use vat::*;
 pub use virt::*;
 pub use virt_ctx::*;

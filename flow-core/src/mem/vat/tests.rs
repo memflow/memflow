@@ -1,6 +1,6 @@
 use crate::address::{Address, Length, PhysicalAddress};
 use crate::arch::Architecture;
-use crate::mem::AccessVirtualMemory;
+use crate::mem::{AccessVirtualMemory, VirtualAddressTranslator};
 use crate::*;
 
 use flow_derive::*;
@@ -76,7 +76,7 @@ impl PageInfo {
     }
 }
 
-#[derive(AccessVirtualMemory)]
+#[derive(AccessVirtualMemory, VirtualAddressTranslator)]
 pub struct TestMemory {
     mem: Box<[u8]>,
     page_list: VecDeque<PageInfo>,
@@ -309,7 +309,7 @@ fn test_cached_mem() {
 
     assert_eq!(buf_nocache, test_buf);
 
-    let mut cache = TimedCache::new(
+    let cache = TimedCache::new(
         arch,
         Length::from_mb(2),
         coarsetime::Duration::from_millis(100),
@@ -460,24 +460,23 @@ fn test_vtop() {
     let (dtb, virt_base) = mem.alloc_dtb(virt_size, &[]);
     let arch = Architecture::from(Architecture::X64);
 
-    assert_eq!(arch.virt_to_phys(&mut mem, dtb, virt_base).is_ok(), true);
+    assert_eq!(mem.virt_to_phys(arch, dtb, virt_base).is_ok(), true);
     assert_eq!(
         arch.virt_to_phys(
             &mut mem,
             dtb,
-            virt_base + Length::from(virt_size.as_usize() / 2)
+            virt_base + Length::from(virt_size.as_usize() / 2),
         )
         .is_ok(),
         true
     );
     assert_eq!(
-        arch.virt_to_phys(&mut mem, dtb, virt_base - Length::from_mb(1))
+        mem.virt_to_phys(arch, dtb, virt_base - Length::from_mb(1))
             .is_ok(),
         false
     );
     assert_eq!(
-        arch.virt_to_phys(&mut mem, dtb, virt_base + virt_size)
-            .is_ok(),
+        mem.virt_to_phys(arch, dtb, virt_base + virt_size).is_ok(),
         false
     );
 }

@@ -105,13 +105,13 @@ fn read_test(bench: &mut Bencher, cache_size: u64, chunk_size: usize, chunks: us
     let (mut mem, os, proc, tmod) = initialize_ctx().unwrap();
 
     if cache_size > 0 {
-        let mut cache = TimedCache::new(
+        let cache = TimedCache::new(
             os.start_block.arch,
             Length::from_mb(cache_size),
             Duration::from_millis(10000).into(),
             PageType::PAGE_TABLE | PageType::READ_ONLY,
         );
-        let mut mem_cache = CachedMemoryAccess::with(&mut mem, &mut cache);
+        let mut mem_cache = CachedMemoryAccess::with(mem, cache);
 
         bench.iter(|| {
             rwtest(

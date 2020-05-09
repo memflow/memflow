@@ -9,29 +9,31 @@ use crate::page_chunks::{PageChunks, PageChunksMut};
 use crate::vat;
 
 // TODO: derive virtual reads here
-pub struct CachedMemoryAccess<'a, T: AccessPhysicalMemory> {
-    mem: &'a mut T,
-    cache: &'a mut dyn PageCache,
+pub struct CachedMemoryAccess<T: AccessPhysicalMemory, Q: PageCache> {
+    mem: T,
+    cache: Q,
 }
 
-impl<'a, T: AccessPhysicalMemory> CachedMemoryAccess<'a, T> {
-    pub fn with(mem: &'a mut T, cache: &'a mut dyn PageCache) -> Self {
+impl<T: AccessPhysicalMemory, Q: PageCache> CachedMemoryAccess<T, Q> {
+    pub fn with(mem: T, cache: Q) -> Self {
         Self { mem, cache }
+    }
+
+    pub fn get_mem(&mut self) -> &mut T {
+        &mut self.mem
     }
 }
 
 // TODO: calling phys_read_raw_into non page alligned causes UB
 // forward AccessPhysicalMemory trait fncs
-impl<'a, T: AccessPhysicalMemory> AccessPhysicalMemory for CachedMemoryAccess<'a, T> {
+impl<T: AccessPhysicalMemory, Q: PageCache> AccessPhysicalMemory for CachedMemoryAccess<T, Q> {
     fn phys_read_raw_into(&mut self, addr: PhysicalAddress, out: &mut [u8]) -> Result<()> {
         if let Some(page) = addr.page {
             // try read from cache or fall back
             if self.cache.is_cached_page_type(page.page_type) {
-                for (paddr, chunk) in PageChunksMut::create_from(
-                    out,
-                    addr.address,
-                    self.cache.page_size(), /* std::cmp::min(page.page_size, self.cache.page_size())*/
-                ) {
+                for (paddr, chunk) in
+                    PageChunksMut::create_from(out, addr.address, self.cache.page_size())
+                {
                     let cached_page = self.cache.cached_page_mut(paddr);
                     // read into page buffer and set addr
                     if !cached_page.is_valid() {
@@ -82,9 +84,10 @@ impl<'a, T: AccessPhysicalMemory> AccessPhysicalMemory for CachedMemoryAccess<'a
 }
 
 // forward AccessVirtualMemory trait fncs if memory has them implemented
-impl<'a, T> AccessVirtualMemory for CachedMemoryAccess<'a, T>
+impl<T, Q> AccessVirtualMemory for CachedMemoryAccess<T, Q>
 where
     T: AccessPhysicalMemory + AccessVirtualMemory,
+    Q: PageCache,
 {
     fn virt_read_raw_into(
         &mut self,

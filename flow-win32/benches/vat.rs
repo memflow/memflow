@@ -91,13 +91,13 @@ fn vat_test<T: AccessVirtualMemory + AccessPhysicalMemory>(
 fn translate_module(bench: &mut Bencher) {
     let mut mem_sys = Memory::new().unwrap();
     let (os, proc, tmod) = find_module(&mut mem_sys).unwrap();
-    let mut cache = TimedCache::new(
+    let cache = TimedCache::new(
         os.start_block.arch,
         Length::from_mb(2),
         Duration::from_millis(1000).into(),
         PageType::PAGE_TABLE | PageType::READ_ONLY,
     );
-    let mut mem = CachedMemoryAccess::with(&mut mem_sys, &mut cache);
+    let mut mem = CachedMemoryAccess::with(mem_sys, cache);
     vat_test(
         bench,
         &mut mem,
@@ -112,13 +112,13 @@ fn translate_module(bench: &mut Bencher) {
 fn translate_module_smallrange(bench: &mut Bencher) {
     let mut mem_sys = Memory::new().unwrap();
     let (os, proc, tmod) = find_module(&mut mem_sys).unwrap();
-    let mut cache = TimedCache::new(
+    let cache = TimedCache::new(
         os.start_block.arch,
         Length::from_mb(2),
         Duration::from_millis(1000).into(),
         PageType::PAGE_TABLE | PageType::READ_ONLY,
     );
-    let mut mem = CachedMemoryAccess::with(&mut mem_sys, &mut cache);
+    let mut mem = CachedMemoryAccess::with(mem_sys, cache);
     vat_test(
         bench,
         &mut mem,
@@ -133,13 +133,13 @@ fn translate_module_smallrange(bench: &mut Bencher) {
 fn translate_range(bench: &mut Bencher, range_start: u64, range_end: u64) {
     let mut mem_sys = Memory::new().unwrap();
     let (os, proc, _) = find_module(&mut mem_sys).unwrap();
-    let mut cache = TimedCache::new(
+    let cache = TimedCache::new(
         os.start_block.arch,
         Length::from_mb(32),
         Duration::from_millis(1000).into(),
         PageType::PAGE_TABLE | PageType::READ_ONLY,
     );
-    let mut mem = CachedMemoryAccess::with(&mut mem_sys, &mut cache);
+    let mut mem = CachedMemoryAccess::with(mem_sys, cache);
     vat_test(
         bench,
         &mut mem,

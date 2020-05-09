@@ -6,9 +6,7 @@ use std::ptr::copy_nonoverlapping;
 use flow_core::*;
 use flow_derive::*;
 
-use crate::native::*;
-
-#[derive(AccessVirtualMemory)]
+#[derive(AccessVirtualMemory, VirtualAddressTranslator)]
 pub struct Memory;
 
 impl Memory {
@@ -17,6 +15,8 @@ impl Memory {
         Self {}
     }
 }
+
+use crate::native::*;
 
 impl AccessPhysicalMemory for Memory {
     fn phys_read_raw_into(&mut self, addr: PhysicalAddress, out: &mut [u8]) -> Result<()> {

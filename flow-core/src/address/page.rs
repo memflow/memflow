@@ -25,3 +25,11 @@ pub struct Page {
     pub page_base: Address,
     pub page_size: Length,
 }
+
+impl Page {
+    pub const INVALID: Page = Page {
+        page_type: PageType::UNKNOWN,
+        page_base: Address::INVALID,
+        page_size: Length::zero(),
+    };
+}

@@ -28,14 +28,14 @@ use std::rc::Rc;
 use crate::bridge_capnp::bridge;
 
 #[derive(Clone)]
-pub struct BridgeServer<T: AccessPhysicalMemory> {
+pub struct BridgeServer<T: AccessPhysicalMemory + VirtualAddressTranslator> {
     pub mem: Rc<RefCell<T>>,
 }
 
 #[cfg(any(unix))]
 fn listen_unix<T>(bridge: &BridgeServer<T>, path: &str, _opts: Vec<&str>) -> Result<()>
 where
-    T: AccessPhysicalMemory + 'static,
+    T: AccessPhysicalMemory + VirtualAddressTranslator + 'static,
 {
     let bridgecp = BridgeServer::<T> {
         mem: bridge.mem.clone(),
@@ -73,7 +73,7 @@ where
 
 fn listen_tcp<T>(bridge: &BridgeServer<T>, path: &str, opts: Vec<&str>) -> Result<()>
 where
-    T: AccessPhysicalMemory + 'static,
+    T: AccessPhysicalMemory + VirtualAddressTranslator + 'static,
 {
     let bridgecp = BridgeServer::<T> {
         mem: bridge.mem.clone(),
@@ -125,7 +125,7 @@ where
     }));
 }
 
-impl<T: AccessPhysicalMemory + 'static> BridgeServer<T> {
+impl<T: AccessPhysicalMemory + VirtualAddressTranslator + 'static> BridgeServer<T> {
     pub fn new(mem: Rc<RefCell<T>>) -> Self {
         BridgeServer { mem }
     }
@@ -154,7 +154,9 @@ impl<T: AccessPhysicalMemory + 'static> BridgeServer<T> {
     }
 }
 
-impl<T: AccessPhysicalMemory + 'static> bridge::Server for BridgeServer<T> {
+impl<T: AccessPhysicalMemory + VirtualAddressTranslator + 'static> bridge::Server
+    for BridgeServer<T>
+{
     // physRead @0 (address :UInt64, length :UInt64) -> (memory :MemoryRegion);
     fn phys_read(
         &mut self,

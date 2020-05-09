@@ -6,8 +6,6 @@ use crate::mem::cache::TLBCache;
 use crate::mem::AccessPhysicalMemory;
 use crate::vat;
 use crate::vat::VirtualAddressTranslator;
-use std::ops::Deref;
-use std::ops::DerefMut;
 
 #[derive(AccessVirtualMemory)]
 pub struct CachedVAT<T: AccessPhysicalMemory + VirtualAddressTranslator, Q: TLBCache> {
@@ -40,30 +38,6 @@ impl<T: AccessPhysicalMemory + VirtualAddressTranslator, Q: TLBCache> VirtualAdd
         }
     }
 }
-
-impl<T: AccessPhysicalMemory + VirtualAddressTranslator, Q: TLBCache> AsMut<T> for CachedVAT<T, Q> {
-    fn as_mut(&mut self) -> &mut T {
-        &mut self.mem
-    }
-}
-
-impl<T: AccessPhysicalMemory + VirtualAddressTranslator, Q: TLBCache> Deref for CachedVAT<T, Q> {
-    type Target = T;
-    fn deref(&self) -> &T {
-        &self.mem
-    }
-}
-
-impl<T: AccessPhysicalMemory + VirtualAddressTranslator, Q: TLBCache> DerefMut for CachedVAT<T, Q> {
-    fn deref_mut(&mut self) -> &mut T {
-        &mut self.mem
-    }
-}
-/*impl<T: AccessPhysicalMemory + VirtualAddressTranslator, Q: TLBCache> core::ops::DerefMut for CachedVAT<T, Q> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.mem
-    }
-}*/
 
 impl<T: AccessPhysicalMemory + VirtualAddressTranslator, Q: TLBCache> AccessPhysicalMemory
     for CachedVAT<T, Q>

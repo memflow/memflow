@@ -1,7 +1,7 @@
 use super::AccessVirtualMemory;
-use crate::address::{Address, Length};
 use crate::arch::Architecture;
 use crate::error::Error;
+use crate::types::{Address, Length};
 use crate::Result;
 
 use std::ffi::CString;

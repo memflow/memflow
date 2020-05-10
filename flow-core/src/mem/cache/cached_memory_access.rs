@@ -2,10 +2,10 @@ use crate::error::Result;
 
 use super::PageCache;
 
-use crate::address::{Address, Page, PhysicalAddress};
 use crate::arch::Architecture;
 use crate::mem::{AccessPhysicalMemory, AccessVirtualMemory};
 use crate::page_chunks::{PageChunks, PageChunksMut};
+use crate::types::{Address, Page, PhysicalAddress};
 use crate::vat;
 
 // TODO: derive virtual reads here

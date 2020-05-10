@@ -1,6 +1,6 @@
 use super::{CacheEntry, PageCache, PageType};
-use crate::address::{Address, Length};
 use crate::arch::Architecture;
+use crate::types::{Address, Length};
 use std::alloc::{alloc_zeroed, Layout};
 
 pub use coarsetime::{Duration, Instant};

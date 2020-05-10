@@ -2,9 +2,9 @@ use crate::error::{Error, Result};
 use crate::offsets::Win32Offsets;
 use crate::win32::Win32;
 
-use flow_core::address::{Address, Length};
 use flow_core::arch::Architecture;
 use flow_core::mem::{AccessVirtualMemory, VirtualMemoryContext};
+use flow_core::types::{Address, Length};
 use flow_core::OsProcess;
 
 use log::trace;

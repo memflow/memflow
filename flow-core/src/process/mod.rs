@@ -1,9 +1,9 @@
 //#[cfg(feature = "emulator")]
 //pub mod emulator;
 
-use crate::address::{Address, Length};
 use crate::arch::Architecture;
 use crate::mem::*;
+use crate::types::{Address, Length};
 
 pub trait OperatingSystem {}
 

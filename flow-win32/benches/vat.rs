@@ -10,12 +10,12 @@ extern crate flow_qemu_procfs;
 extern crate flow_win32;
 extern crate rand;
 
-use flow_core::address::Address;
 use flow_core::arch::Architecture;
 use flow_core::mem::{
     AccessPhysicalMemory, AccessVirtualMemory, CachedMemoryAccess, CachedVAT, TimedCache, TimedTLB,
     VirtualAddressTranslator,
 };
+use flow_core::types::Address;
 
 use flow_qemu_procfs::Memory;
 
@@ -70,6 +70,7 @@ fn find_module<T: AccessPhysicalMemory + AccessVirtualMemory>(
     Err("No module found!".into())
 }
 
+#[allow(clippy::too_many_arguments)]
 fn vat_test<T: AccessVirtualMemory + AccessPhysicalMemory + VirtualAddressTranslator>(
     bench: &mut Bencher,
     mut mem: T,

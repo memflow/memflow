@@ -147,20 +147,18 @@ fn read_test(
         );
 
         if use_tlb {
-            let mem = CachedMemoryAccess::with(mem, cache.clone());
+            let mem = CachedMemoryAccess::with(mem, cache);
             let mut mem = CachedVAT::with(mem, tlb_cache);
             read_test_with_mem(bench, &mut mem, chunk_size, chunks, proc, tmod);
         } else {
             let mut mem = CachedMemoryAccess::with(mem, cache);
             read_test_with_mem(bench, &mut mem, chunk_size, chunks, proc, tmod);
         }
+    } else if use_tlb {
+        let mut mem = CachedVAT::with(mem, tlb_cache);
+        read_test_with_mem(bench, &mut mem, chunk_size, chunks, proc, tmod);
     } else {
-        if use_tlb {
-            let mut mem = CachedVAT::with(mem, tlb_cache);
-            read_test_with_mem(bench, &mut mem, chunk_size, chunks, proc, tmod);
-        } else {
-            read_test_with_mem(bench, &mut mem, chunk_size, chunks, proc, tmod);
-        }
+        read_test_with_mem(bench, &mut mem, chunk_size, chunks, proc, tmod);
     }
 
     bench.bytes = chunk_size as u64;

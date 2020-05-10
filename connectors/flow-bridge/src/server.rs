@@ -234,7 +234,7 @@ impl<T: AccessPhysicalMemory + VirtualAddressTranslator + 'static> bridge::Serve
         let address = Address::from(pry!(params.get()).get_address());
         let data = pry!(pry!(params.get()).get_data());
 
-        vat::virt_write_raw_from(&mut **memory, ins, dtb, address, &data.to_vec())
+        vat::virt_write_raw(&mut **memory, ins, dtb, address, &data.to_vec())
             .unwrap_or_else(|_| ());
         results.get().set_length(data.len() as u64);
 

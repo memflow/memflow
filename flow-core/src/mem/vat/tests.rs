@@ -1,4 +1,6 @@
 use crate::arch::Architecture;
+use crate::mem::cache::page_cache::PageCache;
+use crate::mem::cache::timed_validator::TimedCacheValidator;
 use crate::mem::{AccessVirtualMemory, VirtualAddressTranslator};
 use crate::types::{Address, Length, PhysicalAddress};
 use crate::*;
@@ -309,13 +311,13 @@ fn test_cached_mem() {
 
     assert_eq!(buf_nocache, test_buf);
 
-    let cache = TimedCache::new(
+    let cache = PageCache::new(
         arch,
         Length::from_mb(2),
-        coarsetime::Duration::from_millis(100),
         PageType::PAGE_TABLE | PageType::READ_ONLY,
+        TimedCacheValidator::new(coarsetime::Duration::from_millis(100)),
     );
-    let mut mem_cache = CachedMemoryAccess::with(mem, cache);
+    let mut mem_cache = CachedMemoryAccess::with(&mut mem, cache);
     let mut buf_cache = vec![0_u8; buf_nocache.len()];
     mem_cache
         .virt_read_raw_into(arch, dtb, virt_base, buf_cache.as_mut_slice())
@@ -327,6 +329,7 @@ fn test_cached_mem() {
 #[test]
 fn test_cache_invalidity_cached() {
     let mut mem = TestMemory::new(Length::from_mb(512));
+    let mem_ptr = &mut mem as *mut TestMemory;
     let virt_size = Length::from_mb(8);
     let mut buf_start = vec![0_u8; 64];
     for (i, item) in buf_start.iter_mut().enumerate() {
@@ -335,14 +338,14 @@ fn test_cache_invalidity_cached() {
     let (dtb, virt_base) = mem.alloc_dtb(virt_size, &buf_start);
     let arch = Architecture::X64;
 
-    let cache = TimedCache::new(
+    let cache = PageCache::new(
         arch,
         Length::from_mb(2),
-        coarsetime::Duration::from_secs(100),
         PageType::PAGE_TABLE | PageType::READ_ONLY | PageType::WRITEABLE,
+        TimedCacheValidator::new(coarsetime::Duration::from_secs(100)),
     );
 
-    let mut mem_cache = CachedMemoryAccess::with(mem, cache);
+    let mut mem_cache = CachedMemoryAccess::with(&mut mem, cache);
 
     //Modifying the memory from other channels should leave the cached page unchanged
     let mut cached_buf = vec![0_u8; 64];
@@ -352,9 +355,8 @@ fn test_cache_invalidity_cached() {
 
     let mut write_buf = cached_buf.clone();
     write_buf[16..20].copy_from_slice(&[255, 255, 255, 255]);
-    mem_cache
-        .get_mem()
-        .virt_write_raw_from(arch, dtb, virt_base, write_buf.as_slice())
+    unsafe { mem_ptr.as_mut().unwrap() }
+        .virt_write_raw(arch, dtb, virt_base, write_buf.as_slice())
         .unwrap();
 
     let mut check_buf = vec![0_u8; 64];
@@ -369,6 +371,7 @@ fn test_cache_invalidity_cached() {
 #[test]
 fn test_cache_invalidity_non_cached() {
     let mut mem = TestMemory::new(Length::from_mb(512));
+    let mem_ptr = &mut mem as *mut TestMemory;
     let virt_size = Length::from_mb(8);
     let mut buf_start = vec![0_u8; 64];
     for (i, item) in buf_start.iter_mut().enumerate() {
@@ -378,14 +381,14 @@ fn test_cache_invalidity_non_cached() {
     let arch = Architecture::X64;
 
     //alloc_dtb creates a page table with all writeable pages, we disable cache for them
-    let cache = TimedCache::new(
+    let cache = PageCache::new(
         arch,
         Length::from_mb(2),
-        coarsetime::Duration::from_secs(100),
         PageType::PAGE_TABLE | PageType::READ_ONLY,
+        TimedCacheValidator::new(coarsetime::Duration::from_secs(100)),
     );
 
-    let mut mem_cache = CachedMemoryAccess::with(mem, cache);
+    let mut mem_cache = CachedMemoryAccess::with(&mut mem, cache);
 
     //Modifying the memory from other channels should leave the cached page unchanged
     let mut cached_buf = vec![0_u8; 64];
@@ -395,9 +398,8 @@ fn test_cache_invalidity_non_cached() {
 
     let mut write_buf = cached_buf.clone();
     write_buf[16..20].copy_from_slice(&[255, 255, 255, 255]);
-    mem_cache
-        .get_mem()
-        .virt_write_raw_from(arch, dtb, virt_base, write_buf.as_slice())
+    unsafe { mem_ptr.as_mut().unwrap() }
+        .virt_write_raw(arch, dtb, virt_base, write_buf.as_slice())
         .unwrap();
 
     let mut check_buf = vec![0_u8; 64];
@@ -420,14 +422,14 @@ fn test_writeback() {
     let (dtb, virt_base) = mem.alloc_dtb(virt_size, &buf_start);
     let arch = Architecture::X64;
 
-    let cache = TimedCache::new(
+    let cache = PageCache::new(
         arch,
         Length::from_mb(2),
-        coarsetime::Duration::from_secs(100),
         PageType::PAGE_TABLE | PageType::READ_ONLY,
+        TimedCacheValidator::new(coarsetime::Duration::from_secs(100)),
     );
 
-    let mut mem = CachedMemoryAccess::with(mem, cache);
+    let mut mem = CachedMemoryAccess::with(&mut mem, cache);
 
     let mut buf_1 = vec![0_u8; 64];
     mem.virt_read_into(arch, dtb, virt_base, buf_1.as_mut_slice())
@@ -436,7 +438,7 @@ fn test_writeback() {
     assert_eq!(buf_start, buf_1);
     buf_1[16..20].copy_from_slice(&[255, 255, 255, 255]);
 
-    mem.virt_write_from(arch, dtb, virt_base + Length::from(16), &buf_1[16..20])
+    mem.virt_write(arch, dtb, virt_base + Length::from(16), &buf_1[16..20])
         .unwrap();
 
     let mut buf_2 = vec![0_u8; 64];
@@ -506,7 +508,7 @@ fn test_virt_write_small() {
         *item = i as u8;
     }
     let (dtb, virt_base) = mem.alloc_dtb(input.len().into(), &input);
-    mem.virt_write_from(Architecture::X64, dtb, virt_base, &input[..])
+    mem.virt_write(Architecture::X64, dtb, virt_base, &input[..])
         .unwrap();
     mem.virt_read_into(Architecture::X64, dtb, virt_base, &mut buf[..])
         .unwrap();
@@ -544,7 +546,7 @@ fn test_virt_write_small_shifted() {
         *item = i as u8;
     }
     let (dtb, virt_base) = mem.alloc_dtb(input.len().into(), &input);
-    mem.virt_write_from(
+    mem.virt_write(
         Architecture::X64,
         dtb,
         virt_base + Length::from(128),
@@ -587,7 +589,7 @@ fn test_virt_write_medium() {
         *item = i as u8;
     }
     let (dtb, virt_base) = mem.alloc_dtb(input.len().into(), &input);
-    mem.virt_write_from(Architecture::X64, dtb, virt_base, &input[..])
+    mem.virt_write(Architecture::X64, dtb, virt_base, &input[..])
         .unwrap();
     mem.virt_read_into(Architecture::X64, dtb, virt_base, &mut buf[..])
         .unwrap();
@@ -625,7 +627,7 @@ fn test_virt_write_medium_shifted() {
         *item = i as u8;
     }
     let (dtb, virt_base) = mem.alloc_dtb(input.len().into(), &input);
-    mem.virt_write_from(
+    mem.virt_write(
         Architecture::X64,
         dtb,
         virt_base + Length::from(0x100),
@@ -668,7 +670,7 @@ fn test_virt_write_big() {
         *item = i as u8;
     }
     let (dtb, virt_base) = mem.alloc_dtb(input.len().into(), &input);
-    mem.virt_write_from(Architecture::X64, dtb, virt_base, &input[..])
+    mem.virt_write(Architecture::X64, dtb, virt_base, &input[..])
         .unwrap();
     mem.virt_read_into(Architecture::X64, dtb, virt_base, &mut buf[..])
         .unwrap();
@@ -706,7 +708,7 @@ fn test_virt_write_big_shifted() {
         *item = i as u8;
     }
     let (dtb, virt_base) = mem.alloc_dtb(input.len().into(), &input);
-    mem.virt_write_from(
+    mem.virt_write(
         Architecture::X64,
         dtb,
         virt_base + Length::from(0x100),

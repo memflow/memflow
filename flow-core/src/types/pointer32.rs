@@ -2,7 +2,6 @@
 32-bit Pointer abstraction.
 */
 
-use super::Address;
 use crate::error::Result;
 use crate::mem::{AccessVirtualMemory, VirtualMemoryContext};
 
@@ -22,6 +21,7 @@ This module is a direct adaption of [CasualX's great IntPtr crate](https://githu
 For reading into structs directly they are required to implement the Pod trait. See [here](https://docs.rs/dataview/0.1.1/dataview/) for more information on the Pod trait.
 
 # Examples
+
 ```
 use flow_core::types::Pointer32;
 use flow_core::mem::{AccessVirtualMemory, VirtualMemoryContext};
@@ -42,6 +42,30 @@ struct Bar {
 fn read_foo_bar<T: AccessVirtualMemory>(virt_mem: &mut VirtualMemoryContext<T>) {
     let bar: Bar = virt_mem.virt_read(0x1234.into()).unwrap();
     let foo = bar.foo_ptr.deref(virt_mem).unwrap();
+    println!("value: {}", foo.some_value);
+}
+```
+
+```
+use flow_core::types::Pointer32;
+use flow_core::mem::{AccessVirtualMemory, VirtualMemoryContext};
+use dataview::Pod;
+
+#[repr(C)]
+#[derive(Clone, Debug, Pod)]
+struct Foo {
+    pub some_value: i32,
+}
+
+#[repr(C)]
+#[derive(Clone, Debug, Pod)]
+struct Bar {
+    pub foo_ptr: Pointer32<Foo>,
+}
+
+fn read_foo_bar<T: AccessVirtualMemory>(virt_mem: &mut VirtualMemoryContext<T>) {
+    let bar: Bar = virt_mem.virt_read(0x1234.into()).unwrap();
+    let foo = virt_mem.virt_read_ptr32(bar.foo_ptr).unwrap();
     println!("value: {}", foo.some_value);
 }
 ```
@@ -84,14 +108,14 @@ impl<T: Pod + ?Sized> Pointer32<T> {
         mem: &mut VirtualMemoryContext<U>,
         out: &mut T,
     ) -> Result<()> {
-        mem.virt_read_into(Address::from(self.address), out)
+        mem.virt_read_ptr32_into(self, out)
     }
 }
 
 /// This function will return the Object this pointer is pointing towards.
 impl<T: Pod + Sized> Pointer32<T> {
     pub fn deref<U: AccessVirtualMemory>(self, mem: &mut VirtualMemoryContext<U>) -> Result<T> {
-        mem.virt_read(Address::from(self.address))
+        mem.virt_read_ptr32(self)
     }
 }
 

@@ -1,7 +1,7 @@
 use super::AccessVirtualMemory;
 use crate::arch::Architecture;
 use crate::error::Error;
-use crate::types::{Address, Length};
+use crate::types::{Address, Length, Pointer32, Pointer64};
 use crate::Result;
 
 use std::ffi::CString;
@@ -80,7 +80,7 @@ impl<'a, T: AccessVirtualMemory + Sized> VirtualMemoryContext<'a, T> {
         self.mem.virt_write(self.sys_arch, self.dtb, addr, data)
     }
 
-    // custom read wrappers
+    // read address wrappers
     pub fn virt_read_addr32(&mut self, addr: Address) -> Result<Address> {
         let mut res = 0u32;
         self.virt_read_into(addr, &mut res)?;
@@ -99,6 +99,31 @@ impl<'a, T: AccessVirtualMemory + Sized> VirtualMemoryContext<'a, T> {
             32 => self.virt_read_addr32(addr),
             _ => Err(Error::new("invalid instruction set")),
         }
+    }
+
+    // read pointer wrappers
+    pub fn virt_read_ptr32_into<U: Pod + ?Sized>(
+        &mut self,
+        ptr: Pointer32<U>,
+        out: &mut U,
+    ) -> Result<()> {
+        self.virt_read_into(ptr.address.into(), out)
+    }
+
+    pub fn virt_read_ptr32<U: Pod + Sized>(&mut self, ptr: Pointer32<U>) -> Result<U> {
+        self.virt_read(ptr.address.into())
+    }
+
+    pub fn virt_read_ptr64_into<U: Pod + ?Sized>(
+        &mut self,
+        ptr: Pointer64<U>,
+        out: &mut U,
+    ) -> Result<()> {
+        self.virt_read_into(ptr.address.into(), out)
+    }
+
+    pub fn virt_read_ptr64<U: Pod + Sized>(&mut self, ptr: Pointer64<U>) -> Result<U> {
+        self.virt_read(ptr.address.into())
     }
 
     // TODO: read into slice?

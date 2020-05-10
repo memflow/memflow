@@ -54,48 +54,157 @@ impl From<Length> for Address {
 }
 
 impl Address {
-    /// A address with the value of zero.
+    /**
+    A address with the value of zero.
+
+    ```
+    use flow_core::types::Address;
+
+    fn test() {
+        println!("address: {}", Address::NULL);
+    }
+    ```
+    */
     pub const NULL: Address = Address { 0: 0 };
 
-    /// A address with an invalid value.
+    /**
+    A address with an invalid value.
+
+    ```
+    use flow_core::types::Address;
+
+    fn test() {
+        println!("address: {}", Address::INVALID);
+    }
+    ```
+    */
     pub const INVALID: Address = Address { 0: !0 };
 
-    /// Returns an address with a value of zero.
+    /**
+    Returns an address with a value of zero.
+
+    ```
+    use flow_core::types::Address;
+
+    fn test() {
+        println!("address: {}", Address::null());
+    }
+    ```
+    */
     pub const fn null() -> Self {
         Address::NULL
     }
 
-    /// Checks wether the address is zero or not.
+    /**
+    Checks wether the address is zero or not.
+
+    ```
+    use flow_core::types::Address;
+
+    fn test() {
+        assert_eq!(Address::null().is_null(), true);
+        assert_eq!(Address::from(0x1000u64).is_null(), false);
+    }
+    ```
+    */
     pub const fn is_null(self) -> bool {
         self.0 == 0
     }
 
-    /// Returns an address with a invalid value.
+    /**
+    Returns an address with a invalid value.
+
+    ```
+    use flow_core::types::Address;
+
+    fn test() {
+        println!("address: {}", Address::invalid());
+    }
+    ```
+    */
     pub const fn invalid() -> Self {
         Address::INVALID
     }
 
-    /// Checks wether the address is valid or not.
+    /**
+    Checks wether the address is valid or not.
+
+    ```
+    use flow_core::types::Address;
+
+    fn test() {
+        assert_eq!(Address::invalid().is_valid(), false);
+        assert_eq!(Address::from(0x1000u64).is_valid(), true);
+    }
+    ```
+    */
     pub const fn is_valid(self) -> bool {
         self.0 != !0
     }
 
-    /// Converts the address into a `u32` value.
+    /**
+    Converts the address into a `u32` value.
+
+    ```
+    use flow_core::types::Address;
+
+    fn test() {
+        let addr = Address::from(0x1000u64);
+        let addr_u32: u32 = addr.as_u32();
+    }
+    ```
+    */
     pub const fn as_u32(self) -> u32 {
         self.0 as u32
     }
 
-    /// Converts the address into a `u64` value.
+    /**
+    Converts the address into a `u64` value.
+
+    ```
+    use flow_core::types::Address;
+
+    fn test() {
+        let addr = Address::from(0x1000u64);
+        let addr_u64: u64 = addr.as_u64();
+    }
+    ```
+    */
     pub const fn as_u64(self) -> u64 {
         self.0
     }
 
-    /// Converts the address into a `usize` value.
+    /**
+    Converts the address into a `usize` value.
+
+    ```
+    use flow_core::types::Address;
+
+    fn test() {
+        let addr = Address::from(0x1000u64);
+        let addr_usize: usize = addr.as_usize();
+    }
+    ```
+    */
     pub const fn as_usize(self) -> usize {
         self.0 as usize
     }
 
-    /// Aligns the containing address to the given page size. It returns the base address of the containing page.
+    /**
+    Aligns the containing address to the given page size.
+    It returns the base address of the containing page.
+
+    ```
+    use flow_core::types::{Address, Length};
+
+    pub fn test() {
+        assert_eq!(
+            Address::from(0x1234).as_page_aligned(Length::from_kb(4)),
+            Address::from(0x1000)
+        );
+    }
+    ```
+    */
     pub const fn as_page_aligned(self, page_size: Length) -> Address {
         Address {
             0: self.0 - self.0 % page_size.as_u64(),
@@ -103,14 +212,34 @@ impl Address {
     }
 }
 
-/// Returns a address with a value of zero.
+/**
+Returns a address with a value of zero.
+
+```
+use flow_core::types::Address;
+
+fn test() {
+    assert_eq!(Address::default().is_null(), true);
+}
+```
+*/
 impl Default for Address {
     fn default() -> Self {
         Self::null()
     }
 }
 
-/// Adds a `Length` to a `Address` which results in a `Address`.
+/**
+Adds a `Length` to a `Address` which results in a `Address`.
+
+```
+use flow_core::types::{Address, Length};
+
+fn test() {
+    assert_eq!(Address::from(10) + Length::from(5), Address::from(15));
+}
+```
+*/
 impl ops::Add<Length> for Address {
     type Output = Self;
 
@@ -121,7 +250,19 @@ impl ops::Add<Length> for Address {
     }
 }
 
-/// Adds a `Length` to a `Address`.
+/**
+Adds a `Length` to a `Address`.
+
+```
+use flow_core::types::{Address, Length};
+
+fn test() {
+    let mut addr = Address::from(10);
+    addr += Length::from(5);
+    assert_eq!(addr, Address::from(15));
+}
+```
+*/
 impl ops::AddAssign<Length> for Address {
     fn add_assign(&mut self, other: Length) {
         *self = Self {
@@ -131,7 +272,17 @@ impl ops::AddAssign<Length> for Address {
 }
 
 // TODO: guarantee no underlfow
-/// Subtracts a `Address` from a `Address` resulting in a `Length`.
+/**
+Subtracts a `Address` from a `Address` resulting in a `Length`.
+
+```
+use flow_core::types::{Address, Length};
+
+fn test() {
+    assert_eq!(Address::from(10) - Length::from(5), Address::from(5));
+}
+```
+*/
 impl ops::Sub for Address {
     type Output = Length;
 
@@ -150,7 +301,19 @@ impl ops::Sub<Length> for Address {
     }
 }
 
-/// Subtracts a `Length` from a `Address`.
+/**
+Subtracts a `Length` from a `Address`.
+
+```
+use flow_core::types::{Address, Length};
+
+fn test() {
+    let mut addr = Address::from(10);
+    addr -= Length::from(5);
+    assert_eq!(addr, Address::from(5));
+}
+```
+*/
 impl ops::SubAssign<Length> for Address {
     fn sub_assign(&mut self, other: Length) {
         *self = Self {
@@ -159,7 +322,18 @@ impl ops::SubAssign<Length> for Address {
     }
 }
 
-/// Adds a `Offset` to a `Address` resulting in a `Address`.
+/**
+Adds a `Offset` to a `Address` resulting in a `Address`.
+
+```
+use flow_core::types::{Address, Offset};
+
+fn test() {
+    assert_eq!(Address::from(10) + Offset::from(5), Address::from(15));
+    assert_eq!(Address::from(10) + Offset::from(-5), Address::from(5));
+}
+```
+*/
 #[allow(clippy::suspicious_op_assign_impl, clippy::suspicious_arithmetic_impl)]
 impl ops::Add<Offset> for Address {
     type Output = Address;
@@ -173,7 +347,19 @@ impl ops::Add<Offset> for Address {
     }
 }
 
-/// Subtract a `Offset` from a `Address`.
+/**
+Subtract a `Offset` from a `Address`.
+
+```
+use flow_core::types::{Address, Length};
+
+fn test() {
+    let mut addr = Address::from(10);
+    addr += Length::from(5);
+    assert_eq!(addr, Address::from(15));
+}
+```
+*/
 #[allow(clippy::suspicious_op_assign_impl, clippy::suspicious_arithmetic_impl)]
 impl ops::AddAssign<Offset> for Address {
     fn add_assign(&mut self, other: Offset) {
@@ -215,8 +401,13 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_from() {
+    fn test_null_valid() {
         assert_eq!(Address::null().is_null(), true);
+        assert_eq!(Address::invalid().is_valid(), false);
+    }
+
+    #[test]
+    fn test_from() {
         assert_eq!(Address::from(1337).as_u64(), 1337);
         assert_eq!(Address::from(4321).as_usize(), 4321);
     }

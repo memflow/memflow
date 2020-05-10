@@ -1,6 +1,6 @@
 use crate::error::Result;
 
-use super::PageCache;
+use super::{page_cache::PageCache, CacheValidator};
 
 use crate::address::{Address, Page, PhysicalAddress};
 use crate::arch::Architecture;
@@ -10,13 +10,13 @@ use crate::vat;
 
 // TODO: derive virtual reads here
 #[derive(VirtualAddressTranslator)]
-pub struct CachedMemoryAccess<T: AccessPhysicalMemory, Q: PageCache> {
-    mem: T,
-    cache: Q,
+pub struct CachedMemoryAccess<'a, T: AccessPhysicalMemory, Q: CacheValidator> {
+    mem: &'a mut T,
+    cache: PageCache<Q>,
 }
 
-impl<T: AccessPhysicalMemory, Q: PageCache> CachedMemoryAccess<T, Q> {
-    pub fn with(mem: T, cache: Q) -> Self {
+impl<'a, T: AccessPhysicalMemory, Q: CacheValidator> CachedMemoryAccess<'a, T, Q> {
+    pub fn with(mem: &'a mut T, cache: PageCache<Q>) -> Self {
         Self { mem, cache }
     }
 
@@ -27,7 +27,9 @@ impl<T: AccessPhysicalMemory, Q: PageCache> CachedMemoryAccess<T, Q> {
 
 // TODO: calling phys_read_raw_into non page alligned causes UB
 // forward AccessPhysicalMemory trait fncs
-impl<T: AccessPhysicalMemory, Q: PageCache> AccessPhysicalMemory for CachedMemoryAccess<T, Q> {
+impl<'a, T: AccessPhysicalMemory, Q: CacheValidator> AccessPhysicalMemory
+    for CachedMemoryAccess<'a, T, Q>
+{
     fn phys_read_raw_into(&mut self, addr: PhysicalAddress, out: &mut [u8]) -> Result<()> {
         if let Some(page) = addr.page {
             // try read from cache or fall back
@@ -85,10 +87,10 @@ impl<T: AccessPhysicalMemory, Q: PageCache> AccessPhysicalMemory for CachedMemor
 }
 
 // forward AccessVirtualMemory trait fncs if memory has them implemented
-impl<T, Q> AccessVirtualMemory for CachedMemoryAccess<T, Q>
+impl<'a, T, Q> AccessVirtualMemory for CachedMemoryAccess<'a, T, Q>
 where
     T: AccessPhysicalMemory,
-    Q: PageCache,
+    Q: CacheValidator,
 {
     fn virt_read_raw_into(
         &mut self,

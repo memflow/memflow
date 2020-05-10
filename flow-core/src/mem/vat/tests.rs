@@ -1,5 +1,7 @@
 use crate::address::{Address, Length, PhysicalAddress};
 use crate::arch::Architecture;
+use crate::mem::cache::page_cache::PageCache;
+use crate::mem::cache::timed_validator::TimedCacheValidator;
 use crate::mem::{AccessVirtualMemory, VirtualAddressTranslator};
 use crate::*;
 
@@ -309,13 +311,13 @@ fn test_cached_mem() {
 
     assert_eq!(buf_nocache, test_buf);
 
-    let cache = TimedCache::new(
+    let cache = PageCache::new(
         arch,
         Length::from_mb(2),
-        coarsetime::Duration::from_millis(100),
         PageType::PAGE_TABLE | PageType::READ_ONLY,
+        TimedCacheValidator::new(coarsetime::Duration::from_millis(100)),
     );
-    let mut mem_cache = CachedMemoryAccess::with(mem, cache);
+    let mut mem_cache = CachedMemoryAccess::with(&mut mem, cache);
     let mut buf_cache = vec![0_u8; buf_nocache.len()];
     mem_cache
         .virt_read_raw_into(arch, dtb, virt_base, buf_cache.as_mut_slice())
@@ -335,14 +337,14 @@ fn test_cache_invalidity_cached() {
     let (dtb, virt_base) = mem.alloc_dtb(virt_size, &buf_start);
     let arch = Architecture::from(Architecture::X64);
 
-    let cache = TimedCache::new(
+    let cache = PageCache::new(
         arch,
         Length::from_mb(2),
-        coarsetime::Duration::from_secs(100),
         PageType::PAGE_TABLE | PageType::READ_ONLY | PageType::WRITEABLE,
+        TimedCacheValidator::new(coarsetime::Duration::from_secs(100)),
     );
 
-    let mut mem_cache = CachedMemoryAccess::with(mem, cache);
+    let mut mem_cache = CachedMemoryAccess::with(&mut mem, cache);
 
     //Modifying the memory from other channels should leave the cached page unchanged
     let mut cached_buf = vec![0_u8; 64];
@@ -378,14 +380,14 @@ fn test_cache_invalidity_non_cached() {
     let arch = Architecture::from(Architecture::X64);
 
     //alloc_dtb creates a page table with all writeable pages, we disable cache for them
-    let cache = TimedCache::new(
+    let cache = PageCache::new(
         arch,
         Length::from_mb(2),
-        coarsetime::Duration::from_secs(100),
         PageType::PAGE_TABLE | PageType::READ_ONLY,
+        TimedCacheValidator::new(coarsetime::Duration::from_secs(100)),
     );
 
-    let mut mem_cache = CachedMemoryAccess::with(mem, cache);
+    let mut mem_cache = CachedMemoryAccess::with(&mut mem, cache);
 
     //Modifying the memory from other channels should leave the cached page unchanged
     let mut cached_buf = vec![0_u8; 64];
@@ -420,14 +422,14 @@ fn test_writeback() {
     let (dtb, virt_base) = mem.alloc_dtb(virt_size, &buf_start);
     let arch = Architecture::from(Architecture::X64);
 
-    let cache = TimedCache::new(
+    let cache = PageCache::new(
         arch,
         Length::from_mb(2),
-        coarsetime::Duration::from_secs(100),
         PageType::PAGE_TABLE | PageType::READ_ONLY,
+        TimedCacheValidator::new(coarsetime::Duration::from_secs(100)),
     );
 
-    let mut mem = CachedMemoryAccess::with(mem, cache);
+    let mut mem = CachedMemoryAccess::with(&mut mem, cache);
 
     let mut buf_1 = vec![0_u8; 64];
     mem.virt_read_into(arch, dtb, virt_base, buf_1.as_mut_slice())

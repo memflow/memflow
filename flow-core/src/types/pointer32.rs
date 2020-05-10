@@ -18,7 +18,8 @@ and to read it in a more convenient way.
 
 This module is a direct adaption of [CasualX's great IntPtr crate](https://github.com/CasualX/intptr).
 
-For reading into structs directly they are required to implement the Pod trait. See [here](https://docs.rs/dataview/0.1.1/dataview/) for more information on the Pod trait.
+Generally the generic Type should implement the Pod trait to be read into easily.
+See [here](https://docs.rs/dataview/0.1.1/dataview/) for more information on the Pod trait.
 
 # Examples
 

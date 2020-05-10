@@ -4,6 +4,8 @@ mod x86pae;
 
 use crate::error::{Error, Result};
 
+use log::warn;
+
 use flow_core::arch::Architecture;
 use flow_core::mem::AccessPhysicalMemory;
 use flow_core::types::{Address, Length, PhysicalAddress};
@@ -25,7 +27,7 @@ pub fn find<T: AccessPhysicalMemory + ?Sized>(mem: &mut T) -> Result<StartBlock>
     // find x64 dtb in low stub < 1M
     match x64::find_lowstub(&low1m) {
         Ok(d) => return Ok(d),
-        Err(e) => println!("Error: {}", e),
+        Err(e) => warn!("x64::find_lowstub() error: {}", e),
     }
 
     // TODO: append instead of read twice?
@@ -35,17 +37,17 @@ pub fn find<T: AccessPhysicalMemory + ?Sized>(mem: &mut T) -> Result<StartBlock>
 
     match x64::find(&low16m) {
         Ok(d) => return Ok(d),
-        Err(e) => println!("Error: {}", e),
+        Err(e) => warn!("x64::find() error: {}", e),
     }
 
     match x86pae::find(&low16m) {
         Ok(d) => return Ok(d),
-        Err(e) => println!("Error: {}", e),
+        Err(e) => warn!("x86pae::find() error: {}", e),
     }
 
     match x86::find(&low16m) {
         Ok(d) => return Ok(d),
-        Err(e) => println!("Error: {}", e),
+        Err(e) => warn!("x86::find() error: {}", e),
     }
 
     Err(Error::new("unable to find dtb"))

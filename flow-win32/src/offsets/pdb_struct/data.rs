@@ -1,5 +1,6 @@
 // https://github.com/willglynn/pdb/blob/master/examples/pdb2hpp.rs
-use log::trace;
+
+use log::{info, trace};
 use std::collections::BTreeSet;
 
 pub type TypeSet = BTreeSet<pdb::TypeIndex>;
@@ -135,7 +136,7 @@ impl<'p> Class<'p> {
                 }
             }
             other => {
-                println!(
+                info!(
                     "trying to Class::add_fields() got {} -> {:?}",
                     type_index, other
                 );
@@ -205,7 +206,7 @@ impl<'p> Class<'p> {
                         }
                     }
                     other => {
-                        println!(
+                        info!(
                             "processing OverloadedMethod, expected MethodList, got {} -> {:?}",
                             data.method_list, other
                         );
@@ -271,7 +272,7 @@ impl<'p> Method<'p> {
             }),
 
             other => {
-                println!("other: {:?}", other);
+                info!("other: {:?}", other);
                 Err(pdb::Error::UnimplementedFeature("that"))
             }
         }
@@ -323,7 +324,7 @@ impl<'p> Enum<'p> {
                 }
             }
             other => {
-                println!(
+                info!(
                     "trying to Enum::add_fields() got {} -> {:?}",
                     type_index, other
                 );

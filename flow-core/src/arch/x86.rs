@@ -5,6 +5,8 @@ use crate::types::{Address, Length, PhysicalAddress};
 
 use crate::mem::AccessPhysicalMemory;
 
+use log::warn;
+
 pub fn bits() -> u8 {
     32
 }
@@ -26,6 +28,6 @@ pub fn virt_to_phys<T: AccessPhysicalMemory>(
     _dtb: Address,
     _addr: Address,
 ) -> Result<PhysicalAddress> {
-    println!("x86::virt_to_phys() not implemented yet");
+    warn!("x86::virt_to_phys() not implemented yet");
     Err(Error::new("x86::virt_to_phys() not implemented yet"))
 }

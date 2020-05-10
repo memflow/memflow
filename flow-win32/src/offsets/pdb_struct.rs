@@ -67,7 +67,6 @@ impl PdbStruct {
         let mut field_map = HashMap::new();
         for class in &data.classes {
             class.fields.iter().for_each(|f| {
-                //println!("found offset: {:?}", f.name.to_string().into_owned());
                 field_map.insert(
                     f.name.to_string().into_owned(),
                     PdbField {

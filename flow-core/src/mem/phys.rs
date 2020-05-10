@@ -16,11 +16,10 @@ pub trait AccessPhysicalMemory {
     fn phys_write_raw(&mut self, addr: PhysicalAddress, data: &[u8]) -> Result<()>;
 
     // read helpers
-    fn phys_read_into<T: Pod + ?Sized>(
-        &mut self,
-        addr: PhysicalAddress,
-        out: &mut T,
-    ) -> Result<()> {
+    fn phys_read_into<T: Pod + ?Sized>(&mut self, addr: PhysicalAddress, out: &mut T) -> Result<()>
+    where
+        Self: Sized,
+    {
         self.phys_read_raw_into(addr, out.as_bytes_mut())
     }
 
@@ -35,14 +34,20 @@ pub trait AccessPhysicalMemory {
     /// this function will overwrite the contents of 'obj' so we can just allocate an unitialized memory section.
     /// this function should only be used with [repr(C)] structs.
     #[allow(clippy::uninit_assumed_init)]
-    fn phys_read<T: Pod + Sized>(&mut self, addr: PhysicalAddress) -> Result<T> {
+    fn phys_read<T: Pod + Sized>(&mut self, addr: PhysicalAddress) -> Result<T>
+    where
+        Self: Sized,
+    {
         let mut obj: T = unsafe { MaybeUninit::uninit().assume_init() };
         self.phys_read_into(addr, &mut obj)?;
         Ok(obj)
     }
 
     // write helpers
-    fn phys_write<T: Pod + ?Sized>(&mut self, addr: PhysicalAddress, data: &T) -> Result<()> {
+    fn phys_write<T: Pod + ?Sized>(&mut self, addr: PhysicalAddress, data: &T) -> Result<()>
+    where
+        Self: Sized,
+    {
         self.phys_write_raw(addr, data.as_bytes())
     }
 }

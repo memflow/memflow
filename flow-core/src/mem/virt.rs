@@ -33,7 +33,10 @@ pub trait AccessVirtualMemory {
         dtb: Address,
         addr: Address,
         out: &mut T,
-    ) -> Result<()> {
+    ) -> Result<()>
+    where
+        Self: Sized,
+    {
         self.virt_read_raw_into(arch, dtb, addr, out.as_bytes_mut())
     }
 
@@ -59,7 +62,10 @@ pub trait AccessVirtualMemory {
         arch: Architecture,
         dtb: Address,
         addr: Address,
-    ) -> Result<T> {
+    ) -> Result<T>
+    where
+        Self: Sized,
+    {
         let mut obj: T = unsafe { MaybeUninit::uninit().assume_init() };
         self.virt_read_into(arch, dtb, addr, &mut obj)?;
         Ok(obj)
@@ -72,7 +78,10 @@ pub trait AccessVirtualMemory {
         dtb: Address,
         addr: Address,
         data: &T,
-    ) -> Result<()> {
+    ) -> Result<()>
+    where
+        Self: Sized,
+    {
         self.virt_write_raw_from(arch, dtb, addr, data.as_bytes())
     }
 }

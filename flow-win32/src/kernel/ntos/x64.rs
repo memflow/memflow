@@ -11,7 +11,7 @@ use flow_core::arch;
 use flow_core::mem::AccessVirtualMemory;
 use flow_core::types::{Address, Length};
 
-pub fn find_with_va<T: AccessVirtualMemory>(
+pub fn find_with_va<T: AccessVirtualMemory + ?Sized>(
     mem: &mut T,
     start_block: &StartBlock,
 ) -> Result<(Address, Length)> {
@@ -86,6 +86,6 @@ pub fn find_with_va<T: AccessVirtualMemory>(
     ))
 }
 
-pub fn find<T: AccessVirtualMemory>(_mem: &mut T) -> Result<(Address, Length)> {
+pub fn find<T: AccessVirtualMemory + ?Sized>(_mem: &mut T) -> Result<(Address, Length)> {
     Err(Error::new("find_x64(): not implemented yet"))
 }

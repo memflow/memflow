@@ -5,8 +5,8 @@ use log::{debug, info};
 
 use pelite::{self, PeView};
 
-use flow_core::address::{Address, Length};
 use flow_core::mem::AccessVirtualMemory;
+use flow_core::types::{Address, Length};
 
 // TODO: store pe size in windows struct so we can reference it later
 pub fn probe_pe_header<T: AccessVirtualMemory>(

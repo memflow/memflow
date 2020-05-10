@@ -1,8 +1,8 @@
 use crate::error::{Error, Result};
 use crate::kernel::StartBlock;
 
-use flow_core::address::Address;
 use flow_core::arch::{self, Architecture};
+use flow_core::types::Address;
 
 fn _find(_mem: &[u8]) -> Option<()> {
     /*

@@ -10,8 +10,8 @@ use log::warn;
 use pelite::{self, image::GUID, pe64::debug::CodeView, PeView};
 use uuid::{self, Uuid};
 
-use flow_core::address::{Address, Length};
 use flow_core::mem::AccessVirtualMemory;
+use flow_core::types::{Address, Length};
 
 pub fn find<T: AccessVirtualMemory>(
     mem: &mut T,

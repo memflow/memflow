@@ -9,7 +9,7 @@ pub use cached_vat::*;
 pub use page_cache::*;
 pub use timed_tlb::*;
 
-use crate::address::{Address, Length, Page, PageType, PhysicalAddress};
+use crate::types::{Address, Length, Page, PageType, PhysicalAddress};
 
 // TODO: overhaul this mess, we should not throw with mutable memory around like this
 pub struct CacheEntry<'a> {

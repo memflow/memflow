@@ -2,8 +2,8 @@ use crate::error::{Error, Result};
 
 use log::{debug, info, warn};
 
-use flow_core::address::{Address, Length};
 use flow_core::mem::*;
+use flow_core::types::{Address, Length};
 
 use crate::kernel::StartBlock;
 

@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::path::Path;
 
-use flow_core::address::Length;
+use flow_core::types::Length;
 
 mod data;
 use data::TypeSet;

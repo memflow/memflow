@@ -15,9 +15,9 @@ use tokio::net::UnixStream;
 use capnp::capability::Promise;
 use capnp_rpc::{pry, rpc_twoparty_capnp, twoparty, RpcSystem};
 
-use flow_core::address::{Address, Length, Page, PhysicalAddress};
 use flow_core::arch::Architecture;
 use flow_core::mem::*;
+use flow_core::types::{Address, Length, Page, PhysicalAddress};
 
 use crate::bridge_capnp::bridge;
 

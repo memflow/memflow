@@ -1,5 +1,5 @@
 use super::{TLBCache, TLBEntry};
-use crate::address::{Address, Length, Page, PhysicalAddress};
+use crate::types::{Address, Length, Page, PhysicalAddress};
 
 pub use coarsetime::{Duration, Instant};
 

@@ -1,5 +1,5 @@
-use crate::address::{Address, Length, Page};
 use crate::arch::Architecture;
+use crate::types::{Address, Length, Page};
 use crate::Result;
 
 use std::mem::MaybeUninit;

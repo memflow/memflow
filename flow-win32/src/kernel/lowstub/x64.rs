@@ -3,8 +3,8 @@ use crate::kernel::StartBlock;
 
 use byteorder::{ByteOrder, LittleEndian};
 
-use flow_core::address::{Address, Length};
 use flow_core::arch::{self, Architecture};
+use flow_core::types::{Address, Length};
 
 // https://github.com/ufrisk/MemProcFS/blob/f2d15cf4fe4f19cfeea3dad52971fae2e491064b/vmm/vmmwininit.c#L560
 pub fn find_lowstub(stub: &[u8]) -> Result<StartBlock> {

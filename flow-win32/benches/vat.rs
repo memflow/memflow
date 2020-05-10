@@ -13,7 +13,7 @@ extern crate rand;
 use flow_core::arch::Architecture;
 use flow_core::mem::{
     timed_validator::*, AccessPhysicalMemory, AccessVirtualMemory, CachedMemoryAccess, CachedVAT,
-    PageCache, TimedTLB, VirtualAddressTranslator,
+    PageCache, TLBCache, VirtualAddressTranslator,
 };
 use flow_core::types::Address;
 
@@ -84,7 +84,10 @@ fn vat_test<T: AccessVirtualMemory + AccessPhysicalMemory + VirtualAddressTransl
     let mut rng = CurRng::from_rng(thread_rng()).unwrap();
 
     if use_tlb {
-        let tlb = TimedTLB::new(2048.into(), Duration::from_millis(1000).into());
+        let tlb = TLBCache::new(
+            2048.into(),
+            TimedCacheValidator::new(Duration::from_millis(1000).into()),
+        );
         let mut mem = CachedVAT::with(mem, tlb);
         bench.iter(|| {
             for _ in 0..translations {

@@ -1,25 +1,25 @@
 use crate::error::Result;
 
 use crate::arch::Architecture;
-use crate::mem::cache::TLBCache;
+use crate::mem::cache::{CacheValidator, TLBCache};
 use crate::mem::AccessPhysicalMemory;
 use crate::types::{Address, Page, PhysicalAddress};
 use crate::vat;
 use crate::vat::VirtualAddressTranslator;
 
 #[derive(AccessVirtualMemory)]
-pub struct CachedVAT<T: AccessPhysicalMemory + VirtualAddressTranslator, Q: TLBCache> {
+pub struct CachedVAT<T: AccessPhysicalMemory + VirtualAddressTranslator, Q: CacheValidator> {
     mem: T,
-    tlb: Q,
+    tlb: TLBCache<Q>,
 }
 
-impl<T: AccessPhysicalMemory + VirtualAddressTranslator, Q: TLBCache> CachedVAT<T, Q> {
-    pub fn with(mem: T, tlb: Q) -> Self {
+impl<T: AccessPhysicalMemory + VirtualAddressTranslator, Q: CacheValidator> CachedVAT<T, Q> {
+    pub fn with(mem: T, tlb: TLBCache<Q>) -> Self {
         Self { mem, tlb }
     }
 }
 
-impl<T: AccessPhysicalMemory + VirtualAddressTranslator, Q: TLBCache> VirtualAddressTranslator
+impl<T: AccessPhysicalMemory + VirtualAddressTranslator, Q: CacheValidator> VirtualAddressTranslator
     for CachedVAT<T, Q>
 {
     fn virt_to_phys(
@@ -28,6 +28,7 @@ impl<T: AccessPhysicalMemory + VirtualAddressTranslator, Q: TLBCache> VirtualAdd
         dtb: Address,
         vaddr: Address,
     ) -> Result<PhysicalAddress> {
+        self.tlb.validator.update_validity();
         if let Some(entry) = self.tlb.try_entry(dtb, vaddr, arch.page_size()) {
             Ok(entry.phys_addr)
         } else {
@@ -39,7 +40,7 @@ impl<T: AccessPhysicalMemory + VirtualAddressTranslator, Q: TLBCache> VirtualAdd
     }
 }
 
-impl<T: AccessPhysicalMemory + VirtualAddressTranslator, Q: TLBCache> AccessPhysicalMemory
+impl<T: AccessPhysicalMemory + VirtualAddressTranslator, Q: CacheValidator> AccessPhysicalMemory
     for CachedVAT<T, Q>
 {
     fn phys_read_raw_into(&mut self, addr: PhysicalAddress, out: &mut [u8]) -> Result<()> {

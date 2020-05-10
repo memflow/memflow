@@ -19,10 +19,6 @@ impl<'a, T: AccessPhysicalMemory, Q: CacheValidator> CachedMemoryAccess<'a, T, Q
     pub fn with(mem: &'a mut T, cache: PageCache<Q>) -> Self {
         Self { mem, cache }
     }
-
-    pub fn get_mem(&mut self) -> &mut T {
-        &mut self.mem
-    }
 }
 
 // TODO: calling phys_read_raw_into non page alligned causes UB
@@ -31,6 +27,7 @@ impl<'a, T: AccessPhysicalMemory, Q: CacheValidator> AccessPhysicalMemory
     for CachedMemoryAccess<'a, T, Q>
 {
     fn phys_read_raw_into(&mut self, addr: PhysicalAddress, out: &mut [u8]) -> Result<()> {
+        self.cache.validator.update_validity();
         if let Some(page) = addr.page {
             // try read from cache or fall back
             if self.cache.is_cached_page_type(page.page_type) {
@@ -67,6 +64,7 @@ impl<'a, T: AccessPhysicalMemory, Q: CacheValidator> AccessPhysicalMemory
     }
 
     fn phys_write_raw(&mut self, addr: PhysicalAddress, data: &[u8]) -> Result<()> {
+        self.cache.validator.update_validity();
         if let Some(page) = addr.page {
             if self.cache.is_cached_page_type(page.page_type) {
                 for (paddr, data_chunk) in

@@ -329,6 +329,7 @@ fn test_cached_mem() {
 #[test]
 fn test_cache_invalidity_cached() {
     let mut mem = TestMemory::new(Length::from_mb(512));
+    let mem_ptr = &mut mem as *mut TestMemory;
     let virt_size = Length::from_mb(8);
     let mut buf_start = vec![0_u8; 64];
     for (i, item) in buf_start.iter_mut().enumerate() {
@@ -354,8 +355,7 @@ fn test_cache_invalidity_cached() {
 
     let mut write_buf = cached_buf.clone();
     write_buf[16..20].copy_from_slice(&[255, 255, 255, 255]);
-    mem_cache
-        .get_mem()
+    unsafe { mem_ptr.as_mut().unwrap() }
         .virt_write_raw_from(arch, dtb, virt_base, write_buf.as_slice())
         .unwrap();
 
@@ -371,6 +371,7 @@ fn test_cache_invalidity_cached() {
 #[test]
 fn test_cache_invalidity_non_cached() {
     let mut mem = TestMemory::new(Length::from_mb(512));
+    let mem_ptr = &mut mem as *mut TestMemory;
     let virt_size = Length::from_mb(8);
     let mut buf_start = vec![0_u8; 64];
     for (i, item) in buf_start.iter_mut().enumerate() {
@@ -397,8 +398,7 @@ fn test_cache_invalidity_non_cached() {
 
     let mut write_buf = cached_buf.clone();
     write_buf[16..20].copy_from_slice(&[255, 255, 255, 255]);
-    mem_cache
-        .get_mem()
+    unsafe { mem_ptr.as_mut().unwrap() }
         .virt_write_raw_from(arch, dtb, virt_base, write_buf.as_slice())
         .unwrap();
 

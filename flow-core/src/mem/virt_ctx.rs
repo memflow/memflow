@@ -8,14 +8,14 @@ use std::ffi::CString;
 
 use dataview::Pod;
 
-pub struct VirtualMemoryContext<'a, T: AccessVirtualMemory> {
+pub struct VirtualMemoryContext<'a, T: AccessVirtualMemory + ?Sized> {
     mem: &'a mut T,
     sys_arch: Architecture,
     proc_arch: Architecture,
     dtb: Address,
 }
 
-impl<'a, T: AccessVirtualMemory> VirtualMemoryContext<'a, T> {
+impl<'a, T: AccessVirtualMemory + ?Sized> VirtualMemoryContext<'a, T> {
     pub fn with(mem: &'a mut T, sys_arch: Architecture, dtb: Address) -> Self {
         Self {
             mem,
@@ -57,21 +57,24 @@ impl<'a, T: AccessVirtualMemory> VirtualMemoryContext<'a, T> {
             .virt_read_raw_into(self.sys_arch, self.dtb, addr, out)
     }
 
-    pub fn virt_read_into<U: Pod + ?Sized>(&mut self, addr: Address, out: &mut U) -> Result<()> {
-        self.mem.virt_read_into(self.sys_arch, self.dtb, addr, out)
-    }
-
     pub fn virt_read_raw(&mut self, addr: Address, len: Length) -> Result<Vec<u8>> {
         self.mem.virt_read_raw(self.sys_arch, self.dtb, addr, len)
-    }
-
-    pub fn virt_read<U: Pod + Sized>(&mut self, addr: Address) -> Result<U> {
-        self.mem.virt_read(self.sys_arch, self.dtb, addr)
     }
 
     pub fn virt_write_raw_from(&mut self, addr: Address, data: &[u8]) -> Result<()> {
         self.mem
             .virt_write_raw_from(self.sys_arch, self.dtb, addr, data)
+    }
+}
+
+// sized impl
+impl<'a, T: AccessVirtualMemory + Sized> VirtualMemoryContext<'a, T> {
+    pub fn virt_read_into<U: Pod + ?Sized>(&mut self, addr: Address, out: &mut U) -> Result<()> {
+        self.mem.virt_read_into(self.sys_arch, self.dtb, addr, out)
+    }
+
+    pub fn virt_read<U: Pod + Sized>(&mut self, addr: Address) -> Result<U> {
+        self.mem.virt_read(self.sys_arch, self.dtb, addr)
     }
 
     pub fn virt_write_from<U: Pod + ?Sized>(&mut self, addr: Address, data: &U) -> Result<()> {

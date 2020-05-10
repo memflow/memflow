@@ -11,4 +11,8 @@ crate-type = ["cdylib"]
 [dependencies]
 flow-core = { path = "../flow-core" }
 flow-win32 = { path = "../flow-win32" }
+flow-qemu-procfs = { path = "../connectors/flow-qemu-procfs" }
 libc = "0.2"
+
+log = "0.4.8"
+simple_logger = "1.0.1"

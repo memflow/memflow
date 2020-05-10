@@ -9,7 +9,7 @@ use flow_core::mem::AccessVirtualMemory;
 use flow_core::types::{Address, Length};
 
 // TODO: store pe size in windows struct so we can reference it later
-pub fn probe_pe_header<T: AccessVirtualMemory>(
+pub fn probe_pe_header<T: AccessVirtualMemory + ?Sized>(
     mem: &mut T,
     start_block: &StartBlock,
     probe_addr: Address,
@@ -34,7 +34,7 @@ pub fn probe_pe_header<T: AccessVirtualMemory>(
     Ok(name.to_string())
 }
 
-pub fn try_fetch_pe_header<T: AccessVirtualMemory>(
+pub fn try_fetch_pe_header<T: AccessVirtualMemory + ?Sized>(
     mem: &mut T,
     start_block: &StartBlock,
     addr: Address,
@@ -45,7 +45,7 @@ pub fn try_fetch_pe_header<T: AccessVirtualMemory>(
     Ok(buf)
 }
 
-pub fn try_fetch_pe_size<T: AccessVirtualMemory>(
+pub fn try_fetch_pe_size<T: AccessVirtualMemory + ?Sized>(
     mem: &mut T,
     start_block: &StartBlock,
     addr: Address,

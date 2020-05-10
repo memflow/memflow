@@ -17,7 +17,7 @@ pub struct StartBlock {
 }
 
 // bcdedit /set firstmegabytepolicyuseall
-pub fn find<T: AccessPhysicalMemory>(mem: &mut T) -> Result<StartBlock> {
+pub fn find<T: AccessPhysicalMemory + ?Sized>(mem: &mut T) -> Result<StartBlock> {
     // read low 1mb stub
     let mut low1m = vec![0; Length::from_mb(1).as_usize()];
     mem.phys_read_raw_into(PhysicalAddress::NULL, &mut low1m)?;

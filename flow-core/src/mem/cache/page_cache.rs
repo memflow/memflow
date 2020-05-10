@@ -10,7 +10,7 @@ pub struct PageCache<T: CacheValidator> {
     cache: Box<[u8]>,
     page_size: Length,
     page_type_mask: PageType,
-    validator: T,
+    pub validator: T,
 }
 
 impl<T: CacheValidator> PageCache<T> {

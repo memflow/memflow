@@ -1,15 +1,15 @@
 pub mod cached_memory_access;
 pub mod cached_vat;
 pub mod page_cache;
-pub mod timed_tlb;
 pub mod timed_validator;
+pub mod tlb_cache;
 
 pub use cached_memory_access::*;
 pub use cached_vat::*;
 pub use page_cache::*;
-pub use timed_tlb::*;
+pub use tlb_cache::*;
 
-use crate::types::{Address, Length, Page, PageType, PhysicalAddress};
+use crate::types::{Address, PageType};
 
 // TODO: overhaul this mess, we should not throw with mutable memory around like this
 pub struct CacheEntry<'a> {
@@ -38,29 +38,8 @@ impl<'a> CacheEntry<'a> {
 
 pub trait CacheValidator {
     fn allocate_slots(&mut self, slot_count: usize);
+    fn update_validity(&mut self);
     fn is_slot_valid(&mut self, slot_id: usize) -> bool;
     fn validate_slot(&mut self, slot_id: usize);
     fn invalidate_slot(&mut self, slot_id: usize);
-}
-
-#[derive(Clone, Copy)]
-pub struct TLBEntry {
-    pub dtb: Address,
-    pub virt_addr: Address,
-    pub phys_addr: PhysicalAddress,
-}
-
-impl TLBEntry {
-    pub const fn create_invalid() -> Self {
-        Self {
-            dtb: Address::INVALID,
-            virt_addr: Address::INVALID,
-            phys_addr: PhysicalAddress::INVALID,
-        }
-    }
-}
-
-pub trait TLBCache {
-    fn try_entry(&mut self, dtb: Address, addr: Address, page_size: Length) -> Option<TLBEntry>;
-    fn cache_entry(&mut self, dtb: Address, in_addr: Address, out_page: Page, page_size: Length);
 }

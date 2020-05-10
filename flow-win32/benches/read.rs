@@ -11,7 +11,7 @@ extern crate flow_win32;
 extern crate rand;
 
 use flow_core::mem::{
-    timed_validator::*, AccessVirtualMemory, CachedMemoryAccess, CachedVAT, PageCache, TimedTLB,
+    timed_validator::*, AccessVirtualMemory, CachedMemoryAccess, CachedVAT, PageCache, TLBCache,
 };
 use flow_core::{Length, OsProcess, OsProcessModule, PageType};
 
@@ -138,7 +138,10 @@ fn read_test(
 ) {
     let (mut mem, os, proc, tmod) = initialize_ctx().unwrap();
 
-    let tlb_cache = TimedTLB::new(2048.into(), Duration::from_millis(1000).into());
+    let tlb_cache = TLBCache::new(
+        2048.into(),
+        TimedCacheValidator::new(Duration::from_millis(1000).into()),
+    );
 
     if cache_size > 0 {
         let cache = PageCache::new(

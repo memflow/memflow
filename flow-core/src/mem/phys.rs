@@ -1,4 +1,4 @@
-use crate::address::{Length, PhysicalAddress};
+use crate::types::{Length, PhysicalAddress};
 use crate::Result;
 
 use std::mem::MaybeUninit;

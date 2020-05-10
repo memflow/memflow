@@ -23,7 +23,7 @@ Emulator::with(process) -> Emulator
     .ok_or_else(|| "some error msg")
 */
 
-use crate::address::Address;
+use crate::types::Address;
 use crate::arch::ArchitectureTrait;
 use crate::process::Process;
 use crate::{Error, Result};

@@ -5,9 +5,9 @@ use masks::*;
 use crate::error::{Error, Result};
 use byteorder::{ByteOrder, LittleEndian};
 
-use crate::address::{Address, Length, Page, PageType, PhysicalAddress};
 use crate::arch;
 use crate::mem::AccessPhysicalMemory;
+use crate::types::{Address, Length, Page, PageType, PhysicalAddress};
 
 pub fn bits() -> u8 {
     64

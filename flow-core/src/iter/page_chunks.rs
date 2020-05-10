@@ -1,4 +1,4 @@
-use crate::address::{Address, Length};
+use crate::types::{Address, Length};
 use std::iter::*;
 
 pub struct PageChunks<'a, T: 'a> {

@@ -1,8 +1,8 @@
 use crate::error::{Error, Result};
 
-use flow_core::address::{Address, Length};
 use flow_core::arch;
 use flow_core::mem::*;
+use flow_core::types::{Address, Length};
 
 use byteorder::{BigEndian, ByteOrder, LittleEndian};
 use widestring::U16CString;

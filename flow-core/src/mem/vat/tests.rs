@@ -1,6 +1,6 @@
-use crate::address::{Address, Length, PhysicalAddress};
 use crate::arch::Architecture;
 use crate::mem::{AccessVirtualMemory, VirtualAddressTranslator};
+use crate::types::{Address, Length, PhysicalAddress};
 use crate::*;
 
 use flow_derive::*;
@@ -28,7 +28,7 @@ enum X64PageSize {
 }
 
 impl X64PageSize {
-    fn to_len(&self) -> Length {
+    fn to_len(self) -> Length {
         match self {
             X64PageSize::P4k => Length::from_kb(4),
             X64PageSize::P2m => Length::from_mb(2),
@@ -36,7 +36,7 @@ impl X64PageSize {
         }
     }
 
-    fn to_idx(&self) -> usize {
+    fn to_idx(self) -> usize {
         match self {
             X64PageSize::P4k => 0,
             X64PageSize::P2m => 1,
@@ -212,7 +212,7 @@ impl TestMemory {
 
         let dtb = self.alloc_pt_page();
         let virt_base =
-            Address::from(thread_rng().gen_range(0x100000000_u64, ((!0_u64) << 16) >> 16))
+            Address::from(thread_rng().gen_range(0x0001_0000_0000_u64, ((!0_u64) << 16) >> 16))
                 .as_page_aligned(Length::from_gb(2));
 
         let mut pml4 = unsafe {
@@ -224,7 +224,7 @@ impl TestMemory {
             unsafe { OffsetPageTable::new(&mut pml4, VirtAddr::from_ptr(self.mem.as_ptr())) };
 
         while cur_len < map_size {
-            let page_info = self.next_page_for_address(cur_len.as_addr());
+            let page_info = self.next_page_for_address(cur_len.as_u64().into());
             let flags = PageTableFlags::PRESENT | PageTableFlags::WRITABLE;
 
             if test_buf.len() >= (cur_len + page_info.size.to_len()).as_usize() {
@@ -283,7 +283,7 @@ impl TestMemory {
             cur_len += page_info.size.to_len();
         }
 
-        (Address::from(dtb.addr), virt_base)
+        (dtb.addr, virt_base)
     }
 }
 
@@ -301,7 +301,7 @@ fn test_cached_mem() {
         unsafe { std::slice::from_raw_parts(test_buf.as_ptr() as *const u8, virt_size.as_usize()) };
 
     let (dtb, virt_base) = mem.alloc_dtb(virt_size, &test_buf);
-    let arch = Architecture::from(Architecture::X64);
+    let arch = Architecture::X64;
 
     let mut buf_nocache = vec![0_u8; test_buf.len()];
     mem.virt_read_raw_into(arch, dtb, virt_base, buf_nocache.as_mut_slice())
@@ -333,7 +333,7 @@ fn test_cache_invalidity_cached() {
         *item = (i % 256) as u8;
     }
     let (dtb, virt_base) = mem.alloc_dtb(virt_size, &buf_start);
-    let arch = Architecture::from(Architecture::X64);
+    let arch = Architecture::X64;
 
     let cache = TimedCache::new(
         arch,
@@ -375,7 +375,7 @@ fn test_cache_invalidity_non_cached() {
         *item = (i % 256) as u8;
     }
     let (dtb, virt_base) = mem.alloc_dtb(virt_size, &buf_start);
-    let arch = Architecture::from(Architecture::X64);
+    let arch = Architecture::X64;
 
     //alloc_dtb creates a page table with all writeable pages, we disable cache for them
     let cache = TimedCache::new(
@@ -418,7 +418,7 @@ fn test_writeback() {
         *item = (i % 256) as u8;
     }
     let (dtb, virt_base) = mem.alloc_dtb(virt_size, &buf_start);
-    let arch = Architecture::from(Architecture::X64);
+    let arch = Architecture::X64;
 
     let cache = TimedCache::new(
         arch,
@@ -458,7 +458,7 @@ fn test_vtop() {
     let mut mem = TestMemory::new(Length::from_mb(512));
     let virt_size = Length::from_mb(8);
     let (dtb, virt_base) = mem.alloc_dtb(virt_size, &[]);
-    let arch = Architecture::from(Architecture::X64);
+    let arch = Architecture::X64;
 
     assert_eq!(mem.virt_to_phys(arch, dtb, virt_base).is_ok(), true);
     assert_eq!(

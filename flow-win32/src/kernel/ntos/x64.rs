@@ -7,9 +7,9 @@ use dataview::Pod;
 use log::debug;
 use pelite::image::IMAGE_DOS_HEADER;
 
-use flow_core::address::{Address, Length};
 use flow_core::arch;
 use flow_core::mem::AccessVirtualMemory;
+use flow_core::types::{Address, Length};
 
 pub fn find_with_va<T: AccessVirtualMemory>(
     mem: &mut T,

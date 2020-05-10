@@ -8,7 +8,7 @@ use std::path::Path;
 use crate::error::{Error, Result};
 use crate::kernel::ntos::Win32GUID;
 
-use flow_core::address::Length;
+use flow_core::types::Length;
 
 #[derive(Debug, Clone)]
 pub struct Win32Offsets {

@@ -4,9 +4,9 @@ mod x86pae;
 
 use crate::error::{Error, Result};
 
-use flow_core::address::{Address, Length, PhysicalAddress};
 use flow_core::arch::Architecture;
 use flow_core::mem::AccessPhysicalMemory;
+use flow_core::types::{Address, Length, PhysicalAddress};
 
 // PROCESSOR_START_BLOCK
 #[derive(Debug, Copy, Clone)]

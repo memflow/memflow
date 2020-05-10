@@ -5,8 +5,8 @@ pub mod x86_pae;
 use crate::error::{Error, Result};
 use std::convert::TryFrom;
 
-use crate::address::{Address, Length, PhysicalAddress};
 use crate::mem::AccessPhysicalMemory;
+use crate::types::{Address, Length, PhysicalAddress};
 
 /// ByteOrder definitions
 ///

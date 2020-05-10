@@ -1,9 +1,9 @@
 use crate::error::Result;
 
-use crate::address::{Address, Page, PhysicalAddress};
 use crate::arch::Architecture;
 use crate::mem::cache::TLBCache;
 use crate::mem::AccessPhysicalMemory;
+use crate::types::{Address, Page, PhysicalAddress};
 use crate::vat;
 use crate::vat::VirtualAddressTranslator;
 

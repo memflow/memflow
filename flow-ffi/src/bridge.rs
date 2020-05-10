@@ -6,7 +6,7 @@ use std::mem::transmute;
 use std::ptr;
 use std::rc::Rc;
 
-use flow_core::address::*;
+use flow_core::types::*;
 use flow_core::arch::*;
 use flow_core::connector::bridge::client::BridgeClient;
 use flow_core::mem::*;

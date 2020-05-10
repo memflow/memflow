@@ -1,8 +1,8 @@
 use crate::error::{Error, Result};
 use crate::kernel::StartBlock;
 
-use flow_core::address::Address;
 use flow_core::arch::{self, Architecture};
+use flow_core::types::Address;
 
 // see _find_x64
 // pa, pb16M + pa

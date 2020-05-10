@@ -1,7 +1,7 @@
 use super::CacheValidator;
 use super::{CacheEntry, PageType};
-use crate::address::{Address, Length};
 use crate::arch::Architecture;
+use crate::types::{Address, Length};
 use std::alloc::{alloc_zeroed, Layout};
 
 #[derive(Clone)]

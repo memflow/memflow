@@ -57,6 +57,8 @@ impl Address {
     /**
     A address with the value of zero.
 
+    # Examples
+
     ```
     use flow_core::types::Address;
 
@@ -70,6 +72,8 @@ impl Address {
     /**
     A address with an invalid value.
 
+    # Examples
+
     ```
     use flow_core::types::Address;
 
@@ -82,6 +86,8 @@ impl Address {
 
     /**
     Returns an address with a value of zero.
+
+    # Examples
 
     ```
     use flow_core::types::Address;
@@ -97,6 +103,8 @@ impl Address {
 
     /**
     Checks wether the address is zero or not.
+
+    # Examples
 
     ```
     use flow_core::types::Address;
@@ -114,6 +122,8 @@ impl Address {
     /**
     Returns an address with a invalid value.
 
+    # Examples
+
     ```
     use flow_core::types::Address;
 
@@ -128,6 +138,8 @@ impl Address {
 
     /**
     Checks wether the address is valid or not.
+
+    # Examples
 
     ```
     use flow_core::types::Address;
@@ -145,6 +157,8 @@ impl Address {
     /**
     Converts the address into a `u32` value.
 
+    # Examples
+
     ```
     use flow_core::types::Address;
 
@@ -160,6 +174,8 @@ impl Address {
 
     /**
     Converts the address into a `u64` value.
+
+    # Examples
 
     ```
     use flow_core::types::Address;
@@ -177,6 +193,8 @@ impl Address {
     /**
     Converts the address into a `usize` value.
 
+    # Examples
+
     ```
     use flow_core::types::Address;
 
@@ -193,6 +211,8 @@ impl Address {
     /**
     Aligns the containing address to the given page size.
     It returns the base address of the containing page.
+
+    # Examples
 
     ```
     use flow_core::types::{Address, Length};
@@ -215,6 +235,8 @@ impl Address {
 /**
 Returns a address with a value of zero.
 
+# Examples
+
 ```
 use flow_core::types::Address;
 
@@ -231,6 +253,8 @@ impl Default for Address {
 
 /**
 Adds a `Length` to a `Address` which results in a `Address`.
+
+# Examples
 
 ```
 use flow_core::types::{Address, Length};
@@ -253,6 +277,8 @@ impl ops::Add<Length> for Address {
 /**
 Adds a `Length` to a `Address`.
 
+# Examples
+
 ```
 use flow_core::types::{Address, Length};
 
@@ -274,6 +300,8 @@ impl ops::AddAssign<Length> for Address {
 // TODO: guarantee no underlfow
 /**
 Subtracts a `Address` from a `Address` resulting in a `Length`.
+
+# Examples
 
 ```
 use flow_core::types::{Address, Length};
@@ -304,6 +332,8 @@ impl ops::Sub<Length> for Address {
 /**
 Subtracts a `Length` from a `Address`.
 
+# Examples
+
 ```
 use flow_core::types::{Address, Length};
 
@@ -324,6 +354,8 @@ impl ops::SubAssign<Length> for Address {
 
 /**
 Adds a `Offset` to a `Address` resulting in a `Address`.
+
+# Examples
 
 ```
 use flow_core::types::{Address, Offset};
@@ -349,6 +381,8 @@ impl ops::Add<Offset> for Address {
 
 /**
 Subtract a `Offset` from a `Address`.
+
+# Examples
 
 ```
 use flow_core::types::{Address, Length};

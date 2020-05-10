@@ -10,7 +10,9 @@ extern crate flow_qemu_procfs;
 extern crate flow_win32;
 extern crate rand;
 
-use flow_core::mem::{AccessVirtualMemory, CachedMemoryAccess, CachedVAT, TimedCache, TimedTLB};
+use flow_core::mem::{
+    timed_validator::*, AccessVirtualMemory, CachedMemoryAccess, CachedVAT, PageCache, TLBCache,
+};
 use flow_core::{Length, OsProcess, OsProcessModule, PageType};
 
 use flow_qemu_procfs::Memory;
@@ -136,22 +138,25 @@ fn read_test(
 ) {
     let (mut mem, os, proc, tmod) = initialize_ctx().unwrap();
 
-    let tlb_cache = TimedTLB::new(2048.into(), Duration::from_millis(1000).into());
+    let tlb_cache = TLBCache::new(
+        2048.into(),
+        TimedCacheValidator::new(Duration::from_millis(1000).into()),
+    );
 
     if cache_size > 0 {
-        let cache = TimedCache::new(
+        let cache = PageCache::new(
             os.start_block.arch,
             Length::from_mb(cache_size),
-            Duration::from_millis(10000).into(),
             PageType::PAGE_TABLE | PageType::READ_ONLY,
+            TimedCacheValidator::new(Duration::from_millis(10000).into()),
         );
 
         if use_tlb {
-            let mem = CachedMemoryAccess::with(mem, cache);
+            let mem = CachedMemoryAccess::with(&mut mem, cache.clone());
             let mut mem = CachedVAT::with(mem, tlb_cache);
             read_test_with_mem(bench, &mut mem, chunk_size, chunks, proc, tmod);
         } else {
-            let mut mem = CachedMemoryAccess::with(mem, cache);
+            let mut mem = CachedMemoryAccess::with(&mut mem, cache);
             read_test_with_mem(bench, &mut mem, chunk_size, chunks, proc, tmod);
         }
     } else if use_tlb {

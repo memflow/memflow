@@ -257,7 +257,7 @@ impl AccessVirtualMemory for BridgeClient {
         Ok(())
     }
 
-    fn virt_write_raw_from(
+    fn virt_write_raw(
         &mut self,
         arch: Architecture,
         dtb: Address,
@@ -265,7 +265,7 @@ impl AccessVirtualMemory for BridgeClient {
         data: &[u8],
     ) -> Result<()> {
         // TODO: implement chunk logic
-        debug!("virt_write_raw_from({:?}, {:?}, {:?})", arch, dtb, addr);
+        debug!("virt_write_raw({:?}, {:?}, {:?})", arch, dtb, addr);
         self.virt_write_chunk(arch, dtb, addr, data)?;
         Ok(())
     }

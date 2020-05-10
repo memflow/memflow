@@ -16,7 +16,7 @@ pub trait AccessVirtualMemory {
         out: &mut [u8],
     ) -> Result<()>;
 
-    fn virt_write_raw_from(
+    fn virt_write_raw(
         &mut self,
         arch: Architecture,
         dtb: Address,
@@ -72,7 +72,7 @@ pub trait AccessVirtualMemory {
     }
 
     // write helpers
-    fn virt_write_from<T: Pod + ?Sized>(
+    fn virt_write<T: Pod + ?Sized>(
         &mut self,
         arch: Architecture,
         dtb: Address,
@@ -82,6 +82,6 @@ pub trait AccessVirtualMemory {
     where
         Self: Sized,
     {
-        self.virt_write_raw_from(arch, dtb, addr, data.as_bytes())
+        self.virt_write_raw(arch, dtb, addr, data.as_bytes())
     }
 }

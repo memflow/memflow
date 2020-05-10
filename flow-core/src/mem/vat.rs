@@ -39,7 +39,7 @@ pub fn virt_read_raw_into<T: AccessPhysicalMemory + VirtualAddressTranslator>(
 }
 
 #[allow(unused)]
-pub fn virt_write_raw_from<T: AccessPhysicalMemory + VirtualAddressTranslator>(
+pub fn virt_write_raw<T: AccessPhysicalMemory + VirtualAddressTranslator>(
     mem: &mut T,
     arch: Architecture,
     dtb: Address,

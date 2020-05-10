@@ -11,6 +11,7 @@ use clap::App;
 use log::Level;
 use std::time::Duration;
 
+use flow_core::timed_validator::*;
 use flow_core::*;
 use flow_core::{Error, Result};
 
@@ -33,13 +34,13 @@ fn main() -> Result<()> {
             let mut conn = init_bridge::init_bridge(&argv).unwrap();
             let os = Win32::try_with(&mut conn)?;
 
-            let cache = TimedCache::new(
+            let cache = PageCache::new(
                 os.start_block.arch,
                 Length::from_mb(32),
-                Duration::from_millis(1000).into(),
                 PageType::PAGE_TABLE | PageType::READ_ONLY,
+                TimedCacheValidator::new(Duration::from_millis(1000).into()),
             );
-            let mut mem = CachedMemoryAccess::with(conn, cache);
+            let mut mem = CachedMemoryAccess::with(&mut conn, cache);
 
             let mut win32 = Win32Interface::with(&mut mem, os)?;
             win32.run()
@@ -48,13 +49,13 @@ fn main() -> Result<()> {
             let mut conn = init_qemu_procfs::init_qemu_procfs().unwrap();
             let os = Win32::try_with(&mut conn)?;
 
-            let cache = TimedCache::new(
+            let cache = PageCache::new(
                 os.start_block.arch,
                 Length::from_mb(32),
-                Duration::from_millis(1000).into(),
                 PageType::PAGE_TABLE | PageType::READ_ONLY,
+                TimedCacheValidator::new(Duration::from_millis(1000).into()),
             );
-            let mut mem = CachedMemoryAccess::with(conn, cache);
+            let mut mem = CachedMemoryAccess::with(&mut conn, cache);
 
             let mut win32 = Win32Interface::with(&mut mem, os)?;
             win32.run()

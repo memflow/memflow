@@ -1,6 +1,6 @@
 use crate::error::Result;
 
-use super::PageCache;
+use super::{page_cache::PageCache, CacheValidator};
 
 use crate::arch::Architecture;
 use crate::mem::{AccessPhysicalMemory, AccessVirtualMemory};
@@ -10,25 +10,24 @@ use crate::vat;
 
 // TODO: derive virtual reads here
 #[derive(VirtualAddressTranslator)]
-pub struct CachedMemoryAccess<T: AccessPhysicalMemory, Q: PageCache> {
-    mem: T,
-    cache: Q,
+pub struct CachedMemoryAccess<'a, T: AccessPhysicalMemory, Q: CacheValidator> {
+    mem: &'a mut T,
+    cache: PageCache<Q>,
 }
 
-impl<T: AccessPhysicalMemory, Q: PageCache> CachedMemoryAccess<T, Q> {
-    pub fn with(mem: T, cache: Q) -> Self {
+impl<'a, T: AccessPhysicalMemory, Q: CacheValidator> CachedMemoryAccess<'a, T, Q> {
+    pub fn with(mem: &'a mut T, cache: PageCache<Q>) -> Self {
         Self { mem, cache }
-    }
-
-    pub fn get_mem(&mut self) -> &mut T {
-        &mut self.mem
     }
 }
 
 // TODO: calling phys_read_raw_into non page alligned causes UB
 // forward AccessPhysicalMemory trait fncs
-impl<T: AccessPhysicalMemory, Q: PageCache> AccessPhysicalMemory for CachedMemoryAccess<T, Q> {
+impl<'a, T: AccessPhysicalMemory, Q: CacheValidator> AccessPhysicalMemory
+    for CachedMemoryAccess<'a, T, Q>
+{
     fn phys_read_raw_into(&mut self, addr: PhysicalAddress, out: &mut [u8]) -> Result<()> {
+        self.cache.validator.update_validity();
         if let Some(page) = addr.page {
             // try read from cache or fall back
             if self.cache.is_cached_page_type(page.page_type) {
@@ -65,6 +64,7 @@ impl<T: AccessPhysicalMemory, Q: PageCache> AccessPhysicalMemory for CachedMemor
     }
 
     fn phys_write_raw(&mut self, addr: PhysicalAddress, data: &[u8]) -> Result<()> {
+        self.cache.validator.update_validity();
         if let Some(page) = addr.page {
             if self.cache.is_cached_page_type(page.page_type) {
                 for (paddr, data_chunk) in
@@ -85,10 +85,10 @@ impl<T: AccessPhysicalMemory, Q: PageCache> AccessPhysicalMemory for CachedMemor
 }
 
 // forward AccessVirtualMemory trait fncs if memory has them implemented
-impl<T, Q> AccessVirtualMemory for CachedMemoryAccess<T, Q>
+impl<'a, T, Q> AccessVirtualMemory for CachedMemoryAccess<'a, T, Q>
 where
     T: AccessPhysicalMemory,
-    Q: PageCache,
+    Q: CacheValidator,
 {
     fn virt_read_raw_into(
         &mut self,
@@ -100,14 +100,14 @@ where
         vat::virt_read_raw_into(self, arch, dtb, addr, out)
     }
 
-    fn virt_write_raw_from(
+    fn virt_write_raw(
         &mut self,
         arch: Architecture,
         dtb: Address,
         addr: Address,
         data: &[u8],
     ) -> Result<()> {
-        vat::virt_write_raw_from(self, arch, dtb, addr, data)
+        vat::virt_write_raw(self, arch, dtb, addr, data)
     }
 
     fn virt_page_info(&mut self, arch: Architecture, dtb: Address, addr: Address) -> Result<Page> {

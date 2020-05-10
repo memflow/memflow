@@ -6,7 +6,9 @@ extern crate rand;
 use std::io::Write;
 use std::time::{Duration, Instant};
 
-use flow_core::{AccessPhysicalMemory, AccessVirtualMemory, CachedMemoryAccess, TimedCache};
+use flow_core::{
+    timed_validator::*, AccessPhysicalMemory, AccessVirtualMemory, CachedMemoryAccess, PageCache,
+};
 use flow_core::{Length, OsProcess, OsProcessModule, PageType};
 use flow_win32::{Win32, Win32Module, Win32Offsets, Win32Process};
 
@@ -154,13 +156,13 @@ fn main() -> flow_core::Result<()> {
 
     println!();
     println!("Benchmarking cached reads:");
-    let cache = TimedCache::new(
+    let cache = PageCache::new(
         os.start_block.arch,
         Length::from_mb(2),
-        Duration::from_millis(1000).into(),
         PageType::PAGE_TABLE | PageType::READ_ONLY,
+        TimedCacheValidator::new(Duration::from_millis(1000).into()),
     );
-    let mut mem_cached = CachedMemoryAccess::with(mem_sys, cache);
+    let mut mem_cached = CachedMemoryAccess::with(&mut mem_sys, cache);
     read_bench(&mut mem_cached, os).unwrap();
 
     Ok(())

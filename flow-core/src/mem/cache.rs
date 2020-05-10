@@ -1,11 +1,12 @@
 pub mod cached_memory_access;
 pub mod cached_vat;
-pub mod timed_cache;
+pub mod page_cache;
 pub mod timed_tlb;
+pub mod timed_validator;
 
 pub use cached_memory_access::*;
 pub use cached_vat::*;
-pub use timed_cache::*;
+pub use page_cache::*;
 pub use timed_tlb::*;
 
 use crate::address::{Address, Length, Page, PageType, PhysicalAddress};
@@ -35,14 +36,11 @@ impl<'a> CacheEntry<'a> {
     }
 }
 
-pub trait PageCache {
-    fn page_size(&self) -> Length;
-    fn is_cached_page_type(&self, page_type: PageType) -> bool;
-
-    fn cached_page_mut(&mut self, addr: Address) -> CacheEntry;
-
-    fn validate_page(&mut self, addr: Address, page_type: PageType);
-    fn invalidate_page(&mut self, addr: Address, page_type: PageType);
+pub trait CacheValidator {
+    fn allocate_slots(&mut self, slot_count: usize);
+    fn is_slot_valid(&mut self, slot_id: usize) -> bool;
+    fn validate_slot(&mut self, slot_id: usize);
+    fn invalidate_slot(&mut self, slot_id: usize);
 }
 
 #[derive(Clone, Copy)]

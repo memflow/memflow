@@ -13,8 +13,8 @@ extern crate rand;
 use flow_core::address::Address;
 use flow_core::arch::Architecture;
 use flow_core::mem::{
-    AccessPhysicalMemory, AccessVirtualMemory, CachedMemoryAccess, CachedVAT, TimedCache, TimedTLB,
-    VirtualAddressTranslator,
+    timed_validator::*, AccessPhysicalMemory, AccessVirtualMemory, CachedMemoryAccess, CachedVAT,
+    PageCache, TimedTLB, VirtualAddressTranslator,
 };
 
 use flow_qemu_procfs::Memory;
@@ -106,13 +106,13 @@ fn vat_test<T: AccessVirtualMemory + AccessPhysicalMemory + VirtualAddressTransl
 fn translate_range(bench: &mut Bencher, range_start: u64, range_end: u64, use_tlb: bool) {
     let mut mem_sys = Memory::new().unwrap();
     let (os, proc, _) = find_module(&mut mem_sys).unwrap();
-    let cache = TimedCache::new(
+    let cache = PageCache::new(
         os.start_block.arch,
         Length::from_mb(32),
-        Duration::from_millis(1000).into(),
         PageType::PAGE_TABLE | PageType::READ_ONLY,
+        TimedCacheValidator::new(Duration::from_millis(1000).into()),
     );
-    let mem = CachedMemoryAccess::with(mem_sys, cache);
+    let mem = CachedMemoryAccess::with(&mut mem_sys, cache);
     vat_test(
         bench,
         mem,
@@ -128,13 +128,13 @@ fn translate_range(bench: &mut Bencher, range_start: u64, range_end: u64, use_tl
 fn translate_notlb_module(bench: &mut Bencher) {
     let mut mem_sys = Memory::new().unwrap();
     let (os, proc, tmod) = find_module(&mut mem_sys).unwrap();
-    let cache = TimedCache::new(
+    let cache = PageCache::new(
         os.start_block.arch,
-        Length::from_mb(2),
-        Duration::from_millis(1000).into(),
+        Length::from_mb(32),
         PageType::PAGE_TABLE | PageType::READ_ONLY,
+        TimedCacheValidator::new(Duration::from_millis(1000).into()),
     );
-    let mem = CachedMemoryAccess::with(mem_sys, cache);
+    let mem = CachedMemoryAccess::with(&mut mem_sys, cache);
     vat_test(
         bench,
         mem,
@@ -150,13 +150,13 @@ fn translate_notlb_module(bench: &mut Bencher) {
 fn translate_notlb_module_smallrange(bench: &mut Bencher) {
     let mut mem_sys = Memory::new().unwrap();
     let (os, proc, tmod) = find_module(&mut mem_sys).unwrap();
-    let cache = TimedCache::new(
+    let cache = PageCache::new(
         os.start_block.arch,
-        Length::from_mb(2),
-        Duration::from_millis(1000).into(),
+        Length::from_mb(32),
         PageType::PAGE_TABLE | PageType::READ_ONLY,
+        TimedCacheValidator::new(Duration::from_millis(1000).into()),
     );
-    let mem = CachedMemoryAccess::with(mem_sys, cache);
+    let mem = CachedMemoryAccess::with(&mut mem_sys, cache);
     vat_test(
         bench,
         mem,
@@ -183,13 +183,13 @@ benchmark_group!(
 fn translate_tlb_module(bench: &mut Bencher) {
     let mut mem_sys = Memory::new().unwrap();
     let (os, proc, tmod) = find_module(&mut mem_sys).unwrap();
-    let cache = TimedCache::new(
+    let cache = PageCache::new(
         os.start_block.arch,
-        Length::from_mb(2),
-        Duration::from_millis(1000).into(),
+        Length::from_mb(32),
         PageType::PAGE_TABLE | PageType::READ_ONLY,
+        TimedCacheValidator::new(Duration::from_millis(1000).into()),
     );
-    let mem = CachedMemoryAccess::with(mem_sys, cache);
+    let mem = CachedMemoryAccess::with(&mut mem_sys, cache);
     vat_test(
         bench,
         mem,
@@ -205,13 +205,13 @@ fn translate_tlb_module(bench: &mut Bencher) {
 fn translate_tlb_module_smallrange(bench: &mut Bencher) {
     let mut mem_sys = Memory::new().unwrap();
     let (os, proc, tmod) = find_module(&mut mem_sys).unwrap();
-    let cache = TimedCache::new(
+    let cache = PageCache::new(
         os.start_block.arch,
-        Length::from_mb(2),
-        Duration::from_millis(1000).into(),
+        Length::from_mb(32),
         PageType::PAGE_TABLE | PageType::READ_ONLY,
+        TimedCacheValidator::new(Duration::from_millis(1000).into()),
     );
-    let mem = CachedMemoryAccess::with(mem_sys, cache);
+    let mem = CachedMemoryAccess::with(&mut mem_sys, cache);
     vat_test(
         bench,
         mem,

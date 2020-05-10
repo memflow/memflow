@@ -100,14 +100,14 @@ where
         vat::virt_read_raw_into(self, arch, dtb, addr, out)
     }
 
-    fn virt_write_raw_from(
+    fn virt_write_raw(
         &mut self,
         arch: Architecture,
         dtb: Address,
         addr: Address,
         data: &[u8],
     ) -> Result<()> {
-        vat::virt_write_raw_from(self, arch, dtb, addr, data)
+        vat::virt_write_raw(self, arch, dtb, addr, data)
     }
 
     fn virt_page_info(&mut self, arch: Architecture, dtb: Address, addr: Address) -> Result<Page> {

@@ -356,7 +356,7 @@ fn test_cache_invalidity_cached() {
     let mut write_buf = cached_buf.clone();
     write_buf[16..20].copy_from_slice(&[255, 255, 255, 255]);
     unsafe { mem_ptr.as_mut().unwrap() }
-        .virt_write_raw_from(arch, dtb, virt_base, write_buf.as_slice())
+        .virt_write_raw(arch, dtb, virt_base, write_buf.as_slice())
         .unwrap();
 
     let mut check_buf = vec![0_u8; 64];
@@ -399,7 +399,7 @@ fn test_cache_invalidity_non_cached() {
     let mut write_buf = cached_buf.clone();
     write_buf[16..20].copy_from_slice(&[255, 255, 255, 255]);
     unsafe { mem_ptr.as_mut().unwrap() }
-        .virt_write_raw_from(arch, dtb, virt_base, write_buf.as_slice())
+        .virt_write_raw(arch, dtb, virt_base, write_buf.as_slice())
         .unwrap();
 
     let mut check_buf = vec![0_u8; 64];
@@ -438,7 +438,7 @@ fn test_writeback() {
     assert_eq!(buf_start, buf_1);
     buf_1[16..20].copy_from_slice(&[255, 255, 255, 255]);
 
-    mem.virt_write_from(arch, dtb, virt_base + Length::from(16), &buf_1[16..20])
+    mem.virt_write(arch, dtb, virt_base + Length::from(16), &buf_1[16..20])
         .unwrap();
 
     let mut buf_2 = vec![0_u8; 64];
@@ -508,7 +508,7 @@ fn test_virt_write_small() {
         *item = i as u8;
     }
     let (dtb, virt_base) = mem.alloc_dtb(input.len().into(), &input);
-    mem.virt_write_from(Architecture::X64, dtb, virt_base, &input[..])
+    mem.virt_write(Architecture::X64, dtb, virt_base, &input[..])
         .unwrap();
     mem.virt_read_into(Architecture::X64, dtb, virt_base, &mut buf[..])
         .unwrap();
@@ -546,7 +546,7 @@ fn test_virt_write_small_shifted() {
         *item = i as u8;
     }
     let (dtb, virt_base) = mem.alloc_dtb(input.len().into(), &input);
-    mem.virt_write_from(
+    mem.virt_write(
         Architecture::X64,
         dtb,
         virt_base + Length::from(128),
@@ -589,7 +589,7 @@ fn test_virt_write_medium() {
         *item = i as u8;
     }
     let (dtb, virt_base) = mem.alloc_dtb(input.len().into(), &input);
-    mem.virt_write_from(Architecture::X64, dtb, virt_base, &input[..])
+    mem.virt_write(Architecture::X64, dtb, virt_base, &input[..])
         .unwrap();
     mem.virt_read_into(Architecture::X64, dtb, virt_base, &mut buf[..])
         .unwrap();
@@ -627,7 +627,7 @@ fn test_virt_write_medium_shifted() {
         *item = i as u8;
     }
     let (dtb, virt_base) = mem.alloc_dtb(input.len().into(), &input);
-    mem.virt_write_from(
+    mem.virt_write(
         Architecture::X64,
         dtb,
         virt_base + Length::from(0x100),
@@ -670,7 +670,7 @@ fn test_virt_write_big() {
         *item = i as u8;
     }
     let (dtb, virt_base) = mem.alloc_dtb(input.len().into(), &input);
-    mem.virt_write_from(Architecture::X64, dtb, virt_base, &input[..])
+    mem.virt_write(Architecture::X64, dtb, virt_base, &input[..])
         .unwrap();
     mem.virt_read_into(Architecture::X64, dtb, virt_base, &mut buf[..])
         .unwrap();
@@ -708,7 +708,7 @@ fn test_virt_write_big_shifted() {
         *item = i as u8;
     }
     let (dtb, virt_base) = mem.alloc_dtb(input.len().into(), &input);
-    mem.virt_write_from(
+    mem.virt_write(
         Architecture::X64,
         dtb,
         virt_base + Length::from(0x100),

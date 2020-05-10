@@ -152,7 +152,7 @@ fn read_test(
         );
 
         if use_tlb {
-            let mem = CachedMemoryAccess::with(&mut mem, cache.clone());
+            let mem = CachedMemoryAccess::with(&mut mem, cache);
             let mut mem = CachedVAT::with(mem, tlb_cache);
             read_test_with_mem(bench, &mut mem, chunk_size, chunks, proc, tmod);
         } else {

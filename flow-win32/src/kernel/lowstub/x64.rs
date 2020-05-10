@@ -1,6 +1,8 @@
 use crate::error::{Error, Result};
 use crate::kernel::StartBlock;
 
+use log::info;
+
 use byteorder::{ByteOrder, LittleEndian};
 
 use flow_core::arch::{self, Architecture};
@@ -52,7 +54,7 @@ fn _find(mem: &[u8]) -> Option<()> {
         return None;
     }
 
-    println!("found potential entry");
+    info!("found potential entry");
 
     None
 }

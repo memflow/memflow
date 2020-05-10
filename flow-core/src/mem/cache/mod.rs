@@ -7,6 +7,7 @@ pub mod tlb_cache;
 pub use cached_memory_access::*;
 pub use cached_vat::*;
 pub use page_cache::*;
+pub use timed_validator::*;
 pub use tlb_cache::*;
 
 use crate::types::PageType;

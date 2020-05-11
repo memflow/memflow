@@ -1,3 +1,16 @@
+/*!
+This module contains all architecture definitions currently
+supported by memflow.
+
+Each architecture is wrapped in the `Architecture` enum
+and all function calls are dispatched into their own
+architecture specific sub-modules.
+
+Each architecture also has a `ByteOrder` assigned to it.
+When reading/writing data from/to the target it is necessary
+that memflow know the proper byte order of the target system.
+*/
+
 pub mod x64;
 pub mod x86;
 pub mod x86_pae;
@@ -8,26 +21,56 @@ use std::convert::TryFrom;
 use crate::mem::AccessPhysicalMemory;
 use crate::types::{Address, Length, PhysicalAddress};
 
-/// ByteOrder definitions
-///
-/// Identifies the byte order of a architecture
+/**
+Identifies the byte order of a architecture
+*/
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum ByteOrder {
+    /// little endianess
     LittleEndian,
+    /// big endianess
     BigEndian,
 }
 
-/// Architecture definitions
-///
-/// Describes a architecture with properties
+/**
+Describes the architecture to of a target.
+The architecture will contain information about the pointer width,
+byte order, page size and also how to translate virtual to physical memory.
+*/
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum Architecture {
+    /**
+    An empty architecture with some sensible defaults and no virt_to_phys translation.
+    This is usually most useful when running automated tests.
+    */
     Null,
+    /// x86_64 architecture.
     X64,
+    /**
+    x86 architecture with physical address extensions.
+    See [here](https://en.wikipedia.org/wiki/Physical_Address_Extension) for more information on the subject.
+    */
     X86Pae,
+    /// x86 architecture.
     X86,
 }
 
+/**
+Converts a `u8` value to an `Architecture`.
+This is usually helpful when serializing / deserializing data in a safe way.
+
+# Examples
+
+```
+use flow_core::arch::Architecture;
+use std::convert::TryFrom;
+
+pub fn test() {
+    let arch = Architecture::try_from(1).unwrap();
+    assert_eq!(arch, Architecture::X64);
+}
+```
+*/
 impl TryFrom<u8> for Architecture {
     type Error = Error;
 
@@ -44,6 +87,21 @@ impl TryFrom<u8> for Architecture {
 
 #[allow(dead_code)]
 impl Architecture {
+    /**
+    Converts a `Architecture` to a corresponding `u8` value.
+    This is usually helpful when serializing / deserializing data in a safe way.
+
+    # Examples
+
+    ```
+    use flow_core::arch::Architecture;
+
+    pub fn test() {
+        let arch = Architecture::X64;
+        assert_eq!(arch.as_u8(), 1);
+    }
+    ```
+    */
     pub fn as_u8(self) -> u8 {
         match self {
             Architecture::Null => 0,
@@ -53,6 +111,23 @@ impl Architecture {
         }
     }
 
+    /**
+    Returns the number of bits of a pointers width on a `Architecture`.
+    Currently this will either return 64 or 32 depending on the pointer width of the target.
+    This function is handy in cases where you only want to know the pointer width of the target\
+    but you don't want to match against all architecture.
+
+    # Examples
+
+    ```
+    use flow_core::arch::Architecture;
+
+    pub fn test() {
+        let arch = Architecture::X86Pae;
+        assert_eq!(arch.bits(), 32);
+    }
+    ```
+    */
     pub fn bits(self) -> u8 {
         match self {
             Architecture::Null => x64::bits(),
@@ -62,6 +137,23 @@ impl Architecture {
         }
     }
 
+    /**
+    Returns the byte order of an `Architecture`.
+    This will either be `ByteOrder::LittleEndian` or `ByteOrder::BigEndian`.
+
+    In most circumstances this will be `ByteOrder::LittleEndian` on all x86 and arm architectures.
+
+    # Examples
+
+    ```
+    use flow_core::arch::{Architecture, ByteOrder};
+
+    pub fn test() {
+        let arch = Architecture::X86;
+        assert_eq!(arch.byte_order(), ByteOrder::LittleEndian);
+    }
+    ```
+    */
     pub fn byte_order(self) -> ByteOrder {
         match self {
             Architecture::Null => x64::byte_order(),
@@ -71,6 +163,23 @@ impl Architecture {
         }
     }
 
+    /**
+    Returns the smallest page size of an `Architecture`.
+
+    In x86/64 and arm this will always return 4kb.
+
+    # Examples
+
+    ```
+    use flow_core::arch::{Architecture, ByteOrder};
+    use flow_core::types::Length;
+
+    pub fn test() {
+        let arch = Architecture::X64;
+        assert_eq!(arch.page_size(), Length::from_kb(4));
+    }
+    ```
+    */
     pub fn page_size(self) -> Length {
         match self {
             Architecture::Null => x64::page_size(),
@@ -80,6 +189,24 @@ impl Architecture {
         }
     }
 
+    /**
+    Returns the `Length` of a pointers width on a `Architecture`.
+
+    This function will return the pointer width as a `Length` value.
+    See `Architecture::bits()` for more information.
+
+    # Examples
+
+    ```
+    use flow_core::arch::Architecture;
+    use flow_core::types::Length;
+
+    pub fn test() {
+        let arch = Architecture::X86;
+        assert_eq!(arch.len_addr(), Length::from(4));
+    }
+    ```
+    */
     pub fn len_addr(self) -> Length {
         match self {
             Architecture::Null => x64::len_addr(),
@@ -89,6 +216,15 @@ impl Architecture {
         }
     }
 
+    /**
+    This function will do a virtual to physical memory translation for the `Architecture`.
+
+    TODO: add more info how virt_to_phys works
+
+    # Examples
+
+    TODO: add example
+    */
     pub fn virt_to_phys<T: AccessPhysicalMemory>(
         self,
         mem: &mut T,

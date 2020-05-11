@@ -20,10 +20,10 @@ pub use error::{Error, Result};
 
 #[macro_use]
 pub mod types;
-pub use types::*;
+pub use types::{Address, Length, Offset, Page, PageType, PhysicalAddress, Pointer32, Pointer64};
 
 pub mod architecture;
-pub use architecture::*;
+pub use architecture::{Architecture, ByteOrder};
 
 pub mod mem;
 pub use mem::*;

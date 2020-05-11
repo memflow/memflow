@@ -1,5 +1,5 @@
 use super::{CacheValidator, PageType};
-use crate::arch::Architecture;
+use crate::architecture::Architecture;
 use crate::types::{Address, Length};
 use std::alloc::{alloc_zeroed, Layout};
 

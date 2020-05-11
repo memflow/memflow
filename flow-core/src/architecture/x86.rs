@@ -1,6 +1,6 @@
 use crate::error::{Error, Result};
 
-use crate::arch::ByteOrder;
+use crate::architecture::ByteOrder;
 use crate::types::{Address, Length, PhysicalAddress};
 
 use crate::mem::AccessPhysicalMemory;

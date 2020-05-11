@@ -17,7 +17,7 @@ use tokio::net::UnixListener;
 use capnp::{self, capability::Promise};
 use capnp_rpc::{pry, rpc_twoparty_capnp, twoparty, RpcSystem};
 
-use flow_core::arch::Architecture;
+use flow_core::architecture::Architecture;
 use flow_core::mem::*;
 use flow_core::types::{Address, Length, PhysicalAddress};
 use flow_core::vat;

@@ -1,4 +1,4 @@
-use crate::arch::Architecture;
+use crate::architecture::Architecture;
 use crate::mem::cache::page_cache::PageCache;
 use crate::mem::cache::timed_validator::TimedCacheValidator;
 use crate::mem::{AccessVirtualMemory, VirtualAddressTranslator};

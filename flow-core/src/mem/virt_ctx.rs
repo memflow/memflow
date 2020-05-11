@@ -1,5 +1,5 @@
 use super::AccessVirtualMemory;
-use crate::arch::Architecture;
+use crate::architecture::Architecture;
 use crate::error::Error;
 use crate::types::{Address, Length, Pointer32, Pointer64};
 use crate::Result;

@@ -5,7 +5,7 @@ use masks::*;
 use crate::error::{Error, Result};
 use byteorder::{ByteOrder, LittleEndian};
 
-use crate::arch;
+use crate::architecture;
 use crate::mem::AccessPhysicalMemory;
 use crate::types::{Address, Length, Page, PageType, PhysicalAddress};
 
@@ -13,8 +13,8 @@ pub fn bits() -> u8 {
     64
 }
 
-pub fn byte_order() -> arch::ByteOrder {
-    arch::ByteOrder::LittleEndian
+pub fn byte_order() -> architecture::ByteOrder {
+    architecture::ByteOrder::LittleEndian
 }
 
 pub fn page_size() -> Length {

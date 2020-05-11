@@ -1,6 +1,6 @@
 use crate::error::{Error, Result};
 
-use flow_core::arch;
+use flow_core::architecture;
 use flow_core::mem::*;
 use flow_core::types::{Address, Length};
 
@@ -65,8 +65,8 @@ impl<'a, T: AccessVirtualMemory> VirtualReadUnicodeString for VirtualMemoryConte
         let content16 = content
             .chunks_exact(2)
             .map(|b| match self.proc_arch().byte_order() {
-                arch::ByteOrder::LittleEndian => LittleEndian::read_u16(b),
-                arch::ByteOrder::BigEndian => BigEndian::read_u16(b),
+                architecture::ByteOrder::LittleEndian => LittleEndian::read_u16(b),
+                architecture::ByteOrder::BigEndian => BigEndian::read_u16(b),
             })
             .collect::<Vec<u16>>();
         Ok(U16CString::from_vec_with_nul(content16)?.to_string_lossy())

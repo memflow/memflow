@@ -5,12 +5,12 @@ use log::info;
 
 use byteorder::{ByteOrder, LittleEndian};
 
-use flow_core::arch::{self, Architecture};
+use flow_core::architecture::{self, Architecture};
 use flow_core::types::{Address, Length};
 
 // https://github.com/ufrisk/MemProcFS/blob/f2d15cf4fe4f19cfeea3dad52971fae2e491064b/vmm/vmmwininit.c#L560
 pub fn find_lowstub(stub: &[u8]) -> Result<StartBlock> {
-    stub.chunks_exact(arch::x64::page_size().as_usize())
+    stub.chunks_exact(architecture::x64::page_size().as_usize())
         .skip(1)
         .filter(|c| (0xffff_ffff_ffff_00ff & LittleEndian::read_u64(&c)) == 0x0000_0001_0006_00E9) // start bytes
         .filter(|c| {
@@ -60,14 +60,14 @@ fn _find(mem: &[u8]) -> Option<()> {
 }
 
 pub fn find(mem: &[u8]) -> Result<StartBlock> {
-    mem.chunks_exact(arch::x64::page_size().as_usize())
+    mem.chunks_exact(architecture::x64::page_size().as_usize())
         .position(|c| _find(c).is_some())
         .ok_or_else(|| Error::new("unable to find x64 dtb in lowstub < 16M"))
         .and_then(|i| {
             Ok(StartBlock {
                 arch: Architecture::X64,
                 va: Address::from(0),
-                dtb: Address::from((i as u64) * arch::x64::page_size().as_u64()),
+                dtb: Address::from((i as u64) * architecture::x64::page_size().as_u64()),
             })
         })
 }

@@ -1,4 +1,4 @@
-use crate::arch::Architecture;
+use crate::architecture::Architecture;
 use crate::types::{Address, Length, Page};
 use crate::Result;
 

@@ -2,7 +2,7 @@ use crate::error::Result;
 
 use super::{page_cache::PageCache, CacheValidator};
 
-use crate::arch::Architecture;
+use crate::architecture::Architecture;
 use crate::mem::{AccessPhysicalMemory, AccessVirtualMemory};
 use crate::page_chunks::{PageChunks, PageChunksMut};
 use crate::types::{Address, Page, PhysicalAddress};

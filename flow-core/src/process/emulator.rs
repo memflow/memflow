@@ -24,7 +24,7 @@ Emulator::with(process) -> Emulator
 */
 
 use crate::types::Address;
-use crate::arch::ArchitectureTrait;
+use crate::architecture::ArchitectureTrait;
 use crate::process::Process;
 use crate::{Error, Result};
 

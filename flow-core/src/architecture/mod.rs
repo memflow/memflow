@@ -62,7 +62,7 @@ This is usually helpful when serializing / deserializing data in a safe way.
 # Examples
 
 ```
-use flow_core::arch::Architecture;
+use flow_core::architecture::Architecture;
 use std::convert::TryFrom;
 
 pub fn test() {
@@ -94,7 +94,7 @@ impl Architecture {
     # Examples
 
     ```
-    use flow_core::arch::Architecture;
+    use flow_core::architecture::Architecture;
 
     pub fn test() {
         let arch = Architecture::X64;
@@ -120,7 +120,7 @@ impl Architecture {
     # Examples
 
     ```
-    use flow_core::arch::Architecture;
+    use flow_core::architecture::Architecture;
 
     pub fn test() {
         let arch = Architecture::X86Pae;
@@ -146,7 +146,7 @@ impl Architecture {
     # Examples
 
     ```
-    use flow_core::arch::{Architecture, ByteOrder};
+    use flow_core::architecture::{Architecture, ByteOrder};
 
     pub fn test() {
         let arch = Architecture::X86;
@@ -171,7 +171,7 @@ impl Architecture {
     # Examples
 
     ```
-    use flow_core::arch::{Architecture, ByteOrder};
+    use flow_core::architecture::{Architecture, ByteOrder};
     use flow_core::types::Length;
 
     pub fn test() {
@@ -198,7 +198,7 @@ impl Architecture {
     # Examples
 
     ```
-    use flow_core::arch::Architecture;
+    use flow_core::architecture::Architecture;
     use flow_core::types::Length;
 
     pub fn test() {

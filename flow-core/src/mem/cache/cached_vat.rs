@@ -1,6 +1,6 @@
 use crate::error::Result;
 
-use crate::arch::Architecture;
+use crate::architecture::Architecture;
 use crate::mem::cache::{CacheValidator, TLBCache};
 use crate::mem::AccessPhysicalMemory;
 use crate::types::{Address, Page, PhysicalAddress};

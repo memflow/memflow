@@ -10,7 +10,7 @@ extern crate flow_qemu_procfs;
 extern crate flow_win32;
 extern crate rand;
 
-use flow_core::arch::Architecture;
+use flow_core::architecture::Architecture;
 use flow_core::mem::{
     timed_validator::*, AccessPhysicalMemory, AccessVirtualMemory, CachedMemoryAccess, CachedVAT,
     PageCache, TLBCache, VirtualAddressTranslator,

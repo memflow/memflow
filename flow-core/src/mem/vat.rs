@@ -3,7 +3,7 @@ mod tests;
 
 use crate::error::{Error, Result};
 
-use crate::arch::Architecture;
+use crate::architecture::Architecture;
 use crate::iter::page_chunks::{PageChunks, PageChunksMut};
 use crate::mem::AccessPhysicalMemory;
 use crate::types::{Address, Page, PhysicalAddress};

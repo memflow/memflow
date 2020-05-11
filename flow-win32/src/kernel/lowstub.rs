@@ -6,7 +6,7 @@ use crate::error::{Error, Result};
 
 use log::warn;
 
-use flow_core::arch::Architecture;
+use flow_core::architecture::Architecture;
 use flow_core::mem::AccessPhysicalMemory;
 use flow_core::types::{Address, Length, PhysicalAddress};
 

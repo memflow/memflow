@@ -22,8 +22,8 @@ pub use error::{Error, Result};
 pub mod types;
 pub use types::*;
 
-pub mod arch;
-pub use arch::*;
+pub mod architecture;
+pub use architecture::*;
 
 pub mod mem;
 pub use mem::*;

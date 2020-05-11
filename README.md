@@ -12,7 +12,8 @@ memflow - machine introspection framework
 - run ... to run all benchmarks
 - run `cargo clippy --all-targets --all-features -- -D warnings` to run clippy linting on everything
 
-#
+## documentation
+- run `cargo doc --open` to compile and open the documentation
 
 ## usage
 - run `cargo run --release -- -c qemu_procfs -vvv` to run the cli on qemu

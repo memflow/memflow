@@ -9,6 +9,58 @@ use dataview::Pod;
 // - check endianess here and return an error
 // - better would be to convert endianess with word alignment from addr
 
+/**
+The `AccessPhysicalMemory` trait is implemented by memory backends
+and provides a generic way to read and write from/to physical memory.
+
+All addresses are of the type [`PhysicalAddress`](../types/physical_address/index.html)
+and can contain additional information about the page the address resides in.
+This information is usually only needed when implementing caches.
+
+There is only 2 methods which have to be implemented by the provider of this trait.
+
+# Examples
+
+Reading physical memory with `AccessPhysicalMemory`:
+```
+use flow_core::mem::AccessPhysicalMemory;
+use flow_core::types::Address;
+
+fn test<T: AccessPhysicalMemory>(mem: &mut T) {
+    let mut value = 0u64;
+    mem.phys_read_into(Address::from(0x1000).into(), &mut value);
+}
+```
+
+Implementing `AccessPhysicalMemory` for a memory backend:
+```
+use std::vec::Vec;
+
+use flow_core::mem::AccessPhysicalMemory;
+use flow_core::types::PhysicalAddress;
+use flow_core::error::Result;
+
+pub struct MemoryBackend {
+    mem: Box<[u8]>,
+}
+
+impl AccessPhysicalMemory for MemoryBackend {
+    fn phys_read_raw_into(
+        &mut self,
+        addr: PhysicalAddress,
+        out: &mut [u8],
+    ) -> Result<()> {
+        out.copy_from_slice(&self.mem[addr.as_usize()..(addr.as_usize() + out.len())]);
+        Ok(())
+    }
+
+    fn phys_write_raw(&mut self, addr: PhysicalAddress, data: &[u8]) -> Result<()> {
+        self.mem[addr.as_usize()..(addr.as_usize() + data.len())].copy_from_slice(&data);
+        Ok(())
+    }
+}
+```
+*/
 pub trait AccessPhysicalMemory {
     // system user-defined impls
     fn phys_read_raw_into(&mut self, addr: PhysicalAddress, out: &mut [u8]) -> Result<()>;

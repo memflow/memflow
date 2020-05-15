@@ -1,4 +1,5 @@
-use std::io::{self, Write};
+use std::fs::File;
+use std::io::{self, prelude::*, Write};
 
 use flow_core::*;
 use flow_win32::*;
@@ -90,6 +91,25 @@ where
                         name: "imports",
                         description: "",
                         func: Some(Self::pe_imports),
+                        subcmds: Vec::new(),
+                    },
+                ],
+            },
+            Command {
+                name: "dump",
+                description: "",
+                func: None,
+                subcmds: vec![
+                    /*Command {
+                        name: "process",
+                        description: "",
+                        func: Some(Self::dump_process),
+                        subcmds: Vec::new(),
+                    },*/
+                    Command {
+                        name: "module",
+                        description: "",
+                        func: Some(Self::dump_module),
                         subcmds: Vec::new(),
                     },
                 ],
@@ -279,6 +299,34 @@ where
             }
         };
         */
+    }
+
+    fn dump_module(&mut self, _args: Vec<&str>) {
+        if self.process.is_none() {
+            println!("no process opened. use process open 'name' to open a process");
+            return;
+        }
+        let p = self.process.as_ref().unwrap();
+
+        if self.module.is_none() {
+            println!("no module opened. use module open 'name' to open a module");
+            return;
+        }
+        let m = self.module.as_ref().unwrap();
+
+        println!("dumping '{}' in '{}'...", m.name(), p.name());
+
+        let mut virt_mem = self.process.as_ref().unwrap().virt_mem(self.mem);
+
+        let mut data = vec![0u8; m.size().as_usize()]; // TODO: chunked read
+        virt_mem.virt_read_into(m.base(), &mut *data).unwrap();
+
+        let mut file = File::create("dump.raw").unwrap();
+        let mut pos = 0;
+        while pos < data.len() {
+            let bytes_written = file.write(&data[pos..]).unwrap();
+            pos += bytes_written;
+        }
     }
 
     fn pe_imports(&mut self, _args: Vec<&str>) {}

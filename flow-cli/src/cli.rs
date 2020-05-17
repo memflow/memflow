@@ -93,6 +93,12 @@ where
                         func: Some(Self::pe_imports),
                         subcmds: Vec::new(),
                     },
+                    Command {
+                        name: "scan",
+                        description: "",
+                        func: Some(Self::pe_scan),
+                        subcmds: Vec::new(),
+                    },
                 ],
             },
             Command {
@@ -301,6 +307,50 @@ where
         */
     }
 
+    fn pe_imports(&mut self, _args: Vec<&str>) {
+        println!("not implemented yet");
+    }
+
+    fn pe_scan(&mut self, args: Vec<&str>) {
+        if self.process.is_none() {
+            println!("no process opened. use process open 'name' to open a process");
+            return;
+        }
+        let p = self.process.as_ref().unwrap();
+
+        if self.module.is_none() {
+            println!("no module opened. use module open 'name' to open a module");
+            return;
+        }
+        let m = self.module.as_ref().unwrap();
+
+        if args.is_empty() {
+            println!("unable to scan module: no signature specified");
+            return;
+        }
+
+        let image = m.read_image(self.mem, p).unwrap();
+        let pe = PeView::from_bytes(&image).unwrap();
+
+        let pattern = pelite::pattern::parse(&args[1..].join(" ")).unwrap();
+        let mut matches = pe.scanner().matches(&pattern, pe.headers().image_range());
+
+        let mut save = [0u32; 16];
+        let mut count = 0;
+        while matches.next(&mut save) {
+            println!(
+                "match no {}: {}",
+                count,
+                save.iter()
+                    .filter(|&&s| s != 0u32)
+                    .map(|s| format!("{:x}", s))
+                    .collect::<Vec<String>>()
+                    .join(" ")
+            );
+            count += 1;
+        }
+    }
+
     fn dump_module(&mut self, _args: Vec<&str>) {
         if self.process.is_none() {
             println!("no process opened. use process open 'name' to open a process");
@@ -316,7 +366,7 @@ where
 
         println!("dumping '{}' in '{}'...", m.name(), p.name());
 
-        let mut virt_mem = self.process.as_ref().unwrap().virt_mem(self.mem);
+        let mut virt_mem = p.virt_mem(self.mem);
 
         let mut data = vec![0u8; m.size().as_usize()]; // TODO: chunked read
         virt_mem.virt_read_into(m.base(), &mut *data).unwrap();
@@ -328,8 +378,6 @@ where
             pos += bytes_written;
         }
     }
-
-    fn pe_imports(&mut self, _args: Vec<&str>) {}
 }
 
 struct Command<'a, T> {

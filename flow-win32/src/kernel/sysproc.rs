@@ -41,8 +41,8 @@ pub fn find_exported<T: AccessPhysicalMemory + AccessVirtualMemory + ?Sized>(
     let header_buf = ntos::pe::try_fetch_pe_header(mem, start_block, ntos)?;
     let header = PeView::from_bytes(&header_buf)?;
 
+    // PsInitialSystemProcess -> PsActiveProcessHead
     let sys_proc = match header.get_export_by_name("PsInitialSystemProcess")? {
-        // PsActiveProcessHead
         Export::Symbol(s) => ntos + Length::from(*s),
         Export::Forward(_) => {
             return Err(Error::new(

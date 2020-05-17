@@ -1,18 +1,25 @@
-// TODO: rename addr to something useful or rename this crate?
-pub mod addr;
+pub mod address;
+pub use address::Address;
+
 pub mod length;
+pub use length::Length;
+
 pub mod offset;
+pub use offset::Offset;
+
+pub mod page;
+pub use page::{Page, PageType};
+
+pub mod physical_address;
+pub use physical_address::PhysicalAddress;
+
 pub mod pointer32;
+pub use pointer32::Pointer32;
+
 pub mod pointer64;
+pub use pointer64::Pointer64;
 
-// forward declares
-pub use addr::*;
-pub use length::*;
-pub use offset::*;
-pub use pointer32::*;
-pub use pointer64::*;
-
-// macro declares
+/// Convenience macro which will be replaced by `Address::from`
 #[macro_export]
 macro_rules! addr {
     ($a:expr) => {
@@ -20,6 +27,7 @@ macro_rules! addr {
     };
 }
 
+/// Convenience macro which will be replaced by `Length::from`
 #[macro_export]
 macro_rules! len {
     ($a:expr) => {
@@ -27,6 +35,7 @@ macro_rules! len {
     };
 }
 
+/// Convenience macro which will be replaced by `Length::from_b`
 #[macro_export]
 macro_rules! len_b {
     ($a:expr) => {
@@ -34,6 +43,7 @@ macro_rules! len_b {
     };
 }
 
+/// Convenience macro which will be replaced by `Length::from_kb`
 #[macro_export]
 macro_rules! len_kb {
     ($a:expr) => {
@@ -41,6 +51,7 @@ macro_rules! len_kb {
     };
 }
 
+/// Convenience macro which will be replaced by `Length::from_kib`
 #[macro_export]
 macro_rules! len_kib {
     ($a:expr) => {
@@ -48,6 +59,7 @@ macro_rules! len_kib {
     };
 }
 
+/// Convenience macro which will be replaced by `Length::from_mb`
 #[macro_export]
 macro_rules! len_mb {
     ($a:expr) => {
@@ -55,6 +67,7 @@ macro_rules! len_mb {
     };
 }
 
+/// Convenience macro which will be replaced by `Length::from_mib`
 #[macro_export]
 macro_rules! len_mib {
     ($a:expr) => {
@@ -62,6 +75,7 @@ macro_rules! len_mib {
     };
 }
 
+/// Convenience macro which will be replaced by `Length::from_gb`
 #[macro_export]
 macro_rules! len_gb {
     ($a:expr) => {
@@ -69,6 +83,7 @@ macro_rules! len_gb {
     };
 }
 
+/// Convenience macro which will be replaced by `Length::from_gib`
 #[macro_export]
 macro_rules! len_gib {
     ($a:expr) => {
@@ -76,6 +91,7 @@ macro_rules! len_gib {
     };
 }
 
+/// Convenience macro which will be replaced by `Offset::from`
 #[macro_export]
 macro_rules! offs {
     ($a:expr) => {

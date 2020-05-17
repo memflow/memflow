@@ -12,5 +12,5 @@ fn main() {
     let mut app = App::from(yaml);
     app.gen_completions("flow-cli", Shell::Bash, outdir.clone());
     app.gen_completions("flow-cli", Shell::Fish, outdir.clone());
-    app.gen_completions("flow-cli", Shell::Zsh, outdir.clone());
+    app.gen_completions("flow-cli", Shell::Zsh, outdir);
 }

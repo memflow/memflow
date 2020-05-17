@@ -1,10 +1,11 @@
 use crate::error::{Error, Result};
 
-use super::PhysicalTranslation;
-use crate::address::{Address, Length};
-use crate::arch::ByteOrder;
+use crate::architecture::ByteOrder;
+use crate::types::{Address, Length, PhysicalAddress};
 
 use crate::mem::AccessPhysicalMemory;
+
+use log::warn;
 
 pub fn bits() -> u8 {
     32
@@ -26,7 +27,7 @@ pub fn virt_to_phys<T: AccessPhysicalMemory>(
     _mem: &mut T,
     _dtb: Address,
     _addr: Address,
-) -> Result<PhysicalTranslation> {
-    println!("x86_pae::virt_to_phys() not implemented yet");
+) -> Result<PhysicalAddress> {
+    warn!("x86_pae::virt_to_phys() not implemented yet");
     Err(Error::new("x86_pae::virt_to_phys() not implemented yet"))
 }

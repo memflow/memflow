@@ -1,8 +1,8 @@
 use flow_core::*;
 
 #[cfg(all(target_os = "linux", feature = "connector-qemu-procfs"))]
-pub fn init_qemu_procfs() -> Result<flow_qemu_procfs::Memory<mem::NoCache>> {
-    flow_qemu_procfs::Memory::new(mem::NO_CACHE)
+pub fn init_qemu_procfs() -> Result<flow_qemu_procfs::Memory> {
+    flow_qemu_procfs::Memory::new()
 }
 
 #[cfg(all(feature = "connector-qemu-procfs", not(target_os = "linux")))]

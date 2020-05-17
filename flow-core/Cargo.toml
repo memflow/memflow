@@ -11,7 +11,12 @@ log = { version = "0.4.8", default-features = false }
 regex = "1.3.1"
 bitflags = "1.2.1"
 coarsetime = "0.1.13"
+flow-derive = { path = "../flow-derive" }
 #unicorn = { version = "0.9.1", optional = true }
+
+[dev-dependencies]
+x86_64 = { version = "0.10.2", default-features = false, features = ["stable"] }
+rand = "0.7.3"
 
 [features]
 default = []

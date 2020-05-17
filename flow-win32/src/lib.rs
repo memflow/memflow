@@ -1,3 +1,8 @@
+/*!
+This crate contains memflow's win32 implementation.
+It is used to interface with windows targets.
+*/
+
 pub mod error;
 pub use error::*;
 

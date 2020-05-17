@@ -98,7 +98,7 @@ impl Win32Module {
             .filter_map(Result::ok)
             .inspect(|p| trace!("{:x} {}", p.base(), p.name()))
             .find(|p| p.name() == name)
-            .ok_or_else(|| Error::new(format!("unable to find process {}", name)))
+            .ok_or_else(|| Error::new(format!("unable to find module {}", name)))
     }
 
     // read_image() - reads the entire image into memory

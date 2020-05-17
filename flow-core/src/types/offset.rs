@@ -23,6 +23,8 @@ impl From<i16> for Offset {
 }
 
 impl Offset {
+    pub const ZERO: Offset = Offset { 0: 0 };
+
     pub fn zero() -> Self {
         Offset::from(0)
     }

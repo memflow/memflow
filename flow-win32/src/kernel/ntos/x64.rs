@@ -7,11 +7,11 @@ use dataview::Pod;
 use log::debug;
 use pelite::image::IMAGE_DOS_HEADER;
 
-use flow_core::address::{Address, Length};
-use flow_core::arch;
+use flow_core::architecture;
 use flow_core::mem::AccessVirtualMemory;
+use flow_core::types::{Address, Length};
 
-pub fn find_with_va<T: AccessVirtualMemory>(
+pub fn find_with_va<T: AccessVirtualMemory + ?Sized>(
     mem: &mut T,
     start_block: &StartBlock,
 ) -> Result<(Address, Length)> {
@@ -34,7 +34,7 @@ pub fn find_with_va<T: AccessVirtualMemory>(
         )?;
 
         let res = buf
-            .chunks_exact(arch::x64::page_size().as_usize())
+            .chunks_exact(architecture::x64::page_size().as_usize())
             .enumerate()
             .map(|(i, c)| {
                 let view = Pod::as_data_view(&c[..]);
@@ -45,7 +45,7 @@ pub fn find_with_va<T: AccessVirtualMemory>(
             .inspect(|(i, _, _)| {
                 debug!(
                     "find_x64_with_va: found potential header flags at offset {:x}",
-                    i * arch::x64::page_size().as_usize()
+                    i * architecture::x64::page_size().as_usize()
                 )
             })
             .flat_map(|(i, c, p)| c.chunks_exact(8).map(move |c| (i, c, p)))
@@ -53,19 +53,19 @@ pub fn find_with_va<T: AccessVirtualMemory>(
             .inspect(|(i, _, _)| {
                 debug!(
                     "find_x64_with_va: found potential POOLCODE flag at offset {:x}",
-                    i * arch::x64::page_size().as_usize()
+                    i * architecture::x64::page_size().as_usize()
                 )
             })
             .find(|(i, _, _)| {
                 let probe_addr =
-                    Address::from(va_base + (*i as u64) * arch::x64::page_size().as_u64());
+                    Address::from(va_base + (*i as u64) * architecture::x64::page_size().as_u64());
                 let name = probe_pe_header(mem, start_block, probe_addr).unwrap_or_default();
                 name == "ntoskrnl.exe"
             })
             .ok_or_else(|| {
                 Error::new("find_x64_with_va: unable to locate ntoskrnl.exe via va hint")
             })
-            .and_then(|(i, _, _)| Ok(va_base + i as u64 * arch::x64::page_size().as_u64()));
+            .and_then(|(i, _, _)| Ok(va_base + i as u64 * architecture::x64::page_size().as_u64()));
 
         match res {
             Ok(a) => {
@@ -86,6 +86,6 @@ pub fn find_with_va<T: AccessVirtualMemory>(
     ))
 }
 
-pub fn find<T: AccessVirtualMemory>(_mem: &mut T) -> Result<(Address, Length)> {
+pub fn find<T: AccessVirtualMemory + ?Sized>(_mem: &mut T) -> Result<(Address, Length)> {
     Err(Error::new("find_x64(): not implemented yet"))
 }

@@ -1,8 +1,8 @@
 use crate::error::{Error, Result};
 use crate::kernel::StartBlock;
 
-use flow_core::address::Address;
-use flow_core::arch::{self, Architecture};
+use flow_core::architecture::{self, Architecture};
+use flow_core::types::Address;
 
 fn _find(_mem: &[u8]) -> Option<()> {
     /*
@@ -19,14 +19,14 @@ fn _find(_mem: &[u8]) -> Option<()> {
 }
 
 pub fn find(mem: &[u8]) -> Result<StartBlock> {
-    mem.chunks_exact(arch::x86::page_size().as_usize())
+    mem.chunks_exact(architecture::x86::page_size().as_usize())
         .position(|c| _find(c).is_some())
         .ok_or_else(|| Error::new("unable to find x86 dtb in lowstub < 16M"))
         .and_then(|i| {
             Ok(StartBlock {
                 arch: Architecture::X86,
                 va: Address::from(0),
-                dtb: Address::from((i as u64) * arch::x86::page_size().as_u64()),
+                dtb: Address::from((i as u64) * architecture::x86::page_size().as_u64()),
             })
         })
 }

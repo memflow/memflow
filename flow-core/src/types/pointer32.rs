@@ -1,7 +1,7 @@
-// pointer32.rs
-// this file is mostly adapted from https://github.com/CasualX/intptr
+/*!
+32-bit Pointer abstraction.
+*/
 
-use crate::addr::Address;
 use crate::error::Result;
 use crate::mem::{AccessVirtualMemory, VirtualMemoryContext};
 
@@ -11,6 +11,66 @@ use std::{cmp, fmt, hash, ops};
 
 use dataview::Pod;
 
+/**
+This type can be used in structs that are being read from the target memory.
+It holds a phantom type that can be used to describe the proper type of the pointer
+and to read it in a more convenient way.
+
+This module is a direct adaption of [CasualX's great IntPtr crate](https://github.com/CasualX/intptr).
+
+Generally the generic Type should implement the Pod trait to be read into easily.
+See [here](https://docs.rs/dataview/0.1.1/dataview/) for more information on the Pod trait.
+
+# Examples
+
+```
+use flow_core::types::Pointer32;
+use flow_core::mem::{AccessVirtualMemory, VirtualMemoryContext};
+use dataview::Pod;
+
+#[repr(C)]
+#[derive(Clone, Debug, Pod)]
+struct Foo {
+    pub some_value: i32,
+}
+
+#[repr(C)]
+#[derive(Clone, Debug, Pod)]
+struct Bar {
+    pub foo_ptr: Pointer32<Foo>,
+}
+
+fn read_foo_bar<T: AccessVirtualMemory>(virt_mem: &mut VirtualMemoryContext<T>) {
+    let bar: Bar = virt_mem.virt_read(0x1234.into()).unwrap();
+    let foo = bar.foo_ptr.deref(virt_mem).unwrap();
+    println!("value: {}", foo.some_value);
+}
+```
+
+```
+use flow_core::types::Pointer32;
+use flow_core::mem::{AccessVirtualMemory, VirtualMemoryContext};
+use dataview::Pod;
+
+#[repr(C)]
+#[derive(Clone, Debug, Pod)]
+struct Foo {
+    pub some_value: i32,
+}
+
+#[repr(C)]
+#[derive(Clone, Debug, Pod)]
+struct Bar {
+    pub foo_ptr: Pointer32<Foo>,
+}
+
+fn read_foo_bar<T: AccessVirtualMemory>(virt_mem: &mut VirtualMemoryContext<T>) {
+    let bar: Bar = virt_mem.virt_read(0x1234.into()).unwrap();
+    let foo = virt_mem.virt_read_ptr32(bar.foo_ptr).unwrap();
+    println!("value: {}", foo.some_value);
+}
+```
+*/
 #[repr(transparent)]
 pub struct Pointer32<T: ?Sized = ()> {
     pub address: u32,
@@ -20,37 +80,43 @@ pub struct Pointer32<T: ?Sized = ()> {
 impl<T: ?Sized> Pointer32<T> {
     const PHANTOM_DATA: PhantomData<fn() -> T> = PhantomData;
 
+    /// A pointer with a value of zero.
     pub const NULL: Pointer32<T> = Pointer32 {
         address: 0,
         phantom_data: PhantomData,
     };
 
+    /// Returns a pointer with a value of zero.
     pub fn null() -> Self {
         Pointer32::NULL
     }
 
+    /// Checks wether the containing value of this pointer is zero.
     pub fn is_null(self) -> bool {
         self.address == 0
     }
 
+    /// Returns the underlying raw u32 value of this pointer.
     pub const fn into_raw(self) -> u32 {
         self.address
     }
 }
 
+/// This function will deref the pointer directly into a Pod type.
 impl<T: Pod + ?Sized> Pointer32<T> {
     pub fn deref_into<U: AccessVirtualMemory>(
         self,
         mem: &mut VirtualMemoryContext<U>,
         out: &mut T,
     ) -> Result<()> {
-        mem.virt_read_into(Address::from(self.address), out)
+        mem.virt_read_ptr32_into(self, out)
     }
 }
 
+/// This function will return the Object this pointer is pointing towards.
 impl<T: Pod + Sized> Pointer32<T> {
     pub fn deref<U: AccessVirtualMemory>(self, mem: &mut VirtualMemoryContext<U>) -> Result<T> {
-        mem.virt_read(Address::from(self.address))
+        mem.virt_read_ptr32(self)
     }
 }
 

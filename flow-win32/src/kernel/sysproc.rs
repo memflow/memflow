@@ -1,9 +1,10 @@
 use crate::error::{Error, Result};
 
+use byteorder::{ByteOrder, LittleEndian};
 use log::{debug, info, warn};
 
-use flow_core::address::{Address, Length};
 use flow_core::mem::*;
+use flow_core::types::{Address, Length};
 
 use crate::kernel::StartBlock;
 
@@ -11,7 +12,7 @@ use crate::kernel::ntos;
 
 use pelite::{self, pe64::exports::Export, PeView};
 
-pub fn find<T: AccessPhysicalMemory + AccessVirtualMemory>(
+pub fn find<T: AccessPhysicalMemory + AccessVirtualMemory + ?Sized>(
     mem: &mut T,
     start_block: &StartBlock,
     ntos: Address,
@@ -32,7 +33,7 @@ pub fn find<T: AccessPhysicalMemory + AccessVirtualMemory>(
 }
 
 // find from exported symbol
-pub fn find_exported<T: AccessPhysicalMemory + AccessVirtualMemory>(
+pub fn find_exported<T: AccessPhysicalMemory + AccessVirtualMemory + ?Sized>(
     mem: &mut T,
     start_block: &StartBlock,
     ntos: Address,
@@ -40,8 +41,8 @@ pub fn find_exported<T: AccessPhysicalMemory + AccessVirtualMemory>(
     let header_buf = ntos::pe::try_fetch_pe_header(mem, start_block, ntos)?;
     let header = PeView::from_bytes(&header_buf)?;
 
+    // PsInitialSystemProcess -> PsActiveProcessHead
     let sys_proc = match header.get_export_by_name("PsInitialSystemProcess")? {
-        // PsActiveProcessHead
         Export::Symbol(s) => ntos + Length::from(*s),
         Export::Forward(_) => {
             return Err(Error::new(
@@ -55,15 +56,24 @@ pub fn find_exported<T: AccessPhysicalMemory + AccessVirtualMemory>(
     // read value again
     // TODO: fallback for 32bit
     // TODO: wrap error properly
-    let mut reader = VirtualMemoryContext::with(mem, start_block.arch, start_block.dtb);
-    let addr = reader.virt_read_addr(sys_proc)?;
-    Ok(addr)
+    let mut out = vec![0u8; start_block.arch.len_addr().as_usize()];
+    mem.virt_read_raw_into(start_block.arch, start_block.dtb, sys_proc, &mut out)?;
+    let address: Address = if start_block.arch.bits() == 64 {
+        LittleEndian::read_u64(&out).into()
+    } else if start_block.arch.bits() == 32 {
+        LittleEndian::read_u32(&out).into()
+    } else {
+        return Err(Error::new(
+            "invalid address size for this architecture. windows requires either 64 or 32 bits.",
+        ));
+    };
+    Ok(address)
 }
 
 // scan in pdb
 
 // scan in section
-pub fn find_in_section<T: AccessPhysicalMemory + AccessVirtualMemory>(
+pub fn find_in_section<T: AccessPhysicalMemory + AccessVirtualMemory + ?Sized>(
     mem: &mut T,
     start_block: &StartBlock,
     ntos: Address,

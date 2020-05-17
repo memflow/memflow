@@ -17,9 +17,9 @@ use tokio::net::UnixListener;
 use capnp::{self, capability::Promise};
 use capnp_rpc::{pry, rpc_twoparty_capnp, twoparty, RpcSystem};
 
-use flow_core::address::{Address, Length};
-use flow_core::arch::Architecture;
+use flow_core::architecture::Architecture;
 use flow_core::mem::*;
+use flow_core::types::{Address, Length, PhysicalAddress};
 use flow_core::vat;
 
 use std::cell::RefCell;
@@ -28,14 +28,14 @@ use std::rc::Rc;
 use crate::bridge_capnp::bridge;
 
 #[derive(Clone)]
-pub struct BridgeServer<T: AccessPhysicalMemory> {
+pub struct BridgeServer<T: AccessPhysicalMemory + VirtualAddressTranslator> {
     pub mem: Rc<RefCell<T>>,
 }
 
 #[cfg(any(unix))]
 fn listen_unix<T>(bridge: &BridgeServer<T>, path: &str, _opts: Vec<&str>) -> Result<()>
 where
-    T: AccessPhysicalMemory + 'static,
+    T: AccessPhysicalMemory + VirtualAddressTranslator + 'static,
 {
     let bridgecp = BridgeServer::<T> {
         mem: bridge.mem.clone(),
@@ -73,7 +73,7 @@ where
 
 fn listen_tcp<T>(bridge: &BridgeServer<T>, path: &str, opts: Vec<&str>) -> Result<()>
 where
-    T: AccessPhysicalMemory + 'static,
+    T: AccessPhysicalMemory + VirtualAddressTranslator + 'static,
 {
     let bridgecp = BridgeServer::<T> {
         mem: bridge.mem.clone(),
@@ -125,7 +125,7 @@ where
     }));
 }
 
-impl<T: AccessPhysicalMemory + 'static> BridgeServer<T> {
+impl<T: AccessPhysicalMemory + VirtualAddressTranslator + 'static> BridgeServer<T> {
     pub fn new(mem: Rc<RefCell<T>>) -> Self {
         BridgeServer { mem }
     }
@@ -154,7 +154,9 @@ impl<T: AccessPhysicalMemory + 'static> BridgeServer<T> {
     }
 }
 
-impl<T: AccessPhysicalMemory + 'static> bridge::Server for BridgeServer<T> {
+impl<T: AccessPhysicalMemory + VirtualAddressTranslator + 'static> bridge::Server
+    for BridgeServer<T>
+{
     // physRead @0 (address :UInt64, length :UInt64) -> (memory :MemoryRegion);
     fn phys_read(
         &mut self,
@@ -164,12 +166,12 @@ impl<T: AccessPhysicalMemory + 'static> bridge::Server for BridgeServer<T> {
         let memcp = self.mem.clone();
         let memory = &mut memcp.borrow_mut();
 
-        let address = Address::from(pry!(params.get()).get_address());
+        let address = PhysicalAddress::from(Address::from(pry!(params.get()).get_address()));
         let length = Length::from(pry!(params.get()).get_length());
 
         let mut data = vec![0; length.as_usize()];
         memory
-            .phys_read_raw_into(address, PageType::UNKNOWN, &mut data)
+            .phys_read_raw_into(address, &mut data)
             .unwrap_or_else(|_| ());
         results.get().set_data(&data);
 
@@ -185,11 +187,11 @@ impl<T: AccessPhysicalMemory + 'static> bridge::Server for BridgeServer<T> {
         let memcp = self.mem.clone();
         let memory = &mut memcp.borrow_mut();
 
-        let address = Address::from(pry!(params.get()).get_address());
+        let address = PhysicalAddress::from(Address::from(pry!(params.get()).get_address()));
         let data = pry!(pry!(params.get()).get_data());
 
         memory
-            .phys_write_raw(address, PageType::UNKNOWN, &data.to_vec())
+            .phys_write_raw(address, &data.to_vec())
             .unwrap_or_else(|_| ());
         results.get().set_length(data.len() as u64);
 

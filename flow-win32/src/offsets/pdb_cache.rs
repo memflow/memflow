@@ -20,7 +20,7 @@ fn cache_dir() -> Result<PathBuf> {
 fn try_download_pdb(url: &str, filename: &str) -> Result<()> {
     let url = duma::utils::parse_url(&format!("{}/{}", url, filename)).map_err(Error::new)?;
 
-    println!("trying to download pdb from {:?}", url);
+    info!("trying to download pdb from {:?}", url);
     duma::download::http_download(url, &ArgMatches::default(), "0.1")?;
 
     // try to parse pdb
@@ -95,7 +95,10 @@ pub fn try_get_pdb(guid: &Win32GUID) -> Result<PathBuf> {
             guid.file_name,
             cache_file.to_str().unwrap_or_default()
         );
-        fs::rename(guid.file_name.clone(), &cache_file)?;
+        if fs::rename(guid.file_name.clone(), &cache_file).is_err() {
+            fs::copy(guid.file_name.clone(), &cache_file)?;
+            fs::remove_file(guid.file_name.clone())?;
+        }
     }
 
     Ok(cache_file)

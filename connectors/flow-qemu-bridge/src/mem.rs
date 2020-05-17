@@ -6,9 +6,7 @@ use std::ptr::copy_nonoverlapping;
 use flow_core::*;
 use flow_derive::*;
 
-use crate::native::*;
-
-#[derive(AccessVirtualMemory)]
+#[derive(AccessVirtualMemory, VirtualAddressTranslator)]
 pub struct Memory;
 
 impl Memory {
@@ -18,23 +16,15 @@ impl Memory {
     }
 }
 
+use crate::native::*;
+
 impl AccessPhysicalMemory for Memory {
-    fn phys_read_raw_into(
-        &mut self,
-        addr: Address,
-        page_type: mem::PageType,
-        out: &mut [u8],
-    ) -> Result<()> {
-        Wrapper::new().phys_read_raw_into(addr, page_type, out)
+    fn phys_read_raw_into(&mut self, addr: PhysicalAddress, out: &mut [u8]) -> Result<()> {
+        Wrapper::new().phys_read_raw_into(addr, out)
     }
 
-    fn phys_write_raw(
-        &mut self,
-        addr: Address,
-        page_type: mem::PageType,
-        data: &[u8],
-    ) -> Result<()> {
-        Wrapper::new().phys_write_raw(addr, page_type, data)
+    fn phys_write_raw(&mut self, addr: PhysicalAddress, data: &[u8]) -> Result<()> {
+        Wrapper::new().phys_write_raw(addr, data)
     }
 }
 
@@ -64,12 +54,7 @@ impl Drop for Wrapper {
 // TODO: proper error handling
 //
 impl AccessPhysicalMemory for Wrapper {
-    fn phys_read_raw_into(
-        &mut self,
-        addr: Address,
-        _page_type: mem::PageType,
-        out: &mut [u8],
-    ) -> Result<()> {
+    fn phys_read_raw_into(&mut self, addr: PhysicalAddress, out: &mut [u8]) -> Result<()> {
         let mut l = out.len() as c_ulonglong;
         let mem = CPU_PHYSICAL_MEMORY_MAP.unwrap()(addr.as_u64(), &mut l, 0);
         if mem.is_null() {
@@ -83,12 +68,7 @@ impl AccessPhysicalMemory for Wrapper {
         }
     }
 
-    fn phys_write_raw(
-        &mut self,
-        addr: Address,
-        _page_type: mem::PageType,
-        data: &[u8],
-    ) -> Result<()> {
+    fn phys_write_raw(&mut self, addr: PhysicalAddress, data: &[u8]) -> Result<()> {
         let mut l = data.len() as c_ulonglong;
         let mem = CPU_PHYSICAL_MEMORY_MAP.unwrap()(addr.as_u64(), &mut l, 1);
         if mem.is_null() {

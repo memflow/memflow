@@ -13,9 +13,9 @@ pub use keystate::*;
 use crate::error::Result;
 use log::info;
 
-use flow_core::address::{Address, Length};
 use flow_core::mem::*;
 use flow_core::process::OperatingSystem;
+use flow_core::types::{Address, Length};
 
 use crate::kernel::{self, ntos::Win32GUID, StartBlock};
 use crate::offsets::Win32Offsets;
@@ -35,7 +35,9 @@ pub struct Win32 {
 impl OperatingSystem for Win32 {}
 
 impl Win32 {
-    pub fn try_with<T: AccessPhysicalMemory + AccessVirtualMemory>(mem: &mut T) -> Result<Self> {
+    pub fn try_with<T: AccessPhysicalMemory + AccessVirtualMemory + ?Sized>(
+        mem: &mut T,
+    ) -> Result<Self> {
         /*
         Options:
         - supply cr3 (dtb)

@@ -1,10 +1,13 @@
 
+[profile.bench]
+debug = true
+
 [workspace]
 members = [
     "flow-core",
     "flow-derive",
     "flow-win32",
-    #"flow-ffi",
+    "flow-ffi",
     "flow-cli",
     "connectors/flow-bridge",
     "connectors/flow-qemu-bridge",
@@ -15,6 +18,6 @@ default-members = [
     "flow-core",
     "flow-derive",
     "flow-win32",
-    #"flow-ffi",
+    "flow-ffi",
     "flow-cli",
 ]

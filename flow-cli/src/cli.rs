@@ -1,4 +1,5 @@
-use std::io::{self, Write};
+use std::fs::File;
+use std::io::{self, prelude::*, Write};
 
 use flow_core::*;
 use flow_win32::*;
@@ -22,8 +23,7 @@ impl<'a, T> Win32Interface<'a, T>
 where
     T: AccessPhysicalMemory + AccessVirtualMemory,
 {
-    pub fn with(mem: &'a mut T) -> flow_core::Result<Self> {
-        let os = Win32::try_with(mem)?;
+    pub fn with(mem: &'a mut T, os: Win32) -> flow_core::Result<Self> {
         let offsets = Win32Offsets::try_with_guid(&os.kernel_guid())?;
         Ok(Self {
             mem,
@@ -91,6 +91,31 @@ where
                         name: "imports",
                         description: "",
                         func: Some(Self::pe_imports),
+                        subcmds: Vec::new(),
+                    },
+                    Command {
+                        name: "scan",
+                        description: "",
+                        func: Some(Self::pe_scan),
+                        subcmds: Vec::new(),
+                    },
+                ],
+            },
+            Command {
+                name: "dump",
+                description: "",
+                func: None,
+                subcmds: vec![
+                    /*Command {
+                        name: "process",
+                        description: "",
+                        func: Some(Self::dump_process),
+                        subcmds: Vec::new(),
+                    },*/
+                    Command {
+                        name: "module",
+                        description: "",
+                        func: Some(Self::dump_module),
                         subcmds: Vec::new(),
                     },
                 ],
@@ -282,7 +307,77 @@ where
         */
     }
 
-    fn pe_imports(&mut self, _args: Vec<&str>) {}
+    fn pe_imports(&mut self, _args: Vec<&str>) {
+        println!("not implemented yet");
+    }
+
+    fn pe_scan(&mut self, args: Vec<&str>) {
+        if self.process.is_none() {
+            println!("no process opened. use process open 'name' to open a process");
+            return;
+        }
+        let p = self.process.as_ref().unwrap();
+
+        if self.module.is_none() {
+            println!("no module opened. use module open 'name' to open a module");
+            return;
+        }
+        let m = self.module.as_ref().unwrap();
+
+        if args.is_empty() {
+            println!("unable to scan module: no signature specified");
+            return;
+        }
+
+        let image = m.read_image(self.mem, p).unwrap();
+        let pe = PeView::from_bytes(&image).unwrap();
+
+        let pattern = pelite::pattern::parse(&args[1..].join(" ")).unwrap();
+        let mut matches = pe.scanner().matches(&pattern, pe.headers().image_range());
+
+        let mut save = [0u32; 16];
+        let mut count = 0;
+        while matches.next(&mut save) {
+            println!(
+                "match no {}: {}",
+                count,
+                save.iter()
+                    .filter(|&&s| s != 0u32)
+                    .map(|s| format!("{:x}", s))
+                    .collect::<Vec<String>>()
+                    .join(" ")
+            );
+            count += 1;
+        }
+    }
+
+    fn dump_module(&mut self, _args: Vec<&str>) {
+        if self.process.is_none() {
+            println!("no process opened. use process open 'name' to open a process");
+            return;
+        }
+        let p = self.process.as_ref().unwrap();
+
+        if self.module.is_none() {
+            println!("no module opened. use module open 'name' to open a module");
+            return;
+        }
+        let m = self.module.as_ref().unwrap();
+
+        println!("dumping '{}' in '{}'...", m.name(), p.name());
+
+        let mut virt_mem = p.virt_mem(self.mem);
+
+        let mut data = vec![0u8; m.size().as_usize()]; // TODO: chunked read
+        virt_mem.virt_read_into(m.base(), &mut *data).unwrap();
+
+        let mut file = File::create("dump.raw").unwrap();
+        let mut pos = 0;
+        while pos < data.len() {
+            let bytes_written = file.write(&data[pos..]).unwrap();
+            pos += bytes_written;
+        }
+    }
 }
 
 struct Command<'a, T> {

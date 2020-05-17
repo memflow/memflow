@@ -10,10 +10,10 @@ use log::warn;
 use pelite::{self, image::GUID, pe64::debug::CodeView, PeView};
 use uuid::{self, Uuid};
 
-use flow_core::address::{Address, Length};
 use flow_core::mem::AccessVirtualMemory;
+use flow_core::types::{Address, Length};
 
-pub fn find<T: AccessVirtualMemory>(
+pub fn find<T: AccessVirtualMemory + ?Sized>(
     mem: &mut T,
     start_block: &StartBlock,
 ) -> Result<(Address, Length)> {
@@ -21,18 +21,18 @@ pub fn find<T: AccessVirtualMemory>(
         if !start_block.va.is_null() {
             match x64::find_with_va(mem, start_block) {
                 Ok(b) => return Ok(b),
-                Err(e) => warn!("{}", e),
+                Err(e) => warn!("x64::find_with_va() error: {}", e),
             }
         }
 
         match x64::find(mem) {
             Ok(b) => return Ok(b),
-            Err(e) => warn!("{}", e),
+            Err(e) => warn!("x64::find() error: {}", e),
         }
     } else if start_block.arch.bits() == 32 {
         match x86::find(mem) {
             Ok(b) => return Ok(b),
-            Err(e) => println!("Error: {}", e),
+            Err(e) => warn!("x86::find() error: {}", e),
         }
     }
 
@@ -45,7 +45,7 @@ pub struct Win32GUID {
     pub guid: String,
 }
 
-pub fn find_guid<T: AccessVirtualMemory>(
+pub fn find_guid<T: AccessVirtualMemory + ?Sized>(
     mem: &mut T,
     start_block: &StartBlock,
     kernel_base: Address,

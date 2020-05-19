@@ -3,30 +3,26 @@ use log::info;
 use flow_core::*;
 use flow_derive::*;
 
-use std::fs::{File, OpenOptions};
-use std::io::{Read, Seek, SeekFrom, Write};
+use core::ffi::c_void;
+use libc::{c_ulong, iovec, pid_t, sysconf, _SC_IOV_MAX};
 
 const LENGTH_2GB: Length = Length::from_gb(2);
 
 #[derive(AccessVirtualMemory, VirtualAddressTranslator)]
 pub struct Memory {
-    pub pid: i32,
+    pub pid: pid_t,
     pub map: procfs::process::MemoryMap,
-    file: File,
+    iov_max: usize,
+    temp_iov: Vec<iovec>,
 }
 
 impl Clone for Memory {
     fn clone(&self) -> Self {
-        let new_file = OpenOptions::new()
-            .read(true)
-            .write(true)
-            .open(format!("/proc/{}/mem", self.pid))
-            .unwrap(); // TODO: might panic
-
         Self {
             pid: self.pid,
             map: self.map.clone(),
-            file: new_file,
+            iov_max: self.iov_max,
+            temp_iov: Vec::with_capacity(self.iov_max * 2),
         }
     }
 }
@@ -52,14 +48,13 @@ impl Memory {
             .ok_or_else(|| Error::new("qemu memory map could not be read"))?;
         info!("qemu memory map found {:?}", map);
 
-        let file = OpenOptions::new()
-            .read(true)
-            .write(true)
-            .open(format!("/proc/{}/mem", prc.stat.pid))?;
+        let iov_max = unsafe { sysconf(_SC_IOV_MAX) } as usize;
+
         Ok(Self {
             pid: prc.stat.pid,
             map: map.clone(),
-            file,
+            iov_max,
+            temp_iov: Vec::with_capacity(iov_max * 2),
         })
     }
 }
@@ -74,9 +69,8 @@ impl AccessPhysicalMemory for Memory {
                 addr.as_u64() - LENGTH_2GB.as_u64()
             }
         };
-        self.file.seek(SeekFrom::Start(ofs))?;
-        let _ = self.file.read(out);
-        Ok(())
+
+        process_vm_read(self.pid, &[(ofs, out)], &mut self.temp_iov, self.iov_max)
     }
 
     fn phys_write_raw(&mut self, addr: PhysicalAddress, data: &[u8]) -> Result<()> {
@@ -87,8 +81,74 @@ impl AccessPhysicalMemory for Memory {
                 addr.as_u64() - LENGTH_2GB.as_u64()
             }
         };
-        self.file.seek(SeekFrom::Start(ofs))?;
-        let _ = self.file.write(data);
-        Ok(())
+
+        process_vm_write(self.pid, &[(ofs, data)], &mut self.temp_iov, self.iov_max)
     }
+}
+
+fn process_vm_rw<F, T: std::convert::AsRef<[F]>>(
+    pid: pid_t,
+    data: &[(u64, T)],
+    temp_iov: &mut Vec<iovec>,
+    iov_max: usize,
+    write: bool,
+) -> Result<()> {
+    let process_vm_rw_func = if write {
+        libc::process_vm_writev
+    } else {
+        libc::process_vm_readv
+    };
+
+    for data in data.chunks(iov_max) {
+        temp_iov.clear();
+
+        for (_, i) in data.iter() {
+            temp_iov.push(iovec {
+                iov_base: i.as_ref().as_ptr() as *mut c_void,
+                iov_len: i.as_ref().len(),
+            });
+        }
+
+        for (addr, i) in data.iter() {
+            temp_iov.push(iovec {
+                iov_base: *addr as *mut c_void,
+                iov_len: i.as_ref().len(),
+            });
+        }
+
+        let ret = unsafe {
+            process_vm_rw_func(
+                pid,
+                temp_iov.as_ptr(),
+                data.len() as c_ulong,
+                temp_iov.as_ptr().offset(data.len() as isize),
+                data.len() as c_ulong,
+                0,
+            )
+        };
+
+        if ret == -1 {
+            return Err(flow_core::error::Error::new("process_vm_rw failed"));
+        }
+    }
+
+    Ok(())
+}
+
+fn process_vm_read(
+    pid: pid_t,
+    data: &[(u64, &mut [u8])],
+    temp_iov: &mut Vec<iovec>,
+    iov_max: usize,
+) -> Result<()> {
+    process_vm_rw(pid, data, temp_iov, iov_max, false)
+}
+
+fn process_vm_write(
+    pid: pid_t,
+    data: &[(u64, &[u8])],
+    temp_iov: &mut Vec<iovec>,
+    iov_max: usize,
+) -> Result<()> {
+    process_vm_rw(pid, data, temp_iov, iov_max, true)
 }

@@ -12,8 +12,7 @@ const LENGTH_2GB: Length = Length::from_gb(2);
 pub struct Memory {
     pub pid: pid_t,
     pub map: procfs::process::MemoryMap,
-    iov_max: usize,
-    temp_iov: Vec<iovec>,
+    temp_iov: Box<[iovec]>,
 }
 
 impl Clone for Memory {
@@ -21,8 +20,7 @@ impl Clone for Memory {
         Self {
             pid: self.pid,
             map: self.map.clone(),
-            iov_max: self.iov_max,
-            temp_iov: Vec::with_capacity(self.iov_max * 2),
+            temp_iov: self.temp_iov.clone(),
         }
     }
 }
@@ -53,8 +51,14 @@ impl Memory {
         Ok(Self {
             pid: prc.stat.pid,
             map: map.clone(),
-            iov_max,
-            temp_iov: Vec::with_capacity(iov_max * 2),
+            temp_iov: vec![
+                iovec {
+                    iov_base: std::ptr::null_mut::<c_void>(),
+                    iov_len: 0
+                };
+                iov_max * 2
+            ]
+            .into_boxed_slice(),
         })
     }
 }
@@ -70,7 +74,7 @@ impl AccessPhysicalMemory for Memory {
             }
         };
 
-        process_vm_read(self.pid, &[(ofs, out)], &mut self.temp_iov, self.iov_max)
+        process_vm_read(self.pid, &[(ofs, out)], &mut self.temp_iov)
     }
 
     fn phys_write_raw(&mut self, addr: PhysicalAddress, data: &[u8]) -> Result<()> {
@@ -82,15 +86,14 @@ impl AccessPhysicalMemory for Memory {
             }
         };
 
-        process_vm_write(self.pid, &[(ofs, data)], &mut self.temp_iov, self.iov_max)
+        process_vm_write(self.pid, &[(ofs, data)], &mut self.temp_iov)
     }
 }
 
 fn process_vm_rw<F, T: std::convert::AsRef<[F]>>(
     pid: pid_t,
     data: &[(u64, T)],
-    temp_iov: &mut Vec<iovec>,
-    iov_max: usize,
+    temp_iov: &mut [iovec],
     write: bool,
 ) -> Result<()> {
     let process_vm_rw_func = if write {
@@ -99,21 +102,21 @@ fn process_vm_rw<F, T: std::convert::AsRef<[F]>>(
         libc::process_vm_readv
     };
 
-    for data in data.chunks(iov_max) {
-        temp_iov.clear();
+    let iov_max = temp_iov.len() / 2;
 
-        for (_, i) in data.iter() {
-            temp_iov.push(iovec {
+    for data in data.chunks(iov_max) {
+        for ((_, i), &mut ref mut iov) in data.iter().zip(temp_iov.iter_mut()) {
+            *iov = iovec {
                 iov_base: i.as_ref().as_ptr() as *mut c_void,
                 iov_len: i.as_ref().len(),
-            });
+            };
         }
 
-        for (addr, i) in data.iter() {
-            temp_iov.push(iovec {
+        for ((addr, i), &mut ref mut iov) in data.iter().zip(temp_iov[data.len()..].iter_mut()) {
+            *iov = iovec {
                 iov_base: *addr as *mut c_void,
                 iov_len: i.as_ref().len(),
-            });
+            };
         }
 
         let ret = unsafe {
@@ -135,20 +138,10 @@ fn process_vm_rw<F, T: std::convert::AsRef<[F]>>(
     Ok(())
 }
 
-fn process_vm_read(
-    pid: pid_t,
-    data: &[(u64, &mut [u8])],
-    temp_iov: &mut Vec<iovec>,
-    iov_max: usize,
-) -> Result<()> {
-    process_vm_rw(pid, data, temp_iov, iov_max, false)
+fn process_vm_read(pid: pid_t, data: &[(u64, &mut [u8])], temp_iov: &mut [iovec]) -> Result<()> {
+    process_vm_rw(pid, data, temp_iov, false)
 }
 
-fn process_vm_write(
-    pid: pid_t,
-    data: &[(u64, &[u8])],
-    temp_iov: &mut Vec<iovec>,
-    iov_max: usize,
-) -> Result<()> {
-    process_vm_rw(pid, data, temp_iov, iov_max, true)
+fn process_vm_write(pid: pid_t, data: &[(u64, &[u8])], temp_iov: &mut [iovec]) -> Result<()> {
+    process_vm_rw(pid, data, temp_iov, true)
 }

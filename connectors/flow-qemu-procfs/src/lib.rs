@@ -121,7 +121,7 @@ fn process_vm_rw<F, T: std::convert::AsRef<[F]>>(
                 pid,
                 temp_iov.as_ptr(),
                 data.len() as c_ulong,
-                temp_iov.as_ptr().offset(data.len() as isize),
+                temp_iov.as_ptr().add(data.len()),
                 data.len() as c_ulong,
                 0,
             )

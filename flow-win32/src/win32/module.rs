@@ -96,8 +96,8 @@ impl Win32Module {
             .iter()
             .map(|peb| Win32Module::try_with_peb(mem, process, offsets, *peb))
             .filter_map(Result::ok)
-            .inspect(|p| trace!("{:x} {}", p.base(), p.name()))
-            .find(|p| p.name() == name)
+            .inspect(|m| trace!("{:x} {}", m.base(), m.name()))
+            .find(|m| m.name() == name)
             .ok_or_else(|| Error::new(format!("unable to find module {}", name)))
     }
 

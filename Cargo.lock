@@ -493,7 +493,6 @@ dependencies = [
  "flow-core 0.1.0",
  "flow-qemu-procfs 0.1.0",
  "flow-win32 0.1.0",
- "libc 0.2.69 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "simple_logger 1.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]

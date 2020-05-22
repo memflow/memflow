@@ -1,6 +1,6 @@
 use super::mem::MemoryBackend;
 
-use libc::c_void;
+use std::ffi::c_void;
 use std::ptr;
 
 use flow_qemu_procfs::Memory;

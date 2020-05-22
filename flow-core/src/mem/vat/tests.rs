@@ -218,7 +218,11 @@ impl TestMemory {
                 .as_page_aligned(Length::from_gb(2));
 
         let mut pml4 = unsafe {
-            &mut *(self.mem.as_ptr().offset(dtb.addr.as_usize() as isize) as *mut PageTable)
+            &mut *(self
+                .mem
+                .as_mut_ptr()
+                .add(dtb.addr.as_usize())
+                .cast::<PageTable>())
         };
         *pml4 = PageTable::new();
 

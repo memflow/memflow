@@ -1,3 +1,4 @@
+use super::Win32Module;
 use crate::error::{Error, Result};
 use crate::offsets::Win32Offsets;
 use crate::win32::Win32;
@@ -5,7 +6,7 @@ use crate::win32::Win32;
 use flow_core::architecture::Architecture;
 use flow_core::mem::{AccessVirtualMemory, VirtualMemoryContext};
 use flow_core::types::{Address, Length};
-use flow_core::OsProcess;
+use flow_core::{OsProcess, OsProcessModule};
 
 use log::trace;
 use pelite::{self, pe64::exports::Export, PeView};
@@ -157,13 +158,31 @@ impl Win32Process {
     where
         T: AccessVirtualMemory,
     {
-        win.eprocess_list(mem, offsets)?
+        let procs = win
+            .eprocess_list(mem, offsets)?
             .iter()
             .map(|eproc| Win32Process::try_with_eprocess(mem, win, offsets, *eproc))
             .filter_map(Result::ok)
             .inspect(|p| trace!("{} {}", p.pid(), p.name()))
-            .find(|p| p.name() == name)
-            .ok_or_else(|| Error::new(format!("unable to find process {}", name)))
+            .filter(|p| p.name().to_lowercase() == name[..name.len().min(15)].to_lowercase())
+            .collect::<Vec<_>>();
+
+        for proc in procs.iter() {
+            // TODO: properly probe pe header here and check ImageBase
+            if let Ok(_) = proc
+                .peb_list(mem)?
+                .iter()
+                .map(|peb| Win32Module::try_with_peb(mem, proc, offsets, *peb))
+                .filter_map(Result::ok)
+                .inspect(|m| println!("{:x} {}", m.base(), m.name()))
+                .find(|m| m.name().to_lowercase() == name.to_lowercase())
+                .ok_or_else(|| Error::new(format!("unable to find module {}", name)))
+            {
+                return Ok(proc.clone());
+            }
+        }
+
+        Err(Error::new(format!("unable to find process {}", name)))
     }
 
     pub fn wow64(&self) -> Address {

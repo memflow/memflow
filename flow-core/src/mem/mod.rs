@@ -16,7 +16,7 @@ pub mod virt;
 pub mod virt_ctx;
 
 pub use cache::*;
-pub use phys::AccessPhysicalMemory;
+pub use phys::{AccessPhysicalMemory, PhysicalReadIterator, PhysicalWriteIterator};
 pub use vat::VirtualAddressTranslator;
 pub use virt::AccessVirtualMemory;
 pub use virt_ctx::VirtualMemoryContext;

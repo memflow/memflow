@@ -1,6 +1,9 @@
 pub mod page_chunks;
 pub use page_chunks::*;
 
+pub mod double_buffered_map;
+pub use double_buffered_map::*;
+
 #[cfg(test)]
 mod tests {
     use crate::page_chunks::{PageChunks, PageChunksMut};

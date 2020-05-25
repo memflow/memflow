@@ -1,18 +1,24 @@
 use super::{CacheValidator, PageType};
 use crate::architecture::Architecture;
-use crate::types::{Address, Length};
+use crate::error::Error;
+use crate::mem::phys::PhysicalReadIterator; //, PhysicalWriteIterator};
+use crate::mem::AccessPhysicalMemory;
+use crate::page_chunks::PageChunksMut;
+use crate::types::{Address, Length, PhysicalAddress};
 use std::alloc::{alloc_zeroed, Layout};
 
 pub struct CacheEntry<'a> {
     pub valid: bool,
     pub address: Address,
+    pub should_validate: bool,
     pub buf: &'a mut [u8],
 }
 
 impl<'a> CacheEntry<'a> {
-    pub fn with(valid: bool, address: Address, buf: &'a mut [u8]) -> Self {
+    pub fn with(valid: bool, should_validate: bool, address: Address, buf: &'a mut [u8]) -> Self {
         Self {
             valid,
+            should_validate,
             address,
             buf,
         }
@@ -25,12 +31,17 @@ impl<'a> CacheEntry<'a> {
     pub fn address(&self) -> Address {
         self.address
     }
+
+    pub fn should_validate(&self) -> bool {
+        self.should_validate
+    }
 }
 
 #[derive(Clone)]
 pub struct PageCache<T: CacheValidator> {
     address: Box<[Address]>,
     cache: Box<[u8]>,
+    address_once_validated: Box<[Address]>,
     page_size: Length,
     page_type_mask: PageType,
     pub validator: T,
@@ -60,8 +71,9 @@ impl<T: CacheValidator> PageCache<T> {
         validator.allocate_slots(cache_entries);
 
         Self {
-            address: vec![(!0_u64).into(); cache_entries].into_boxed_slice(),
+            address: vec![Address::INVALID; cache_entries].into_boxed_slice(),
             cache,
+            address_once_validated: vec![Address::INVALID; cache_entries].into_boxed_slice(),
             page_size,
             page_type_mask,
             validator,
@@ -73,11 +85,12 @@ impl<T: CacheValidator> PageCache<T> {
             % self.address.len()
     }
 
-    fn page_and_info_from_index(&mut self, idx: usize) -> (&mut [u8], &mut Address) {
+    fn page_and_info_from_index(&mut self, idx: usize) -> (&mut [u8], &mut Address, &mut Address) {
         let start = self.page_size.as_usize() * idx;
         (
             &mut self.cache[start..(start + self.page_size.as_usize())],
             &mut self.address[idx],
+            &mut self.address_once_validated[idx],
         )
     }
 
@@ -89,7 +102,7 @@ impl<T: CacheValidator> PageCache<T> {
     fn try_page(
         &mut self,
         addr: Address,
-    ) -> std::result::Result<&mut [u8], (&mut [u8], &mut Address)> {
+    ) -> std::result::Result<&mut [u8], (&mut [u8], &mut Address, &mut Address)> {
         let page_index = self.page_index(addr);
         if self.address[page_index] == addr.as_page_aligned(self.page_size)
             && self.validator.is_slot_valid(page_index)
@@ -114,14 +127,21 @@ impl<T: CacheValidator> PageCache<T> {
         match self.try_page(addr) {
             Ok(page) => CacheEntry {
                 valid: true,
+                should_validate: false,
                 address: aligned_addr,
                 buf: page,
             },
-            Err((page, _)) => CacheEntry {
-                valid: false,
-                address: aligned_addr,
-                buf: page,
-            },
+            Err((page, _, addr_once_validated)) => {
+                if *addr_once_validated == Address::INVALID {
+                    *addr_once_validated = aligned_addr;
+                }
+                CacheEntry {
+                    valid: false,
+                    should_validate: aligned_addr == *addr_once_validated,
+                    address: aligned_addr,
+                    buf: page,
+                }
+            }
         }
     }
 
@@ -132,6 +152,8 @@ impl<T: CacheValidator> PageCache<T> {
             let page_info = self.page_and_info_from_index(idx);
             *page_info.1 = aligned_addr;
             self.validator.validate_slot(idx);
+            debug_assert_eq!(self.address_once_validated[idx], aligned_addr);
+            self.address_once_validated[idx] = Address::INVALID;
         }
     }
 
@@ -141,6 +163,110 @@ impl<T: CacheValidator> PageCache<T> {
             let page_info = self.page_and_info_from_index(idx);
             *page_info.1 = Address::null();
             self.validator.invalidate_slot(idx);
+            self.address_once_validated[idx] = Address::INVALID;
         }
+    }
+
+    fn cached_read_single<F: AccessPhysicalMemory>(
+        &mut self,
+        mem: &mut F,
+        addr: PhysicalAddress,
+        out: &mut [u8],
+    ) -> Result<(), Error> {
+        if let Some(page) = addr.page {
+            // try read from cache or fall back
+            if self.is_cached_page_type(page.page_type) {
+                for (paddr, chunk) in
+                    PageChunksMut::create_from(out, addr.address, self.page_size())
+                {
+                    let cached_page = self.cached_page_mut(paddr);
+
+                    if cached_page.should_validate() {
+                        mem.phys_read_raw_into(cached_page.address.into(), cached_page.buf)?;
+                    }
+
+                    if cached_page.is_valid() || cached_page.should_validate() {
+                        let start = (paddr - cached_page.address).as_usize();
+                        chunk.copy_from_slice(&cached_page.buf[start..(start + chunk.len())]);
+                    }
+
+                    if cached_page.should_validate() {
+                        self.validate_page(paddr, page.page_type);
+                    }
+                }
+            } else {
+                mem.phys_read_raw_into(addr, out)?;
+            }
+        }
+        Ok(())
+    }
+
+    pub fn cached_read<'a, F: AccessPhysicalMemory, PI: PhysicalReadIterator<'a>>(
+        &mut self,
+        mem: &mut F,
+        iter: PI,
+    ) -> impl PhysicalReadIterator<'a> {
+        /*if data.iter_mut().nth(1).is_none() && data.iter_mut().next().is_some() {
+            let (addr, ref mut out) = data.iter_mut().next().unwrap().get_phys_read_info();
+            self.cached_read_single(mem, addr, out)
+        } else {
+            let mut rlist = smallvec::SmallVec::<[_; 32]>::new();
+            let mut clist = smallvec::SmallVec::<[_; 32]>::new();
+
+            for data in data.iter_mut() {
+                let (addr, out) = data.get_phys_read_info();
+                if let Some(page) = addr.page {
+                    // try read from cache or fall back
+                    if self.is_cached_page_type(page.page_type) {
+                        for (paddr, chunk) in
+                            PageChunksMut::create_from(out, addr.address, self.page_size())
+                        {
+                            let cached_page = self.cached_page_mut(paddr);
+
+                            if !cached_page.is_valid() {
+                                if cached_page.should_validate() {
+                                    // should_validate ensures that there would not be
+                                    // any aliasing
+                                    rlist.push(PhysicalReadData::new(
+                                        cached_page.address.into(),
+                                        unsafe {
+                                            std::slice::from_raw_parts_mut(
+                                                cached_page.buf.as_mut_ptr(),
+                                                cached_page.buf.len(),
+                                            )
+                                        },
+                                    ));
+                                    clist.push((chunk, paddr));
+                                    self.validate_page(paddr, page.page_type);
+                                } else {
+                                    rlist.push(PhysicalReadData::new(paddr.into(), chunk));
+                                }
+                            } else {
+                                clist.push((chunk, paddr));
+                            }
+                        }
+                    } else {
+                        rlist.push(PhysicalReadData::new(addr, out));
+                    }
+                } else {
+                    rlist.push(PhysicalReadData::new(addr, out));
+                }
+            }
+
+            //Execute the queued reads
+            if !rlist.is_empty() {
+                mem.phys_read_raw_list(data).unwrap(); //rlist.as_mut_slice()).unwrap();
+            }
+
+            for &mut (ref mut chunk, paddr) in clist.iter_mut() {
+                let aligned_addr = paddr.as_page_aligned(self.page_size);
+                let cached_page = self.page_from_index(self.page_index(paddr));
+                let start = (paddr - aligned_addr).as_usize();
+                chunk.copy_from_slice(&cached_page[start..(start + chunk.len())]);
+            }
+
+            Ok(())
+        }*/
+        iter
     }
 }

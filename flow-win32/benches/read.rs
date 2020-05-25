@@ -13,7 +13,7 @@ extern crate rand;
 use flow_core::mem::{
     timed_validator::*, AccessVirtualMemory, CachedMemoryAccess, CachedVAT, PageCache, TLBCache,
 };
-use flow_core::{Length, OsProcess, OsProcessModule, PageType};
+use flow_core::{Address, Length, OsProcess, OsProcessModule, PageType};
 
 use flow_qemu_procfs::Memory;
 
@@ -36,7 +36,7 @@ fn rwtest<T: AccessVirtualMemory>(
 
     for i in chunk_sizes {
         for o in chunk_counts {
-            let mut bufs = vec![(vec![0 as u8; *i], 0); *o];
+            let mut bufs = vec![(Address::null(), vec![0 as u8; *i]); *o];
             let mut done_size = 0;
 
             while done_size < read_size {
@@ -44,14 +44,14 @@ fn rwtest<T: AccessVirtualMemory>(
                     module.base().as_u64(),
                     module.base().as_u64() + module.size().as_u64(),
                 );
-                for (_, addr) in bufs.iter_mut() {
-                    *addr = base_addr + rng.gen_range(0, 0x2000);
+                for (addr, _) in bufs.iter_mut() {
+                    *addr = (base_addr + rng.gen_range(0, 0x2000)).into();
                 }
 
                 {
                     let mut vmem = proc.virt_mem(mem);
-                    for (buf, addr) in bufs.iter_mut() {
-                        let _ = vmem.virt_read_raw_into((*addr).into(), buf.as_mut_slice());
+                    for (addr, buf) in bufs.iter_mut() {
+                        let _ = vmem.virt_read_raw_into(*addr, buf.as_mut_slice());
                     }
                 }
                 done_size += *i * *o;

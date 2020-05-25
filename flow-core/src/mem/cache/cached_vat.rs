@@ -2,7 +2,7 @@ use crate::error::Result;
 
 use crate::architecture::Architecture;
 use crate::mem::cache::{CacheValidator, TLBCache};
-use crate::mem::AccessPhysicalMemory;
+use crate::mem::{AccessPhysicalMemory, PhysicalReadIterator, PhysicalWriteIterator};
 use crate::types::{Address, Page, PhysicalAddress};
 use crate::vat;
 use crate::vat::VirtualAddressTranslator;
@@ -43,11 +43,17 @@ impl<T: AccessPhysicalMemory + VirtualAddressTranslator, Q: CacheValidator> Virt
 impl<T: AccessPhysicalMemory + VirtualAddressTranslator, Q: CacheValidator> AccessPhysicalMemory
     for CachedVAT<T, Q>
 {
-    fn phys_read_raw_into(&mut self, addr: PhysicalAddress, out: &mut [u8]) -> Result<()> {
-        self.mem.phys_read_raw_into(addr, out)
+    fn phys_read_raw_iter<'b, PI: PhysicalReadIterator<'b>>(
+        &'b mut self,
+        iter: PI,
+    ) -> Box<dyn PhysicalReadIterator<'b>> {
+        self.mem.phys_read_raw_iter(iter)
     }
 
-    fn phys_write_raw(&mut self, addr: PhysicalAddress, data: &[u8]) -> Result<()> {
-        self.mem.phys_write_raw(addr, data)
+    fn phys_write_raw_iter<'b, PI: PhysicalWriteIterator<'b>>(
+        &'b mut self,
+        iter: PI,
+    ) -> Box<dyn PhysicalWriteIterator<'b>> {
+        self.mem.phys_write_raw_iter(iter)
     }
 }

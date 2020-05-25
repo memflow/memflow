@@ -1,28 +1,21 @@
 use log::info;
 
+use flow_core::iter::double_buffered_map::DoubleBufferedMap;
+use flow_core::types::{Done, Progress, ToDo};
 use flow_core::*;
 use flow_derive::*;
 
 use core::ffi::c_void;
 use libc::{c_ulong, iovec, pid_t, sysconf, _SC_IOV_MAX};
+use std::collections::VecDeque;
 
 const LENGTH_2GB: Length = Length::from_gb(2);
 
-#[derive(AccessVirtualMemory, VirtualAddressTranslator)]
+#[derive(Clone, AccessVirtualMemory, VirtualAddressTranslator)]
 pub struct Memory {
     pub pid: pid_t,
     pub map: procfs::process::MemoryMap,
     temp_iov: Box<[iovec]>,
-}
-
-impl Clone for Memory {
-    fn clone(&self) -> Self {
-        Self {
-            pid: self.pid,
-            map: self.map.clone(),
-            temp_iov: self.temp_iov.clone(),
-        }
-    }
 }
 
 impl Memory {
@@ -62,70 +55,113 @@ impl Memory {
         })
     }
 
-    fn process_vm_rw<F, T: std::convert::AsRef<[F]>>(
+    pub fn filter_element<A, B>(
+        elem: Progress<A, B>,
+        cnt: &mut usize,
+        iov_max: usize,
+    ) -> (bool, Progress<A, B>) {
+        (
+            if let ToDo(_) = elem {
+                *cnt += 1;
+                (*cnt % iov_max) == 0
+            } else {
+                true
+            },
+            elem,
+        )
+    }
+
+    pub fn perform_rw<A2: AsRef<[A3]>, A3>(
         &mut self,
-        data: &[(PhysicalAddress, T)],
-        write: bool,
-    ) -> Result<()> {
-        let process_vm_rw_func = if write {
-            libc::process_vm_writev
-        } else {
-            libc::process_vm_readv
-        };
+        vec_in: &mut VecDeque<Progress<(PhysicalAddress, A2), Result<(PhysicalAddress, A2)>>>,
+        vec_out: &mut VecDeque<Progress<(PhysicalAddress, A2), Result<(PhysicalAddress, A2)>>>,
+        process_vm_rw_func: unsafe extern "C" fn (pid_t, *const iovec, c_ulong, *const iovec, c_ulong, c_ulong) -> isize
+    ) {
+        let mut data_cnt = 0;
 
-        let iov_max = self.temp_iov.len() / 2;
-
-        for data in data.chunks(iov_max) {
-            for ((_, i), &mut ref mut iov) in data.iter().zip(self.temp_iov.iter_mut()) {
-                *iov = iovec {
-                    iov_base: i.as_ref().as_ptr() as *mut c_void,
-                    iov_len: i.as_ref().len(),
-                };
-            }
-
-            for ((addr, i), &mut ref mut iov) in
-                data.iter().zip(self.temp_iov[data.len()..].iter_mut())
-            {
-                let ofs = self.map.address.0 + {
-                    if addr.as_u64() <= LENGTH_2GB.as_u64() {
-                        addr.as_u64()
-                    } else {
-                        addr.as_u64() - LENGTH_2GB.as_u64()
-                    }
-                };
-
-                *iov = iovec {
-                    iov_base: ofs as *mut c_void,
-                    iov_len: i.as_ref().len(),
-                };
-            }
-
-            let ret = unsafe {
-                process_vm_rw_func(
-                    self.pid,
-                    self.temp_iov.as_ptr(),
-                    data.len() as c_ulong,
-                    self.temp_iov.as_ptr().add(data.len()),
-                    data.len() as c_ulong,
-                    0,
-                )
+        for ((_, i), &mut ref mut iov) in vec_in
+            .iter()
+            .filter_map(|x| match x {
+                ToDo(x) => Some(x),
+                _ => None,
+            })
+            .zip(self.temp_iov.iter_mut())
+        {
+            data_cnt += 1;
+            *iov = iovec {
+                iov_base: i.as_ref().as_ptr() as *mut c_void,
+                iov_len: i.as_ref().len(),
             };
-
-            if ret == -1 {
-                return Err(flow_core::error::Error::new("process_vm_rw failed"));
-            }
         }
 
-        Ok(())
+        for ((addr, i), &mut ref mut iov) in vec_in
+            .iter()
+            .filter_map(|x| match x {
+                ToDo(x) => Some(x),
+                _ => None,
+            })
+            .zip(self.temp_iov[data_cnt..].iter_mut())
+        {
+            let ofs = self.map.address.0 + {
+                if addr.as_u64() <= LENGTH_2GB.as_u64() {
+                    addr.as_u64()
+                } else {
+                    addr.as_u64() - LENGTH_2GB.as_u64()
+                }
+            };
+
+            *iov = iovec {
+                iov_base: ofs as *mut c_void,
+                iov_len: i.as_ref().len(),
+            };
+        }
+
+        let ret = unsafe {
+            process_vm_rw_func(
+                self.pid,
+                self.temp_iov.as_ptr(),
+                data_cnt as c_ulong,
+                self.temp_iov.as_ptr().add(data_cnt),
+                data_cnt as c_ulong,
+                0,
+            )
+        };
+
+        while let Some(item) = vec_in.pop_front() {
+            vec_out.push_back(match item {
+                ToDo((addr, out)) => Done(if ret == -1 {
+                    Err(flow_core::error::Error::new("process_vm_rw failed"))
+                } else {
+                    Ok((addr, out))
+                }),
+                _ => item,
+            });
+        }
     }
 }
 
 impl AccessPhysicalMemory for Memory {
-    fn phys_read_raw_into(&mut self, addr: PhysicalAddress, out: &mut [u8]) -> Result<()> {
-        self.process_vm_rw(&[(addr, out)], false)
+    fn phys_read_raw_iter<'a, PI: PhysicalReadIterator<'a>>(
+        &'a mut self,
+        iter: PI,
+    ) -> Box<dyn PhysicalReadIterator<'a>> {
+        let iov_max = self.temp_iov.len() / 2;
+        let mut cnt = 0;
+        Box::new(iter.double_buffered_map(
+            move |x| Self::filter_element(x, &mut cnt, iov_max),
+            move |vec_in, vec_out| self.perform_rw(vec_in, vec_out, libc::process_vm_readv),
+        ))
     }
 
-    fn phys_write_raw(&mut self, addr: PhysicalAddress, data: &[u8]) -> Result<()> {
-        self.process_vm_rw(&[(addr, data)], true)
+    fn phys_write_raw_iter<'a, PI: PhysicalWriteIterator<'a>>(
+        &'a mut self,
+        iter: PI,
+    ) -> Box<dyn PhysicalWriteIterator<'a>> {
+        let iov_max = self.temp_iov.len() / 2;
+        let mut cnt = 0;
+        Box::new(iter.double_buffered_map(
+            move |x| Self::filter_element(x, &mut cnt, iov_max),
+            move |vec_in, vec_out| self.perform_rw(vec_in, vec_out, libc::process_vm_writev),
+        ))
     }
 }

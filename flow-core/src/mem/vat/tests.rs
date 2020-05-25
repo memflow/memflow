@@ -2,7 +2,8 @@ use crate::architecture::Architecture;
 use crate::mem::cache::page_cache::PageCache;
 use crate::mem::cache::timed_validator::TimedCacheValidator;
 use crate::mem::{AccessVirtualMemory, VirtualAddressTranslator};
-use crate::types::{Address, Length, PhysicalAddress};
+use crate::mem::{PhysicalReadIterator, PhysicalWriteIterator};
+use crate::types::{Address, Done, Length, PhysicalAddress, ToDo};
 use crate::*;
 
 use flow_derive::*;
@@ -86,25 +87,34 @@ pub struct TestMemory {
 }
 
 impl AccessPhysicalMemory for TestMemory {
-    fn phys_read_raw_into(&mut self, addr: PhysicalAddress, out: &mut [u8]) -> Result<()> {
-        if addr.address.as_usize() + out.len() <= self.mem.len() {
-            out.copy_from_slice(
-                &self.mem[addr.address.as_usize()..(addr.address.as_usize() + out.len())],
-            );
-            Ok(())
-        } else {
-            Err(Error::new("Read out of bounds"))
-        }
+    fn phys_read_raw_iter<'b, PI: PhysicalReadIterator<'b>>(
+        &'b mut self,
+        iter: PI,
+    ) -> Box<dyn PhysicalReadIterator<'b>> {
+        Box::new(iter.map(move |x| match x {
+            ToDo((addr, out)) => Done(if addr.address.as_usize() + out.len() <= self.mem.len() {
+                out.copy_from_slice(&self.mem[addr.as_usize()..(addr.as_usize() + out.len())]);
+                Ok((addr, out))
+            } else {
+                Err(Error::new("Read out of bounds"))
+            }),
+            _ => x,
+        }))
     }
 
-    fn phys_write_raw(&mut self, addr: PhysicalAddress, data: &[u8]) -> Result<()> {
-        if addr.address.as_usize() + data.len() <= self.mem.len() {
-            self.mem[addr.address.as_usize()..(addr.address.as_usize() + data.len())]
-                .copy_from_slice(data);
-            Ok(())
-        } else {
-            Err(Error::new("Read out of bounds"))
-        }
+    fn phys_write_raw_iter<'b, PI: PhysicalWriteIterator<'b>>(
+        &'b mut self,
+        iter: PI,
+    ) -> Box<dyn PhysicalWriteIterator<'b>> {
+        Box::new(iter.map(move |x| match x {
+            ToDo((addr, data)) => Done(if addr.address.as_usize() + data.len() <= self.mem.len() {
+                self.mem[addr.as_usize()..(addr.as_usize() + data.len())].copy_from_slice(data);
+                Ok((addr, data))
+            } else {
+                Err(Error::new("Write out of bounds"))
+            }),
+            _ => x,
+        }))
     }
 }
 

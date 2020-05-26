@@ -205,7 +205,7 @@ impl<T: CacheValidator> PageCache<T> {
     pub fn split_to_chunks<'a>(
         iter_elem: PhysicalReadType<'a>,
         page_size: Length,
-    ) -> impl PhysicalReadIterator<'a> {
+    ) -> impl Iterator<Item = PhysicalReadType<'a>> {
         if let ToDo((addr, out)) = iter_elem {
             Box::new(
                 PageChunksMut::create_from(out, addr.address, page_size).map(
@@ -227,11 +227,15 @@ impl<T: CacheValidator> PageCache<T> {
         }
     }
 
-    pub fn cached_read<'a, F: AccessPhysicalMemory, PI: PhysicalReadIterator<'a>>(
+    pub fn cached_read<
+        'a,
+        F: AccessPhysicalMemory,
+        PI: Iterator<Item = PhysicalReadType<'a>> + 'a,
+    >(
         &'a mut self,
         mem: &'a mut F,
         iter: PI,
-    ) -> Box<dyn PhysicalReadIterator<'a>> {
+    ) -> Box<dyn Iterator<Item = PhysicalReadType<'a>> + 'a> {
         let page_size = self.page_size;
 
         let iter = iter
@@ -276,7 +280,7 @@ impl<T: CacheValidator> PageCache<T> {
                 ret.into_iter()
             });
 
-        let iter = mem.phys_read_raw_iter(iter);
+        //let iter = mem.phys_read_raw_iter(iter);
 
         Box::new(iter)
 

@@ -1,14 +1,16 @@
-
 pub struct DoublePeekingIterator<I>
-where I: Iterator {
+where
+    I: Iterator,
+{
     iter: I,
     next: Option<I::Item>,
-    next2: Option<I::Item>
+    next2: Option<I::Item>,
 }
 
 impl<I> DoublePeekingIterator<I>
 where
-    I: Iterator {
+    I: Iterator,
+{
     pub fn new(mut iter: I) -> Self {
         Self {
             next: iter.next(),
@@ -39,8 +41,10 @@ where
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        let ret = std::mem::replace(&mut self.next, std::mem::replace(&mut self.next2, self.iter.next()));
+        let ret = std::mem::replace(
+            &mut self.next,
+            std::mem::replace(&mut self.next2, self.iter.next()),
+        );
         ret
     }
 }
-

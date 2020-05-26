@@ -72,7 +72,33 @@ impl Memory {
         )
     }
 
-    pub fn perform_rw<A2: AsRef<[A3]>, A3>(
+    pub fn fill_iovec(
+        addr: &PhysicalAddress,
+        data: &[u8],
+        liov: &mut iovec,
+        riov: &mut iovec,
+        map_address: u64,
+    ) {
+        let ofs = map_address + {
+            if addr.as_u64() <= LENGTH_2GB.as_u64() {
+                addr.as_u64()
+            } else {
+                addr.as_u64() - LENGTH_2GB.as_u64()
+            }
+        };
+
+        *liov = iovec {
+            iov_base: data.as_ptr() as *mut c_void,
+            iov_len: data.len(),
+        };
+
+        *riov = iovec {
+            iov_base: ofs as *mut c_void,
+            iov_len: data.len(),
+        };
+    }
+
+    pub fn perform_rw<A2: AsRef<[u8]>>(
         &mut self,
         vec_in: &mut VecType<Progress<(PhysicalAddress, A2), Result<(PhysicalAddress, A2)>>>,
         vec_out: &mut VecType<Progress<(PhysicalAddress, A2), Result<(PhysicalAddress, A2)>>>,
@@ -94,24 +120,8 @@ impl Memory {
 
         for (item, (liov, riov)) in vec_in.into_iter().zip(iov_iter) {
             if let ToDo((addr, out)) = item {
+                Self::fill_iovec(addr, out.as_ref(), liov, riov, self.map.address.0);
                 data_cnt += 1;
-                *liov = iovec {
-                    iov_base: out.as_ref().as_ptr() as *mut c_void,
-                    iov_len: out.as_ref().len(),
-                };
-
-                let ofs = self.map.address.0 + {
-                    if addr.as_u64() <= LENGTH_2GB.as_u64() {
-                        addr.as_u64()
-                    } else {
-                        addr.as_u64() - LENGTH_2GB.as_u64()
-                    }
-                };
-
-                *riov = iovec {
-                    iov_base: ofs as *mut c_void,
-                    iov_len: out.as_ref().len(),
-                };
             }
         }
 
@@ -128,13 +138,17 @@ impl Memory {
 
         while let Some(item) = vec_in.pop_front() {
             vec_out.push_back(match item {
-                ToDo((addr, out)) => Done(match ret {
-                    -1 => Err(Error::new("process_vm_rw failed")),
-                    _ => Ok((addr, out)),
-                }),
+                ToDo((addr, out)) => {
+                    data_cnt -= 1; Done(match ret {
+                        -1 => Err(Error::new("process_vm_rw failed")),
+                        _ => Ok((addr, out)),
+                    })
+                },
                 _ => item,
             });
         }
+
+        debug_assert!(data_cnt == 0);
     }
 }
 
@@ -148,47 +162,28 @@ impl AccessPhysicalMemory for Memory {
 
         let iter = iter.double_peekable();
 
+        //Batching has an overhead of 15-25%, so avoid it,
+        //if we only have only one element we need to process
         if !iter.is_next_last() {
-            Box::new(
-                iter.double_buffered_map(
-                    move |x| Self::filter_element(x, &mut cnt, iov_max),
-                    move |vec_in, vec_out| self.perform_rw(vec_in, vec_out, libc::process_vm_readv),
-                    )
-                )
+            Box::new(iter.double_buffered_map(
+                move |x| Self::filter_element(x, &mut cnt, iov_max),
+                move |vec_in, vec_out| self.perform_rw(vec_in, vec_out, libc::process_vm_readv),
+            ))
         } else {
-            //Non-batcvhing impl.
-            Box::new(
-                iter
-                .map(move |x| match x {
-                    ToDo((addr, out)) => {
-                        let ofs = self.map.address.0 + {
-                            if addr.as_u64() <= LENGTH_2GB.as_u64() {
-                                addr.as_u64()
-                            } else {
-                                addr.as_u64() - LENGTH_2GB.as_u64()
-                            }
-                        };
-
-                        self.temp_iov[1] = iovec {
-                            iov_base: ofs as *mut c_void,
-                            iov_len: out.as_ref().len(),
-                        };
-
-                        self.temp_iov[0] = iovec {
-                            iov_base: out.as_ref().as_ptr() as *mut c_void,
-                            iov_len: out.as_ref().len(),
-                        };
-
-                        Done(match unsafe {
-                            libc::process_vm_readv(self.pid, self.temp_iov.as_ptr(), 1, self.temp_iov.as_ptr().offset(1), 1, 0)
-                        } {
-                            -1 => Err(Error::new("process_vm_readv failed")),
-                            _ => Ok((addr, out))
-                        })
-                    },
-                    _ => x
-                })
-            )
+            Box::new(iter.map(move |x| match x {
+                ToDo((addr, out)) => {
+                    let (liov, riovl) = self.temp_iov.split_first_mut().unwrap();
+                    let (riov, _) = riovl.split_first_mut().unwrap();
+                    Self::fill_iovec(&addr, out, liov, riov, self.map.address.0);
+                    Done(
+                        match unsafe { libc::process_vm_readv(self.pid, liov, 1, riov, 1, 0) } {
+                            -1 => Err(Error::new("process_vm_rw failed")),
+                            _ => Ok((addr, out)),
+                        },
+                    )
+                }
+                _ => x,
+            }))
         }
     }
 
@@ -198,9 +193,29 @@ impl AccessPhysicalMemory for Memory {
     ) -> Box<dyn PhysicalWriteIterator<'a>> {
         let iov_max = self.temp_iov.len() / 2;
         let mut cnt = 0;
-        Box::new(iter.double_buffered_map(
-            move |x| Self::filter_element(x, &mut cnt, iov_max),
-            move |vec_in, vec_out| self.perform_rw(vec_in, vec_out, libc::process_vm_writev),
-        ))
+
+        let iter = iter.double_peekable();
+
+        if !iter.is_next_last() {
+            Box::new(iter.double_buffered_map(
+                move |x| Self::filter_element(x, &mut cnt, iov_max),
+                move |vec_in, vec_out| self.perform_rw(vec_in, vec_out, libc::process_vm_writev),
+            ))
+        } else {
+            Box::new(iter.map(move |x| match x {
+                ToDo((addr, out)) => {
+                    let (liov, riovl) = self.temp_iov.split_first_mut().unwrap();
+                    let (riov, _) = riovl.split_first_mut().unwrap();
+                    Self::fill_iovec(&addr, out, liov, riov, self.map.address.0);
+                    Done(
+                        match unsafe { libc::process_vm_writev(self.pid, liov, 1, riov, 1, 0) } {
+                            -1 => Err(Error::new("process_vm_rw failed")),
+                            _ => Ok((addr, out)),
+                        },
+                    )
+                }
+                _ => x,
+            }))
+        }
     }
 }

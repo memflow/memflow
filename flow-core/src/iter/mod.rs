@@ -7,7 +7,7 @@ use double_buffered_iterator::*;
 mod doublepeek;
 use doublepeek::*;
 
-pub trait FlowIters : Iterator {
+pub trait FlowIters: Iterator {
     /// Split an iterator to chunks, process them, and produce another iterator back
     ///
     /// Yield chunks that are as long as determined by the first predicate `FI: FnMut(Self::Item)
@@ -36,18 +36,12 @@ pub trait FlowIters : Iterator {
         FI: FnMut(Self::Item) -> (bool, B),
         FO: FnMut(&mut VecType<B>, &mut VecType<C>),
     {
-        DoubleBufferedMapIterator::new(
-            self,
-            fi,
-            fo,
-        )
+        DoubleBufferedMapIterator::new(self, fi, fo)
     }
 
-
-    fn double_peekable(
-        self
-    ) -> DoublePeekingIterator<Self>
-        where Self: Sized
+    fn double_peekable(self) -> DoublePeekingIterator<Self>
+    where
+        Self: Sized,
     {
         DoublePeekingIterator::<Self>::new(self)
     }

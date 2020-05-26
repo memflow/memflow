@@ -17,7 +17,7 @@ impl<I, FI, FO, B, C> DoubleBufferedMapIterator<I, FI, FO, B, C> {
             fi,
             fo,
             buf: VecType::new(),
-            buf_out: VecType::new()
+            buf_out: VecType::new(),
         }
     }
 }
@@ -57,4 +57,3 @@ where
         self.buf_out.pop_front()
     }
 }
-

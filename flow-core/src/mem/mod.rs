@@ -15,6 +15,9 @@ pub mod vat;
 pub mod virt;
 pub mod virt_ctx;
 
+#[cfg(any(feature = "dummy_mem", test))]
+pub mod dummy;
+
 pub use cache::*;
 pub use phys::{AccessPhysicalMemory, PhysicalReadIterator, PhysicalWriteIterator};
 pub use vat::VirtualAddressTranslator;

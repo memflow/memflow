@@ -1,10 +1,11 @@
 use super::{CacheValidator, PageType};
 use crate::architecture::Architecture;
 use crate::error::Error;
-use crate::mem::phys::PhysicalReadIterator; //, PhysicalWriteIterator};
+use crate::mem::phys::{PhysicalReadIterator, PhysicalReadType}; //, PhysicalWriteIterator};
 use crate::mem::AccessPhysicalMemory;
 use crate::page_chunks::PageChunksMut;
-use crate::types::{Address, Length, PhysicalAddress};
+use crate::types::{Address, Done, Length, PhysicalAddress, ToDo};
+use arrayvec::ArrayVec;
 use std::alloc::{alloc_zeroed, Layout};
 
 pub struct CacheEntry<'a> {
@@ -121,7 +122,7 @@ impl<T: CacheValidator> PageCache<T> {
         self.page_type_mask.contains(page_type)
     }
 
-    pub fn cached_page_mut(&mut self, addr: Address) -> CacheEntry {
+    pub fn cached_page_mut<'a>(&'a mut self, addr: Address) -> CacheEntry {
         let page_size = self.page_size;
         let aligned_addr = addr.as_page_aligned(page_size);
         match self.try_page(addr) {
@@ -201,11 +202,84 @@ impl<T: CacheValidator> PageCache<T> {
         Ok(())
     }
 
-    pub fn cached_read<'a, F: AccessPhysicalMemory, PI: PhysicalReadIterator<'a>>(
-        &mut self,
-        mem: &mut F,
-        iter: PI,
+    pub fn split_to_chunks<'a>(
+        iter_elem: PhysicalReadType<'a>,
+        page_size: Length,
     ) -> impl PhysicalReadIterator<'a> {
+        if let ToDo((addr, out)) = iter_elem {
+            Box::new(
+                PageChunksMut::create_from(out, addr.address, page_size).map(
+                    move |(paddr, chunk)| {
+                        ToDo((
+                            PhysicalAddress {
+                                address: paddr,
+                                page: addr.page,
+                            },
+                            chunk,
+                        ))
+                    },
+                ),
+            )
+        } else {
+            // TODO: Currently can not handle this correctly. Add a new iterator for this purpose?
+            //Box::new(Some(iter_elem).into_iter())
+            panic!("Done elements already in the chain! Is the order of cache wrappers correct?")
+        }
+    }
+
+    pub fn cached_read<'a, F: AccessPhysicalMemory, PI: PhysicalReadIterator<'a>>(
+        &'a mut self,
+        mem: &'a mut F,
+        iter: PI,
+    ) -> Box<dyn PhysicalReadIterator<'a>> {
+        let page_size = self.page_size;
+
+        let iter = iter
+            //.flat_map(move |x| Self::split_to_chunks(x, page_size))
+            .flat_map(move |x| {
+                let mut ret = ArrayVec::<[_; 2]>::new();
+                ret.push(x);
+                if let ToDo((addr, out)) = &mut ret[0] {
+                    if let Some(page) = addr.page {
+                        if self.is_cached_page_type(page.page_type) {
+                            let cached_page = self.cached_page_mut(addr.address);
+
+                            if !cached_page.is_valid() {
+                                if cached_page.should_validate() {
+                                    // TODO: This does need to become safe
+                                    let cache_buf = unsafe {
+                                        std::slice::from_raw_parts_mut(
+                                            cached_page.buf.as_mut_ptr(),
+                                            cached_page.buf.len(),
+                                        )
+                                    };
+
+                                    let cache_address = cached_page.address.into();
+
+                                    self.validate_page(addr.address, page.page_type);
+
+                                    ret.push(ToDo((cache_address, cache_buf)));
+                                }
+                            } else {
+                                let aligned_addr = addr.address.as_page_aligned(page_size);
+                                let cached_page =
+                                    self.page_from_index(self.page_index(addr.address));
+                                let start = (addr.address - aligned_addr).as_usize();
+                                out.copy_from_slice(&cached_page[start..(start + out.len())]);
+
+                                let (addr, out) = ret.pop().unwrap().left().unwrap();
+                                ret.push(Done(Ok((addr, out))));
+                            }
+                        }
+                    }
+                }
+                ret.into_iter()
+            });
+
+        let iter = mem.phys_read_raw_iter(iter);
+
+        Box::new(iter)
+
         /*if data.iter_mut().nth(1).is_none() && data.iter_mut().next().is_some() {
             let (addr, ref mut out) = data.iter_mut().next().unwrap().get_phys_read_info();
             self.cached_read_single(mem, addr, out)
@@ -267,6 +341,5 @@ impl<T: CacheValidator> PageCache<T> {
 
             Ok(())
         }*/
-        iter
     }
 }

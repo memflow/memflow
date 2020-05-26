@@ -15,12 +15,16 @@ flow-derive = { path = "../flow-derive" }
 smallvec = "1.4.0"
 either = "1.5.3"
 #unicorn = { version = "0.9.1", optional = true }
+arrayvec = "0.5.1"
+x86_64 = { version = "0.10.2", optional = true, default-features = false, features = ["stable"] }
+rand = { version = "0.7.3", optional = true }
 
 [dev-dependencies]
 x86_64 = { version = "0.10.2", default-features = false, features = ["stable"] }
-rand = "0.7.3"
+rand = { version = "0.7.3" }
 
 [features]
 default = []
+dummy_mem = ["x86_64", "rand"]
 bridge = [] # enables the connector bridge (requires tokio)
 #emulator = ["unicorn"] # enables the process emulator (requires unicorn engine)

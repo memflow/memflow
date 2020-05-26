@@ -64,7 +64,7 @@ impl Memory {
         (
             if let ToDo(_) = elem {
                 *cnt += 1;
-                (*cnt % iov_max) == 0
+                (*cnt % iov_max) != 0
             } else {
                 true
             },
@@ -139,11 +139,12 @@ impl Memory {
         while let Some(item) = vec_in.pop_front() {
             vec_out.push_back(match item {
                 ToDo((addr, out)) => {
-                    data_cnt -= 1; Done(match ret {
+                    data_cnt -= 1;
+                    Done(match ret {
                         -1 => Err(Error::new("process_vm_rw failed")),
                         _ => Ok((addr, out)),
                     })
-                },
+                }
                 _ => item,
             });
         }

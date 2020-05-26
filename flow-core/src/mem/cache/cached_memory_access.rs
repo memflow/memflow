@@ -6,6 +6,7 @@ use crate::architecture::Architecture;
 use crate::mem::{AccessPhysicalMemory, PhysicalReadIterator, PhysicalWriteIterator};
 use crate::page_chunks::PageChunks; //, PageChunksMut};
 use crate::types::{Address, Page, PhysicalAddress};
+use crate::types::{Done, ToDo};
 use crate::vat;
 
 // TODO: derive virtual reads here
@@ -29,6 +30,7 @@ impl<'a, T: AccessPhysicalMemory, Q: CacheValidator> AccessPhysicalMemory
         &'b mut self,
         iter: PI,
     ) -> Box<dyn PhysicalReadIterator<'b>> {
+        self.cache.validator.update_validity();
         /*let mut rlist = smallvec::SmallVec::<[_; 64]>::new();
         self.cache.validator.update_validity();
 
@@ -71,34 +73,40 @@ impl<'a, T: AccessPhysicalMemory, Q: CacheValidator> AccessPhysicalMemory
         }
 
         Ok(())*/
-        self.mem.phys_read_raw_iter(iter)
-        //self.cache.cached_read(self.mem, data)
+        //self.mem.phys_read_raw_iter(iter)
+        self.cache.cached_read(self.mem, iter)
     }
 
     fn phys_write_raw_iter<'b, PI: PhysicalWriteIterator<'b>>(
         &'b mut self,
         iter: PI,
     ) -> Box<dyn PhysicalWriteIterator<'b>> {
-        /*self.cache.validator.update_validity();
-        for entry in data.into_iter() {
-            let (addr, data) = entry.get_phys_write_info();
-            if let Some(page) = addr.page {
-                if self.cache.is_cached_page_type(page.page_type) {
-                    for (paddr, data_chunk) in
-                        PageChunks::create_from(data, addr.address, self.cache.page_size())
-                    {
-                        let cached_page = self.cache.cached_page_mut(paddr);
-                        if cached_page.is_valid() {
-                            // write-back into still valid cache pages
-                            let start = (paddr - cached_page.address).as_usize();
-                            cached_page.buf[start..(start + data_chunk.len())]
-                                .copy_from_slice(data_chunk);
+        self.cache.validator.update_validity();
+
+        let cache = &mut self.cache;
+        let mem = &mut self.mem;
+
+        let iter = iter.inspect(move |x| {
+            if let ToDo((addr, data)) = x {
+                if let Some(page) = addr.page {
+                    if cache.is_cached_page_type(page.page_type) {
+                        for (paddr, data_chunk) in
+                            PageChunks::create_from(data, addr.address, cache.page_size())
+                        {
+                            let cached_page = cache.cached_page_mut(paddr);
+                            if cached_page.is_valid() {
+                                // write-back into still valid cache pages
+                                let start = (paddr - cached_page.address).as_usize();
+                                cached_page.buf[start..(start + data_chunk.len())]
+                                    .copy_from_slice(data_chunk);
+                            }
                         }
                     }
                 }
             }
-        }*/
-        self.mem.phys_write_raw_iter(iter)
+        });
+
+        mem.phys_write_raw_iter(iter)
     }
 }
 

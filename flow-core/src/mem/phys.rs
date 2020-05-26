@@ -38,8 +38,8 @@ Implementing `AccessPhysicalMemory` for a memory backend:
 ```
 use std::vec::Vec;
 
-use flow_core::mem::AccessPhysicalMemory;
-use flow_core::types::PhysicalAddress;
+use flow_core::mem::{AccessPhysicalMemory, PhysicalReadIterator, PhysicalWriteIterator};
+use flow_core::types::{PhysicalAddress, ToDo, Done};
 use flow_core::error::Result;
 
 pub struct MemoryBackend {
@@ -48,10 +48,10 @@ pub struct MemoryBackend {
 
 impl AccessPhysicalMemory for MemoryBackend {
     fn phys_read_raw_iter<'a, PI: PhysicalReadIterator<'a>>(
-        &mut self,
+        &'a mut self,
         iter: PI
     ) -> Box<dyn PhysicalReadIterator<'a>> {
-        Box::new(iter.map(|x| match x {
+        Box::new(iter.map(move |x| match x {
             ToDo((addr, out)) => {
                 out.copy_from_slice(&self.mem[addr.as_usize()..(addr.as_usize() + out.len())]);
                 Done(Ok((addr, out)))
@@ -60,8 +60,11 @@ impl AccessPhysicalMemory for MemoryBackend {
         }))
     }
 
-    fn phys_write_raw_iter(&mut self, data: &[(PhysicalAddress, &[u8])]) -> Result<()> {
-        Box::new(iter.map(|x| match x {
+    fn phys_write_raw_iter<'a, PI: PhysicalWriteIterator<'a>>(
+        &'a mut self,
+        iter: PI
+    ) -> Box<dyn PhysicalWriteIterator<'a>> {
+        Box::new(iter.map(move |x| match x {
             ToDo((addr, data)) => {
                 self.mem[addr.as_usize()..(addr.as_usize() + data.len())].copy_from_slice(data);
                 Done(Ok((addr, data)))
@@ -90,6 +93,8 @@ pub trait AccessPhysicalMemory {
         // Even though there should be only one element, the iteration chain could possibly create
         // more ToDo and Done elements
         self.phys_read_raw_iter(Some(ToDo((addr, out))).into_iter())
+            .collect::<Vec<_>>()
+            .into_iter()
             .fold(Ok(()), |acc, x| {
                 if let Done(Err(x)) = x {
                     Err(x)
@@ -151,12 +156,12 @@ pub trait AccessPhysicalMemory {
     }
 }
 
-type PhysicalReadData<'a> = (PhysicalAddress, &'a mut [u8]);
-type PhysicalReadType<'a> = Progress<PhysicalReadData<'a>, Result<PhysicalReadData<'a>>>;
+pub type PhysicalReadData<'a> = (PhysicalAddress, &'a mut [u8]);
+pub type PhysicalReadType<'a> = Progress<PhysicalReadData<'a>, Result<PhysicalReadData<'a>>>;
 pub trait PhysicalReadIterator<'a>: Iterator<Item = PhysicalReadType<'a>> + 'a {}
 impl<'a, T: Iterator<Item = PhysicalReadType<'a>> + 'a> PhysicalReadIterator<'a> for T {}
 
-type PhysicalWriteData<'a> = (PhysicalAddress, &'a [u8]);
-type PhysicalWriteType<'a> = Progress<PhysicalWriteData<'a>, Result<PhysicalWriteData<'a>>>;
+pub type PhysicalWriteData<'a> = (PhysicalAddress, &'a [u8]);
+pub type PhysicalWriteType<'a> = Progress<PhysicalWriteData<'a>, Result<PhysicalWriteData<'a>>>;
 pub trait PhysicalWriteIterator<'a>: Iterator<Item = PhysicalWriteType<'a>> + 'a {}
 impl<'a, T: Iterator<Item = PhysicalWriteType<'a>> + 'a> PhysicalWriteIterator<'a> for T {}

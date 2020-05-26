@@ -163,7 +163,7 @@ impl AccessPhysicalMemory for Memory {
         let iter = iter.double_peekable();
 
         //Batching has an overhead of 15-25%, so avoid it,
-        //if we only have only one element we need to process
+        //if we have only one element we need to process
         if !iter.is_next_last() {
             Box::new(iter.double_buffered_map(
                 move |x| Self::filter_element(x, &mut cnt, iov_max),

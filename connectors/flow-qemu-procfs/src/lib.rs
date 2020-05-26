@@ -156,36 +156,45 @@ impl Memory {
 impl AccessPhysicalMemory for Memory {
     fn phys_read_raw_iter<'a, PI: PhysicalReadIterator<'a>>(
         &'a mut self,
-        iter: PI,
-    ) -> Box<dyn PhysicalReadIterator<'a>> {
-        let iov_max = self.temp_iov.len() / 2;
-        let mut cnt = 0;
+        mut iter: PI,
+    ) -> Result<()> {
+        let max_iov = self.temp_iov.len() / 2;
+        let (iov_local, iov_remote) = self.temp_iov.split_at_mut(max_iov);
 
-        let iter = iter.double_peekable();
+        let mut elem = iter.next();
 
-        //Batching has an overhead of 15-25%, so avoid it,
-        //if we have only one element we need to process
-        if !iter.is_next_last() {
-            Box::new(iter.double_buffered_map(
-                move |x| Self::filter_element(x, &mut cnt, iov_max),
-                move |vec_in, vec_out| self.perform_rw(vec_in, vec_out, libc::process_vm_readv),
-            ))
-        } else {
-            Box::new(iter.map(move |x| match x {
-                ToDo((addr, out)) => {
-                    let (liov, riovl) = self.temp_iov.split_first_mut().unwrap();
-                    let (riov, _) = riovl.split_first_mut().unwrap();
-                    Self::fill_iovec(&addr, out, liov, riov, self.map.address.0);
-                    Done(
-                        match unsafe { libc::process_vm_readv(self.pid, liov, 1, riov, 1, 0) } {
-                            -1 => Err(Error::new("process_vm_rw failed")),
-                            _ => Ok((addr, out)),
-                        },
+        let mut iov_iter = iov_local.iter_mut().zip(iov_remote.iter_mut()).enumerate();
+        let mut iov_next = iov_iter.next();
+
+        while let Some((addr, out)) = elem {
+            let (cnt, (liov, riov)) = iov_next.unwrap();
+
+            Self::fill_iovec(&addr, out.as_ref(), liov, riov, self.map.address.0);
+
+            iov_next = iov_iter.next();
+            elem = iter.next();
+
+            if elem.is_none() || iov_next.is_none() {
+                if unsafe {
+                    libc::process_vm_readv(
+                        self.pid,
+                        iov_local.as_ptr(),
+                        (cnt + 1) as c_ulong,
+                        iov_remote.as_ptr(),
+                        (cnt + 1) as c_ulong,
+                        0,
                     )
+                } == -1
+                {
+                    return Err(Error::new("process_vm_readv failed"));
                 }
-                _ => x,
-            }))
+
+                iov_iter = iov_local.iter_mut().zip(iov_remote.iter_mut()).enumerate();
+                iov_next = iov_iter.next();
+            }
         }
+
+        Ok(())
     }
 
     fn phys_write_raw_iter<'a, PI: PhysicalWriteIterator<'a>>(

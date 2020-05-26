@@ -43,10 +43,7 @@ impl<T: AccessPhysicalMemory + VirtualAddressTranslator, Q: CacheValidator> Virt
 impl<T: AccessPhysicalMemory + VirtualAddressTranslator, Q: CacheValidator> AccessPhysicalMemory
     for CachedVAT<T, Q>
 {
-    fn phys_read_raw_iter<'b, PI: PhysicalReadIterator<'b>>(
-        &'b mut self,
-        iter: PI,
-    ) -> Box<dyn PhysicalReadIterator<'b>> {
+    fn phys_read_raw_iter<'b, PI: PhysicalReadIterator<'b>>(&'b mut self, iter: PI) -> Result<()> {
         self.mem.phys_read_raw_iter(iter)
     }
 

@@ -10,11 +10,8 @@ use flow_derive::*;
 pub struct EmptyVirtualMemory {}
 
 impl AccessPhysicalMemory for EmptyVirtualMemory {
-    fn phys_read_raw_iter<'a, PI: PhysicalReadIterator<'a>>(
-        &'a mut self,
-        iter: PI,
-    ) -> Box<dyn PhysicalReadIterator<'a>> {
-        Box::new(iter.map(|_| Done(Err(Error::new("phys_read not implemented")))))
+    fn phys_read_raw_iter<'a, PI: PhysicalReadIterator<'a>>(&'a mut self, _iter: PI) -> Result<()> {
+        Err(Error::new("phys_read not implemented"))
     }
 
     fn phys_write_raw_iter<'a, PI: PhysicalWriteIterator<'a>>(

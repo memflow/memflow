@@ -77,10 +77,7 @@ impl AccessPhysicalMemory for MemoryBackend {
 */
 pub trait AccessPhysicalMemory {
     // required to be implemented
-    fn phys_read_raw_iter<'a, PI: PhysicalReadIterator<'a>>(
-        &'a mut self,
-        iter: PI,
-    ) -> Box<dyn PhysicalReadIterator<'a>>;
+    fn phys_read_raw_iter<'a, PI: PhysicalReadIterator<'a>>(&'a mut self, iter: PI) -> Result<()>;
 
     fn phys_write_raw_iter<'a, PI: PhysicalWriteIterator<'a>>(
         &'a mut self,
@@ -89,21 +86,7 @@ pub trait AccessPhysicalMemory {
 
     // read helpers
     fn phys_read_raw_into(&mut self, addr: PhysicalAddress, out: &mut [u8]) -> Result<()> {
-        // Consume the iterator and return the last error if there is one
-        // Even though there should be only one element, the iteration chain could possibly create
-        // more ToDo and Done elements
-        self.phys_read_raw_iter(Some(ToDo((addr, out))).into_iter())
-            .collect::<Vec<_>>()
-            .into_iter()
-            .fold(Ok(()), |acc, x| {
-                if let Done(Err(x)) = x {
-                    Err(x)
-                } else if let ToDo(_) = x {
-                    panic!("phys_read_raw_iter did not process all entries");
-                } else {
-                    acc
-                }
-            })
+        self.phys_read_raw_iter(Some((addr, out)).into_iter())
     }
 
     fn phys_read_into<T: Pod + ?Sized>(&mut self, addr: PhysicalAddress, out: &mut T) -> Result<()>
@@ -158,8 +141,8 @@ pub trait AccessPhysicalMemory {
 
 pub type PhysicalReadData<'a> = (PhysicalAddress, &'a mut [u8]);
 pub type PhysicalReadType<'a> = Progress<PhysicalReadData<'a>, Result<PhysicalReadData<'a>>>;
-pub trait PhysicalReadIterator<'a>: Iterator<Item = PhysicalReadType<'a>> + 'a {}
-impl<'a, T: Iterator<Item = PhysicalReadType<'a>> + 'a> PhysicalReadIterator<'a> for T {}
+pub trait PhysicalReadIterator<'a>: Iterator<Item = PhysicalReadData<'a>> + 'a {}
+impl<'a, T: Iterator<Item = PhysicalReadData<'a>> + 'a> PhysicalReadIterator<'a> for T {}
 
 pub type PhysicalWriteData<'a> = (PhysicalAddress, &'a [u8]);
 pub type PhysicalWriteType<'a> = Progress<PhysicalWriteData<'a>, Result<PhysicalWriteData<'a>>>;

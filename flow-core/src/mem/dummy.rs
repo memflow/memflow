@@ -157,17 +157,16 @@ pub struct DummyMemory {
 impl AccessPhysicalMemory for DummyMemory {
     fn phys_read_raw_iter<'b, PI: PhysicalReadIterator<'b>>(
         &'b mut self,
-        iter: PI,
-    ) -> Box<dyn PhysicalReadIterator<'b>> {
-        Box::new(iter.map(move |x| match x {
-            ToDo((addr, out)) => Done(if addr.address.as_usize() + out.len() <= self.mem.len() {
+        mut iter: PI,
+    ) -> Result<()> {
+        iter.try_fold((), move |_, (addr, out)| {
+            if addr.address.as_usize() + out.len() <= self.mem.len() {
                 out.copy_from_slice(&self.mem[addr.as_usize()..(addr.as_usize() + out.len())]);
-                Ok((addr, out))
+                Ok(())
             } else {
                 Err(Error::new("Read out of bounds"))
-            }),
-            _ => x,
-        }))
+            }
+        })
     }
 
     fn phys_write_raw_iter<'b, PI: PhysicalWriteIterator<'b>>(

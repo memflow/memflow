@@ -26,10 +26,7 @@ impl<'a, T: AccessPhysicalMemory, Q: CacheValidator> CachedMemoryAccess<'a, T, Q
 impl<'a, T: AccessPhysicalMemory, Q: CacheValidator> AccessPhysicalMemory
     for CachedMemoryAccess<'a, T, Q>
 {
-    fn phys_read_raw_iter<'b, PI: PhysicalReadIterator<'b>>(
-        &'b mut self,
-        iter: PI,
-    ) -> Box<dyn PhysicalReadIterator<'b>> {
+    fn phys_read_raw_iter<'b, PI: PhysicalReadIterator<'b>>(&'b mut self, iter: PI) -> Result<()> {
         self.cache.validator.update_validity();
         /*let mut rlist = smallvec::SmallVec::<[_; 64]>::new();
         self.cache.validator.update_validity();
@@ -73,8 +70,8 @@ impl<'a, T: AccessPhysicalMemory, Q: CacheValidator> AccessPhysicalMemory
         }
 
         Ok(())*/
-        //self.mem.phys_read_raw_iter(iter)
-        self.cache.cached_read(self.mem, iter)
+        self.mem.phys_read_raw_iter(iter)
+        //self.cache.cached_read(self.mem, iter)
     }
 
     fn phys_write_raw_iter<'b, PI: PhysicalWriteIterator<'b>>(

@@ -20,8 +20,6 @@ extern crate smallvec;
 
 extern crate either;
 
-extern crate itertools;
-
 pub mod error;
 pub use error::{Error, Result};
 

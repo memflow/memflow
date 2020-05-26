@@ -89,6 +89,15 @@ impl PhysicalAddress {
         }
     }
 
+    /// Converts the physical address into it's containing page page
+    pub fn containing_page(&self) -> Page {
+        Page {
+            page_type: self.page_type,
+            page_base: self.page_base(),
+            page_size: self.page_size,
+        }
+    }
+
     /// Converts the physical address into an address.
     pub fn as_addr(&self) -> Address {
         self.address
@@ -107,15 +116,6 @@ impl PhysicalAddress {
     /// Returns the containing address converted to a usize.
     pub const fn as_usize(&self) -> usize {
         self.address.as_usize()
-    }
-
-    /// Converts the physical address into a page
-    pub fn into_page(&self) -> Page {
-        Page {
-            page_type: self.page_type,
-            page_base: self.page_base(),
-            page_size: self.page_size,
-        }
     }
 }
 

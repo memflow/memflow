@@ -1,8 +1,59 @@
 pub mod page_chunks;
 pub use page_chunks::*;
 
-pub mod double_buffered_map;
-pub use double_buffered_map::*;
+mod double_buffered_iterator;
+use double_buffered_iterator::*;
+
+mod doublepeek;
+use doublepeek::*;
+
+pub trait FlowIters : Iterator {
+    /// Split an iterator to chunks, process them, and produce another iterator back
+    ///
+    /// Yield chunks that are as long as determined by the first predicate `FI: FnMut(Self::Item)
+    /// -> (bool, B)`. Pass that chunk to the second predicate `FO: FnMut(&mut VecType<B>,
+    /// &mut VecType<C>)` as a `&mut VecType<B>`, where it can be processed into the output
+    /// `&mut VecType<C>`, which is then used to retrieve individual elements.
+    ///
+    /// The first predicate has a return type `(bool, B)`, where `bool == false` indicates that
+    /// the element is the last element of the current chunk, and `B` is the type that element of
+    /// type `A` gets mapped to.
+    ///
+    /// Output iterator element type is `C`, which is determined by the second predicate `FO`.
+    ///
+    /// Buffering and mapping (thus, both predicates) get invoked only once the output
+    /// `VecType<C>` becomes empty.
+    ///
+    /// Note: For maximum flexibility, the implementation does not clear `VecType<B>` after it
+    /// gets passed to `FO`. `FO` needs to clear the buffer on its own when iterating `Copy` types
+    fn double_buffered_map<FI, FO, B, C>(
+        self,
+        fi: FI,
+        fo: FO,
+    ) -> DoubleBufferedMapIterator<Self, FI, FO, B, C>
+    where
+        Self: Sized,
+        FI: FnMut(Self::Item) -> (bool, B),
+        FO: FnMut(&mut VecType<B>, &mut VecType<C>),
+    {
+        DoubleBufferedMapIterator::new(
+            self,
+            fi,
+            fo,
+        )
+    }
+
+
+    fn double_peekable(
+        self
+    ) -> DoublePeekingIterator<Self>
+        where Self: Sized
+    {
+        DoublePeekingIterator::<Self>::new(self)
+    }
+}
+
+impl<T> FlowIters for T where T: Iterator {}
 
 #[cfg(test)]
 mod tests {

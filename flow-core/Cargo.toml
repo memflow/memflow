@@ -14,7 +14,6 @@ coarsetime = "0.1.13"
 flow-derive = { path = "../flow-derive" }
 smallvec = "1.4.0"
 either = "1.5.3"
-itertools = "0.9.0"
 #unicorn = { version = "0.9.1", optional = true }
 
 [dev-dependencies]

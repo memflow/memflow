@@ -2,7 +2,7 @@
 Abstraction over a physical address with optional page information.
 */
 
-use super::{Address, Page};
+use super::{Address, Length, Page, PageType};
 
 /**
 This type represents a wrapper over a [address](address/index.html)
@@ -18,7 +18,8 @@ which will be represented by the containing `page` of the `PhysicalAddress` stru
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub struct PhysicalAddress {
     pub address: Address,
-    pub page: Option<Page>,
+    pub page_type: PageType,
+    pub page_size: Length,
 }
 
 /// Converts a `Address` into a `PhysicalAddress` with no page information attached.
@@ -26,7 +27,8 @@ impl From<Address> for PhysicalAddress {
     fn from(address: Address) -> Self {
         Self {
             address,
-            page: None,
+            page_type: PageType::UNKNOWN,
+            page_size: Length::ZERO,
         }
     }
 }
@@ -42,13 +44,15 @@ impl PhysicalAddress {
     /// A physical address with a value of zero.
     pub const NULL: PhysicalAddress = PhysicalAddress {
         address: Address::null(),
-        page: None,
+        page_type: PageType::UNKNOWN,
+        page_size: Length::ZERO,
     };
 
     /// A physical address with an invalid value.
     pub const INVALID: PhysicalAddress = PhysicalAddress {
         address: Address::INVALID,
-        page: None,
+        page_type: PageType::UNKNOWN,
+        page_size: Length::ZERO,
     };
 
     /// Returns a physical address with a value of zero.
@@ -71,6 +75,20 @@ impl PhysicalAddress {
         self.address.is_valid()
     }
 
+    /// Checks wether the physical address also contains page informations or not.
+    pub const fn has_page(&self) -> bool {
+        !self.page_size.is_zero()
+    }
+
+    /// Returns the base address of the containing page.
+    pub fn page_base(&self) -> Address {
+        if !self.has_page() {
+            Address::INVALID
+        } else {
+            self.address.as_page_aligned(self.page_size)
+        }
+    }
+
     /// Converts the physical address into an address.
     pub fn as_addr(&self) -> Address {
         self.address
@@ -89,6 +107,15 @@ impl PhysicalAddress {
     /// Returns the containing address converted to a usize.
     pub const fn as_usize(&self) -> usize {
         self.address.as_usize()
+    }
+
+    /// Converts the physical address into a page
+    pub fn into_page(&self) -> Page {
+        Page {
+            page_type: self.page_type,
+            page_base: self.page_base(),
+            page_size: self.page_size,
+        }
     }
 }
 

@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests;
 
-use crate::error::{Error, Result};
+use crate::error::Result;
 
 use crate::architecture::Architecture;
 use crate::iter::page_chunks::{PageChunks, PageChunksMut};
@@ -63,7 +63,5 @@ pub fn virt_page_info<T: AccessPhysicalMemory + VirtualAddressTranslator>(
     addr: Address,
 ) -> Result<Page> {
     let paddr = mem.virt_to_phys(arch, dtb, addr)?;
-    Ok(paddr
-        .page
-        .ok_or_else(|| Error::new("page info not found"))?)
+    Ok(paddr.into_page())
 }

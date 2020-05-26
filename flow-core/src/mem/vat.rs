@@ -63,5 +63,5 @@ pub fn virt_page_info<T: AccessPhysicalMemory + VirtualAddressTranslator>(
     addr: Address,
 ) -> Result<Page> {
     let paddr = mem.virt_to_phys(arch, dtb, addr)?;
-    Ok(paddr.into_page())
+    Ok(paddr.containing_page())
 }

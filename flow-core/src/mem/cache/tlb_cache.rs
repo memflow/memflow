@@ -1,5 +1,5 @@
 use super::CacheValidator;
-use crate::types::{Address, Length, Page, PhysicalAddress};
+use crate::types::{Address, Length, PhysicalAddress};
 
 #[derive(Clone, Copy)]
 pub struct TLBEntry {
@@ -22,14 +22,14 @@ impl TLBEntry {
 pub struct CachedEntry {
     dtb: Address,
     virt_page: Address,
-    phys_page: Page,
+    phys_page: PhysicalAddress,
 }
 
 impl CachedEntry {
     const INVALID: CachedEntry = CachedEntry {
         dtb: Address::INVALID,
         virt_page: Address::INVALID,
-        phys_page: Page::INVALID,
+        phys_page: PhysicalAddress::INVALID,
     };
 }
 
@@ -66,15 +66,17 @@ impl<T: CacheValidator> TLBCache<T> {
         let entry = self.entries[idx];
         if entry.dtb == dtb
             && entry.virt_page == page_address
-            && entry.phys_page.page_base != Address::INVALID
+            && entry.phys_page.is_valid()
+            && entry.phys_page.has_page()
         {
             if self.validator.is_slot_valid(idx) {
                 Some(TLBEntry {
                     dtb,
                     virt_addr: addr,
                     phys_addr: PhysicalAddress {
-                        address: entry.phys_page.page_base + (addr - page_address),
-                        page: Some(entry.phys_page),
+                        address: entry.phys_page.page_base() + (addr - page_address),
+                        page_type: entry.phys_page.page_type,
+                        page_size: entry.phys_page.page_size,
                     },
                 })
             } else {
@@ -91,7 +93,7 @@ impl<T: CacheValidator> TLBCache<T> {
         &mut self,
         dtb: Address,
         in_addr: Address,
-        out_page: Page,
+        out_page: PhysicalAddress,
         page_size: Length,
     ) {
         let idx = self.get_cache_index(in_addr.as_page_aligned(page_size), page_size);

@@ -33,8 +33,7 @@ impl<T: AccessPhysicalMemory + VirtualAddressTranslator, Q: CacheValidator> Virt
             Ok(entry.phys_addr)
         } else {
             let ret = arch.virt_to_phys(&mut self.mem, dtb, vaddr)?;
-            self.tlb
-                .cache_entry(dtb, vaddr, ret.page.unwrap(), arch.page_size());
+            self.tlb.cache_entry(dtb, vaddr, ret, arch.page_size());
             Ok(ret)
         }
     }

@@ -7,7 +7,7 @@ use byteorder::{ByteOrder, LittleEndian};
 
 use crate::architecture;
 use crate::mem::AccessPhysicalMemory;
-use crate::types::{Address, Length, Page, PageType, PhysicalAddress};
+use crate::types::{Address, Length, PageType, PhysicalAddress};
 
 pub fn bits() -> u8 {
     64
@@ -32,11 +32,8 @@ fn read_pt_address<T: AccessPhysicalMemory>(mem: &mut T, addr: Address) -> Resul
     mem.phys_read_raw_into(
         PhysicalAddress {
             address: addr,
-            page: Some(Page {
-                page_type: PageType::PAGE_TABLE,
-                page_base: addr.as_page_aligned(page_size),
-                page_size,
-            }),
+            page_type: PageType::PAGE_TABLE,
+            page_size,
         },
         &mut buf,
     )?;
@@ -73,11 +70,8 @@ pub fn virt_to_phys<T: AccessPhysicalMemory>(
         let page_size = Length::from_gb(1);
         return Ok(PhysicalAddress {
             address: phys_addr,
-            page: Some(Page {
-                page_type: PageType::from_writeable_bit(is_writeable_page!(pdpte.as_u64())),
-                page_base: phys_addr.as_page_aligned(page_size),
-                page_size,
-            }),
+            page_type: PageType::from_writeable_bit(is_writeable_page!(pdpte.as_u64())),
+            page_size,
         });
     }
 
@@ -97,11 +91,8 @@ pub fn virt_to_phys<T: AccessPhysicalMemory>(
         let page_size = Length::from_mb(2);
         return Ok(PhysicalAddress {
             address: phys_addr,
-            page: Some(Page {
-                page_type: PageType::from_writeable_bit(is_writeable_page!(pgd.as_u64())),
-                page_base: phys_addr.as_page_aligned(page_size),
-                page_size,
-            }),
+            page_type: PageType::from_writeable_bit(is_writeable_page!(pgd.as_u64())),
+            page_size,
         });
     }
 
@@ -120,11 +111,8 @@ pub fn virt_to_phys<T: AccessPhysicalMemory>(
     let page_size = Length::from_kb(4);
     Ok(PhysicalAddress {
         address: phys_addr,
-        page: Some(Page {
-            page_type: PageType::from_writeable_bit(is_writeable_page!(pte.as_u64())),
-            page_base: phys_addr.as_page_aligned(page_size),
-            page_size,
-        }),
+        page_type: PageType::from_writeable_bit(is_writeable_page!(pte.as_u64())),
+        page_size,
     })
 }
 

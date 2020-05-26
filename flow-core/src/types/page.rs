@@ -56,4 +56,11 @@ impl Page {
     pub const fn invalid() -> Self {
         Self::INVALID
     }
+
+    /**
+    Checks wether the page is valid or not.
+    */
+    pub fn is_valid(&self) -> bool {
+        self.page_base.is_valid() && !self.page_size.is_zero()
+    }
 }

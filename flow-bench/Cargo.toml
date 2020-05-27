@@ -7,7 +7,8 @@ edition = "2018"
 [dev-dependencies]
 flow-core = { path = "../flow-core", features = ["dummy_mem"] }
 rand = "0.5"
-bencher = "0.1.5"
+# This branch provides throughput plots
+criterion = { git = "https://github.com/Heep042/criterion.rs.git", branch = "tput" }
 
 [[bench]]
 name = "read_dummy"

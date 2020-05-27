@@ -1,9 +1,6 @@
 use std::time::Duration;
 
-#[macro_use]
-extern crate bencher;
-
-use bencher::{black_box, Bencher};
+use criterion::*;
 
 use flow_core::mem::{
     timed_validator::*, AccessVirtualMemory, CachedMemoryAccess, CachedVAT, PageCache, TLBCache,
@@ -122,124 +119,51 @@ fn read_test(
     } else {
         read_test_with_mem(bench, &mut mem, chunk_size, chunks, proc, tmod);
     }
-
-    bench.bytes = chunk_size as u64;
 }
 
-fn dummy_read_nocache_0x8_x1(bench: &mut Bencher) {
-    read_test(bench, 0, 8, 1, false);
+fn dummy_read_params(
+    group: &mut BenchmarkGroup<'_, measurement::WallTime>,
+    func_name: String,
+    cache_size: u64,
+    use_tlb: bool,
+) {
+    for &chunk_count in [1, 2].iter() {
+        for &size in [0x8, 0x10, 0x100, 0x1000, 0x10000].iter() {
+            group.throughput(Throughput::Bytes(size * chunk_count));
+            group.bench_with_input(
+                BenchmarkId::new(format!("{}_{}_chunks", func_name, chunk_count), size),
+                &(size, chunk_count),
+                |b, &(size, chunk_count)| {
+                    read_test(
+                        b,
+                        black_box(cache_size),
+                        black_box(size as usize),
+                        black_box(chunk_count as usize),
+                        black_box(use_tlb),
+                    )
+                },
+            );
+        }
+    }
+}
+fn dummy_read_group(c: &mut Criterion) {
+    let plot_config = PlotConfiguration::default().summary_scale(AxisScale::Logarithmic);
+
+    let mut group = c.benchmark_group("dummy_read");
+    group.plot_config(plot_config);
+
+    dummy_read_params(&mut group, "dummy_read_nocache".into(), 0, false);
+    dummy_read_params(&mut group, "dummy_read_tlb_nocache".into(), 0, true);
+    dummy_read_params(&mut group, "dummy_read_cache".into(), 2, false);
+    dummy_read_params(&mut group, "dummy_read_tlb_cache".into(), 2, true);
 }
 
-fn dummy_read_nocache_0x10_x1(bench: &mut Bencher) {
-    read_test(bench, 0, 0x10, 1, false);
+criterion_group! {
+    name = dummy_read;
+    config = Criterion::default()
+        .warm_up_time(std::time::Duration::from_millis(500))
+        .measurement_time(std::time::Duration::from_secs(2));
+    targets = dummy_read_group
 }
 
-fn dummy_read_nocache_0x100_x1(bench: &mut Bencher) {
-    read_test(bench, 0, 0x100, 1, false);
-}
-
-fn dummy_read_nocache_0x1000_x1(bench: &mut Bencher) {
-    read_test(bench, 0, 0x1000, 1, false);
-}
-
-fn dummy_read_nocache_0x10000_x1(bench: &mut Bencher) {
-    read_test(bench, 0, 0x10000, 1, false);
-}
-
-benchmark_group!(
-    bench_nocache,
-    dummy_read_nocache_0x8_x1,
-    dummy_read_nocache_0x10_x1,
-    dummy_read_nocache_0x100_x1,
-    dummy_read_nocache_0x1000_x1,
-    dummy_read_nocache_0x10000_x1
-);
-
-fn dummy_read_cache_0x8_x1(bench: &mut Bencher) {
-    read_test(bench, 2, 8, 1, false);
-}
-
-fn dummy_read_cache_0x10_x1(bench: &mut Bencher) {
-    read_test(bench, 2, 0x10, 1, false);
-}
-
-fn dummy_read_cache_0x100_x1(bench: &mut Bencher) {
-    read_test(bench, 2, 0x100, 1, false);
-}
-
-fn dummy_read_cache_0x1000_x1(bench: &mut Bencher) {
-    read_test(bench, 2, 0x1000, 1, false);
-}
-
-fn dummy_read_cache_0x10000_x1(bench: &mut Bencher) {
-    read_test(bench, 2, 0x10000, 1, false);
-}
-
-benchmark_group!(
-    bench_cache,
-    dummy_read_cache_0x8_x1,
-    dummy_read_cache_0x10_x1,
-    dummy_read_cache_0x100_x1,
-    dummy_read_cache_0x1000_x1,
-    dummy_read_cache_0x10000_x1
-);
-
-fn dummy_read_cache_tlb_0x8_x1(bench: &mut Bencher) {
-    read_test(bench, 2, 8, 1, true);
-}
-
-fn dummy_read_cache_tlb_0x10_x1(bench: &mut Bencher) {
-    read_test(bench, 2, 0x10, 1, true);
-}
-
-fn dummy_read_cache_tlb_0x100_x1(bench: &mut Bencher) {
-    read_test(bench, 2, 0x100, 1, true);
-}
-
-fn dummy_read_cache_tlb_0x1000_x1(bench: &mut Bencher) {
-    read_test(bench, 2, 0x1000, 1, true);
-}
-
-fn dummy_read_cache_tlb_0x10000_x1(bench: &mut Bencher) {
-    read_test(bench, 2, 0x10000, 1, true);
-}
-
-benchmark_group!(
-    bench_cache_tlb,
-    dummy_read_cache_tlb_0x8_x1,
-    dummy_read_cache_tlb_0x10_x1,
-    dummy_read_cache_tlb_0x100_x1,
-    dummy_read_cache_tlb_0x1000_x1,
-    dummy_read_cache_tlb_0x10000_x1
-);
-
-fn dummy_read_tlb_0x8_x1(bench: &mut Bencher) {
-    read_test(bench, 0, 8, 1, true);
-}
-
-fn dummy_read_tlb_0x10_x1(bench: &mut Bencher) {
-    read_test(bench, 0, 0x10, 1, true);
-}
-
-fn dummy_read_tlb_0x100_x1(bench: &mut Bencher) {
-    read_test(bench, 0, 0x100, 1, true);
-}
-
-fn dummy_read_tlb_0x1000_x1(bench: &mut Bencher) {
-    read_test(bench, 0, 0x1000, 1, true);
-}
-
-fn dummy_read_tlb_0x10000_x1(bench: &mut Bencher) {
-    read_test(bench, 0, 0x10000, 1, true);
-}
-
-benchmark_group!(
-    bench_tlb,
-    dummy_read_tlb_0x8_x1,
-    dummy_read_tlb_0x10_x1,
-    dummy_read_tlb_0x100_x1,
-    dummy_read_tlb_0x1000_x1,
-    dummy_read_tlb_0x10000_x1
-);
-
-benchmark_main!(bench_nocache, bench_cache, bench_cache_tlb, bench_tlb,);
+criterion_main!(dummy_read);

@@ -101,7 +101,7 @@ fn read_test(
         let cache = PageCache::new(
             proc.sys_arch(),
             Length::from_mb(cache_size),
-            PageType::PAGE_TABLE | PageType::READ_ONLY,
+            PageType::PAGE_TABLE | PageType::READ_ONLY | PageType::WRITEABLE,
             TimedCacheValidator::new(Duration::from_millis(10000).into()),
         );
 

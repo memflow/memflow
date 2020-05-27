@@ -1,11 +1,12 @@
 use super::{CacheValidator, PageType};
 use crate::architecture::Architecture;
 use crate::error::Error;
-use crate::mem::phys::{PhysicalReadIterator, PhysicalReadType}; //, PhysicalWriteIterator};
+use crate::iter::FlowIters;
+use crate::mem::phys::{PhysicalReadData, PhysicalReadIterator}; //, PhysicalWriteIterator};
 use crate::mem::AccessPhysicalMemory;
 use crate::page_chunks::PageChunksMut;
 use crate::types::{Address, Done, Length, PhysicalAddress, ToDo};
-use arrayvec::ArrayVec;
+use bumpalo::{collections::Vec as BumpVec, Bump};
 use std::alloc::{alloc_zeroed, Layout};
 
 pub struct CacheEntry<'a> {
@@ -203,147 +204,104 @@ impl<T: CacheValidator> PageCache<T> {
     }
 
     pub fn split_to_chunks<'a>(
-        iter_elem: PhysicalReadType<'a>,
+        (addr, out): PhysicalReadData<'a>,
         page_size: Length,
-    ) -> impl Iterator<Item = PhysicalReadType<'a>> {
-        if let ToDo((addr, out)) = iter_elem {
-            Box::new(
-                PageChunksMut::create_from(out, addr.address, page_size).map(
-                    move |(paddr, chunk)| {
-                        ToDo((
+    ) -> impl PhysicalReadIterator<'a> {
+        PageChunksMut::create_from(out, addr.address, page_size).map(move |(paddr, chunk)| {
+            (
+                PhysicalAddress {
+                    address: paddr,
+                    page: addr.page,
+                },
+                chunk,
+            )
+        })
+    }
+
+    pub fn cached_read<'a, F: AccessPhysicalMemory, PI: PhysicalReadIterator<'a>>(
+        &'a mut self,
+        mem: &'a mut F,
+        iter: PI,
+        arena: &Bump,
+    ) -> Result<(), crate::Error> {
+        let page_size = self.page_size;
+
+        let mut iter = iter.double_peekable();
+
+        if iter.is_next_last() {
+            let (addr, ref mut out) = iter.next().unwrap();
+            self.cached_read_single(mem, addr, out)
+        } else {
+            let mut next = iter.next();
+            let mut clist = BumpVec::new_in(arena);
+            let mut wlist = BumpVec::new_in(arena);
+
+            while let Some((addr, out)) = next {
+                PageChunksMut::create_from(out, addr.address, page_size).for_each(
+                    |(paddr, chunk)| {
+                        let (addr, out) = (
                             PhysicalAddress {
                                 address: paddr,
                                 page: addr.page,
                             },
                             chunk,
-                        ))
-                    },
-                ),
-            )
-        } else {
-            // TODO: Currently can not handle this correctly. Add a new iterator for this purpose?
-            //Box::new(Some(iter_elem).into_iter())
-            panic!("Done elements already in the chain! Is the order of cache wrappers correct?")
-        }
-    }
+                        );
 
-    pub fn cached_read<
-        'a,
-        F: AccessPhysicalMemory,
-        PI: Iterator<Item = PhysicalReadType<'a>> + 'a,
-    >(
-        &'a mut self,
-        mem: &'a mut F,
-        iter: PI,
-    ) -> Box<dyn Iterator<Item = PhysicalReadType<'a>> + 'a> {
-        let page_size = self.page_size;
+                        loop {
+                            if let Some(page) = addr.page {
+                                if self.is_cached_page_type(page.page_type) {
+                                    let cached_page = self.cached_page_mut(addr.address);
 
-        let iter = iter
-            //.flat_map(move |x| Self::split_to_chunks(x, page_size))
-            .flat_map(move |x| {
-                let mut ret = ArrayVec::<[_; 2]>::new();
-                ret.push(x);
-                if let ToDo((addr, out)) = &mut ret[0] {
-                    if let Some(page) = addr.page {
-                        if self.is_cached_page_type(page.page_type) {
-                            let cached_page = self.cached_page_mut(addr.address);
-
-                            if !cached_page.is_valid() {
-                                if cached_page.should_validate() {
-                                    // TODO: This does need to become safe
-                                    let cache_buf = unsafe {
-                                        std::slice::from_raw_parts_mut(
-                                            cached_page.buf.as_mut_ptr(),
-                                            cached_page.buf.len(),
-                                        )
-                                    };
-
-                                    let cache_address = cached_page.address.into();
-
-                                    self.validate_page(addr.address, page.page_type);
-
-                                    ret.push(ToDo((cache_address, cache_buf)));
-                                }
-                            } else {
-                                let aligned_addr = addr.address.as_page_aligned(page_size);
-                                let cached_page =
-                                    self.page_from_index(self.page_index(addr.address));
-                                let start = (addr.address - aligned_addr).as_usize();
-                                out.copy_from_slice(&cached_page[start..(start + out.len())]);
-
-                                let (addr, out) = ret.pop().unwrap().left().unwrap();
-                                ret.push(Done(Ok((addr, out))));
-                            }
-                        }
-                    }
-                }
-                ret.into_iter()
-            });
-
-        //let iter = mem.phys_read_raw_iter(iter);
-
-        Box::new(iter)
-
-        /*if data.iter_mut().nth(1).is_none() && data.iter_mut().next().is_some() {
-            let (addr, ref mut out) = data.iter_mut().next().unwrap().get_phys_read_info();
-            self.cached_read_single(mem, addr, out)
-        } else {
-            let mut rlist = smallvec::SmallVec::<[_; 32]>::new();
-            let mut clist = smallvec::SmallVec::<[_; 32]>::new();
-
-            for data in data.iter_mut() {
-                let (addr, out) = data.get_phys_read_info();
-                if let Some(page) = addr.page {
-                    // try read from cache or fall back
-                    if self.is_cached_page_type(page.page_type) {
-                        for (paddr, chunk) in
-                            PageChunksMut::create_from(out, addr.address, self.page_size())
-                        {
-                            let cached_page = self.cached_page_mut(paddr);
-
-                            if !cached_page.is_valid() {
-                                if cached_page.should_validate() {
-                                    // should_validate ensures that there would not be
-                                    // any aliasing
-                                    rlist.push(PhysicalReadData::new(
-                                        cached_page.address.into(),
-                                        unsafe {
+                                    if cached_page.is_valid() {
+                                        clist.push((addr, out));
+                                        break;
+                                    } else if cached_page.should_validate() {
+                                        //TODO: This has to become safe somehow
+                                        let buf = unsafe {
                                             std::slice::from_raw_parts_mut(
                                                 cached_page.buf.as_mut_ptr(),
                                                 cached_page.buf.len(),
                                             )
-                                        },
-                                    ));
-                                    clist.push((chunk, paddr));
-                                    self.validate_page(paddr, page.page_type);
-                                } else {
-                                    rlist.push(PhysicalReadData::new(paddr.into(), chunk));
+                                        };
+
+                                        wlist.push((
+                                            PhysicalAddress::from(cached_page.address),
+                                            buf,
+                                        ));
+                                        clist.push((addr, out));
+                                        self.validate_page(addr.address, page.page_type);
+                                        break;
+                                    }
                                 }
-                            } else {
-                                clist.push((chunk, paddr));
                             }
+
+                            wlist.push((addr, out));
+                            break;
                         }
-                    } else {
-                        rlist.push(PhysicalReadData::new(addr, out));
+                    },
+                );
+
+                next = iter.next();
+
+                if next.is_none() || wlist.len() >= 64 || clist.len() >= 64 {
+                    if wlist.len() > 0 {
+                        mem.phys_read_raw_iter(wlist.into_iter())?;
+                        wlist = BumpVec::new_in(arena);
                     }
-                } else {
-                    rlist.push(PhysicalReadData::new(addr, out));
+
+                    while let Some((addr, out)) = clist.pop() {
+                        let paddr = addr.address;
+                        let aligned_addr = paddr.as_page_aligned(self.page_size);
+                        let cached_page = self.page_from_index(self.page_index(paddr));
+                        let start = (paddr - aligned_addr).as_usize();
+                        let cached_page =
+                            cached_page.split_at_mut(start).1.split_at_mut(out.len()).0;
+                        out.copy_from_slice(cached_page);
+                    }
                 }
             }
 
-            //Execute the queued reads
-            if !rlist.is_empty() {
-                mem.phys_read_raw_list(data).unwrap(); //rlist.as_mut_slice()).unwrap();
-            }
-
-            for &mut (ref mut chunk, paddr) in clist.iter_mut() {
-                let aligned_addr = paddr.as_page_aligned(self.page_size);
-                let cached_page = self.page_from_index(self.page_index(paddr));
-                let start = (paddr - aligned_addr).as_usize();
-                chunk.copy_from_slice(&cached_page[start..(start + chunk.len())]);
-            }
-
             Ok(())
-        }*/
+        }
     }
 }

@@ -169,208 +169,208 @@ fn read_test(
     bench.bytes = chunk_size as u64;
 }
 
-fn read_nocache_0x8_x1(bench: &mut Bencher) {
+fn win32_read_nocache_0x8_x1(bench: &mut Bencher) {
     read_test(bench, 0, 8, 1, false);
 }
 
-fn read_nocache_0x10_x1(bench: &mut Bencher) {
+fn win32_read_nocache_0x10_x1(bench: &mut Bencher) {
     read_test(bench, 0, 0x10, 1, false);
 }
 
-fn read_nocache_0x100_x1(bench: &mut Bencher) {
+fn win32_read_nocache_0x100_x1(bench: &mut Bencher) {
     read_test(bench, 0, 0x100, 1, false);
 }
 
-fn read_nocache_0x1000_x1(bench: &mut Bencher) {
+fn win32_read_nocache_0x1000_x1(bench: &mut Bencher) {
     read_test(bench, 0, 0x1000, 1, false);
 }
 
-fn read_nocache_0x10000_x1(bench: &mut Bencher) {
+fn win32_read_nocache_0x10000_x1(bench: &mut Bencher) {
     read_test(bench, 0, 0x10000, 1, false);
 }
 
 benchmark_group!(
     bench_nocache,
-    read_nocache_0x8_x1,
-    read_nocache_0x10_x1,
-    read_nocache_0x100_x1,
-    read_nocache_0x1000_x1,
-    read_nocache_0x10000_x1
+    win32_read_nocache_0x8_x1,
+    win32_read_nocache_0x10_x1,
+    win32_read_nocache_0x100_x1,
+    win32_read_nocache_0x1000_x1,
+    win32_read_nocache_0x10000_x1
 );
 
-fn read_cache_0x8_x1(bench: &mut Bencher) {
+fn win32_read_cache_0x8_x1(bench: &mut Bencher) {
     read_test(bench, 2, 8, 1, false);
 }
 
-fn read_cache_0x10_x1(bench: &mut Bencher) {
+fn win32_read_cache_0x10_x1(bench: &mut Bencher) {
     read_test(bench, 2, 0x10, 1, false);
 }
 
-fn read_cache_0x100_x1(bench: &mut Bencher) {
+fn win32_read_cache_0x100_x1(bench: &mut Bencher) {
     read_test(bench, 2, 0x100, 1, false);
 }
 
-fn read_cache_0x1000_x1(bench: &mut Bencher) {
+fn win32_read_cache_0x1000_x1(bench: &mut Bencher) {
     read_test(bench, 2, 0x1000, 1, false);
 }
 
-fn read_cache_0x10000_x1(bench: &mut Bencher) {
+fn win32_read_cache_0x10000_x1(bench: &mut Bencher) {
     read_test(bench, 2, 0x10000, 1, false);
 }
 
 benchmark_group!(
     bench_cache,
-    read_cache_0x8_x1,
-    read_cache_0x10_x1,
-    read_cache_0x100_x1,
-    read_cache_0x1000_x1,
-    read_cache_0x10000_x1
+    win32_read_cache_0x8_x1,
+    win32_read_cache_0x10_x1,
+    win32_read_cache_0x100_x1,
+    win32_read_cache_0x1000_x1,
+    win32_read_cache_0x10000_x1
 );
 
-fn read_cache_tlb_0x8_x1(bench: &mut Bencher) {
+fn win32_read_cache_tlb_0x8_x1(bench: &mut Bencher) {
     read_test(bench, 2, 8, 1, true);
 }
 
-fn read_cache_tlb_0x10_x1(bench: &mut Bencher) {
+fn win32_read_cache_tlb_0x10_x1(bench: &mut Bencher) {
     read_test(bench, 2, 0x10, 1, true);
 }
 
-fn read_cache_tlb_0x100_x1(bench: &mut Bencher) {
+fn win32_read_cache_tlb_0x100_x1(bench: &mut Bencher) {
     read_test(bench, 2, 0x100, 1, true);
 }
 
-fn read_cache_tlb_0x1000_x1(bench: &mut Bencher) {
+fn win32_read_cache_tlb_0x1000_x1(bench: &mut Bencher) {
     read_test(bench, 2, 0x1000, 1, true);
 }
 
-fn read_cache_tlb_0x10000_x1(bench: &mut Bencher) {
+fn win32_read_cache_tlb_0x10000_x1(bench: &mut Bencher) {
     read_test(bench, 2, 0x10000, 1, true);
 }
 
 benchmark_group!(
     bench_cache_tlb,
-    read_cache_tlb_0x8_x1,
-    read_cache_tlb_0x10_x1,
-    read_cache_tlb_0x100_x1,
-    read_cache_tlb_0x1000_x1,
-    read_cache_tlb_0x10000_x1
+    win32_read_cache_tlb_0x8_x1,
+    win32_read_cache_tlb_0x10_x1,
+    win32_read_cache_tlb_0x100_x1,
+    win32_read_cache_tlb_0x1000_x1,
+    win32_read_cache_tlb_0x10000_x1
 );
 
-fn read_tlb_0x8_x1(bench: &mut Bencher) {
+fn win32_read_tlb_0x8_x1(bench: &mut Bencher) {
     read_test(bench, 0, 8, 1, true);
 }
 
-fn read_tlb_0x10_x1(bench: &mut Bencher) {
+fn win32_read_tlb_0x10_x1(bench: &mut Bencher) {
     read_test(bench, 0, 0x10, 1, true);
 }
 
-fn read_tlb_0x100_x1(bench: &mut Bencher) {
+fn win32_read_tlb_0x100_x1(bench: &mut Bencher) {
     read_test(bench, 0, 0x100, 1, true);
 }
 
-fn read_tlb_0x1000_x1(bench: &mut Bencher) {
+fn win32_read_tlb_0x1000_x1(bench: &mut Bencher) {
     read_test(bench, 0, 0x1000, 1, true);
 }
 
-fn read_tlb_0x10000_x1(bench: &mut Bencher) {
+fn win32_read_tlb_0x10000_x1(bench: &mut Bencher) {
     read_test(bench, 0, 0x10000, 1, true);
 }
 
 benchmark_group!(
     bench_tlb,
-    read_tlb_0x8_x1,
-    read_tlb_0x10_x1,
-    read_tlb_0x100_x1,
-    read_tlb_0x1000_x1,
-    read_tlb_0x10000_x1
+    win32_read_tlb_0x8_x1,
+    win32_read_tlb_0x10_x1,
+    win32_read_tlb_0x100_x1,
+    win32_read_tlb_0x1000_x1,
+    win32_read_tlb_0x10000_x1
 );
 
-fn read_size_cache_0x001m_0x8_x1(bench: &mut Bencher) {
+fn win32_read_size_cache_0x001m_0x8_x1(bench: &mut Bencher) {
     read_test(bench, 1, 0x8, 1, false);
 }
 
-fn read_size_cache_0x002m_0x8_x1(bench: &mut Bencher) {
+fn win32_read_size_cache_0x002m_0x8_x1(bench: &mut Bencher) {
     read_test(bench, 2, 0x8, 1, false);
 }
 
-fn read_size_cache_0x004m_0x8_x1(bench: &mut Bencher) {
+fn win32_read_size_cache_0x004m_0x8_x1(bench: &mut Bencher) {
     read_test(bench, 4, 0x8, 1, false);
 }
 
-fn read_size_cache_0x008m_0x8_x1(bench: &mut Bencher) {
+fn win32_read_size_cache_0x008m_0x8_x1(bench: &mut Bencher) {
     read_test(bench, 8, 0x8, 1, false);
 }
 
-fn read_size_cache_0x010m_0x8_x1(bench: &mut Bencher) {
+fn win32_read_size_cache_0x010m_0x8_x1(bench: &mut Bencher) {
     read_test(bench, 16, 0x8, 1, false);
 }
 
-fn read_size_cache_0x020m_0x8_x1(bench: &mut Bencher) {
+fn win32_read_size_cache_0x020m_0x8_x1(bench: &mut Bencher) {
     read_test(bench, 32, 0x8, 1, false);
 }
 
-fn read_size_cache_0x040m_0x8_x1(bench: &mut Bencher) {
+fn win32_read_size_cache_0x040m_0x8_x1(bench: &mut Bencher) {
     read_test(bench, 64, 0x8, 1, false);
 }
 
-fn read_size_cache_0x080m_0x8_x1(bench: &mut Bencher) {
+fn win32_read_size_cache_0x080m_0x8_x1(bench: &mut Bencher) {
     read_test(bench, 128, 0x8, 1, false);
 }
 
 benchmark_group!(
     bench_size_cache,
-    read_size_cache_0x001m_0x8_x1,
-    read_size_cache_0x002m_0x8_x1,
-    read_size_cache_0x004m_0x8_x1,
-    read_size_cache_0x008m_0x8_x1,
-    read_size_cache_0x010m_0x8_x1,
-    read_size_cache_0x020m_0x8_x1,
-    read_size_cache_0x040m_0x8_x1,
-    read_size_cache_0x080m_0x8_x1,
+    win32_read_size_cache_0x001m_0x8_x1,
+    win32_read_size_cache_0x002m_0x8_x1,
+    win32_read_size_cache_0x004m_0x8_x1,
+    win32_read_size_cache_0x008m_0x8_x1,
+    win32_read_size_cache_0x010m_0x8_x1,
+    win32_read_size_cache_0x020m_0x8_x1,
+    win32_read_size_cache_0x040m_0x8_x1,
+    win32_read_size_cache_0x080m_0x8_x1,
 );
 
-fn read_size_cache_tlb_0x001m_0x8_x1(bench: &mut Bencher) {
+fn win32_read_size_cache_tlb_0x001m_0x8_x1(bench: &mut Bencher) {
     read_test(bench, 1, 0x8, 1, true);
 }
 
-fn read_size_cache_tlb_0x002m_0x8_x1(bench: &mut Bencher) {
+fn win32_read_size_cache_tlb_0x002m_0x8_x1(bench: &mut Bencher) {
     read_test(bench, 2, 0x8, 1, true);
 }
 
-fn read_size_cache_tlb_0x004m_0x8_x1(bench: &mut Bencher) {
+fn win32_read_size_cache_tlb_0x004m_0x8_x1(bench: &mut Bencher) {
     read_test(bench, 4, 0x8, 1, true);
 }
 
-fn read_size_cache_tlb_0x008m_0x8_x1(bench: &mut Bencher) {
+fn win32_read_size_cache_tlb_0x008m_0x8_x1(bench: &mut Bencher) {
     read_test(bench, 8, 0x8, 1, true);
 }
 
-fn read_size_cache_tlb_0x010m_0x8_x1(bench: &mut Bencher) {
+fn win32_read_size_cache_tlb_0x010m_0x8_x1(bench: &mut Bencher) {
     read_test(bench, 16, 0x8, 1, true);
 }
 
-fn read_size_cache_tlb_0x020m_0x8_x1(bench: &mut Bencher) {
+fn win32_read_size_cache_tlb_0x020m_0x8_x1(bench: &mut Bencher) {
     read_test(bench, 32, 0x8, 1, true);
 }
 
-fn read_size_cache_tlb_0x040m_0x8_x1(bench: &mut Bencher) {
+fn win32_read_size_cache_tlb_0x040m_0x8_x1(bench: &mut Bencher) {
     read_test(bench, 64, 0x8, 1, true);
 }
 
-fn read_size_cache_tlb_0x080m_0x8_x1(bench: &mut Bencher) {
+fn win32_read_size_cache_tlb_0x080m_0x8_x1(bench: &mut Bencher) {
     read_test(bench, 128, 0x8, 1, true);
 }
 
 benchmark_group!(
     bench_size_cache_tlb,
-    read_size_cache_tlb_0x001m_0x8_x1,
-    read_size_cache_tlb_0x002m_0x8_x1,
-    read_size_cache_tlb_0x004m_0x8_x1,
-    read_size_cache_tlb_0x008m_0x8_x1,
-    read_size_cache_tlb_0x010m_0x8_x1,
-    read_size_cache_tlb_0x020m_0x8_x1,
-    read_size_cache_tlb_0x040m_0x8_x1,
-    read_size_cache_tlb_0x080m_0x8_x1,
+    win32_read_size_cache_tlb_0x001m_0x8_x1,
+    win32_read_size_cache_tlb_0x002m_0x8_x1,
+    win32_read_size_cache_tlb_0x004m_0x8_x1,
+    win32_read_size_cache_tlb_0x008m_0x8_x1,
+    win32_read_size_cache_tlb_0x010m_0x8_x1,
+    win32_read_size_cache_tlb_0x020m_0x8_x1,
+    win32_read_size_cache_tlb_0x040m_0x8_x1,
+    win32_read_size_cache_tlb_0x080m_0x8_x1,
 );
 
 benchmark_main!(

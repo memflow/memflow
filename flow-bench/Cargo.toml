@@ -4,13 +4,25 @@ version = "0.1.0"
 authors = ["Aurimas Blažulionis <0x60@pm.me>"]
 edition = "2018"
 
-[dev-dependencies]
+[dependencies]
 flow-core = { path = "../flow-core", features = ["dummy_mem"] }
 rand = "0.5"
 # This branch provides throughput plots
 criterion = { git = "https://github.com/Heep042/criterion.rs.git", branch = "tput" }
+flow-win32 = { path = "../flow-win32" }
+flow-qemu-procfs = { path = "../connectors/flow-qemu-procfs" }
+
+[dev-dependencies]
+flow-core = { path = "../flow-core", features = ["dummy_mem"] }
+rand = "0.5"
+# This branch provides throughput plots
+flow-win32 = { path = "../flow-win32" }
+#criterion = { git = "https://github.com/Heep042/criterion.rs.git", branch = "tput" }
 
 [[bench]]
 name = "read_dummy"
 harness = false
 
+[[bench]]
+name = "read_win32"
+harness = false

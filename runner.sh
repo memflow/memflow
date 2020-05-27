@@ -1,5 +1,7 @@
 #!/bin/bash
 
+echo $@
+
 PCMD=$(cat /proc/$PPID/cmdline | strings -1)
 PCMD=$(echo -n ${PCMD##*/})
 RNAME=$(echo -n ${@##*/})

@@ -8,17 +8,23 @@ use crate::page_chunks::PageChunks; //, PageChunksMut};
 use crate::types::{Address, Page, PhysicalAddress};
 use crate::types::{Done, ToDo};
 use crate::vat;
+use bumpalo::Bump;
 
 // TODO: derive virtual reads here
 #[derive(VirtualAddressTranslator, AccessVirtualMemory)]
 pub struct CachedMemoryAccess<'a, T: AccessPhysicalMemory, Q: CacheValidator> {
     mem: &'a mut T,
     cache: PageCache<Q>,
+    arena: Bump,
 }
 
 impl<'a, T: AccessPhysicalMemory, Q: CacheValidator> CachedMemoryAccess<'a, T, Q> {
     pub fn with(mem: &'a mut T, cache: PageCache<Q>) -> Self {
-        Self { mem, cache }
+        Self {
+            mem,
+            cache,
+            arena: Bump::new(),
+        }
     }
 }
 
@@ -28,50 +34,8 @@ impl<'a, T: AccessPhysicalMemory, Q: CacheValidator> AccessPhysicalMemory
 {
     fn phys_read_raw_iter<'b, PI: PhysicalReadIterator<'b>>(&'b mut self, iter: PI) -> Result<()> {
         self.cache.validator.update_validity();
-        /*let mut rlist = smallvec::SmallVec::<[_; 64]>::new();
-        self.cache.validator.update_validity();
-
-        for &mut (addr, ref mut out) in data.iter_mut() {
-            if let Some(page) = addr.page {
-                // try read from cache or fall back
-                if self.cache.is_cached_page_type(page.page_type) {
-                    for (paddr, chunk) in
-                        PageChunksMut::create_from(out, addr.address, self.cache.page_size())
-                        {
-                            let cached_page = self.cache.cached_page_mut(paddr);
-                            // read into page buffer and set addr
-                            if !cached_page.is_valid() {
-                                rlist.push((cached_page.address.into(), unsafe { std::slice::from_raw_parts_mut(cached_page.buf.as_mut_ptr(), cached_page.buf.len()) }));
-                                //self.mem
-                                //    .phys_read_raw_into(cached_page.address.into(), cached_page.buf)?;
-                            }
-
-                            // copy page into out buffer
-                            // TODO: reowkr this logic, no comptuations needed
-                            let start = (paddr - cached_page.address).as_usize();
-                            chunk.copy_from_slice(&cached_page.buf[start..(start + chunk.len())]);
-
-                            // update update page if it wasnt valid before
-                            // this is done here due to borrowing constraints
-                            if !cached_page.is_valid() {
-                                self.cache.validate_page(paddr, page.page_type);
-                            }
-                        }
-                } else {
-                    rlist.push((addr, out));
-                }
-            } else {
-                rlist.push((addr, out));
-            }
-        }
-
-        if !rlist.is_empty() {
-            self.mem.phys_read_raw_iter(rlist.as_mut_slice())?;
-        }
-
-        Ok(())*/
-        self.mem.phys_read_raw_iter(iter)
-        //self.cache.cached_read(self.mem, iter)
+        self.arena.reset();
+        self.cache.cached_read(self.mem, iter, &self.arena)
     }
 
     fn phys_write_raw_iter<'b, PI: PhysicalWriteIterator<'b>>(

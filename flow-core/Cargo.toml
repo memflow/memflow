@@ -18,6 +18,7 @@ either = "1.5.3"
 arrayvec = "0.5.1"
 x86_64 = { version = "0.10.2", optional = true, default-features = false, features = ["stable"] }
 rand = { version = "0.7.3", optional = true }
+bumpalo = { version = "3.3.0", features = ["collections"] }
 
 [dev-dependencies]
 x86_64 = { version = "0.10.2", default-features = false, features = ["stable"] }

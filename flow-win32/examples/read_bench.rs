@@ -7,7 +7,8 @@ use std::io::Write;
 use std::time::{Duration, Instant};
 
 use flow_core::{
-    timed_validator::*, AccessPhysicalMemory, AccessVirtualMemory, CachedMemoryAccess, PageCache,
+    timed_validator::*, AccessPhysicalMemory, AccessVirtualMemory, Address, CachedMemoryAccess,
+    PageCache,
 };
 use flow_core::{Length, OsProcess, OsProcessModule, PageType};
 use flow_win32::{Win32, Win32Module, Win32Offsets, Win32Process};
@@ -57,10 +58,12 @@ fn rwtest<T: AccessVirtualMemory>(
 
                 let now = Instant::now();
                 {
-                    let mut vmem = proc.virt_mem(mem);
-                    for (buf, addr) in bufs.iter_mut() {
-                        let _ = vmem.virt_read_raw_into((*addr).into(), buf.as_mut_slice());
-                    }
+                    let _ = mem.virt_read_raw_iter(
+                        proc.sys_arch(),
+                        proc.dtb(),
+                        bufs.iter_mut()
+                            .map(|(buf, addr)| (Address::from(*addr), buf.as_mut_slice())),
+                    );
                 }
                 total_dur += now.elapsed();
                 done_size += *i * *o;

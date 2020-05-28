@@ -36,12 +36,12 @@ fn rwtest<T: AccessVirtualMemory, P: OsProcess, M: OsProcessModule>(
                     *addr = (base_addr + rng.gen_range(0, 0x2000)).into();
                 }
 
-                {
-                    let mut vmem = proc.virt_mem(mem);
-                    for (addr, buf) in bufs.iter_mut() {
-                        let _ = vmem.virt_read_raw_into(*addr, buf.as_mut_slice());
-                    }
-                }
+                let _ = mem.virt_read_raw_iter(
+                    proc.sys_arch(),
+                    proc.dtb(),
+                    bufs.iter_mut()
+                        .map(|(addr, buf)| (*addr, buf.as_mut_slice())),
+                );
                 done_size += *i * *o;
             }
 
@@ -158,7 +158,7 @@ fn chunk_read_params<
         for &chunk_size in [1, 4, 16, 64].iter() {
             group.throughput(Throughput::Bytes(size * chunk_size));
             group.bench_with_input(
-                BenchmarkId::new(format!("{}_s{:x}", func_name, size), size),
+                BenchmarkId::new(format!("{}_s{:x}", func_name, size), size * chunk_size),
                 &size,
                 |b, &size| {
                     read_test_with_ctx(

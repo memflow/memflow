@@ -6,36 +6,65 @@ use crate::mem::{AccessPhysicalMemory, PhysicalReadIterator, PhysicalWriteIterat
 use crate::types::{Address, Page, PhysicalAddress};
 use crate::vat;
 use crate::vat::VirtualAddressTranslator;
+use bumpalo::{collections::Vec as BumpVec, Bump};
 
 #[derive(AccessVirtualMemory)]
 pub struct CachedVAT<T: AccessPhysicalMemory + VirtualAddressTranslator, Q: CacheValidator> {
     mem: T,
     tlb: TLBCache<Q>,
+    arena: Bump,
 }
 
 impl<T: AccessPhysicalMemory + VirtualAddressTranslator, Q: CacheValidator> CachedVAT<T, Q> {
     pub fn with(mem: T, tlb: TLBCache<Q>) -> Self {
-        Self { mem, tlb }
+        Self {
+            mem,
+            tlb,
+            arena: Bump::new(),
+        }
     }
 }
 
 impl<T: AccessPhysicalMemory + VirtualAddressTranslator, Q: CacheValidator> VirtualAddressTranslator
     for CachedVAT<T, Q>
 {
-    fn virt_to_phys(
+    fn virt_to_phys_iter<B, VI: Iterator<Item = (Address, B)>>(
         &mut self,
         arch: Architecture,
         dtb: Address,
-        vaddr: Address,
-    ) -> Result<PhysicalAddress> {
+        addrs: VI,
+        out: &mut Vec<(Result<PhysicalAddress>, Address, B)>,
+    ) {
         self.tlb.validator.update_validity();
-        if let Some(entry) = self.tlb.try_entry(dtb, vaddr, arch.page_size()) {
-            Ok(entry.phys_addr)
-        } else {
-            let ret = arch.virt_to_phys(&mut self.mem, dtb, vaddr)?;
-            self.tlb
-                .cache_entry(dtb, vaddr, ret.page.unwrap(), arch.page_size());
-            Ok(ret)
+        self.arena.reset();
+
+        let tlb = &mut self.tlb;
+        let mut cached_out = BumpVec::new_in(&self.arena);
+
+        let mut addrs = addrs
+            .filter_map(|(addr, buf)| {
+                if let Some(entry) = tlb.try_entry(dtb, addr, arch.page_size()) {
+                    cached_out.push((Ok(entry.phys_addr), addr, buf));
+                    None
+                } else {
+                    Some((addr, buf))
+                }
+            })
+            .peekable();
+
+        if addrs.peek().is_some() {
+            let last_idx = out.len();
+            arch.virt_to_phys_iter(&mut self.mem, dtb, addrs, out);
+            for (ret, addr, _) in out.iter_mut().skip(last_idx) {
+                if let Ok(ret) = ret {
+                    self.tlb
+                        .cache_entry(dtb, *addr, ret.page.unwrap(), arch.page_size());
+                }
+            }
+        }
+
+        for x in cached_out.into_iter() {
+            out.push(x);
         }
     }
 }

@@ -9,12 +9,24 @@ use crate::mem::AccessPhysicalMemory;
 use crate::types::{Address, Page, PhysicalAddress};
 
 pub trait VirtualAddressTranslator {
+    fn virt_to_phys_iter<B, VI: Iterator<Item = (Address, B)>>(
+        &mut self,
+        arch: Architecture,
+        dtb: Address,
+        addrs: VI,
+        out: &mut Vec<(Result<PhysicalAddress>, Address, B)>,
+    );
+
     fn virt_to_phys(
         &mut self,
         arch: Architecture,
         dtb: Address,
         vaddr: Address,
-    ) -> Result<PhysicalAddress>;
+    ) -> Result<PhysicalAddress> {
+        let mut out = Vec::with_capacity(1);
+        self.virt_to_phys_iter(arch, dtb, Some((vaddr, false)).into_iter(), &mut out);
+        out.pop().unwrap().0
+    }
 }
 
 #[allow(unused)]

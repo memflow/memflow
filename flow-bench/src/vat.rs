@@ -10,7 +10,7 @@ use flow_core::{Address, Length, OsProcess, OsProcessModule, PageType};
 use rand::prelude::*;
 use rand::{prng::XorShiftRng as CurRng, Rng, SeedableRng};
 
-fn vattest<T: AccessPhysicalMemory, P: OsProcess, M: OsProcessModule>(
+fn vattest<T: VirtualAddressTranslator, P: OsProcess, M: OsProcessModule>(
     mem: &mut T,
     proc: &P,
     module: &M,
@@ -35,10 +35,10 @@ fn vattest<T: AccessPhysicalMemory, P: OsProcess, M: OsProcessModule>(
         }
 
         out.clear();
-        black_box(proc.sys_arch().virt_to_phys_iter(
-            mem,
+        black_box(mem.virt_to_phys_iter(
+            proc.sys_arch(),
             proc.dtb(),
-            bufs.iter_mut().map(|x| *x),
+            bufs.iter_mut().map(|x| (*x, Option::<&[u8]>::None)),
             &mut out,
         ));
 
@@ -48,7 +48,7 @@ fn vattest<T: AccessPhysicalMemory, P: OsProcess, M: OsProcessModule>(
     done_size
 }
 
-pub fn vat_test_with_mem<T: AccessPhysicalMemory, P: OsProcess, M: OsProcessModule>(
+pub fn vat_test_with_mem<T: VirtualAddressTranslator, P: OsProcess, M: OsProcessModule>(
     bench: &mut Bencher,
     mem: &mut T,
     chunks: usize,

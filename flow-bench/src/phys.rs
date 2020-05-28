@@ -123,7 +123,7 @@ fn chunk_read_params<T: AccessPhysicalMemory>(
         for &chunk_size in [1, 4, 16, 64].iter() {
             group.throughput(Throughput::Bytes(size * chunk_size));
             group.bench_with_input(
-                BenchmarkId::new(format!("{}_s{:x}", func_name, size), size),
+                BenchmarkId::new(format!("{}_s{:x}", func_name, size), size * chunk_size),
                 &size,
                 |b, &size| {
                     read_test_with_ctx(

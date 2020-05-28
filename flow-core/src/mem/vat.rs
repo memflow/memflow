@@ -5,7 +5,10 @@ use crate::error::{Error, Result};
 
 use crate::architecture::Architecture;
 use crate::iter::page_chunks::{PageChunks, PageChunksMut};
-use crate::mem::AccessPhysicalMemory;
+use crate::mem::{
+    virt::{VirtualReadIterator, VirtualWriteIterator},
+    AccessPhysicalMemory,
+};
 use crate::types::{Address, Page, PhysicalAddress};
 
 pub trait VirtualAddressTranslator {
@@ -29,23 +32,37 @@ pub trait VirtualAddressTranslator {
     }
 }
 
-#[allow(unused)]
-pub fn virt_read_raw_into<T: AccessPhysicalMemory + VirtualAddressTranslator>(
+pub fn virt_read_raw_iter<
+    'a,
+    T: AccessPhysicalMemory + VirtualAddressTranslator,
+    VI: VirtualReadIterator<'a>,
+>(
     mem: &mut T,
     arch: Architecture,
     dtb: Address,
-    addr: Address,
-    out: &mut [u8],
+    iter: VI,
 ) -> Result<()> {
-    for (vaddr, chunk) in PageChunksMut::create_from(out, addr, arch.page_size()) {
-        if let Ok(paddr) = mem.virt_to_phys(arch, dtb, vaddr) {
-            mem.phys_read_raw_into(paddr, chunk)?;
+    //30% perf hit on dummy!!! FIXME!!!
+    let mut translation = Vec::with_capacity(iter.size_hint().0);
+    mem.virt_to_phys_iter(
+        arch,
+        dtb,
+        iter.flat_map(|(addr, out)| PageChunksMut::create_from(out, addr, arch.page_size())),
+        &mut translation,
+    );
+
+    let iter = translation.into_iter().filter_map(|(paddr, _, out)| {
+        if let Ok(paddr) = paddr {
+            Some((paddr, out))
         } else {
-            for v in chunk.iter_mut() {
-                *v = 0u8;
+            for v in out.iter_mut() {
+                *v = 0
             }
+            None
         }
-    }
+    });
+
+    mem.phys_read_raw_iter(iter)?;
 
     Ok(())
 }

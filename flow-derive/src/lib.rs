@@ -38,14 +38,12 @@ pub fn virtual_memory_trait_derive(input: TokenStream) -> TokenStream {
 
     let expanded = quote! {
         impl #impl_generics crate::mem::AccessVirtualMemory for #name #type_generics {
-            fn virt_read_raw_into(
+            fn virt_read_raw_iter<'vtl, VI: crate::mem::virt::VirtualReadIterator<'vtl>>(
                 &mut self,
                 arch: Architecture,
                 dtb: Address,
-                addr: Address,
-                out: &mut [u8],
-            ) -> Result<()> {
-                vat::virt_read_raw_into(self, arch, dtb, addr, out)
+                iter: VI) -> Result<()> {
+                vat::virt_read_raw_iter(self, arch, dtb, iter)
             }
 
             fn virt_write_raw(

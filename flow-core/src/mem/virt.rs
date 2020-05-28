@@ -8,12 +8,11 @@ use dataview::Pod;
 
 pub trait AccessVirtualMemory {
     // system user-defined impls
-    fn virt_read_raw_into(
+    fn virt_read_raw_iter<'a, VI: VirtualReadIterator<'a>>(
         &mut self,
         arch: Architecture,
         dtb: Address,
-        addr: Address,
-        out: &mut [u8],
+        iter: VI,
     ) -> Result<()>;
 
     fn virt_write_raw(
@@ -27,6 +26,17 @@ pub trait AccessVirtualMemory {
     fn virt_page_info(&mut self, arch: Architecture, dtb: Address, addr: Address) -> Result<Page>;
 
     // read helpers
+
+    fn virt_read_raw_into(
+        &mut self,
+        arch: Architecture,
+        dtb: Address,
+        addr: Address,
+        out: &mut [u8],
+    ) -> Result<()> {
+        self.virt_read_raw_iter(arch, dtb, Some((addr, out)).into_iter())
+    }
+
     fn virt_read_into<T: Pod + ?Sized>(
         &mut self,
         arch: Architecture,
@@ -85,3 +95,11 @@ pub trait AccessVirtualMemory {
         self.virt_write_raw(arch, dtb, addr, data.as_bytes())
     }
 }
+
+pub type VirtualReadData<'a> = (Address, &'a mut [u8]);
+pub trait VirtualReadIterator<'a>: Iterator<Item = VirtualReadData<'a>> + 'a {}
+impl<'a, T: Iterator<Item = VirtualReadData<'a>> + 'a> VirtualReadIterator<'a> for T {}
+
+pub type VirtualWriteData<'a> = (Address, &'a [u8]);
+pub trait VirtualWriteIterator<'a>: Iterator<Item = VirtualWriteData<'a>> + 'a {}
+impl<'a, T: Iterator<Item = VirtualWriteData<'a>> + 'a> VirtualWriteIterator<'a> for T {}

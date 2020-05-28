@@ -73,11 +73,11 @@ impl<T: CacheValidator> TLBCache<T> {
                 Some(TLBEntry {
                     dtb,
                     virt_addr: addr,
-                    phys_addr: PhysicalAddress {
-                        address: entry.phys_page.page_base() + (addr - page_address),
-                        page_type: entry.phys_page.page_type,
-                        page_size: entry.phys_page.page_size,
-                    },
+                    phys_addr: PhysicalAddress::with_page(
+                        entry.phys_page.page_base() + (addr - page_address),
+                        entry.phys_page.page_type(),
+                        entry.phys_page.page_size(),
+                    ),
                 })
             } else {
                 self.entries[idx].dtb = Address::INVALID;

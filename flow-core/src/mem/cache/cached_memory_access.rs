@@ -30,9 +30,9 @@ impl<'a, T: AccessPhysicalMemory, Q: CacheValidator> AccessPhysicalMemory
         self.cache.validator.update_validity();
         if addr.has_page() {
             // try read from cache or fall back
-            if self.cache.is_cached_page_type(addr.page_type) {
+            if self.cache.is_cached_page_type(addr.page_type()) {
                 for (paddr, chunk) in
-                    PageChunksMut::create_from(out, addr.address, self.cache.page_size())
+                    PageChunksMut::create_from(out, addr.into(), self.cache.page_size())
                 {
                     let cached_page = self.cache.cached_page_mut(paddr);
                     // read into page buffer and set addr
@@ -49,7 +49,7 @@ impl<'a, T: AccessPhysicalMemory, Q: CacheValidator> AccessPhysicalMemory
                     // update update page if it wasnt valid before
                     // this is done here due to borrowing constraints
                     if !cached_page.is_valid() {
-                        self.cache.validate_page(paddr, addr.page_type);
+                        self.cache.validate_page(paddr, addr.page_type());
                     }
                 }
             } else {
@@ -66,9 +66,9 @@ impl<'a, T: AccessPhysicalMemory, Q: CacheValidator> AccessPhysicalMemory
     fn phys_write_raw(&mut self, addr: PhysicalAddress, data: &[u8]) -> Result<()> {
         self.cache.validator.update_validity();
         if addr.has_page() {
-            if self.cache.is_cached_page_type(addr.page_type) {
+            if self.cache.is_cached_page_type(addr.page_type()) {
                 for (paddr, data_chunk) in
-                    PageChunks::create_from(data, addr.address, self.cache.page_size())
+                    PageChunks::create_from(data, addr.into(), self.cache.page_size())
                 {
                     let cached_page = self.cache.cached_page_mut(paddr);
                     if cached_page.is_valid() {

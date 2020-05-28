@@ -231,11 +231,23 @@ impl Architecture {
         dtb: Address,
         addr: Address,
     ) -> Result<PhysicalAddress> {
+        let mut vec = Vec::new();
+        self.virt_to_phys_iter(mem, dtb, Some(addr).into_iter(), &mut vec);
+        vec.pop().unwrap()
+    }
+
+    pub fn virt_to_phys_iter<T: AccessPhysicalMemory, VI: Iterator<Item = Address>>(
+        self,
+        mem: &mut T,
+        dtb: Address,
+        addrs: VI,
+        out: &mut Vec<Result<PhysicalAddress>>,
+    ) -> () {
         match self {
-            Architecture::Null => Ok(PhysicalAddress::from(addr)),
-            Architecture::X64 => x64::virt_to_phys(mem, dtb, addr),
-            Architecture::X86Pae => x86_pae::virt_to_phys(mem, dtb, addr),
-            Architecture::X86 => x86::virt_to_phys(mem, dtb, addr),
+            Architecture::Null => addrs.for_each(|addr| out.push(Ok(PhysicalAddress::from(addr)))),
+            Architecture::X64 => x64::virt_to_phys_iter(mem, dtb, addrs, out),
+            Architecture::X86Pae => x86_pae::virt_to_phys_iter(mem, dtb, addrs, out),
+            Architecture::X86 => x86::virt_to_phys_iter(mem, dtb, addrs, out),
         }
     }
 }

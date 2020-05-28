@@ -87,10 +87,8 @@ pub struct TestMemory {
 
 impl AccessPhysicalMemory for TestMemory {
     fn phys_read_raw_into(&mut self, addr: PhysicalAddress, out: &mut [u8]) -> Result<()> {
-        if addr.address.as_usize() + out.len() <= self.mem.len() {
-            out.copy_from_slice(
-                &self.mem[addr.address.as_usize()..(addr.address.as_usize() + out.len())],
-            );
+        if addr.as_usize() + out.len() <= self.mem.len() {
+            out.copy_from_slice(&self.mem[addr.as_usize()..(addr.as_usize() + out.len())]);
             Ok(())
         } else {
             Err(Error::new("Read out of bounds"))
@@ -98,9 +96,8 @@ impl AccessPhysicalMemory for TestMemory {
     }
 
     fn phys_write_raw(&mut self, addr: PhysicalAddress, data: &[u8]) -> Result<()> {
-        if addr.address.as_usize() + data.len() <= self.mem.len() {
-            self.mem[addr.address.as_usize()..(addr.address.as_usize() + data.len())]
-                .copy_from_slice(data);
+        if addr.as_usize() + data.len() <= self.mem.len() {
+            self.mem[addr.as_usize()..(addr.as_usize() + data.len())].copy_from_slice(data);
             Ok(())
         } else {
             Err(Error::new("Read out of bounds"))

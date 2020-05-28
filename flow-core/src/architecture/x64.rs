@@ -30,11 +30,7 @@ fn read_pt_address<T: AccessPhysicalMemory>(mem: &mut T, addr: Address) -> Resul
     let mut buf = vec![0; len_addr().as_usize()];
     let page_size = Length::from_kb(4);
     mem.phys_read_raw_into(
-        PhysicalAddress {
-            address: addr,
-            page_type: PageType::PAGE_TABLE,
-            page_size,
-        },
+        PhysicalAddress::with_page(addr, PageType::PAGE_TABLE, page_size),
         &mut buf,
     )?;
     Ok(Address::from(LittleEndian::read_u64(&buf)))
@@ -68,11 +64,11 @@ pub fn virt_to_phys<T: AccessPhysicalMemory>(
             (pdpte.as_u64() & make_bit_mask(30, 51)) | (addr.as_u64() & make_bit_mask(0, 29)),
         );
         let page_size = Length::from_gb(1);
-        return Ok(PhysicalAddress {
-            address: phys_addr,
-            page_type: PageType::from_writeable_bit(is_writeable_page!(pdpte.as_u64())),
+        return Ok(PhysicalAddress::with_page(
+            phys_addr,
+            PageType::from_writeable_bit(is_writeable_page!(pdpte.as_u64())),
             page_size,
-        });
+        ));
     }
 
     let pgd = read_pt_address(
@@ -89,11 +85,11 @@ pub fn virt_to_phys<T: AccessPhysicalMemory>(
             (pgd.as_u64() & make_bit_mask(21, 51)) | (addr.as_u64() & make_bit_mask(0, 20)),
         );
         let page_size = Length::from_mb(2);
-        return Ok(PhysicalAddress {
-            address: phys_addr,
-            page_type: PageType::from_writeable_bit(is_writeable_page!(pgd.as_u64())),
+        return Ok(PhysicalAddress::with_page(
+            phys_addr,
+            PageType::from_writeable_bit(is_writeable_page!(pgd.as_u64())),
             page_size,
-        });
+        ));
     }
 
     let pte = read_pt_address(
@@ -109,11 +105,11 @@ pub fn virt_to_phys<T: AccessPhysicalMemory>(
         (pte.as_u64() & make_bit_mask(12, 51)) | (addr.as_u64() & make_bit_mask(0, 11)),
     );
     let page_size = Length::from_kb(4);
-    Ok(PhysicalAddress {
-        address: phys_addr,
-        page_type: PageType::from_writeable_bit(is_writeable_page!(pte.as_u64())),
+    Ok(PhysicalAddress::with_page(
+        phys_addr,
+        PageType::from_writeable_bit(is_writeable_page!(pte.as_u64())),
         page_size,
-    })
+    ))
 }
 
 /*

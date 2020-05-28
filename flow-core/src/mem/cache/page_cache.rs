@@ -229,8 +229,11 @@ impl<T: CacheValidator> PageCache<T> {
         let mut iter = iter.double_peekable();
 
         if iter.is_next_last() {
-            let (addr, ref mut out) = iter.next().unwrap();
-            self.cached_read_single(mem, addr, out)
+            if let Some((addr, ref mut out)) = iter.next() {
+                self.cached_read_single(mem, addr, out)
+            } else {
+                Ok(())
+            }
         } else {
             let mut next = iter.next();
             let mut clist = BumpVec::new_in(arena);

@@ -21,13 +21,14 @@ fn dummy_read_group(c: &mut Criterion) {
     virt::chunk_read(c, "dummy", &initialize_virt_ctx);
     phys::seq_read(c, "dummy", &|| Ok(Memory::new(Length::from_mb(64))));
     phys::chunk_read(c, "dummy", &|| Ok(Memory::new(Length::from_mb(64))));
+    vat::chunk_vat(c, "dummy", &initialize_virt_ctx);
 }
 
 criterion_group! {
     name = dummy_read;
     config = Criterion::default()
         .warm_up_time(std::time::Duration::from_millis(300))
-        .measurement_time(std::time::Duration::from_millis(2200));
+        .measurement_time(std::time::Duration::from_millis(2700));
     targets = dummy_read_group
 }
 

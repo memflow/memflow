@@ -1,5 +1,5 @@
 extern crate flow_bench;
-use flow_bench::{phys, virt};
+use flow_bench::{phys, vat, virt};
 
 use criterion::*;
 
@@ -61,13 +61,14 @@ fn win32_read_group(c: &mut Criterion) {
     virt::chunk_read(c, "win32", &initialize_virt_ctx);
     phys::seq_read(c, "win32", &|| Memory::new());
     phys::chunk_read(c, "win32", &|| Memory::new());
+    vat::chunk_vat(c, "win32", &initialize_virt_ctx);
 }
 
 criterion_group! {
     name = win32_read;
     config = Criterion::default()
         .warm_up_time(std::time::Duration::from_millis(300))
-        .measurement_time(std::time::Duration::from_millis(2200));
+        .measurement_time(std::time::Duration::from_millis(2700));
     targets = win32_read_group
 }
 

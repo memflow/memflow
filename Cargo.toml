@@ -9,7 +9,7 @@ members = [
     "flow-win32",
     "flow-ffi",
     "flow-cli",
-	"flow-bench",
+    "flow-bench",
     "connectors/flow-bridge",
     "connectors/flow-qemu-bridge",
     "connectors/flow-qemu-procfs",
@@ -19,7 +19,7 @@ default-members = [
     "flow-core",
     "flow-derive",
     "flow-win32",
-    #"flow-ffi",
+    "flow-ffi",
     "flow-cli",
-	"flow-bench"
+    "flow-bench"
 ]

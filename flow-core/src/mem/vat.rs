@@ -7,11 +7,11 @@ use crate::architecture::Architecture;
 use crate::iter::page_chunks::{PageChunks, PageChunksMut};
 use crate::mem::{
     virt::{VirtualReadIterator, VirtualWriteIterator},
-    AccessPhysicalMemory,
+    AccessPhysicalMemoryRaw,
 };
 use crate::types::{Address, Page, PhysicalAddress};
 
-pub trait VirtualAddressTranslator {
+pub trait VirtualAddressTranslatorRaw {
     fn virt_to_phys_iter<
         B,
         VI: Iterator<Item = (Address, B)>,
@@ -23,7 +23,18 @@ pub trait VirtualAddressTranslator {
         addrs: VI,
         out: &mut OV,
     );
+}
 
+pub trait VirtualAddressTranslator {
+    fn virt_to_phys(
+        &mut self,
+        arch: Architecture,
+        dtb: Address,
+        vaddr: Address,
+    ) -> Result<PhysicalAddress>;
+}
+
+impl<T: VirtualAddressTranslatorRaw + ?Sized> VirtualAddressTranslator for T {
     fn virt_to_phys(
         &mut self,
         arch: Architecture,
@@ -38,7 +49,7 @@ pub trait VirtualAddressTranslator {
 
 pub fn virt_read_raw_iter<
     'a,
-    T: AccessPhysicalMemory + VirtualAddressTranslator,
+    T: AccessPhysicalMemoryRaw + VirtualAddressTranslatorRaw,
     VI: VirtualReadIterator<'a>,
 >(
     mem: &mut T,
@@ -71,7 +82,7 @@ pub fn virt_read_raw_iter<
 
 pub fn virt_write_raw_iter<
     'a,
-    T: AccessPhysicalMemory + VirtualAddressTranslator,
+    T: AccessPhysicalMemoryRaw + VirtualAddressTranslatorRaw,
     VI: VirtualWriteIterator<'a>,
 >(
     mem: &mut T,
@@ -100,7 +111,7 @@ pub fn virt_write_raw_iter<
 }
 
 #[allow(unused)]
-pub fn virt_page_info<T: AccessPhysicalMemory + VirtualAddressTranslator>(
+pub fn virt_page_info<T: AccessPhysicalMemoryRaw + VirtualAddressTranslator>(
     mem: &mut T,
     arch: Architecture,
     dtb: Address,

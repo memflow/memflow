@@ -10,7 +10,7 @@ use dataview::Pod;
 // - better would be to convert endianess with word alignment from addr
 
 /**
-The `AccessPhysicalMemory` trait is implemented by memory backends
+The `AccessPhysicalMemoryRaw` trait is implemented by memory backends
 and provides a generic way to read and write from/to physical memory.
 
 All addresses are of the type [`PhysicalAddress`](../types/physical_address/index.html)
@@ -19,24 +19,15 @@ This information is usually only needed when implementing caches.
 
 There are only 2 methods which are required to be implemented by the provider of this trait.
 
+`AccessPhysicalMemory` that is auto implemented provides additional helper functions to assist RW operations.
+
 # Examples
 
-Reading physical memory with `AccessPhysicalMemory`:
-```
-use flow_core::mem::AccessPhysicalMemory;
-use flow_core::types::Address;
-
-fn test<T: AccessPhysicalMemory>(mem: &mut T) {
-    let mut value = 0u64;
-    mem.phys_read_into(Address::from(0x1000).into(), &mut value);
-}
-```
-
-Implementing `AccessPhysicalMemory` for a memory backend:
+Implementing `AccessPhysicalMemoryRaw` for a memory backend:
 ```
 use std::vec::Vec;
 
-use flow_core::mem::{AccessPhysicalMemory, PhysicalReadIterator, PhysicalWriteIterator};
+use flow_core::mem::{AccessPhysicalMemoryRaw, PhysicalReadIterator, PhysicalWriteIterator};
 use flow_core::types::{PhysicalAddress, ToDo, Done};
 use flow_core::error::Result;
 
@@ -44,7 +35,7 @@ pub struct MemoryBackend {
     mem: Box<[u8]>,
 }
 
-impl AccessPhysicalMemory for MemoryBackend {
+impl AccessPhysicalMemoryRaw for MemoryBackend {
     fn phys_read_raw_iter<'a, PI: PhysicalReadIterator<'a>>(
         &'a mut self,
         iter: PI
@@ -63,17 +54,31 @@ impl AccessPhysicalMemory for MemoryBackend {
 }
 ```
 */
-pub trait AccessPhysicalMemory {
-    // required to be implemented
+pub trait AccessPhysicalMemoryRaw {
     fn phys_read_raw_iter<'a, PI: PhysicalReadIterator<'a>>(&'a mut self, iter: PI) -> Result<()>;
 
     fn phys_write_raw_iter<'a, PI: PhysicalWriteIterator<'a>>(&'a mut self, iter: PI)
         -> Result<()>;
+}
 
-    // read helpers
-    fn phys_read_raw_into(&mut self, addr: PhysicalAddress, out: &mut [u8]) -> Result<()> {
-        self.phys_read_raw_iter(Some((addr, out)).into_iter())
-    }
+/**
+The `AccessPhysicalMemory` trait implements helper functions to assist in memory operations. It is automatically implemented by objects implementing `AccessPhysicalMemoryRaw`.
+
+# Examples
+
+Reading physical memory with `AccessPhysicalMemory`:
+```
+use flow_core::mem::AccessPhysicalMemory;
+use flow_core::types::Address;
+
+fn test<T: AccessPhysicalMemory>(mem: &mut T) {
+    let mut value = 0u64;
+    mem.phys_read_into(Address::from(0x1000).into(), &mut value);
+}
+```
+*/
+pub trait AccessPhysicalMemory {
+    fn phys_read_raw_into(&mut self, addr: PhysicalAddress, out: &mut [u8]) -> Result<()>;
 
     fn phys_read_into<T: Pod + ?Sized>(&mut self, addr: PhysicalAddress, out: &mut T) -> Result<()>
     where
@@ -103,15 +108,23 @@ pub trait AccessPhysicalMemory {
     }
 
     // write helpers
-    fn phys_write_raw(&mut self, addr: PhysicalAddress, data: &[u8]) -> Result<()> {
-        self.phys_write_raw_iter(Some((addr, data)).into_iter())
-    }
+    fn phys_write_raw(&mut self, addr: PhysicalAddress, data: &[u8]) -> Result<()>;
 
     fn phys_write<T: Pod + ?Sized>(&mut self, addr: PhysicalAddress, data: &T) -> Result<()>
     where
         Self: Sized,
     {
         self.phys_write_raw(addr, data.as_bytes())
+    }
+}
+
+impl<T: AccessPhysicalMemoryRaw + ?Sized> AccessPhysicalMemory for T {
+    fn phys_read_raw_into(&mut self, addr: PhysicalAddress, out: &mut [u8]) -> Result<()> {
+        self.phys_read_raw_iter(Some((addr, out)).into_iter())
+    }
+
+    fn phys_write_raw(&mut self, addr: PhysicalAddress, data: &[u8]) -> Result<()> {
+        self.phys_write_raw_iter(Some((addr, data)).into_iter())
     }
 }
 

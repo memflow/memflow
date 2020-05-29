@@ -6,8 +6,7 @@ use std::mem::MaybeUninit;
 
 use dataview::Pod;
 
-pub trait AccessVirtualMemory {
-    // system user-defined impls
+pub trait AccessVirtualMemoryRaw {
     fn virt_read_raw_iter<'a, VI: VirtualReadIterator<'a>>(
         &mut self,
         arch: Architecture,
@@ -23,18 +22,16 @@ pub trait AccessVirtualMemory {
     ) -> Result<()>;
 
     fn virt_page_info(&mut self, arch: Architecture, dtb: Address, addr: Address) -> Result<Page>;
+}
 
-    // read helpers
-
+pub trait AccessVirtualMemory {
     fn virt_read_raw_into(
         &mut self,
         arch: Architecture,
         dtb: Address,
         addr: Address,
         out: &mut [u8],
-    ) -> Result<()> {
-        self.virt_read_raw_iter(arch, dtb, Some((addr, out)).into_iter())
-    }
+    ) -> Result<()>;
 
     fn virt_read_into<T: Pod + ?Sized>(
         &mut self,
@@ -87,9 +84,7 @@ pub trait AccessVirtualMemory {
         dtb: Address,
         addr: Address,
         data: &[u8],
-    ) -> Result<()> {
-        self.virt_write_raw_iter(arch, dtb, Some((addr, data)).into_iter())
-    }
+    ) -> Result<()>;
 
     fn virt_write<T: Pod + ?Sized>(
         &mut self,
@@ -102,6 +97,28 @@ pub trait AccessVirtualMemory {
         Self: Sized,
     {
         self.virt_write_raw(arch, dtb, addr, data.as_bytes())
+    }
+}
+
+impl<T: AccessVirtualMemoryRaw + ?Sized> AccessVirtualMemory for T {
+    fn virt_read_raw_into(
+        &mut self,
+        arch: Architecture,
+        dtb: Address,
+        addr: Address,
+        out: &mut [u8],
+    ) -> Result<()> {
+        self.virt_read_raw_iter(arch, dtb, Some((addr, out)).into_iter())
+    }
+
+    fn virt_write_raw(
+        &mut self,
+        arch: Architecture,
+        dtb: Address,
+        addr: Address,
+        data: &[u8],
+    ) -> Result<()> {
+        self.virt_write_raw_iter(arch, dtb, Some((addr, data)).into_iter())
     }
 }
 

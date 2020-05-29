@@ -146,7 +146,7 @@ impl OsProcess for DummyProcess {
     }
 }
 
-#[derive(AccessVirtualMemory, VirtualAddressTranslator)]
+#[derive(AccessVirtualMemoryRaw, VirtualAddressTranslatorRaw)]
 pub struct DummyMemory {
     mem: Box<[u8]>,
     page_list: VecDeque<PageInfo>,
@@ -154,7 +154,7 @@ pub struct DummyMemory {
     last_pid: i32,
 }
 
-impl AccessPhysicalMemory for DummyMemory {
+impl AccessPhysicalMemoryRaw for DummyMemory {
     fn phys_read_raw_iter<'b, PI: PhysicalReadIterator<'b>>(
         &'b mut self,
         mut iter: PI,

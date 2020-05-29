@@ -89,7 +89,7 @@ pub fn virt_to_phys_iter<
     dtb: Address,
     addrs: VI,
     out: &mut OV,
-) -> () {
+) {
     //TODO: Optimize this to not use allocs
     let mut data = addrs
         .map(|(addr, buf)| {

@@ -1,14 +1,10 @@
 use log::info;
 
-use flow_core::iter::FlowIters;
-use flow_core::types::{Done, Progress, ToDo};
 use flow_core::*;
 use flow_derive::*;
 
 use core::ffi::c_void;
 use libc::{c_ulong, iovec, pid_t, sysconf, _SC_IOV_MAX};
-
-use std::collections::VecDeque as VecType;
 
 const LENGTH_2GB: Length = Length::from_gb(2);
 
@@ -54,22 +50,6 @@ impl Memory {
             ]
             .into_boxed_slice(),
         })
-    }
-
-    pub fn filter_element<A, B>(
-        elem: Progress<A, B>,
-        cnt: &mut usize,
-        iov_max: usize,
-    ) -> (bool, Progress<A, B>) {
-        (
-            if let ToDo(_) = elem {
-                *cnt += 1;
-                (*cnt % iov_max) != 0
-            } else {
-                true
-            },
-            elem,
-        )
     }
 
     pub fn fill_iovec(

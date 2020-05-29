@@ -4,13 +4,11 @@ use super::{page_cache::PageCache, CacheValidator};
 
 use crate::architecture::Architecture;
 use crate::mem::{AccessPhysicalMemory, PhysicalReadIterator, PhysicalWriteIterator};
-use crate::page_chunks::PageChunks; //, PageChunksMut};
+use crate::page_chunks::PageChunks;
 use crate::types::{Address, Page, PhysicalAddress};
-use crate::types::{Done, ToDo};
 use crate::vat;
 use bumpalo::Bump;
 
-// TODO: derive virtual reads here
 #[derive(VirtualAddressTranslator, AccessVirtualMemory)]
 pub struct CachedMemoryAccess<'a, T: AccessPhysicalMemory, Q: CacheValidator> {
     mem: &'a mut T,
@@ -68,34 +66,3 @@ impl<'a, T: AccessPhysicalMemory, Q: CacheValidator> AccessPhysicalMemory
         mem.phys_write_raw_iter(iter)
     }
 }
-
-// forward AccessVirtualMemory trait fncs if memory has them implemented
-/*impl<'a, T, Q> AccessVirtualMemory for CachedMemoryAccess<'a, T, Q>
-where
-    T: AccessPhysicalMemory,
-    Q: CacheValidator,
-{
-    fn virt_read_raw_into(
-        &mut self,
-        arch: Architecture,
-        dtb: Address,
-        addr: Address,
-        out: &mut [u8],
-    ) -> Result<()> {
-        vat::virt_read_raw_into(self, arch, dtb, addr, out)
-    }
-
-    fn virt_write_raw(
-        &mut self,
-        arch: Architecture,
-        dtb: Address,
-        addr: Address,
-        data: &[u8],
-    ) -> Result<()> {
-        vat::virt_write_raw(self, arch, dtb, addr, data)
-    }
-
-    fn virt_page_info(&mut self, arch: Architecture, dtb: Address, addr: Address) -> Result<Page> {
-        vat::virt_page_info(self, arch, dtb, addr)
-    }
-}*/

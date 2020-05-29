@@ -2,10 +2,10 @@ use super::{CacheValidator, PageType};
 use crate::architecture::Architecture;
 use crate::error::Error;
 use crate::iter::FlowIters;
-use crate::mem::phys::{PhysicalReadData, PhysicalReadIterator}; //, PhysicalWriteIterator};
+use crate::mem::phys::{PhysicalReadData, PhysicalReadIterator};
 use crate::mem::AccessPhysicalMemory;
 use crate::page_chunks::PageChunksMut;
-use crate::types::{Address, Done, Length, PhysicalAddress, ToDo};
+use crate::types::{Address, Length, PhysicalAddress};
 use bumpalo::{collections::Vec as BumpVec, Bump};
 use std::alloc::{alloc_zeroed, Layout};
 
@@ -123,7 +123,7 @@ impl<T: CacheValidator> PageCache<T> {
         self.page_type_mask.contains(page_type)
     }
 
-    pub fn cached_page_mut<'a>(&'a mut self, addr: Address) -> CacheEntry {
+    pub fn cached_page_mut(&mut self, addr: Address) -> CacheEntry {
         let page_size = self.page_size;
         let aligned_addr = addr.as_page_aligned(page_size);
         match self.try_page(addr) {
@@ -203,10 +203,10 @@ impl<T: CacheValidator> PageCache<T> {
         Ok(())
     }
 
-    pub fn split_to_chunks<'a>(
-        (addr, out): PhysicalReadData<'a>,
+    pub fn split_to_chunks(
+        (addr, out): PhysicalReadData<'_>,
         page_size: Length,
-    ) -> impl PhysicalReadIterator<'a> {
+    ) -> impl PhysicalReadIterator<'_> {
         PageChunksMut::create_from(out, addr.address, page_size).map(move |(paddr, chunk)| {
             (
                 PhysicalAddress {
@@ -218,6 +218,7 @@ impl<T: CacheValidator> PageCache<T> {
         })
     }
 
+    #[allow(clippy::never_loop)]
     pub fn cached_read<'a, F: AccessPhysicalMemory, PI: PhysicalReadIterator<'a>>(
         &'a mut self,
         mem: &'a mut F,
@@ -287,7 +288,7 @@ impl<T: CacheValidator> PageCache<T> {
                 next = iter.next();
 
                 if next.is_none() || wlist.len() >= 64 || clist.len() >= 64 {
-                    if wlist.len() > 0 {
+                    if !wlist.is_empty() {
                         mem.phys_read_raw_iter(wlist.into_iter())?;
                         wlist = BumpVec::new_in(arena);
                     }

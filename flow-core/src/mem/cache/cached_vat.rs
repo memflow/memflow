@@ -58,12 +58,11 @@ impl<T: AccessPhysicalMemory + VirtualAddressTranslator, Q: CacheValidator> Virt
 
         if addrs.peek().is_some() {
             arch.virt_to_phys_iter(&mut self.mem, dtb, addrs, &mut uncached_out);
-            out.extend(uncached_out.into_iter().filter_map(|(ret, addr, buf)| {
+            out.extend(uncached_out.into_iter().inspect(|(ret, addr, _)| {
                 if let Ok(paddr) = ret {
                     self.tlb
-                        .cache_entry(dtb, addr, paddr.page.unwrap(), arch.page_size());
+                        .cache_entry(dtb, *addr, paddr.page.unwrap(), arch.page_size());
                 }
-                Some((ret, addr, buf))
             }));
         }
     }

@@ -33,7 +33,7 @@ pub fn virt_to_phys_iter<
     _dtb: Address,
     addrs: VI,
     out: &mut OV,
-) -> () {
+) {
     warn!("x86::virt_to_phys_iter() not implemented yet");
     out.extend(addrs.map(|(addr, buf)| {
         (

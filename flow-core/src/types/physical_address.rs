@@ -209,11 +209,8 @@ mod tests {
 
     #[test]
     fn test_page_size_invalid() {
-        let pa = PhysicalAddress::with_page(
-            Address::from(0x1234),
-            PageType::UNKNOWN,
-            Length::from(42),
-        );
+        let pa =
+            PhysicalAddress::with_page(Address::from(0x1234), PageType::UNKNOWN, Length::from(42));
         assert_ne!(pa.page_size(), Length::from(42));
     }
 }

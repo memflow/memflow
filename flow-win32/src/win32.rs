@@ -85,7 +85,7 @@ impl Win32 {
         offsets: &Win32Offsets,
     ) -> Result<Vec<Address>> {
         let mut reader =
-            VirtualMemoryContext::with(mem, self.start_block.arch, self.start_block.dtb);
+            ProcessMemoryContext::with(mem, self.start_block.arch, self.start_block.dtb);
 
         let mut eprocs = Vec::new();
 

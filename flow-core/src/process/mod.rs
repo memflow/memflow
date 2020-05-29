@@ -18,8 +18,8 @@ pub trait OsProcess {
     fn proc_arch(&self) -> Architecture;
 
     // virt_mem() - creates a VirtualMemory wrapper with system and process architecture
-    fn virt_mem<'a, T: AccessVirtualMemory>(&self, mem: &'a mut T) -> VirtualMemoryContext<'a, T> {
-        VirtualMemoryContext::with_proc_arch(mem, self.sys_arch(), self.proc_arch(), self.dtb())
+    fn virt_mem<'a, T: AccessVirtualMemory>(&self, mem: &'a mut T) -> ProcessMemoryContext<'a, T> {
+        ProcessMemoryContext::with_proc_arch(mem, self.sys_arch(), self.proc_arch(), self.dtb())
     }
 }
 

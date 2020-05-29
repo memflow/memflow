@@ -4,7 +4,7 @@ use crate::offsets::Win32Offsets;
 use crate::win32::Win32;
 
 use flow_core::architecture::Architecture;
-use flow_core::mem::{AccessVirtualMemory, VirtualMemoryContext};
+use flow_core::mem::{AccessVirtualMemory, ProcessMemoryContext};
 use flow_core::types::{Address, Length};
 use flow_core::{OsProcess, OsProcessModule};
 
@@ -29,7 +29,7 @@ impl Win32Process {
     where
         T: AccessVirtualMemory,
     {
-        let mut reader = VirtualMemoryContext::with(mem, win.start_block.arch, win.start_block.dtb);
+        let mut reader = ProcessMemoryContext::with(mem, win.start_block.arch, win.start_block.dtb);
 
         // read pe header
         let mut pe_buf = vec![0; win.kernel_size.as_usize()];
@@ -71,7 +71,7 @@ impl Win32Process {
     where
         T: AccessVirtualMemory,
     {
-        let mut reader = VirtualMemoryContext::with(mem, win.start_block.arch, win.start_block.dtb);
+        let mut reader = ProcessMemoryContext::with(mem, win.start_block.arch, win.start_block.dtb);
 
         let mut pid = 0i32;
         reader.virt_read_into(eprocess + offsets.eproc_pid, &mut pid)?;
@@ -129,7 +129,7 @@ impl Win32Process {
 
         // construct reader with process dtb
         let mut proc_reader =
-            VirtualMemoryContext::with_proc_arch(mem, win.start_block.arch, proc_arch, dtb);
+            ProcessMemoryContext::with_proc_arch(mem, win.start_block.arch, proc_arch, dtb);
         let peb_ldr = proc_reader.virt_read_addr(peb + peb_ldr_offs)?;
         trace!("peb_ldr={:x}", peb_ldr);
 
@@ -199,7 +199,7 @@ impl Win32Process {
 
     pub fn peb_list<T: AccessVirtualMemory>(&self, mem: &mut T) -> Result<Vec<Address>> {
         let mut proc_reader =
-            VirtualMemoryContext::with_proc_arch(mem, self.sys_arch, self.proc_arch, self.dtb);
+            ProcessMemoryContext::with_proc_arch(mem, self.sys_arch, self.proc_arch, self.dtb);
 
         let mut pebs = Vec::new();
 

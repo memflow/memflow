@@ -41,10 +41,9 @@ where
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        let ret = std::mem::replace(
+        std::mem::replace(
             &mut self.next,
             std::mem::replace(&mut self.next2, self.iter.next()),
-        );
-        ret
+        )
     }
 }

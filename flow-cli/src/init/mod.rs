@@ -2,7 +2,6 @@ pub mod init_bridge;
 pub mod init_qemu_procfs;
 
 // empty implementation
-use flow_core::types::Done;
 use flow_core::*;
 use flow_derive::*;
 
@@ -16,7 +15,7 @@ impl AccessPhysicalMemory for EmptyVirtualMemory {
 
     fn phys_write_raw_iter<'a, PI: PhysicalWriteIterator<'a>>(
         &'a mut self,
-        iter: PI,
+        _iter: PI,
     ) -> Result<()> {
         Err(Error::new("phys_read not implemented"))
     }

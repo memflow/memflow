@@ -247,7 +247,7 @@ impl Architecture {
         dtb: Address,
         addrs: VI,
         out: &mut OV,
-    ) -> () {
+    ) {
         match self {
             Architecture::Null => {
                 out.extend(addrs.map(|(addr, buf)| (Ok(PhysicalAddress::from(addr)), addr, buf)))

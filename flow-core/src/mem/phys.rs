@@ -3,8 +3,6 @@ use crate::Result;
 
 use std::mem::MaybeUninit;
 
-use crate::types::{Done, Progress, ToDo};
-
 use dataview::Pod;
 
 // TODO:

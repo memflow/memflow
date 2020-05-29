@@ -19,8 +19,8 @@ pub fn virtual_translator_trait_derive(input: TokenStream) -> TokenStream {
 
     let expanded = quote! {
         impl #impl_generics crate::mem::VirtualAddressTranslator for #name #type_generics {
-            fn virt_to_phys(&mut self, arch: Architecture, dtb: Address, vaddr: Address) -> Result<PhysicalAddress> {
-                arch.virt_to_phys(self, dtb, vaddr)
+            fn virt_to_phys_iter<B, VI: Iterator<Item = (Address, B)>, OV: Extend<(Result<PhysicalAddress>, Address, B)>> (&mut self, arch: Architecture, dtb: Address, addrs: VI, out: &mut OV) {
+                arch.virt_to_phys_iter(self, dtb, addrs, out)
             }
         }
     };
@@ -38,24 +38,20 @@ pub fn virtual_memory_trait_derive(input: TokenStream) -> TokenStream {
 
     let expanded = quote! {
         impl #impl_generics crate::mem::AccessVirtualMemory for #name #type_generics {
-            fn virt_read_raw_into(
+            fn virt_read_raw_iter<'vtl, VI: crate::mem::virt::VirtualReadIterator<'vtl>>(
                 &mut self,
                 arch: Architecture,
                 dtb: Address,
-                addr: Address,
-                out: &mut [u8],
-            ) -> Result<()> {
-                vat::virt_read_raw_into(self, arch, dtb, addr, out)
+                iter: VI) -> Result<()> {
+                vat::virt_read_raw_iter(self, arch, dtb, iter)
             }
 
-            fn virt_write_raw(
+            fn virt_write_raw_iter<'vtl, VI: crate::mem::virt::VirtualWriteIterator<'vtl>>(
                 &mut self,
                 arch: Architecture,
                 dtb: Address,
-                addr: Address,
-                data: &[u8],
-            ) -> Result<()> {
-                vat::virt_write_raw(self, arch, dtb, addr, data)
+                iter: VI) -> Result<()> {
+                vat::virt_write_raw_iter(self, arch, dtb, iter)
             }
 
             fn virt_page_info(

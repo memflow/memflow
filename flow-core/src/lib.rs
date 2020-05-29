@@ -15,6 +15,11 @@ extern crate flow_derive;
 #[macro_use]
 extern crate bitflags;
 
+#[macro_use]
+extern crate smallvec;
+
+extern crate either;
+
 pub mod error;
 pub use error::{Error, Result};
 

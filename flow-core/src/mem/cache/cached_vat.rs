@@ -2,39 +2,67 @@ use crate::error::Result;
 
 use crate::architecture::Architecture;
 use crate::mem::cache::{CacheValidator, TLBCache};
-use crate::mem::AccessPhysicalMemory;
+use crate::mem::{AccessPhysicalMemory, PhysicalReadIterator, PhysicalWriteIterator};
 use crate::types::{Address, Page, PhysicalAddress};
 use crate::vat;
 use crate::vat::VirtualAddressTranslator;
+use bumpalo::{collections::Vec as BumpVec, Bump};
 
 #[derive(AccessVirtualMemory)]
 pub struct CachedVAT<T: AccessPhysicalMemory + VirtualAddressTranslator, Q: CacheValidator> {
     mem: T,
     tlb: TLBCache<Q>,
+    arena: Bump,
 }
 
 impl<T: AccessPhysicalMemory + VirtualAddressTranslator, Q: CacheValidator> CachedVAT<T, Q> {
     pub fn with(mem: T, tlb: TLBCache<Q>) -> Self {
-        Self { mem, tlb }
+        Self {
+            mem,
+            tlb,
+            arena: Bump::new(),
+        }
     }
 }
 
 impl<T: AccessPhysicalMemory + VirtualAddressTranslator, Q: CacheValidator> VirtualAddressTranslator
     for CachedVAT<T, Q>
 {
-    fn virt_to_phys(
+    fn virt_to_phys_iter<
+        B,
+        VI: Iterator<Item = (Address, B)>,
+        OV: Extend<(Result<PhysicalAddress>, Address, B)>,
+    >(
         &mut self,
         arch: Architecture,
         dtb: Address,
-        vaddr: Address,
-    ) -> Result<PhysicalAddress> {
+        addrs: VI,
+        out: &mut OV,
+    ) {
         self.tlb.validator.update_validity();
-        if let Some(entry) = self.tlb.try_entry(dtb, vaddr, arch.page_size()) {
-            Ok(entry.phys_addr)
-        } else {
-            let ret = arch.virt_to_phys(&mut self.mem, dtb, vaddr)?;
-            self.tlb.cache_entry(dtb, vaddr, ret, arch.page_size());
-            Ok(ret)
+        self.arena.reset();
+
+        let tlb = &mut self.tlb;
+        let mut uncached_out = BumpVec::new_in(&self.arena);
+
+        let mut addrs = addrs
+            .filter_map(|(addr, buf)| {
+                if let Some(entry) = tlb.try_entry(dtb, addr, arch.page_size()) {
+                    out.extend(Some((Ok(entry.phys_addr), addr, buf)).into_iter());
+                    None
+                } else {
+                    Some((addr, buf))
+                }
+            })
+            .peekable();
+
+        if addrs.peek().is_some() {
+            arch.virt_to_phys_iter(&mut self.mem, dtb, addrs, &mut uncached_out);
+            out.extend(uncached_out.into_iter().inspect(|(ret, addr, _)| {
+                if let Ok(paddr) = ret {
+                    self.tlb.cache_entry(dtb, *addr, *paddr, arch.page_size());
+                }
+            }));
         }
     }
 }
@@ -42,11 +70,14 @@ impl<T: AccessPhysicalMemory + VirtualAddressTranslator, Q: CacheValidator> Virt
 impl<T: AccessPhysicalMemory + VirtualAddressTranslator, Q: CacheValidator> AccessPhysicalMemory
     for CachedVAT<T, Q>
 {
-    fn phys_read_raw_into(&mut self, addr: PhysicalAddress, out: &mut [u8]) -> Result<()> {
-        self.mem.phys_read_raw_into(addr, out)
+    fn phys_read_raw_iter<'b, PI: PhysicalReadIterator<'b>>(&'b mut self, iter: PI) -> Result<()> {
+        self.mem.phys_read_raw_iter(iter)
     }
 
-    fn phys_write_raw(&mut self, addr: PhysicalAddress, data: &[u8]) -> Result<()> {
-        self.mem.phys_write_raw(addr, data)
+    fn phys_write_raw_iter<'b, PI: PhysicalWriteIterator<'b>>(
+        &'b mut self,
+        iter: PI,
+    ) -> Result<()> {
+        self.mem.phys_write_raw_iter(iter)
     }
 }

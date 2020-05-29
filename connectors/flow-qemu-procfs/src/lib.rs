@@ -8,21 +8,11 @@ use libc::{c_ulong, iovec, pid_t, sysconf, _SC_IOV_MAX};
 
 const LENGTH_2GB: Length = Length::from_gb(2);
 
-#[derive(AccessVirtualMemory, VirtualAddressTranslator)]
+#[derive(Clone, AccessVirtualMemory, VirtualAddressTranslator)]
 pub struct Memory {
     pub pid: pid_t,
     pub map: procfs::process::MemoryMap,
     temp_iov: Box<[iovec]>,
-}
-
-impl Clone for Memory {
-    fn clone(&self) -> Self {
-        Self {
-            pid: self.pid,
-            map: self.map.clone(),
-            temp_iov: self.temp_iov.clone(),
-        }
-    }
 }
 
 impl Memory {
@@ -62,70 +52,117 @@ impl Memory {
         })
     }
 
-    fn process_vm_rw<F, T: std::convert::AsRef<[F]>>(
-        &mut self,
-        data: &[(PhysicalAddress, T)],
-        write: bool,
-    ) -> Result<()> {
-        let process_vm_rw_func = if write {
-            libc::process_vm_writev
-        } else {
-            libc::process_vm_readv
+    pub fn fill_iovec(
+        addr: &PhysicalAddress,
+        data: &[u8],
+        liov: &mut iovec,
+        riov: &mut iovec,
+        map_address: u64,
+    ) {
+        let ofs = map_address + {
+            if addr.as_u64() <= LENGTH_2GB.as_u64() {
+                addr.as_u64()
+            } else {
+                addr.as_u64() - LENGTH_2GB.as_u64()
+            }
         };
 
-        let iov_max = self.temp_iov.len() / 2;
+        *liov = iovec {
+            iov_base: data.as_ptr() as *mut c_void,
+            iov_len: data.len(),
+        };
 
-        for data in data.chunks(iov_max) {
-            for ((_, i), &mut ref mut iov) in data.iter().zip(self.temp_iov.iter_mut()) {
-                *iov = iovec {
-                    iov_base: i.as_ref().as_ptr() as *mut c_void,
-                    iov_len: i.as_ref().len(),
-                };
-            }
+        *riov = iovec {
+            iov_base: ofs as *mut c_void,
+            iov_len: data.len(),
+        };
+    }
+}
 
-            for ((addr, i), &mut ref mut iov) in
-                data.iter().zip(self.temp_iov[data.len()..].iter_mut())
-            {
-                let ofs = self.map.address.0 + {
-                    if addr.as_u64() <= LENGTH_2GB.as_u64() {
-                        addr.as_u64()
-                    } else {
-                        addr.as_u64() - LENGTH_2GB.as_u64()
-                    }
-                };
+impl AccessPhysicalMemory for Memory {
+    fn phys_read_raw_iter<'a, PI: PhysicalReadIterator<'a>>(
+        &'a mut self,
+        mut iter: PI,
+    ) -> Result<()> {
+        let max_iov = self.temp_iov.len() / 2;
+        let (iov_local, iov_remote) = self.temp_iov.split_at_mut(max_iov);
 
-                *iov = iovec {
-                    iov_base: ofs as *mut c_void,
-                    iov_len: i.as_ref().len(),
-                };
-            }
+        let mut elem = iter.next();
 
-            let ret = unsafe {
-                process_vm_rw_func(
-                    self.pid,
-                    self.temp_iov.as_ptr(),
-                    data.len() as c_ulong,
-                    self.temp_iov.as_ptr().add(data.len()),
-                    data.len() as c_ulong,
-                    0,
-                )
-            };
+        let mut iov_iter = iov_local.iter_mut().zip(iov_remote.iter_mut()).enumerate();
+        let mut iov_next = iov_iter.next();
 
-            if ret == -1 {
-                return Err(flow_core::error::Error::new("process_vm_rw failed"));
+        while let Some((addr, out)) = elem {
+            let (cnt, (liov, riov)) = iov_next.unwrap();
+
+            Self::fill_iovec(&addr, out.as_ref(), liov, riov, self.map.address.0);
+
+            iov_next = iov_iter.next();
+            elem = iter.next();
+
+            if elem.is_none() || iov_next.is_none() {
+                if unsafe {
+                    libc::process_vm_readv(
+                        self.pid,
+                        iov_local.as_ptr(),
+                        (cnt + 1) as c_ulong,
+                        iov_remote.as_ptr(),
+                        (cnt + 1) as c_ulong,
+                        0,
+                    )
+                } == -1
+                {
+                    return Err(Error::new("process_vm_readv failed"));
+                }
+
+                iov_iter = iov_local.iter_mut().zip(iov_remote.iter_mut()).enumerate();
+                iov_next = iov_iter.next();
             }
         }
 
         Ok(())
     }
-}
 
-impl AccessPhysicalMemory for Memory {
-    fn phys_read_raw_into(&mut self, addr: PhysicalAddress, out: &mut [u8]) -> Result<()> {
-        self.process_vm_rw(&[(addr, out)], false)
-    }
+    fn phys_write_raw_iter<'a, PI: PhysicalWriteIterator<'a>>(
+        &'a mut self,
+        mut iter: PI,
+    ) -> Result<()> {
+        let max_iov = self.temp_iov.len() / 2;
+        let (iov_local, iov_remote) = self.temp_iov.split_at_mut(max_iov);
 
-    fn phys_write_raw(&mut self, addr: PhysicalAddress, data: &[u8]) -> Result<()> {
-        self.process_vm_rw(&[(addr, data)], true)
+        let mut elem = iter.next();
+
+        let mut iov_iter = iov_local.iter_mut().zip(iov_remote.iter_mut()).enumerate();
+        let mut iov_next = iov_iter.next();
+
+        while let Some((addr, out)) = elem {
+            let (cnt, (liov, riov)) = iov_next.unwrap();
+
+            Self::fill_iovec(&addr, out.as_ref(), liov, riov, self.map.address.0);
+
+            iov_next = iov_iter.next();
+            elem = iter.next();
+
+            if elem.is_none() || iov_next.is_none() {
+                if unsafe {
+                    libc::process_vm_writev(
+                        self.pid,
+                        iov_local.as_ptr(),
+                        (cnt + 1) as c_ulong,
+                        iov_remote.as_ptr(),
+                        (cnt + 1) as c_ulong,
+                        0,
+                    )
+                } == -1
+                {
+                    return Err(Error::new("process_vm_writev failed"));
+                }
+
+                iov_iter = iov_local.iter_mut().zip(iov_remote.iter_mut()).enumerate();
+                iov_next = iov_iter.next();
+            }
+        }
+
+        Ok(())
     }
 }

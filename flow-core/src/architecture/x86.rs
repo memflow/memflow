@@ -23,11 +23,23 @@ pub fn len_addr() -> Length {
     Length::from(4)
 }
 
-pub fn virt_to_phys<T: AccessPhysicalMemory>(
+pub fn virt_to_phys_iter<
+    T: AccessPhysicalMemory,
+    B,
+    VI: Iterator<Item = (Address, B)>,
+    OV: Extend<(Result<PhysicalAddress>, Address, B)>,
+>(
     _mem: &mut T,
     _dtb: Address,
-    _addr: Address,
-) -> Result<PhysicalAddress> {
-    warn!("x86::virt_to_phys() not implemented yet");
-    Err(Error::new("x86::virt_to_phys() not implemented yet"))
+    addrs: VI,
+    out: &mut OV,
+) {
+    warn!("x86::virt_to_phys_iter() not implemented yet");
+    out.extend(addrs.map(|(addr, buf)| {
+        (
+            Err(Error::new("x86::virt_to_phys_iter() not implemented yet")),
+            addr,
+            buf,
+        )
+    }));
 }

@@ -12,11 +12,15 @@ impl Memory {
 }
 
 impl AccessPhysicalMemory for Memory {
-    fn phys_read_raw_into(&mut self, _addr: PhysicalAddress, _out: &mut [u8]) -> Result<()> {
-        Ok(())
+    fn phys_read_raw_iter<'a, T: PhysicalReadIterator<'a>>(&mut self, _: T) -> Result<()> {
+        Err(Error::new(
+            "flow-pcileech::phys_read_raw_iter not implemented",
+        ))
     }
 
-    fn phys_write_raw(&mut self, _addr: PhysicalAddress, _data: &[u8]) -> Result<()> {
-        Ok(())
+    fn phys_write_raw_iter<'a, T: PhysicalWriteIterator<'a>>(&mut self, _: T) -> Result<()> {
+        Err(Error::new(
+            "flow-pcileech::phys_write_raw_iter not implemented",
+        ))
     }
 }

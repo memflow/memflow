@@ -17,7 +17,7 @@ All addresses are of the type [`PhysicalAddress`](../types/physical_address/inde
 and can contain additional information about the page the address resides in.
 This information is usually only needed when implementing caches.
 
-There is only 2 methods which have to be implemented by the provider of this trait.
+There are only 2 methods which are required to be implemented by the provider of this trait.
 
 # Examples
 
@@ -36,8 +36,8 @@ Implementing `AccessPhysicalMemory` for a memory backend:
 ```
 use std::vec::Vec;
 
-use flow_core::mem::AccessPhysicalMemory;
-use flow_core::types::PhysicalAddress;
+use flow_core::mem::{AccessPhysicalMemory, PhysicalReadIterator, PhysicalWriteIterator};
+use flow_core::types::{PhysicalAddress, ToDo, Done};
 use flow_core::error::Result;
 
 pub struct MemoryBackend {
@@ -45,29 +45,36 @@ pub struct MemoryBackend {
 }
 
 impl AccessPhysicalMemory for MemoryBackend {
-    fn phys_read_raw_into(
-        &mut self,
-        addr: PhysicalAddress,
-        out: &mut [u8],
+    fn phys_read_raw_iter<'a, PI: PhysicalReadIterator<'a>>(
+        &'a mut self,
+        iter: PI
     ) -> Result<()> {
-        out.copy_from_slice(&self.mem[addr.as_usize()..(addr.as_usize() + out.len())]);
+        iter.for_each(|(addr, out)| out.copy_from_slice(&self.mem[addr.as_usize()..(addr.as_usize() + out.len())]));
         Ok(())
     }
 
-    fn phys_write_raw(&mut self, addr: PhysicalAddress, data: &[u8]) -> Result<()> {
-        self.mem[addr.as_usize()..(addr.as_usize() + data.len())].copy_from_slice(&data);
+    fn phys_write_raw_iter<'a, PI: PhysicalWriteIterator<'a>>(
+        &'a mut self,
+        iter: PI
+    ) -> Result<()> {
+        iter.for_each(|(addr, data)| self.mem[addr.as_usize()..(addr.as_usize() + data.len())].copy_from_slice(data));
         Ok(())
     }
 }
 ```
 */
 pub trait AccessPhysicalMemory {
-    // system user-defined impls
-    fn phys_read_raw_into(&mut self, addr: PhysicalAddress, out: &mut [u8]) -> Result<()>;
+    // required to be implemented
+    fn phys_read_raw_iter<'a, PI: PhysicalReadIterator<'a>>(&'a mut self, iter: PI) -> Result<()>;
 
-    fn phys_write_raw(&mut self, addr: PhysicalAddress, data: &[u8]) -> Result<()>;
+    fn phys_write_raw_iter<'a, PI: PhysicalWriteIterator<'a>>(&'a mut self, iter: PI)
+        -> Result<()>;
 
     // read helpers
+    fn phys_read_raw_into(&mut self, addr: PhysicalAddress, out: &mut [u8]) -> Result<()> {
+        self.phys_read_raw_iter(Some((addr, out)).into_iter())
+    }
+
     fn phys_read_into<T: Pod + ?Sized>(&mut self, addr: PhysicalAddress, out: &mut T) -> Result<()>
     where
         Self: Sized,
@@ -96,6 +103,10 @@ pub trait AccessPhysicalMemory {
     }
 
     // write helpers
+    fn phys_write_raw(&mut self, addr: PhysicalAddress, data: &[u8]) -> Result<()> {
+        self.phys_write_raw_iter(Some((addr, data)).into_iter())
+    }
+
     fn phys_write<T: Pod + ?Sized>(&mut self, addr: PhysicalAddress, data: &T) -> Result<()>
     where
         Self: Sized,
@@ -103,3 +114,11 @@ pub trait AccessPhysicalMemory {
         self.phys_write_raw(addr, data.as_bytes())
     }
 }
+
+pub type PhysicalReadData<'a> = (PhysicalAddress, &'a mut [u8]);
+pub trait PhysicalReadIterator<'a>: Iterator<Item = PhysicalReadData<'a>> + 'a {}
+impl<'a, T: Iterator<Item = PhysicalReadData<'a>> + 'a> PhysicalReadIterator<'a> for T {}
+
+pub type PhysicalWriteData<'a> = (PhysicalAddress, &'a [u8]);
+pub trait PhysicalWriteIterator<'a>: Iterator<Item = PhysicalWriteData<'a>> + 'a {}
+impl<'a, T: Iterator<Item = PhysicalWriteData<'a>> + 'a> PhysicalWriteIterator<'a> for T {}

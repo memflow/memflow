@@ -110,16 +110,17 @@ fn vat_test<T: AccessVirtualMemory + AccessPhysicalMemory + VirtualAddressTransl
 fn translate_range(bench: &mut Bencher, range_start: u64, range_end: u64, use_tlb: bool) {
     let mut mem_sys = Memory::new().unwrap();
     let (os, proc, _) = find_module(&mut mem_sys).unwrap();
-    let cache = PageCache::new(
+    /*let cache = PageCache::new(
         os.start_block.arch,
         Length::from_mb(32),
         PageType::PAGE_TABLE | PageType::READ_ONLY,
         TimedCacheValidator::new(Duration::from_millis(1000).into()),
     );
     let mem = CachedMemoryAccess::with(&mut mem_sys, cache);
+    */
     vat_test(
         bench,
-        mem,
+        mem_sys,
         range_start,
         range_end,
         0x100,

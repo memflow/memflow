@@ -7,8 +7,8 @@ use std::io::Write;
 use std::time::{Duration, Instant};
 
 use flow_core::{
-    timed_validator::*, AccessPhysicalMemoryRaw, AccessVirtualMemoryRaw, Address,
-    CachedMemoryAccess, PageCache,
+    timed_validator::*, AccessPhysicalMemory, AccessVirtualMemoryRaw, Address, CachedMemoryAccess,
+    PageCache,
 };
 use flow_core::{Length, OsProcess, OsProcessModule, PageType};
 use flow_win32::{Win32, Win32Module, Win32Offsets, Win32Process};
@@ -91,7 +91,7 @@ fn rwtest<T: AccessVirtualMemoryRaw>(
     );
 }
 
-fn read_bench<T: AccessPhysicalMemoryRaw + AccessVirtualMemoryRaw>(
+fn read_bench<T: AccessPhysicalMemory + AccessVirtualMemoryRaw>(
     mem: &mut T,
     os: Win32,
 ) -> flow_core::Result<()> {

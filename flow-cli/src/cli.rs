@@ -8,7 +8,7 @@ use pelite::{self, PeView};
 
 pub struct Win32Interface<'a, T>
 where
-    T: AccessPhysicalMemory + AccessVirtualMemory,
+    T: AccessPhysicalMemoryExt + AccessVirtualMemory,
 {
     pub mem: &'a mut T,
     pub os: Win32,
@@ -21,7 +21,7 @@ where
 
 impl<'a, T> Win32Interface<'a, T>
 where
-    T: AccessPhysicalMemory + AccessVirtualMemory,
+    T: AccessPhysicalMemoryExt + AccessVirtualMemory,
 {
     pub fn with(mem: &'a mut T, os: Win32) -> flow_core::Result<Self> {
         let offsets = Win32Offsets::try_with_guid(&os.kernel_guid())?;

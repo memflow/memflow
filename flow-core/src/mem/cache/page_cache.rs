@@ -3,7 +3,7 @@ use crate::architecture::Architecture;
 use crate::error::Error;
 use crate::iter::FlowIters;
 use crate::mem::phys::{PhysicalReadData, PhysicalReadIterator};
-use crate::mem::{AccessPhysicalMemory, AccessPhysicalMemoryRaw};
+use crate::mem::{AccessPhysicalMemory, AccessPhysicalMemoryExt};
 use crate::page_chunks::PageChunksMut;
 use crate::types::{Address, Length, PhysicalAddress};
 use bumpalo::{collections::Vec as BumpVec, Bump};
@@ -169,7 +169,7 @@ impl<T: CacheValidator> PageCache<T> {
         }
     }
 
-    fn cached_read_single<F: AccessPhysicalMemory>(
+    fn cached_read_single<F: AccessPhysicalMemoryExt>(
         &mut self,
         mem: &mut F,
         addr: PhysicalAddress,
@@ -213,7 +213,7 @@ impl<T: CacheValidator> PageCache<T> {
     }
 
     #[allow(clippy::never_loop)]
-    pub fn cached_read<'a, F: AccessPhysicalMemoryRaw, PI: PhysicalReadIterator<'a>>(
+    pub fn cached_read<'a, F: AccessPhysicalMemory, PI: PhysicalReadIterator<'a>>(
         &'a mut self,
         mem: &'a mut F,
         iter: PI,
@@ -275,7 +275,7 @@ impl<T: CacheValidator> PageCache<T> {
 
                 if next.is_none() || wlist.len() >= 64 || clist.len() >= 64 {
                     if !wlist.is_empty() {
-                        mem.phys_read_raw_iter(wlist.into_iter())?;
+                        mem.phys_read_iter(wlist.into_iter())?;
                         wlist = BumpVec::new_in(arena);
                     }
 

@@ -3,7 +3,7 @@ use crate::error::{Error, Result};
 use crate::architecture::ByteOrder;
 use crate::types::{Address, Length, PhysicalAddress};
 
-use crate::mem::AccessPhysicalMemory;
+use crate::mem::AccessPhysicalMemoryExt;
 
 use log::warn;
 
@@ -24,7 +24,7 @@ pub fn len_addr() -> Length {
 }
 
 pub fn virt_to_phys_iter<
-    T: AccessPhysicalMemory,
+    T: AccessPhysicalMemoryExt,
     B,
     VI: Iterator<Item = (Address, B)>,
     OV: Extend<(Result<PhysicalAddress>, Address, B)>,

@@ -20,7 +20,7 @@ pub mod dummy;
 
 pub use cache::*;
 pub use phys::{
-    AccessPhysicalMemory, AccessPhysicalMemoryRaw, PhysicalReadIterator, PhysicalWriteIterator,
+    AccessPhysicalMemory, AccessPhysicalMemoryExt, PhysicalReadIterator, PhysicalWriteIterator,
 };
 pub use proc_mem_ctx::ProcessMemoryContext;
 pub use vat::{VirtualAddressTranslator, VirtualAddressTranslatorRaw};

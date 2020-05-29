@@ -154,11 +154,8 @@ pub struct DummyMemory {
     last_pid: i32,
 }
 
-impl AccessPhysicalMemoryRaw for DummyMemory {
-    fn phys_read_raw_iter<'b, PI: PhysicalReadIterator<'b>>(
-        &'b mut self,
-        mut iter: PI,
-    ) -> Result<()> {
+impl AccessPhysicalMemory for DummyMemory {
+    fn phys_read_iter<'b, PI: PhysicalReadIterator<'b>>(&'b mut self, mut iter: PI) -> Result<()> {
         iter.try_for_each(move |(addr, out)| {
             if addr.address().as_usize() + out.len() <= self.mem.len() {
                 out.copy_from_slice(&self.mem[addr.as_usize()..(addr.as_usize() + out.len())]);
@@ -169,7 +166,7 @@ impl AccessPhysicalMemoryRaw for DummyMemory {
         })
     }
 
-    fn phys_write_raw_iter<'b, PI: PhysicalWriteIterator<'b>>(
+    fn phys_write_iter<'b, PI: PhysicalWriteIterator<'b>>(
         &'b mut self,
         mut iter: PI,
     ) -> Result<()> {

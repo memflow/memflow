@@ -10,10 +10,10 @@ members = [
     "flow-ffi",
     "flow-cli",
     "flow-bench",
-    "connectors/flow-bridge",
-    "connectors/flow-qemu-bridge",
+    #"connectors/flow-bridge",
+    #"connectors/flow-qemu-bridge",
     "connectors/flow-qemu-procfs",
-    "connectors/flow-pcileech",
+    #"connectors/flow-pcileech",
 ]
 default-members = [
     "flow-core",

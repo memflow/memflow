@@ -3,20 +3,20 @@ use crate::error::Result;
 use super::{page_cache::PageCache, CacheValidator};
 
 use crate::architecture::Architecture;
-use crate::mem::{AccessPhysicalMemoryRaw, PhysicalReadIterator, PhysicalWriteIterator};
+use crate::mem::{AccessPhysicalMemory, PhysicalReadIterator, PhysicalWriteIterator};
 use crate::page_chunks::PageChunks;
 use crate::types::{Address, Page, PhysicalAddress};
 use crate::vat;
 use bumpalo::Bump;
 
 #[derive(VirtualAddressTranslatorRaw, AccessVirtualMemoryRaw)]
-pub struct CachedMemoryAccess<'a, T: AccessPhysicalMemoryRaw, Q: CacheValidator> {
+pub struct CachedMemoryAccess<'a, T: AccessPhysicalMemory, Q: CacheValidator> {
     mem: &'a mut T,
     cache: PageCache<Q>,
     arena: Bump,
 }
 
-impl<'a, T: AccessPhysicalMemoryRaw, Q: CacheValidator> CachedMemoryAccess<'a, T, Q> {
+impl<'a, T: AccessPhysicalMemory, Q: CacheValidator> CachedMemoryAccess<'a, T, Q> {
     pub fn with(mem: &'a mut T, cache: PageCache<Q>) -> Self {
         Self {
             mem,
@@ -26,20 +26,17 @@ impl<'a, T: AccessPhysicalMemoryRaw, Q: CacheValidator> CachedMemoryAccess<'a, T
     }
 }
 
-// forward AccessPhysicalMemoryRaw trait fncs
-impl<'a, T: AccessPhysicalMemoryRaw, Q: CacheValidator> AccessPhysicalMemoryRaw
+// forward AccessPhysicalMemory trait fncs
+impl<'a, T: AccessPhysicalMemory, Q: CacheValidator> AccessPhysicalMemory
     for CachedMemoryAccess<'a, T, Q>
 {
-    fn phys_read_raw_iter<'b, PI: PhysicalReadIterator<'b>>(&'b mut self, iter: PI) -> Result<()> {
+    fn phys_read_iter<'b, PI: PhysicalReadIterator<'b>>(&'b mut self, iter: PI) -> Result<()> {
         self.cache.validator.update_validity();
         self.arena.reset();
         self.cache.cached_read(self.mem, iter, &self.arena)
     }
 
-    fn phys_write_raw_iter<'b, PI: PhysicalWriteIterator<'b>>(
-        &'b mut self,
-        iter: PI,
-    ) -> Result<()> {
+    fn phys_write_iter<'b, PI: PhysicalWriteIterator<'b>>(&'b mut self, iter: PI) -> Result<()> {
         self.cache.validator.update_validity();
 
         let cache = &mut self.cache;
@@ -61,6 +58,6 @@ impl<'a, T: AccessPhysicalMemoryRaw, Q: CacheValidator> AccessPhysicalMemoryRaw
             }
         });
 
-        mem.phys_write_raw_iter(iter)
+        mem.phys_write_iter(iter)
     }
 }

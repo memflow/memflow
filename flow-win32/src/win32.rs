@@ -35,7 +35,7 @@ pub struct Win32 {
 impl OperatingSystem for Win32 {}
 
 impl Win32 {
-    pub fn try_with<T: AccessPhysicalMemory + AccessVirtualMemory + ?Sized>(
+    pub fn try_with<T: AccessPhysicalMemoryExt + AccessVirtualMemory + ?Sized>(
         mem: &mut T,
     ) -> Result<Self> {
         /*

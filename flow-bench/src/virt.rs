@@ -1,7 +1,7 @@
 use criterion::*;
 
 use flow_core::mem::{
-    timed_validator::*, vat::VirtualAddressTranslatorRaw, AccessPhysicalMemoryRaw,
+    timed_validator::*, vat::VirtualAddressTranslatorRaw, AccessPhysicalMemory,
     AccessVirtualMemoryRaw, CachedMemoryAccess, CachedVAT, PageCache, TLBCache,
 };
 
@@ -73,7 +73,7 @@ pub fn read_test_with_mem<T: AccessVirtualMemoryRaw, P: OsProcess, M: OsProcessM
 }
 
 fn read_test_with_ctx<
-    T: VirtualAddressTranslatorRaw + AccessVirtualMemoryRaw + AccessPhysicalMemoryRaw,
+    T: VirtualAddressTranslatorRaw + AccessVirtualMemoryRaw + AccessPhysicalMemory,
     P: OsProcess,
     M: OsProcessModule,
 >(
@@ -114,7 +114,7 @@ fn read_test_with_ctx<
 }
 
 fn seq_read_params<
-    T: VirtualAddressTranslatorRaw + AccessVirtualMemoryRaw + AccessPhysicalMemoryRaw,
+    T: VirtualAddressTranslatorRaw + AccessVirtualMemoryRaw + AccessPhysicalMemory,
     P: OsProcess,
     M: OsProcessModule,
 >(
@@ -144,7 +144,7 @@ fn seq_read_params<
 }
 
 fn chunk_read_params<
-    T: VirtualAddressTranslatorRaw + AccessVirtualMemoryRaw + AccessPhysicalMemoryRaw,
+    T: VirtualAddressTranslatorRaw + AccessVirtualMemoryRaw + AccessPhysicalMemory,
     P: OsProcess,
     M: OsProcessModule,
 >(
@@ -176,7 +176,7 @@ fn chunk_read_params<
 }
 
 pub fn seq_read<
-    T: VirtualAddressTranslatorRaw + AccessVirtualMemoryRaw + AccessPhysicalMemoryRaw,
+    T: VirtualAddressTranslatorRaw + AccessVirtualMemoryRaw + AccessPhysicalMemory,
     P: OsProcess,
     M: OsProcessModule,
 >(
@@ -210,7 +210,7 @@ pub fn seq_read<
 }
 
 pub fn chunk_read<
-    T: VirtualAddressTranslatorRaw + AccessVirtualMemoryRaw + AccessPhysicalMemoryRaw,
+    T: VirtualAddressTranslatorRaw + AccessVirtualMemoryRaw + AccessPhysicalMemory,
     P: OsProcess,
     M: OsProcessModule,
 >(

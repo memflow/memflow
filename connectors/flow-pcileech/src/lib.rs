@@ -11,16 +11,16 @@ impl Memory {
     }
 }
 
-impl AccessPhysicalMemoryRaw for Memory {
-    fn phys_read_raw_iter<'a, T: PhysicalReadIterator<'a>>(&mut self, _: T) -> Result<()> {
+impl AccessPhysicalMemory for Memory {
+    fn phys_read_iter<'a, T: PhysicalReadIterator<'a>>(&mut self, _: T) -> Result<()> {
         Err(Error::new(
-            "flow-pcileech::phys_read_raw_iter not implemented",
+            "flow-pcileech::phys_read_iter not implemented",
         ))
     }
 
-    fn phys_write_raw_iter<'a, T: PhysicalWriteIterator<'a>>(&mut self, _: T) -> Result<()> {
+    fn phys_write_iter<'a, T: PhysicalWriteIterator<'a>>(&mut self, _: T) -> Result<()> {
         Err(Error::new(
-            "flow-pcileech::phys_write_raw_iter not implemented",
+            "flow-pcileech::phys_write_iter not implemented",
         ))
     }
 }

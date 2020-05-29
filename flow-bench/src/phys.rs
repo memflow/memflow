@@ -1,13 +1,13 @@
 use criterion::*;
 
-use flow_core::mem::{timed_validator::*, AccessPhysicalMemoryRaw, CachedMemoryAccess, PageCache};
+use flow_core::mem::{timed_validator::*, AccessPhysicalMemory, CachedMemoryAccess, PageCache};
 
 use flow_core::{Address, Architecture, Length, PageType, PhysicalAddress};
 
 use rand::prelude::*;
 use rand::{prng::XorShiftRng as CurRng, Rng, SeedableRng};
 
-fn rwtest<T: AccessPhysicalMemoryRaw>(
+fn rwtest<T: AccessPhysicalMemory>(
     mem: &mut T,
     (start, end): (Address, Address),
     chunk_sizes: &[usize],
@@ -26,7 +26,7 @@ fn rwtest<T: AccessPhysicalMemoryRaw>(
             while done_size < read_size {
                 let base_addr = rng.gen_range(start.as_u64(), end.as_u64());
 
-                let _ = mem.phys_read_raw_iter(bufs.iter_mut().map(|(addr, buf)| {
+                let _ = mem.phys_read_iter(bufs.iter_mut().map(|(addr, buf)| {
                     *addr = (base_addr + rng.gen_range(0, 0x2000)).into();
                     (
                         PhysicalAddress::with_page(
@@ -47,7 +47,7 @@ fn rwtest<T: AccessPhysicalMemoryRaw>(
     total_size
 }
 
-pub fn read_test_with_mem<T: AccessPhysicalMemoryRaw>(
+pub fn read_test_with_mem<T: AccessPhysicalMemory>(
     bench: &mut Bencher,
     mem: &mut T,
     chunk_size: usize,
@@ -59,7 +59,7 @@ pub fn read_test_with_mem<T: AccessPhysicalMemoryRaw>(
     });
 }
 
-fn read_test_with_ctx<T: AccessPhysicalMemoryRaw>(
+fn read_test_with_ctx<T: AccessPhysicalMemory>(
     bench: &mut Bencher,
     cache_size: u64,
     chunk_size: usize,
@@ -86,7 +86,7 @@ fn read_test_with_ctx<T: AccessPhysicalMemoryRaw>(
     }
 }
 
-fn seq_read_params<T: AccessPhysicalMemoryRaw>(
+fn seq_read_params<T: AccessPhysicalMemory>(
     group: &mut BenchmarkGroup<'_, measurement::WallTime>,
     func_name: String,
     cache_size: u64,
@@ -110,7 +110,7 @@ fn seq_read_params<T: AccessPhysicalMemoryRaw>(
     }
 }
 
-fn chunk_read_params<T: AccessPhysicalMemoryRaw>(
+fn chunk_read_params<T: AccessPhysicalMemory>(
     group: &mut BenchmarkGroup<'_, measurement::WallTime>,
     func_name: String,
     cache_size: u64,
@@ -136,7 +136,7 @@ fn chunk_read_params<T: AccessPhysicalMemoryRaw>(
     }
 }
 
-pub fn seq_read<T: AccessPhysicalMemoryRaw>(
+pub fn seq_read<T: AccessPhysicalMemory>(
     c: &mut Criterion,
     backend_name: &str,
     initialize_ctx: &dyn Fn() -> flow_core::Result<T>,
@@ -162,7 +162,7 @@ pub fn seq_read<T: AccessPhysicalMemoryRaw>(
     );
 }
 
-pub fn chunk_read<T: AccessPhysicalMemoryRaw>(
+pub fn chunk_read<T: AccessPhysicalMemory>(
     c: &mut Criterion,
     backend_name: &str,
     initialize_ctx: &dyn Fn() -> flow_core::Result<T>,

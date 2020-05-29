@@ -79,11 +79,8 @@ impl Memory {
     }
 }
 
-impl AccessPhysicalMemoryRaw for Memory {
-    fn phys_read_raw_iter<'a, PI: PhysicalReadIterator<'a>>(
-        &'a mut self,
-        mut iter: PI,
-    ) -> Result<()> {
+impl AccessPhysicalMemory for Memory {
+    fn phys_read_iter<'a, PI: PhysicalReadIterator<'a>>(&'a mut self, mut iter: PI) -> Result<()> {
         let max_iov = self.temp_iov.len() / 2;
         let (iov_local, iov_remote) = self.temp_iov.split_at_mut(max_iov);
 
@@ -123,7 +120,7 @@ impl AccessPhysicalMemoryRaw for Memory {
         Ok(())
     }
 
-    fn phys_write_raw_iter<'a, PI: PhysicalWriteIterator<'a>>(
+    fn phys_write_iter<'a, PI: PhysicalWriteIterator<'a>>(
         &'a mut self,
         mut iter: PI,
     ) -> Result<()> {

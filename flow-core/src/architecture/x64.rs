@@ -6,7 +6,7 @@ use crate::error::{Error, Result};
 use byteorder::{ByteOrder, LittleEndian};
 
 use crate::architecture;
-use crate::mem::AccessPhysicalMemoryRaw;
+use crate::mem::AccessPhysicalMemory;
 use crate::types::{Address, Length, PageType, PhysicalAddress};
 
 pub fn bits() -> u8 {
@@ -30,12 +30,12 @@ fn pml_index_bits(a: u64, level: u32) -> u64 {
 }
 
 // assume a 4kb page-table page for pt reads
-fn read_pt_address_iter<T: AccessPhysicalMemoryRaw, B>(
+fn read_pt_address_iter<T: AccessPhysicalMemory, B>(
     mem: &mut T,
     addrs: &mut Vec<(Address, B, Address, [u8; 8])>,
 ) {
     let page_size = Length::from_kb(4);
-    let _ = mem.phys_read_raw_iter(addrs.iter_mut().map(|(_, _, pt_addr, arr)| {
+    let _ = mem.phys_read_iter(addrs.iter_mut().map(|(_, _, pt_addr, arr)| {
         arr.iter_mut().for_each(|x| *x = 0);
         (
             PhysicalAddress::with_page(*pt_addr, PageType::PAGE_TABLE, page_size),
@@ -70,7 +70,7 @@ fn get_phys_page(pt_level: u32, pt_addr: Address, virt_addr: Address) -> Physica
 }
 
 pub fn virt_to_phys_iter<
-    T: AccessPhysicalMemoryRaw,
+    T: AccessPhysicalMemory,
     B,
     VI: Iterator<Item = (Address, B)>,
     OV: Extend<(Result<PhysicalAddress>, Address, B)>,

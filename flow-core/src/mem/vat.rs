@@ -7,7 +7,7 @@ use crate::architecture::Architecture;
 use crate::iter::page_chunks::{PageChunks, PageChunksMut};
 use crate::mem::{
     virt::{VirtualReadIterator, VirtualWriteIterator},
-    AccessPhysicalMemoryRaw,
+    AccessPhysicalMemory,
 };
 use crate::types::{Address, Page, PhysicalAddress};
 
@@ -49,7 +49,7 @@ impl<T: VirtualAddressTranslatorRaw + ?Sized> VirtualAddressTranslator for T {
 
 pub fn virt_read_raw_iter<
     'a,
-    T: AccessPhysicalMemoryRaw + VirtualAddressTranslatorRaw,
+    T: AccessPhysicalMemory + VirtualAddressTranslatorRaw,
     VI: VirtualReadIterator<'a>,
 >(
     mem: &mut T,
@@ -77,12 +77,12 @@ pub fn virt_read_raw_iter<
         }
     });
 
-    mem.phys_read_raw_iter(iter)
+    mem.phys_read_iter(iter)
 }
 
 pub fn virt_write_raw_iter<
     'a,
-    T: AccessPhysicalMemoryRaw + VirtualAddressTranslatorRaw,
+    T: AccessPhysicalMemory + VirtualAddressTranslatorRaw,
     VI: VirtualWriteIterator<'a>,
 >(
     mem: &mut T,
@@ -107,11 +107,11 @@ pub fn virt_write_raw_iter<
         }
     });
 
-    mem.phys_write_raw_iter(iter)
+    mem.phys_write_iter(iter)
 }
 
 #[allow(unused)]
-pub fn virt_page_info<T: AccessPhysicalMemoryRaw + VirtualAddressTranslator>(
+pub fn virt_page_info<T: AccessPhysicalMemory + VirtualAddressTranslator>(
     mem: &mut T,
     arch: Architecture,
     dtb: Address,

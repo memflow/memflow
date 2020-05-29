@@ -11,12 +11,12 @@ TODO: more documentation
 
 pub mod cache;
 pub mod phys;
+pub mod proc_mem_ctx;
 pub mod vat;
 pub mod virt;
-pub mod virt_ctx;
 
 pub use cache::*;
 pub use phys::AccessPhysicalMemory;
+pub use proc_mem_ctx::ProcessMemoryContext;
 pub use vat::VirtualAddressTranslator;
 pub use virt::AccessVirtualMemory;
-pub use virt_ctx::VirtualMemoryContext;

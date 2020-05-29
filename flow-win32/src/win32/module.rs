@@ -27,7 +27,7 @@ impl Win32Module {
         offsets: &Win32Offsets,
         peb_module: Address,
     ) -> Result<Self> {
-        let mut proc_reader = VirtualMemoryContext::with_proc_arch(
+        let mut proc_reader = ProcessMemoryContext::with_proc_arch(
             mem,
             process.sys_arch(),
             process.proc_arch(),
@@ -109,7 +109,7 @@ impl Win32Module {
     ) -> Result<Vec<u8>> {
         // TODO: probing is totally unnecessary here because we know base + size already...
 
-        let mut proc_reader = VirtualMemoryContext::with_proc_arch(
+        let mut proc_reader = ProcessMemoryContext::with_proc_arch(
             mem,
             process.sys_arch(),
             process.proc_arch(),

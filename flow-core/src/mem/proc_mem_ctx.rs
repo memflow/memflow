@@ -8,14 +8,14 @@ use std::ffi::CString;
 
 use dataview::Pod;
 
-pub struct VirtualMemoryContext<'a, T: AccessVirtualMemory + ?Sized> {
+pub struct ProcessMemoryContext<'a, T: AccessVirtualMemory + ?Sized> {
     mem: &'a mut T,
     sys_arch: Architecture,
     proc_arch: Architecture,
     dtb: Address,
 }
 
-impl<'a, T: AccessVirtualMemory + ?Sized> VirtualMemoryContext<'a, T> {
+impl<'a, T: AccessVirtualMemory + ?Sized> ProcessMemoryContext<'a, T> {
     pub fn with(mem: &'a mut T, sys_arch: Architecture, dtb: Address) -> Self {
         Self {
             mem,
@@ -67,7 +67,7 @@ impl<'a, T: AccessVirtualMemory + ?Sized> VirtualMemoryContext<'a, T> {
 }
 
 // sized impl
-impl<'a, T: AccessVirtualMemory + Sized> VirtualMemoryContext<'a, T> {
+impl<'a, T: AccessVirtualMemory + Sized> ProcessMemoryContext<'a, T> {
     pub fn virt_read_into<U: Pod + ?Sized>(&mut self, addr: Address, out: &mut U) -> Result<()> {
         self.mem.virt_read_into(self.sys_arch, self.dtb, addr, out)
     }

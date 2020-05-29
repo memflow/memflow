@@ -19,7 +19,7 @@ pub fn virtual_translator_trait_derive(input: TokenStream) -> TokenStream {
 
     let expanded = quote! {
         impl #impl_generics crate::mem::VirtualAddressTranslator for #name #type_generics {
-            fn virt_to_phys_iter<B, VI: Iterator<Item = (Address, B)>> (&mut self, arch: Architecture, dtb: Address, addrs: VI, out: &mut Vec<(Result<PhysicalAddress>, Address, B)>) {
+            fn virt_to_phys_iter<B, VI: Iterator<Item = (Address, B)>, OV: Extend<(Result<PhysicalAddress>, Address, B)>> (&mut self, arch: Architecture, dtb: Address, addrs: VI, out: &mut OV) {
                 arch.virt_to_phys_iter(self, dtb, addrs, out)
             }
         }

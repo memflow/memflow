@@ -35,14 +35,14 @@ fn read_pt_address_iter<T: AccessPhysicalMemory, B>(
     addrs: &mut Vec<(Address, B, Address, [u8; 8])>,
 ) {
     let page_size = Length::from_kb(4);
-    let _ = mem.phys_read_raw_iter(addrs.iter_mut().map(|(_, _, tmp_addr, arr)| {
+    let _ = mem.phys_read_raw_iter(addrs.iter_mut().map(|(_, _, pt_addr, arr)| {
         arr.iter_mut().for_each(|x| *x = 0);
         (
             PhysicalAddress {
-                address: *tmp_addr,
+                address: *pt_addr,
                 page: Some(Page {
                     page_type: PageType::PAGE_TABLE,
-                    page_base: tmp_addr.as_page_aligned(page_size),
+                    page_base: pt_addr.as_page_aligned(page_size),
                     page_size,
                 }),
             },
@@ -51,14 +51,44 @@ fn read_pt_address_iter<T: AccessPhysicalMemory, B>(
     }));
     addrs
         .iter_mut()
-        .for_each(|(_, _, tmp_addr, buf)| *tmp_addr = Address::from(LittleEndian::read_u64(buf)));
+        .for_each(|(_, _, pt_addr, buf)| *pt_addr = Address::from(LittleEndian::read_u64(buf)));
 }
 
-pub fn virt_to_phys_iter<T: AccessPhysicalMemory, B, VI: Iterator<Item = (Address, B)>>(
+fn is_final_mapping(pt_level: u32, pt_addr: Address) -> bool {
+    pt_level == 1 || (is_large_page!(pt_addr.as_u64()) && pt_level != 4)
+}
+
+const fn pt_entries_log2() -> u32 {
+    9
+}
+
+fn get_phys_page(pt_level: u32, pt_addr: Address, virt_addr: Address) -> PhysicalAddress {
+    let phys_addr = Address::from(
+        (pt_addr.as_u64() & make_bit_mask(3 + pt_entries_log2() * pt_level, 51))
+            | (virt_addr.as_u64() & make_bit_mask(0, 2 + pt_entries_log2() * pt_level)),
+    );
+    let page_size = Length::from_b(len_addr().as_u64() << (pt_entries_log2() * pt_level));
+
+    PhysicalAddress {
+        address: phys_addr,
+        page: Some(Page {
+            page_type: PageType::from_writeable_bit(is_writeable_page!(pt_addr.as_u64())),
+            page_base: phys_addr.as_page_aligned(page_size),
+            page_size,
+        }),
+    }
+}
+
+pub fn virt_to_phys_iter<
+    T: AccessPhysicalMemory,
+    B,
+    VI: Iterator<Item = (Address, B)>,
+    OV: Extend<(Result<PhysicalAddress>, Address, B)>,
+>(
     mem: &mut T,
     dtb: Address,
     addrs: VI,
-    out: &mut Vec<(Result<PhysicalAddress>, Address, B)>,
+    out: &mut OV,
 ) -> () {
     //TODO: Optimize this to not use allocs
     let mut data = addrs
@@ -74,7 +104,7 @@ pub fn virt_to_phys_iter<T: AccessPhysicalMemory, B, VI: Iterator<Item = (Addres
         })
         .collect::<Vec<_>>();
 
-    for (i, error_str) in [
+    for (pt_cnt, error_str) in [
         "unable to read pml4e",
         "unable to read pdpte",
         "unable to read pgd",
@@ -84,39 +114,24 @@ pub fn virt_to_phys_iter<T: AccessPhysicalMemory, B, VI: Iterator<Item = (Addres
     .enumerate()
     {
         read_pt_address_iter(mem, &mut data);
-        let pt_level = 4 - i as u32;
+        let pt_level = 4 - pt_cnt as u32;
 
         let mut i = 0;
-        while let Some((addr, _, tmp_addr, _)) = data.get_mut(i) {
-            if !check_entry!(tmp_addr.as_u64()) {
+        //Possibly make this iterator based? Call in out.extend with some sort of filtering
+        while let Some((addr, _, pt_addr, _)) = data.get_mut(i) {
+            if !check_entry!(pt_addr.as_u64()) {
                 let (addr, buf, _, _) = data.swap_remove(i);
-                out.push((Err(Error::new(*error_str)), addr, buf));
-            } else if (pt_level != 4 && is_large_page!(tmp_addr.as_u64())) || pt_level == 1 {
-                let (addr, buf, tmp_addr, _) = data.swap_remove(i);
+                out.extend(Some((Err(Error::new(*error_str)), addr, buf)).into_iter());
+            } else if is_final_mapping(pt_level, *pt_addr) {
+                let (addr, buf, pt_addr, _) = data.swap_remove(i);
 
-                let phys_addr = Address::from(
-                    (tmp_addr.as_u64() & make_bit_mask(3 + 9 * pt_level, 51))
-                        | (addr.as_u64() & make_bit_mask(0, 2 + 9 * pt_level)),
+                out.extend(
+                    Some((Ok(get_phys_page(pt_level, pt_addr, addr)), addr, buf)).into_iter(),
                 );
-                let page_size = Length::from_b(8 << (9 * pt_level));
-                out.push((
-                    Ok(PhysicalAddress {
-                        address: phys_addr,
-                        page: Some(Page {
-                            page_type: PageType::from_writeable_bit(is_writeable_page!(
-                                tmp_addr.as_u64()
-                            )),
-                            page_base: phys_addr.as_page_aligned(page_size),
-                            page_size,
-                        }),
-                    }),
-                    addr,
-                    buf,
-                ));
             } else {
                 i += 1;
-                *tmp_addr = Address::from(
-                    (tmp_addr.as_u64() & make_bit_mask(12, 51))
+                *pt_addr = Address::from(
+                    (pt_addr.as_u64() & make_bit_mask(12, 51))
                         | pml_index_bits(addr.as_u64(), pt_level - 1),
                 );
             }

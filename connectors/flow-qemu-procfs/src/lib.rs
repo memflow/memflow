@@ -97,60 +97,6 @@ impl Memory {
             iov_len: data.len(),
         };
     }
-
-    pub fn perform_rw<A2: AsRef<[u8]>>(
-        &mut self,
-        vec_in: &mut VecType<Progress<(PhysicalAddress, A2), Result<(PhysicalAddress, A2)>>>,
-        vec_out: &mut VecType<Progress<(PhysicalAddress, A2), Result<(PhysicalAddress, A2)>>>,
-        process_vm_rw_func: unsafe extern "C" fn(
-            pid_t,
-            *const iovec,
-            c_ulong,
-            *const iovec,
-            c_ulong,
-            c_ulong,
-        ) -> isize,
-    ) {
-        let mut data_cnt = 0;
-        let max_iov = self.temp_iov.len() / 2;
-
-        let (iov_local, iov_remote) = self.temp_iov.split_at_mut(max_iov);
-
-        let iov_iter = iov_local.iter_mut().zip(iov_remote.iter_mut());
-
-        for (item, (liov, riov)) in vec_in.into_iter().zip(iov_iter) {
-            if let ToDo((addr, out)) = item {
-                Self::fill_iovec(addr, out.as_ref(), liov, riov, self.map.address.0);
-                data_cnt += 1;
-            }
-        }
-
-        let ret = unsafe {
-            process_vm_rw_func(
-                self.pid,
-                self.temp_iov.as_ptr(),
-                data_cnt as c_ulong,
-                self.temp_iov.as_ptr().add(max_iov),
-                data_cnt as c_ulong,
-                0,
-            )
-        };
-
-        while let Some(item) = vec_in.pop_front() {
-            vec_out.push_back(match item {
-                ToDo((addr, out)) => {
-                    data_cnt -= 1;
-                    Done(match ret {
-                        -1 => Err(Error::new("process_vm_rw failed")),
-                        _ => Ok((addr, out)),
-                    })
-                }
-                _ => item,
-            });
-        }
-
-        debug_assert!(data_cnt == 0);
-    }
 }
 
 impl AccessPhysicalMemory for Memory {
@@ -199,33 +145,44 @@ impl AccessPhysicalMemory for Memory {
 
     fn phys_write_raw_iter<'a, PI: PhysicalWriteIterator<'a>>(
         &'a mut self,
-        iter: PI,
-    ) -> Box<dyn PhysicalWriteIterator<'a>> {
-        let iov_max = self.temp_iov.len() / 2;
-        let mut cnt = 0;
+        mut iter: PI,
+    ) -> Result<()> {
+        let max_iov = self.temp_iov.len() / 2;
+        let (iov_local, iov_remote) = self.temp_iov.split_at_mut(max_iov);
 
-        let iter = iter.double_peekable();
+        let mut elem = iter.next();
 
-        if !iter.is_next_last() {
-            Box::new(iter.double_buffered_map(
-                move |x| Self::filter_element(x, &mut cnt, iov_max),
-                move |vec_in, vec_out| self.perform_rw(vec_in, vec_out, libc::process_vm_writev),
-            ))
-        } else {
-            Box::new(iter.map(move |x| match x {
-                ToDo((addr, out)) => {
-                    let (liov, riovl) = self.temp_iov.split_first_mut().unwrap();
-                    let (riov, _) = riovl.split_first_mut().unwrap();
-                    Self::fill_iovec(&addr, out, liov, riov, self.map.address.0);
-                    Done(
-                        match unsafe { libc::process_vm_writev(self.pid, liov, 1, riov, 1, 0) } {
-                            -1 => Err(Error::new("process_vm_rw failed")),
-                            _ => Ok((addr, out)),
-                        },
+        let mut iov_iter = iov_local.iter_mut().zip(iov_remote.iter_mut()).enumerate();
+        let mut iov_next = iov_iter.next();
+
+        while let Some((addr, out)) = elem {
+            let (cnt, (liov, riov)) = iov_next.unwrap();
+
+            Self::fill_iovec(&addr, out.as_ref(), liov, riov, self.map.address.0);
+
+            iov_next = iov_iter.next();
+            elem = iter.next();
+
+            if elem.is_none() || iov_next.is_none() {
+                if unsafe {
+                    libc::process_vm_writev(
+                        self.pid,
+                        iov_local.as_ptr(),
+                        (cnt + 1) as c_ulong,
+                        iov_remote.as_ptr(),
+                        (cnt + 1) as c_ulong,
+                        0,
                     )
+                } == -1
+                {
+                    return Err(Error::new("process_vm_writev failed"));
                 }
-                _ => x,
-            }))
+
+                iov_iter = iov_local.iter_mut().zip(iov_remote.iter_mut()).enumerate();
+                iov_next = iov_iter.next();
+            }
         }
+
+        Ok(())
     }
 }

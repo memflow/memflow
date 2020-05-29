@@ -41,26 +41,24 @@ impl<'a, T: AccessPhysicalMemory, Q: CacheValidator> AccessPhysicalMemory
     fn phys_write_raw_iter<'b, PI: PhysicalWriteIterator<'b>>(
         &'b mut self,
         iter: PI,
-    ) -> Box<dyn PhysicalWriteIterator<'b>> {
+    ) -> Result<()> {
         self.cache.validator.update_validity();
 
         let cache = &mut self.cache;
         let mem = &mut self.mem;
 
-        let iter = iter.inspect(move |x| {
-            if let ToDo((addr, data)) = x {
-                if let Some(page) = addr.page {
-                    if cache.is_cached_page_type(page.page_type) {
-                        for (paddr, data_chunk) in
-                            PageChunks::create_from(data, addr.address, cache.page_size())
-                        {
-                            let cached_page = cache.cached_page_mut(paddr);
-                            if cached_page.is_valid() {
-                                // write-back into still valid cache pages
-                                let start = (paddr - cached_page.address).as_usize();
-                                cached_page.buf[start..(start + data_chunk.len())]
-                                    .copy_from_slice(data_chunk);
-                            }
+        let iter = iter.inspect(move |(addr, data)| {
+            if let Some(page) = addr.page {
+                if cache.is_cached_page_type(page.page_type) {
+                    for (paddr, data_chunk) in
+                        PageChunks::create_from(data, addr.address, cache.page_size())
+                    {
+                        let cached_page = cache.cached_page_mut(paddr);
+                        if cached_page.is_valid() {
+                            // write-back into still valid cache pages
+                            let start = (paddr - cached_page.address).as_usize();
+                            cached_page.buf[start..(start + data_chunk.len())]
+                                .copy_from_slice(data_chunk);
                         }
                     }
                 }

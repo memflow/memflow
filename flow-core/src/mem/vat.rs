@@ -66,26 +66,37 @@ pub fn virt_read_raw_iter<
         }
     });
 
-    mem.phys_read_raw_iter(iter)?;
-
-    Ok(())
+    mem.phys_read_raw_iter(iter)
 }
 
-#[allow(unused)]
-pub fn virt_write_raw<T: AccessPhysicalMemory + VirtualAddressTranslator>(
+pub fn virt_write_raw_iter<
+    'a,
+    T: AccessPhysicalMemory + VirtualAddressTranslator,
+    VI: VirtualWriteIterator<'a>,
+>(
     mem: &mut T,
     arch: Architecture,
     dtb: Address,
-    addr: Address,
-    data: &[u8],
+    iter: VI,
 ) -> Result<()> {
-    for (vaddr, chunk) in PageChunks::create_from(data, addr, arch.page_size()) {
-        if let Ok(paddr) = mem.virt_to_phys(arch, dtb, vaddr) {
-            mem.phys_write_raw(paddr, chunk)?;
-        }
-    }
+    //30% perf hit on dummy!!! FIXME!!!
+    let mut translation = Vec::with_capacity(iter.size_hint().0);
+    mem.virt_to_phys_iter(
+        arch,
+        dtb,
+        iter.flat_map(|(addr, out)| PageChunks::create_from(out, addr, arch.page_size())),
+        &mut translation,
+    );
 
-    Ok(())
+    let iter = translation.into_iter().filter_map(|(paddr, _, out)| {
+        if let Ok(paddr) = paddr {
+            Some((paddr, out))
+        } else {
+            None
+        }
+    });
+
+    mem.phys_write_raw_iter(iter)
 }
 
 #[allow(unused)]

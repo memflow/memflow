@@ -15,12 +15,11 @@ pub trait AccessVirtualMemory {
         iter: VI,
     ) -> Result<()>;
 
-    fn virt_write_raw(
+    fn virt_write_raw_iter<'a, VI: VirtualWriteIterator<'a>>(
         &mut self,
         arch: Architecture,
         dtb: Address,
-        addr: Address,
-        data: &[u8],
+        iter: VI,
     ) -> Result<()>;
 
     fn virt_page_info(&mut self, arch: Architecture, dtb: Address, addr: Address) -> Result<Page>;
@@ -82,6 +81,16 @@ pub trait AccessVirtualMemory {
     }
 
     // write helpers
+    fn virt_write_raw(
+        &mut self,
+        arch: Architecture,
+        dtb: Address,
+        addr: Address,
+        data: &[u8],
+    ) -> Result<()> {
+        self.virt_write_raw_iter(arch, dtb, Some((addr, data)).into_iter())
+    }
+
     fn virt_write<T: Pod + ?Sized>(
         &mut self,
         arch: Architecture,

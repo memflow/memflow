@@ -79,7 +79,7 @@ impl<T: AccessPhysicalMemory + VirtualAddressTranslator, Q: CacheValidator> Acce
     fn phys_write_raw_iter<'b, PI: PhysicalWriteIterator<'b>>(
         &'b mut self,
         iter: PI,
-    ) -> Box<dyn PhysicalWriteIterator<'b>> {
+    ) -> Result<()> {
         self.mem.phys_write_raw_iter(iter)
     }
 }

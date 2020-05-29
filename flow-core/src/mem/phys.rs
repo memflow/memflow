@@ -50,27 +50,17 @@ impl AccessPhysicalMemory for MemoryBackend {
     fn phys_read_raw_iter<'a, PI: PhysicalReadIterator<'a>>(
         &'a mut self,
         iter: PI
-    ) -> Box<dyn PhysicalReadIterator<'a>> {
-        Box::new(iter.map(move |x| match x {
-            ToDo((addr, out)) => {
-                out.copy_from_slice(&self.mem[addr.as_usize()..(addr.as_usize() + out.len())]);
-                Done(Ok((addr, out)))
-            },
-            x => x
-        }))
+    ) -> Result<()> {
+        iter.for_each(|(addr, out)| out.copy_from_slice(&self.mem[addr.as_usize()..(addr.as_usize() + out.len())]));
+        Ok(())
     }
 
     fn phys_write_raw_iter<'a, PI: PhysicalWriteIterator<'a>>(
         &'a mut self,
         iter: PI
-    ) -> Box<dyn PhysicalWriteIterator<'a>> {
-        Box::new(iter.map(move |x| match x {
-            ToDo((addr, data)) => {
-                self.mem[addr.as_usize()..(addr.as_usize() + data.len())].copy_from_slice(data);
-                Done(Ok((addr, data)))
-            },
-            x => x
-        }))
+    ) -> Result<()> {
+        iter.for_each(|(addr, data)| self.mem[addr.as_usize()..(addr.as_usize() + data.len())].copy_from_slice(data));
+        Ok(())
     }
 }
 ```
@@ -79,10 +69,8 @@ pub trait AccessPhysicalMemory {
     // required to be implemented
     fn phys_read_raw_iter<'a, PI: PhysicalReadIterator<'a>>(&'a mut self, iter: PI) -> Result<()>;
 
-    fn phys_write_raw_iter<'a, PI: PhysicalWriteIterator<'a>>(
-        &'a mut self,
-        iter: PI,
-    ) -> Box<dyn PhysicalWriteIterator<'a>>;
+    fn phys_write_raw_iter<'a, PI: PhysicalWriteIterator<'a>>(&'a mut self, iter: PI)
+        -> Result<()>;
 
     // read helpers
     fn phys_read_raw_into(&mut self, addr: PhysicalAddress, out: &mut [u8]) -> Result<()> {
@@ -118,17 +106,7 @@ pub trait AccessPhysicalMemory {
 
     // write helpers
     fn phys_write_raw(&mut self, addr: PhysicalAddress, data: &[u8]) -> Result<()> {
-        // Consume the iterator and return the last error if there is one
-        self.phys_write_raw_iter(Some(ToDo((addr, data))).into_iter())
-            .fold(Ok(()), |acc, x| {
-                if let Done(Err(x)) = x {
-                    Err(x)
-                } else if let ToDo(_) = x {
-                    panic!("phys_read_raw_iter did not process all entries");
-                } else {
-                    acc
-                }
-            })
+        self.phys_write_raw_iter(Some((addr, data)).into_iter())
     }
 
     fn phys_write<T: Pod + ?Sized>(&mut self, addr: PhysicalAddress, data: &T) -> Result<()>
@@ -140,11 +118,9 @@ pub trait AccessPhysicalMemory {
 }
 
 pub type PhysicalReadData<'a> = (PhysicalAddress, &'a mut [u8]);
-pub type PhysicalReadType<'a> = Progress<PhysicalReadData<'a>, Result<PhysicalReadData<'a>>>;
 pub trait PhysicalReadIterator<'a>: Iterator<Item = PhysicalReadData<'a>> + 'a {}
 impl<'a, T: Iterator<Item = PhysicalReadData<'a>> + 'a> PhysicalReadIterator<'a> for T {}
 
 pub type PhysicalWriteData<'a> = (PhysicalAddress, &'a [u8]);
-pub type PhysicalWriteType<'a> = Progress<PhysicalWriteData<'a>, Result<PhysicalWriteData<'a>>>;
-pub trait PhysicalWriteIterator<'a>: Iterator<Item = PhysicalWriteType<'a>> + 'a {}
-impl<'a, T: Iterator<Item = PhysicalWriteType<'a>> + 'a> PhysicalWriteIterator<'a> for T {}
+pub trait PhysicalWriteIterator<'a>: Iterator<Item = PhysicalWriteData<'a>> + 'a {}
+impl<'a, T: Iterator<Item = PhysicalWriteData<'a>> + 'a> PhysicalWriteIterator<'a> for T {}

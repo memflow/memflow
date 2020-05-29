@@ -159,7 +159,7 @@ impl AccessPhysicalMemory for DummyMemory {
         &'b mut self,
         mut iter: PI,
     ) -> Result<()> {
-        iter.try_fold((), move |_, (addr, out)| {
+        iter.try_for_each(move |(addr, out)| {
             if addr.address.as_usize() + out.len() <= self.mem.len() {
                 out.copy_from_slice(&self.mem[addr.as_usize()..(addr.as_usize() + out.len())]);
                 Ok(())
@@ -171,17 +171,16 @@ impl AccessPhysicalMemory for DummyMemory {
 
     fn phys_write_raw_iter<'b, PI: PhysicalWriteIterator<'b>>(
         &'b mut self,
-        iter: PI,
-    ) -> Box<dyn PhysicalWriteIterator<'b>> {
-        Box::new(iter.map(move |x| match x {
-            ToDo((addr, data)) => Done(if addr.address.as_usize() + data.len() <= self.mem.len() {
+        mut iter: PI,
+    ) -> Result<()> {
+        iter.try_for_each(move |(addr, data)| {
+            if addr.address.as_usize() + data.len() <= self.mem.len() {
                 self.mem[addr.as_usize()..(addr.as_usize() + data.len())].copy_from_slice(data);
-                Ok((addr, data))
+                Ok(())
             } else {
                 Err(Error::new("Write out of bounds"))
-            }),
-            _ => x,
-        }))
+            }
+        })
     }
 }
 

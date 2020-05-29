@@ -17,7 +17,7 @@ impl AccessPhysicalMemory for EmptyVirtualMemory {
     fn phys_write_raw_iter<'a, PI: PhysicalWriteIterator<'a>>(
         &'a mut self,
         iter: PI,
-    ) -> Box<dyn PhysicalWriteIterator<'a>> {
-        Box::new(iter.map(|_| Done(Err(Error::new("phys_write not implemented")))))
+    ) -> Result<()> {
+        Err(Error::new("phys_read not implemented"))
     }
 }

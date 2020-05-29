@@ -12,12 +12,16 @@ use crate::mem::{
 use crate::types::{Address, Page, PhysicalAddress};
 
 pub trait VirtualAddressTranslator {
-    fn virt_to_phys_iter<B, VI: Iterator<Item = (Address, B)>>(
+    fn virt_to_phys_iter<
+        B,
+        VI: Iterator<Item = (Address, B)>,
+        OV: Extend<(Result<PhysicalAddress>, Address, B)>,
+    >(
         &mut self,
         arch: Architecture,
         dtb: Address,
         addrs: VI,
-        out: &mut Vec<(Result<PhysicalAddress>, Address, B)>,
+        out: &mut OV,
     );
 
     fn virt_to_phys(

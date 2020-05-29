@@ -2,20 +2,20 @@ use crate::error::Result;
 
 use crate::architecture::Architecture;
 use crate::mem::cache::{CacheValidator, TLBCache};
-use crate::mem::{AccessPhysicalMemory, PhysicalReadIterator, PhysicalWriteIterator};
+use crate::mem::{AccessPhysicalMemoryRaw, PhysicalReadIterator, PhysicalWriteIterator};
 use crate::types::{Address, Page, PhysicalAddress};
 use crate::vat;
-use crate::vat::VirtualAddressTranslator;
+use crate::vat::VirtualAddressTranslatorRaw;
 use bumpalo::{collections::Vec as BumpVec, Bump};
 
-#[derive(AccessVirtualMemory)]
-pub struct CachedVAT<T: AccessPhysicalMemory + VirtualAddressTranslator, Q: CacheValidator> {
+#[derive(AccessVirtualMemoryRaw)]
+pub struct CachedVAT<T: AccessPhysicalMemoryRaw + VirtualAddressTranslatorRaw, Q: CacheValidator> {
     mem: T,
     tlb: TLBCache<Q>,
     arena: Bump,
 }
 
-impl<T: AccessPhysicalMemory + VirtualAddressTranslator, Q: CacheValidator> CachedVAT<T, Q> {
+impl<T: AccessPhysicalMemoryRaw + VirtualAddressTranslatorRaw, Q: CacheValidator> CachedVAT<T, Q> {
     pub fn with(mem: T, tlb: TLBCache<Q>) -> Self {
         Self {
             mem,
@@ -25,8 +25,8 @@ impl<T: AccessPhysicalMemory + VirtualAddressTranslator, Q: CacheValidator> Cach
     }
 }
 
-impl<T: AccessPhysicalMemory + VirtualAddressTranslator, Q: CacheValidator> VirtualAddressTranslator
-    for CachedVAT<T, Q>
+impl<T: AccessPhysicalMemoryRaw + VirtualAddressTranslatorRaw, Q: CacheValidator>
+    VirtualAddressTranslatorRaw for CachedVAT<T, Q>
 {
     fn virt_to_phys_iter<
         B,
@@ -67,8 +67,8 @@ impl<T: AccessPhysicalMemory + VirtualAddressTranslator, Q: CacheValidator> Virt
     }
 }
 
-impl<T: AccessPhysicalMemory + VirtualAddressTranslator, Q: CacheValidator> AccessPhysicalMemory
-    for CachedVAT<T, Q>
+impl<T: AccessPhysicalMemoryRaw + VirtualAddressTranslatorRaw, Q: CacheValidator>
+    AccessPhysicalMemoryRaw for CachedVAT<T, Q>
 {
     fn phys_read_raw_iter<'b, PI: PhysicalReadIterator<'b>>(&'b mut self, iter: PI) -> Result<()> {
         self.mem.phys_read_raw_iter(iter)

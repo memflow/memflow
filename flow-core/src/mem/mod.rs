@@ -19,7 +19,9 @@ pub mod virt;
 pub mod dummy;
 
 pub use cache::*;
-pub use phys::{AccessPhysicalMemory, PhysicalReadIterator, PhysicalWriteIterator};
+pub use phys::{
+    AccessPhysicalMemory, AccessPhysicalMemoryRaw, PhysicalReadIterator, PhysicalWriteIterator,
+};
 pub use proc_mem_ctx::ProcessMemoryContext;
-pub use vat::VirtualAddressTranslator;
-pub use virt::AccessVirtualMemory;
+pub use vat::{VirtualAddressTranslator, VirtualAddressTranslatorRaw};
+pub use virt::{AccessVirtualMemory, AccessVirtualMemoryRaw};

@@ -3,20 +3,20 @@ use crate::error::Result;
 use super::{page_cache::PageCache, CacheValidator};
 
 use crate::architecture::Architecture;
-use crate::mem::{AccessPhysicalMemory, PhysicalReadIterator, PhysicalWriteIterator};
+use crate::mem::{AccessPhysicalMemoryRaw, PhysicalReadIterator, PhysicalWriteIterator};
 use crate::page_chunks::PageChunks;
 use crate::types::{Address, Page, PhysicalAddress};
 use crate::vat;
 use bumpalo::Bump;
 
-#[derive(VirtualAddressTranslator, AccessVirtualMemory)]
-pub struct CachedMemoryAccess<'a, T: AccessPhysicalMemory, Q: CacheValidator> {
+#[derive(VirtualAddressTranslatorRaw, AccessVirtualMemoryRaw)]
+pub struct CachedMemoryAccess<'a, T: AccessPhysicalMemoryRaw, Q: CacheValidator> {
     mem: &'a mut T,
     cache: PageCache<Q>,
     arena: Bump,
 }
 
-impl<'a, T: AccessPhysicalMemory, Q: CacheValidator> CachedMemoryAccess<'a, T, Q> {
+impl<'a, T: AccessPhysicalMemoryRaw, Q: CacheValidator> CachedMemoryAccess<'a, T, Q> {
     pub fn with(mem: &'a mut T, cache: PageCache<Q>) -> Self {
         Self {
             mem,
@@ -26,8 +26,8 @@ impl<'a, T: AccessPhysicalMemory, Q: CacheValidator> CachedMemoryAccess<'a, T, Q
     }
 }
 
-// forward AccessPhysicalMemory trait fncs
-impl<'a, T: AccessPhysicalMemory, Q: CacheValidator> AccessPhysicalMemory
+// forward AccessPhysicalMemoryRaw trait fncs
+impl<'a, T: AccessPhysicalMemoryRaw, Q: CacheValidator> AccessPhysicalMemoryRaw
     for CachedMemoryAccess<'a, T, Q>
 {
     fn phys_read_raw_iter<'b, PI: PhysicalReadIterator<'b>>(&'b mut self, iter: PI) -> Result<()> {

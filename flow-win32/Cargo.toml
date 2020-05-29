@@ -29,10 +29,6 @@ win_key_codes = "0.1.2"
 rand = "0.5"
 bencher = "0.1.5"
 
-[[bench]]
-name = "vat"
-harness = false
-
 [[example]]
 name = "read_keys"
 path = "examples/read_keys.rs"

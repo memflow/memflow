@@ -1,8 +1,8 @@
 use criterion::*;
 
 use flow_core::mem::{
-    timed_validator::*, vat::VirtualAddressTranslator, AccessPhysicalMemory, CachedMemoryAccess,
-    CachedVAT, PageCache, TLBCache,
+    timed_validator::*, vat::VirtualAddressTranslatorRaw, AccessPhysicalMemoryRaw,
+    CachedMemoryAccess, CachedVAT, PageCache, TLBCache,
 };
 
 use flow_core::{Address, Length, OsProcess, OsProcessModule, PageType};
@@ -10,7 +10,7 @@ use flow_core::{Address, Length, OsProcess, OsProcessModule, PageType};
 use rand::prelude::*;
 use rand::{prng::XorShiftRng as CurRng, Rng, SeedableRng};
 
-fn vattest<T: VirtualAddressTranslator, P: OsProcess, M: OsProcessModule>(
+fn vattest<T: VirtualAddressTranslatorRaw, P: OsProcess, M: OsProcessModule>(
     mem: &mut T,
     proc: &P,
     module: &M,
@@ -48,7 +48,7 @@ fn vattest<T: VirtualAddressTranslator, P: OsProcess, M: OsProcessModule>(
     done_size
 }
 
-pub fn vat_test_with_mem<T: VirtualAddressTranslator, P: OsProcess, M: OsProcessModule>(
+pub fn vat_test_with_mem<T: VirtualAddressTranslatorRaw, P: OsProcess, M: OsProcessModule>(
     bench: &mut Bencher,
     mem: &mut T,
     chunks: usize,
@@ -62,7 +62,7 @@ pub fn vat_test_with_mem<T: VirtualAddressTranslator, P: OsProcess, M: OsProcess
 }
 
 fn vat_test_with_ctx<
-    T: VirtualAddressTranslator + AccessPhysicalMemory,
+    T: VirtualAddressTranslatorRaw + AccessPhysicalMemoryRaw,
     P: OsProcess,
     M: OsProcessModule,
 >(
@@ -103,7 +103,7 @@ fn vat_test_with_ctx<
 }
 
 fn chunk_vat_params<
-    T: VirtualAddressTranslator + AccessPhysicalMemory,
+    T: VirtualAddressTranslatorRaw + AccessPhysicalMemoryRaw,
     P: OsProcess,
     M: OsProcessModule,
 >(
@@ -134,7 +134,7 @@ fn chunk_vat_params<
 }
 
 pub fn chunk_vat<
-    T: VirtualAddressTranslator + AccessPhysicalMemory,
+    T: VirtualAddressTranslatorRaw + AccessPhysicalMemoryRaw,
     P: OsProcess,
     M: OsProcessModule,
 >(

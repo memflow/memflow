@@ -5,10 +5,10 @@ pub mod init_qemu_procfs;
 use flow_core::*;
 use flow_derive::*;
 
-#[derive(VirtualAddressTranslator, AccessVirtualMemory)]
+#[derive(VirtualAddressTranslatorRaw, AccessVirtualMemoryRaw)]
 pub struct EmptyVirtualMemory {}
 
-impl AccessPhysicalMemory for EmptyVirtualMemory {
+impl AccessPhysicalMemoryRaw for EmptyVirtualMemory {
     fn phys_read_raw_iter<'a, PI: PhysicalReadIterator<'a>>(&'a mut self, _iter: PI) -> Result<()> {
         Err(Error::new("phys_read not implemented"))
     }

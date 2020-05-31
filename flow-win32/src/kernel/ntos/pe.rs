@@ -5,11 +5,11 @@ use log::{debug, info};
 
 use pelite::{self, PeView};
 
-use flow_core::mem::AccessVirtualMemory;
+use flow_core::mem::VirtualMemory;
 use flow_core::types::{Address, Length};
 
 // TODO: store pe size in windows struct so we can reference it later
-pub fn probe_pe_header<T: AccessVirtualMemory + ?Sized>(
+pub fn probe_pe_header<T: VirtualMemory + ?Sized>(
     mem: &mut T,
     start_block: &StartBlock,
     probe_addr: Address,
@@ -34,7 +34,7 @@ pub fn probe_pe_header<T: AccessVirtualMemory + ?Sized>(
     Ok(name.to_string())
 }
 
-pub fn try_fetch_pe_header<T: AccessVirtualMemory + ?Sized>(
+pub fn try_fetch_pe_header<T: VirtualMemory + ?Sized>(
     mem: &mut T,
     start_block: &StartBlock,
     addr: Address,
@@ -45,7 +45,7 @@ pub fn try_fetch_pe_header<T: AccessVirtualMemory + ?Sized>(
     Ok(buf)
 }
 
-pub fn try_fetch_pe_size<T: AccessVirtualMemory + ?Sized>(
+pub fn try_fetch_pe_size<T: VirtualMemory + ?Sized>(
     mem: &mut T,
     start_block: &StartBlock,
     addr: Address,

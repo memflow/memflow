@@ -1,11 +1,8 @@
-use flow_core::mem::{AccessPhysicalMemoryExt, AccessVirtualMemory, VirtualAddressTranslator};
+use flow_core::mem::{PhysicalMemoryExt, VirtualAddressTranslator, VirtualMemory};
 
-pub trait MemoryBackend:
-    AccessPhysicalMemoryExt + AccessVirtualMemory + VirtualAddressTranslator
-{
-}
+pub trait MemoryBackend: PhysicalMemoryExt + VirtualMemory + VirtualAddressTranslator {}
 
 impl<T> MemoryBackend for T where
-    T: AccessPhysicalMemoryExt + AccessVirtualMemory + VirtualAddressTranslator + ?Sized
+    T: PhysicalMemoryExt + VirtualMemory + VirtualAddressTranslator + ?Sized
 {
 }

@@ -12,7 +12,7 @@ use crate::kernel::ntos;
 
 use pelite::{self, pe64::exports::Export, PeView};
 
-pub fn find<T: AccessPhysicalMemoryExt + AccessVirtualMemory + ?Sized>(
+pub fn find<T: PhysicalMemoryExt + VirtualMemory + ?Sized>(
     mem: &mut T,
     start_block: &StartBlock,
     ntos: Address,
@@ -33,7 +33,7 @@ pub fn find<T: AccessPhysicalMemoryExt + AccessVirtualMemory + ?Sized>(
 }
 
 // find from exported symbol
-pub fn find_exported<T: AccessPhysicalMemoryExt + AccessVirtualMemory + ?Sized>(
+pub fn find_exported<T: PhysicalMemoryExt + VirtualMemory + ?Sized>(
     mem: &mut T,
     start_block: &StartBlock,
     ntos: Address,
@@ -73,7 +73,7 @@ pub fn find_exported<T: AccessPhysicalMemoryExt + AccessVirtualMemory + ?Sized>(
 // scan in pdb
 
 // scan in section
-pub fn find_in_section<T: AccessPhysicalMemoryExt + AccessVirtualMemory + ?Sized>(
+pub fn find_in_section<T: PhysicalMemoryExt + VirtualMemory + ?Sized>(
     mem: &mut T,
     start_block: &StartBlock,
     ntos: Address,

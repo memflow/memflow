@@ -9,19 +9,17 @@ and are themselves a memory backend.
 TODO: more documentation
 */
 
-pub mod cache;
-pub mod phys;
-pub mod proc_mem_ctx;
+pub mod phys_mem;
+pub mod virt_mem;
+//pub mod cache;
 pub mod vat;
-pub mod virt;
+pub mod virt_from_phys;
 
 #[cfg(any(feature = "dummy_mem", test))]
 pub mod dummy;
 
-pub use cache::*;
-pub use phys::{
-    AccessPhysicalMemory, AccessPhysicalMemoryExt, PhysicalReadIterator, PhysicalWriteIterator,
-};
-pub use proc_mem_ctx::ProcessMemoryContext;
-pub use vat::{VirtualAddressTranslator, VirtualAddressTranslatorRaw};
-pub use virt::{AccessVirtualMemory, AccessVirtualMemoryRaw};
+pub use phys_mem::{PhysicalMemory, PhysicalReadIterator, PhysicalWriteIterator};
+pub use virt_mem::VirtualMemory;
+//pub use cache::*;
+pub use vat::VAT;
+pub use virt_from_phys::VirtualFromPhysical;

@@ -1,7 +1,7 @@
 use super::{Win32, Win32Module, Win32Offsets, Win32Process};
 use crate::error::{Error, Result};
 
-use flow_core::mem::AccessVirtualMemory;
+use flow_core::mem::VirtualMemory;
 use flow_core::process::{OsProcess, OsProcessModule};
 use flow_core::{Address, Length};
 
@@ -19,7 +19,7 @@ pub struct KeyboardState {
 }
 
 impl Keyboard {
-    pub fn with<T: AccessVirtualMemory>(
+    pub fn with<T: VirtualMemory>(
         mem: &mut T,
         win: &Win32,
         offsets: &Win32Offsets,
@@ -57,7 +57,7 @@ impl Keyboard {
         })
     }
 
-    pub fn state<T: AccessVirtualMemory>(&self, mem: &mut T) -> Result<KeyboardState> {
+    pub fn state<T: VirtualMemory>(&self, mem: &mut T) -> Result<KeyboardState> {
         let mut virt_mem = self.user_process.virt_mem(mem);
         let buffer: [u8; 256 * 2 / 8] = virt_mem.virt_read(self.key_state_addr)?;
         Ok(KeyboardState {
@@ -65,11 +65,7 @@ impl Keyboard {
         })
     }
 
-    pub fn set_state<T: AccessVirtualMemory>(
-        &self,
-        mem: &mut T,
-        state: &KeyboardState,
-    ) -> Result<()> {
+    pub fn set_state<T: VirtualMemory>(&self, mem: &mut T, state: &KeyboardState) -> Result<()> {
         let mut virt_mem = self.user_process.virt_mem(mem);
         virt_mem.virt_write(self.key_state_addr, &*state.buffer)?;
         Ok(())

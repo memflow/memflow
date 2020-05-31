@@ -4,7 +4,7 @@ use crate::offsets::Win32Offsets;
 use crate::win32::Win32;
 
 use flow_core::architecture::Architecture;
-use flow_core::mem::{AccessVirtualMemory, ProcessMemoryContext};
+use flow_core::mem::{ProcessMemoryContext, VirtualMemory};
 use flow_core::types::{Address, Length};
 use flow_core::{OsProcess, OsProcessModule};
 
@@ -27,7 +27,7 @@ pub struct Win32Process {
 impl Win32Process {
     pub fn try_from_kernel<T>(mem: &mut T, win: &Win32) -> Result<Self>
     where
-        T: AccessVirtualMemory,
+        T: VirtualMemory,
     {
         let mut reader = ProcessMemoryContext::with(mem, win.start_block.arch, win.start_block.dtb);
 
@@ -69,7 +69,7 @@ impl Win32Process {
         eprocess: Address,
     ) -> Result<Self>
     where
-        T: AccessVirtualMemory,
+        T: VirtualMemory,
     {
         let mut reader = ProcessMemoryContext::with(mem, win.start_block.arch, win.start_block.dtb);
 
@@ -156,7 +156,7 @@ impl Win32Process {
         name: &str,
     ) -> Result<Self>
     where
-        T: AccessVirtualMemory,
+        T: VirtualMemory,
     {
         let procs = win
             .eprocess_list(mem, offsets)?
@@ -197,7 +197,7 @@ impl Win32Process {
         self.peb_module
     }
 
-    pub fn peb_list<T: AccessVirtualMemory>(&self, mem: &mut T) -> Result<Vec<Address>> {
+    pub fn peb_list<T: VirtualMemory>(&self, mem: &mut T) -> Result<Vec<Address>> {
         let mut proc_reader =
             ProcessMemoryContext::with_proc_arch(mem, self.sys_arch, self.proc_arch, self.dtb);
 

@@ -5,7 +5,7 @@ use log::Level;
 use flow_core::*;
 use flow_win32::*;
 
-pub fn write_string<T: AccessVirtualMemory>(
+pub fn write_string<T: VirtualMemory>(
     mem: &mut T,
     kbd: &Keyboard,
     input: &[i32],

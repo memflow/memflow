@@ -12,7 +12,7 @@ pub trait VirtualReadUnicodeString {
 }
 
 // TODO: split up cpu and proc arch in read_helper.rs
-impl<'a, T: AccessVirtualMemory> VirtualReadUnicodeString for ProcessMemoryContext<'a, T> {
+impl<'a, T: VirtualMemory> VirtualReadUnicodeString for ProcessMemoryContext<'a, T> {
     fn virt_read_unicode_string(&mut self, addr: Address) -> Result<String> {
         /*
         typedef struct _windows_unicode_string32 {

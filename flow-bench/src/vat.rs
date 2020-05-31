@@ -1,8 +1,8 @@
 use criterion::*;
 
 use flow_core::mem::{
-    timed_validator::*, vat::VirtualAddressTranslatorRaw, AccessPhysicalMemory, CachedMemoryAccess,
-    CachedVAT, PageCache, TLBCache,
+    timed_validator::*, vat::VirtualAddressTranslatorRaw, CachedMemoryAccess, CachedVAT, PageCache,
+    PhysicalMemory, TLBCache,
 };
 
 use flow_core::{Address, Length, OsProcess, OsProcessModule, PageType};
@@ -62,7 +62,7 @@ pub fn vat_test_with_mem<T: VirtualAddressTranslatorRaw, P: OsProcess, M: OsProc
 }
 
 fn vat_test_with_ctx<
-    T: VirtualAddressTranslatorRaw + AccessPhysicalMemory,
+    T: VirtualAddressTranslatorRaw + PhysicalMemory,
     P: OsProcess,
     M: OsProcessModule,
 >(
@@ -103,7 +103,7 @@ fn vat_test_with_ctx<
 }
 
 fn chunk_vat_params<
-    T: VirtualAddressTranslatorRaw + AccessPhysicalMemory,
+    T: VirtualAddressTranslatorRaw + PhysicalMemory,
     P: OsProcess,
     M: OsProcessModule,
 >(
@@ -134,7 +134,7 @@ fn chunk_vat_params<
 }
 
 pub fn chunk_vat<
-    T: VirtualAddressTranslatorRaw + AccessPhysicalMemory,
+    T: VirtualAddressTranslatorRaw + PhysicalMemory,
     P: OsProcess,
     M: OsProcessModule,
 >(

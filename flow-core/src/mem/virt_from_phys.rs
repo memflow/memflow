@@ -1,39 +1,47 @@
-use super::AccessVirtualMemory;
+use super::vat;
+use super::{
+    vat::{VirtualAdressTranslator, VAT},
+    virt_mem::{VirtualMemory, VirtualReadIterator, VirtualWriteIterator},
+    PhysicalMemory,
+};
 use crate::architecture::Architecture;
 use crate::error::Error;
-use crate::types::{Address, Length, Pointer32, Pointer64};
+use crate::types::{Address, Length, Page, Pointer32, Pointer64};
 use crate::Result;
 
 use std::ffi::CString;
 
 use dataview::Pod;
 
-pub struct ProcessMemoryContext<'a, T: AccessVirtualMemory + ?Sized> {
-    mem: &'a mut T,
+pub struct VirtualFromPhysical<'a, T: PhysicalMemory + ?Sized, U: VAT + ?Sized> {
+    phys_mem: &'a mut T,
     sys_arch: Architecture,
+    vat: VirtualAdressTranslator,
     proc_arch: Architecture,
     dtb: Address,
 }
 
-impl<'a, T: AccessVirtualMemory + ?Sized> ProcessMemoryContext<'a, T> {
-    pub fn with(mem: &'a mut T, sys_arch: Architecture, dtb: Address) -> Self {
+impl<'a, T: PhysicalMemory + ?Sized, U: VAT + ?Sized> VirtualFromPhysical<'a, T, U> {
+    pub fn new(phys_mem: &'a mut T, sys_arch: Architecture, dtb: Address) -> Self {
         Self {
-            mem,
+            phys_mem,
             sys_arch,
+            vat: VirtualAdressTranslator::new(sys_arch),
             proc_arch: sys_arch,
             dtb,
         }
     }
 
     pub fn with_proc_arch(
-        mem: &'a mut T,
+        phys_mem: &'a mut T,
         sys_arch: Architecture,
         proc_arch: Architecture,
         dtb: Address,
     ) -> Self {
         Self {
-            mem,
+            phys_mem,
             sys_arch,
+            vat: VirtualAdressTranslator::new(sys_arch),
             proc_arch,
             dtb,
         }
@@ -52,7 +60,7 @@ impl<'a, T: AccessVirtualMemory + ?Sized> ProcessMemoryContext<'a, T> {
     }
 
     // self.mem wrappers
-    pub fn virt_read_raw_into(&mut self, addr: Address, out: &mut [u8]) -> Result<()> {
+    /*pub fn virt_read_raw_into(&mut self, addr: Address, out: &mut [u8]) -> Result<()> {
         self.mem
             .virt_read_raw_into(self.sys_arch, self.dtb, addr, out)
     }
@@ -63,11 +71,28 @@ impl<'a, T: AccessVirtualMemory + ?Sized> ProcessMemoryContext<'a, T> {
 
     pub fn virt_write_raw(&mut self, addr: Address, data: &[u8]) -> Result<()> {
         self.mem.virt_write_raw(self.sys_arch, self.dtb, addr, data)
+    }*/
+}
+
+impl<'a, T: PhysicalMemory + ?Sized, U: VAT + ?Sized> VirtualMemory
+    for VirtualFromPhysical<'a, T, U>
+{
+    fn virt_read_raw_iter<'b, VI: VirtualReadIterator<'b>>(&mut self, iter: VI) -> Result<()> {
+        vat::virt_read_raw_iter(self.phys_mem, &mut self.vat, self.sys_arch, self.dtb, iter)
+    }
+
+    fn virt_write_raw_iter<'b, VI: VirtualWriteIterator<'b>>(&mut self, iter: VI) -> Result<()> {
+        vat::virt_write_raw_iter(self.phys_mem, &mut self.vat, self.sys_arch, self.dtb, iter)
+    }
+
+    fn virt_page_info(&mut self, addr: Address) -> Result<Page> {
+        vat::virt_page_info(self.phys_mem, &mut self.vat, self.sys_arch, self.dtb, addr)
     }
 }
 
 // sized impl
-impl<'a, T: AccessVirtualMemory + Sized> ProcessMemoryContext<'a, T> {
+impl<'a, T: PhysicalMemory + Sized, U: VAT> VirtualFromPhysical<'a, T, U> {
+    /*
     pub fn virt_read_into<U: Pod + ?Sized>(&mut self, addr: Address, out: &mut U) -> Result<()> {
         self.mem.virt_read_into(self.sys_arch, self.dtb, addr, out)
     }
@@ -154,4 +179,5 @@ impl<'a, T: AccessVirtualMemory + Sized> ProcessMemoryContext<'a, T> {
             .iter()
             .try_fold(base_addr, |c, &a| self.virt_read_addr(c + a))
     }
+    */
 }

@@ -117,7 +117,7 @@ impl BridgeClient {
     }
 }
 
-impl AccessPhysicalMemoryExt for BridgeClient {
+impl PhysicalMemoryExt for BridgeClient {
     // physRead @0 (address :UInt64, length :UInt64) -> (data :Data);
     fn phys_read_raw_into(&mut self, addr: PhysicalAddress, out: &mut [u8]) -> Result<()> {
         trace!("phys_read_raw_into({:x}, {})", addr, out.len());
@@ -210,7 +210,7 @@ impl BridgeClient {
 //
 // TODO: split up sections greater than 32mb into multiple packets due to capnp limitations!
 //
-impl AccessVirtualMemory for BridgeClient {
+impl VirtualMemory for BridgeClient {
     fn virt_read_raw_into(
         &mut self,
         arch: Architecture,

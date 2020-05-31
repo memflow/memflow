@@ -1,8 +1,8 @@
 use criterion::*;
 
 use flow_core::mem::{
-    timed_validator::*, vat::VirtualAddressTranslatorRaw, AccessPhysicalMemory,
-    AccessVirtualMemoryRaw, CachedMemoryAccess, CachedVAT, PageCache, TLBCache,
+    timed_validator::*, vat::VirtualAddressTranslatorRaw, CachedMemoryAccess, CachedVAT, PageCache,
+    PhysicalMemory, TLBCache, VirtualMemoryRaw,
 };
 
 use flow_core::{Address, Length, OsProcess, OsProcessModule, PageType};
@@ -10,7 +10,7 @@ use flow_core::{Address, Length, OsProcess, OsProcessModule, PageType};
 use rand::prelude::*;
 use rand::{prng::XorShiftRng as CurRng, Rng, SeedableRng};
 
-fn rwtest<T: AccessVirtualMemoryRaw, P: OsProcess, M: OsProcessModule>(
+fn rwtest<T: VirtualMemoryRaw, P: OsProcess, M: OsProcessModule>(
     mem: &mut T,
     proc: &P,
     module: &M,
@@ -52,7 +52,7 @@ fn rwtest<T: AccessVirtualMemoryRaw, P: OsProcess, M: OsProcessModule>(
     total_size
 }
 
-pub fn read_test_with_mem<T: AccessVirtualMemoryRaw, P: OsProcess, M: OsProcessModule>(
+pub fn read_test_with_mem<T: VirtualMemoryRaw, P: OsProcess, M: OsProcessModule>(
     bench: &mut Bencher,
     mem: &mut T,
     chunk_size: usize,
@@ -73,7 +73,7 @@ pub fn read_test_with_mem<T: AccessVirtualMemoryRaw, P: OsProcess, M: OsProcessM
 }
 
 fn read_test_with_ctx<
-    T: VirtualAddressTranslatorRaw + AccessVirtualMemoryRaw + AccessPhysicalMemory,
+    T: VirtualAddressTranslatorRaw + VirtualMemoryRaw + PhysicalMemory,
     P: OsProcess,
     M: OsProcessModule,
 >(
@@ -114,7 +114,7 @@ fn read_test_with_ctx<
 }
 
 fn seq_read_params<
-    T: VirtualAddressTranslatorRaw + AccessVirtualMemoryRaw + AccessPhysicalMemory,
+    T: VirtualAddressTranslatorRaw + VirtualMemoryRaw + PhysicalMemory,
     P: OsProcess,
     M: OsProcessModule,
 >(
@@ -144,7 +144,7 @@ fn seq_read_params<
 }
 
 fn chunk_read_params<
-    T: VirtualAddressTranslatorRaw + AccessVirtualMemoryRaw + AccessPhysicalMemory,
+    T: VirtualAddressTranslatorRaw + VirtualMemoryRaw + PhysicalMemory,
     P: OsProcess,
     M: OsProcessModule,
 >(
@@ -176,7 +176,7 @@ fn chunk_read_params<
 }
 
 pub fn seq_read<
-    T: VirtualAddressTranslatorRaw + AccessVirtualMemoryRaw + AccessPhysicalMemory,
+    T: VirtualAddressTranslatorRaw + VirtualMemoryRaw + PhysicalMemory,
     P: OsProcess,
     M: OsProcessModule,
 >(
@@ -210,7 +210,7 @@ pub fn seq_read<
 }
 
 pub fn chunk_read<
-    T: VirtualAddressTranslatorRaw + AccessVirtualMemoryRaw + AccessPhysicalMemory,
+    T: VirtualAddressTranslatorRaw + VirtualMemoryRaw + PhysicalMemory,
     P: OsProcess,
     M: OsProcessModule,
 >(

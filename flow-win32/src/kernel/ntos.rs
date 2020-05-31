@@ -10,10 +10,10 @@ use log::warn;
 use pelite::{self, image::GUID, pe64::debug::CodeView, PeView};
 use uuid::{self, Uuid};
 
-use flow_core::mem::AccessVirtualMemory;
+use flow_core::mem::VirtualMemory;
 use flow_core::types::{Address, Length};
 
-pub fn find<T: AccessVirtualMemory + ?Sized>(
+pub fn find<T: VirtualMemory + ?Sized>(
     mem: &mut T,
     start_block: &StartBlock,
 ) -> Result<(Address, Length)> {
@@ -45,7 +45,7 @@ pub struct Win32GUID {
     pub guid: String,
 }
 
-pub fn find_guid<T: AccessVirtualMemory + ?Sized>(
+pub fn find_guid<T: VirtualMemory + ?Sized>(
     mem: &mut T,
     start_block: &StartBlock,
     kernel_base: Address,

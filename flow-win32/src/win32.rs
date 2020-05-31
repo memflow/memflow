@@ -35,9 +35,7 @@ pub struct Win32 {
 impl OperatingSystem for Win32 {}
 
 impl Win32 {
-    pub fn try_with<T: AccessPhysicalMemoryExt + AccessVirtualMemory + ?Sized>(
-        mem: &mut T,
-    ) -> Result<Self> {
+    pub fn try_with<T: PhysicalMemoryExt + VirtualMemory + ?Sized>(mem: &mut T) -> Result<Self> {
         /*
         Options:
         - supply cr3 (dtb)
@@ -79,7 +77,7 @@ impl Win32 {
         self.kernel_guid.clone()
     }
 
-    pub fn eprocess_list<T: AccessVirtualMemory>(
+    pub fn eprocess_list<T: VirtualMemory>(
         &self,
         mem: &mut T,
         offsets: &Win32Offsets,

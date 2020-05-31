@@ -1,13 +1,13 @@
 use criterion::*;
 
-use flow_core::mem::{timed_validator::*, AccessPhysicalMemory, CachedMemoryAccess, PageCache};
+use flow_core::mem::{timed_validator::*, CachedMemoryAccess, PageCache, PhysicalMemory};
 
 use flow_core::{Address, Architecture, Length, PageType, PhysicalAddress};
 
 use rand::prelude::*;
 use rand::{prng::XorShiftRng as CurRng, Rng, SeedableRng};
 
-fn rwtest<T: AccessPhysicalMemory>(
+fn rwtest<T: PhysicalMemory>(
     mem: &mut T,
     (start, end): (Address, Address),
     chunk_sizes: &[usize],
@@ -47,7 +47,7 @@ fn rwtest<T: AccessPhysicalMemory>(
     total_size
 }
 
-pub fn read_test_with_mem<T: AccessPhysicalMemory>(
+pub fn read_test_with_mem<T: PhysicalMemory>(
     bench: &mut Bencher,
     mem: &mut T,
     chunk_size: usize,
@@ -59,7 +59,7 @@ pub fn read_test_with_mem<T: AccessPhysicalMemory>(
     });
 }
 
-fn read_test_with_ctx<T: AccessPhysicalMemory>(
+fn read_test_with_ctx<T: PhysicalMemory>(
     bench: &mut Bencher,
     cache_size: u64,
     chunk_size: usize,
@@ -86,7 +86,7 @@ fn read_test_with_ctx<T: AccessPhysicalMemory>(
     }
 }
 
-fn seq_read_params<T: AccessPhysicalMemory>(
+fn seq_read_params<T: PhysicalMemory>(
     group: &mut BenchmarkGroup<'_, measurement::WallTime>,
     func_name: String,
     cache_size: u64,
@@ -110,7 +110,7 @@ fn seq_read_params<T: AccessPhysicalMemory>(
     }
 }
 
-fn chunk_read_params<T: AccessPhysicalMemory>(
+fn chunk_read_params<T: PhysicalMemory>(
     group: &mut BenchmarkGroup<'_, measurement::WallTime>,
     func_name: String,
     cache_size: u64,
@@ -136,7 +136,7 @@ fn chunk_read_params<T: AccessPhysicalMemory>(
     }
 }
 
-pub fn seq_read<T: AccessPhysicalMemory>(
+pub fn seq_read<T: PhysicalMemory>(
     c: &mut Criterion,
     backend_name: &str,
     initialize_ctx: &dyn Fn() -> flow_core::Result<T>,
@@ -162,7 +162,7 @@ pub fn seq_read<T: AccessPhysicalMemory>(
     );
 }
 
-pub fn chunk_read<T: AccessPhysicalMemory>(
+pub fn chunk_read<T: PhysicalMemory>(
     c: &mut Criterion,
     backend_name: &str,
     initialize_ctx: &dyn Fn() -> flow_core::Result<T>,

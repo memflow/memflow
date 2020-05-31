@@ -2,7 +2,7 @@ use flow_core::*;
 use flow_derive::*;
 
 // TODO: open usb device
-#[derive(AccessVirtualMemoryRaw, VirtualAddressTranslatorRaw)]
+#[derive(VirtualMemoryRaw, VirtualAddressTranslatorRaw)]
 pub struct Memory {}
 
 impl Memory {
@@ -11,7 +11,7 @@ impl Memory {
     }
 }
 
-impl AccessPhysicalMemory for Memory {
+impl PhysicalMemory for Memory {
     fn phys_read_iter<'a, T: PhysicalReadIterator<'a>>(&mut self, _: T) -> Result<()> {
         Err(Error::new(
             "flow-pcileech::phys_read_iter not implemented",

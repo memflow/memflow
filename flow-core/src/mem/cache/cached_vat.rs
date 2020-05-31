@@ -2,20 +2,20 @@ use crate::error::Result;
 
 use crate::architecture::Architecture;
 use crate::mem::cache::{CacheValidator, TLBCache};
-use crate::mem::{AccessPhysicalMemory, PhysicalReadIterator, PhysicalWriteIterator};
+use crate::mem::{PhysicalMemory, PhysicalReadIterator, PhysicalWriteIterator};
 use crate::types::{Address, Page, PhysicalAddress};
 use crate::vat;
 use crate::vat::VirtualAddressTranslatorRaw;
 use bumpalo::{collections::Vec as BumpVec, Bump};
 
-#[derive(AccessVirtualMemoryRaw)]
-pub struct CachedVAT<T: AccessPhysicalMemory + VirtualAddressTranslatorRaw, Q: CacheValidator> {
+#[derive(VirtualMemoryRaw)]
+pub struct CachedVAT<T: PhysicalMemory + VirtualAddressTranslatorRaw, Q: CacheValidator> {
     mem: T,
     tlb: TLBCache<Q>,
     arena: Bump,
 }
 
-impl<T: AccessPhysicalMemory + VirtualAddressTranslatorRaw, Q: CacheValidator> CachedVAT<T, Q> {
+impl<T: PhysicalMemory + VirtualAddressTranslatorRaw, Q: CacheValidator> CachedVAT<T, Q> {
     pub fn with(mem: T, tlb: TLBCache<Q>) -> Self {
         Self {
             mem,
@@ -25,7 +25,7 @@ impl<T: AccessPhysicalMemory + VirtualAddressTranslatorRaw, Q: CacheValidator> C
     }
 }
 
-impl<T: AccessPhysicalMemory + VirtualAddressTranslatorRaw, Q: CacheValidator>
+impl<T: PhysicalMemory + VirtualAddressTranslatorRaw, Q: CacheValidator>
     VirtualAddressTranslatorRaw for CachedVAT<T, Q>
 {
     fn virt_to_phys_iter<
@@ -67,7 +67,7 @@ impl<T: AccessPhysicalMemory + VirtualAddressTranslatorRaw, Q: CacheValidator>
     }
 }
 
-impl<T: AccessPhysicalMemory + VirtualAddressTranslatorRaw, Q: CacheValidator> AccessPhysicalMemory
+impl<T: PhysicalMemory + VirtualAddressTranslatorRaw, Q: CacheValidator> PhysicalMemory
     for CachedVAT<T, Q>
 {
     fn phys_read_iter<'b, PI: PhysicalReadIterator<'b>>(&'b mut self, iter: PI) -> Result<()> {

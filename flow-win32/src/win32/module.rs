@@ -21,7 +21,7 @@ pub struct Win32Module {
 }
 
 impl Win32Module {
-    pub fn try_with_peb<T: AccessVirtualMemory>(
+    pub fn try_with_peb<T: VirtualMemory>(
         mem: &mut T,
         process: &Win32Process,
         offsets: &Win32Offsets,
@@ -85,7 +85,7 @@ impl Win32Module {
         })
     }
 
-    pub fn try_with_name<T: AccessVirtualMemory>(
+    pub fn try_with_name<T: VirtualMemory>(
         mem: &mut T,
         process: &Win32Process,
         offsets: &Win32Offsets,
@@ -102,7 +102,7 @@ impl Win32Module {
     }
 
     // read_image() - reads the entire image into memory
-    pub fn read_image<T: AccessVirtualMemory>(
+    pub fn read_image<T: VirtualMemory>(
         &self,
         mem: &mut T,
         process: &Win32Process,

@@ -28,7 +28,7 @@ pub fn virtual_translator_trait_derive(input: TokenStream) -> TokenStream {
     TokenStream::from(expanded)
 }
 
-#[proc_macro_derive(AccessVirtualMemoryRaw)]
+#[proc_macro_derive(VirtualMemoryRaw)]
 pub fn virtual_memory_trait_derive(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
 
@@ -37,7 +37,7 @@ pub fn virtual_memory_trait_derive(input: TokenStream) -> TokenStream {
     let (impl_generics, type_generics, _) = input.generics.split_for_impl();
 
     let expanded = quote! {
-        impl #impl_generics crate::mem::AccessVirtualMemoryRaw for #name #type_generics {
+        impl #impl_generics crate::mem::VirtualMemoryRaw for #name #type_generics {
             fn virt_read_raw_iter<'vtl, VI: crate::mem::virt::VirtualReadIterator<'vtl>>(
                 &mut self,
                 arch: Architecture,

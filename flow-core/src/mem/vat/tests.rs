@@ -2,7 +2,7 @@ use crate::architecture::Architecture;
 use crate::dummy::DummyMemory;
 use crate::mem::cache::page_cache::PageCache;
 use crate::mem::cache::timed_validator::TimedCacheValidator;
-use crate::mem::{AccessVirtualMemory, VirtualAddressTranslator};
+use crate::mem::{VirtualAddressTranslator, VirtualMemory};
 use crate::types::{Address, Length, PhysicalAddress};
 use crate::*;
 

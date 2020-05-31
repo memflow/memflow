@@ -2,7 +2,7 @@
 //pub mod emulator;
 
 use crate::architecture::Architecture;
-use crate::mem::*;
+use crate::mem::{PhysicalMemory, VirtualFromPhysical};
 use crate::types::{Address, Length};
 
 pub trait OperatingSystem {}
@@ -18,8 +18,8 @@ pub trait OsProcess {
     fn proc_arch(&self) -> Architecture;
 
     // virt_mem() - creates a VirtualMemory wrapper with system and process architecture
-    fn virt_mem<'a, T: AccessVirtualMemory>(&self, mem: &'a mut T) -> ProcessMemoryContext<'a, T> {
-        ProcessMemoryContext::with_proc_arch(mem, self.sys_arch(), self.proc_arch(), self.dtb())
+    fn virt_mem<'a, T: PhysicalMemory>(&self, mem: &'a mut T) -> VirtualFromPhysical<'a, T> {
+        VirtualFromPhysical::with_proc_arch(mem, self.sys_arch(), self.proc_arch(), self.dtb())
     }
 }
 

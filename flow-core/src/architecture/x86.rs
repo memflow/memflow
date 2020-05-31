@@ -3,7 +3,7 @@ use crate::error::{Error, Result};
 use crate::architecture::ByteOrder;
 use crate::types::{Address, Length, PhysicalAddress};
 
-use crate::mem::AccessPhysicalMemoryExt;
+use crate::mem::PhysicalMemory;
 
 use log::warn;
 
@@ -23,17 +23,12 @@ pub fn len_addr() -> Length {
     Length::from(4)
 }
 
-pub fn virt_to_phys_iter<
-    T: AccessPhysicalMemoryExt,
-    B,
+pub fn virt_to_phys_iter<T, B, VI, OV>(_mem: &mut T, _dtb: Address, addrs: VI, out: &mut OV)
+where
+    T: PhysicalMemory + ?Sized,
     VI: Iterator<Item = (Address, B)>,
     OV: Extend<(Result<PhysicalAddress>, Address, B)>,
->(
-    _mem: &mut T,
-    _dtb: Address,
-    addrs: VI,
-    out: &mut OV,
-) {
+{
     warn!("x86::virt_to_phys_iter() not implemented yet");
     out.extend(addrs.map(|(addr, buf)| {
         (

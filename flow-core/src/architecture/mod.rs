@@ -18,7 +18,7 @@ pub mod x86_pae;
 use crate::error::{Error, Result};
 use std::convert::TryFrom;
 
-use crate::mem::AccessPhysicalMemory;
+use crate::mem::PhysicalMemory;
 use crate::types::{Address, Length, PhysicalAddress};
 
 /**
@@ -225,7 +225,7 @@ impl Architecture {
 
     TODO: add example
     */
-    pub fn virt_to_phys<T: AccessPhysicalMemory>(
+    pub fn virt_to_phys<T: PhysicalMemory>(
         self,
         mem: &mut T,
         dtb: Address,
@@ -237,7 +237,7 @@ impl Architecture {
     }
 
     pub fn virt_to_phys_iter<
-        T: AccessPhysicalMemory,
+        T: PhysicalMemory + ?Sized,
         B,
         VI: Iterator<Item = (Address, B)>,
         OV: Extend<(Result<PhysicalAddress>, Address, B)>,

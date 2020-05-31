@@ -3,7 +3,7 @@ use crate::architecture::Architecture;
 use crate::error::Error;
 use crate::iter::FlowIters;
 use crate::mem::phys::{PhysicalReadData, PhysicalReadIterator};
-use crate::mem::{AccessPhysicalMemory, AccessPhysicalMemoryExt};
+use crate::mem::{PhysicalMemory, PhysicalMemoryExt};
 use crate::page_chunks::PageChunksMut;
 use crate::types::{Address, Length, PhysicalAddress};
 use bumpalo::{collections::Vec as BumpVec, Bump};
@@ -169,7 +169,7 @@ impl<T: CacheValidator> PageCache<T> {
         }
     }
 
-    fn cached_read_single<F: AccessPhysicalMemoryExt>(
+    fn cached_read_single<F: PhysicalMemoryExt>(
         &mut self,
         mem: &mut F,
         addr: PhysicalAddress,
@@ -213,7 +213,7 @@ impl<T: CacheValidator> PageCache<T> {
     }
 
     #[allow(clippy::never_loop)]
-    pub fn cached_read<'a, F: AccessPhysicalMemory, PI: PhysicalReadIterator<'a>>(
+    pub fn cached_read<'a, F: PhysicalMemory, PI: PhysicalReadIterator<'a>>(
         &'a mut self,
         mem: &'a mut F,
         iter: PI,

@@ -8,7 +8,7 @@ use libc::{c_ulong, iovec, pid_t, sysconf, _SC_IOV_MAX};
 
 const LENGTH_2GB: Length = Length::from_gb(2);
 
-#[derive(Clone, AccessVirtualMemoryRaw, VirtualAddressTranslatorRaw)]
+#[derive(Clone, VirtualMemoryRaw, VirtualAddressTranslatorRaw)]
 pub struct Memory {
     pub pid: pid_t,
     pub map: procfs::process::MemoryMap,
@@ -79,7 +79,7 @@ impl Memory {
     }
 }
 
-impl AccessPhysicalMemory for Memory {
+impl PhysicalMemory for Memory {
     fn phys_read_iter<'a, PI: PhysicalReadIterator<'a>>(&'a mut self, mut iter: PI) -> Result<()> {
         let max_iov = self.temp_iov.len() / 2;
         let (iov_local, iov_remote) = self.temp_iov.split_at_mut(max_iov);

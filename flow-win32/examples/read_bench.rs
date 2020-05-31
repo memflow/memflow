@@ -7,8 +7,7 @@ use std::io::Write;
 use std::time::{Duration, Instant};
 
 use flow_core::{
-    timed_validator::*, AccessPhysicalMemory, AccessVirtualMemoryRaw, Address, CachedMemoryAccess,
-    PageCache,
+    timed_validator::*, Address, CachedMemoryAccess, PageCache, PhysicalMemory, VirtualMemoryRaw,
 };
 use flow_core::{Length, OsProcess, OsProcessModule, PageType};
 use flow_win32::{Win32, Win32Module, Win32Offsets, Win32Process};
@@ -17,7 +16,7 @@ use flow_qemu_procfs::Memory;
 
 use rand::{prng::XorShiftRng as CurRng, Rng, SeedableRng};
 
-fn rwtest<T: AccessVirtualMemoryRaw>(
+fn rwtest<T: VirtualMemoryRaw>(
     mem: &mut T,
     proc: &Win32Process,
     module: &dyn OsProcessModule,
@@ -91,7 +90,7 @@ fn rwtest<T: AccessVirtualMemoryRaw>(
     );
 }
 
-fn read_bench<T: AccessPhysicalMemory + AccessVirtualMemoryRaw>(
+fn read_bench<T: PhysicalMemory + VirtualMemoryRaw>(
     mem: &mut T,
     os: Win32,
 ) -> flow_core::Result<()> {

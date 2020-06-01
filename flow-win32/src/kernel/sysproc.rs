@@ -3,7 +3,7 @@ use crate::error::{Error, Result};
 use byteorder::{ByteOrder, LittleEndian};
 use log::{debug, info, warn};
 
-use flow_core::mem::*;
+use flow_core::mem::VirtualMemory;
 use flow_core::types::{Address, Length};
 
 use crate::kernel::StartBlock;
@@ -12,19 +12,19 @@ use crate::kernel::ntos;
 
 use pelite::{self, pe64::exports::Export, PeView};
 
-pub fn find<T: PhysicalMemoryExt + VirtualMemory + ?Sized>(
-    mem: &mut T,
+pub fn find<T: VirtualMemory + ?Sized>(
+    virt_mem: &mut T,
     start_block: &StartBlock,
     ntos: Address,
 ) -> Result<Address> {
     debug!("trying to find system eprocess");
 
-    match find_exported(mem, start_block, ntos) {
+    match find_exported(virt_mem, start_block, ntos) {
         Ok(e) => return Ok(e),
         Err(e) => warn!("{}", e),
     }
 
-    match find_in_section(mem, start_block, ntos) {
+    match find_in_section(virt_mem, start_block, ntos) {
         Ok(e) => return Ok(e),
         Err(e) => warn!("{}", e),
     }
@@ -33,12 +33,12 @@ pub fn find<T: PhysicalMemoryExt + VirtualMemory + ?Sized>(
 }
 
 // find from exported symbol
-pub fn find_exported<T: PhysicalMemoryExt + VirtualMemory + ?Sized>(
-    mem: &mut T,
+pub fn find_exported<T: VirtualMemory + ?Sized>(
+    virt_mem: &mut T,
     start_block: &StartBlock,
     ntos: Address,
 ) -> Result<Address> {
-    let header_buf = ntos::pe::try_fetch_pe_header(mem, start_block, ntos)?;
+    let header_buf = ntos::pe::try_fetch_pe_header(virt_mem, ntos)?;
     let header = PeView::from_bytes(&header_buf)?;
 
     // PsInitialSystemProcess -> PsActiveProcessHead
@@ -57,7 +57,7 @@ pub fn find_exported<T: PhysicalMemoryExt + VirtualMemory + ?Sized>(
     // TODO: fallback for 32bit
     // TODO: wrap error properly
     let mut out = vec![0u8; start_block.arch.len_addr().as_usize()];
-    mem.virt_read_raw_into(start_block.arch, start_block.dtb, sys_proc, &mut out)?;
+    virt_mem.virt_read_raw_into(sys_proc, &mut out)?;
     let address: Address = if start_block.arch.bits() == 64 {
         LittleEndian::read_u64(&out).into()
     } else if start_block.arch.bits() == 32 {
@@ -73,8 +73,8 @@ pub fn find_exported<T: PhysicalMemoryExt + VirtualMemory + ?Sized>(
 // scan in pdb
 
 // scan in section
-pub fn find_in_section<T: PhysicalMemoryExt + VirtualMemory + ?Sized>(
-    mem: &mut T,
+pub fn find_in_section<T: VirtualMemory + ?Sized>(
+    virt_mem: &mut T,
     start_block: &StartBlock,
     ntos: Address,
 ) -> Result<Address> {
@@ -83,7 +83,7 @@ pub fn find_in_section<T: PhysicalMemoryExt + VirtualMemory + ?Sized>(
     // ... check if its 32 or 64bit
 
     let mut header_buf = vec![0; Length::from_mb(32).as_usize()];
-    mem.virt_read_raw_into(start_block.arch, start_block.dtb, ntos, &mut header_buf)?;
+    virt_mem.virt_read_raw_into(ntos, &mut header_buf)?;
 
     /*
     let mut pe_opts = ParseOptions::default();

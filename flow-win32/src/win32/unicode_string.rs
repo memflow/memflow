@@ -1,19 +1,27 @@
 use crate::error::{Error, Result};
 
-use flow_core::architecture;
-use flow_core::mem::*;
+use flow_core::architecture::{Architecture, Endianess};
+use flow_core::mem::VirtualMemory;
 use flow_core::types::{Address, Length};
 
 use byteorder::{BigEndian, ByteOrder, LittleEndian};
 use widestring::U16CString;
 
 pub trait VirtualReadUnicodeString {
-    fn virt_read_unicode_string(&mut self, addr: Address) -> Result<String>;
+    fn virt_read_unicode_string(
+        &mut self,
+        proc_arch: Architecture,
+        addr: Address,
+    ) -> Result<String>;
 }
 
 // TODO: split up cpu and proc arch in read_helper.rs
-impl<'a, T: VirtualMemory> VirtualReadUnicodeString for ProcessMemoryContext<'a, T> {
-    fn virt_read_unicode_string(&mut self, addr: Address) -> Result<String> {
+impl<'a, T: VirtualMemory> VirtualReadUnicodeString for T {
+    fn virt_read_unicode_string(
+        &mut self,
+        proc_arch: Architecture,
+        addr: Address,
+    ) -> Result<String> {
         /*
         typedef struct _windows_unicode_string32 {
             uint16_t length;
@@ -38,7 +46,7 @@ impl<'a, T: VirtualMemory> VirtualReadUnicodeString for ProcessMemoryContext<'a,
 
         // TODO: chek if length exceeds limit
         // buffer is either aligned at 4 or 8
-        let buffer = match self.proc_arch().bits() {
+        let buffer = match proc_arch.bits() {
             64 => self.virt_read_addr64(addr + Length::from(8))?,
             32 => self.virt_read_addr32(addr + Length::from(4))?,
             _ => {
@@ -64,9 +72,9 @@ impl<'a, T: VirtualMemory> VirtualReadUnicodeString for ProcessMemoryContext<'a,
 
         let content16 = content
             .chunks_exact(2)
-            .map(|b| match self.proc_arch().byte_order() {
-                architecture::ByteOrder::LittleEndian => LittleEndian::read_u16(b),
-                architecture::ByteOrder::BigEndian => BigEndian::read_u16(b),
+            .map(|b| match proc_arch.endianess() {
+                Endianess::LittleEndian => LittleEndian::read_u16(b),
+                Endianess::BigEndian => BigEndian::read_u16(b),
             })
             .collect::<Vec<u16>>();
         Ok(U16CString::from_vec_with_nul(content16)?.to_string_lossy())

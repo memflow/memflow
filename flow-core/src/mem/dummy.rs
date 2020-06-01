@@ -1,7 +1,8 @@
-use crate::mem::{PhysicalReadIterator, PhysicalWriteIterator};
-use crate::types::{Address, Length, PhysicalAddress};
-use crate::*;
-use flow_derive::*;
+use crate::architecture::Architecture;
+use crate::error::{Error, Result};
+use crate::mem::{PhysicalMemory, PhysicalReadIterator, PhysicalWriteIterator};
+use crate::process::{OsProcessInfo, OsProcessModuleInfo};
+use crate::types::{Address, Length};
 
 use rand::seq::SliceRandom;
 use rand::{thread_rng, Rng};
@@ -79,7 +80,7 @@ pub struct DummyModule {
     size: Length,
 }
 
-impl OsProcessModule for DummyModule {
+impl OsProcessModuleInfo for DummyModule {
     fn address(&self) -> Address {
         Address::INVALID
     }
@@ -115,7 +116,7 @@ impl DummyProcess {
     }
 }
 
-impl OsProcess for DummyProcess {
+impl OsProcessInfo for DummyProcess {
     fn address(&self) -> Address {
         self.address
     }

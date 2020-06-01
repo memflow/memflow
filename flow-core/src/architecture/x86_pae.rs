@@ -1,6 +1,6 @@
 use crate::error::{Error, Result};
 
-use crate::architecture::ByteOrder;
+use crate::architecture::Endianess;
 use crate::types::{Address, Length, PhysicalAddress};
 
 use crate::mem::PhysicalMemory;
@@ -11,8 +11,8 @@ pub fn bits() -> u8 {
     32
 }
 
-pub fn byte_order() -> ByteOrder {
-    ByteOrder::LittleEndian
+pub fn endianess() -> Endianess {
+    Endianess::LittleEndian
 }
 
 pub fn page_size() -> Length {

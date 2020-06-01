@@ -25,8 +25,8 @@ impl<T: PhysicalMemory + VirtualAddressTranslatorRaw, Q: CacheValidator> CachedV
     }
 }
 
-impl<T: PhysicalMemory + VirtualAddressTranslatorRaw, Q: CacheValidator>
-    VirtualAddressTranslatorRaw for CachedVAT<T, Q>
+impl<T: PhysicalMemory + VirtualAddressTranslatorRaw, Q: CacheValidator> VirtualAddressTranslatorRaw
+    for CachedVAT<T, Q>
 {
     fn virt_to_phys_iter<
         B,

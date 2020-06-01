@@ -150,7 +150,7 @@ impl Architecture {
 
     pub fn test() {
         let arch = Architecture::X86;
-        assert_eq!(arch.byte_order(), Endianess::LittleEndian);
+        assert_eq!(arch.endianess(), Endianess::LittleEndian);
     }
     ```
     */
@@ -171,7 +171,7 @@ impl Architecture {
     # Examples
 
     ```
-    use flow_core::architecture::{Architecture, ByteOrder};
+    use flow_core::architecture::Architecture;
     use flow_core::types::Length;
 
     pub fn test() {

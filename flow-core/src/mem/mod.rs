@@ -20,6 +20,6 @@ pub mod dummy;
 
 pub use cache::*; // TODO: specify pub declarations
 pub use phys_mem::{PhysicalMemory, PhysicalReadIterator, PhysicalWriteIterator};
-pub use vat::VAT;
+pub use vat::{VirtualAdressTranslator, VAT};
 pub use virt_from_phys::VirtualFromPhysical;
 pub use virt_mem::VirtualMemory;

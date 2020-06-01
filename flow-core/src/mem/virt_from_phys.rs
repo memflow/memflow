@@ -1,39 +1,23 @@
 use super::vat;
 use super::{
-    vat::VirtualAdressTranslator,
+    vat::{VirtualAdressTranslator, VAT},
     virt_mem::{VirtualMemory, VirtualReadIterator, VirtualWriteIterator},
     PhysicalMemory,
 };
 use crate::architecture::Architecture;
-use crate::error::Error;
+use crate::error::{Error, Result};
 use crate::types::{Address, Page};
-use crate::Result;
 
-pub struct VirtualFromPhysical<T: PhysicalMemory> {
+pub struct VirtualFromPhysical<T: PhysicalMemory, V: VAT> {
     phys_mem: T,
     sys_arch: Architecture,
-    vat: VirtualAdressTranslator,
+    vat: V,
     proc_arch: Architecture,
     dtb: Address,
 }
 
-impl<T: PhysicalMemory> VirtualFromPhysical<T> {
-    pub fn new(phys_mem: T, sys_arch: Architecture, dtb: Address) -> Self {
-        Self {
-            phys_mem,
-            sys_arch,
-            vat: VirtualAdressTranslator::new(sys_arch),
-            proc_arch: sys_arch,
-            dtb,
-        }
-    }
-
-    pub fn with_proc_arch(
-        phys_mem: T,
-        sys_arch: Architecture,
-        proc_arch: Architecture,
-        dtb: Address,
-    ) -> Self {
+impl<T: PhysicalMemory> VirtualFromPhysical<T, VirtualAdressTranslator> {
+    pub fn new(phys_mem: T, sys_arch: Architecture, proc_arch: Architecture, dtb: Address) -> Self {
         Self {
             phys_mem,
             sys_arch,
@@ -42,9 +26,32 @@ impl<T: PhysicalMemory> VirtualFromPhysical<T> {
             dtb,
         }
     }
+}
+
+// TODO: with_process
+impl<T: PhysicalMemory, V: VAT> VirtualFromPhysical<T, V> {
+    pub fn with_vat(
+        phys_mem: T,
+        sys_arch: Architecture,
+        proc_arch: Architecture,
+        dtb: Address,
+        vat: V,
+    ) -> Self {
+        Self {
+            phys_mem,
+            sys_arch,
+            vat,
+            proc_arch,
+            dtb,
+        }
+    }
 
     pub fn sys_arch(&self) -> Architecture {
         self.sys_arch
+    }
+
+    pub fn vat(&mut self) -> &mut V {
+        &mut self.vat
     }
 
     pub fn proc_arch(&self) -> Architecture {
@@ -64,7 +71,7 @@ impl<T: PhysicalMemory> VirtualFromPhysical<T> {
     }
 }
 
-impl<T: PhysicalMemory> VirtualMemory for VirtualFromPhysical<T> {
+impl<T: PhysicalMemory, V: VAT> VirtualMemory for VirtualFromPhysical<T, V> {
     fn virt_read_raw_iter<'a, VI: VirtualReadIterator<'a>>(&mut self, iter: VI) -> Result<()> {
         vat::virt_read_raw_iter(
             &mut self.phys_mem,

@@ -36,6 +36,23 @@ pub trait VAT {
     }
 }
 
+// forward impls
+impl<'a, T: VAT> VAT for &'a mut T {
+    fn virt_to_phys_iter<U, B, VI, OV>(
+        &mut self,
+        phys_mem: &mut U,
+        dtb: Address,
+        addrs: VI,
+        out: &mut OV,
+    ) where
+        U: PhysicalMemory + ?Sized,
+        VI: Iterator<Item = (Address, B)>,
+        OV: Extend<(Result<PhysicalAddress>, Address, B)>,
+    {
+        (*self).virt_to_phys_iter(phys_mem, dtb, addrs, out)
+    }
+}
+
 //
 //
 //

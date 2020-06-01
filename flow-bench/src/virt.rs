@@ -1,18 +1,17 @@
 use criterion::*;
 
 use flow_core::mem::{
-    timed_validator::*, vat::VirtualAddressTranslatorRaw, CachedMemoryAccess, CachedVAT, PageCache,
-    PhysicalMemory, TLBCache, VirtualMemoryRaw,
+    timed_validator::*, vat::VirtualAdressTranslator, CachedMemoryAccess, CachedVAT, PageCache,
+    TLBCache, VirtualFromPhysical, VirtualMemory,
 };
 
-use flow_core::{Address, Length, OsProcess, OsProcessModule, PageType};
+use flow_core::{Address, Length, OsProcessInfo, OsProcessModuleInfo, PageType};
 
 use rand::prelude::*;
 use rand::{prng::XorShiftRng as CurRng, Rng, SeedableRng};
 
-fn rwtest<T: VirtualMemoryRaw, P: OsProcess, M: OsProcessModule>(
-    mem: &mut T,
-    proc: &P,
+fn rwtest<T: VirtualMemory, M: OsProcessModuleInfo>(
+    virt_mem: &mut T,
     module: &M,
     chunk_sizes: &[usize],
     chunk_counts: &[usize],
@@ -36,9 +35,7 @@ fn rwtest<T: VirtualMemoryRaw, P: OsProcess, M: OsProcessModule>(
                     *addr = (base_addr + rng.gen_range(0, 0x2000)).into();
                 }
 
-                let _ = mem.virt_read_raw_iter(
-                    proc.sys_arch(),
-                    proc.dtb(),
+                let _ = virt_mem.virt_read_raw_iter(
                     bufs.iter_mut()
                         .map(|(addr, buf)| (*addr, buf.as_mut_slice())),
                 );
@@ -52,18 +49,16 @@ fn rwtest<T: VirtualMemoryRaw, P: OsProcess, M: OsProcessModule>(
     total_size
 }
 
-pub fn read_test_with_mem<T: VirtualMemoryRaw, P: OsProcess, M: OsProcessModule>(
+pub fn read_test_with_mem<T: VirtualMemory, M: OsProcessModuleInfo>(
     bench: &mut Bencher,
-    mem: &mut T,
+    virt_mem: &mut T,
     chunk_size: usize,
     chunks: usize,
-    proc: P,
     tmod: M,
 ) {
     bench.iter(|| {
         black_box(rwtest(
-            mem,
-            &proc,
+            virt_mem,
             &tmod,
             &[chunk_size],
             &[chunks],
@@ -72,17 +67,13 @@ pub fn read_test_with_mem<T: VirtualMemoryRaw, P: OsProcess, M: OsProcessModule>
     });
 }
 
-fn read_test_with_ctx<
-    T: VirtualAddressTranslatorRaw + VirtualMemoryRaw + PhysicalMemory,
-    P: OsProcess,
-    M: OsProcessModule,
->(
+fn read_test_with_ctx<T: PhysicalMemory, V: VAT, P: OsProcessInfo, M: OsProcessModuleInfo>(
     bench: &mut Bencher,
     cache_size: u64,
     chunk_size: usize,
     chunks: usize,
     use_tlb: bool,
-    (mut mem, proc, tmod): (T, P, M),
+    (mut mem, mut vat, proc, tmod): (T, V, P, M),
 ) {
     let tlb_cache = TLBCache::new(
         2048.into(),
@@ -99,25 +90,39 @@ fn read_test_with_ctx<
 
         if use_tlb {
             let mem = CachedMemoryAccess::with(&mut mem, cache);
-            let mut mem = CachedVAT::with(mem, tlb_cache);
-            read_test_with_mem(bench, &mut mem, chunk_size, chunks, proc, tmod);
+            let mut vat = CachedVAT::with(vat, tlb_cache, proc.sys_arch());
+            let mut virt_mem = VirtualFromPhysical::with_vat(
+                mem,
+                proc.sys_arch(),
+                proc.proc_arch(),
+                proc.dtb(),
+                vat,
+            );
+            read_test_with_mem(bench, &mut virt_mem, chunk_size, chunks, proc, tmod);
         } else {
             let mut mem = CachedMemoryAccess::with(&mut mem, cache);
-            read_test_with_mem(bench, &mut mem, chunk_size, chunks, proc, tmod);
+            let mut virt_mem = VirtualFromPhysical::with_vat(
+                mem,
+                proc.sys_arch(),
+                proc.proc_arch(),
+                proc.dtb(),
+                vat,
+            );
+            read_test_with_mem(bench, &mut virt_mem, chunk_size, chunks, proc, tmod);
         }
     } else if use_tlb {
-        let mut mem = CachedVAT::with(mem, tlb_cache);
-        read_test_with_mem(bench, &mut mem, chunk_size, chunks, proc, tmod);
+        let mut vat = CachedVAT::with(vat, tlb_cache, proc.sys_arch());
+        let mut virt_mem =
+            VirtualFromPhysical::with_vat(mem, proc.sys_arch(), proc.proc_arch(), proc.dtb(), vat);
+        read_test_with_mem(bench, &mut virt_mem, chunk_size, chunks, proc, tmod);
     } else {
-        read_test_with_mem(bench, &mut mem, chunk_size, chunks, proc, tmod);
+        let mut virt_mem =
+            VirtualFromPhysical::with_vat(mem, proc.sys_arch(), proc.proc_arch(), proc.dtb(), vat);
+        read_test_with_mem(bench, &mut virt_mem, chunk_size, chunks, proc, tmod);
     }
 }
 
-fn seq_read_params<
-    T: VirtualAddressTranslatorRaw + VirtualMemoryRaw + PhysicalMemory,
-    P: OsProcess,
-    M: OsProcessModule,
->(
+fn seq_read_params<T: VirtualMemory, P: OsProcessInfo, M: OsProcessModuleInfo>(
     group: &mut BenchmarkGroup<'_, measurement::WallTime>,
     func_name: String,
     cache_size: u64,
@@ -143,11 +148,7 @@ fn seq_read_params<
     }
 }
 
-fn chunk_read_params<
-    T: VirtualAddressTranslatorRaw + VirtualMemoryRaw + PhysicalMemory,
-    P: OsProcess,
-    M: OsProcessModule,
->(
+fn chunk_read_params<T: VirtualMemory, P: OsProcessInfo, M: OsProcessModuleInfo>(
     group: &mut BenchmarkGroup<'_, measurement::WallTime>,
     func_name: String,
     cache_size: u64,
@@ -175,11 +176,7 @@ fn chunk_read_params<
     }
 }
 
-pub fn seq_read<
-    T: VirtualAddressTranslatorRaw + VirtualMemoryRaw + PhysicalMemory,
-    P: OsProcess,
-    M: OsProcessModule,
->(
+pub fn seq_read<T: VirtualMemory, P: OsProcessInfo, M: OsProcessModuleInfo>(
     c: &mut Criterion,
     backend_name: &str,
     initialize_ctx: &dyn Fn() -> flow_core::Result<(T, P, M)>,
@@ -209,11 +206,7 @@ pub fn seq_read<
     //seq_read_params(&mut group, format!("{}_tlb_cache", group_name), 2, true, initialize_ctx);
 }
 
-pub fn chunk_read<
-    T: VirtualAddressTranslatorRaw + VirtualMemoryRaw + PhysicalMemory,
-    P: OsProcess,
-    M: OsProcessModule,
->(
+pub fn chunk_read<T: VirtualMemory, P: OsProcessInfo, M: OsProcessModuleInfo>(
     c: &mut Criterion,
     backend_name: &str,
     initialize_ctx: &dyn Fn() -> flow_core::Result<(T, P, M)>,

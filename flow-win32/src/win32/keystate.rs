@@ -15,7 +15,7 @@ pub struct Keyboard {
 }
 
 pub struct KeyboardState {
-    buffer: Box<[u8; 256 * 2 / 8]>,
+    buffer: [u8; 256 * 2 / 8],
 }
 
 impl Keyboard {
@@ -62,9 +62,7 @@ impl Keyboard {
         let buffer: [u8; 256 * 2 / 8] = user_process
             .borrow_virt_mem()
             .virt_read(self.key_state_addr)?;
-        Ok(KeyboardState {
-            buffer: Box::new(buffer),
-        })
+        Ok(KeyboardState { buffer })
     }
 
     pub fn set_state<T: PhysicalMemory>(
@@ -76,7 +74,7 @@ impl Keyboard {
             Win32Process::new(win.borrow_phys_mem(), self.user_process_info.clone());
         user_process
             .borrow_virt_mem()
-            .virt_write(self.key_state_addr, &*state.buffer)?;
+            .virt_write(self.key_state_addr, &state.buffer)?;
         Ok(())
     }
 }

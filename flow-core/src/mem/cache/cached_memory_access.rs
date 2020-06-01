@@ -1,15 +1,10 @@
-use crate::error::Result;
-
 use super::{page_cache::PageCache, CacheValidator};
-
-use crate::architecture::Architecture;
-use crate::mem::{PhysicalMemory, PhysicalReadIterator, PhysicalWriteIterator};
+use crate::error::Result;
+use crate::mem::phys_mem::{PhysicalMemory, PhysicalReadIterator, PhysicalWriteIterator};
 use crate::page_chunks::PageChunks;
-use crate::types::{Address, Page, PhysicalAddress};
-use crate::vat;
+
 use bumpalo::Bump;
 
-#[derive(VirtualAddressTranslatorRaw, VirtualMemoryRaw)]
 pub struct CachedMemoryAccess<'a, T: PhysicalMemory, Q: CacheValidator> {
     mem: &'a mut T,
     cache: PageCache<Q>,
@@ -27,9 +22,7 @@ impl<'a, T: PhysicalMemory, Q: CacheValidator> CachedMemoryAccess<'a, T, Q> {
 }
 
 // forward PhysicalMemory trait fncs
-impl<'a, T: PhysicalMemory, Q: CacheValidator> PhysicalMemory
-    for CachedMemoryAccess<'a, T, Q>
-{
+impl<'a, T: PhysicalMemory, Q: CacheValidator> PhysicalMemory for CachedMemoryAccess<'a, T, Q> {
     fn phys_read_iter<'b, PI: PhysicalReadIterator<'b>>(&'b mut self, iter: PI) -> Result<()> {
         self.cache.validator.update_validity();
         self.arena.reset();

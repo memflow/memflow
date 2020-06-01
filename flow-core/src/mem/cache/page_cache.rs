@@ -2,8 +2,7 @@ use super::{CacheValidator, PageType};
 use crate::architecture::Architecture;
 use crate::error::Error;
 use crate::iter::FlowIters;
-use crate::mem::phys::{PhysicalReadData, PhysicalReadIterator};
-use crate::mem::{PhysicalMemory, PhysicalMemoryExt};
+use crate::mem::phys_mem::{PhysicalMemory, PhysicalReadData, PhysicalReadIterator};
 use crate::page_chunks::PageChunksMut;
 use crate::types::{Address, Length, PhysicalAddress};
 use bumpalo::{collections::Vec as BumpVec, Bump};
@@ -169,7 +168,7 @@ impl<T: CacheValidator> PageCache<T> {
         }
     }
 
-    fn cached_read_single<F: PhysicalMemoryExt>(
+    fn cached_read_single<F: PhysicalMemory>(
         &mut self,
         mem: &mut F,
         addr: PhysicalAddress,

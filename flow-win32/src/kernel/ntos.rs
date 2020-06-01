@@ -14,23 +14,23 @@ use flow_core::mem::VirtualMemory;
 use flow_core::types::{Address, Length};
 
 pub fn find<T: VirtualMemory + ?Sized>(
-    mem: &mut T,
+    virt_mem: &mut T,
     start_block: &StartBlock,
 ) -> Result<(Address, Length)> {
     if start_block.arch.bits() == 64 {
         if !start_block.va.is_null() {
-            match x64::find_with_va(mem, start_block) {
+            match x64::find_with_va(virt_mem, start_block) {
                 Ok(b) => return Ok(b),
                 Err(e) => warn!("x64::find_with_va() error: {}", e),
             }
         }
 
-        match x64::find(mem) {
+        match x64::find(virt_mem) {
             Ok(b) => return Ok(b),
             Err(e) => warn!("x64::find() error: {}", e),
         }
     } else if start_block.arch.bits() == 32 {
-        match x86::find(mem) {
+        match x86::find(virt_mem) {
             Ok(b) => return Ok(b),
             Err(e) => warn!("x86::find() error: {}", e),
         }
@@ -47,12 +47,11 @@ pub struct Win32GUID {
 
 pub fn find_guid<T: VirtualMemory + ?Sized>(
     mem: &mut T,
-    start_block: &StartBlock,
     kernel_base: Address,
     kernel_size: Length,
 ) -> Result<Win32GUID> {
     let mut pe_buf = vec![0; kernel_size.as_usize()];
-    mem.virt_read_raw_into(start_block.arch, start_block.dtb, kernel_base, &mut pe_buf)?;
+    mem.virt_read_raw_into(kernel_base, &mut pe_buf)?;
 
     let pe = PeView::from_bytes(&pe_buf)?;
 

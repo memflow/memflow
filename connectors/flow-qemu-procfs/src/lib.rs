@@ -1,14 +1,13 @@
 use log::info;
 
 use flow_core::*;
-use flow_derive::*;
 
 use core::ffi::c_void;
 use libc::{c_ulong, iovec, pid_t, sysconf, _SC_IOV_MAX};
 
 const LENGTH_2GB: Length = Length::from_gb(2);
 
-#[derive(Clone, VirtualMemoryRaw, VirtualAddressTranslatorRaw)]
+#[derive(Clone)]
 pub struct Memory {
     pub pid: pid_t,
     pub map: procfs::process::MemoryMap,

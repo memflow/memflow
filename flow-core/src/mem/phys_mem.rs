@@ -103,6 +103,18 @@ pub trait PhysicalMemory {
     }
 }
 
+// forward impls
+impl<'a, T: PhysicalMemory> PhysicalMemory for &'a mut T {
+    fn phys_read_iter<'b, PI: PhysicalReadIterator<'b>>(&'b mut self, iter: PI) -> Result<()> {
+        (*self).phys_read_iter(iter)
+    }
+
+    fn phys_write_iter<'b, PI: PhysicalWriteIterator<'b>>(&'b mut self, iter: PI) -> Result<()> {
+        (*self).phys_write_iter(iter)
+    }
+}
+
+// iterator helpers
 pub type PhysicalReadData<'a> = (PhysicalAddress, &'a mut [u8]);
 pub trait PhysicalReadIterator<'a>: Iterator<Item = PhysicalReadData<'a>> + 'a {}
 impl<'a, T: Iterator<Item = PhysicalReadData<'a>> + 'a> PhysicalReadIterator<'a> for T {}

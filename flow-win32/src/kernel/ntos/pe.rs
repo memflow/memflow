@@ -1,5 +1,4 @@
 use crate::error::{Error, Result};
-use crate::kernel::StartBlock;
 
 use log::{debug, info};
 
@@ -11,7 +10,6 @@ use flow_core::types::{Address, Length};
 // TODO: store pe size in windows struct so we can reference it later
 pub fn probe_pe_header<T: VirtualMemory + ?Sized>(
     virt_mem: &mut T,
-    start_block: &StartBlock,
     probe_addr: Address,
 ) -> Result<String> {
     // try to probe pe header

@@ -1,11 +1,11 @@
-use super::Win32ModuleInfo;
+use super::{Kernel, Win32ModuleInfo};
 use crate::error::{Error, Result};
 use crate::win32::VirtualReadUnicodeString;
 
 use std::fmt;
 
 use flow_core::architecture::Architecture;
-use flow_core::mem::{PhysicalMemory, VirtualFromPhysical, VirtualMemory};
+use flow_core::mem::{PhysicalMemory, VirtualFromPhysical, VirtualMemory, VAT};
 use flow_core::types::{Address, Length};
 use flow_core::{OsProcessInfo, OsProcessModuleInfo};
 
@@ -75,34 +75,30 @@ impl OsProcessInfo for Win32ProcessInfo {
     }
 }
 
-pub struct Win32Process<T: PhysicalMemory> {
-    pub virt_mem: VirtualFromPhysical<T>,
+pub struct Win32Process<T: VirtualMemory> {
+    pub virt_mem: T,
     pub proc_info: Win32ProcessInfo,
 }
 
-impl<T: PhysicalMemory> Win32Process<T> {
-    pub fn new(phys_mem: T, proc_info: Win32ProcessInfo) -> Self {
+impl<'a, T: PhysicalMemory, V: VAT> Win32Process<VirtualFromPhysical<&'a mut T, &'a mut V>> {
+    pub fn with_physical(kernel: &'a mut Kernel<T, V>, proc_info: Win32ProcessInfo) -> Self {
+        // create virt_mem
+        let virt_mem = VirtualFromPhysical::with_vat(
+            &mut kernel.phys_mem,
+            proc_info.sys_arch,
+            proc_info.proc_arch,
+            proc_info.dtb,
+            &mut kernel.vat,
+        );
+
         Self {
-            virt_mem: VirtualFromPhysical::with_proc_arch(
-                phys_mem,
-                proc_info.sys_arch,
-                proc_info.proc_arch,
-                proc_info.dtb,
-            ),
+            virt_mem,
             proc_info,
         }
     }
+}
 
-    /// Consume the self object and return the containing memory connection
-    pub fn destroy(self) -> VirtualFromPhysical<T> {
-        self.virt_mem
-    }
-
-    /// Borrows the containing memory connection
-    pub fn borrow_virt_mem(&mut self) -> &mut VirtualFromPhysical<T> {
-        &mut self.virt_mem
-    }
-
+impl<T: VirtualMemory> Win32Process<T> {
     pub fn peb_list(&mut self) -> Result<Vec<Address>> {
         let mut list = Vec::new();
 
@@ -110,7 +106,6 @@ impl<T: PhysicalMemory> Win32Process<T> {
         let mut list_entry = list_start;
         loop {
             list.push(list_entry);
-            // TODO: asdf
             list_entry = match self.proc_info.proc_arch.bits() {
                 64 => self.virt_mem.virt_read_addr64(list_entry)?,
                 32 => self.virt_mem.virt_read_addr32(list_entry)?,
@@ -125,16 +120,28 @@ impl<T: PhysicalMemory> Win32Process<T> {
     }
 
     pub fn module_info_from_peb(&mut self, peb_module: Address) -> Result<Win32ModuleInfo> {
-        let base = self
-            .virt_mem
-            .virt_read_addr(peb_module + self.proc_info.ldr_data_base_offs)?;
+        let base = match self.proc_info.proc_arch.bits() {
+            64 => self
+                .virt_mem
+                .virt_read_addr64(peb_module + self.proc_info.ldr_data_base_offs)?,
+            32 => self
+                .virt_mem
+                .virt_read_addr32(peb_module + self.proc_info.ldr_data_base_offs)?,
+            _ => return Err(Error::new("invalid architecture")),
+        };
         trace!("base={:x}", base);
 
-        let size = Length::from(
-            self.virt_mem
-                .virt_read_addr(peb_module + self.proc_info.ldr_data_size_offs)?
+        let size = Length::from(match self.proc_info.proc_arch.bits() {
+            64 => self
+                .virt_mem
+                .virt_read_addr64(peb_module + self.proc_info.ldr_data_size_offs)?
                 .as_u64(),
-        );
+            32 => self
+                .virt_mem
+                .virt_read_addr32(peb_module + self.proc_info.ldr_data_size_offs)?
+                .as_u64(),
+            _ => return Err(Error::new("invalid architecture")),
+        });
         trace!("size={:x}", size);
 
         let name = self.virt_mem.virt_read_unicode_string(
@@ -155,7 +162,9 @@ impl<T: PhysicalMemory> Win32Process<T> {
     pub fn module_info_list(&mut self) -> Result<Vec<Win32ModuleInfo>> {
         let mut list = Vec::new();
         for &peb in self.peb_list()?.iter() {
-            list.push(self.module_info_from_peb(peb)?);
+            if let Ok(modu) = self.module_info_from_peb(peb) {
+                list.push(modu);
+            }
         }
         Ok(list)
     }
@@ -170,7 +179,7 @@ impl<T: PhysicalMemory> Win32Process<T> {
     }
 }
 
-impl<T: PhysicalMemory> fmt::Debug for Win32Process<T> {
+impl<'a, T: VirtualMemory> fmt::Debug for Win32Process<T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{:?}", self.proc_info)
     }

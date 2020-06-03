@@ -75,7 +75,7 @@ pub fn find_exported<T: VirtualMemory + ?Sized>(
 // scan in section
 pub fn find_in_section<T: VirtualMemory + ?Sized>(
     virt_mem: &mut T,
-    start_block: &StartBlock,
+    _start_block: &StartBlock,
     ntos: Address,
 ) -> Result<Address> {
     // find section ALMOSTRO

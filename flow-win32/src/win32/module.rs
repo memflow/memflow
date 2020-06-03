@@ -1,10 +1,10 @@
 use crate::error::{Error, Result};
-use log::trace;
+
+use log::{info, trace};
 
 use flow_core::mem::VirtualMemory;
 use flow_core::process::OsProcessModuleInfo;
-
-use crate::win32::*;
+use flow_core::types::{Address, Length};
 
 use pelite::{self, PeView};
 
@@ -22,11 +22,7 @@ pub struct Win32ModuleInfo {
 
 impl Win32ModuleInfo {
     // read_image() - reads the entire image into memory
-    pub fn read_image<T: VirtualMemory>(
-        &self,
-        proc_mem: &mut T,
-        process: &Win32ProcessInfo,
-    ) -> Result<Vec<u8>> {
+    pub fn read_image<T: VirtualMemory>(&self, proc_mem: &mut T) -> Result<Vec<u8>> {
         let mut probe_buf = vec![0; Length::from_kb(4).as_usize()];
         proc_mem.virt_read_raw_into(self.base, &mut probe_buf)?;
 

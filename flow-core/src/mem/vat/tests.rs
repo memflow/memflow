@@ -86,7 +86,8 @@ fn test_cache_invalidity_cached() {
     let mut write_buf = cached_buf.clone();
     write_buf[16..20].copy_from_slice(&[255, 255, 255, 255]);
     {
-        let mut virt_mem = VirtualFromPhysical::new(unsafe { mem_ptr.as_mut().unwrap() }, arch, arch, dtb);
+        let mut virt_mem =
+            VirtualFromPhysical::new(unsafe { mem_ptr.as_mut().unwrap() }, arch, arch, dtb);
         virt_mem
             .virt_write_raw(virt_base, write_buf.as_slice())
             .unwrap();
@@ -138,7 +139,8 @@ fn test_cache_invalidity_non_cached() {
     let mut write_buf = cached_buf.clone();
     write_buf[16..20].copy_from_slice(&[255, 255, 255, 255]);
     {
-        let mut virt_mem = VirtualFromPhysical::new(unsafe { mem_ptr.as_mut().unwrap() }, arch, arch, dtb);
+        let mut virt_mem =
+            VirtualFromPhysical::new(unsafe { mem_ptr.as_mut().unwrap() }, arch, arch, dtb);
         virt_mem
             .virt_write_raw(virt_base, write_buf.as_slice())
             .unwrap();

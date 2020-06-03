@@ -3,13 +3,14 @@ use crate::error::{Error, Result};
 use crate::kernel::StartBlock;
 
 use byteorder::{ByteOrder, LittleEndian};
-use dataview::Pod;
 use log::debug;
-use pelite::image::IMAGE_DOS_HEADER;
 
 use flow_core::architecture;
 use flow_core::mem::VirtualMemory;
 use flow_core::types::{Address, Length};
+
+use dataview::Pod;
+use pelite::image::IMAGE_DOS_HEADER;
 
 pub fn find_with_va<T: VirtualMemory + ?Sized>(
     virt_mem: &mut T,
@@ -54,7 +55,7 @@ pub fn find_with_va<T: VirtualMemory + ?Sized>(
             .find(|(i, _, _)| {
                 let probe_addr =
                     Address::from(va_base + (*i as u64) * architecture::x64::page_size().as_u64());
-                let name = probe_pe_header(virt_mem, start_block, probe_addr).unwrap_or_default();
+                let name = probe_pe_header(virt_mem, probe_addr).unwrap_or_default();
                 name == "ntoskrnl.exe"
             })
             .ok_or_else(|| {

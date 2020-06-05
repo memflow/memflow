@@ -110,13 +110,7 @@ fn read_bench<T: PhysicalMemory, V: VAT>(
         let mod_list: Vec<Win32ModuleInfo> = proc
             .module_info_list()?
             .into_iter()
-            .filter_map(|module| {
-                if module.size() > 0x1000.into() {
-                    Some(module)
-                } else {
-                    None
-                }
-            })
+            .filter(|module| module.size() > 0x1000.into())
             .collect();
 
         if !mod_list.is_empty() {

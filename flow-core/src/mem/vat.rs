@@ -59,6 +59,7 @@ impl<'a, T: VAT> VAT for &'a mut T {
 
 // TODO: rename trait + impl
 // impl
+#[derive(Debug, Clone)]
 pub struct VirtualAdressTranslator {
     sys_arch: Architecture,
 }

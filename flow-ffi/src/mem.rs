@@ -1,4 +1,4 @@
-use flow_core::mem::{PhysicalMemoryExt, VirtualAddressTranslator, VirtualMemory};
+use flow_core::mem::{PhysicalMemory, VirtualMemory, VAT};
 
 pub trait MemoryBackend: PhysicalMemoryExt + VirtualMemory + VirtualAddressTranslator {}
 

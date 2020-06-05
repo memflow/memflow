@@ -1,8 +1,7 @@
 use criterion::*;
 
 use flow_core::mem::{
-    timed_validator::*, vat::VirtualAdressTranslator, vat::VAT, CachedMemoryAccess, CachedVAT,
-    PageCache, PhysicalMemory, TLBCache,
+    timed_validator::*, CachedMemoryAccess, CachedVAT, PageCache, PhysicalMemory, TLBCache, VAT,
 };
 
 use flow_core::{Address, Length, OsProcessInfo, OsProcessModuleInfo, PageType};
@@ -85,7 +84,7 @@ fn vat_test_with_ctx<T: PhysicalMemory, V: VAT, P: OsProcessInfo, M: OsProcessMo
         );
 
         if use_tlb {
-            let mem = CachedMemoryAccess::with(&mut mem, cache);
+            let mut mem = CachedMemoryAccess::with(&mut mem, cache);
             let mut vat = CachedVAT::with(vat, tlb_cache, proc.sys_arch());
             vat_test_with_mem(bench, &mut mem, &mut vat, chunks, translations, proc, tmod);
         } else {

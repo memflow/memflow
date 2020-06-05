@@ -34,9 +34,5 @@ name = "read_keys"
 path = "examples/read_keys.rs"
 
 [[example]]
-name = "write_keys"
-path = "examples/write_keys.rs"
-
-[[example]]
 name = "read_bench"
 path = "examples/read_bench.rs"

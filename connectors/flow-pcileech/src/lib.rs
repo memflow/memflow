@@ -1,5 +1,4 @@
 use flow_core::*;
-use flow_derive::*;
 
 // TODO: open usb device
 #[derive(VirtualMemoryRaw, VirtualAddressTranslatorRaw)]

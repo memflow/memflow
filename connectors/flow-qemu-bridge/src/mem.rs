@@ -4,7 +4,6 @@ use std::os::raw::{c_ulonglong, c_void};
 use std::ptr::copy_nonoverlapping;
 
 use flow_core::*;
-use flow_derive::*;
 
 #[derive(VirtualMemory, VirtualAddressTranslator)]
 pub struct Memory;

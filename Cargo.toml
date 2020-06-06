@@ -5,9 +5,8 @@ debug = true
 [workspace]
 members = [
     "flow-core",
-    "flow-derive",
     "flow-win32",
-    "flow-ffi",
+    #"flow-ffi",
     "flow-cli",
     "flow-bench",
     #"connectors/flow-bridge",
@@ -17,9 +16,8 @@ members = [
 ]
 default-members = [
     "flow-core",
-    "flow-derive",
     "flow-win32",
-    "flow-ffi",
+    #"flow-ffi",
     "flow-cli",
     "flow-bench"
 ]

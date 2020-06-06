@@ -1,21 +1,19 @@
 use crate::error::{Error, Result};
-use crate::kernel::StartBlock;
 
 use log::{debug, info};
 
 use pelite::{self, PeView};
 
-use flow_core::mem::AccessVirtualMemory;
+use flow_core::mem::VirtualMemory;
 use flow_core::types::{Address, Length};
 
 // TODO: store pe size in windows struct so we can reference it later
-pub fn probe_pe_header<T: AccessVirtualMemory + ?Sized>(
-    mem: &mut T,
-    start_block: &StartBlock,
+pub fn probe_pe_header<T: VirtualMemory + ?Sized>(
+    virt_mem: &mut T,
     probe_addr: Address,
 ) -> Result<String> {
     // try to probe pe header
-    let pe_buf = try_fetch_pe_header(mem, start_block, probe_addr)?;
+    let pe_buf = try_fetch_pe_header(virt_mem, probe_addr)?;
 
     let pe = match PeView::from_bytes(&pe_buf) {
         Ok(pe) => pe,
@@ -34,25 +32,23 @@ pub fn probe_pe_header<T: AccessVirtualMemory + ?Sized>(
     Ok(name.to_string())
 }
 
-pub fn try_fetch_pe_header<T: AccessVirtualMemory + ?Sized>(
-    mem: &mut T,
-    start_block: &StartBlock,
+pub fn try_fetch_pe_header<T: VirtualMemory + ?Sized>(
+    virt_mem: &mut T,
     addr: Address,
 ) -> Result<Vec<u8>> {
-    let size_of_image = try_fetch_pe_size(mem, start_block, addr)?;
+    let size_of_image = try_fetch_pe_size(virt_mem, addr)?;
     let mut buf = vec![0; size_of_image.as_usize()];
-    mem.virt_read_raw_into(start_block.arch, start_block.dtb, addr, &mut buf)?;
+    virt_mem.virt_read_raw_into(addr, &mut buf)?;
     Ok(buf)
 }
 
-pub fn try_fetch_pe_size<T: AccessVirtualMemory + ?Sized>(
-    mem: &mut T,
-    start_block: &StartBlock,
+pub fn try_fetch_pe_size<T: VirtualMemory + ?Sized>(
+    virt_mem: &mut T,
     addr: Address,
 ) -> Result<Length> {
     // try to probe pe header
     let mut probe_buf = vec![0; Length::from_kb(4).as_usize()];
-    mem.virt_read_raw_into(start_block.arch, start_block.dtb, addr, &mut probe_buf)?;
+    virt_mem.virt_read_raw_into(addr, &mut probe_buf)?;
 
     let pe_probe = match PeView::from_bytes(&probe_buf) {
         Ok(pe) => {

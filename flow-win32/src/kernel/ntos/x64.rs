@@ -3,16 +3,17 @@ use crate::error::{Error, Result};
 use crate::kernel::StartBlock;
 
 use byteorder::{ByteOrder, LittleEndian};
-use dataview::Pod;
 use log::debug;
-use pelite::image::IMAGE_DOS_HEADER;
 
 use flow_core::architecture;
-use flow_core::mem::AccessVirtualMemory;
+use flow_core::mem::VirtualMemory;
 use flow_core::types::{Address, Length};
 
-pub fn find_with_va<T: AccessVirtualMemory + ?Sized>(
-    mem: &mut T,
+use dataview::Pod;
+use pelite::image::IMAGE_DOS_HEADER;
+
+pub fn find_with_va<T: VirtualMemory + ?Sized>(
+    virt_mem: &mut T,
     start_block: &StartBlock,
 ) -> Result<(Address, Length)> {
     debug!(
@@ -26,12 +27,7 @@ pub fn find_with_va<T: AccessVirtualMemory + ?Sized>(
         debug!("find_x64_with_va: probing at {:x}", va_base);
 
         let mut buf = vec![0; Length::from_mb(2).as_usize()];
-        mem.virt_read_raw_into(
-            start_block.arch,
-            start_block.dtb,
-            Address::from(va_base),
-            &mut buf,
-        )?;
+        virt_mem.virt_read_raw_into(Address::from(va_base), &mut buf)?;
 
         let res = buf
             .chunks_exact(architecture::x64::page_size().as_usize())
@@ -59,7 +55,7 @@ pub fn find_with_va<T: AccessVirtualMemory + ?Sized>(
             .find(|(i, _, _)| {
                 let probe_addr =
                     Address::from(va_base + (*i as u64) * architecture::x64::page_size().as_u64());
-                let name = probe_pe_header(mem, start_block, probe_addr).unwrap_or_default();
+                let name = probe_pe_header(virt_mem, probe_addr).unwrap_or_default();
                 name == "ntoskrnl.exe"
             })
             .ok_or_else(|| {
@@ -70,7 +66,7 @@ pub fn find_with_va<T: AccessVirtualMemory + ?Sized>(
         match res {
             Ok(a) => {
                 let addr = Address::from(a);
-                let size_of_image = try_fetch_pe_size(mem, start_block, addr)?;
+                let size_of_image = try_fetch_pe_size(virt_mem, addr)?;
                 return Ok((addr, size_of_image));
             }
             Err(e) => {
@@ -86,6 +82,6 @@ pub fn find_with_va<T: AccessVirtualMemory + ?Sized>(
     ))
 }
 
-pub fn find<T: AccessVirtualMemory + ?Sized>(_mem: &mut T) -> Result<(Address, Length)> {
+pub fn find<T: VirtualMemory + ?Sized>(_mem: &mut T) -> Result<(Address, Length)> {
     Err(Error::new("find_x64(): not implemented yet"))
 }

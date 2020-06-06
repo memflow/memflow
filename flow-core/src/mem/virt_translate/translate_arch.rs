@@ -1,66 +1,56 @@
-#[cfg(test)]
-mod tests;
-
-use crate::error::Result;
-
+use super::VirtualTranslate;
 use crate::architecture::Architecture;
-use crate::iter::page_chunks::{PageChunks, PageChunksMut};
+use crate::error::Result;
+use crate::iter::{PageChunks, PageChunksMut};
 use crate::mem::{
-    virt::{VirtualReadIterator, VirtualWriteIterator},
-    AccessPhysicalMemory,
+    virt_mem::{VirtualReadIterator, VirtualWriteIterator},
+    PhysicalMemory,
 };
 use crate::types::{Address, Page, PhysicalAddress};
 
-pub trait VirtualAddressTranslatorRaw {
-    fn virt_to_phys_iter<
-        B,
-        VI: Iterator<Item = (Address, B)>,
-        OV: Extend<(Result<PhysicalAddress>, Address, B)>,
-    >(
+#[derive(Debug, Clone)]
+pub struct TranslateArch {
+    sys_arch: Architecture,
+}
+
+impl TranslateArch {
+    pub fn new(sys_arch: Architecture) -> Self {
+        Self { sys_arch }
+    }
+}
+
+impl VirtualTranslate for TranslateArch {
+    fn virt_to_phys_iter<T, B, VI, OV>(
         &mut self,
-        arch: Architecture,
+        phys_mem: &mut T,
         dtb: Address,
         addrs: VI,
         out: &mut OV,
-    );
-}
-
-pub trait VirtualAddressTranslator {
-    fn virt_to_phys(
-        &mut self,
-        arch: Architecture,
-        dtb: Address,
-        vaddr: Address,
-    ) -> Result<PhysicalAddress>;
-}
-
-impl<T: VirtualAddressTranslatorRaw + ?Sized> VirtualAddressTranslator for T {
-    fn virt_to_phys(
-        &mut self,
-        arch: Architecture,
-        dtb: Address,
-        vaddr: Address,
-    ) -> Result<PhysicalAddress> {
-        let mut out = Vec::with_capacity(1);
-        self.virt_to_phys_iter(arch, dtb, Some((vaddr, false)).into_iter(), &mut out);
-        out.pop().unwrap().0
+    ) where
+        T: PhysicalMemory + ?Sized,
+        VI: Iterator<Item = (Address, B)>,
+        OV: Extend<(Result<PhysicalAddress>, Address, B)>,
+    {
+        self.sys_arch.virt_to_phys_iter(phys_mem, dtb, addrs, out)
     }
 }
 
 pub fn virt_read_raw_iter<
     'a,
-    T: AccessPhysicalMemory + VirtualAddressTranslatorRaw,
+    T: PhysicalMemory + ?Sized,
+    U: VirtualTranslate + ?Sized,
     VI: VirtualReadIterator<'a>,
 >(
-    mem: &mut T,
+    phys_mem: &mut T,
+    vat: &mut U,
     arch: Architecture,
     dtb: Address,
     iter: VI,
 ) -> Result<()> {
     //30% perf hit on dummy!!! FIXME!!!
     let mut translation = Vec::with_capacity(iter.size_hint().0);
-    mem.virt_to_phys_iter(
-        arch,
+    vat.virt_to_phys_iter(
+        phys_mem,
         dtb,
         iter.flat_map(|(addr, out)| PageChunksMut::create_from(out, addr, arch.page_size())),
         &mut translation,
@@ -77,23 +67,25 @@ pub fn virt_read_raw_iter<
         }
     });
 
-    mem.phys_read_iter(iter)
+    phys_mem.phys_read_iter(iter)
 }
 
 pub fn virt_write_raw_iter<
     'a,
-    T: AccessPhysicalMemory + VirtualAddressTranslatorRaw,
+    T: PhysicalMemory + ?Sized,
+    U: VirtualTranslate + ?Sized,
     VI: VirtualWriteIterator<'a>,
 >(
-    mem: &mut T,
+    phys_mem: &mut T,
+    vat: &mut U,
     arch: Architecture,
     dtb: Address,
     iter: VI,
 ) -> Result<()> {
     //30% perf hit on dummy!!! FIXME!!!
     let mut translation = Vec::with_capacity(iter.size_hint().0);
-    mem.virt_to_phys_iter(
-        arch,
+    vat.virt_to_phys_iter(
+        phys_mem,
         dtb,
         iter.flat_map(|(addr, out)| PageChunks::create_from(out, addr, arch.page_size())),
         &mut translation,
@@ -107,16 +99,17 @@ pub fn virt_write_raw_iter<
         }
     });
 
-    mem.phys_write_iter(iter)
+    phys_mem.phys_write_iter(iter)
 }
 
 #[allow(unused)]
-pub fn virt_page_info<T: AccessPhysicalMemory + VirtualAddressTranslator>(
-    mem: &mut T,
+pub fn virt_page_info<T: PhysicalMemory + ?Sized, U: VirtualTranslate + ?Sized>(
+    phys_mem: &mut T,
+    vat: &mut U,
     arch: Architecture,
     dtb: Address,
     addr: Address,
 ) -> Result<Page> {
-    let paddr = mem.virt_to_phys(arch, dtb, addr)?;
+    let paddr = vat.virt_to_phys(phys_mem, dtb, addr)?;
     Ok(paddr.containing_page())
 }

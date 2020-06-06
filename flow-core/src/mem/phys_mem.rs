@@ -10,7 +10,7 @@ use dataview::Pod;
 // - better would be to convert endianess with word alignment from addr
 
 /**
-The `AccessPhysicalMemory` trait is implemented by memory backends
+The `PhysicalMemory` trait is implemented by memory backends
 and provides a generic way to read and write from/to physical memory.
 
 All addresses are of the type [`PhysicalAddress`](../types/physical_address/index.html)
@@ -19,15 +19,15 @@ This information is usually only needed when implementing caches.
 
 There are only 2 methods which are required to be implemented by the provider of this trait.
 
-`AccessPhysicalMemoryExt` that is auto implemented provides additional helper functions to assist RW operations.
+`PhysicalMemoryExt` that is auto implemented provides additional helper functions to assist RW operations.
 
 # Examples
 
-Implementing `AccessPhysicalMemory` for a memory backend:
+Implementing `PhysicalMemory` for a memory backend:
 ```
 use std::vec::Vec;
 
-use flow_core::mem::{AccessPhysicalMemory, PhysicalReadIterator, PhysicalWriteIterator};
+use flow_core::mem::{PhysicalMemory, PhysicalReadIterator, PhysicalWriteIterator};
 use flow_core::types::{PhysicalAddress, ToDo, Done};
 use flow_core::error::Result;
 
@@ -35,7 +35,7 @@ pub struct MemoryBackend {
     mem: Box<[u8]>,
 }
 
-impl AccessPhysicalMemory for MemoryBackend {
+impl PhysicalMemory for MemoryBackend {
     fn phys_read_iter<'a, PI: PhysicalReadIterator<'a>>(
         &'a mut self,
         iter: PI
@@ -54,29 +54,14 @@ impl AccessPhysicalMemory for MemoryBackend {
 }
 ```
 */
-pub trait AccessPhysicalMemory {
+pub trait PhysicalMemory {
     fn phys_read_iter<'a, PI: PhysicalReadIterator<'a>>(&'a mut self, iter: PI) -> Result<()>;
     fn phys_write_iter<'a, PI: PhysicalWriteIterator<'a>>(&'a mut self, iter: PI) -> Result<()>;
-}
 
-/**
-The `AccessPhysicalMemoryExt` trait implements helper functions to assist in memory operations. It is automatically implemented by objects implementing `AccessPhysicalMemory`.
-
-# Examples
-
-Reading physical memory with `AccessPhysicalMemoryExt`:
-```
-use flow_core::mem::AccessPhysicalMemoryExt;
-use flow_core::types::Address;
-
-fn test<T: AccessPhysicalMemoryExt>(mem: &mut T) {
-    let mut value = 0u64;
-    mem.phys_read_into(Address::from(0x1000).into(), &mut value);
-}
-```
-*/
-pub trait AccessPhysicalMemoryExt {
-    fn phys_read_raw_into(&mut self, addr: PhysicalAddress, out: &mut [u8]) -> Result<()>;
+    // read helpers
+    fn phys_read_raw_into(&mut self, addr: PhysicalAddress, out: &mut [u8]) -> Result<()> {
+        self.phys_read_iter(Some((addr, out)).into_iter())
+    }
 
     fn phys_read_into<T: Pod + ?Sized>(&mut self, addr: PhysicalAddress, out: &mut T) -> Result<()>
     where
@@ -106,7 +91,9 @@ pub trait AccessPhysicalMemoryExt {
     }
 
     // write helpers
-    fn phys_write_raw(&mut self, addr: PhysicalAddress, data: &[u8]) -> Result<()>;
+    fn phys_write_raw(&mut self, addr: PhysicalAddress, data: &[u8]) -> Result<()> {
+        self.phys_write_iter(Some((addr, data)).into_iter())
+    }
 
     fn phys_write<T: Pod + ?Sized>(&mut self, addr: PhysicalAddress, data: &T) -> Result<()>
     where
@@ -116,16 +103,18 @@ pub trait AccessPhysicalMemoryExt {
     }
 }
 
-impl<T: AccessPhysicalMemory + ?Sized> AccessPhysicalMemoryExt for T {
-    fn phys_read_raw_into(&mut self, addr: PhysicalAddress, out: &mut [u8]) -> Result<()> {
-        self.phys_read_iter(Some((addr, out)).into_iter())
+// forward impls
+impl<'a, T: PhysicalMemory> PhysicalMemory for &'a mut T {
+    fn phys_read_iter<'b, PI: PhysicalReadIterator<'b>>(&'b mut self, iter: PI) -> Result<()> {
+        (*self).phys_read_iter(iter)
     }
 
-    fn phys_write_raw(&mut self, addr: PhysicalAddress, data: &[u8]) -> Result<()> {
-        self.phys_write_iter(Some((addr, data)).into_iter())
+    fn phys_write_iter<'b, PI: PhysicalWriteIterator<'b>>(&'b mut self, iter: PI) -> Result<()> {
+        (*self).phys_write_iter(iter)
     }
 }
 
+// iterator helpers
 pub type PhysicalReadData<'a> = (PhysicalAddress, &'a mut [u8]);
 pub trait PhysicalReadIterator<'a>: Iterator<Item = PhysicalReadData<'a>> + 'a {}
 impl<'a, T: Iterator<Item = PhysicalReadData<'a>> + 'a> PhysicalReadIterator<'a> for T {}

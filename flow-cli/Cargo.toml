@@ -9,7 +9,6 @@ clap = { version = "2.33.0", features = ["yaml"] }
 
 [dependencies]
 flow-core = { path = "../flow-core" }
-flow-derive = { path = "../flow-derive" }
 flow-win32 = { path = "../flow-win32" }
 clap = { version = "2.33.0", features = ["yaml"] }
 toml = "0.5"
@@ -22,12 +21,12 @@ pdb = { git = "https://github.com/willglynn/pdb" }
 pelite = { git = "https://github.com/CasualX/pelite", branch = "master" }
 url = "2.1.0"
 win_key_codes = "0.1.2"
-flow-bridge = { path = "../connectors/flow-bridge", optional = true }
+#flow-bridge = { path = "../connectors/flow-bridge", optional = true }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 flow-qemu-procfs = { path = "../connectors/flow-qemu-procfs", optional = true }
 
 [features]
 default = ["connector-qemu-procfs"]
-connector-bridge = ["flow-bridge"]
+#connector-bridge = ["flow-bridge"]
 connector-qemu-procfs = ["flow-qemu-procfs"]

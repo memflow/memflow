@@ -116,7 +116,7 @@ unsafe impl<'a, T: VirtualMemory> Pe<'a> for MemoryPeView<'a, T> {
     ///
     /// * [`Null`](../enum.Error.html#variant.Null):
     ///   The rva is zero.
-    fn slice(&self, rva: Rva, min_size_of: usize, align: usize) -> Result<&'a [u8]> {
+    fn slice(&self, rva: Rva, min_size_of: usize, _align: usize) -> Result<&'a [u8]> {
         unsafe {
             // slice_section(image, rva, min_size_of, align),
             let start = rva as usize;
@@ -146,9 +146,20 @@ unsafe impl<'a, T: VirtualMemory> Pe<'a> for MemoryPeView<'a, T> {
     ///
     /// * [`Bounds`](../enum.Error.html#variant.Bounds):
     ///   The data referenced by the section header is out of bounds.
-    //fn get_section_bytes(self, section_header: &IMAGE_SECTION_HEADER) -> Result<&'a [u8]> {
-    //	crate::wrap::get_section_bytes(self.image(), section_header, self.align())
-    //}
+    fn get_section_bytes(self, section_header: &IMAGE_SECTION_HEADER) -> Result<&'a [u8]> {
+        let address = section_header.VirtualAddress;
+        if address == 0 {
+            return Err(Error::Null);
+        }
+        let start = address as usize;
+        let end = address.wrapping_add(section_header.VirtualSize) as usize;
+
+        unsafe {
+            self.context
+            .update_cache(Address::from(start), Length::from(start - end));
+            (*self.context.image_cache.get()).get(start..end).ok_or(Error::Bounds)
+        }
+    }
 
     /// Reads the image at the specified va.
     ///
@@ -162,7 +173,7 @@ unsafe impl<'a, T: VirtualMemory> Pe<'a> for MemoryPeView<'a, T> {
     ///
     /// * [`Null`](../enum.Error.html#variant.Null):
     ///   The va is zero.
-    fn read(&self, va: Va, min_size_of: usize, align: usize) -> Result<&'a [u8]> {
+    fn read(&self, va: Va, min_size_of: usize, _align: usize) -> Result<&'a [u8]> {
         unsafe {
             // read_section(image, va, min_size_of, align),
             let (image_base, image_size) = {

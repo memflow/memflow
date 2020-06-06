@@ -73,10 +73,12 @@ impl<T: CacheValidator> TLBCache<T> {
                 Some(TLBEntry {
                     dtb,
                     virt_addr: addr,
+                    // TODO: this should be aware of huge pages
                     phys_addr: PhysicalAddress::with_page(
-                        entry.phys_page.page_base() + (addr - page_address),
+                        entry.phys_page.address().as_page_aligned(page_size)
+                            + (addr - page_address),
                         entry.phys_page.page_type(),
-                        entry.phys_page.page_size(),
+                        page_size,
                     ),
                 })
             } else {

@@ -15,12 +15,12 @@ use flow_core::mem::VirtualMemory;
 use flow_core::types::{Address, Length};
 
 /// View into a mapped PE image.
-pub struct MemoryPeView<'a, T: VirtualMemory> {
-    context: &'a MemoryPeViewContext<T>,
+pub struct MemoryPeView<'a, T: VirtualMemory + ?Sized> {
+    context: &'a MemoryPeViewContext<'a, T>,
 }
 
-impl<'a, T: VirtualMemory> Copy for MemoryPeView<'a, T> {}
-impl<'a, T: VirtualMemory> Clone for MemoryPeView<'a, T> {
+impl<'a, T: VirtualMemory + ?Sized> Copy for MemoryPeView<'a, T> {}
+impl<'a, T: VirtualMemory + ?Sized> Clone for MemoryPeView<'a, T> {
     fn clone(&self) -> Self {
         Self {
             context: self.context.clone(),
@@ -28,7 +28,7 @@ impl<'a, T: VirtualMemory> Clone for MemoryPeView<'a, T> {
     }
 }
 
-impl<'a, T: VirtualMemory> MemoryPeView<'a, T> {
+impl<'a, T: VirtualMemory + ?Sized> MemoryPeView<'a, T> {
     /// Constructs a view from a `VirtualMemory` reader.
     ///
     /// # Errors
@@ -47,7 +47,7 @@ impl<'a, T: VirtualMemory> MemoryPeView<'a, T> {
     ///
     /// * [`Insanity`](../enum.Error.html#variant.Insanity):
     ///   Reasonable limits on `e_lfanew`, `SizeOfHeaders` or `NumberOfSections` are exceeded.
-    pub fn new(context: &'a MemoryPeViewContext<T>) -> Result<Self> {
+    pub fn new(context: &'a MemoryPeViewContext<'a, T>) -> Result<Self> {
         Ok(Self { context })
     }
 
@@ -103,7 +103,7 @@ impl<'a, T: VirtualMemory> MemoryPeView<'a, T> {
 
 //----------------------------------------------------------------
 
-unsafe impl<'a, T: VirtualMemory> Pe<'a> for MemoryPeView<'a, T> {
+unsafe impl<'a, T: VirtualMemory + ?Sized> Pe<'a> for MemoryPeView<'a, T> {
     /// Slices the image at the specified rva.
     ///
     /// If successful the returned slice's length will be at least the given size but often be quite larger.
@@ -156,8 +156,10 @@ unsafe impl<'a, T: VirtualMemory> Pe<'a> for MemoryPeView<'a, T> {
 
         unsafe {
             self.context
-            .update_cache(Address::from(start), Length::from(start - end));
-            (*self.context.image_cache.get()).get(start..end).ok_or(Error::Bounds)
+                .update_cache(Address::from(start), Length::from(start - end));
+            (*self.context.image_cache.get())
+                .get(start..end)
+                .ok_or(Error::Bounds)
         }
     }
 
@@ -202,7 +204,7 @@ unsafe impl<'a, T: VirtualMemory> Pe<'a> for MemoryPeView<'a, T> {
     }
 }
 
-unsafe impl<'a, T: VirtualMemory> PeObject<'a> for MemoryPeView<'a, T> {
+unsafe impl<'a, T: VirtualMemory + ?Sized> PeObject<'a> for MemoryPeView<'a, T> {
     fn image(&self) -> &'a [u8] {
         unsafe { &*self.context.image_cache.get() }
     }

@@ -8,19 +8,26 @@ use pelite::{Error, PeView, Result};
 use flow_core::mem::VirtualMemory;
 use flow_core::types::{Address, Length};
 
+#[derive(Copy, Clone)]
+pub enum PeFormat {
+    Pe64,
+    Pe32,
+}
+
 /// Wrapping Context to enable the MemoryPeView to be Copy-able
-pub struct MemoryPeViewContext<T: VirtualMemory> {
-    virt_mem: RefCell<T>,
+pub struct MemoryPeViewContext<'a, T: VirtualMemory + ?Sized> {
+    virt_mem: RefCell<&'a mut T>,
     image_base: Address,
+    image_format: PeFormat,
     image_cache: UnsafeCell<Box<[u8]>>,
 }
 
-impl<T: VirtualMemory> MemoryPeViewContext<T> {
-    pub fn new(mut virt_mem: T, image_base: Address) -> Result<Self> {
+impl<'a, T: VirtualMemory + ?Sized> MemoryPeViewContext<'a, T> {
+    pub fn new(virt_mem: &'a mut T, image_base: Address) -> Result<Self> {
         // read the first page of the image
         let mut image_header = [0u8; 0x1000];
         virt_mem
-            .virt_read_into(image_base, &mut image_header)
+            .virt_read_raw_into(image_base, &mut image_header)
             .map_err(|_| Error::Unmapped)?;
 
         let view = PeView::from_bytes(image_header.as_ref())?;
@@ -36,8 +43,16 @@ impl<T: VirtualMemory> MemoryPeViewContext<T> {
         Ok(Self {
             virt_mem: RefCell::new(virt_mem),
             image_base,
+            image_format: match view {
+                pelite::Wrap::T32(_) => PeFormat::Pe32,
+                pelite::Wrap::T64(_) => PeFormat::Pe64,
+            },
             image_cache: UnsafeCell::new(image_cache),
         })
+    }
+
+    pub fn image_format(&self) -> PeFormat {
+        self.image_format
     }
 
     pub unsafe fn update_cache(&self, addr: Address, mut len: Length) {

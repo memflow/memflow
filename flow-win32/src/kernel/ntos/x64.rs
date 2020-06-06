@@ -1,6 +1,7 @@
 use super::pe::*;
 use crate::error::{Error, Result};
 use crate::kernel::StartBlock;
+use crate::pe::*; // TODO: specific
 
 use byteorder::{ByteOrder, LittleEndian};
 use log::debug;
@@ -55,7 +56,7 @@ pub fn find_with_va<T: VirtualMemory + ?Sized>(
             .find(|(i, _, _)| {
                 let probe_addr =
                     Address::from(va_base + (*i as u64) * architecture::x64::page_size().as_u64());
-                let name = probe_pe_header(virt_mem, probe_addr).unwrap_or_default();
+                let name = try_get_pe_name(virt_mem, probe_addr).unwrap_or_default();
                 name == "ntoskrnl.exe"
             })
             .ok_or_else(|| {
@@ -66,7 +67,7 @@ pub fn find_with_va<T: VirtualMemory + ?Sized>(
         match res {
             Ok(a) => {
                 let addr = Address::from(a);
-                let size_of_image = try_fetch_pe_size(virt_mem, addr)?;
+                let size_of_image = try_get_pe_size(virt_mem, addr)?;
                 return Ok((addr, size_of_image));
             }
             Err(e) => {

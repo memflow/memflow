@@ -19,6 +19,5 @@ libc = "0.2.65"
 lazy_static = "1.4.0"
 rand = "0.7.2"
 flow-core = { path = "../../flow-core" }
-flow-derive = { path = "../../flow-derive" }
 flow-bridge = { path = "../flow-bridge" }
 url = "2.1.0"

@@ -3,24 +3,30 @@ use flow_bench::{phys, vat, virt};
 
 use criterion::*;
 
-use flow_core::OsProcessModule;
-
+use flow_core::mem::TranslateArch;
 use flow_qemu_procfs::Memory;
-use flow_win32::{Win32, Win32Module, Win32Offsets, Win32Process};
+
+use flow_win32::{
+    Kernel, KernelInfo, Win32ModuleInfo, Win32Offsets, Win32Process, Win32ProcessInfo,
+};
 
 use rand::prelude::*;
 use rand::{prng::XorShiftRng as CurRng, Rng, SeedableRng};
 
-fn initialize_virt_ctx() -> flow_core::Result<(Memory, Win32Process, Win32Module)> {
-    let mut mem = Memory::new().unwrap();
+fn initialize_virt_ctx(
+) -> flow_core::Result<(Memory, TranslateArch, Win32ProcessInfo, Win32ModuleInfo)> {
+    let mut phys_mem = Memory::new()?;
 
-    let os = Win32::try_with(&mut mem).unwrap();
-    let offsets = Win32Offsets::try_with_guid(&os.kernel_guid()).unwrap();
+    let kernel_info = KernelInfo::find(&mut phys_mem)?;
+    let vat = TranslateArch::new(kernel_info.start_block.arch);
+    let offsets = Win32Offsets::try_with_guid(&kernel_info.kernel_guid)?;
+
+    // TODO: remove phys_mem + vat clone
+    let mut kernel = Kernel::new(phys_mem.clone(), vat.clone(), offsets, kernel_info);
 
     let mut rng = CurRng::from_rng(thread_rng()).unwrap();
 
-    let proc_list = os.eprocess_list(&mut mem, &offsets).unwrap();
-
+    let proc_list = kernel.process_info_list()?;
     for i in -100..(proc_list.len() as isize) {
         let idx = if i >= 0 {
             i as usize
@@ -28,28 +34,18 @@ fn initialize_virt_ctx() -> flow_core::Result<(Memory, Win32Process, Win32Module
             rng.gen_range(0, proc_list.len())
         };
 
-        if let Ok(proc) = Win32Process::try_with_eprocess(&mut mem, &os, &offsets, proc_list[idx]) {
-            let mod_list: Vec<Win32Module> = proc
-                .peb_list(&mut mem)
+        let mod_list: Vec<Win32ModuleInfo> = {
+            let mut proc = Win32Process::with_kernel(&mut kernel, proc_list[idx].clone());
+            proc.module_info_list()
                 .unwrap_or_default()
-                .iter()
-                .filter_map(|&x| {
-                    if let Ok(module) = Win32Module::try_with_peb(&mut mem, &proc, &offsets, x) {
-                        if module.size() > 0x1000.into() {
-                            Some(module)
-                        } else {
-                            None
-                        }
-                    } else {
-                        None
-                    }
-                })
-                .collect();
+                .into_iter()
+                .filter(|module| module.size > 0x1000.into())
+                .collect()
+        };
 
-            if !mod_list.is_empty() {
-                let tmod = &mod_list[rng.gen_range(0, mod_list.len())];
-                return Ok((mem, proc, tmod.clone()));
-            }
+        if !mod_list.is_empty() {
+            let tmod = &mod_list[rng.gen_range(0, mod_list.len())];
+            return Ok((phys_mem, vat, proc_list[idx].clone(), tmod.clone())); // TODO: remove clone of mem + vat
         }
     }
 

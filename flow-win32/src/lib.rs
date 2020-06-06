@@ -6,8 +6,12 @@ It is used to interface with windows targets.
 pub mod error;
 pub use error::*;
 
+// TODO: private these
 pub mod kernel;
 pub use kernel::*;
+
+pub mod pe;
+pub use pe::*; // TODO: restrict forwarding
 
 // TODO: enable again
 //pub mod keyboard;

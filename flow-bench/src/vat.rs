@@ -1,17 +1,18 @@
 use criterion::*;
 
 use flow_core::mem::{
-    timed_validator::*, vat::VirtualAddressTranslatorRaw, AccessPhysicalMemory, CachedMemoryAccess,
-    CachedVAT, PageCache, TLBCache,
+    timed_validator::*, CachedMemoryAccess, CachedVirtualTranslate, PageCache, PhysicalMemory,
+    TLBCache, VirtualTranslate,
 };
 
-use flow_core::{Address, Length, OsProcess, OsProcessModule, PageType};
+use flow_core::{Address, Length, OsProcessInfo, OsProcessModuleInfo, PageType};
 
 use rand::prelude::*;
 use rand::{prng::XorShiftRng as CurRng, Rng, SeedableRng};
 
-fn vattest<T: VirtualAddressTranslatorRaw, P: OsProcess, M: OsProcessModule>(
-    mem: &mut T,
+fn vattest<T: PhysicalMemory, V: VirtualTranslate, P: OsProcessInfo, M: OsProcessModuleInfo>(
+    phys_mem: &mut T,
+    vat: &mut V,
     proc: &P,
     module: &M,
     chunk_count: usize,
@@ -35,8 +36,8 @@ fn vattest<T: VirtualAddressTranslatorRaw, P: OsProcess, M: OsProcessModule>(
         }
 
         out.clear();
-        black_box(mem.virt_to_phys_iter(
-            proc.sys_arch(),
+        black_box(vat.virt_to_phys_iter(
+            phys_mem,
             proc.dtb(),
             bufs.iter_mut().map(|x| (*x, Option::<&[u8]>::None)),
             &mut out,
@@ -48,30 +49,37 @@ fn vattest<T: VirtualAddressTranslatorRaw, P: OsProcess, M: OsProcessModule>(
     done_size
 }
 
-pub fn vat_test_with_mem<T: VirtualAddressTranslatorRaw, P: OsProcess, M: OsProcessModule>(
+pub fn vat_test_with_mem<
+    T: PhysicalMemory,
+    V: VirtualTranslate,
+    P: OsProcessInfo,
+    M: OsProcessModuleInfo,
+>(
     bench: &mut Bencher,
-    mem: &mut T,
+    phys_mem: &mut T,
+    vat: &mut V,
     chunks: usize,
     translations: usize,
     proc: P,
     tmod: M,
 ) {
     bench.iter(|| {
-        black_box(vattest(mem, &proc, &tmod, chunks, translations));
+        black_box(vattest(phys_mem, vat, &proc, &tmod, chunks, translations));
     });
 }
 
 fn vat_test_with_ctx<
-    T: VirtualAddressTranslatorRaw + AccessPhysicalMemory,
-    P: OsProcess,
-    M: OsProcessModule,
+    T: PhysicalMemory,
+    V: VirtualTranslate,
+    P: OsProcessInfo,
+    M: OsProcessModuleInfo,
 >(
     bench: &mut Bencher,
     cache_size: u64,
     chunks: usize,
     translations: usize,
     use_tlb: bool,
-    (mut mem, proc, tmod): (T, P, M),
+    (mut mem, mut vat, proc, tmod): (T, V, P, M),
 ) {
     let tlb_cache = TLBCache::new(
         2048.into(),
@@ -87,31 +95,32 @@ fn vat_test_with_ctx<
         );
 
         if use_tlb {
-            let mem = CachedMemoryAccess::with(&mut mem, cache);
-            let mut mem = CachedVAT::with(mem, tlb_cache);
-            vat_test_with_mem(bench, &mut mem, chunks, translations, proc, tmod);
+            let mut mem = CachedMemoryAccess::with(&mut mem, cache);
+            let mut vat = CachedVirtualTranslate::with(vat, tlb_cache, proc.sys_arch());
+            vat_test_with_mem(bench, &mut mem, &mut vat, chunks, translations, proc, tmod);
         } else {
             let mut mem = CachedMemoryAccess::with(&mut mem, cache);
-            vat_test_with_mem(bench, &mut mem, chunks, translations, proc, tmod);
+            vat_test_with_mem(bench, &mut mem, &mut vat, chunks, translations, proc, tmod);
         }
     } else if use_tlb {
-        let mut mem = CachedVAT::with(mem, tlb_cache);
-        vat_test_with_mem(bench, &mut mem, chunks, translations, proc, tmod);
+        let mut vat = CachedVirtualTranslate::with(vat, tlb_cache, proc.sys_arch());
+        vat_test_with_mem(bench, &mut mem, &mut vat, chunks, translations, proc, tmod);
     } else {
-        vat_test_with_mem(bench, &mut mem, chunks, translations, proc, tmod);
+        vat_test_with_mem(bench, &mut mem, &mut vat, chunks, translations, proc, tmod);
     }
 }
 
 fn chunk_vat_params<
-    T: VirtualAddressTranslatorRaw + AccessPhysicalMemory,
-    P: OsProcess,
-    M: OsProcessModule,
+    T: PhysicalMemory,
+    V: VirtualTranslate,
+    P: OsProcessInfo,
+    M: OsProcessModuleInfo,
 >(
     group: &mut BenchmarkGroup<'_, measurement::WallTime>,
     func_name: String,
     cache_size: u64,
     use_tlb: bool,
-    initialize_ctx: &dyn Fn() -> flow_core::Result<(T, P, M)>,
+    initialize_ctx: &dyn Fn() -> flow_core::Result<(T, V, P, M)>,
 ) {
     let size = 0x10;
     for &chunk_size in [1, 4, 16, 64].iter() {
@@ -134,13 +143,14 @@ fn chunk_vat_params<
 }
 
 pub fn chunk_vat<
-    T: VirtualAddressTranslatorRaw + AccessPhysicalMemory,
-    P: OsProcess,
-    M: OsProcessModule,
+    T: PhysicalMemory,
+    V: VirtualTranslate,
+    P: OsProcessInfo,
+    M: OsProcessModuleInfo,
 >(
     c: &mut Criterion,
     backend_name: &str,
-    initialize_ctx: &dyn Fn() -> flow_core::Result<(T, P, M)>,
+    initialize_ctx: &dyn Fn() -> flow_core::Result<(T, V, P, M)>,
 ) {
     let plot_config = PlotConfiguration::default().summary_scale(AxisScale::Logarithmic);
 

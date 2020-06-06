@@ -3,7 +3,7 @@
 */
 
 use crate::error::Result;
-use crate::mem::{AccessVirtualMemory, ProcessMemoryContext};
+use crate::mem::VirtualMemory;
 
 use std::marker::PhantomData;
 use std::mem::size_of;
@@ -25,7 +25,7 @@ See [here](https://docs.rs/dataview/0.1.1/dataview/) for more information on the
 
 ```
 use flow_core::types::Pointer64;
-use flow_core::mem::{AccessVirtualMemory, ProcessMemoryContext};
+use flow_core::mem::VirtualMemory;
 use dataview::Pod;
 
 #[repr(C)]
@@ -40,7 +40,7 @@ struct Bar {
     pub foo_ptr: Pointer64<Foo>,
 }
 
-fn read_foo_bar<T: AccessVirtualMemory>(virt_mem: &mut ProcessMemoryContext<T>) {
+fn read_foo_bar<T: VirtualMemory>(virt_mem: &mut T) {
     let bar: Bar = virt_mem.virt_read(0x1234.into()).unwrap();
     let foo = bar.foo_ptr.deref(virt_mem).unwrap();
     println!("value: {}", foo.some_value);
@@ -49,7 +49,7 @@ fn read_foo_bar<T: AccessVirtualMemory>(virt_mem: &mut ProcessMemoryContext<T>) 
 
 ```
 use flow_core::types::Pointer64;
-use flow_core::mem::{AccessVirtualMemory, ProcessMemoryContext};
+use flow_core::mem::VirtualMemory;
 use dataview::Pod;
 
 #[repr(C)]
@@ -64,7 +64,7 @@ struct Bar {
     pub foo_ptr: Pointer64<Foo>,
 }
 
-fn read_foo_bar<T: AccessVirtualMemory>(virt_mem: &mut ProcessMemoryContext<T>) {
+fn read_foo_bar<T: VirtualMemory>(virt_mem: &mut T) {
     let bar: Bar = virt_mem.virt_read(0x1234.into()).unwrap();
     let foo = virt_mem.virt_read_ptr64(bar.foo_ptr).unwrap();
     println!("value: {}", foo.some_value);
@@ -104,18 +104,14 @@ impl<T: ?Sized> Pointer64<T> {
 
 /// This function will deref the pointer directly into a Pod type.
 impl<T: Pod + ?Sized> Pointer64<T> {
-    pub fn deref_into<U: AccessVirtualMemory>(
-        self,
-        mem: &mut ProcessMemoryContext<U>,
-        out: &mut T,
-    ) -> Result<()> {
+    pub fn deref_into<U: VirtualMemory>(self, mem: &mut U, out: &mut T) -> Result<()> {
         mem.virt_read_ptr64_into(self, out)
     }
 }
 
 /// This function will return the Object this pointer is pointing towards.
 impl<T: Pod + Sized> Pointer64<T> {
-    pub fn deref<U: AccessVirtualMemory>(self, mem: &mut ProcessMemoryContext<U>) -> Result<T> {
+    pub fn deref<U: VirtualMemory>(self, mem: &mut U) -> Result<T> {
         mem.virt_read_ptr64(self)
     }
 }

@@ -10,9 +10,6 @@ It contains abstractions over [memory addresses](address/index.html),
 */
 
 #[macro_use]
-extern crate flow_derive;
-
-#[macro_use]
 extern crate bitflags;
 
 #[macro_use]
@@ -28,7 +25,7 @@ pub mod types;
 pub use types::{Address, Length, Offset, Page, PageType, PhysicalAddress, Pointer32, Pointer64};
 
 pub mod architecture;
-pub use architecture::{Architecture, ByteOrder};
+pub use architecture::{Architecture, Endianess};
 
 pub mod mem;
 pub use mem::*;

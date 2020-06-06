@@ -1,7 +1,8 @@
-use crate::mem::{PhysicalReadIterator, PhysicalWriteIterator};
-use crate::types::{Address, Length, PhysicalAddress};
-use crate::*;
-use flow_derive::*;
+use crate::architecture::Architecture;
+use crate::error::{Error, Result};
+use crate::mem::{PhysicalMemory, PhysicalReadIterator, PhysicalWriteIterator};
+use crate::process::{OsProcessInfo, OsProcessModuleInfo};
+use crate::types::{Address, Length};
 
 use rand::seq::SliceRandom;
 use rand::{thread_rng, Rng};
@@ -79,7 +80,7 @@ pub struct DummyModule {
     size: Length,
 }
 
-impl OsProcessModule for DummyModule {
+impl OsProcessModuleInfo for DummyModule {
     fn address(&self) -> Address {
         Address::INVALID
     }
@@ -115,7 +116,7 @@ impl DummyProcess {
     }
 }
 
-impl OsProcess for DummyProcess {
+impl OsProcessInfo for DummyProcess {
     fn address(&self) -> Address {
         self.address
     }
@@ -139,14 +140,8 @@ impl OsProcess for DummyProcess {
     fn proc_arch(&self) -> Architecture {
         Architecture::X64
     }
-
-    // virt_mem() - creates a VirtualMemory wrapper with system and process architecture
-    fn virt_mem<'a, T: AccessVirtualMemory>(&self, mem: &'a mut T) -> ProcessMemoryContext<'a, T> {
-        ProcessMemoryContext::with_proc_arch(mem, self.sys_arch(), self.proc_arch(), self.dtb())
-    }
 }
 
-#[derive(AccessVirtualMemoryRaw, VirtualAddressTranslatorRaw)]
 pub struct DummyMemory {
     mem: Box<[u8]>,
     page_list: VecDeque<PageInfo>,
@@ -154,7 +149,7 @@ pub struct DummyMemory {
     last_pid: i32,
 }
 
-impl AccessPhysicalMemory for DummyMemory {
+impl PhysicalMemory for DummyMemory {
     fn phys_read_iter<'b, PI: PhysicalReadIterator<'b>>(&'b mut self, mut iter: PI) -> Result<()> {
         iter.try_for_each(move |(addr, out)| {
             if addr.address().as_usize() + out.len() <= self.mem.len() {

@@ -1,14 +1,11 @@
-pub mod init_bridge;
+//pub mod init_bridge;
 pub mod init_qemu_procfs;
 
-// empty implementation
 use flow_core::*;
-use flow_derive::*;
 
-#[derive(VirtualAddressTranslatorRaw, AccessVirtualMemoryRaw)]
-pub struct EmptyVirtualMemory {}
+pub struct EmptyPhysicalMemory {}
 
-impl AccessPhysicalMemory for EmptyVirtualMemory {
+impl PhysicalMemory for EmptyPhysicalMemory {
     fn phys_read_iter<'a, PI: PhysicalReadIterator<'a>>(&'a mut self, _iter: PI) -> Result<()> {
         Err(Error::new("phys_read not implemented"))
     }

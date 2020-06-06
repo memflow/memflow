@@ -5,16 +5,16 @@ use masks::*;
 use crate::error::{Error, Result};
 use byteorder::{ByteOrder, LittleEndian};
 
-use crate::architecture;
-use crate::mem::AccessPhysicalMemory;
+use crate::architecture::Endianess;
+use crate::mem::PhysicalMemory;
 use crate::types::{Address, Length, PageType, PhysicalAddress};
 
 pub fn bits() -> u8 {
     64
 }
 
-pub fn byte_order() -> architecture::ByteOrder {
-    architecture::ByteOrder::LittleEndian
+pub fn endianess() -> Endianess {
+    Endianess::LittleEndian
 }
 
 pub fn page_size() -> Length {
@@ -30,7 +30,7 @@ fn pml_index_bits(a: u64, level: u32) -> u64 {
 }
 
 // assume a 4kb page-table page for pt reads
-fn read_pt_address_iter<T: AccessPhysicalMemory, B>(
+fn read_pt_address_iter<T: PhysicalMemory + ?Sized, B>(
     mem: &mut T,
     addrs: &mut Vec<(Address, B, Address, [u8; 8])>,
 ) {
@@ -69,17 +69,12 @@ fn get_phys_page(pt_level: u32, pt_addr: Address, virt_addr: Address) -> Physica
     )
 }
 
-pub fn virt_to_phys_iter<
-    T: AccessPhysicalMemory,
-    B,
+pub fn virt_to_phys_iter<T, B, VI, OV>(mem: &mut T, dtb: Address, addrs: VI, out: &mut OV)
+where
+    T: PhysicalMemory + ?Sized,
     VI: Iterator<Item = (Address, B)>,
     OV: Extend<(Result<PhysicalAddress>, Address, B)>,
->(
-    mem: &mut T,
-    dtb: Address,
-    addrs: VI,
-    out: &mut OV,
-) {
+{
     //TODO: Optimize this to not use allocs
     let mut data = addrs
         .map(|(addr, buf)| {

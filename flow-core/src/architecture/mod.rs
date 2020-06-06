@@ -18,14 +18,14 @@ pub mod x86_pae;
 use crate::error::{Error, Result};
 use std::convert::TryFrom;
 
-use crate::mem::AccessPhysicalMemory;
+use crate::mem::PhysicalMemory;
 use crate::types::{Address, Length, PhysicalAddress};
 
 /**
 Identifies the byte order of a architecture
 */
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub enum ByteOrder {
+pub enum Endianess {
     /// little endianess
     LittleEndian,
     /// big endianess
@@ -139,27 +139,27 @@ impl Architecture {
 
     /**
     Returns the byte order of an `Architecture`.
-    This will either be `ByteOrder::LittleEndian` or `ByteOrder::BigEndian`.
+    This will either be `Endianess::LittleEndian` or `Endianess::BigEndian`.
 
-    In most circumstances this will be `ByteOrder::LittleEndian` on all x86 and arm architectures.
+    In most circumstances this will be `Endianess::LittleEndian` on all x86 and arm architectures.
 
     # Examples
 
     ```
-    use flow_core::architecture::{Architecture, ByteOrder};
+    use flow_core::architecture::{Architecture, Endianess};
 
     pub fn test() {
         let arch = Architecture::X86;
-        assert_eq!(arch.byte_order(), ByteOrder::LittleEndian);
+        assert_eq!(arch.endianess(), Endianess::LittleEndian);
     }
     ```
     */
-    pub fn byte_order(self) -> ByteOrder {
+    pub fn endianess(self) -> Endianess {
         match self {
-            Architecture::Null => x64::byte_order(),
-            Architecture::X64 => x64::byte_order(),
-            Architecture::X86Pae => x86_pae::byte_order(),
-            Architecture::X86 => x86::byte_order(),
+            Architecture::Null => x64::endianess(),
+            Architecture::X64 => x64::endianess(),
+            Architecture::X86Pae => x86_pae::endianess(),
+            Architecture::X86 => x86::endianess(),
         }
     }
 
@@ -171,7 +171,7 @@ impl Architecture {
     # Examples
 
     ```
-    use flow_core::architecture::{Architecture, ByteOrder};
+    use flow_core::architecture::Architecture;
     use flow_core::types::Length;
 
     pub fn test() {
@@ -225,7 +225,7 @@ impl Architecture {
 
     TODO: add example
     */
-    pub fn virt_to_phys<T: AccessPhysicalMemory>(
+    pub fn virt_to_phys<T: PhysicalMemory>(
         self,
         mem: &mut T,
         dtb: Address,
@@ -237,7 +237,7 @@ impl Architecture {
     }
 
     pub fn virt_to_phys_iter<
-        T: AccessPhysicalMemory,
+        T: PhysicalMemory + ?Sized,
         B,
         VI: Iterator<Item = (Address, B)>,
         OV: Extend<(Result<PhysicalAddress>, Address, B)>,

@@ -79,7 +79,7 @@ impl PhysicalAddress {
             // once it is stabilizied in rust
             // see issue: https://github.com/rust-lang/rust/issues/70887
             page_size_log2: (std::mem::size_of::<u64>() * 8
-                - page_size.as_u64().leading_zeros() as usize) as u8
+                - page_size.as_u64().to_le().leading_zeros() as usize) as u8
                 - 2,
         }
     }

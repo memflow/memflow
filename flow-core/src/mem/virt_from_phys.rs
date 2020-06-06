@@ -7,6 +7,7 @@ use super::{
 use crate::architecture::Architecture;
 use crate::error::{Error, Result};
 use crate::types::{Address, Page};
+use crate::process::OsProcessInfo;
 
 pub struct VirtualFromPhysical<T: PhysicalMemory, V: VAT> {
     phys_mem: T,
@@ -24,6 +25,16 @@ impl<T: PhysicalMemory> VirtualFromPhysical<T, VirtualAdressTranslator> {
             vat: VirtualAdressTranslator::new(sys_arch),
             proc_arch,
             dtb,
+        }
+    }
+
+    pub fn with_process_info<U: OsProcessInfo>(phys_mem: T, process_info: U) -> Self {
+        Self {
+            phys_mem,
+            sys_arch: process_info.sys_arch(),
+            vat: VirtualAdressTranslator::new(process_info.sys_arch()),
+            proc_arch: process_info.proc_arch(),
+            dtb: process_info.dtb(),
         }
     }
 }

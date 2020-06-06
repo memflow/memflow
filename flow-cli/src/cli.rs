@@ -4,7 +4,7 @@ use std::io::{self, Write};
 use flow_core::*;
 use flow_win32::*;
 
-use pelite::{self, PeView};
+use pelite::{self, PeView, pe64::Pe as Pe64, pe32::Pe as Pe32};
 
 pub struct Win32Interface<'a, T, V>
 where
@@ -196,9 +196,11 @@ where
             return;
         }
 
-        let mut process = Win32Process::with_kernel(self.kernel, self.process_info.as_ref().unwrap().clone());
+        let mut process =
+            Win32Process::with_kernel(self.kernel, self.process_info.as_ref().unwrap().clone());
         process
-            .module_info_list().unwrap()
+            .module_info_list()
+            .unwrap()
             .iter()
             .for_each(|module| {
                 println!(
@@ -222,7 +224,8 @@ where
             return;
         }
 
-        let mut process = Win32Process::with_kernel(self.kernel, self.process_info.as_ref().unwrap().clone());
+        let mut process =
+            Win32Process::with_kernel(self.kernel, self.process_info.as_ref().unwrap().clone());
         match process.module_info(args[1]) {
             Ok(m) => {
                 println!("successfully opened module '{}': {:?}", args[1], m);
@@ -246,31 +249,31 @@ where
             return;
         }
 
-        let mut process = Win32Process::with_kernel(self.kernel, self.process_info.as_ref().unwrap().clone());
-        let module_buf = process.virt_mem
-            .virt_read_raw(
-                self.module_info.as_ref().unwrap().base(),
-                self.module_info.as_ref().unwrap().size(),
-            )
-            .unwrap();
-        let pe = PeView::from_bytes(&module_buf).unwrap();
+        let process =
+            Win32Process::with_kernel(self.kernel, self.process_info.as_ref().unwrap().clone());
+        let ctx =
+            MemoryPeViewContext::new(process.virt_mem, self.module_info.as_ref().unwrap().base())
+                .unwrap();
+        let pe = pe64::MemoryPeView::new(&ctx).unwrap();
+
+        // TODO: make this work on Wrap<>
         let exports = pe.exports().unwrap();
 
-        exports
+        for (&name_rva, function_rva) in exports
             .by()
             .unwrap()
             .names()
             .iter()
             .zip(exports.by().unwrap().functions())
-            .for_each(|(&name_rva, function_rva)| {
-                let name_it = pe.derva_c_str(name_rva).unwrap().as_ref();
-                println!(
-                    "{:x} + {:x} -> {}",
-                    self.module_info.as_ref().unwrap().base(),
-                    function_rva,
-                    std::str::from_utf8(name_it).unwrap()
-                );
-            });
+        {
+            let name_it = pe.derva_c_str(name_rva).unwrap().as_ref();
+            println!(
+                "{:x} + {:x} -> {}",
+                self.module_info.as_ref().unwrap().base(),
+                function_rva,
+                std::str::from_utf8(name_it).unwrap()
+            );
+        }
 
         /*
         let export_addr = match pe.get_export_by_name("gafAsyncKeyState")? {
@@ -299,7 +302,8 @@ where
             return;
         }
 
-        let mut process = Win32Process::with_kernel(self.kernel, self.process_info.as_ref().unwrap().clone());
+        let mut process =
+            Win32Process::with_kernel(self.kernel, self.process_info.as_ref().unwrap().clone());
         let mi = self.module_info.as_ref().unwrap();
 
         if args.is_empty() {
@@ -340,13 +344,21 @@ where
             return;
         }
 
-        let mut process = Win32Process::with_kernel(self.kernel, self.process_info.as_ref().unwrap().clone());
+        let mut process =
+            Win32Process::with_kernel(self.kernel, self.process_info.as_ref().unwrap().clone());
         let mi = self.module_info.as_ref().unwrap();
 
-        println!("dumping '{}' in '{}'...", mi.name(), process.proc_info.name());
+        println!(
+            "dumping '{}' in '{}'...",
+            mi.name(),
+            process.proc_info.name()
+        );
 
         let mut data = vec![0u8; mi.size().as_usize()]; // TODO: chunked read
-        process.virt_mem.virt_read_into(mi.base(), &mut *data).unwrap();
+        process
+            .virt_mem
+            .virt_read_into(mi.base(), &mut *data)
+            .unwrap();
 
         let mut file = File::create("dump.raw").unwrap();
         let mut pos = 0;

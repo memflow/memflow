@@ -64,8 +64,7 @@ pub fn try_fetch_pe_size<T: VirtualMemory + ?Sized>(
         }
     };
 
-    let opt_header = pe_probe.optional_header();
-    let size_of_image = match opt_header {
+    let size_of_image = match pe_probe.optional_header() {
         pelite::Wrap::T32(opt32) => opt32.SizeOfImage,
         pelite::Wrap::T64(opt64) => opt64.SizeOfImage,
     };

@@ -39,7 +39,7 @@ fn initialize_virt_ctx() -> flow_core::Result<(
         };
 
         let mod_list: Vec<Win32ModuleInfo> = {
-            let mut proc = Win32Process::with_physical(&mut kernel, proc_list[idx].clone());
+            let mut proc = Win32Process::with_kernel(&mut kernel, proc_list[idx].clone());
             proc.module_info_list()
                 .unwrap_or_default()
                 .into_iter()

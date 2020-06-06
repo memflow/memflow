@@ -278,7 +278,7 @@ impl<T: PhysicalMemory, V: VAT> Kernel<T, V> {
         for &candidate in candidates.iter() {
             // TODO: properly probe pe header here and check ImageBase
             // TODO: this wont work with tlb
-            let mut process = Win32Process::with_physical(self, candidate.clone());
+            let mut process = Win32Process::with_kernel(self, candidate.clone());
             if let Ok(_) = process
                 .module_info_list()?
                 .iter()

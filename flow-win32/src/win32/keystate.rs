@@ -24,7 +24,7 @@ impl Keyboard {
         debug!("found ntoskrnl.exe: {:?}", ntoskrnl_process_info);
 
         let win32kbase_module_info = {
-            let mut ntoskrnl_process = Win32Process::with_physical(kernel, ntoskrnl_process_info);
+            let mut ntoskrnl_process = Win32Process::with_kernel(kernel, ntoskrnl_process_info);
             ntoskrnl_process.module_info("win32kbase.sys")?
         };
         debug!("found win32kbase.sys: {:?}", win32kbase_module_info);
@@ -32,7 +32,7 @@ impl Keyboard {
         let user_process_info = kernel
             .process_info("winlogon.exe")
             .or_else(|_| kernel.process_info("wininit.exe"))?;
-        let mut user_process = Win32Process::with_physical(kernel, user_process_info.clone());
+        let mut user_process = Win32Process::with_kernel(kernel, user_process_info.clone());
         debug!("found user proxy process: {:?}", user_process);
 
         // read with user_process dtb
@@ -62,7 +62,7 @@ impl Keyboard {
         &self,
         kernel: &mut Kernel<T, V>,
     ) -> Result<KeyboardState> {
-        let mut user_process = Win32Process::with_physical(kernel, self.user_process_info.clone());
+        let mut user_process = Win32Process::with_kernel(kernel, self.user_process_info.clone());
         let buffer: [u8; 256 * 2 / 8] = user_process.virt_mem.virt_read(self.key_state_addr)?;
         Ok(KeyboardState { buffer })
     }
@@ -72,7 +72,7 @@ impl Keyboard {
         kernel: &mut Kernel<T, V>,
         state: &KeyboardState,
     ) -> Result<()> {
-        let mut user_process = Win32Process::with_physical(kernel, self.user_process_info.clone());
+        let mut user_process = Win32Process::with_kernel(kernel, self.user_process_info.clone());
         user_process
             .virt_mem
             .virt_write(self.key_state_addr, &state.buffer)?;

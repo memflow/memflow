@@ -81,7 +81,7 @@ pub struct Win32Process<T: VirtualMemory> {
 }
 
 impl<'a, T: PhysicalMemory, V: VAT> Win32Process<VirtualFromPhysical<&'a mut T, &'a mut V>> {
-    pub fn with_physical(kernel: &'a mut Kernel<T, V>, proc_info: Win32ProcessInfo) -> Self {
+    pub fn with_kernel(kernel: &'a mut Kernel<T, V>, proc_info: Win32ProcessInfo) -> Self {
         // create virt_mem
         let virt_mem = VirtualFromPhysical::with_vat(
             &mut kernel.phys_mem,

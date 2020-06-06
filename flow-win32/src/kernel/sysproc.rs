@@ -38,19 +38,8 @@ pub fn find_exported<T: VirtualMemory + ?Sized>(
     start_block: &StartBlock,
     ntos: Address,
 ) -> Result<Address> {
-    let header_buf = ntos::pe::try_fetch_pe_header(virt_mem, ntos)?;
-    let header = PeView::from_bytes(&header_buf)?;
-
     // PsInitialSystemProcess -> PsActiveProcessHead
-    let sys_proc = match header.get_export_by_name("PsInitialSystemProcess")? {
-        Export::Symbol(s) => ntos + Length::from(*s),
-        Export::Forward(_) => {
-            return Err(Error::new(
-                "PsInitialSystemProcess found but it was a forwarded export",
-            ))
-        }
-    };
-
+    let sys_proc = ntos::pe::try_get_pe_export(virt_mem, ntos, "PsInitialSystemProcess")?;
     info!("PsInitialSystemProcess found at 0x{:x}", sys_proc);
 
     // read value again

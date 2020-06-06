@@ -249,11 +249,13 @@ where
             return;
         }
 
-        let process =
+        let mut process =
             Win32Process::with_kernel(self.kernel, self.process_info.as_ref().unwrap().clone());
-        let ctx =
-            MemoryPeViewContext::new(process.virt_mem, self.module_info.as_ref().unwrap().base())
-                .unwrap();
+        let ctx = MemoryPeViewContext::new(
+            &mut process.virt_mem,
+            self.module_info.as_ref().unwrap().base(),
+        )
+        .unwrap();
         // TODO: decide wether to use pe64 or pe32 based on process arch
         let pe = pe64::MemoryPeView::new(&ctx).unwrap();
 

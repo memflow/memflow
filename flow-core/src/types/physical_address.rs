@@ -75,10 +75,12 @@ impl PhysicalAddress {
         Self {
             address,
             page_type,
-            // TODO: this should be replaced by integer log2
+            // TODO: this should be replaced by rust's internal functions as this is not endian aware
             // once it is stabilizied in rust
             // see issue: https://github.com/rust-lang/rust/issues/70887
-            page_size_log2: (page_size.as_u64() as f32).log(2f32) as u8 - 1,
+            page_size_log2: (std::mem::size_of::<u64>() * 8
+                - page_size.as_u64().leading_zeros() as usize) as u8
+                - 2,
         }
     }
 
@@ -209,8 +211,31 @@ mod tests {
 
     #[test]
     fn test_page_size_invalid() {
-        let pa =
+        let pa_42 =
             PhysicalAddress::with_page(Address::from(0x1234), PageType::UNKNOWN, Length::from(42));
-        assert_ne!(pa.page_size(), Length::from(42));
+        assert_ne!(pa_42.page_size(), Length::from(42));
+
+        let pa_0 =
+            PhysicalAddress::with_page(Address::from(0x1234), PageType::UNKNOWN, Length::from(42));
+        assert_ne!(pa_0.page_size(), Length::from(0));
+    }
+
+    #[test]
+    fn test_page_size_huge() {
+        let pa_2mb = PhysicalAddress::with_page(
+            Address::from(0x123456),
+            PageType::UNKNOWN,
+            Length::from_mb(2),
+        );
+        assert_eq!(pa_2mb.page_size(), Length::from_mb(2));
+        assert_eq!(pa_2mb.page_base(), Address::from(0));
+
+        let pa_1gb = PhysicalAddress::with_page(
+            Address::from(0x1234567),
+            PageType::UNKNOWN,
+            Length::from_gb(1),
+        );
+        assert_eq!(pa_1gb.page_size(), Length::from_gb(1));
+        assert_eq!(pa_1gb.page_base(), Address::from(0));
     }
 }

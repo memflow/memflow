@@ -6,31 +6,26 @@ use flow_win32::*;
 
 use pelite::{self, PeView};
 
-pub struct Win32Interface<'a, T>
+pub struct Win32Interface<'a, T, V>
 where
-    T: PhysicalMemoryExt + VirtualMemory,
+    T: PhysicalMemory,
+    V: VirtualTranslate,
 {
-    pub mem: &'a mut T,
-    pub os: Win32,
-    pub offsets: Win32Offsets,
-
-    pub process: Option<Win32Process>,
-
-    pub module: Option<Win32Module>,
+    pub kernel: &'a mut Kernel<T, V>,
+    pub process_info: Option<Win32ProcessInfo>,
+    pub module_info: Option<Win32ModuleInfo>,
 }
 
-impl<'a, T> Win32Interface<'a, T>
+impl<'a, T, V> Win32Interface<'a, T, V>
 where
-    T: PhysicalMemoryExt + VirtualMemory,
+    T: PhysicalMemory,
+    V: VirtualTranslate,
 {
-    pub fn with(mem: &'a mut T, os: Win32) -> flow_core::Result<Self> {
-        let offsets = Win32Offsets::try_with_guid(&os.kernel_guid())?;
+    pub fn new(kernel: &'a mut Kernel<T, V>) -> flow_core::Result<Self> {
         Ok(Self {
-            mem,
-            os,
-            offsets,
-            process: None,
-            module: None,
+            kernel,
+            process_info: None,
+            module_info: None,
         })
     }
 
@@ -168,11 +163,10 @@ where
     }
 
     fn process_ls(&mut self, _args: Vec<&str>) {
-        let eprocs = self.os.eprocess_list(self.mem, &self.offsets).unwrap();
-        eprocs
+        self.kernel
+            .process_info_list()
+            .unwrap()
             .iter()
-            .map(|eproc| Win32Process::try_with_eprocess(self.mem, &self.os, &self.offsets, *eproc))
-            .filter_map(std::result::Result::ok)
             .for_each(|p| println!("{} {}", p.pid(), p.name()));
     }
 
@@ -182,42 +176,30 @@ where
             return;
         }
 
-        let procs = Win32Process::try_with_name(self.mem, &self.os, &self.offsets, args[1]);
-        match procs {
+        match self.kernel.process_info(args[1]) {
             Ok(p) => {
                 println!("successfully opened process '{}': {:?}", args[1], p);
-                self.process = Some(p);
-                self.module = None;
+                self.process_info = Some(p);
+                self.module_info = None;
             }
             Err(e) => {
                 println!("unable to open process '{}': {:?}", args[1], e);
-                self.process = None;
-                self.module = None;
+                self.process_info = None;
+                self.module_info = None;
             }
         }
     }
 
     fn module_ls(&mut self, _args: Vec<&str>) {
-        if self.process.is_none() {
+        if self.process_info.is_none() {
             println!("no process opened. use process open 'name' to open a process");
             return;
         }
 
-        self.process
-            .as_ref()
-            .unwrap()
-            .peb_list(self.mem)
-            .unwrap()
+        let mut process = Win32Process::with_kernel(self.kernel, self.process_info.as_ref().unwrap().clone());
+        process
+            .module_info_list().unwrap()
             .iter()
-            .map(|peb| {
-                Win32Module::try_with_peb(
-                    self.mem,
-                    self.process.as_ref().unwrap(),
-                    &self.offsets,
-                    *peb,
-                )
-            })
-            .filter_map(std::result::Result::ok)
             .for_each(|module| {
                 println!(
                     "{:x} - {:x} + {:x} -> {}",
@@ -230,7 +212,7 @@ where
     }
 
     fn module_open(&mut self, args: Vec<&str>) {
-        if self.process.is_none() {
+        if self.process_info.is_none() {
             println!("no process opened. use process open 'name' to open a process first");
             return;
         }
@@ -240,40 +222,35 @@ where
             return;
         }
 
-        let mods = Win32Module::try_with_name(
-            self.mem,
-            self.process.as_ref().unwrap(),
-            &self.offsets,
-            args[1],
-        );
-        match mods {
+        let mut process = Win32Process::with_kernel(self.kernel, self.process_info.as_ref().unwrap().clone());
+        match process.module_info(args[1]) {
             Ok(m) => {
                 println!("successfully opened module '{}': {:?}", args[1], m);
-                self.module = Some(m);
+                self.module_info = Some(m);
             }
             Err(e) => {
                 println!("unable to open module '{}': {:?}", args[1], e);
-                self.module = None;
+                self.module_info = None;
             }
         }
     }
 
     fn pe_exports(&mut self, _args: Vec<&str>) {
-        if self.process.is_none() {
+        if self.process_info.is_none() {
             println!("no process opened. use process open 'name' to open a process");
             return;
         }
 
-        if self.module.is_none() {
+        if self.module_info.is_none() {
             println!("no module opened. use module open 'name' to open a module");
             return;
         }
 
-        let mut virt_mem = self.process.as_ref().unwrap().virt_mem(self.mem);
-        let module_buf = virt_mem
+        let mut process = Win32Process::with_kernel(self.kernel, self.process_info.as_ref().unwrap().clone());
+        let module_buf = process.virt_mem
             .virt_read_raw(
-                self.module.as_ref().unwrap().base(),
-                self.module.as_ref().unwrap().size(),
+                self.module_info.as_ref().unwrap().base(),
+                self.module_info.as_ref().unwrap().size(),
             )
             .unwrap();
         let pe = PeView::from_bytes(&module_buf).unwrap();
@@ -289,7 +266,7 @@ where
                 let name_it = pe.derva_c_str(name_rva).unwrap().as_ref();
                 println!(
                     "{:x} + {:x} -> {}",
-                    self.module.as_ref().unwrap().base(),
+                    self.module_info.as_ref().unwrap().base(),
                     function_rva,
                     std::str::from_utf8(name_it).unwrap()
                 );
@@ -312,24 +289,25 @@ where
     }
 
     fn pe_scan(&mut self, args: Vec<&str>) {
-        if self.process.is_none() {
+        if self.process_info.is_none() {
             println!("no process opened. use process open 'name' to open a process");
             return;
         }
-        let p = self.process.as_ref().unwrap();
 
-        if self.module.is_none() {
+        if self.module_info.is_none() {
             println!("no module opened. use module open 'name' to open a module");
             return;
         }
-        let m = self.module.as_ref().unwrap();
+
+        let mut process = Win32Process::with_kernel(self.kernel, self.process_info.as_ref().unwrap().clone());
+        let mi = self.module_info.as_ref().unwrap();
 
         if args.is_empty() {
             println!("unable to scan module: no signature specified");
             return;
         }
 
-        let image = m.read_image(self.mem, p).unwrap();
+        let image = mi.read_image(&mut process.virt_mem).unwrap();
         let pe = PeView::from_bytes(&image).unwrap();
 
         let pattern = pelite::pattern::parse(&args[1..].join(" ")).unwrap();
@@ -352,24 +330,23 @@ where
     }
 
     fn dump_module(&mut self, _args: Vec<&str>) {
-        if self.process.is_none() {
+        if self.process_info.is_none() {
             println!("no process opened. use process open 'name' to open a process");
             return;
         }
-        let p = self.process.as_ref().unwrap();
 
-        if self.module.is_none() {
+        if self.module_info.is_none() {
             println!("no module opened. use module open 'name' to open a module");
             return;
         }
-        let m = self.module.as_ref().unwrap();
 
-        println!("dumping '{}' in '{}'...", m.name(), p.name());
+        let mut process = Win32Process::with_kernel(self.kernel, self.process_info.as_ref().unwrap().clone());
+        let mi = self.module_info.as_ref().unwrap();
 
-        let mut virt_mem = p.virt_mem(self.mem);
+        println!("dumping '{}' in '{}'...", mi.name(), process.proc_info.name());
 
-        let mut data = vec![0u8; m.size().as_usize()]; // TODO: chunked read
-        virt_mem.virt_read_into(m.base(), &mut *data).unwrap();
+        let mut data = vec![0u8; mi.size().as_usize()]; // TODO: chunked read
+        process.virt_mem.virt_read_into(mi.base(), &mut *data).unwrap();
 
         let mut file = File::create("dump.raw").unwrap();
         let mut pos = 0;

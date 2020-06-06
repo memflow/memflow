@@ -10,6 +10,9 @@ pub use error::*;
 pub mod kernel;
 pub use kernel::*;
 
+pub mod pe;
+pub use pe::*; // TODO: restrict forwarding
+
 // TODO: enable again
 //pub mod keyboard;
 //pub use keyboard::*;

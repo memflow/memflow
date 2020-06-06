@@ -10,9 +10,6 @@ It contains abstractions over [memory addresses](address/index.html),
 */
 
 #[macro_use]
-extern crate flow_derive;
-
-#[macro_use]
 extern crate bitflags;
 
 #[macro_use]

@@ -3,7 +3,7 @@ use flow_bench::{phys, vat, virt};
 
 use criterion::*;
 
-use flow_core::mem::VirtualAdressTranslator;
+use flow_core::mem::TranslateArch;
 use flow_qemu_procfs::Memory;
 
 use flow_win32::{
@@ -13,16 +13,12 @@ use flow_win32::{
 use rand::prelude::*;
 use rand::{prng::XorShiftRng as CurRng, Rng, SeedableRng};
 
-fn initialize_virt_ctx() -> flow_core::Result<(
-    Memory,
-    VirtualAdressTranslator,
-    Win32ProcessInfo,
-    Win32ModuleInfo,
-)> {
+fn initialize_virt_ctx(
+) -> flow_core::Result<(Memory, TranslateArch, Win32ProcessInfo, Win32ModuleInfo)> {
     let mut phys_mem = Memory::new()?;
 
     let kernel_info = KernelInfo::find(&mut phys_mem)?;
-    let vat = VirtualAdressTranslator::new(kernel_info.start_block.arch);
+    let vat = TranslateArch::new(kernel_info.start_block.arch);
     let offsets = Win32Offsets::try_with_guid(&kernel_info.kernel_guid)?;
 
     // TODO: remove phys_mem + vat clone

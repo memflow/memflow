@@ -1,76 +1,25 @@
-#[cfg(test)]
-mod tests;
-
-use crate::error::Result;
-
+use super::VirtualTranslate;
 use crate::architecture::Architecture;
-use crate::iter::page_chunks::{PageChunks, PageChunksMut};
+use crate::error::Result;
+use crate::iter::{PageChunks, PageChunksMut};
 use crate::mem::{
     virt_mem::{VirtualReadIterator, VirtualWriteIterator},
     PhysicalMemory,
 };
 use crate::types::{Address, Page, PhysicalAddress};
 
-pub trait VAT {
-    fn virt_to_phys_iter<T, B, VI, OV>(
-        &mut self,
-        phys_mem: &mut T,
-        dtb: Address,
-        addrs: VI,
-        out: &mut OV,
-    ) where
-        T: PhysicalMemory + ?Sized,
-        VI: Iterator<Item = (Address, B)>,
-        OV: Extend<(Result<PhysicalAddress>, Address, B)>;
-
-    // helpers
-    fn virt_to_phys<T: PhysicalMemory + ?Sized>(
-        &mut self,
-        phys_mem: &mut T,
-        dtb: Address,
-        vaddr: Address,
-    ) -> Result<PhysicalAddress> {
-        let mut out = Vec::with_capacity(1);
-        self.virt_to_phys_iter(phys_mem, dtb, Some((vaddr, false)).into_iter(), &mut out);
-        out.pop().unwrap().0
-    }
-}
-
-// forward impls
-impl<'a, T: VAT> VAT for &'a mut T {
-    fn virt_to_phys_iter<U, B, VI, OV>(
-        &mut self,
-        phys_mem: &mut U,
-        dtb: Address,
-        addrs: VI,
-        out: &mut OV,
-    ) where
-        U: PhysicalMemory + ?Sized,
-        VI: Iterator<Item = (Address, B)>,
-        OV: Extend<(Result<PhysicalAddress>, Address, B)>,
-    {
-        (*self).virt_to_phys_iter(phys_mem, dtb, addrs, out)
-    }
-}
-
-//
-//
-//
-
-// TODO: rename trait + impl
-// impl
 #[derive(Debug, Clone)]
-pub struct VirtualAdressTranslator {
+pub struct TranslateArch {
     sys_arch: Architecture,
 }
 
-impl VirtualAdressTranslator {
+impl TranslateArch {
     pub fn new(sys_arch: Architecture) -> Self {
         Self { sys_arch }
     }
 }
 
-impl VAT for VirtualAdressTranslator {
+impl VirtualTranslate for TranslateArch {
     fn virt_to_phys_iter<T, B, VI, OV>(
         &mut self,
         phys_mem: &mut T,
@@ -86,14 +35,10 @@ impl VAT for VirtualAdressTranslator {
     }
 }
 
-//
-//
-//
-
 pub fn virt_read_raw_iter<
     'a,
     T: PhysicalMemory + ?Sized,
-    U: VAT + ?Sized,
+    U: VirtualTranslate + ?Sized,
     VI: VirtualReadIterator<'a>,
 >(
     phys_mem: &mut T,
@@ -128,7 +73,7 @@ pub fn virt_read_raw_iter<
 pub fn virt_write_raw_iter<
     'a,
     T: PhysicalMemory + ?Sized,
-    U: VAT + ?Sized,
+    U: VirtualTranslate + ?Sized,
     VI: VirtualWriteIterator<'a>,
 >(
     phys_mem: &mut T,
@@ -158,7 +103,7 @@ pub fn virt_write_raw_iter<
 }
 
 #[allow(unused)]
-pub fn virt_page_info<T: PhysicalMemory + ?Sized, U: VAT + ?Sized>(
+pub fn virt_page_info<T: PhysicalMemory + ?Sized, U: VirtualTranslate + ?Sized>(
     phys_mem: &mut T,
     vat: &mut U,
     arch: Architecture,

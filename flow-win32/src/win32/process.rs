@@ -5,7 +5,7 @@ use crate::win32::VirtualReadUnicodeString;
 use std::fmt;
 
 use flow_core::architecture::Architecture;
-use flow_core::mem::{PhysicalMemory, VirtualFromPhysical, VirtualMemory, VAT};
+use flow_core::mem::{PhysicalMemory, VirtualFromPhysical, VirtualMemory, VirtualTranslate};
 use flow_core::types::{Address, Length};
 use flow_core::{OsProcessInfo, OsProcessModuleInfo};
 
@@ -80,7 +80,9 @@ pub struct Win32Process<T: VirtualMemory> {
     pub proc_info: Win32ProcessInfo,
 }
 
-impl<'a, T: PhysicalMemory, V: VAT> Win32Process<VirtualFromPhysical<&'a mut T, &'a mut V>> {
+impl<'a, T: PhysicalMemory, V: VirtualTranslate>
+    Win32Process<VirtualFromPhysical<&'a mut T, &'a mut V>>
+{
     pub fn with_kernel(kernel: &'a mut Kernel<T, V>, proc_info: Win32ProcessInfo) -> Self {
         // create virt_mem
         let virt_mem = VirtualFromPhysical::with_vat(

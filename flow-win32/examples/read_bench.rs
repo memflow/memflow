@@ -7,9 +7,9 @@ use std::io::Write;
 use std::time::{Duration, Instant};
 
 use flow_core::mem::cache::{
-    CachedMemoryAccess, CachedVAT, PageCache, TLBCache, TimedCacheValidator,
+    CachedMemoryAccess, CachedVirtualTranslate, PageCache, TLBCache, TimedCacheValidator,
 };
-use flow_core::mem::{PhysicalMemory, VirtualAdressTranslator, VirtualMemory, VAT};
+use flow_core::mem::{PhysicalMemory, TranslateArch, VirtualMemory, VirtualTranslate};
 use flow_core::process::{OsProcessInfo, OsProcessModuleInfo};
 use flow_core::types::{Address, Length, PageType};
 
@@ -91,7 +91,7 @@ fn rwtest<T: VirtualMemory>(
     );
 }
 
-fn read_bench<T: PhysicalMemory, V: VAT>(
+fn read_bench<T: PhysicalMemory, V: VirtualTranslate>(
     phys_mem: &mut T,
     vat: &mut V,
     kernel_info: KernelInfo,
@@ -141,7 +141,7 @@ fn main() -> flow_core::Result<()> {
     let mut mem_sys = Memory::new()?;
     let kernel_info = KernelInfo::find(&mut mem_sys)?;
 
-    let mut vat = VirtualAdressTranslator::new(kernel_info.start_block.arch);
+    let mut vat = TranslateArch::new(kernel_info.start_block.arch);
 
     println!("Benchmarking uncached reads:");
     read_bench(&mut mem_sys, &mut vat, kernel_info.clone()).unwrap();
@@ -160,7 +160,8 @@ fn main() -> flow_core::Result<()> {
         2048.into(),
         TimedCacheValidator::new(Duration::from_millis(1000).into()),
     );
-    let mut vat_cached = CachedVAT::with(&mut vat, tlb_cache, kernel_info.start_block.arch);
+    let mut vat_cached =
+        CachedVirtualTranslate::with(&mut vat, tlb_cache, kernel_info.start_block.arch);
 
     read_bench(&mut mem_cached, &mut vat_cached, kernel_info).unwrap();
 

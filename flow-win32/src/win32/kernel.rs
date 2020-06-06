@@ -6,14 +6,14 @@ use log::trace;
 use std::fmt;
 
 use flow_core::architecture::Architecture;
-use flow_core::mem::{PhysicalMemory, VirtualFromPhysical, VirtualMemory, VAT};
+use flow_core::mem::{PhysicalMemory, VirtualFromPhysical, VirtualMemory, VirtualTranslate};
 use flow_core::process::{OperatingSystem, OsProcessInfo, OsProcessModuleInfo};
 use flow_core::types::{Address, Length};
 
 use pelite::{self, pe64::exports::Export, PeView};
 
 #[derive(Clone)]
-pub struct Kernel<T: PhysicalMemory, V: VAT> {
+pub struct Kernel<T: PhysicalMemory, V: VirtualTranslate> {
     pub phys_mem: T,
     pub vat: V,
     pub offsets: Win32Offsets,
@@ -21,9 +21,9 @@ pub struct Kernel<T: PhysicalMemory, V: VAT> {
     pub kernel_info: KernelInfo,
 }
 
-impl<T: PhysicalMemory, V: VAT> OperatingSystem for Kernel<T, V> {}
+impl<T: PhysicalMemory, V: VirtualTranslate> OperatingSystem for Kernel<T, V> {}
 
-impl<T: PhysicalMemory, V: VAT> Kernel<T, V> {
+impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
     pub fn new(phys_mem: T, vat: V, offsets: Win32Offsets, kernel_info: KernelInfo) -> Self {
         Self {
             phys_mem,
@@ -294,7 +294,7 @@ impl<T: PhysicalMemory, V: VAT> Kernel<T, V> {
     }
 }
 
-impl<T: PhysicalMemory, V: VAT> fmt::Debug for Kernel<T, V> {
+impl<T: PhysicalMemory, V: VirtualTranslate> fmt::Debug for Kernel<T, V> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{:?}", self.kernel_info)
     }

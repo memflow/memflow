@@ -2,20 +2,20 @@ use crate::error::Result;
 
 use crate::architecture::Architecture;
 use crate::mem::cache::{CacheValidator, TLBCache};
-use crate::mem::vat::VAT;
+use crate::mem::virt_translate::VirtualTranslate;
 use crate::mem::PhysicalMemory;
 use crate::types::{Address, PhysicalAddress};
 
 use bumpalo::{collections::Vec as BumpVec, Bump};
 
-pub struct CachedVAT<V: VAT, Q: CacheValidator> {
+pub struct CachedVirtualTranslate<V: VirtualTranslate, Q: CacheValidator> {
     vat: V,
     tlb: TLBCache<Q>,
     arch: Architecture,
     arena: Bump,
 }
 
-impl<V: VAT, Q: CacheValidator> CachedVAT<V, Q> {
+impl<V: VirtualTranslate, Q: CacheValidator> CachedVirtualTranslate<V, Q> {
     pub fn with(vat: V, tlb: TLBCache<Q>, arch: Architecture) -> Self {
         Self {
             vat,
@@ -26,7 +26,7 @@ impl<V: VAT, Q: CacheValidator> CachedVAT<V, Q> {
     }
 }
 
-impl<V: VAT, Q: CacheValidator> VAT for CachedVAT<V, Q> {
+impl<V: VirtualTranslate, Q: CacheValidator> VirtualTranslate for CachedVirtualTranslate<V, Q> {
     fn virt_to_phys_iter<T, B, VI, OV>(
         &mut self,
         phys_mem: &mut T,

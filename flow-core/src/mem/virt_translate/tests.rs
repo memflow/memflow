@@ -2,7 +2,7 @@ use crate::architecture::Architecture;
 use crate::dummy::DummyMemory;
 use crate::mem::cache::page_cache::PageCache;
 use crate::mem::cache::timed_validator::TimedCacheValidator;
-use crate::mem::{VirtualAdressTranslator, VirtualFromPhysical, VirtualMemory, VAT};
+use crate::mem::{TranslateArch, VirtualFromPhysical, VirtualMemory, VirtualTranslate};
 use crate::types::{Address, Length, PhysicalAddress};
 use crate::*;
 
@@ -252,7 +252,7 @@ fn test_vtop() {
     let virt_size = Length::from_mb(8);
     let (dtb, virt_base) = dummy_mem.alloc_dtb(virt_size, &[]);
     let arch = Architecture::X64;
-    let mut vat = VirtualAdressTranslator::new(arch);
+    let mut vat = TranslateArch::new(arch);
 
     assert_eq!(
         vat.virt_to_phys(&mut dummy_mem, dtb, virt_base).is_ok(),

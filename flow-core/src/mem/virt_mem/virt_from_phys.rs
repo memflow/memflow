@@ -1,15 +1,14 @@
-use super::vat;
-use super::{
-    vat::{VirtualAdressTranslator, VAT},
-    virt_mem::{VirtualMemory, VirtualReadIterator, VirtualWriteIterator},
-    PhysicalMemory,
-};
+use super::{VirtualReadIterator, VirtualWriteIterator};
 use crate::architecture::Architecture;
 use crate::error::{Error, Result};
-use crate::types::{Address, Page};
+use crate::mem::{
+    virt_translate::{translate_arch, TranslateArch, VirtualTranslate},
+    PhysicalMemory, VirtualMemory,
+};
 use crate::process::OsProcessInfo;
+use crate::types::{Address, Page};
 
-pub struct VirtualFromPhysical<T: PhysicalMemory, V: VAT> {
+pub struct VirtualFromPhysical<T: PhysicalMemory, V: VirtualTranslate> {
     phys_mem: T,
     sys_arch: Architecture,
     vat: V,
@@ -17,12 +16,12 @@ pub struct VirtualFromPhysical<T: PhysicalMemory, V: VAT> {
     dtb: Address,
 }
 
-impl<T: PhysicalMemory> VirtualFromPhysical<T, VirtualAdressTranslator> {
+impl<T: PhysicalMemory> VirtualFromPhysical<T, TranslateArch> {
     pub fn new(phys_mem: T, sys_arch: Architecture, proc_arch: Architecture, dtb: Address) -> Self {
         Self {
             phys_mem,
             sys_arch,
-            vat: VirtualAdressTranslator::new(sys_arch),
+            vat: TranslateArch::new(sys_arch),
             proc_arch,
             dtb,
         }
@@ -32,15 +31,14 @@ impl<T: PhysicalMemory> VirtualFromPhysical<T, VirtualAdressTranslator> {
         Self {
             phys_mem,
             sys_arch: process_info.sys_arch(),
-            vat: VirtualAdressTranslator::new(process_info.sys_arch()),
+            vat: TranslateArch::new(process_info.sys_arch()),
             proc_arch: process_info.proc_arch(),
             dtb: process_info.dtb(),
         }
     }
 }
 
-// TODO: with_process
-impl<T: PhysicalMemory, V: VAT> VirtualFromPhysical<T, V> {
+impl<T: PhysicalMemory, V: VirtualTranslate> VirtualFromPhysical<T, V> {
     pub fn with_vat(
         phys_mem: T,
         sys_arch: Architecture,
@@ -82,9 +80,9 @@ impl<T: PhysicalMemory, V: VAT> VirtualFromPhysical<T, V> {
     }
 }
 
-impl<T: PhysicalMemory, V: VAT> VirtualMemory for VirtualFromPhysical<T, V> {
+impl<T: PhysicalMemory, V: VirtualTranslate> VirtualMemory for VirtualFromPhysical<T, V> {
     fn virt_read_raw_iter<'a, VI: VirtualReadIterator<'a>>(&mut self, iter: VI) -> Result<()> {
-        vat::virt_read_raw_iter(
+        translate_arch::virt_read_raw_iter(
             &mut self.phys_mem,
             &mut self.vat,
             self.sys_arch,
@@ -94,7 +92,7 @@ impl<T: PhysicalMemory, V: VAT> VirtualMemory for VirtualFromPhysical<T, V> {
     }
 
     fn virt_write_raw_iter<'a, VI: VirtualWriteIterator<'a>>(&mut self, iter: VI) -> Result<()> {
-        vat::virt_write_raw_iter(
+        translate_arch::virt_write_raw_iter(
             &mut self.phys_mem,
             &mut self.vat,
             self.sys_arch,
@@ -104,7 +102,7 @@ impl<T: PhysicalMemory, V: VAT> VirtualMemory for VirtualFromPhysical<T, V> {
     }
 
     fn virt_page_info(&mut self, addr: Address) -> Result<Page> {
-        vat::virt_page_info(
+        translate_arch::virt_page_info(
             &mut self.phys_mem,
             &mut self.vat,
             self.sys_arch,

@@ -3,7 +3,7 @@ use simple_logger;
 use std::{thread, time};
 
 use flow_core::error::Result;
-use flow_core::mem::VirtualAdressTranslator;
+use flow_core::mem::TranslateArch;
 
 use flow_qemu_procfs::Memory;
 
@@ -16,7 +16,7 @@ pub fn main() -> Result<()> {
     let mut mem_sys = Memory::new()?;
     let kernel_info = KernelInfo::find(&mut mem_sys)?;
 
-    let vat = VirtualAdressTranslator::new(kernel_info.start_block.arch);
+    let vat = TranslateArch::new(kernel_info.start_block.arch);
     let offsets = Win32Offsets::try_with_guid(&kernel_info.kernel_guid)?;
     let mut kernel = Kernel::new(mem_sys, vat, offsets, kernel_info);
 

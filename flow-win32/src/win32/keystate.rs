@@ -3,7 +3,7 @@ use crate::error::{Error, Result};
 
 use log::debug;
 
-use flow_core::mem::{PhysicalMemory, VirtualMemory, VAT};
+use flow_core::mem::{PhysicalMemory, VirtualMemory, VirtualTranslate};
 use flow_core::process::OsProcessModuleInfo;
 use flow_core::types::{Address, Length};
 
@@ -19,7 +19,7 @@ pub struct KeyboardState {
 }
 
 impl Keyboard {
-    pub fn with<T: PhysicalMemory, V: VAT>(kernel: &mut Kernel<T, V>) -> Result<Self> {
+    pub fn with<T: PhysicalMemory, V: VirtualTranslate>(kernel: &mut Kernel<T, V>) -> Result<Self> {
         let ntoskrnl_process_info = kernel.ntoskrnl_process_info()?;
         debug!("found ntoskrnl.exe: {:?}", ntoskrnl_process_info);
 
@@ -58,7 +58,7 @@ impl Keyboard {
         })
     }
 
-    pub fn state<T: PhysicalMemory, V: VAT>(
+    pub fn state<T: PhysicalMemory, V: VirtualTranslate>(
         &self,
         kernel: &mut Kernel<T, V>,
     ) -> Result<KeyboardState> {
@@ -67,7 +67,7 @@ impl Keyboard {
         Ok(KeyboardState { buffer })
     }
 
-    pub fn set_state<T: PhysicalMemory, V: VAT>(
+    pub fn set_state<T: PhysicalMemory, V: VirtualTranslate>(
         &self,
         kernel: &mut Kernel<T, V>,
         state: &KeyboardState,

@@ -1,3 +1,6 @@
+pub mod virt_from_phys;
+pub use virt_from_phys::VirtualFromPhysical;
+
 use crate::error::Result;
 use crate::types::{Address, Length, Page, Pointer32, Pointer64};
 

@@ -1,7 +1,8 @@
 use criterion::*;
 
 use flow_core::mem::{
-    timed_validator::*, CachedMemoryAccess, CachedVAT, PageCache, PhysicalMemory, TLBCache, VAT,
+    timed_validator::*, CachedMemoryAccess, CachedVirtualTranslate, PageCache, PhysicalMemory,
+    TLBCache, VirtualTranslate,
 };
 
 use flow_core::{Address, Length, OsProcessInfo, OsProcessModuleInfo, PageType};
@@ -9,7 +10,7 @@ use flow_core::{Address, Length, OsProcessInfo, OsProcessModuleInfo, PageType};
 use rand::prelude::*;
 use rand::{prng::XorShiftRng as CurRng, Rng, SeedableRng};
 
-fn vattest<T: PhysicalMemory, V: VAT, P: OsProcessInfo, M: OsProcessModuleInfo>(
+fn vattest<T: PhysicalMemory, V: VirtualTranslate, P: OsProcessInfo, M: OsProcessModuleInfo>(
     phys_mem: &mut T,
     vat: &mut V,
     proc: &P,
@@ -48,7 +49,12 @@ fn vattest<T: PhysicalMemory, V: VAT, P: OsProcessInfo, M: OsProcessModuleInfo>(
     done_size
 }
 
-pub fn vat_test_with_mem<T: PhysicalMemory, V: VAT, P: OsProcessInfo, M: OsProcessModuleInfo>(
+pub fn vat_test_with_mem<
+    T: PhysicalMemory,
+    V: VirtualTranslate,
+    P: OsProcessInfo,
+    M: OsProcessModuleInfo,
+>(
     bench: &mut Bencher,
     phys_mem: &mut T,
     vat: &mut V,
@@ -62,7 +68,12 @@ pub fn vat_test_with_mem<T: PhysicalMemory, V: VAT, P: OsProcessInfo, M: OsProce
     });
 }
 
-fn vat_test_with_ctx<T: PhysicalMemory, V: VAT, P: OsProcessInfo, M: OsProcessModuleInfo>(
+fn vat_test_with_ctx<
+    T: PhysicalMemory,
+    V: VirtualTranslate,
+    P: OsProcessInfo,
+    M: OsProcessModuleInfo,
+>(
     bench: &mut Bencher,
     cache_size: u64,
     chunks: usize,
@@ -85,21 +96,26 @@ fn vat_test_with_ctx<T: PhysicalMemory, V: VAT, P: OsProcessInfo, M: OsProcessMo
 
         if use_tlb {
             let mut mem = CachedMemoryAccess::with(&mut mem, cache);
-            let mut vat = CachedVAT::with(vat, tlb_cache, proc.sys_arch());
+            let mut vat = CachedVirtualTranslate::with(vat, tlb_cache, proc.sys_arch());
             vat_test_with_mem(bench, &mut mem, &mut vat, chunks, translations, proc, tmod);
         } else {
             let mut mem = CachedMemoryAccess::with(&mut mem, cache);
             vat_test_with_mem(bench, &mut mem, &mut vat, chunks, translations, proc, tmod);
         }
     } else if use_tlb {
-        let mut vat = CachedVAT::with(vat, tlb_cache, proc.sys_arch());
+        let mut vat = CachedVirtualTranslate::with(vat, tlb_cache, proc.sys_arch());
         vat_test_with_mem(bench, &mut mem, &mut vat, chunks, translations, proc, tmod);
     } else {
         vat_test_with_mem(bench, &mut mem, &mut vat, chunks, translations, proc, tmod);
     }
 }
 
-fn chunk_vat_params<T: PhysicalMemory, V: VAT, P: OsProcessInfo, M: OsProcessModuleInfo>(
+fn chunk_vat_params<
+    T: PhysicalMemory,
+    V: VirtualTranslate,
+    P: OsProcessInfo,
+    M: OsProcessModuleInfo,
+>(
     group: &mut BenchmarkGroup<'_, measurement::WallTime>,
     func_name: String,
     cache_size: u64,
@@ -126,7 +142,12 @@ fn chunk_vat_params<T: PhysicalMemory, V: VAT, P: OsProcessInfo, M: OsProcessMod
     }
 }
 
-pub fn chunk_vat<T: PhysicalMemory, V: VAT, P: OsProcessInfo, M: OsProcessModuleInfo>(
+pub fn chunk_vat<
+    T: PhysicalMemory,
+    V: VirtualTranslate,
+    P: OsProcessInfo,
+    M: OsProcessModuleInfo,
+>(
     c: &mut Criterion,
     backend_name: &str,
     initialize_ctx: &dyn Fn() -> flow_core::Result<(T, V, P, M)>,

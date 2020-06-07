@@ -45,7 +45,7 @@ impl KernelInfo {
         info!("kernel_base={:x}", kernel_base);
 
         // get ntoskrnl.exe guid
-        let kernel_guid = kernel::ntos::find_guid(&mut virt_mem, kernel_base, kernel_size)?;
+        let kernel_guid = kernel::ntos::find_guid(&mut virt_mem, kernel_base)?;
         info!("kernel_guid={:?}", kernel_guid);
 
         // find eprocess base

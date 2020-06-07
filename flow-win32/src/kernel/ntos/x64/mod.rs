@@ -1,7 +1,8 @@
-use super::pe::*;
+mod pe;
+use pe::*;
+
 use crate::error::{Error, Result};
 use crate::kernel::StartBlock;
-use crate::pe::*; // TODO: specific
 
 use byteorder::{ByteOrder, LittleEndian};
 use log::debug;

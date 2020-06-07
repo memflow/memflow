@@ -104,6 +104,15 @@ impl<'a, T: VirtualMemory + ?Sized> MemoryPeView<'a, T> {
 //----------------------------------------------------------------
 
 unsafe impl<'a, T: VirtualMemory + ?Sized> Pe<'a> for MemoryPeView<'a, T> {
+    /// Slices the raw image buffer at the specified offset
+    fn image_slice(&self, offset: usize, size: usize) -> Option<&'a [u8]> {
+        unsafe {
+            self.context
+                .update_cache(Address::from(offset), Length::from(size));
+            (*self.context.image_cache.get()).get(offset..offset.wrapping_add(size))
+        }
+    }
+
     /// Slices the image at the specified rva.
     ///
     /// If successful the returned slice's length will be at least the given size but often be quite larger.

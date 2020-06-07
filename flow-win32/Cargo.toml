@@ -10,7 +10,7 @@ log = { version = "0.4.8", default-features = false }
 byteorder = "1.3.2"
 dataview = "0.1"
 num = "0.2.0"
-pelite = { git = "https://github.com/CasualX/pelite", branch = "master" }
+pelite = { git = "https://github.com/ko1n/pelite" }
 scroll = "0.9"
 pretty-hex = "0.1.1"
 clap = "2.33.0"
@@ -29,21 +29,9 @@ win_key_codes = "0.1.2"
 rand = "0.5"
 bencher = "0.1.5"
 
-[[bench]]
-name = "read"
-harness = false
-
-[[bench]]
-name = "vat"
-harness = false
-
 [[example]]
 name = "read_keys"
 path = "examples/read_keys.rs"
-
-[[example]]
-name = "write_keys"
-path = "examples/write_keys.rs"
 
 [[example]]
 name = "read_bench"

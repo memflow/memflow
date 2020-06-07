@@ -5,19 +5,19 @@ debug = true
 [workspace]
 members = [
     "flow-core",
-    "flow-derive",
     "flow-win32",
-    "flow-ffi",
+    #"flow-ffi",
     "flow-cli",
-    "connectors/flow-bridge",
-    "connectors/flow-qemu-bridge",
+    "flow-bench",
+    #"connectors/flow-bridge",
+    #"connectors/flow-qemu-bridge",
     "connectors/flow-qemu-procfs",
-    "connectors/flow-pcileech",
+    #"connectors/flow-pcileech",
 ]
 default-members = [
     "flow-core",
-    "flow-derive",
     "flow-win32",
-    "flow-ffi",
+    #"flow-ffi",
     "flow-cli",
+    "flow-bench"
 ]

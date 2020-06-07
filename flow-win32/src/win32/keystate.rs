@@ -1,49 +1,50 @@
-use super::{Win32, Win32Module, Win32Offsets, Win32Process};
+use super::{Kernel, Win32Process, Win32ProcessInfo};
 use crate::error::{Error, Result};
 
-use flow_core::mem::AccessVirtualMemory;
-use flow_core::process::{OsProcess, OsProcessModule};
-use flow_core::{Address, Length};
-
 use log::debug;
+
+use flow_core::mem::{PhysicalMemory, VirtualMemory, VirtualTranslate};
+use flow_core::process::OsProcessModuleInfo;
+use flow_core::types::{Address, Length};
 
 use pelite::{self, pe64::exports::Export, PeView};
 
 pub struct Keyboard {
-    user_process: Win32Process,
+    user_process_info: Win32ProcessInfo,
     key_state_addr: Address,
 }
 
 pub struct KeyboardState {
-    buffer: Box<[u8; 256 * 2 / 8]>,
+    buffer: [u8; 256 * 2 / 8],
 }
 
 impl Keyboard {
-    pub fn with<T: AccessVirtualMemory>(
-        mem: &mut T,
-        win: &Win32,
-        offsets: &Win32Offsets,
-    ) -> Result<Self> {
-        let kernel_process = Win32Process::try_from_kernel(mem, win)?;
-        debug!("found kernel_process: {:?}", kernel_process);
-        let kernel_module =
-            Win32Module::try_with_name(mem, &kernel_process, offsets, "win32kbase.sys")?;
-        debug!("found kernel_module: {:?}", kernel_module);
+    pub fn with<T: PhysicalMemory, V: VirtualTranslate>(kernel: &mut Kernel<T, V>) -> Result<Self> {
+        let ntoskrnl_process_info = kernel.ntoskrnl_process_info()?;
+        debug!("found ntoskrnl.exe: {:?}", ntoskrnl_process_info);
 
-        let user_process = Win32Process::try_with_name(mem, win, offsets, "winlogon.exe")
-            .or_else(|_| Win32Process::try_with_name(mem, win, offsets, "wininit.exe"))?;
-        debug!("found user_process: {:?}", user_process);
+        let win32kbase_module_info = {
+            let mut ntoskrnl_process = Win32Process::with_kernel(kernel, ntoskrnl_process_info);
+            ntoskrnl_process.module_info("win32kbase.sys")?
+        };
+        debug!("found win32kbase.sys: {:?}", win32kbase_module_info);
+
+        let user_process_info = kernel
+            .process_info("winlogon.exe")
+            .or_else(|_| kernel.process_info("wininit.exe"))?;
+        let mut user_process = Win32Process::with_kernel(kernel, user_process_info.clone());
+        debug!("found user proxy process: {:?}", user_process);
 
         // read with user_process dtb
-        let mut virt_mem = user_process.virt_mem(mem);
-
-        let module_buf = virt_mem.virt_read_raw(kernel_module.base(), kernel_module.size())?;
+        let module_buf = user_process
+            .virt_mem
+            .virt_read_raw(win32kbase_module_info.base(), win32kbase_module_info.size())?;
         let pe = PeView::from_bytes(&module_buf).map_err(Error::new)?;
         let export_addr = match pe
             .get_export_by_name("gafAsyncKeyState")
             .map_err(Error::new)?
         {
-            Export::Symbol(s) => kernel_module.base() + Length::from(*s),
+            Export::Symbol(s) => win32kbase_module_info.base() + Length::from(*s),
             Export::Forward(_) => {
                 return Err(Error::new(
                     "export gafAsyncKeyState found but it is forwarded",
@@ -52,26 +53,29 @@ impl Keyboard {
         };
 
         Ok(Self {
-            user_process,
+            user_process_info,
             key_state_addr: export_addr,
         })
     }
 
-    pub fn state<T: AccessVirtualMemory>(&self, mem: &mut T) -> Result<KeyboardState> {
-        let mut virt_mem = self.user_process.virt_mem(mem);
-        let buffer: [u8; 256 * 2 / 8] = virt_mem.virt_read(self.key_state_addr)?;
-        Ok(KeyboardState {
-            buffer: Box::new(buffer),
-        })
+    pub fn state<T: PhysicalMemory, V: VirtualTranslate>(
+        &self,
+        kernel: &mut Kernel<T, V>,
+    ) -> Result<KeyboardState> {
+        let mut user_process = Win32Process::with_kernel(kernel, self.user_process_info.clone());
+        let buffer: [u8; 256 * 2 / 8] = user_process.virt_mem.virt_read(self.key_state_addr)?;
+        Ok(KeyboardState { buffer })
     }
 
-    pub fn set_state<T: AccessVirtualMemory>(
+    pub fn set_state<T: PhysicalMemory, V: VirtualTranslate>(
         &self,
-        mem: &mut T,
+        kernel: &mut Kernel<T, V>,
         state: &KeyboardState,
     ) -> Result<()> {
-        let mut virt_mem = self.user_process.virt_mem(mem);
-        virt_mem.virt_write(self.key_state_addr, &*state.buffer)?;
+        let mut user_process = Win32Process::with_kernel(kernel, self.user_process_info.clone());
+        user_process
+            .virt_mem
+            .virt_write(self.key_state_addr, &state.buffer)?;
         Ok(())
     }
 }
@@ -118,19 +122,19 @@ macro_rules! set_key_up {
 //                                                              ((ks)[GET_KS_BYTE(vk)] & ~GET_KS_LOCK_BIT(vk)))
 
 impl KeyboardState {
-    pub fn down(&self, vk: i32) -> Result<bool> {
+    pub fn is_down(&self, vk: i32) -> bool {
         if vk < 0 || vk > 256 {
-            Err(Error::new("invalid key"))
+            false
         } else {
-            Ok(is_key_down!(self.buffer, vk))
+            is_key_down!(self.buffer, vk)
         }
     }
 
-    pub fn set_down(&mut self, vk: i32, down: bool) {
-        if down {
-            set_key_down!(self.buffer, vk);
-        } else {
-            set_key_up!(self.buffer, vk);
-        }
+    pub fn set_key_down(&mut self, vk: i32) {
+        set_key_down!(self.buffer, vk);
+    }
+
+    pub fn set_key_up(&mut self, vk: i32) {
+        set_key_up!(self.buffer, vk);
     }
 }

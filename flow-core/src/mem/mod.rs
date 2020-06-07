@@ -10,13 +10,14 @@ TODO: more documentation
 */
 
 pub mod cache;
-pub mod phys;
-pub mod vat;
-pub mod virt;
-pub mod virt_ctx;
+pub mod phys_mem;
+pub mod virt_mem;
+pub mod virt_translate;
 
-pub use cache::*;
-pub use phys::AccessPhysicalMemory;
-pub use vat::VirtualAddressTranslator;
-pub use virt::AccessVirtualMemory;
-pub use virt_ctx::VirtualMemoryContext;
+#[cfg(any(feature = "dummy_mem", test))]
+pub mod dummy;
+
+pub use cache::*; // TODO: specify pub declarations
+pub use phys_mem::{PhysicalMemory, PhysicalReadIterator, PhysicalWriteIterator};
+pub use virt_mem::{VirtualFromPhysical, VirtualMemory};
+pub use virt_translate::{TranslateArch, VirtualTranslate};

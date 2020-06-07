@@ -1,34 +1,17 @@
 use log::info;
 
 use flow_core::*;
-use flow_derive::*;
 
-use std::fs::{File, OpenOptions};
-use std::io::{Read, Seek, SeekFrom, Write};
+use core::ffi::c_void;
+use libc::{c_ulong, iovec, pid_t, sysconf, _SC_IOV_MAX};
 
 const LENGTH_2GB: Length = Length::from_gb(2);
 
-#[derive(AccessVirtualMemory, VirtualAddressTranslator)]
+#[derive(Clone)]
 pub struct Memory {
-    pub pid: i32,
+    pub pid: pid_t,
     pub map: procfs::process::MemoryMap,
-    file: File,
-}
-
-impl Clone for Memory {
-    fn clone(&self) -> Self {
-        let new_file = OpenOptions::new()
-            .read(true)
-            .write(true)
-            .open(format!("/proc/{}/mem", self.pid))
-            .unwrap(); // TODO: might panic
-
-        Self {
-            pid: self.pid,
-            map: self.map.clone(),
-            file: new_file,
-        }
-    }
+    temp_iov: Box<[iovec]>,
 }
 
 impl Memory {
@@ -52,43 +35,130 @@ impl Memory {
             .ok_or_else(|| Error::new("qemu memory map could not be read"))?;
         info!("qemu memory map found {:?}", map);
 
-        let file = OpenOptions::new()
-            .read(true)
-            .write(true)
-            .open(format!("/proc/{}/mem", prc.stat.pid))?;
+        let iov_max = unsafe { sysconf(_SC_IOV_MAX) } as usize;
+
         Ok(Self {
             pid: prc.stat.pid,
             map: map.clone(),
-            file,
+            temp_iov: vec![
+                iovec {
+                    iov_base: std::ptr::null_mut::<c_void>(),
+                    iov_len: 0
+                };
+                iov_max * 2
+            ]
+            .into_boxed_slice(),
         })
+    }
+
+    pub fn fill_iovec(
+        addr: &PhysicalAddress,
+        data: &[u8],
+        liov: &mut iovec,
+        riov: &mut iovec,
+        map_address: u64,
+    ) {
+        let ofs = map_address + {
+            if addr.as_u64() <= LENGTH_2GB.as_u64() {
+                addr.as_u64()
+            } else {
+                addr.as_u64() - LENGTH_2GB.as_u64()
+            }
+        };
+
+        *liov = iovec {
+            iov_base: data.as_ptr() as *mut c_void,
+            iov_len: data.len(),
+        };
+
+        *riov = iovec {
+            iov_base: ofs as *mut c_void,
+            iov_len: data.len(),
+        };
     }
 }
 
-// TODO: evaluate use of memmap
-impl AccessPhysicalMemory for Memory {
-    fn phys_read_raw_into(&mut self, addr: PhysicalAddress, out: &mut [u8]) -> Result<()> {
-        let ofs = self.map.address.0 + {
-            if addr.as_u64() <= LENGTH_2GB.as_u64() {
-                addr.as_u64()
-            } else {
-                addr.as_u64() - LENGTH_2GB.as_u64()
+impl PhysicalMemory for Memory {
+    fn phys_read_iter<'a, PI: PhysicalReadIterator<'a>>(&'a mut self, mut iter: PI) -> Result<()> {
+        let max_iov = self.temp_iov.len() / 2;
+        let (iov_local, iov_remote) = self.temp_iov.split_at_mut(max_iov);
+
+        let mut elem = iter.next();
+
+        let mut iov_iter = iov_local.iter_mut().zip(iov_remote.iter_mut()).enumerate();
+        let mut iov_next = iov_iter.next();
+
+        while let Some((addr, out)) = elem {
+            let (cnt, (liov, riov)) = iov_next.unwrap();
+
+            Self::fill_iovec(&addr, out.as_ref(), liov, riov, self.map.address.0);
+
+            iov_next = iov_iter.next();
+            elem = iter.next();
+
+            if elem.is_none() || iov_next.is_none() {
+                if unsafe {
+                    libc::process_vm_readv(
+                        self.pid,
+                        iov_local.as_ptr(),
+                        (cnt + 1) as c_ulong,
+                        iov_remote.as_ptr(),
+                        (cnt + 1) as c_ulong,
+                        0,
+                    )
+                } == -1
+                {
+                    return Err(Error::new("process_vm_readv failed"));
+                }
+
+                iov_iter = iov_local.iter_mut().zip(iov_remote.iter_mut()).enumerate();
+                iov_next = iov_iter.next();
             }
-        };
-        self.file.seek(SeekFrom::Start(ofs))?;
-        let _ = self.file.read(out);
+        }
+
         Ok(())
     }
 
-    fn phys_write_raw(&mut self, addr: PhysicalAddress, data: &[u8]) -> Result<()> {
-        let ofs = self.map.address.0 + {
-            if addr.as_u64() <= LENGTH_2GB.as_u64() {
-                addr.as_u64()
-            } else {
-                addr.as_u64() - LENGTH_2GB.as_u64()
+    fn phys_write_iter<'a, PI: PhysicalWriteIterator<'a>>(
+        &'a mut self,
+        mut iter: PI,
+    ) -> Result<()> {
+        let max_iov = self.temp_iov.len() / 2;
+        let (iov_local, iov_remote) = self.temp_iov.split_at_mut(max_iov);
+
+        let mut elem = iter.next();
+
+        let mut iov_iter = iov_local.iter_mut().zip(iov_remote.iter_mut()).enumerate();
+        let mut iov_next = iov_iter.next();
+
+        while let Some((addr, out)) = elem {
+            let (cnt, (liov, riov)) = iov_next.unwrap();
+
+            Self::fill_iovec(&addr, out.as_ref(), liov, riov, self.map.address.0);
+
+            iov_next = iov_iter.next();
+            elem = iter.next();
+
+            if elem.is_none() || iov_next.is_none() {
+                if unsafe {
+                    libc::process_vm_writev(
+                        self.pid,
+                        iov_local.as_ptr(),
+                        (cnt + 1) as c_ulong,
+                        iov_remote.as_ptr(),
+                        (cnt + 1) as c_ulong,
+                        0,
+                    )
+                } == -1
+                {
+                    return Err(Error::new("process_vm_writev failed"));
+                }
+
+                iov_iter = iov_local.iter_mut().zip(iov_remote.iter_mut()).enumerate();
+                iov_next = iov_iter.next();
             }
-        };
-        self.file.seek(SeekFrom::Start(ofs))?;
-        let _ = self.file.write(data);
+        }
+
         Ok(())
     }
 }

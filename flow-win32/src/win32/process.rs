@@ -1,171 +1,41 @@
+use super::{Kernel, Win32ModuleInfo};
 use crate::error::{Error, Result};
-use crate::offsets::Win32Offsets;
-use crate::win32::Win32;
+use crate::win32::VirtualReadUnicodeString;
+
+use std::fmt;
 
 use flow_core::architecture::Architecture;
-use flow_core::mem::{AccessVirtualMemory, VirtualMemoryContext};
+use flow_core::mem::{PhysicalMemory, VirtualFromPhysical, VirtualMemory, VirtualTranslate};
 use flow_core::types::{Address, Length};
-use flow_core::OsProcess;
+use flow_core::{OsProcessInfo, OsProcessModuleInfo};
 
 use log::trace;
-use pelite::{self, pe64::exports::Export, PeView};
 
 #[derive(Debug, Clone)]
-pub struct Win32Process {
-    address: Address,
-    pid: i32,
-    name: String,
-    dtb: Address,
-    wow64: Address,
-    peb: Address,
-    peb_module: Address,
-    sys_arch: Architecture,
-    proc_arch: Architecture,
+pub struct Win32ProcessInfo {
+    pub address: Address,
+
+    // general information from eprocess
+    pub pid: i32,
+    pub name: String,
+    pub dtb: Address,
+    pub wow64: Address,
+
+    // peb
+    pub peb: Address,
+    pub peb_module: Address,
+
+    // architecture
+    pub sys_arch: Architecture,
+    pub proc_arch: Architecture,
+
+    // offsets for this process (either x86 or x64 offsets)
+    pub ldr_data_base_offs: Length,
+    pub ldr_data_size_offs: Length,
+    pub ldr_data_name_offs: Length,
 }
 
-impl Win32Process {
-    pub fn try_from_kernel<T>(mem: &mut T, win: &Win32) -> Result<Self>
-    where
-        T: AccessVirtualMemory,
-    {
-        let mut reader = VirtualMemoryContext::with(mem, win.start_block.arch, win.start_block.dtb);
-
-        // read pe header
-        let mut pe_buf = vec![0; win.kernel_size.as_usize()];
-        reader.virt_read_raw_into(win.kernel_base, &mut pe_buf)?;
-
-        let pe = PeView::from_bytes(&pe_buf)?;
-
-        // find PsActiveProcessHead
-        let loaded_module_list = match pe.get_export_by_name("PsLoadedModuleList")? {
-            Export::Symbol(s) => win.kernel_base + Length::from(*s),
-            Export::Forward(_) => {
-                return Err(Error::new(
-                    "PsLoadedModuleList found but it was a forwarded export",
-                ))
-            }
-        };
-
-        let peb_module = reader.virt_read_addr(loaded_module_list)?;
-
-        Ok(Self {
-            address: win.kernel_base,
-            pid: 0,
-            name: "ntoskrnl.exe".to_string(),
-            dtb: win.start_block.dtb,
-            wow64: Address::null(),
-            peb: Address::null(),
-            peb_module,
-            sys_arch: win.start_block.arch,
-            proc_arch: win.start_block.arch,
-        })
-    }
-
-    pub fn try_with_eprocess<T>(
-        mem: &mut T,
-        win: &Win32,
-        offsets: &Win32Offsets,
-        eprocess: Address,
-    ) -> Result<Self>
-    where
-        T: AccessVirtualMemory,
-    {
-        let mut reader = VirtualMemoryContext::with(mem, win.start_block.arch, win.start_block.dtb);
-
-        let mut pid = 0i32;
-        reader.virt_read_into(eprocess + offsets.eproc_pid, &mut pid)?;
-        trace!("pid={}", pid);
-        let name = reader.virt_read_cstr(eprocess + offsets.eproc_name, Length::from(16))?;
-        trace!("name={}", name);
-        let dtb = reader.virt_read_addr(eprocess + offsets.kproc_dtb)?;
-        trace!("dtb={:x}", dtb);
-        let wow64 = if offsets.eproc_wow64.is_zero() {
-            trace!("eproc_wow64=null; skipping wow64 detection");
-            Address::null()
-        } else {
-            trace!(
-                "eproc_wow64=${:x}; trying to read wow64 pointer",
-                offsets.eproc_wow64
-            );
-            reader.virt_read_addr(eprocess + offsets.eproc_wow64)?
-        };
-        trace!("wow64={:x}", wow64);
-
-        // read peb
-        let peb = if wow64.is_null() {
-            trace!("reading peb for native process");
-            reader.virt_read_addr(eprocess + offsets.eproc_peb)?
-        } else {
-            trace!("reading peb for wow64 process");
-            reader.virt_read_addr(wow64)?
-        };
-        trace!("peb={:x}", peb);
-
-        let sys_arch = win.start_block.arch;
-        trace!("sys_arch={:?}", sys_arch);
-        let proc_arch = match sys_arch.bits() {
-            64 => {
-                if wow64.is_null() {
-                    Architecture::X64
-                } else {
-                    Architecture::X86
-                }
-            }
-            32 => Architecture::X86,
-            _ => return Err(Error::new("invalid architecture")),
-        };
-        trace!("proc_arch={:?}", proc_arch);
-
-        // from here on out we are in the process context
-        // we will be using the process type architecture now
-        let (peb_ldr_offs, ldr_list_offs) = match proc_arch.bits() {
-            64 => (offsets.peb_ldr_x64, offsets.ldr_list_x64),
-            32 => (offsets.peb_ldr_x86, offsets.ldr_list_x86),
-            _ => return Err(Error::new("invalid architecture")),
-        };
-        trace!("peb_ldr_offs={:x}", peb_ldr_offs);
-        trace!("ldr_list_offs={:x}", ldr_list_offs);
-
-        // construct reader with process dtb
-        let mut proc_reader =
-            VirtualMemoryContext::with_proc_arch(mem, win.start_block.arch, proc_arch, dtb);
-        let peb_ldr = proc_reader.virt_read_addr(peb + peb_ldr_offs)?;
-        trace!("peb_ldr={:x}", peb_ldr);
-
-        let peb_module = proc_reader.virt_read_addr(peb_ldr + ldr_list_offs)?;
-        trace!("peb_module={:x}", peb_module);
-
-        Ok(Self {
-            address: eprocess,
-            pid,
-            name,
-            dtb,
-            wow64,
-            peb,
-            peb_module,
-            sys_arch,
-            proc_arch,
-        })
-    }
-
-    pub fn try_with_name<T>(
-        mem: &mut T,
-        win: &Win32,
-        offsets: &Win32Offsets,
-        name: &str,
-    ) -> Result<Self>
-    where
-        T: AccessVirtualMemory,
-    {
-        win.eprocess_list(mem, offsets)?
-            .iter()
-            .map(|eproc| Win32Process::try_with_eprocess(mem, win, offsets, *eproc))
-            .filter_map(Result::ok)
-            .inspect(|p| trace!("{} {}", p.pid(), p.name()))
-            .find(|p| p.name() == name)
-            .ok_or_else(|| Error::new(format!("unable to find process {}", name)))
-    }
-
+impl Win32ProcessInfo {
     pub fn wow64(&self) -> Address {
         self.wow64
     }
@@ -177,28 +47,9 @@ impl Win32Process {
     pub fn peb_module(&self) -> Address {
         self.peb_module
     }
-
-    pub fn peb_list<T: AccessVirtualMemory>(&self, mem: &mut T) -> Result<Vec<Address>> {
-        let mut proc_reader =
-            VirtualMemoryContext::with_proc_arch(mem, self.sys_arch, self.proc_arch, self.dtb);
-
-        let mut pebs = Vec::new();
-
-        let list_start = self.peb_module;
-        let mut list_entry = list_start;
-        loop {
-            pebs.push(list_entry);
-            list_entry = proc_reader.virt_read_addr(list_entry)?;
-            if list_entry.is_null() || list_entry == self.peb_module {
-                break;
-            }
-        }
-
-        Ok(pebs)
-    }
 }
 
-impl OsProcess for Win32Process {
+impl OsProcessInfo for Win32ProcessInfo {
     fn address(&self) -> Address {
         self.address
     }
@@ -221,5 +72,117 @@ impl OsProcess for Win32Process {
 
     fn proc_arch(&self) -> Architecture {
         self.proc_arch
+    }
+}
+
+pub struct Win32Process<T: VirtualMemory> {
+    pub virt_mem: T,
+    pub proc_info: Win32ProcessInfo,
+}
+
+impl<'a, T: PhysicalMemory, V: VirtualTranslate>
+    Win32Process<VirtualFromPhysical<&'a mut T, &'a mut V>>
+{
+    pub fn with_kernel(kernel: &'a mut Kernel<T, V>, proc_info: Win32ProcessInfo) -> Self {
+        // create virt_mem
+        let virt_mem = VirtualFromPhysical::with_vat(
+            &mut kernel.phys_mem,
+            proc_info.sys_arch,
+            proc_info.proc_arch,
+            proc_info.dtb,
+            &mut kernel.vat,
+        );
+
+        Self {
+            virt_mem,
+            proc_info,
+        }
+    }
+}
+
+impl<T: VirtualMemory> Win32Process<T> {
+    pub fn peb_list(&mut self) -> Result<Vec<Address>> {
+        let mut list = Vec::new();
+
+        let list_start = self.proc_info.peb_module;
+        let mut list_entry = list_start;
+        loop {
+            list.push(list_entry);
+            list_entry = match self.proc_info.proc_arch.bits() {
+                64 => self.virt_mem.virt_read_addr64(list_entry)?,
+                32 => self.virt_mem.virt_read_addr32(list_entry)?,
+                _ => return Err(Error::new("invalid architecture")),
+            };
+            if list_entry.is_null() || list_entry == self.proc_info.peb_module {
+                break;
+            }
+        }
+
+        Ok(list)
+    }
+
+    pub fn module_info_from_peb(&mut self, peb_module: Address) -> Result<Win32ModuleInfo> {
+        let base = match self.proc_info.proc_arch.bits() {
+            64 => self
+                .virt_mem
+                .virt_read_addr64(peb_module + self.proc_info.ldr_data_base_offs)?,
+            32 => self
+                .virt_mem
+                .virt_read_addr32(peb_module + self.proc_info.ldr_data_base_offs)?,
+            _ => return Err(Error::new("invalid architecture")),
+        };
+        trace!("base={:x}", base);
+
+        let size = Length::from(match self.proc_info.proc_arch.bits() {
+            64 => self
+                .virt_mem
+                .virt_read_addr64(peb_module + self.proc_info.ldr_data_size_offs)?
+                .as_u64(),
+            32 => self
+                .virt_mem
+                .virt_read_addr32(peb_module + self.proc_info.ldr_data_size_offs)?
+                .as_u64(),
+            _ => return Err(Error::new("invalid architecture")),
+        });
+        trace!("size={:x}", size);
+
+        let name = self.virt_mem.virt_read_unicode_string(
+            self.proc_info.proc_arch,
+            peb_module + self.proc_info.ldr_data_name_offs,
+        )?;
+        trace!("name={}", name);
+
+        Ok(Win32ModuleInfo {
+            peb_module,
+            parent_eprocess: self.proc_info.address,
+            base,
+            size,
+            name,
+        })
+    }
+
+    pub fn module_info_list(&mut self) -> Result<Vec<Win32ModuleInfo>> {
+        let mut list = Vec::new();
+        for &peb in self.peb_list()?.iter() {
+            if let Ok(modu) = self.module_info_from_peb(peb) {
+                list.push(modu);
+            }
+        }
+        Ok(list)
+    }
+
+    pub fn module_info(&mut self, name: &str) -> Result<Win32ModuleInfo> {
+        let module_info_list = self.module_info_list()?;
+        module_info_list
+            .into_iter()
+            .inspect(|module| trace!("{:x} {}", module.base(), module.name()))
+            .find(|module| module.name() == name)
+            .ok_or_else(|| Error::new(format!("unable to find module {}", name)))
+    }
+}
+
+impl<'a, T: VirtualMemory> fmt::Debug for Win32Process<T> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", self.proc_info)
     }
 }

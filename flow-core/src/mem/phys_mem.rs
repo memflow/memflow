@@ -19,8 +19,6 @@ This information is usually only needed when implementing caches.
 
 There are only 2 methods which are required to be implemented by the provider of this trait.
 
-`PhysicalMemoryExt` that is auto implemented provides additional helper functions to assist RW operations.
-
 # Examples
 
 Implementing `PhysicalMemory` for a memory backend:
@@ -51,6 +49,18 @@ impl PhysicalMemory for MemoryBackend {
         iter.for_each(|(addr, data)| self.mem[addr.as_usize()..(addr.as_usize() + data.len())].copy_from_slice(data));
         Ok(())
     }
+}
+```
+
+Reading from `PhysicalMemory`:
+```
+use flow_core::types::Address;
+use flow_core::mem::PhysicalMemory;
+
+fn read<T: PhysicalMemory>(mem: &mut T) {
+    let mut addr = 0u64;
+    mem.phys_read_into(Address::from(0x1000).into(), &mut addr).unwrap();
+    println!("addr: {:x}", addr);
 }
 ```
 */

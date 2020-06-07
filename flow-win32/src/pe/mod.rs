@@ -9,6 +9,8 @@ use flow_core::iter::PageChunksMut;
 use flow_core::mem::VirtualMemory;
 use flow_core::types::{Address, Length};
 
+const PE_PAGE_SIZE: Length = Length::from_kb(4);
+
 #[derive(Copy, Clone)]
 pub enum PeFormat {
     Pe64,
@@ -43,9 +45,8 @@ impl<'a, T: VirtualMemory + ?Sized> MemoryPeViewContext<'a, T> {
         let mut image_cache = vec![0u8; size_of_image as usize].into_boxed_slice();
 
         // create a map that contains all possible pages
-        let page_size = Length::from_kb(4); // fixed for win32
         let mut image_pages =
-            vec![false; (size_of_image / page_size.as_u32()) as usize].into_boxed_slice();
+            vec![false; (size_of_image / PE_PAGE_SIZE.as_u32()) as usize].into_boxed_slice();
 
         // copy over header page
         image_cache[..image_header.len()].copy_from_slice(&image_header);
@@ -76,15 +77,15 @@ impl<'a, T: VirtualMemory + ?Sized> MemoryPeViewContext<'a, T> {
         // TODO: use wraping here
 
         // always read up to page boundary
-        let start_addr = addr.as_page_aligned(Length::from_kb(4));
-        let end_addr = (addr + len + Length::from_kb(4)).as_page_aligned(Length::from_kb(4));
+        let start_addr = addr.as_page_aligned(PE_PAGE_SIZE);
+        let end_addr = (addr + len + PE_PAGE_SIZE).as_page_aligned(PE_PAGE_SIZE);
 
         let slice = &mut (*self.image_cache.get())[start_addr.as_usize()..end_addr.as_usize()];
 
         for (chunk_addr, chunk) in PageChunksMut::create_from(slice, start_addr, Length::from_kb(4))
         {
             // chunk_addr is already page aligned
-            let page_idx = chunk_addr.as_usize() / Length::from_kb(4).as_usize();
+            let page_idx = chunk_addr.as_usize() / PE_PAGE_SIZE.as_usize();
             if !self.image_pages.borrow()[page_idx] {
                 self.virt_mem
                     .borrow_mut()

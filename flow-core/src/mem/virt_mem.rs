@@ -9,6 +9,31 @@ use std::mem::MaybeUninit;
 
 use dataview::Pod;
 
+/**
+The `VirtualMemory` trait implements access to virtual memory for a specific process
+and provides a generic way to read and write from/to that processes virtual memory.
+
+The CPU accesses virtual memory by setting the CR3 register to the appropiate Directory Table Base (DTB)
+for that process. The ntoskrnl.exe Kernel Process has it's own DTB.
+Using the DTB it is possible to resolve the physical memory location of a virtual address page.
+After the address has been resolved the physical memory page can then be read or written to.
+
+There are 3 methods which are required to be implemented by the provider of this trait.
+
+# Examples
+
+Reading from `VirtualMemory`:
+```
+use flow_core::types::Address;
+use flow_core::mem::VirtualMemory;
+
+fn read<T: VirtualMemory>(virt_mem: &mut T) {
+    let mut addr = 0u64;
+    virt_mem.virt_read_into(Address::from(0x1000), &mut addr).unwrap();
+    println!("addr: {:x}", addr);
+}
+```
+*/
 pub trait VirtualMemory {
     fn virt_read_raw_iter<'a, VI: VirtualReadIterator<'a>>(&mut self, iter: VI) -> Result<()>;
 

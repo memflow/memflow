@@ -5,6 +5,7 @@ use std::cell::{RefCell, UnsafeCell};
 
 use pelite::{Error, PeView, Result};
 
+use flow_core::iter::PageChunksMut;
 use flow_core::mem::VirtualMemory;
 use flow_core::types::{Address, Length};
 
@@ -19,6 +20,7 @@ pub struct MemoryPeViewContext<'a, T: VirtualMemory + ?Sized> {
     virt_mem: RefCell<&'a mut T>,
     image_base: Address,
     image_format: PeFormat,
+    image_pages: RefCell<Box<[bool]>>,
     image_cache: UnsafeCell<Box<[u8]>>,
 }
 
@@ -39,7 +41,16 @@ impl<'a, T: VirtualMemory + ?Sized> MemoryPeViewContext<'a, T> {
         };
 
         let mut image_cache = vec![0u8; size_of_image as usize].into_boxed_slice();
+
+        // create a map that contains all possible pages
+        let page_size = Length::from_kb(4); // fixed for win32
+        let mut image_pages =
+            vec![false; (size_of_image / page_size.as_u32()) as usize].into_boxed_slice();
+
+        // copy over header page
         image_cache[..image_header.len()].copy_from_slice(&image_header);
+        image_pages[0] = true;
+
         Ok(Self {
             virt_mem: RefCell::new(virt_mem),
             image_base,
@@ -47,6 +58,7 @@ impl<'a, T: VirtualMemory + ?Sized> MemoryPeViewContext<'a, T> {
                 pelite::Wrap::T32(_) => PeFormat::Pe32,
                 pelite::Wrap::T64(_) => PeFormat::Pe64,
             },
+            image_pages: RefCell::new(image_pages),
             image_cache: UnsafeCell::new(image_cache),
         })
     }
@@ -61,12 +73,25 @@ impl<'a, T: VirtualMemory + ?Sized> MemoryPeViewContext<'a, T> {
             len = Length::from_kb(1);
         }
 
-        self.virt_mem
-            .borrow_mut()
-            .virt_read_raw_into(
-                self.image_base + Length::from(addr.as_u64()),
-                &mut (*self.image_cache.get())[addr.as_usize()..(addr + len).as_usize()],
-            )
-            .ok();
+        // TODO: use wraping here
+
+        // always read up to page boundary
+        let start_addr = addr.as_page_aligned(Length::from_kb(4));
+        let end_addr = (addr + len + Length::from_kb(4)).as_page_aligned(Length::from_kb(4));
+
+        let slice = &mut (*self.image_cache.get())[start_addr.as_usize()..end_addr.as_usize()];
+
+        for (chunk_addr, chunk) in PageChunksMut::create_from(slice, start_addr, Length::from_kb(4))
+        {
+            // chunk_addr is already page aligned
+            let page_idx = chunk_addr.as_usize() / Length::from_kb(4).as_usize();
+            if !self.image_pages.borrow()[page_idx] {
+                self.virt_mem
+                    .borrow_mut()
+                    .virt_read_raw_into(self.image_base + Length::from(chunk_addr.as_u64()), chunk)
+                    .ok();
+                self.image_pages.borrow_mut()[page_idx] = true;
+            }
+        }
     }
 }

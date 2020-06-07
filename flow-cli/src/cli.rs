@@ -313,7 +313,12 @@ where
             return;
         }
 
-        let image = mi.read_image(&mut process.virt_mem).unwrap();
+        let size_of_image = mi.size_of_image(&mut process.virt_mem).unwrap();
+        let image = process
+            .virt_mem
+            .virt_read_raw(mi.base(), size_of_image.into())
+            .unwrap();
+        // TODO: lazy
         let pe = PeView::from_bytes(&image).unwrap();
 
         let pattern = pelite::pattern::parse(&args[1..].join(" ")).unwrap();

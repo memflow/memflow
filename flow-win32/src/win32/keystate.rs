@@ -39,6 +39,8 @@ impl Keyboard {
         let module_buf = user_process
             .virt_mem
             .virt_read_raw(win32kbase_module_info.base(), win32kbase_module_info.size())?;
+
+        // TODO: lazy
         let pe = PeView::from_bytes(&module_buf).map_err(Error::new)?;
         let export_addr = match pe
             .get_export_by_name("gafAsyncKeyState")

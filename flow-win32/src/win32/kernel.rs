@@ -1,6 +1,7 @@
 use super::{KernelInfo, Win32Process, Win32ProcessInfo};
 use crate::error::{Error, Result};
 use crate::offsets::Win32Offsets;
+use crate::pe::{pe32, pe64, MemoryPeViewContext};
 
 use log::trace;
 use std::fmt;
@@ -10,7 +11,11 @@ use flow_core::mem::{PhysicalMemory, VirtualFromPhysical, VirtualMemory, Virtual
 use flow_core::process::{OperatingSystem, OsProcessInfo, OsProcessModuleInfo};
 use flow_core::types::{Address, Length};
 
-use pelite::{self, pe64::exports::Export, PeView};
+use pelite::{
+    self,
+    pe32::exports::GetProcAddress as GetProcAddress32,
+    pe64::exports::{Export, GetProcAddress},
+};
 
 #[derive(Clone)]
 pub struct Kernel<T: PhysicalMemory, V: VirtualTranslate> {
@@ -79,20 +84,34 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
             &mut self.vat,
         );
 
-        // TODO: cache this header on creation :)
-        // read pe header
-        let mut pe_buf = vec![0; self.kernel_info.kernel_size.as_usize()];
-        reader.virt_read_raw_into(self.kernel_info.kernel_base, &mut pe_buf)?;
-
-        let pe = PeView::from_bytes(&pe_buf)?;
-
-        // find PsActiveProcessHead
-        let loaded_module_list = match pe.get_export_by_name("PsLoadedModuleList")? {
-            Export::Symbol(s) => self.kernel_info.kernel_base + Length::from(*s),
-            Export::Forward(_) => {
-                return Err(Error::new(
-                    "PsLoadedModuleList found but it was a forwarded export",
-                ))
+        // TODO: cache pe globally
+        // find PsLoadedModuleList
+        let loaded_module_list = {
+            let pectx = MemoryPeViewContext::new(&mut reader, self.kernel_info.kernel_base)?;
+            match self.kernel_info.start_block.arch.bits() {
+                32 => {
+                    let pe = pe32::MemoryPeView::new(&pectx)?;
+                    match pe.get_export("PsLoadedModuleList").map_err(Error::new)? {
+                        Export::Symbol(s) => self.kernel_info.kernel_base + Length::from(*s),
+                        Export::Forward(_) => {
+                            return Err(Error::new(
+                                "PsLoadedModuleList found but it was a forwarded export",
+                            ))
+                        }
+                    }
+                }
+                64 => {
+                    let pe = pe64::MemoryPeView::new(&pectx)?;
+                    match pe.get_export("PsLoadedModuleList").map_err(Error::new)? {
+                        Export::Symbol(s) => self.kernel_info.kernel_base + Length::from(*s),
+                        Export::Forward(_) => {
+                            return Err(Error::new(
+                                "PsLoadedModuleList found but it was a forwarded export",
+                            ))
+                        }
+                    }
+                }
+                _ => return Err(Error::new("invalid architecture")),
             }
         };
 

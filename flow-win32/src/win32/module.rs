@@ -21,8 +21,7 @@ pub struct Win32ModuleInfo {
 }
 
 impl Win32ModuleInfo {
-    // read_image() - reads the entire image into memory
-    pub fn read_image<T: VirtualMemory>(&self, proc_mem: &mut T) -> Result<Vec<u8>> {
+    pub fn size_of_image<T: VirtualMemory>(&self, proc_mem: &mut T) -> Result<u32> {
         let mut probe_buf = vec![0; Length::from_kb(4).as_usize()];
         proc_mem.virt_read_raw_into(self.base, &mut probe_buf)?;
 
@@ -50,10 +49,7 @@ impl Win32ModuleInfo {
             return Err(Error::new("unable to read size_of_image"));
         }
         info!("found pe header with a size of {} bytes.", size_of_image);
-
-        let mut buf = vec![0; size_of_image as usize];
-        proc_mem.virt_read_raw_into(self.base, &mut buf)?;
-        Ok(buf)
+        Ok(size_of_image)
     }
 }
 

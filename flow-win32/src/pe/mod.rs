@@ -37,9 +37,9 @@ impl<'a, T: VirtualMemory + ?Sized> MemoryPeViewContext<'a, T> {
             pelite::Wrap::T32(opt32) => opt32.SizeOfImage,
             pelite::Wrap::T64(opt64) => opt64.SizeOfImage,
         };
+
         let mut image_cache = vec![0u8; size_of_image as usize].into_boxed_slice();
         image_cache[..image_header.len()].copy_from_slice(&image_header);
-
         Ok(Self {
             virt_mem: RefCell::new(virt_mem),
             image_base,

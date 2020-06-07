@@ -1,16 +1,18 @@
+use super::StartBlock;
 use crate::error::{Error, Result};
+use crate::pe::{pe64::MemoryPeView, MemoryPeViewContext};
 
-use byteorder::{ByteOrder, LittleEndian};
 use log::{debug, info, warn};
 
 use flow_core::mem::VirtualMemory;
 use flow_core::types::{Address, Length};
 
-use crate::kernel::StartBlock;
+use byteorder::{ByteOrder, LittleEndian};
 
-use crate::kernel::ntos;
-
-use pelite::{self, pe64::exports::Export, PeView};
+use pelite::{
+    self,
+    pe64::exports::{Export, GetProcAddress},
+};
 
 pub fn find<T: VirtualMemory + ?Sized>(
     virt_mem: &mut T,
@@ -36,17 +38,25 @@ pub fn find<T: VirtualMemory + ?Sized>(
 pub fn find_exported<T: VirtualMemory + ?Sized>(
     virt_mem: &mut T,
     start_block: &StartBlock,
-    ntos: Address,
+    kernel_base: Address,
 ) -> Result<Address> {
     // PsInitialSystemProcess -> PsActiveProcessHead
-    let sys_proc = ntos::pe::try_get_pe_export(virt_mem, ntos, "PsInitialSystemProcess")?;
-    info!("PsInitialSystemProcess found at 0x{:x}", sys_proc);
+    let ctx = MemoryPeViewContext::new(virt_mem, kernel_base)?;
+    let pe = MemoryPeView::new(&ctx)?;
+    let proc = match pe.get_export("PsInitialSystemProcess")? {
+        Export::Symbol(s) => kernel_base + Length::from(*s),
+        Export::Forward(_) => {
+            return Err(Error::new(
+                "PsInitialSystemProcess found but it was a forwarded export",
+            ))
+        }
+    };
+    info!("PsInitialSystemProcess found at 0x{:x}", proc);
 
     // read value again
     // TODO: fallback for 32bit
-    // TODO: wrap error properly
     let mut out = vec![0u8; start_block.arch.len_addr().as_usize()];
-    virt_mem.virt_read_raw_into(sys_proc, &mut out)?;
+    virt_mem.virt_read_raw_into(proc, &mut out)?;
     let address: Address = if start_block.arch.bits() == 64 {
         LittleEndian::read_u64(&out).into()
     } else if start_block.arch.bits() == 32 {

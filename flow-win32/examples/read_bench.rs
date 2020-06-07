@@ -6,20 +6,23 @@ extern crate rand;
 use std::io::Write;
 use std::time::{Duration, Instant};
 
-use flow_core::{
-    timed_validator::*, AccessPhysicalMemory, AccessVirtualMemory, CachedMemoryAccess, PageCache,
+use flow_core::mem::cache::{
+    CachedMemoryAccess, CachedVirtualTranslate, PageCache, TLBCache, TimedCacheValidator,
 };
-use flow_core::{Length, OsProcess, OsProcessModule, PageType};
-use flow_win32::{Win32, Win32Module, Win32Offsets, Win32Process};
+use flow_core::mem::{PhysicalMemory, TranslateArch, VirtualMemory, VirtualTranslate};
+use flow_core::process::{OsProcessInfo, OsProcessModuleInfo};
+use flow_core::types::{Address, Length, PageType};
 
 use flow_qemu_procfs::Memory;
 
+use flow_win32::offsets::Win32Offsets;
+use flow_win32::win32::{Kernel, KernelInfo, Win32ModuleInfo, Win32Process};
+
 use rand::{prng::XorShiftRng as CurRng, Rng, SeedableRng};
 
-fn rwtest<T: AccessVirtualMemory>(
-    mem: &mut T,
-    proc: &Win32Process,
-    module: &dyn OsProcessModule,
+fn rwtest<T: VirtualMemory>(
+    proc: &mut Win32Process<T>,
+    module: &dyn OsProcessModuleInfo,
     chunk_sizes: &[usize],
     chunk_counts: &[usize],
     read_size: usize,
@@ -57,10 +60,10 @@ fn rwtest<T: AccessVirtualMemory>(
 
                 let now = Instant::now();
                 {
-                    let mut vmem = proc.virt_mem(mem);
-                    for (buf, addr) in bufs.iter_mut() {
-                        let _ = vmem.virt_read_raw_into((*addr).into(), buf.as_mut_slice());
-                    }
+                    let _ = proc.virt_mem.virt_read_raw_iter(
+                        bufs.iter_mut()
+                            .map(|(buf, addr)| (Address::from(*addr), buf.as_mut_slice())),
+                    );
                 }
                 total_dur += now.elapsed();
                 done_size += *i * *o;
@@ -88,38 +91,26 @@ fn rwtest<T: AccessVirtualMemory>(
     );
 }
 
-fn read_bench<T: AccessPhysicalMemory + AccessVirtualMemory>(
-    mem: &mut T,
-    os: Win32,
+fn read_bench<T: PhysicalMemory, V: VirtualTranslate>(
+    phys_mem: &mut T,
+    vat: &mut V,
+    kernel_info: KernelInfo,
 ) -> flow_core::Result<()> {
-    let offsets = Win32Offsets::try_with_guid(&os.kernel_guid())?;
+    let offsets = Win32Offsets::try_with_guid(&kernel_info.kernel_guid)?;
+    let mut kernel = Kernel::new(phys_mem, vat, offsets, kernel_info);
 
+    let proc_list = kernel.process_info_list()?;
     let mut rng = CurRng::seed_from_u64(0);
-
-    let proc_list = os.eprocess_list(mem, &offsets)?;
-
     loop {
-        let proc = Win32Process::try_with_eprocess(
-            mem,
-            &os,
-            &offsets,
-            proc_list[rng.gen_range(0, proc_list.len())],
-        )?;
+        let mut proc = Win32Process::with_kernel(
+            &mut kernel,
+            proc_list[rng.gen_range(0, proc_list.len())].clone(),
+        );
 
-        let mod_list: Vec<Win32Module> = proc
-            .peb_list(mem)?
-            .iter()
-            .filter_map(|&x| {
-                if let Ok(module) = Win32Module::try_with_peb(mem, &proc, &offsets, x) {
-                    if module.size() > 0x1000.into() {
-                        Some(module)
-                    } else {
-                        None
-                    }
-                } else {
-                    None
-                }
-            })
+        let mod_list: Vec<Win32ModuleInfo> = proc
+            .module_info_list()?
+            .into_iter()
+            .filter(|module| module.size() > 0x1000.into())
             .collect();
 
         if !mod_list.is_empty() {
@@ -128,12 +119,11 @@ fn read_bench<T: AccessPhysicalMemory + AccessVirtualMemory>(
                 "Found test module {} ({:x}) in {}",
                 tmod.name(),
                 tmod.size(),
-                proc.name()
+                proc.proc_info.name(),
             );
 
             rwtest(
-                mem,
-                &proc,
+                &mut proc,
                 tmod,
                 &[0x10000, 0x1000, 0x100, 0x10, 0x8],
                 &[32, 8, 1],
@@ -149,21 +139,31 @@ fn read_bench<T: AccessPhysicalMemory + AccessVirtualMemory>(
 
 fn main() -> flow_core::Result<()> {
     let mut mem_sys = Memory::new()?;
-    let os = Win32::try_with(&mut mem_sys)?;
+    let kernel_info = KernelInfo::find(&mut mem_sys)?;
+
+    let mut vat = TranslateArch::new(kernel_info.start_block.arch);
 
     println!("Benchmarking uncached reads:");
-    read_bench(&mut mem_sys, os.clone()).unwrap();
+    read_bench(&mut mem_sys, &mut vat, kernel_info.clone()).unwrap();
 
     println!();
     println!("Benchmarking cached reads:");
     let cache = PageCache::new(
-        os.start_block.arch,
+        kernel_info.start_block.arch,
         Length::from_mb(2),
         PageType::PAGE_TABLE | PageType::READ_ONLY,
         TimedCacheValidator::new(Duration::from_millis(1000).into()),
     );
     let mut mem_cached = CachedMemoryAccess::with(&mut mem_sys, cache);
-    read_bench(&mut mem_cached, os).unwrap();
+
+    let tlb_cache = TLBCache::new(
+        2048.into(),
+        TimedCacheValidator::new(Duration::from_millis(1000).into()),
+    );
+    let mut vat_cached =
+        CachedVirtualTranslate::with(&mut vat, tlb_cache, kernel_info.start_block.arch);
+
+    read_bench(&mut mem_cached, &mut vat_cached, kernel_info).unwrap();
 
     Ok(())
 }

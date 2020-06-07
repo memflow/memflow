@@ -1,6 +1,6 @@
 use crate::mem::MemoryBackend;
 
-use libc::c_void;
+use std::ffi::c_void;
 use std::ptr;
 
 use flow_win32::{Win32, Win32Offsets};

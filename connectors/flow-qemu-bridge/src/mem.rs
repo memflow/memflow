@@ -4,9 +4,8 @@ use std::os::raw::{c_ulonglong, c_void};
 use std::ptr::copy_nonoverlapping;
 
 use flow_core::*;
-use flow_derive::*;
 
-#[derive(AccessVirtualMemory, VirtualAddressTranslator)]
+#[derive(VirtualMemory, VirtualAddressTranslator)]
 pub struct Memory;
 
 impl Memory {
@@ -18,7 +17,7 @@ impl Memory {
 
 use crate::native::*;
 
-impl AccessPhysicalMemory for Memory {
+impl PhysicalMemoryExt for Memory {
     fn phys_read_raw_into(&mut self, addr: PhysicalAddress, out: &mut [u8]) -> Result<()> {
         Wrapper::new().phys_read_raw_into(addr, out)
     }
@@ -53,7 +52,7 @@ impl Drop for Wrapper {
 //
 // TODO: proper error handling
 //
-impl AccessPhysicalMemory for Wrapper {
+impl PhysicalMemoryExt for Wrapper {
     fn phys_read_raw_into(&mut self, addr: PhysicalAddress, out: &mut [u8]) -> Result<()> {
         let mut l = out.len() as c_ulonglong;
         let mem = CPU_PHYSICAL_MEMORY_MAP.unwrap()(addr.as_u64(), &mut l, 0);

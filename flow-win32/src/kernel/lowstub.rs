@@ -7,7 +7,7 @@ use crate::error::{Error, Result};
 use log::warn;
 
 use flow_core::architecture::Architecture;
-use flow_core::mem::AccessPhysicalMemory;
+use flow_core::mem::PhysicalMemory;
 use flow_core::types::{Address, Length, PhysicalAddress};
 
 // PROCESSOR_START_BLOCK
@@ -19,7 +19,7 @@ pub struct StartBlock {
 }
 
 // bcdedit /set firstmegabytepolicyuseall
-pub fn find<T: AccessPhysicalMemory + ?Sized>(mem: &mut T) -> Result<StartBlock> {
+pub fn find<T: PhysicalMemory + ?Sized>(mem: &mut T) -> Result<StartBlock> {
     // read low 1mb stub
     let mut low1m = vec![0; Length::from_mb(1).as_usize()];
     mem.phys_read_raw_into(PhysicalAddress::NULL, &mut low1m)?;

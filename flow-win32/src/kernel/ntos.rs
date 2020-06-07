@@ -1,36 +1,40 @@
-pub mod pe;
-
 mod x64;
 mod x86;
 
 use crate::error::{Error, Result};
 use crate::kernel::StartBlock;
+use crate::pe::{pe64::MemoryPeView, MemoryPeViewContext};
 
 use log::warn;
-use pelite::{self, image::GUID, pe64::debug::CodeView, PeView};
-use uuid::{self, Uuid};
 
-use flow_core::mem::AccessVirtualMemory;
+use flow_core::mem::VirtualMemory;
 use flow_core::types::{Address, Length};
 
-pub fn find<T: AccessVirtualMemory + ?Sized>(
-    mem: &mut T,
+use pelite::{
+    self,
+    image::GUID,
+    pe64::{debug::CodeView, Pe},
+};
+use uuid::{self, Uuid};
+
+pub fn find<T: VirtualMemory + ?Sized>(
+    virt_mem: &mut T,
     start_block: &StartBlock,
 ) -> Result<(Address, Length)> {
     if start_block.arch.bits() == 64 {
         if !start_block.va.is_null() {
-            match x64::find_with_va(mem, start_block) {
+            match x64::find_with_va(virt_mem, start_block) {
                 Ok(b) => return Ok(b),
                 Err(e) => warn!("x64::find_with_va() error: {}", e),
             }
         }
 
-        match x64::find(mem) {
+        match x64::find(virt_mem) {
             Ok(b) => return Ok(b),
             Err(e) => warn!("x64::find() error: {}", e),
         }
     } else if start_block.arch.bits() == 32 {
-        match x86::find(mem) {
+        match x86::find(virt_mem) {
             Ok(b) => return Ok(b),
             Err(e) => warn!("x86::find() error: {}", e),
         }
@@ -45,16 +49,12 @@ pub struct Win32GUID {
     pub guid: String,
 }
 
-pub fn find_guid<T: AccessVirtualMemory + ?Sized>(
-    mem: &mut T,
-    start_block: &StartBlock,
+pub fn find_guid<T: VirtualMemory + ?Sized>(
+    virt_mem: &mut T,
     kernel_base: Address,
-    kernel_size: Length,
 ) -> Result<Win32GUID> {
-    let mut pe_buf = vec![0; kernel_size.as_usize()];
-    mem.virt_read_raw_into(start_block.arch, start_block.dtb, kernel_base, &mut pe_buf)?;
-
-    let pe = PeView::from_bytes(&pe_buf)?;
+    let ctx = MemoryPeViewContext::new(virt_mem, kernel_base)?;
+    let pe = MemoryPeView::new(&ctx)?;
 
     let debug = match pe.debug() {
         Ok(d) => d,
@@ -68,7 +68,7 @@ pub fn find_guid<T: AccessVirtualMemory + ?Sized>(
         .find(|&e| e.as_code_view().is_some())
         .ok_or_else(|| Error::new("unable to find codeview debug_data entry"))?
         .as_code_view()
-        .unwrap();
+        .unwrap(); // TODO: fix unwrap
 
     let signature = match code_view {
         CodeView::Cv70 { image, .. } => image.Signature,

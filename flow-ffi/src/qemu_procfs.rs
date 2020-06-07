@@ -1,8 +1,7 @@
-use super::mem::MemoryBackend;
-
-use libc::c_void;
+use std::ffi::c_void;
 use std::ptr;
 
+use flow_core::mem::PhysicalMemory;
 use flow_qemu_procfs::Memory;
 
 /// # Safety
@@ -12,7 +11,7 @@ use flow_qemu_procfs::Memory;
 pub unsafe extern "C" fn qemu_procfs_init() -> *mut c_void {
     match Memory::new() {
         Ok(m) => {
-            let inner: Box<dyn MemoryBackend> = Box::new(m);
+            let inner: Box<dyn PhysicalMemory> = Box::new(m);
             Box::into_raw(Box::new(inner)) as *mut c_void
         }
         Err(_) => ptr::null_mut(),

@@ -1,7 +1,7 @@
 use super::VirtualTranslate;
 use crate::architecture::Architecture;
+pub use crate::architecture::TranslateData;
 use crate::error::Result;
-use crate::iter::{PageChunks, PageChunksMut};
 use crate::mem::{
     virt_mem::{VirtualReadIterator, VirtualWriteIterator},
     PhysicalMemory,
@@ -31,6 +31,7 @@ impl VirtualTranslate for TranslateArch {
         out: &mut OV,
     ) where
         T: PhysicalMemory + ?Sized,
+        B: TranslateData,
         VI: Iterator<Item = (Address, B)>,
         OV: Extend<(Result<PhysicalAddress>, Address, B)>,
     {
@@ -46,18 +47,12 @@ pub fn virt_read_raw_iter<
 >(
     phys_mem: &mut T,
     vat: &mut U,
-    arch: Architecture,
     dtb: Address,
     iter: VI,
 ) -> Result<()> {
     //30% perf hit on dummy!!! FIXME!!!
     let mut translation = Vec::with_capacity(iter.size_hint().0);
-    vat.virt_to_phys_iter(
-        phys_mem,
-        dtb,
-        iter.flat_map(|(addr, out)| PageChunksMut::create_from(out, addr, arch.page_size())),
-        &mut translation,
-    );
+    vat.virt_to_phys_iter(phys_mem, dtb, iter, &mut translation);
 
     let iter = translation.into_iter().filter_map(|(paddr, _, out)| {
         if let Ok(paddr) = paddr {
@@ -81,18 +76,12 @@ pub fn virt_write_raw_iter<
 >(
     phys_mem: &mut T,
     vat: &mut U,
-    arch: Architecture,
     dtb: Address,
     iter: VI,
 ) -> Result<()> {
     //30% perf hit on dummy!!! FIXME!!!
     let mut translation = Vec::with_capacity(iter.size_hint().0);
-    vat.virt_to_phys_iter(
-        phys_mem,
-        dtb,
-        iter.flat_map(|(addr, out)| PageChunks::create_from(out, addr, arch.page_size())),
-        &mut translation,
-    );
+    vat.virt_to_phys_iter(phys_mem, dtb, iter, &mut translation);
 
     let iter = translation.into_iter().filter_map(|(paddr, _, out)| {
         if let Ok(paddr) = paddr {
@@ -105,11 +94,9 @@ pub fn virt_write_raw_iter<
     phys_mem.phys_write_iter(iter)
 }
 
-#[allow(unused)]
 pub fn virt_page_info<T: PhysicalMemory + ?Sized, U: VirtualTranslate + ?Sized>(
     phys_mem: &mut T,
     vat: &mut U,
-    arch: Architecture,
     dtb: Address,
     addr: Address,
 ) -> Result<Page> {

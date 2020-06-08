@@ -39,7 +39,7 @@ fn vattest<T: PhysicalMemory, V: VirtualTranslate, P: OsProcessInfo, M: OsProces
         black_box(vat.virt_to_phys_iter(
             phys_mem,
             proc.dtb(),
-            bufs.iter_mut().map(|x| (*x, Option::<&[u8]>::None)),
+            bufs.iter_mut().map(|x| (*x, false)),
             &mut out,
         ));
 

@@ -6,11 +6,53 @@ use core::ffi::c_void;
 use libc::{c_ulong, iovec, pid_t, sysconf, _SC_IOV_MAX};
 
 const LENGTH_2GB: Length = Length::from_gb(2);
+const LENGTH_1GB: Length = Length::from_gb(1);
+
+fn qemu_cmdline_find_name(args: &Vec<String>) -> String {
+    for (idx, arg) in args.iter().enumerate() {
+        if arg == "-name" {
+            let name = args[idx + 1].split(",");
+            for (i, kv) in name.clone().into_iter().enumerate() {
+                let kvsplt = kv.split("=").collect::<Vec<_>>();
+                if kvsplt.len() == 2 {
+                    if kvsplt[0] == "guest" {
+                        return kvsplt[1].to_string();
+                    }
+                } else if i == 0 {
+                    return kv.to_string();
+                }
+            }
+        }
+    }
+
+    String::new()
+}
+
+fn qemu_cmdline_find_machine(args: &Vec<String>) -> String {
+    for (idx, arg) in args.iter().enumerate() {
+        if arg == "-machine" {
+            let name = args[idx + 1].split(",");
+            for (i, kv) in name.clone().into_iter().enumerate() {
+                let kvsplt = kv.split("=").collect::<Vec<_>>();
+                if kvsplt.len() == 2 {
+                    if kvsplt[0] == "type" {
+                        return kvsplt[1].to_string();
+                    }
+                } else if i == 0 {
+                    return kv.to_string();
+                }
+            }
+        }
+    }
+
+    "pc".to_string()
+}
 
 #[derive(Clone)]
 pub struct Memory {
     pub pid: pid_t,
     pub map: procfs::process::MemoryMap,
+    pub hw_offset: Length,
     temp_iov: Box<[iovec]>,
 }
 
@@ -21,7 +63,49 @@ impl Memory {
             .iter()
             .find(|p| p.stat.comm == "qemu-system-x86")
             .ok_or_else(|| Error::new("qemu process not found"))?;
-        info!("qemu process found {:?}", prc.stat);
+        info!("qemu process found with pid {:?}", prc.stat.pid);
+
+        Self::with_process(prc)
+    }
+
+    pub fn with_name(name: &str) -> Result<Self> {
+        let prcs = procfs::process::all_processes().map_err(Error::new)?;
+        let (prc, _) = prcs
+            .iter()
+            .filter(|p| p.stat.comm == "qemu-system-x86")
+            .filter_map(|p| {
+                if let Ok(c) = p.cmdline() {
+                    Some((p, c))
+                } else {
+                    None
+                }
+            })
+            .find(|(_, c)| qemu_cmdline_find_name(c) == name)
+            .ok_or_else(|| Error::new("qemu process not found"))?;
+        info!(
+            "qemu process with name {} found with pid {:?}",
+            name, prc.stat.pid
+        );
+
+        Self::with_process(prc)
+    }
+
+    fn with_process(prc: &procfs::process::Process) -> Result<Self> {
+        // find machine architecture
+        let machine = qemu_cmdline_find_machine(&prc.cmdline().map_err(Error::new)?);
+        info!("qemu process started with machine: {}", machine);
+
+        // this is quite an ugly hack...
+        let hw_offset = {
+            if machine.contains("q35") {
+                // q35 -> subtract 2GB
+                LENGTH_2GB
+            } else {
+                // pc-i1440fx -> subtract 1GB
+                LENGTH_1GB
+            }
+        };
+        info!("qemu machine hardware offset: {:x}", hw_offset);
 
         // find biggest mapping
         let mut maps = prc.maps().map_err(Error::new)?;
@@ -40,6 +124,7 @@ impl Memory {
         Ok(Self {
             pid: prc.stat.pid,
             map: map.clone(),
+            hw_offset,
             temp_iov: vec![
                 iovec {
                     iov_base: std::ptr::null_mut::<c_void>(),
@@ -57,12 +142,13 @@ impl Memory {
         liov: &mut iovec,
         riov: &mut iovec,
         map_address: u64,
+        hw_offset: u64,
     ) {
         let ofs = map_address + {
             if addr.as_u64() <= LENGTH_2GB.as_u64() {
                 addr.as_u64()
             } else {
-                addr.as_u64() - LENGTH_2GB.as_u64()
+                addr.as_u64() - hw_offset
             }
         };
 
@@ -91,7 +177,14 @@ impl PhysicalMemory for Memory {
         while let Some((addr, out)) = elem {
             let (cnt, (liov, riov)) = iov_next.unwrap();
 
-            Self::fill_iovec(&addr, out, liov, riov, self.map.address.0);
+            Self::fill_iovec(
+                &addr,
+                out,
+                liov,
+                riov,
+                self.map.address.0,
+                self.hw_offset.as_u64(),
+            );
 
             iov_next = iov_iter.next();
             elem = iter.next();
@@ -134,7 +227,14 @@ impl PhysicalMemory for Memory {
         while let Some((addr, out)) = elem {
             let (cnt, (liov, riov)) = iov_next.unwrap();
 
-            Self::fill_iovec(&addr, out, liov, riov, self.map.address.0);
+            Self::fill_iovec(
+                &addr,
+                out,
+                liov,
+                riov,
+                self.map.address.0,
+                self.hw_offset.as_u64(),
+            );
 
             iov_next = iov_iter.next();
             elem = iter.next();

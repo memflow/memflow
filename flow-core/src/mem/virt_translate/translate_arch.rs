@@ -17,7 +17,10 @@ pub struct TranslateArch {
 
 impl TranslateArch {
     pub fn new(sys_arch: Architecture) -> Self {
-        Self { sys_arch, arena: Bump::new() }
+        Self {
+            sys_arch,
+            arena: Bump::new(),
+        }
     }
 }
 
@@ -41,7 +44,7 @@ impl VirtualTranslate for TranslateArch {
         OV: Extend<(Result<PhysicalAddress>, Address, B)>,
     {
         self.arena.reset();
-        self.sys_arch.virt_to_phys_iter(phys_mem, dtb, addrs, out, &self.arena)
+        self.sys_arch
+            .virt_to_phys_iter(phys_mem, dtb, addrs, out, &self.arena)
     }
 }
-

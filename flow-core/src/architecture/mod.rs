@@ -21,7 +21,7 @@ use std::convert::TryFrom;
 use crate::mem::PhysicalMemory;
 use crate::types::{Address, Length, PhysicalAddress};
 
-use bumpalo::{Bump, collections::Vec as BumpVec};
+use bumpalo::{collections::Vec as BumpVec, Bump};
 
 /**
 Identifies the byte order of a architecture
@@ -276,7 +276,7 @@ impl Architecture {
         dtb: Address,
         addrs: VI,
         out: &mut OV,
-        arena: &Bump
+        arena: &Bump,
     ) {
         match self {
             Architecture::Null => {

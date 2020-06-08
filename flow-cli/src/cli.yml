@@ -9,6 +9,11 @@ args:
         long: connector
         help: selects the connector type (bridge, qemu_procfs)
         takes_value: true
+    - connector_args:
+        short: a
+        long: connector-args
+        help: additional arguments supplied to the connector
+        takes_value: true
     - url:
         long: url
         value_name: URL

@@ -43,7 +43,7 @@ pub fn find_exported<T: VirtualMemory + ?Sized>(
     // PsInitialSystemProcess -> PsActiveProcessHead
     let ctx = MemoryPeViewContext::new(virt_mem, kernel_base)?;
     let pe = MemoryPeView::new(&ctx)?;
-    let proc = match pe.get_export("PsInitialSystemProcess")? {
+    let sys_proc = match pe.get_export("PsInitialSystemProcess")? {
         Export::Symbol(s) => kernel_base + Length::from(*s),
         Export::Forward(_) => {
             return Err(Error::new(
@@ -51,22 +51,22 @@ pub fn find_exported<T: VirtualMemory + ?Sized>(
             ))
         }
     };
-    info!("PsInitialSystemProcess found at 0x{:x}", proc);
+    info!("PsInitialSystemProcess found at 0x{:x}", sys_proc);
 
-    // read value again
-    // TODO: fallback for 32bit
-    let mut out = vec![0u8; start_block.arch.len_addr().as_usize()];
-    virt_mem.virt_read_raw_into(proc, &mut out)?;
-    let address: Address = if start_block.arch.bits() == 64 {
-        LittleEndian::read_u64(&out).into()
-    } else if start_block.arch.bits() == 32 {
-        LittleEndian::read_u32(&out).into()
-    } else {
-        return Err(Error::new(
-            "invalid address size for this architecture. windows requires either 64 or 32 bits.",
-        ));
+    // read containing value
+    let mut buf = vec![0u8; start_block.arch.len_addr().as_usize()];
+    let sys_proc_addr: Address = match start_block.arch.bits() {
+        64 => {
+            virt_mem.virt_read_raw_into(sys_proc, &mut buf)?;
+            LittleEndian::read_u64(&buf).into()
+        }
+        32 => {
+            virt_mem.virt_read_raw_into(sys_proc, &mut buf)?;
+            LittleEndian::read_u32(&buf).into()
+        }
+        _ => return Err(Error::new("invalid architecture")),
     };
-    Ok(address)
+    Ok(sys_proc_addr)
 }
 
 // scan in pdb

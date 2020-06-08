@@ -55,17 +55,18 @@ pub fn find_with_va<T: VirtualMemory + ?Sized>(
                 )
             })
             .find(|(i, _, _)| {
-                let probe_addr =
-                    Address::from(va_base + (*i as u64) * architecture::x64::page_size_level(1).as_u64());
+                let probe_addr = Address::from(
+                    va_base + (*i as u64) * architecture::x64::page_size_level(1).as_u64(),
+                );
                 let name = try_get_pe_name(virt_mem, probe_addr).unwrap_or_default();
                 name == "ntoskrnl.exe"
             })
             .ok_or_else(|| {
                 Error::new("find_x64_with_va: unable to locate ntoskrnl.exe via va hint")
             })
-            .and_then(
-                |(i, _, _)| Ok(va_base + i as u64 * architecture::x64::page_size_level(1).as_u64()),
-            );
+            .and_then(|(i, _, _)| {
+                Ok(va_base + i as u64 * architecture::x64::page_size_level(1).as_u64())
+            });
 
         match res {
             Ok(a) => {

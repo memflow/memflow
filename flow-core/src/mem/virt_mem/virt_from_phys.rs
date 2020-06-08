@@ -21,7 +21,7 @@ pub struct VirtualFromPhysical<T: PhysicalMemory, V: VirtualTranslate> {
     vat: V,
     proc_arch: Architecture,
     dtb: Address,
-    arena: Bump
+    arena: Bump,
 }
 
 impl<T: PhysicalMemory> VirtualFromPhysical<T, TranslateArch> {
@@ -59,7 +59,7 @@ impl<T: PhysicalMemory> VirtualFromPhysical<T, TranslateArch> {
             vat: TranslateArch::new(sys_arch),
             proc_arch,
             dtb,
-            arena: Bump::new()
+            arena: Bump::new(),
         }
     }
 
@@ -94,7 +94,7 @@ impl<T: PhysicalMemory> VirtualFromPhysical<T, TranslateArch> {
             vat: TranslateArch::new(process_info.sys_arch()),
             proc_arch: process_info.proc_arch(),
             dtb: process_info.dtb(),
-            arena: Bump::new()
+            arena: Bump::new(),
         }
     }
 }
@@ -137,7 +137,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> VirtualFromPhysical<T, V> {
             vat,
             proc_arch,
             dtb,
-            arena: Bump::new()
+            arena: Bump::new(),
         }
     }
 
@@ -170,7 +170,8 @@ impl<T: PhysicalMemory, V: VirtualTranslate> VirtualMemory for VirtualFromPhysic
     fn virt_read_raw_iter<'a, VI: VirtualReadIterator<'a>>(&mut self, iter: VI) -> Result<()> {
         self.arena.reset();
         let mut translation = BumpVec::with_capacity_in(iter.size_hint().0, &self.arena);
-        self.vat.virt_to_phys_iter(&mut self.phys_mem, self.dtb, iter, &mut translation);
+        self.vat
+            .virt_to_phys_iter(&mut self.phys_mem, self.dtb, iter, &mut translation);
 
         let iter = translation.into_iter().filter_map(|(paddr, _, out)| {
             if let Ok(paddr) = paddr {
@@ -189,7 +190,8 @@ impl<T: PhysicalMemory, V: VirtualTranslate> VirtualMemory for VirtualFromPhysic
     fn virt_write_raw_iter<'a, VI: VirtualWriteIterator<'a>>(&mut self, iter: VI) -> Result<()> {
         self.arena.reset();
         let mut translation = BumpVec::with_capacity_in(iter.size_hint().0, &self.arena);
-        self.vat.virt_to_phys_iter(&mut self.phys_mem, self.dtb, iter, &mut translation);
+        self.vat
+            .virt_to_phys_iter(&mut self.phys_mem, self.dtb, iter, &mut translation);
 
         let iter = translation.into_iter().filter_map(|(paddr, _, out)| {
             if let Ok(paddr) = paddr {

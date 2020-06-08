@@ -9,7 +9,7 @@ use super::TranslateData;
 use crate::architecture::Endianess;
 use crate::mem::PhysicalMemory;
 use crate::types::{Address, Length, PageType, PhysicalAddress};
-use bumpalo::{Bump, collections::Vec as BumpVec};
+use bumpalo::{collections::Vec as BumpVec, Bump};
 
 pub fn bits() -> u8 {
     64
@@ -24,7 +24,10 @@ pub fn len_addr() -> Length {
 }
 
 fn pml_index_bits(a: u64, level: u32) -> u64 {
-    (a & make_bit_mask(3 + pt_entries_log2() * level, 11 + pt_entries_log2() * level)) >> (9 * level)
+    (a & make_bit_mask(
+        3 + pt_entries_log2() * level,
+        11 + pt_entries_log2() * level,
+    )) >> (9 * level)
 }
 
 // assume a level 1 (4kb) page for pt reads
@@ -74,8 +77,13 @@ fn get_phys_page(pt_level: u32, pt_addr: Address, virt_addr: Address) -> Physica
 }
 
 #[allow(clippy::nonminimal_bool)]
-pub fn virt_to_phys_iter<T, B, VI, OV>(mem: &mut T, dtb: Address, addrs: VI, out: &mut OV, arena: &Bump)
-where
+pub fn virt_to_phys_iter<T, B, VI, OV>(
+    mem: &mut T,
+    dtb: Address,
+    addrs: VI,
+    out: &mut OV,
+    arena: &Bump,
+) where
     T: PhysicalMemory + ?Sized,
     B: TranslateData,
     VI: Iterator<Item = (Address, B)>,
@@ -84,18 +92,16 @@ where
     //TODO: build a tree to eliminate duplicate phys reads with multiple elements
     let mut data_to_translate = BumpVec::new_in(arena);
 
-    data_to_translate.extend(
-        addrs
-        .map(|(addr, buf)| {
-            (
-                addr,
-                buf,
-                Address::from(
-                    (dtb.as_u64() & make_bit_mask(12, 51)) | pml_index_bits(addr.as_u64(), 4),
-                ),
-                [0; 8],
-            )
-        }));
+    data_to_translate.extend(addrs.map(|(addr, buf)| {
+        (
+            addr,
+            buf,
+            Address::from(
+                (dtb.as_u64() & make_bit_mask(12, 51)) | pml_index_bits(addr.as_u64(), 4),
+            ),
+            [0; 8],
+        )
+    }));
 
     //There are 4 almost identical stages in x64 vtop
     //We just have different error messages

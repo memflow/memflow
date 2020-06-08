@@ -62,9 +62,15 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
 
         loop {
             let eprocess = list_entry - self.offsets.eproc_link;
+            trace!("found eprocess {:x}", eprocess);
             eprocs.push(eprocess);
 
             // read next list entry
+            trace!(
+                "skipping to next entry at {:x} + {:x}",
+                list_entry,
+                self.offsets.list_blink
+            );
             list_entry = reader.virt_read_addr(list_entry + self.offsets.list_blink)?;
             if list_entry.is_null() || list_entry == list_start {
                 break;

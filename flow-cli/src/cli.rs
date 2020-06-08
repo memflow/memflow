@@ -4,7 +4,7 @@ use std::io::{self, Write};
 use flow_core::*;
 use flow_win32::*;
 
-use pelite::{self, pe32::Pe as Pe32, pe64::Pe as Pe64, PeView};
+use pelite::{self, pe64::Pe as Pe64, PeView};
 
 pub struct Win32Interface<'a, T, V>
 where

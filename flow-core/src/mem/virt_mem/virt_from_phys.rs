@@ -2,11 +2,12 @@ use super::{VirtualReadIterator, VirtualWriteIterator};
 use crate::architecture::Architecture;
 use crate::error::{Error, Result};
 use crate::mem::{
-    virt_translate::{translate_arch, TranslateArch, VirtualTranslate},
+    virt_translate::{TranslateArch, VirtualTranslate},
     PhysicalMemory, VirtualMemory,
 };
 use crate::process::OsProcessInfo;
 use crate::types::{Address, Page};
+use bumpalo::{collections::Vec as BumpVec, Bump};
 
 /**
 The `VirtualFromPhysical` struct provides a default implementation to access virtual memory
@@ -20,6 +21,7 @@ pub struct VirtualFromPhysical<T: PhysicalMemory, V: VirtualTranslate> {
     vat: V,
     proc_arch: Architecture,
     dtb: Address,
+    arena: Bump
 }
 
 impl<T: PhysicalMemory> VirtualFromPhysical<T, TranslateArch> {
@@ -57,6 +59,7 @@ impl<T: PhysicalMemory> VirtualFromPhysical<T, TranslateArch> {
             vat: TranslateArch::new(sys_arch),
             proc_arch,
             dtb,
+            arena: Bump::new()
         }
     }
 
@@ -91,6 +94,7 @@ impl<T: PhysicalMemory> VirtualFromPhysical<T, TranslateArch> {
             vat: TranslateArch::new(process_info.sys_arch()),
             proc_arch: process_info.proc_arch(),
             dtb: process_info.dtb(),
+            arena: Bump::new()
         }
     }
 }
@@ -133,6 +137,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> VirtualFromPhysical<T, V> {
             vat,
             proc_arch,
             dtb,
+            arena: Bump::new()
         }
     }
 
@@ -163,14 +168,42 @@ impl<T: PhysicalMemory, V: VirtualTranslate> VirtualFromPhysical<T, V> {
 
 impl<T: PhysicalMemory, V: VirtualTranslate> VirtualMemory for VirtualFromPhysical<T, V> {
     fn virt_read_raw_iter<'a, VI: VirtualReadIterator<'a>>(&mut self, iter: VI) -> Result<()> {
-        translate_arch::virt_read_raw_iter(&mut self.phys_mem, &mut self.vat, self.dtb, iter)
+        self.arena.reset();
+        let mut translation = BumpVec::with_capacity_in(iter.size_hint().0, &self.arena);
+        self.vat.virt_to_phys_iter(&mut self.phys_mem, self.dtb, iter, &mut translation);
+
+        let iter = translation.into_iter().filter_map(|(paddr, _, out)| {
+            if let Ok(paddr) = paddr {
+                Some((paddr, out))
+            } else {
+                for v in out.iter_mut() {
+                    *v = 0
+                }
+                None
+            }
+        });
+
+        self.phys_mem.phys_read_iter(iter)
     }
 
     fn virt_write_raw_iter<'a, VI: VirtualWriteIterator<'a>>(&mut self, iter: VI) -> Result<()> {
-        translate_arch::virt_write_raw_iter(&mut self.phys_mem, &mut self.vat, self.dtb, iter)
+        self.arena.reset();
+        let mut translation = BumpVec::with_capacity_in(iter.size_hint().0, &self.arena);
+        self.vat.virt_to_phys_iter(&mut self.phys_mem, self.dtb, iter, &mut translation);
+
+        let iter = translation.into_iter().filter_map(|(paddr, _, out)| {
+            if let Ok(paddr) = paddr {
+                Some((paddr, out))
+            } else {
+                None
+            }
+        });
+
+        self.phys_mem.phys_write_iter(iter)
     }
 
     fn virt_page_info(&mut self, addr: Address) -> Result<Page> {
-        translate_arch::virt_page_info(&mut self.phys_mem, &mut self.vat, self.dtb, addr)
+        let paddr = self.vat.virt_to_phys(&mut self.phys_mem, self.dtb, addr)?;
+        Ok(paddr.containing_page())
     }
 }

@@ -163,32 +163,14 @@ impl<T: PhysicalMemory, V: VirtualTranslate> VirtualFromPhysical<T, V> {
 
 impl<T: PhysicalMemory, V: VirtualTranslate> VirtualMemory for VirtualFromPhysical<T, V> {
     fn virt_read_raw_iter<'a, VI: VirtualReadIterator<'a>>(&mut self, iter: VI) -> Result<()> {
-        translate_arch::virt_read_raw_iter(
-            &mut self.phys_mem,
-            &mut self.vat,
-            self.sys_arch,
-            self.dtb,
-            iter,
-        )
+        translate_arch::virt_read_raw_iter(&mut self.phys_mem, &mut self.vat, self.dtb, iter)
     }
 
     fn virt_write_raw_iter<'a, VI: VirtualWriteIterator<'a>>(&mut self, iter: VI) -> Result<()> {
-        translate_arch::virt_write_raw_iter(
-            &mut self.phys_mem,
-            &mut self.vat,
-            self.sys_arch,
-            self.dtb,
-            iter,
-        )
+        translate_arch::virt_write_raw_iter(&mut self.phys_mem, &mut self.vat, self.dtb, iter)
     }
 
     fn virt_page_info(&mut self, addr: Address) -> Result<Page> {
-        translate_arch::virt_page_info(
-            &mut self.phys_mem,
-            &mut self.vat,
-            self.sys_arch,
-            self.dtb,
-            addr,
-        )
+        translate_arch::virt_page_info(&mut self.phys_mem, &mut self.vat, self.dtb, addr)
     }
 }

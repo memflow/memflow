@@ -8,6 +8,9 @@ use crate::mem::{
 };
 use crate::types::{Address, Page, PhysicalAddress};
 
+/*
+The `TranslateArch` struct provides a default implementation for `VirtualTranslate` for physical memory.
+*/
 #[derive(Debug, Clone)]
 pub struct TranslateArch {
     sys_arch: Architecture,

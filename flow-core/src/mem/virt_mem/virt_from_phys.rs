@@ -12,7 +12,7 @@ use crate::types::{Address, Page};
 The `VirtualFromPhysical` struct provides a default implementation to access virtual memory
 from user provided `PhysicalMemory` and `VirtualTranslate` objects.
 
-# Examples
+This struct implements `VirtualMemory` and allows the user to access the virtual memory of a process.
 */
 pub struct VirtualFromPhysical<T: PhysicalMemory, V: VirtualTranslate> {
     phys_mem: T,
@@ -136,22 +136,22 @@ impl<T: PhysicalMemory, V: VirtualTranslate> VirtualFromPhysical<T, V> {
         }
     }
 
+    /// Returns the architecture of the system. The system architecture is used for virtual to physical translations.
     pub fn sys_arch(&self) -> Architecture {
         self.sys_arch
     }
 
-    pub fn vat(&mut self) -> &mut V {
-        &mut self.vat
-    }
-
+    /// Returns the architecture of the process for this context. The process architecture is mainly used to determine pointer sizes.
     pub fn proc_arch(&self) -> Architecture {
         self.proc_arch
     }
 
+    /// Returns the Directory Table Base of this process.
     pub fn dtb(&self) -> Address {
         self.dtb
     }
 
+    /// A wrapper around `virt_read_addr64` and `virt_read_addr32` that will use the pointer size of this context's process.
     pub fn virt_read_addr(&mut self, addr: Address) -> Result<Address> {
         match self.proc_arch.bits() {
             64 => self.virt_read_addr64(addr),

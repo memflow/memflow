@@ -2,7 +2,7 @@ use crate::error::Result;
 
 use crate::architecture::Architecture;
 use crate::mem::cache::{CacheValidator, TLBCache};
-use crate::mem::virt_translate::VirtualTranslate;
+use crate::mem::virt_translate::{TranslateData, VirtualTranslate};
 use crate::mem::PhysicalMemory;
 use crate::types::{Address, PhysicalAddress};
 
@@ -35,10 +35,11 @@ impl<V: VirtualTranslate, Q: CacheValidator> VirtualTranslate for CachedVirtualT
         out: &mut OV,
     ) where
         T: PhysicalMemory + ?Sized,
+        B: TranslateData,
         VI: Iterator<Item = (Address, B)>,
         OV: Extend<(Result<PhysicalAddress>, Address, B)>,
     {
-        self.tlb.validator.update_validity();
+        //self.tlb.validator.update_validity();
         self.arena.reset();
 
         let tlb = &mut self.tlb;
@@ -59,11 +60,13 @@ impl<V: VirtualTranslate, Q: CacheValidator> VirtualTranslate for CachedVirtualT
         if addrs.peek().is_some() {
             self.vat
                 .virt_to_phys_iter(phys_mem, dtb, addrs, &mut uncached_out);
-            out.extend(uncached_out.into_iter().inspect(|(ret, addr, _)| {
+            //Do not actually cache anything, because TLB does not support recent VTOP optimization
+            out.extend(uncached_out.into_iter());
+            /*out.extend(uncached_out.into_iter().inspect(|(ret, addr, _)| {
                 if let Ok(paddr) = ret {
                     self.tlb.cache_entry(dtb, *addr, *paddr, page_size);
                 }
-            }));
+            }));*/
         }
     }
 }

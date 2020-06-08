@@ -222,6 +222,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::unreadable_literal)]
     fn test_page_size_huge() {
         let pa_2mb = PhysicalAddress::with_page(
             Address::from(0x123456),

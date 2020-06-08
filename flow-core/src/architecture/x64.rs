@@ -9,6 +9,7 @@ use super::TranslateData;
 use crate::architecture::Endianess;
 use crate::mem::PhysicalMemory;
 use crate::types::{Address, Length, PageType, PhysicalAddress};
+use bumpalo::{Bump, collections::Vec as BumpVec};
 
 pub fn bits() -> u8 {
     64
@@ -23,15 +24,15 @@ pub fn len_addr() -> Length {
 }
 
 fn pml_index_bits(a: u64, level: u32) -> u64 {
-    (a & make_bit_mask(3 + 9 * level, 11 + 9 * level)) >> (9 * level)
+    (a & make_bit_mask(3 + pt_entries_log2() * level, 11 + pt_entries_log2() * level)) >> (9 * level)
 }
 
 // assume a level 1 (4kb) page for pt reads
 fn read_pt_address_iter<T: PhysicalMemory + ?Sized, B>(
     mem: &mut T,
-    addrs: &mut Vec<(Address, B, Address, [u8; 8])>,
+    addrs: &mut BumpVec<(Address, B, Address, [u8; 8])>,
 ) {
-    let page_size = page_size(1);
+    let page_size = page_size_level(1);
 
     let _ = mem.phys_read_iter(addrs.iter_mut().map(|(_, _, pt_addr, arr)| {
         arr.iter_mut().for_each(|x| *x = 0);
@@ -54,7 +55,8 @@ const fn pt_entries_log2() -> u32 {
     9
 }
 
-pub fn page_size(pt_level: u32) -> Length {
+pub fn page_size_level(pt_level: u32) -> Length {
+    //Each PT level up has 512 more entries than the lower level. 512 = 4096 / 8
     Length::from_b(len_addr().as_u64() << (pt_entries_log2() * pt_level))
 }
 
@@ -67,20 +69,23 @@ fn get_phys_page(pt_level: u32, pt_addr: Address, virt_addr: Address) -> Physica
     PhysicalAddress::with_page(
         phys_addr,
         PageType::from_writeable_bit(is_writeable_page!(pt_addr.as_u64())),
-        page_size(pt_level),
+        page_size_level(pt_level),
     )
 }
 
-pub fn virt_to_phys_iter<T, B, VI, OV>(mem: &mut T, dtb: Address, addrs: VI, out: &mut OV)
+#[allow(clippy::nonminimal_bool)]
+pub fn virt_to_phys_iter<T, B, VI, OV>(mem: &mut T, dtb: Address, addrs: VI, out: &mut OV, arena: &Bump)
 where
     T: PhysicalMemory + ?Sized,
     B: TranslateData,
     VI: Iterator<Item = (Address, B)>,
     OV: Extend<(Result<PhysicalAddress>, Address, B)>,
 {
-    //TODO: Optimize this to not use allocs
-    //Also TODO: build a tree to eliminate duplicate phys reads with multiple elements
-    let mut data = addrs
+    //TODO: build a tree to eliminate duplicate phys reads with multiple elements
+    let mut data_to_translate = BumpVec::new_in(arena);
+
+    data_to_translate.extend(
+        addrs
         .map(|(addr, buf)| {
             (
                 addr,
@@ -90,9 +95,10 @@ where
                 ),
                 [0; 8],
             )
-        })
-        .collect::<Vec<_>>();
+        }));
 
+    //There are 4 almost identical stages in x64 vtop
+    //We just have different error messages
     for (pt_cnt, error_str) in [
         "unable to read pml4e",
         "unable to read pdpte",
@@ -102,15 +108,15 @@ where
     .iter()
     .enumerate()
     {
-        read_pt_address_iter(mem, &mut data);
+        read_pt_address_iter(mem, &mut data_to_translate);
 
         let pt_level = 4 - pt_cnt as u32;
-        let next_page_size = page_size(pt_level - 1);
+        let next_page_size = page_size_level(pt_level - 1);
 
         //Loop through the data in reverse order to allow the data buffer grow on the back when
         //memory regions are split
-        for i in (0..data.len()).rev() {
-            let (addr, buf, pt_addr, tmp_arr) = data.swap_remove(i);
+        for i in (0..data_to_translate.len()).rev() {
+            let (addr, buf, pt_addr, tmp_arr) = data_to_translate.swap_remove(i);
 
             if !check_entry!(pt_addr.as_u64()) {
                 //There has been an error in translation, push it to output with the associated buf
@@ -140,7 +146,7 @@ where
 
                     let (left, next_buf) = buf.do_split_at(next_addr - addr);
 
-                    data.push((addr, left, pt_addr, tmp_arr));
+                    data_to_translate.push((addr, left, pt_addr, tmp_arr));
 
                     addr = next_addr;
                     tbuf = next_buf;
@@ -148,10 +154,10 @@ where
             }
         }
 
-        if data.is_empty() {
+        if data_to_translate.is_empty() {
             break;
         }
     }
 
-    debug_assert!(data.is_empty());
+    debug_assert!(data_to_translate.is_empty());
 }

@@ -21,6 +21,8 @@ use std::convert::TryFrom;
 use crate::mem::PhysicalMemory;
 use crate::types::{Address, Length, PhysicalAddress};
 
+use bumpalo::{Bump, collections::Vec as BumpVec};
+
 /**
 Identifies the byte order of a architecture
 */
@@ -208,8 +210,8 @@ impl Architecture {
     */
     pub fn page_size(self) -> Length {
         match self {
-            Architecture::Null => x64::page_size(1),
-            Architecture::X64 => x64::page_size(1),
+            Architecture::Null => x64::page_size_level(1),
+            Architecture::X64 => x64::page_size_level(1),
             Architecture::X86Pae => x86_pae::page_size(),
             Architecture::X86 => x86::page_size(),
         }
@@ -257,8 +259,9 @@ impl Architecture {
         dtb: Address,
         addr: Address,
     ) -> Result<PhysicalAddress> {
-        let mut vec = Vec::new();
-        self.virt_to_phys_iter(mem, dtb, Some((addr, false)).into_iter(), &mut vec);
+        let arena = Bump::new();
+        let mut vec = BumpVec::new_in(&arena);
+        self.virt_to_phys_iter(mem, dtb, Some((addr, false)).into_iter(), &mut vec, &arena);
         vec.pop().unwrap().0
     }
 
@@ -273,12 +276,13 @@ impl Architecture {
         dtb: Address,
         addrs: VI,
         out: &mut OV,
+        arena: &Bump
     ) {
         match self {
             Architecture::Null => {
                 out.extend(addrs.map(|(addr, buf)| (Ok(PhysicalAddress::from(addr)), addr, buf)))
             }
-            Architecture::X64 => x64::virt_to_phys_iter(mem, dtb, addrs, out),
+            Architecture::X64 => x64::virt_to_phys_iter(mem, dtb, addrs, out, arena),
             Architecture::X86Pae => x86_pae::virt_to_phys_iter(mem, dtb, addrs, out),
             Architecture::X86 => x86::virt_to_phys_iter(mem, dtb, addrs, out),
         }

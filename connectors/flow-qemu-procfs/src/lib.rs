@@ -91,7 +91,7 @@ impl PhysicalMemory for Memory {
         while let Some((addr, out)) = elem {
             let (cnt, (liov, riov)) = iov_next.unwrap();
 
-            Self::fill_iovec(&addr, out.as_ref(), liov, riov, self.map.address.0);
+            Self::fill_iovec(&addr, out, liov, riov, self.map.address.0);
 
             iov_next = iov_iter.next();
             elem = iter.next();
@@ -134,7 +134,7 @@ impl PhysicalMemory for Memory {
         while let Some((addr, out)) = elem {
             let (cnt, (liov, riov)) = iov_next.unwrap();
 
-            Self::fill_iovec(&addr, out.as_ref(), liov, riov, self.map.address.0);
+            Self::fill_iovec(&addr, out, liov, riov, self.map.address.0);
 
             iov_next = iov_iter.next();
             elem = iter.next();

@@ -32,7 +32,7 @@ pub fn find_with_va<T: VirtualMemory + ?Sized>(
         virt_mem.virt_read_raw_into(Address::from(va_base), &mut buf)?;
 
         let res = buf
-            .chunks_exact(architecture::x64::page_size(1).as_usize())
+            .chunks_exact(architecture::x64::page_size_level(1).as_usize())
             .enumerate()
             .map(|(i, c)| {
                 let view = Pod::as_data_view(&c[..]);
@@ -43,7 +43,7 @@ pub fn find_with_va<T: VirtualMemory + ?Sized>(
             .inspect(|(i, _, _)| {
                 debug!(
                     "find_x64_with_va: found potential header flags at offset {:x}",
-                    i * architecture::x64::page_size(1).as_usize()
+                    i * architecture::x64::page_size_level(1).as_usize()
                 )
             })
             .flat_map(|(i, c, p)| c.chunks_exact(8).map(move |c| (i, c, p)))
@@ -51,12 +51,12 @@ pub fn find_with_va<T: VirtualMemory + ?Sized>(
             .inspect(|(i, _, _)| {
                 debug!(
                     "find_x64_with_va: found potential POOLCODE flag at offset {:x}",
-                    i * architecture::x64::page_size(1).as_usize()
+                    i * architecture::x64::page_size_level(1).as_usize()
                 )
             })
             .find(|(i, _, _)| {
                 let probe_addr =
-                    Address::from(va_base + (*i as u64) * architecture::x64::page_size(1).as_u64());
+                    Address::from(va_base + (*i as u64) * architecture::x64::page_size_level(1).as_u64());
                 let name = try_get_pe_name(virt_mem, probe_addr).unwrap_or_default();
                 name == "ntoskrnl.exe"
             })
@@ -64,7 +64,7 @@ pub fn find_with_va<T: VirtualMemory + ?Sized>(
                 Error::new("find_x64_with_va: unable to locate ntoskrnl.exe via va hint")
             })
             .and_then(
-                |(i, _, _)| Ok(va_base + i as u64 * architecture::x64::page_size(1).as_u64()),
+                |(i, _, _)| Ok(va_base + i as u64 * architecture::x64::page_size_level(1).as_u64()),
             );
 
         match res {

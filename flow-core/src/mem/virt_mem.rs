@@ -1,7 +1,4 @@
-pub mod virt_batch;
 pub mod virt_from_phys;
-
-pub use virt_batch::VirtualMemoryBatch;
 pub use virt_from_phys::VirtualFromPhysical;
 
 use crate::error::Result;

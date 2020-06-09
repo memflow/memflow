@@ -8,44 +8,24 @@ use libc::{c_ulong, iovec, pid_t, sysconf, _SC_IOV_MAX};
 const LENGTH_2GB: Length = Length::from_gb(2);
 const LENGTH_1GB: Length = Length::from_gb(1);
 
-fn qemu_cmdline_find_name(args: &Vec<String>) -> String {
+fn qemu_arg_opt(args: &[String], argname: &str, argopt: &str) -> Option<String> {
     for (idx, arg) in args.iter().enumerate() {
-        if arg == "-name" {
-            let name = args[idx + 1].split(",");
-            for (i, kv) in name.clone().into_iter().enumerate() {
-                let kvsplt = kv.split("=").collect::<Vec<_>>();
+        if arg == argname {
+            let name = args[idx + 1].split(',');
+            for (i, kv) in name.clone().enumerate() {
+                let kvsplt = kv.split('=').collect::<Vec<_>>();
                 if kvsplt.len() == 2 {
-                    if kvsplt[0] == "guest" {
-                        return kvsplt[1].to_string();
+                    if kvsplt[0] == argopt {
+                        return Some(kvsplt[1].to_string());
                     }
                 } else if i == 0 {
-                    return kv.to_string();
+                    return Some(kv.to_string());
                 }
             }
         }
     }
 
-    String::new()
-}
-
-fn qemu_cmdline_find_machine(args: &Vec<String>) -> String {
-    for (idx, arg) in args.iter().enumerate() {
-        if arg == "-machine" {
-            let name = args[idx + 1].split(",");
-            for (i, kv) in name.clone().into_iter().enumerate() {
-                let kvsplt = kv.split("=").collect::<Vec<_>>();
-                if kvsplt.len() == 2 {
-                    if kvsplt[0] == "type" {
-                        return kvsplt[1].to_string();
-                    }
-                } else if i == 0 {
-                    return kv.to_string();
-                }
-            }
-        }
-    }
-
-    "pc".to_string()
+    None
 }
 
 #[derive(Clone)]
@@ -68,7 +48,7 @@ impl Memory {
         Self::with_process(prc)
     }
 
-    pub fn with_name(name: &str) -> Result<Self> {
+    pub fn with_guest_name(name: &str) -> Result<Self> {
         let prcs = procfs::process::all_processes().map_err(Error::new)?;
         let (prc, _) = prcs
             .iter()
@@ -80,7 +60,7 @@ impl Memory {
                     None
                 }
             })
-            .find(|(_, c)| qemu_cmdline_find_name(c) == name)
+            .find(|(_, c)| qemu_arg_opt(c, "-machine", "guest").unwrap_or_default() == name)
             .ok_or_else(|| Error::new("qemu process not found"))?;
         info!(
             "qemu process with name {} found with pid {:?}",
@@ -92,7 +72,8 @@ impl Memory {
 
     fn with_process(prc: &procfs::process::Process) -> Result<Self> {
         // find machine architecture
-        let machine = qemu_cmdline_find_machine(&prc.cmdline().map_err(Error::new)?);
+        let machine = qemu_arg_opt(&prc.cmdline().map_err(Error::new)?, "-machine", "type")
+            .unwrap_or_else(|| "pc".into());
         info!("qemu process started with machine: {}", machine);
 
         // this is quite an ugly hack...
@@ -260,5 +241,125 @@ impl PhysicalMemory for Memory {
         }
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_name() {
+        assert_eq!(
+            qemu_arg_opt(
+                &vec!["-name".to_string(), "win10-test".to_string()],
+                "-name",
+                "guest"
+            ),
+            Some("win10-test".into())
+        );
+        assert_eq!(
+            qemu_arg_opt(
+                &vec![
+                    "-test".to_string(),
+                    "-name".to_string(),
+                    "win10-test".to_string()
+                ],
+                "-name",
+                "guest"
+            ),
+            Some("win10-test".into())
+        );
+        assert_eq!(
+            qemu_arg_opt(
+                &vec!["-name".to_string(), "win10-test,arg=opt".to_string()],
+                "-name",
+                "guest"
+            ),
+            Some("win10-test".into())
+        );
+        assert_eq!(
+            qemu_arg_opt(
+                &vec!["-name".to_string(), "guest=win10-test,arg=opt".to_string()],
+                "-name",
+                "guest"
+            ),
+            Some("win10-test".into())
+        );
+        assert_eq!(
+            qemu_arg_opt(
+                &vec!["-name".to_string(), "arg=opt,guest=win10-test".to_string()],
+                "-name",
+                "guest"
+            ),
+            Some("win10-test".into())
+        );
+        assert_eq!(
+            qemu_arg_opt(
+                &vec!["-name".to_string(), "arg=opt".to_string()],
+                "-name",
+                "guest"
+            ),
+            None
+        );
+    }
+
+    #[test]
+    fn test_machine() {
+        assert_eq!(
+            qemu_arg_opt(
+                &vec!["-machine".to_string(), "q35".to_string()],
+                "-machine",
+                "type"
+            ),
+            Some("q35".into())
+        );
+        assert_eq!(
+            qemu_arg_opt(
+                &vec![
+                    "-test".to_string(),
+                    "-machine".to_string(),
+                    "q35".to_string()
+                ],
+                "-machine",
+                "type"
+            ),
+            Some("q35".into())
+        );
+        assert_eq!(
+            qemu_arg_opt(
+                &vec!["-machine".to_string(), "q35,arg=opt".to_string()],
+                "-machine",
+                "type"
+            ),
+            Some("q35".into())
+        );
+        assert_eq!(
+            qemu_arg_opt(
+                &vec!["-machine".to_string(), "type=pc,arg=opt".to_string()],
+                "-machine",
+                "type"
+            ),
+            Some("pc".into())
+        );
+        assert_eq!(
+            qemu_arg_opt(
+                &vec![
+                    "-machine".to_string(),
+                    "arg=opt,type=pc-i1440fx".to_string()
+                ],
+                "-machine",
+                "type"
+            ),
+            Some("pc-i1440fx".into())
+        );
+        assert_eq!(
+            qemu_arg_opt(
+                &vec!["-machine".to_string(), "arg=opt".to_string()],
+                "-machine",
+                "type"
+            ),
+            None
+        );
     }
 }

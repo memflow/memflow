@@ -5,7 +5,7 @@ use flow_core::*;
 #[cfg(all(target_os = "linux", feature = "connector-qemu-procfs"))]
 pub fn init_qemu_procfs(argv: &ArgMatches) -> Result<flow_qemu_procfs::Memory> {
     if argv.is_present("connector_args") {
-        flow_qemu_procfs::Memory::with_name(argv.value_of("connector_args").unwrap())
+        flow_qemu_procfs::Memory::with_guest_name(argv.value_of("connector_args").unwrap())
     } else {
         flow_qemu_procfs::Memory::new()
     }

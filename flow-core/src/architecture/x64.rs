@@ -5,7 +5,7 @@ use masks::*;
 use crate::error::{Error, Result};
 use byteorder::{ByteOrder, LittleEndian};
 
-use super::TranslateData;
+use super::SplitAtIndex;
 use crate::architecture::Endianess;
 use crate::mem::PhysicalMemory;
 use crate::types::{Address, Length, PageType, PhysicalAddress};
@@ -58,6 +58,10 @@ const fn pt_entries_log2() -> u32 {
     9
 }
 
+pub fn page_size() -> Length {
+    page_size_level(1)
+}
+
 pub fn page_size_level(pt_level: u32) -> Length {
     //Each PT level up has 512 more entries than the lower level. 512 = 4096 / 8
     Length::from_b(len_addr().as_u64() << (pt_entries_log2() * pt_level))
@@ -85,7 +89,7 @@ pub fn virt_to_phys_iter<T, B, VI, OV>(
     arena: &Bump,
 ) where
     T: PhysicalMemory + ?Sized,
-    B: TranslateData,
+    B: SplitAtIndex,
     VI: Iterator<Item = (Address, B)>,
     OV: Extend<(Result<PhysicalAddress>, Address, B)>,
 {
@@ -150,7 +154,7 @@ pub fn virt_to_phys_iter<T, B, VI, OV>(
                             | pml_index_bits(addr.as_u64(), pt_level - 1),
                     );
 
-                    let (left, next_buf) = buf.do_split_at(next_addr - addr);
+                    let (left, next_buf) = buf.split_at(next_addr - addr);
 
                     data_to_translate.push((addr, left, pt_addr, tmp_arr));
 

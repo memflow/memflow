@@ -1,5 +1,5 @@
 pub mod translate_arch;
-pub use translate_arch::{TranslateArch, TranslateData};
+pub use translate_arch::{TranslateArch, SplitAtIndex};
 
 #[cfg(test)]
 mod tests;
@@ -18,7 +18,7 @@ pub trait VirtualTranslate {
         out: &mut OV,
     ) where
         T: PhysicalMemory + ?Sized,
-        B: TranslateData,
+        B: SplitAtIndex,
         VI: Iterator<Item = (Address, B)>,
         OV: Extend<(Result<PhysicalAddress>, Address, B)>;
 
@@ -45,7 +45,7 @@ impl<'a, T: VirtualTranslate> VirtualTranslate for &'a mut T {
         out: &mut OV,
     ) where
         U: PhysicalMemory + ?Sized,
-        B: TranslateData,
+        B: SplitAtIndex,
         VI: Iterator<Item = (Address, B)>,
         OV: Extend<(Result<PhysicalAddress>, Address, B)>,
     {

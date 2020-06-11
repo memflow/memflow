@@ -19,6 +19,14 @@ pub fn page_size() -> Length {
     Length::from_kb(4)
 }
 
+pub fn page_size_level(pt_level: u32) -> Length {
+    match pt_level {
+        1 => Length::from_kb(4),
+        2 => Length::from_mb(4),
+        _ => panic!("non existent page table level '{}' for architecture x86 (non pae mode)", pt_level),
+    }
+}
+
 pub fn len_addr() -> Length {
     Length::from(4)
 }

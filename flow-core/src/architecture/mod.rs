@@ -34,27 +34,27 @@ pub enum Endianess {
     BigEndian,
 }
 
-pub trait TranslateData {
-    fn do_split_at(self, idx: Length) -> (Self, Option<Self>)
+pub trait SplitAtIndex {
+    fn split_at(self, idx: Length) -> (Self, Option<Self>)
     where
         Self: Sized;
 }
 
-impl TranslateData for bool {
-    fn do_split_at(self, _: Length) -> (Self, Option<Self>) {
+impl SplitAtIndex for bool {
+    fn split_at(self, _: Length) -> (Self, Option<Self>) {
         (self, None)
     }
 }
 
-impl<T> TranslateData for &[T] {
-    fn do_split_at(self, idx: Length) -> (Self, Option<Self>) {
+impl<T> SplitAtIndex for &[T] {
+    fn split_at(self, idx: Length) -> (Self, Option<Self>) {
         let (left, right) = self.split_at(core::cmp::min(self.len(), idx.as_usize()));
         (left, if right.is_empty() { None } else { Some(right) })
     }
 }
 
-impl<T> TranslateData for &mut [T] {
-    fn do_split_at(self, idx: Length) -> (Self, Option<Self>) {
+impl<T> SplitAtIndex for &mut [T] {
+    fn split_at(self, idx: Length) -> (Self, Option<Self>) {
         let (left, right) = self.split_at_mut(core::cmp::min(self.len(), idx.as_usize()));
         (left, if right.is_empty() { None } else { Some(right) })
     }
@@ -210,8 +210,8 @@ impl Architecture {
     */
     pub fn page_size(self) -> Length {
         match self {
-            Architecture::Null => x64::page_size_level(1),
-            Architecture::X64 => x64::page_size_level(1),
+            Architecture::Null => x64::page_size(),
+            Architecture::X64 => x64::page_size(),
             Architecture::X86Pae => x86_pae::page_size(),
             Architecture::X86 => x86::page_size(),
         }
@@ -267,7 +267,7 @@ impl Architecture {
 
     pub fn virt_to_phys_iter<
         T: PhysicalMemory + ?Sized,
-        B: TranslateData,
+        B: SplitAtIndex,
         VI: Iterator<Item = (Address, B)>,
         OV: Extend<(Result<PhysicalAddress>, Address, B)>,
     >(

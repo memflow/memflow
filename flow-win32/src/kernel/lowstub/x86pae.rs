@@ -1,45 +1,33 @@
 use crate::error::{Error, Result};
 use crate::kernel::StartBlock;
 
+use byteorder::{ByteOrder, LittleEndian};
+
 use flow_core::architecture::{self, Architecture};
 use flow_core::types::Address;
 
-// see _find_x64
-// pa, pb16M + pa
-fn _find(mem: &[u8]) -> Option<()> {
-    // pa, pb16M + pa
-
-    /*
-    for(QWORD i = 0; i < 0x1000; i += 8) {
-        if((i < 0x20) && ((*(PQWORD)(pbPage + i) != pa + (i << 9) + 0x1001))) {
-            return FALSE;
-        } else if((i >= 0x20) && *(PQWORD)(pbPage + i)) {
-            return FALSE;
+fn _find(addr: Address, mem: &[u8]) -> Option<()> {
+    for (i, chunk) in mem.to_vec().chunks_exact(8).enumerate() {
+        if i < 4 && LittleEndian::read_u64(chunk) == addr.as_u64() + ((i as u64 * 8) << 9) + 0x1001 {
+            return None;
+        } else if i >= 4 && LittleEndian::read_u64(chunk) != 0 {
+            return None;
         }
     }
-    return TRUE;
-    */
-
-    match mem
-        .to_vec()
-        .chunks_exact(8)
-        .skip(3) // >= 0x20
-        .find(|c| c[0] != 0)
-    {
-        Some(_c) => None,
-        None => Some(()),
-    }
+    Some(())
 }
 
 pub fn find(mem: &[u8]) -> Result<StartBlock> {
     mem.chunks_exact(architecture::x86_pae::page_size().as_usize())
-        .position(|c| _find(c).is_some())
+        .enumerate()
+        .map(|(i, c)| (Address::from(architecture::x86::page_size().as_u64() * i as u64), c))
+        .find(|(a, c)| _find(a.clone(), c).is_some())
         .ok_or_else(|| Error::new("unable to find x64_pae dtb in lowstub < 16M"))
-        .and_then(|i| {
+        .and_then(|(a, _)| {
             Ok(StartBlock {
                 arch: Architecture::X86Pae,
                 va: Address::from(0),
-                dtb: Address::from((i as u64) * architecture::x86_pae::page_size().as_u64()),
+                dtb: a,
             })
         })
 }

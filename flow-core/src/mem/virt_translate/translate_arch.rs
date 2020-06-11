@@ -1,6 +1,6 @@
 use super::VirtualTranslate;
 use crate::architecture::Architecture;
-pub use crate::architecture::TranslateData;
+pub use crate::architecture::SplitAtIndex;
 use crate::error::Result;
 use crate::mem::PhysicalMemory;
 use crate::types::{Address, PhysicalAddress};
@@ -39,7 +39,7 @@ impl VirtualTranslate for TranslateArch {
         out: &mut OV,
     ) where
         T: PhysicalMemory + ?Sized,
-        B: TranslateData,
+        B: SplitAtIndex,
         VI: Iterator<Item = (Address, B)>,
         OV: Extend<(Result<PhysicalAddress>, Address, B)>,
     {

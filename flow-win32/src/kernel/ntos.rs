@@ -34,7 +34,7 @@ pub fn find<T: VirtualMemory + ?Sized>(
             Err(e) => warn!("x64::find() error: {}", e),
         }
     } else if start_block.arch.bits() == 32 {
-        match x86::find(virt_mem) {
+        match x86::find(virt_mem, start_block) {
             Ok(b) => return Ok(b),
             Err(e) => warn!("x86::find() error: {}", e),
         }

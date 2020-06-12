@@ -29,7 +29,12 @@ fn _find(base: Address, mem: &[u8]) -> Option<()> {
 pub fn find(mem: &[u8]) -> Result<StartBlock> {
     mem.chunks_exact(architecture::x86::page_size().as_usize())
         .enumerate()
-        .map(|(i, c)| (Address::from(architecture::x86::page_size().as_u64() * i as u64), c))
+        .map(|(i, c)| {
+            (
+                Address::from(architecture::x86::page_size().as_u64() * i as u64),
+                c,
+            )
+        })
         .find(|(a, c)| _find(a.clone(), c).is_some())
         .ok_or_else(|| Error::new("unable to find x86 dtb in lowstub < 16M"))
         .and_then(|(a, _)| {

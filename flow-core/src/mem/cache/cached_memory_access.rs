@@ -1,7 +1,7 @@
 use super::{page_cache::PageCache, CacheValidator};
 use crate::error::Result;
+use crate::iter::PageChunks;
 use crate::mem::phys_mem::{PhysicalMemory, PhysicalReadIterator, PhysicalWriteIterator};
-use crate::page_chunks::PageChunks;
 
 use bumpalo::Bump;
 
@@ -37,9 +37,7 @@ impl<'a, T: PhysicalMemory, Q: CacheValidator> PhysicalMemory for CachedMemoryAc
 
         let iter = iter.inspect(move |(addr, data)| {
             if cache.is_cached_page_type(addr.page_type()) {
-                for (paddr, data_chunk) in
-                    PageChunks::create_from(data, addr.address(), cache.page_size())
-                {
+                for (paddr, data_chunk) in data.page_chunks(addr.address(), cache.page_size()) {
                     let cached_page = cache.cached_page_mut(paddr);
                     if cached_page.is_valid() {
                         // write-back into still valid cache pages

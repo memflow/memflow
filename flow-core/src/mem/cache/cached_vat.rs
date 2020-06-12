@@ -1,8 +1,9 @@
 use crate::error::Result;
 
 use crate::architecture::Architecture;
+use crate::iter::SplitAtIndex;
 use crate::mem::cache::{CacheValidator, TLBCache};
-use crate::mem::virt_translate::{SplitAtIndex, VirtualTranslate};
+use crate::mem::virt_translate::VirtualTranslate;
 use crate::mem::PhysicalMemory;
 use crate::types::{Address, PhysicalAddress};
 

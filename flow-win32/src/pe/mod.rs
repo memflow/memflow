@@ -5,7 +5,7 @@ use std::cell::{RefCell, UnsafeCell};
 
 use pelite::{Error, PeView, Result};
 
-use flow_core::iter::PageChunksMut;
+use flow_core::iter::PageChunks;
 use flow_core::mem::VirtualMemory;
 use flow_core::types::{Address, Length};
 
@@ -82,8 +82,7 @@ impl<'a, T: VirtualMemory + ?Sized> MemoryPeViewContext<'a, T> {
 
         let slice = &mut (*self.image_cache.get())[start_addr.as_usize()..end_addr.as_usize()];
 
-        for (chunk_addr, chunk) in PageChunksMut::create_from(slice, start_addr, Length::from_kb(4))
-        {
+        for (chunk_addr, chunk) in slice.page_chunks(start_addr, Length::from_kb(4)) {
             // chunk_addr is already page aligned
             let page_idx = chunk_addr.as_usize() / PE_PAGE_SIZE.as_usize();
             if !self.image_pages.borrow()[page_idx] {

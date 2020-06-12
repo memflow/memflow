@@ -5,8 +5,8 @@ use masks::*;
 use crate::error::{Error, Result};
 use byteorder::{ByteOrder, LittleEndian};
 
-use super::SplitAtIndex;
 use crate::architecture::Endianess;
+use crate::iter::SplitAtIndex;
 use crate::mem::PhysicalMemory;
 use crate::types::{Address, Length, PageType, PhysicalAddress};
 use bumpalo::{collections::Vec as BumpVec, Bump};
@@ -64,6 +64,10 @@ pub fn page_size() -> Length {
 
 pub fn page_size_level(pt_level: u32) -> Length {
     //Each PT level up has 512 more entries than the lower level. 512 = 4096 / 8
+    debug_assert!(
+        pt_level > 0 && pt_level < 4,
+        format!("assertion failed: {} <= 0 or {} >= 4", pt_level, pt_level)
+    );
     Length::from_b(len_addr().as_u64() << (pt_entries_log2() * pt_level))
 }
 
@@ -121,7 +125,11 @@ pub fn virt_to_phys_iter<T, B, VI, OV>(
         read_pt_address_iter(mem, &mut data_to_translate);
 
         let pt_level = 4 - pt_cnt as u32;
-        let next_page_size = page_size_level(pt_level - 1);
+        let next_page_size = if pt_level > 1 {
+            page_size_level(pt_level - 1)
+        } else {
+            0.into()
+        };
 
         //Loop through the data in reverse order to allow the data buffer grow on the back when
         //memory regions are split

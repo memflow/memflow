@@ -1,7 +1,7 @@
 use super::VirtualTranslate;
 use crate::architecture::Architecture;
-pub use crate::architecture::SplitAtIndex;
 use crate::error::Result;
+use crate::iter::SplitAtIndex;
 use crate::mem::PhysicalMemory;
 use crate::types::{Address, PhysicalAddress};
 use bumpalo::Bump;

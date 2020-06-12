@@ -18,7 +18,10 @@ const LENGTH_8MB: Length = Length::from_mb(8);
 const LENGTH_4KB: Length = Length::from_kb(4);
 
 // https://github.com/ufrisk/MemProcFS/blob/f2d15cf4fe4f19cfeea3dad52971fae2e491064b/vmm/vmmwininit.c#L410
-pub fn find<T: VirtualMemory + ?Sized>(virt_mem: &mut T, start_block: &StartBlock) -> Result<(Address, Length)> {
+pub fn find<T: VirtualMemory + ?Sized>(
+    virt_mem: &mut T,
+    start_block: &StartBlock,
+) -> Result<(Address, Length)> {
     debug!("x86::find: trying to find ntoskrnl.exe");
 
     for base_addr in (0..LENGTH_64MB.as_u64()).step_by(LENGTH_8MB.as_usize()) {
@@ -38,7 +41,8 @@ pub fn find<T: VirtualMemory + ?Sized>(virt_mem: &mut T, start_block: &StartBloc
             }
 
             for offset in (0..0x800).step_by(8) {
-                if LittleEndian::read_u64(&mem[(addr + offset) as usize..]) == 0x4544_4f43_4c4f_4f50 {
+                if LittleEndian::read_u64(&mem[(addr + offset) as usize..]) == 0x4544_4f43_4c4f_4f50
+                {
                     if let Ok(name) = try_get_pe_name(virt_mem, Address::from(addr + offset)) {
                         if name == "ntoskrnl.exe" {
                             println!("ntoskrnl found");

@@ -3,7 +3,7 @@ pub mod pe64;
 
 use std::cell::{RefCell, UnsafeCell};
 
-use pelite::{Error, PeView, Result};
+use pelite::{util::Align16, Error, PeView, Result};
 
 use flow_core::iter::PageChunks;
 use flow_core::mem::VirtualMemory;
@@ -29,7 +29,7 @@ pub struct MemoryPeViewContext<'a, T: VirtualMemory + ?Sized> {
 impl<'a, T: VirtualMemory + ?Sized> MemoryPeViewContext<'a, T> {
     pub fn new(virt_mem: &'a mut T, image_base: Address) -> Result<Self> {
         // read the first page of the image
-        let mut image_header = [0u8; 0x1000];
+        let mut image_header = Align16([0u8; 0x1000]).0;
         virt_mem
             .virt_read_raw_into(image_base, &mut image_header)
             .map_err(|_| Error::Unmapped)?;

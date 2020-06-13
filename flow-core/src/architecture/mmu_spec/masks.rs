@@ -1,6 +1,7 @@
 // bit mask macros
-pub const fn make_bit_mask(a: u32, b: u32) -> u64 {
-    (0xffff_ffff_ffff_ffff >> (63 - b)) & !(((1 as u64) << a) - 1)
+pub fn make_bit_mask<T: core::convert::TryInto<u8>>(a: T, b: T) -> u64 {
+    (0xffff_ffff_ffff_ffff >> (63 - b.try_into().ok().unwrap()))
+        & !(((1 as u64) << a.try_into().ok().unwrap()) - 1)
 }
 
 #[macro_export]

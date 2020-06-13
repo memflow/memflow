@@ -11,7 +11,7 @@ use std::collections::VecDeque;
 use x86_64::{
     structures::paging,
     structures::paging::{
-        mapper::{Mapper, OffsetPageTable},
+        mapper::{Mapper, MapperAllSizes, OffsetPageTable},
         page::{PageSize, Size1GiB, Size2MiB, Size4KiB},
         page_table::{PageTable, PageTableFlags},
         FrameAllocator, PhysFrame,
@@ -291,13 +291,31 @@ impl DummyMemory {
         }
     }
 
+    pub fn vtop(&mut self, dtb_base: Address, virt_addr: Address) -> Option<Address> {
+        let mut pml4 = unsafe {
+            &mut *(self
+                .mem
+                .as_mut_ptr()
+                .add(dtb_base.as_usize())
+                .cast::<PageTable>())
+        };
+
+        let pt_mapper =
+            unsafe { OffsetPageTable::new(&mut pml4, VirtAddr::from_ptr(self.mem.as_ptr())) };
+
+        match pt_mapper.translate_addr(VirtAddr::new(virt_addr.as_u64())) {
+            None => None,
+            Some(addr) => Some(Address::from(addr.as_u64())),
+        }
+    }
+
     pub fn alloc_dtb(&mut self, map_size: Length, test_buf: &[u8]) -> (Address, Address) {
         let mut cur_len = Length::from(0);
 
         let dtb = self.alloc_pt_page();
-        let virt_base =
-            Address::from(thread_rng().gen_range(0x0001_0000_0000_u64, ((!0_u64) << 16) >> 16))
-                .as_page_aligned(Length::from_gb(2));
+        let virt_base = (Address::null()
+            + Length::from(thread_rng().gen_range(0x0001_0000_0000_u64, ((!0_u64) << 16) >> 16)))
+        .as_page_aligned(Length::from_gb(2));
 
         let mut pml4 = unsafe {
             &mut *(self

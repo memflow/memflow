@@ -12,7 +12,7 @@ use rand::{thread_rng, Rng};
 fn test_cached_mem() {
     let mut dummy_mem = DummyMemory::new(Length::from_mb(512));
 
-    let virt_size = Length::from_mb(8);
+    let virt_size = Length::from_mb(3);
     let mut test_buf = vec![0_u64; virt_size.as_usize() / 8];
 
     for i in &mut test_buf {
@@ -254,29 +254,42 @@ fn test_vtop() {
     let arch = Architecture::X64;
     let mut vat = TranslateArch::new(arch);
 
-    assert_eq!(
-        vat.virt_to_phys(&mut dummy_mem, dtb, virt_base).is_ok(),
-        true
-    );
-    assert_eq!(
-        arch.virt_to_phys(
-            &mut dummy_mem,
-            dtb,
-            virt_base + Length::from(virt_size.as_usize() / 2),
-        )
-        .is_ok(),
-        true
-    );
-    assert_eq!(
-        vat.virt_to_phys(&mut dummy_mem, dtb, virt_base - Length::from_mb(1))
-            .is_ok(),
-        false
-    );
-    assert_eq!(
-        vat.virt_to_phys(&mut dummy_mem, dtb, virt_base + virt_size)
-            .is_ok(),
-        false
-    );
+    for i in (0..virt_size.as_u64()).step_by(128) {
+        let virt_base = virt_base + Length::from(i);
+        let vtop = match vat.virt_to_phys(&mut dummy_mem, dtb, virt_base) {
+            Err(_) => None,
+            Ok(paddr) => Some(paddr.address()),
+        };
+        let dummy_vtop = dummy_mem.vtop(dtb, virt_base);
+
+        assert_eq!(vtop, dummy_vtop);
+    }
+
+    for i in 0..128 {
+        let virt_base = virt_base + virt_size + Length::from(i);
+        let vtop = match vat.virt_to_phys(&mut dummy_mem, dtb, virt_base) {
+            Err(_) => None,
+            Ok(paddr) => Some(paddr.address()),
+        };
+        let dummy_vtop = dummy_mem.vtop(dtb, virt_base);
+
+        assert!(vtop.is_none());
+
+        assert_eq!(vtop, dummy_vtop);
+    }
+
+    for i in 0..128 {
+        let virt_base = virt_base - Length::from(i);
+        let vtop = match vat.virt_to_phys(&mut dummy_mem, dtb, virt_base) {
+            Err(_) => None,
+            Ok(paddr) => Some(paddr.address()),
+        };
+        let dummy_vtop = dummy_mem.vtop(dtb, virt_base);
+
+        assert!(i == 0 || vtop.is_none());
+
+        assert_eq!(vtop, dummy_vtop);
+    }
 }
 
 #[test]

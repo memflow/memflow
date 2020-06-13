@@ -19,7 +19,9 @@ pub struct KeyboardState {
 }
 
 impl Keyboard {
-    pub fn with<T: PhysicalMemory, V: VirtualTranslate>(kernel: &mut Kernel<T, V>) -> Result<Self> {
+    pub fn try_with<T: PhysicalMemory, V: VirtualTranslate>(
+        kernel: &mut Kernel<T, V>,
+    ) -> Result<Self> {
         let ntoskrnl_process_info = kernel.ntoskrnl_process_info()?;
         debug!("found ntoskrnl.exe: {:?}", ntoskrnl_process_info);
 
@@ -60,25 +62,55 @@ impl Keyboard {
         })
     }
 
-    pub fn state<T: PhysicalMemory, V: VirtualTranslate>(
+    pub fn state<T: VirtualMemory>(&self, virt_mem: &mut T) -> Result<KeyboardState> {
+        let buffer: [u8; 256 * 2 / 8] = virt_mem.virt_read(self.key_state_addr)?;
+        Ok(KeyboardState { buffer })
+    }
+
+    pub fn set_state<T: VirtualMemory>(
+        &self,
+        virt_mem: &mut T,
+        state: &KeyboardState,
+    ) -> Result<()> {
+        virt_mem.virt_write(self.key_state_addr, &state.buffer)?;
+        Ok(())
+    }
+
+    pub fn state_with_kernel<T: PhysicalMemory, V: VirtualTranslate>(
         &self,
         kernel: &mut Kernel<T, V>,
     ) -> Result<KeyboardState> {
         let mut user_process = Win32Process::with_kernel(kernel, self.user_process_info.clone());
-        let buffer: [u8; 256 * 2 / 8] = user_process.virt_mem.virt_read(self.key_state_addr)?;
-        Ok(KeyboardState { buffer })
+        self.state(&mut user_process.virt_mem)
     }
 
-    pub fn set_state<T: PhysicalMemory, V: VirtualTranslate>(
+    pub fn set_state_with_kernel<T: PhysicalMemory, V: VirtualTranslate>(
         &self,
         kernel: &mut Kernel<T, V>,
         state: &KeyboardState,
     ) -> Result<()> {
         let mut user_process = Win32Process::with_kernel(kernel, self.user_process_info.clone());
-        user_process
-            .virt_mem
-            .virt_write(self.key_state_addr, &state.buffer)?;
-        Ok(())
+        self.set_state(&mut user_process.virt_mem, state)
+    }
+
+    /**
+     * Fetches the kernel's gafAsyncKeyState state with a processes context.
+     * The win32kbase.sys kernel module is accessible with the DTB of a user process
+     * so any usermode process can be used to read this memory region.
+     */
+    pub fn state_with_process<T: VirtualMemory>(
+        &self,
+        process: &mut Win32Process<T>,
+    ) -> Result<KeyboardState> {
+        self.state(&mut process.virt_mem)
+    }
+
+    pub fn set_state_with_process<T: VirtualMemory>(
+        &self,
+        process: &mut Win32Process<T>,
+        state: &KeyboardState,
+    ) -> Result<()> {
+        self.set_state(&mut process.virt_mem, state)
     }
 }
 

@@ -1,9 +1,8 @@
 use super::{CacheValidator, PageType};
 use crate::architecture::Architecture;
 use crate::error::Error;
-use crate::iter::FlowIters;
+use crate::iter::{FlowIters, PageChunks};
 use crate::mem::phys_mem::{PhysicalMemory, PhysicalReadData, PhysicalReadIterator};
-use crate::page_chunks::PageChunksMut;
 use crate::types::{Address, Length, PhysicalAddress};
 use bumpalo::{collections::Vec as BumpVec, Bump};
 use std::alloc::{alloc_zeroed, Layout};
@@ -176,8 +175,7 @@ impl<T: CacheValidator> PageCache<T> {
     ) -> Result<(), Error> {
         // try read from cache or fall back
         if self.is_cached_page_type(addr.page_type()) {
-            for (paddr, chunk) in PageChunksMut::create_from(out, addr.address(), self.page_size())
-            {
+            for (paddr, chunk) in out.page_chunks(addr.address(), self.page_size()) {
                 let cached_page = self.cached_page_mut(paddr);
 
                 if cached_page.should_validate() {
@@ -203,12 +201,13 @@ impl<T: CacheValidator> PageCache<T> {
         (addr, out): PhysicalReadData<'_>,
         page_size: Length,
     ) -> impl PhysicalReadIterator<'_> {
-        PageChunksMut::create_from(out, addr.address(), page_size).map(move |(paddr, chunk)| {
-            (
-                PhysicalAddress::with_page(paddr, addr.page_type(), addr.page_size()),
-                chunk,
-            )
-        })
+        out.page_chunks(addr.address(), page_size)
+            .map(move |(paddr, chunk)| {
+                (
+                    PhysicalAddress::with_page(paddr, addr.page_type(), addr.page_size()),
+                    chunk,
+                )
+            })
     }
 
     #[allow(clippy::never_loop)]
@@ -234,8 +233,8 @@ impl<T: CacheValidator> PageCache<T> {
             let mut wlist = BumpVec::new_in(arena);
 
             while let Some((addr, out)) = next {
-                PageChunksMut::create_from(out, addr.address(), page_size).for_each(
-                    |(paddr, chunk)| {
+                out.page_chunks(addr.address(), page_size)
+                    .for_each(|(paddr, chunk)| {
                         let (addr, out) = (
                             PhysicalAddress::with_page(paddr, addr.page_type(), addr.page_size()),
                             chunk,
@@ -267,8 +266,7 @@ impl<T: CacheValidator> PageCache<T> {
                             wlist.push((addr, out));
                             break;
                         }
-                    },
-                );
+                    });
 
                 next = iter.next();
 

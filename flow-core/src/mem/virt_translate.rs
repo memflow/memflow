@@ -1,5 +1,6 @@
 pub mod translate_arch;
-pub use translate_arch::{SplitAtIndex, TranslateArch};
+use crate::iter::SplitAtIndex;
+pub use translate_arch::TranslateArch;
 
 #[cfg(test)]
 mod tests;

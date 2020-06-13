@@ -16,6 +16,7 @@ pub mod x86;
 pub mod x86_pae;
 
 use crate::error::{Error, Result};
+use crate::iter::SplitAtIndex;
 use std::convert::TryFrom;
 
 use crate::mem::PhysicalMemory;
@@ -32,32 +33,6 @@ pub enum Endianess {
     LittleEndian,
     /// big endianess
     BigEndian,
-}
-
-pub trait SplitAtIndex {
-    fn split_at(self, idx: Length) -> (Self, Option<Self>)
-    where
-        Self: Sized;
-}
-
-impl SplitAtIndex for bool {
-    fn split_at(self, _: Length) -> (Self, Option<Self>) {
-        (self, None)
-    }
-}
-
-impl<T> SplitAtIndex for &[T] {
-    fn split_at(self, idx: Length) -> (Self, Option<Self>) {
-        let (left, right) = self.split_at(core::cmp::min(self.len(), idx.as_usize()));
-        (left, if right.is_empty() { None } else { Some(right) })
-    }
-}
-
-impl<T> SplitAtIndex for &mut [T] {
-    fn split_at(self, idx: Length) -> (Self, Option<Self>) {
-        let (left, right) = self.split_at_mut(core::cmp::min(self.len(), idx.as_usize()));
-        (left, if right.is_empty() { None } else { Some(right) })
-    }
 }
 
 /**

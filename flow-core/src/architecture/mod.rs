@@ -15,14 +15,19 @@ pub mod x64;
 pub mod x86;
 pub mod x86_pae;
 
+pub mod mmu_spec;
+
+use mmu_spec::ArchMMUSpec;
+
 use crate::error::{Error, Result};
-use crate::iter::SplitAtIndex;
+use crate::iter::{PageChunks, SplitAtIndex};
 use std::convert::TryFrom;
 
 use crate::mem::PhysicalMemory;
-use crate::types::{Address, Length, PhysicalAddress};
+use crate::types::{Address, Length, PageType, PhysicalAddress};
 
 use bumpalo::{collections::Vec as BumpVec, Bump};
+use byteorder::{ByteOrder, LittleEndian};
 
 /**
 Identifies the byte order of a architecture
@@ -141,6 +146,19 @@ impl Architecture {
     }
 
     /**
+    Returns a structure representing all paramters of the architecture's memory managment unit
+    This structure represents various value used in virtual to physical address translation.
+    */
+    pub fn get_mmu_spec(self) -> ArchMMUSpec {
+        match self {
+            Architecture::X64 => x64::get_mmu_spec(),
+            Architecture::X86 => x86::get_mmu_spec(),
+            Architecture::X86Pae => x86_pae::get_mmu_spec(),
+            _ => x64::get_mmu_spec(),
+        }
+    }
+
+    /**
     Returns the byte order of an `Architecture`.
     This will either be `Endianess::LittleEndian` or `Endianess::BigEndian`.
 
@@ -184,12 +202,7 @@ impl Architecture {
     ```
     */
     pub fn page_size(self) -> Length {
-        match self {
-            Architecture::Null => x64::page_size(),
-            Architecture::X64 => x64::page_size(),
-            Architecture::X86Pae => x86_pae::page_size(),
-            Architecture::X86 => x86::page_size(),
-        }
+        self.get_mmu_spec().page_size_level(1)
     }
 
     /**
@@ -257,9 +270,93 @@ impl Architecture {
             Architecture::Null => {
                 out.extend(addrs.map(|(addr, buf)| (Ok(PhysicalAddress::from(addr)), addr, buf)))
             }
-            Architecture::X64 => x64::virt_to_phys_iter(mem, dtb, addrs, out, arena),
-            Architecture::X86Pae => x86_pae::virt_to_phys_iter(mem, dtb, addrs, out),
-            Architecture::X86 => x86::virt_to_phys_iter(mem, dtb, addrs, out),
+            _ => Self::virt_to_phys_iter_with_mmu(mem, dtb, addrs, out, arena, self.get_mmu_spec()),
         }
+    }
+
+    fn read_pt_address_iter<T: PhysicalMemory + ?Sized, B>(
+        mem: &mut T,
+        spec: &ArchMMUSpec,
+        step: usize,
+        addrs: &mut BumpVec<(Address, B, Address, [u8; 8])>,
+    ) {
+        let page_size = spec.pt_leaf_size(step);
+
+        let _ = mem.phys_read_iter(addrs.iter_mut().map(|(_, _, pt_addr, arr)| {
+            arr.iter_mut().for_each(|x| *x = 0);
+            (
+                PhysicalAddress::with_page(*pt_addr, PageType::PAGE_TABLE, page_size),
+                &mut arr[..],
+            )
+        }));
+
+        addrs
+            .iter_mut()
+            .for_each(|(_, _, pt_addr, buf)| *pt_addr = Address::from(LittleEndian::read_u64(buf)));
+    }
+
+    fn virt_to_phys_iter_with_mmu<T, B, VI, OV>(
+        mem: &mut T,
+        dtb: Address,
+        addrs: VI,
+        out: &mut OV,
+        arena: &Bump,
+        spec: ArchMMUSpec,
+    ) where
+        T: PhysicalMemory + ?Sized,
+        B: SplitAtIndex,
+        VI: Iterator<Item = (Address, B)>,
+        OV: Extend<(Result<PhysicalAddress>, Address, B)>,
+    {
+        //TODO: build a tree to eliminate duplicate phys reads with multiple elements
+        let mut data_to_translate = BumpVec::new_in(arena);
+
+        data_to_translate.extend(addrs.map(|(addr, buf)| {
+            (
+                addr, buf, dtb,
+                [0; 8], //TODO: What to do with this? PTE size may be 128-bit in further MMU impls
+            )
+        }));
+
+        for pt_step in 0..spec.split_count() {
+            let next_page_size = spec.page_size_step_unchecked(pt_step + 1);
+
+            //Loop through the data in reverse order to allow the data buffer grow on the back when
+            //memory regions are split
+            for i in (0..data_to_translate.len()).rev() {
+                let (addr, buf, pt_addr, tmp_arr) = data_to_translate.swap_remove(i);
+
+                if !spec.check_entry(pt_addr, pt_step) {
+                    //There has been an error in translation, push it to output with the associated buf
+                    out.extend(
+                        Some((Err(Error::new("virt_to_phys failed")), addr, buf)).into_iter(),
+                    );
+                } else if spec.is_final_mapping(pt_addr, pt_step) {
+                    //We reached an actual page. The translation was successful
+                    out.extend(
+                        Some((Ok(spec.get_phys_page(pt_addr, addr, pt_step)), addr, buf))
+                            .into_iter(),
+                    );
+                } else {
+                    //We still need to continue the page walk
+
+                    //As an optimization, divide and conquer the input memory regions.
+                    //Potential speedups of 4x for up to 2M sequential regions, and 2x for up to 1G sequential regions,
+                    //assuming all pages are 4kb sized.
+                    for (addr, buf) in buf.page_chunks(addr, next_page_size) {
+                        let pt_addr = spec.vtop_step(pt_addr, addr, pt_step);
+                        data_to_translate.push((addr, buf, pt_addr, tmp_arr));
+                    }
+                }
+            }
+
+            if data_to_translate.is_empty() {
+                break;
+            } else {
+                Self::read_pt_address_iter(mem, &spec, pt_step, &mut data_to_translate);
+            }
+        }
+
+        debug_assert!(data_to_translate.is_empty());
     }
 }

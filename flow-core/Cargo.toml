@@ -15,13 +15,13 @@ smallvec = "1.4.0"
 either = "1.5.3"
 #unicorn = { version = "0.9.1", optional = true }
 arrayvec = "0.5.1"
-x86_64 = { version = "0.10.2", optional = true, default-features = false, features = ["stable"] }
+x86_64 = { version = "0.11.0", optional = true, default-features = false, features = ["stable"] }
 rand = { version = "0.7.3", optional = true }
 bumpalo = { version = "3.3.0", features = ["collections"] }
 lazy_static = "1.4"
 
 [dev-dependencies]
-x86_64 = { version = "0.10.2", default-features = false, features = ["stable"] }
+x86_64 = { version = "0.11.0", default-features = false, features = ["stable"] }
 rand = { version = "0.7.3" }
 
 [features]

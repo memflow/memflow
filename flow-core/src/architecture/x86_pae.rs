@@ -1,11 +1,6 @@
-use crate::error::{Error, Result};
-
+use super::ArchMMUSpec;
 use crate::architecture::Endianess;
-use crate::types::{Address, Length, PhysicalAddress};
-
-use crate::mem::PhysicalMemory;
-
-use log::warn;
+use crate::types::Length;
 
 pub fn bits() -> u8 {
     32
@@ -15,43 +10,27 @@ pub fn endianess() -> Endianess {
     Endianess::LittleEndian
 }
 
-pub fn page_size() -> Length {
-    Length::from_kb(4)
-}
-
-pub fn page_size_level(pt_level: u32) -> Length {
-    match pt_level {
-        1 => Length::from_kb(4),
-        2 => Length::from_mb(2),
-        _ => panic!(
-            "non existent page table level '{}' for architecture x86 (pae mode)",
-            pt_level
-        ),
-    }
-}
-
 pub fn len_addr() -> Length {
     Length::from(4)
 }
 
-// https://github.com/libvmi/libvmi/blob/master/libvmi/arch/intel.c#L327
-pub fn virt_to_phys_iter<T, B, VI, OV>(_mem: &mut T, _dtb: Address, addrs: VI, out: &mut OV)
-where
-    T: PhysicalMemory + ?Sized,
-    VI: Iterator<Item = (Address, B)>,
-    OV: Extend<(Result<PhysicalAddress>, Address, B)>,
-{
-    warn!("x86_pae::virt_to_phys_iter() not implemented yet");
-    out.extend(addrs.map(|(addr, buf)| {
-        (
-            // get pdpi
-            // get pgd -> check 2mb page
-            // get pte -> check 4kb page
-            Err(Error::new(
-                "x86_pae::virt_to_phys_iter() not implemented yet",
-            )),
-            addr,
-            buf,
-        )
-    }));
+pub fn get_mmu_spec() -> ArchMMUSpec {
+    ArchMMUSpec {
+        virtual_address_splits: &[2, 9, 9, 12],
+        valid_final_page_steps: &[2, 3],
+        pte_address_bits: (12, 35),
+        pte_size: 8,
+        present_bit: 0,
+        writeable_bit: 1,
+        nx_bit: 63,
+        large_page_bit: 7,
+    }
+}
+
+pub fn page_size() -> Length {
+    page_size_level(1)
+}
+
+pub fn page_size_level(pt_level: u32) -> Length {
+    get_mmu_spec().page_size_level(pt_level as usize)
 }

@@ -41,6 +41,7 @@ impl Keyboard {
         let module_buf = user_process
             .virt_mem
             .virt_read_raw(win32kbase_module_info.base(), win32kbase_module_info.size())?;
+        debug!("fetched {:x} bytes from win32kbase.sys", module_buf.len());
 
         // TODO: lazy
         let pe = PeView::from_bytes(&module_buf).map_err(Error::new)?;
@@ -55,6 +56,7 @@ impl Keyboard {
                 ))
             }
         };
+        debug!("gafAsyncKeyState found at: {:x}", export_addr);
 
         Ok(Self {
             user_process_info,

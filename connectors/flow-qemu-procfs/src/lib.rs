@@ -60,7 +60,7 @@ impl Memory {
                     None
                 }
             })
-            .find(|(_, c)| qemu_arg_opt(c, "-machine", "guest").unwrap_or_default() == name)
+            .find(|(_, c)| qemu_arg_opt(c, "-name", "guest").unwrap_or_default() == name)
             .ok_or_else(|| Error::new("qemu process not found"))?;
         info!(
             "qemu process with name {} found with pid {:?}",

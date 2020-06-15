@@ -58,7 +58,7 @@ impl KernelInfo {
         // so we might read the real dtb here in the future
         let kernel_dtb = start_block.dtb;
         //let kernel_dtb = virt_mem.virt_read_addr(eprocess_base + /*self.offsets.kproc_dtb*/ Length::from(0x18))?;
-        //info!("kernel_dtb={:x}", kernel_dtb);
+        info!("kernel_dtb={:x}", kernel_dtb);
 
         Ok(Self {
             start_block,

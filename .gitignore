@@ -1,5 +1,6 @@
 /target
 **/*.rs.bk
 *.swp
+.vscode
 Cargo.lock
 flow-bench/target

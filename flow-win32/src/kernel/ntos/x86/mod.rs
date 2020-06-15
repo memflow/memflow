@@ -13,18 +13,18 @@ use flow_core::types::{Address, Length};
 use dataview::Pod;
 use pelite::image::IMAGE_DOS_HEADER;
 
-const LENGTH_64MB: Length = Length::from_mb(64);
+const LENGTH_256MB: Length = Length::from_mb(256);
 const LENGTH_8MB: Length = Length::from_mb(8);
 const LENGTH_4KB: Length = Length::from_kb(4);
 
 // https://github.com/ufrisk/MemProcFS/blob/f2d15cf4fe4f19cfeea3dad52971fae2e491064b/vmm/vmmwininit.c#L410
 pub fn find<T: VirtualMemory + ?Sized>(
     virt_mem: &mut T,
-    start_block: &StartBlock,
+    _start_block: &StartBlock,
 ) -> Result<(Address, Length)> {
     debug!("x86::find: trying to find ntoskrnl.exe");
 
-    for base_addr in (0..LENGTH_64MB.as_u64()).step_by(LENGTH_8MB.as_usize()) {
+    for base_addr in (0..LENGTH_256MB.as_u64()).step_by(LENGTH_8MB.as_usize()) {
         let base_addr = Length::from_gb(2).as_u64() + base_addr;
         // search in each page in the first 8mb chunks in the first 64mb of virtual memory
         let mem = virt_mem.virt_read_raw(Address::from(base_addr), LENGTH_8MB)?;
@@ -52,19 +52,14 @@ pub fn find<T: VirtualMemory + ?Sized>(
                             if let Ok(size_of_image) = try_get_pe_size(virt_mem, image_base) {
                                 return Ok((image_base, size_of_image));
                             }
-                        } else {
-                            // continue 'for addr in ...'
                         }
-                    } else {
-                        // vaNtosTry = 0x80000000 + p;
-                        // continue 'for addr in ...'
                     }
                 }
             }
         }
     }
 
-    // return vaNtosTry;
-
-    Err(Error::new("find_x86(): not implemented yet"))
+    Err(Error::new(
+        "find_x86(): unable to locate ntoskrnl.exe in high mem",
+    ))
 }

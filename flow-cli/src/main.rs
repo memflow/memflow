@@ -8,7 +8,7 @@ use cli::*;
 extern crate clap;
 use clap::App;
 
-use log::Level;
+use log::{trace, Level};
 use std::time::Duration;
 
 use flow_core::timed_validator::*;
@@ -68,6 +68,7 @@ fn main() -> Result<()> {
         CachedVirtualTranslate::with(&mut vat, tlb_cache, kernel_info.start_block.arch);
 
     let offsets = Win32Offsets::try_with_guid(&kernel_info.kernel_guid)?;
+    trace!("offsets: {:?}", offsets);
     let mut kernel = Kernel::new(mem_cached, vat_cached, offsets, kernel_info);
 
     let mut win32 = Win32Interface::new(&mut kernel)?;

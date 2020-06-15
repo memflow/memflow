@@ -1,20 +1,17 @@
+mod pehelper;
 mod x64;
 mod x86;
 
 use crate::error::{Error, Result};
 use crate::kernel::StartBlock;
-use crate::pe::{pe64::MemoryPeView, MemoryPeViewContext};
+use crate::pe::{self, MemoryPeViewContext};
 
 use log::warn;
 
 use flow_core::mem::VirtualMemory;
 use flow_core::types::{Address, Length};
 
-use pelite::{
-    self,
-    image::GUID,
-    pe64::{debug::CodeView, Pe},
-};
+use pelite::{self, image::GUID, pe64::debug::CodeView};
 use uuid::{self, Uuid};
 
 pub fn find<T: VirtualMemory + ?Sized>(
@@ -49,12 +46,13 @@ pub struct Win32GUID {
     pub guid: String,
 }
 
+// TODO: move to pe::...
 pub fn find_guid<T: VirtualMemory + ?Sized>(
     virt_mem: &mut T,
     kernel_base: Address,
 ) -> Result<Win32GUID> {
     let ctx = MemoryPeViewContext::new(virt_mem, kernel_base)?;
-    let pe = MemoryPeView::new(&ctx)?;
+    let pe = pe::wrap_memory_pe_view(&ctx)?;
 
     let debug = match pe.debug() {
         Ok(d) => d,

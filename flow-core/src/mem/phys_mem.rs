@@ -1,3 +1,4 @@
+use super::PhysicalMemoryBatcher;
 use crate::types::{Length, PhysicalAddress};
 use crate::Result;
 
@@ -110,6 +111,13 @@ pub trait PhysicalMemory {
         Self: Sized,
     {
         self.phys_write_raw(addr, data.as_bytes())
+    }
+
+    fn get_batcher(&mut self) -> PhysicalMemoryBatcher<Self>
+    where
+        Self: Sized,
+    {
+        PhysicalMemoryBatcher::new(self)
     }
 }
 

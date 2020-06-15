@@ -9,7 +9,9 @@ use std::time::{Duration, Instant};
 use flow_core::mem::cache::{
     CachedMemoryAccess, CachedVirtualTranslate, PageCache, TLBCache, TimedCacheValidator,
 };
-use flow_core::mem::{PhysicalMemory, TranslateArch, VirtualMemory, VirtualTranslate};
+use flow_core::mem::{
+    PhysicalMemory, TranslateArch, VirtualMemory, VirtualMemoryBatcher, VirtualTranslate,
+};
 use flow_core::process::{OsProcessInfo, OsProcessModuleInfo};
 use flow_core::types::{Address, Length, PageType};
 
@@ -60,10 +62,11 @@ fn rwtest<T: VirtualMemory>(
 
                 let now = Instant::now();
                 {
-                    let _ = proc.virt_mem.virt_read_raw_iter(
-                        bufs.iter_mut()
-                            .map(|(buf, addr)| (Address::from(*addr), buf.as_mut_slice())),
-                    );
+                    let mut batcher = proc.virt_mem.get_batcher();
+
+                    for (buf, addr) in bufs.iter_mut() {
+                        batcher.read_raw_into(Address::from(*addr), buf);
+                    }
                 }
                 total_dur += now.elapsed();
                 done_size += *i * *o;

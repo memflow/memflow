@@ -1,6 +1,4 @@
-mod pe;
-use pe::*;
-
+use super::pehelper;
 use crate::error::{Error, Result};
 use crate::kernel::StartBlock;
 
@@ -46,10 +44,13 @@ pub fn find<T: VirtualMemory + ?Sized>(
                 if LittleEndian::read_u64(&mem[(addr + offset) as usize..]) == 0x4544_4f43_4c4f_4f50
                 {
                     let image_base = Address::from(base_addr + addr);
-                    if let Ok(name) = try_get_pe_name(virt_mem, image_base) {
+                    if let Ok(name) = pehelper::try_get_pe_name(virt_mem, image_base) {
                         if name == "ntoskrnl.exe" {
                             println!("ntoskrnl found");
-                            if let Ok(size_of_image) = try_get_pe_size(virt_mem, image_base) {
+                            // TODO: unify pe name + size
+                            if let Ok(size_of_image) =
+                                pehelper::try_get_pe_size(virt_mem, image_base)
+                            {
                                 return Ok((image_base, size_of_image));
                             }
                         }

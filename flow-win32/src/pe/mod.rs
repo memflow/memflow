@@ -3,7 +3,7 @@ pub mod pe64;
 
 use std::cell::{RefCell, UnsafeCell};
 
-use pelite::{util::Align16, Error, PeView, Result};
+use pelite::{util::Align16, Error, PeView, Result, Wrap};
 
 use flow_core::iter::PageChunks;
 use flow_core::mem::VirtualMemory;
@@ -93,5 +93,17 @@ impl<'a, T: VirtualMemory + ?Sized> MemoryPeViewContext<'a, T> {
                 self.image_pages.borrow_mut()[page_idx] = true;
             }
         }
+    }
+}
+
+/// Format agnostic lazy PE view.
+pub type MemoryPeView<'a, T> = Wrap<pe32::MemoryPeView<'a, T>, pe64::MemoryPeView<'a, T>>;
+
+pub fn wrap_memory_pe_view<'a, T: VirtualMemory + ?Sized>(
+    context: &'a MemoryPeViewContext<'a, T>,
+) -> Result<MemoryPeView<'a, T>> {
+    match context.image_format() {
+        PeFormat::Pe32 => Ok(Wrap::T32(pe32::MemoryPeView::new(context)?)),
+        PeFormat::Pe64 => Ok(Wrap::T64(pe64::MemoryPeView::new(context)?)),
     }
 }

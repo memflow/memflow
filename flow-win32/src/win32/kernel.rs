@@ -1,7 +1,7 @@
 use super::{KernelInfo, Win32Process, Win32ProcessInfo};
 use crate::error::{Error, Result};
 use crate::offsets::Win32Offsets;
-use crate::pe::{pe32, pe64, MemoryPeViewContext};
+use crate::pe::{self, pe32, pe64, MemoryPeViewContext};
 
 use log::trace;
 use std::fmt;
@@ -93,6 +93,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
         // TODO: cache pe globally
         // find PsLoadedModuleList
         let loaded_module_list = {
+            // TODO: use pe wrap :)
             let pectx = MemoryPeViewContext::new(&mut reader, self.kernel_info.kernel_base)?;
             match self.kernel_info.start_block.arch.bits() {
                 32 => {
@@ -303,6 +304,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
         for &candidate in candidates.iter() {
             // TODO: properly probe pe header here and check ImageBase
             // TODO: this wont work with tlb
+            //println!("candidate: {:?}", candidate);
             let mut process = Win32Process::with_kernel(self, candidate.clone());
             if let Ok(_) = process
                 .module_info_list()?

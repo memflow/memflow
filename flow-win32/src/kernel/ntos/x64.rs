@@ -1,6 +1,4 @@
-mod pe;
-use pe::*;
-
+use super::pehelper;
 use crate::error::{Error, Result};
 use crate::kernel::StartBlock;
 
@@ -57,7 +55,7 @@ pub fn find_with_va<T: VirtualMemory + ?Sized>(
             .find(|(i, _, _)| {
                 let probe_addr =
                     Address::from(va_base + (*i as u64) * architecture::x64::page_size().as_u64());
-                let name = try_get_pe_name(virt_mem, probe_addr).unwrap_or_default();
+                let name = pehelper::try_get_pe_name(virt_mem, probe_addr).unwrap_or_default();
                 name == "ntoskrnl.exe"
             })
             .ok_or_else(|| {
@@ -67,8 +65,9 @@ pub fn find_with_va<T: VirtualMemory + ?Sized>(
 
         match res {
             Ok(a) => {
+                // TODO: unify pe name + size
                 let addr = Address::from(a);
-                let size_of_image = try_get_pe_size(virt_mem, addr)?;
+                let size_of_image = pehelper::try_get_pe_size(virt_mem, addr)?;
                 return Ok((addr, size_of_image));
             }
             Err(e) => {

@@ -50,7 +50,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
             &mut self.phys_mem,
             self.kernel_info.start_block.arch,
             self.kernel_info.start_block.arch,
-            self.kernel_info.start_block.dtb,
+            self.kernel_info.kernel_dtb,
             &mut self.vat,
         );
 
@@ -86,7 +86,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
             &mut self.phys_mem,
             self.kernel_info.start_block.arch,
             self.kernel_info.start_block.arch,
-            self.kernel_info.start_block.dtb,
+            self.kernel_info.kernel_dtb,
             &mut self.vat,
         );
 
@@ -148,7 +148,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
 
             pid: 0,
             name: "ntoskrnl.exe".to_string(),
-            dtb: self.kernel_info.start_block.dtb,
+            dtb: self.kernel_info.kernel_dtb,
             wow64: Address::null(),
 
             peb: Address::null(),
@@ -169,7 +169,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
             &mut self.phys_mem,
             self.kernel_info.start_block.arch,
             self.kernel_info.start_block.arch,
-            self.kernel_info.start_block.dtb,
+            self.kernel_info.kernel_dtb,
             &mut self.vat,
         );
 

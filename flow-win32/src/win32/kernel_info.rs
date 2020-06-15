@@ -13,6 +13,7 @@ pub struct KernelInfo {
     pub kernel_base: Address,
     pub kernel_size: Length,
     pub kernel_guid: Win32GUID,
+    pub kernel_dtb: Address,
 
     pub eprocess_base: Address,
 }
@@ -52,12 +53,20 @@ impl KernelInfo {
         let eprocess_base = kernel::sysproc::find(&mut virt_mem, &start_block, kernel_base)?;
         info!("eprocess_base={:x}", eprocess_base);
 
+        // start_block only contains the winload's dtb which might
+        // be different to the one used in the actual kernel
+        // so we might read the real dtb here in the future
+        let kernel_dtb = start_block.dtb;
+        //let kernel_dtb = virt_mem.virt_read_addr(eprocess_base + /*self.offsets.kproc_dtb*/ Length::from(0x18))?;
+        //info!("kernel_dtb={:x}", kernel_dtb);
+
         Ok(Self {
             start_block,
 
             kernel_base,
             kernel_size,
             kernel_guid,
+            kernel_dtb,
 
             eprocess_base,
         })

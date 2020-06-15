@@ -2,6 +2,8 @@
 mod masks;
 use masks::*;
 
+use log::trace;
+
 use crate::types::{Address, Length, PageType, PhysicalAddress};
 
 pub struct ArchMMUSpec {
@@ -40,6 +42,9 @@ impl ArchMMUSpec {
 
     pub fn pte_addr_mask(&self, pte_addr: Address) -> u64 {
         let (min, max) = self.pte_address_bits;
+        if cfg!(feature = "trace_mmu") {
+            trace!("pte_addr_mask={:b}", make_bit_mask(min, max));
+        }
         pte_addr.as_u64() & make_bit_mask(min, max)
     }
 
@@ -51,6 +56,9 @@ impl ArchMMUSpec {
 
     fn virt_addr_to_pte_offset(&self, virt_addr: Address, step: usize) -> u64 {
         let (min, max) = self.virt_addr_bit_range(step);
+        if cfg!(feature = "trace_mmu") {
+            trace!("virt_addr_bit_range for step {} = ({}, {})", step, min, max);
+        }
 
         let shifted = virt_addr.as_u64() >> min;
         let mask = make_bit_mask(0, max - min - 1);
@@ -113,6 +121,7 @@ impl ArchMMUSpec {
 
     pub fn is_final_mapping(&self, pte_addr: Address, step: usize) -> bool {
         (step == self.virtual_address_splits.len() - 1)
-            || get_bit!(pte_addr.as_u64(), self.large_page_bit)
+            || (get_bit!(pte_addr.as_u64(), self.large_page_bit)
+                && self.valid_final_page_steps.binary_search(&step).is_ok())
     }
 }

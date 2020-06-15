@@ -1,6 +1,6 @@
 use super::StartBlock;
 use crate::error::{Error, Result};
-use crate::pe::{pe64::MemoryPeView, MemoryPeViewContext};
+use crate::pe::{self, MemoryPeViewContext};
 
 use log::{debug, info, warn};
 
@@ -42,8 +42,8 @@ pub fn find_exported<T: VirtualMemory + ?Sized>(
 ) -> Result<Address> {
     // PsInitialSystemProcess -> PsActiveProcessHead
     let ctx = MemoryPeViewContext::new(virt_mem, kernel_base)?;
-    let pe = MemoryPeView::new(&ctx)?;
-    let sys_proc = match pe.get_export("PsInitialSystemProcess")? {
+    let pe = pe::wrap_memory_pe_view(&ctx)?;
+    let sys_proc = match pe.get_export_by_name("PsInitialSystemProcess")? {
         Export::Symbol(s) => kernel_base + Length::from(*s),
         Export::Forward(_) => {
             return Err(Error::new(
@@ -97,5 +97,7 @@ pub fn find_in_section<T: VirtualMemory + ?Sized>(
         .ok_or_else(|| Error::new("unable to find section ALMOSTRO"))?;
     */
 
-    Err(Error::new("not implemented yet"))
+    Err(Error::new(
+        "sysproc::find_in_section(): not implemented yet",
+    ))
 }

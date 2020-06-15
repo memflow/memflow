@@ -1,0 +1,10 @@
+load kernel syms:
+.sympath srv*https://msdl.microsoft.com/download/symbols
+.reload /f
+
+get eprocess of a proc:
+!process 0 0
+or
+!process calc.exe
+then
+dt nt!_EPROCESS <address>

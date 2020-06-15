@@ -25,3 +25,7 @@ harness = false
 [[bench]]
 name = "read_win32"
 harness = false
+
+[[bench]]
+name = "batcher"
+harness = false

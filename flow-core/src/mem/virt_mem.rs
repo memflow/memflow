@@ -1,6 +1,7 @@
 pub mod virt_from_phys;
 pub use virt_from_phys::VirtualFromPhysical;
 
+use super::VirtualMemoryBatcher;
 use crate::error::Result;
 use crate::types::{Address, Length, Page, Pointer32, Pointer64};
 
@@ -174,6 +175,13 @@ pub trait VirtualMemory {
         offsets
             .iter()
             .try_fold(base_addr, |c, &a| self.virt_read_addr64(c + a))
+    }
+
+    fn get_batcher(&mut self) -> VirtualMemoryBatcher<Self>
+    where
+        Self: Sized,
+    {
+        VirtualMemoryBatcher::new(self)
     }
 }
 

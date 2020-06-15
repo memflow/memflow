@@ -25,9 +25,11 @@ pub fn find<T: VirtualMemory + ?Sized>(
     debug!("x86::find: trying to find ntoskrnl.exe");
 
     for base_addr in (0..LENGTH_64MB.as_u64()).step_by(LENGTH_8MB.as_usize()) {
+        let base_addr = Length::from_gb(2).as_u64() + base_addr;
         // search in each page in the first 8mb chunks in the first 64mb of virtual memory
         let mem = virt_mem.virt_read_raw(Address::from(base_addr), LENGTH_8MB)?;
-        for addr in (base_addr..LENGTH_8MB.as_u64()).step_by(LENGTH_4KB.as_usize()) {
+
+        for addr in (0..LENGTH_8MB.as_u64()).step_by(LENGTH_4KB.as_usize()) {
             // TODO: potential endian mismatch in pod
             let view = Pod::as_data_view(&mem[addr as usize..]);
 
@@ -43,9 +45,13 @@ pub fn find<T: VirtualMemory + ?Sized>(
             for offset in (0..0x800).step_by(8) {
                 if LittleEndian::read_u64(&mem[(addr + offset) as usize..]) == 0x4544_4f43_4c4f_4f50
                 {
-                    if let Ok(name) = try_get_pe_name(virt_mem, Address::from(addr + offset)) {
+                    let image_base = Address::from(base_addr + addr);
+                    if let Ok(name) = try_get_pe_name(virt_mem, image_base) {
                         if name == "ntoskrnl.exe" {
                             println!("ntoskrnl found");
+                            if let Ok(size_of_image) = try_get_pe_size(virt_mem, image_base) {
+                                return Ok((image_base, size_of_image));
+                            }
                         } else {
                             // continue 'for addr in ...'
                         }

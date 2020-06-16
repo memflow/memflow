@@ -122,10 +122,10 @@ impl Memory {
         data: &[u8],
         liov: &mut iovec,
         riov: &mut iovec,
-        map_address: u64,
+        map_address: (u64, u64),
         hw_offset: u64,
-    ) {
-        let ofs = map_address + {
+    ) -> bool {
+        let ofs = map_address.0 + {
             if addr.as_u64() <= LENGTH_2GB.as_u64() {
                 addr.as_u64()
             } else {
@@ -133,15 +133,34 @@ impl Memory {
             }
         };
 
+        let iov_len = if ofs < map_address.0 || ofs + data.len() as u64 > map_address.1 {
+            0
+        } else {
+            data.len()
+        };
+
         *liov = iovec {
             iov_base: data.as_ptr() as *mut c_void,
-            iov_len: data.len(),
+            iov_len,
         };
 
         *riov = iovec {
             iov_base: ofs as *mut c_void,
-            iov_len: data.len(),
+            iov_len,
         };
+
+        iov_len == data.len()
+    }
+
+    fn vm_error() -> Error {
+        match unsafe { *libc::__errno_location() } {
+            libc::EFAULT => Error::new("process_vm_readv failed: EFAULT (remote memory address is invalid)"),
+            libc::ENOMEM => Error::new("process_vm_readv failed: ENOMEM (unable to allocate memory for internal copies)"),
+            libc::EPERM => Error::new("process_vm_readv failed: EPERM (insifficient permissions to access the target address space)"),
+            libc::ESRCH => Error::new("process_vm_readv failed: ESRCH (process not found)"),
+            libc::EINVAL => Error::new("process_vm_readv failed: EINVAL (invalid value)"),
+            _ => Error::new("process_vm_readv failed: unknown error")
+        }
     }
 }
 
@@ -158,14 +177,16 @@ impl PhysicalMemory for Memory {
         while let Some((addr, out)) = elem {
             let (cnt, (liov, riov)) = iov_next.unwrap();
 
-            Self::fill_iovec(
+            if !Self::fill_iovec(
                 &addr,
                 out,
                 liov,
                 riov,
-                self.map.address.0,
+                self.map.address,
                 self.hw_offset.as_u64(),
-            );
+            ) {
+                //We might want to zero out the memory here
+            }
 
             iov_next = iov_iter.next();
             elem = iter.next();
@@ -182,7 +203,7 @@ impl PhysicalMemory for Memory {
                     )
                 } == -1
                 {
-                    return Err(Error::new("process_vm_readv failed"));
+                    return Err(Self::vm_error());
                 }
 
                 iov_iter = iov_local.iter_mut().zip(iov_remote.iter_mut()).enumerate();
@@ -213,7 +234,7 @@ impl PhysicalMemory for Memory {
                 out,
                 liov,
                 riov,
-                self.map.address.0,
+                self.map.address,
                 self.hw_offset.as_u64(),
             );
 
@@ -232,7 +253,7 @@ impl PhysicalMemory for Memory {
                     )
                 } == -1
                 {
-                    return Err(Error::new("process_vm_writev failed"));
+                    return Err(Self::vm_error());
                 }
 
                 iov_iter = iov_local.iter_mut().zip(iov_remote.iter_mut()).enumerate();

@@ -35,12 +35,3 @@ pub use process::*;
 
 pub mod iter;
 pub use iter::*;
-
-//pub mod cpu;
-//pub mod net;
-
-// bridge
-// TODO: can we put this in bridge somehow?
-
-pub mod ida_pattern;
-pub use ida_pattern::*;

@@ -19,7 +19,7 @@ pub fn get_mmu_spec() -> ArchMMUSpec {
     ArchMMUSpec {
         virtual_address_splits: &[10, 10, 12],
         valid_final_page_steps: &[1, 2],
-        pte_address_bits: (12, 31),
+        address_space_bits: 32,
         pte_size: 4,
         present_bit: 0,
         writeable_bit: 1,

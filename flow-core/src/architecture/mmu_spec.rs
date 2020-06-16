@@ -9,7 +9,7 @@ use crate::types::{Address, Length, PageType, PhysicalAddress};
 pub struct ArchMMUSpec {
     pub virtual_address_splits: &'static [u8],
     pub valid_final_page_steps: &'static [usize],
-    pub pte_address_bits: (u8, u8),
+    pub address_space_bits: u8,
     pub pte_size: usize,
     pub present_bit: u8,
     pub writeable_bit: u8,
@@ -21,7 +21,7 @@ impl ArchMMUSpec {
     pub const fn new(
         virtual_address_splits: &'static [u8],
         valid_final_page_steps: &'static [usize],
-        pte_address_bits: (u8, u8),
+        address_space_bits: u8,
         pte_size: usize,
         present_bit: u8,
         writeable_bit: u8,
@@ -31,7 +31,7 @@ impl ArchMMUSpec {
         ArchMMUSpec {
             virtual_address_splits,
             valid_final_page_steps,
-            pte_address_bits,
+            address_space_bits,
             pte_size,
             present_bit,
             writeable_bit,
@@ -40,12 +40,19 @@ impl ArchMMUSpec {
         }
     }
 
-    pub fn pte_addr_mask(&self, pte_addr: Address) -> u64 {
-        let (min, max) = self.pte_address_bits;
+    pub fn pte_addr_mask(&self, pte_addr: Address, step: usize) -> u64 {
+        let max = self.address_space_bits - 1;
+        let min = self.virtual_address_splits[step]
+            + if step == self.virtual_address_splits.len() - 1 {
+                0
+            } else {
+                self.pte_size.to_le().trailing_zeros() as u8
+            };
+        let mask = make_bit_mask(min, max);
         if cfg!(feature = "trace_mmu") {
-            trace!("pte_addr_mask={:b}", make_bit_mask(min, max));
+            trace!("pte_addr_mask={:b}", mask);
         }
-        pte_addr.as_u64() & make_bit_mask(min, max)
+        pte_addr.as_u64() & mask
     }
 
     fn virt_addr_bit_range(&self, step: usize) -> (u8, u8) {
@@ -81,7 +88,9 @@ impl ArchMMUSpec {
     }
 
     pub fn vtop_step(&self, pte_addr: Address, virt_addr: Address, step: usize) -> Address {
-        Address::from(self.pte_addr_mask(pte_addr) | self.virt_addr_to_pte_offset(virt_addr, step))
+        Address::from(
+            self.pte_addr_mask(pte_addr, step) | self.virt_addr_to_pte_offset(virt_addr, step),
+        )
     }
 
     pub fn page_size_step_unchecked(&self, step: usize) -> Length {
@@ -105,7 +114,7 @@ impl ArchMMUSpec {
         step: usize,
     ) -> PhysicalAddress {
         let phys_addr = Address::from(
-            self.pte_addr_mask(pte_addr) | self.virt_addr_to_page_offset(virt_addr, step),
+            self.pte_addr_mask(pte_addr, step) | self.virt_addr_to_page_offset(virt_addr, step),
         );
 
         PhysicalAddress::with_page(

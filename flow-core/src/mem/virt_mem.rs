@@ -150,33 +150,6 @@ pub trait VirtualMemory {
         Ok(String::from(v.to_string_lossy()))
     }
 
-    // TODO: chain reading should be obsolete and replaced by something more general
-    fn virt_read_addr32_chain(
-        &mut self,
-        base_addr: Address,
-        offsets: Vec<Length>,
-    ) -> Result<Address>
-    where
-        Self: Sized,
-    {
-        offsets
-            .iter()
-            .try_fold(base_addr, |c, &a| self.virt_read_addr32(c + a))
-    }
-
-    fn virt_read_addr64_chain(
-        &mut self,
-        base_addr: Address,
-        offsets: Vec<Length>,
-    ) -> Result<Address>
-    where
-        Self: Sized,
-    {
-        offsets
-            .iter()
-            .try_fold(base_addr, |c, &a| self.virt_read_addr64(c + a))
-    }
-
     fn get_batcher(&mut self) -> VirtualMemoryBatcher<Self>
     where
         Self: Sized,

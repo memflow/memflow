@@ -4,7 +4,7 @@ use std::io::{self, Write};
 use flow_core::*;
 use flow_win32::*;
 
-use pelite::{self, pe64::Pe as Pe64, PeView};
+use pelite::{self, PeView};
 
 pub struct Win32Interface<'a, T, V>
 where
@@ -257,7 +257,7 @@ where
         )
         .unwrap();
         // TODO: decide wether to use pe64 or pe32 based on process arch
-        let pe = pe64::MemoryPeView::new(&ctx).unwrap();
+        let pe = pe::wrap_memory_pe_view(&ctx).unwrap();
 
         let exports = pe.exports().unwrap();
 

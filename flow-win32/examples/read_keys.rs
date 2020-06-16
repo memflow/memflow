@@ -20,10 +20,10 @@ pub fn main() -> Result<()> {
     let offsets = Win32Offsets::try_with_guid(&kernel_info.kernel_guid)?;
     let mut kernel = Kernel::new(mem_sys, vat, offsets, kernel_info);
 
-    let kbd = Keyboard::with(&mut kernel)?;
+    let kbd = Keyboard::try_with(&mut kernel)?;
 
     loop {
-        let kbs = kbd.state(&mut kernel)?;
+        let kbs = kbd.state_with_kernel(&mut kernel)?;
         println!("{:?}", kbs.is_down(win_key_codes::VK_SPACE));
         thread::sleep(time::Duration::from_millis(1000));
     }

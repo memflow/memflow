@@ -282,7 +282,7 @@ impl Architecture {
         spec: &ArchMMUSpec,
         step: usize,
         addrs: &mut BumpVec<(Address, B, Address, [u8; 8])>,
-    ) {
+    ) -> Result<()> {
         let page_size = spec.pt_leaf_size(step);
 
         vtop_trace!("pt_leaf_size = {}", page_size);
@@ -293,12 +293,13 @@ impl Architecture {
                 PhysicalAddress::with_page(*pt_addr, PageType::PAGE_TABLE, page_size),
                 &mut arr[..],
             )
-        }))
-        .ok();
+        }))?;
 
         addrs
             .iter_mut()
             .for_each(|(_, _, pt_addr, buf)| *pt_addr = Address::from(LittleEndian::read_u64(buf)));
+
+        Ok(())
     }
 
     fn virt_to_phys_iter_with_mmu<T, B, VI, OV>(
@@ -375,8 +376,16 @@ impl Architecture {
 
             if data_to_translate.is_empty() {
                 break;
-            } else {
-                Self::read_pt_address_iter(mem, &spec, pt_step, &mut data_to_translate);
+            } else if let Err(err) =
+                Self::read_pt_address_iter(mem, &spec, pt_step, &mut data_to_translate)
+            {
+                vtop_trace!("read_pt_address_iter failue: {}", err);
+                out.extend(
+                    data_to_translate
+                        .into_iter()
+                        .map(|(addr, buf, _, _)| (Err(Error::from(err.to_string())), addr, buf)),
+                );
+                return ();
             }
         }
 

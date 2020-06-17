@@ -4,6 +4,10 @@ memflow - machine introspection framework
 
 #
 
+![Build and test](https://github.com/memflow/memflow/workflows/Build%20and%20test/badge.svg?branch=master)
+
+#
+
 ## building
 - install capnp package (soon to be removed for default builds)
 - run `cargo build --release --all --all-features` to build everything

@@ -15,6 +15,11 @@ jobs:
       uses: actions/cache@v1
       env:
         cache-name: cargo-build-target
+      with:
+        path: target
+        key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-${{ env.cache-name }}-
     - name: Build
       run: cargo build --all --all-features --verbose
     - name: Build examples
@@ -28,6 +33,11 @@ jobs:
       uses: actions/cache@v1
       env:
         cache-name: cargo-build-target
+      with:
+        path: target
+        key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-${{ env.cache-name }}-
     - name: Run all tests
       run: cargo test --all --all-features --verbose
 
@@ -40,6 +50,11 @@ jobs:
       uses: actions/cache@v1
       env:
         cache-name: cargo-build-target
+      with:
+        path: target
+        key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-${{ env.cache-name }}-
     - name: Check formatting
       run: cargo fmt -- --check
     - uses: actions-rs/clippy-check@v1
@@ -60,11 +75,13 @@ jobs:
           key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-${{ env.cache-name }}-
+      - name: Build
+        run: cargo build --all --all-features --verbose
       - name: Download grcov
         run: |
           curl -L https://github.com/mozilla/grcov/releases/latest/download/grcov-linux-x86_64.tar.bz2 | tar jxf -
       - name: Run tests with coverage
         run: |
           export PATH=$PATH:.
-          make coverage-lcov COVERAGE_CACHE=1
+          COVERAGE_CACHE=1 grcov ./target/debug/ -s . -t lcov --llvm --branch --ignore-not-existing -o ./target/debug/$@.txt
           bash <(curl -s https://codecov.io/bash) -s ./target/cov/ -t ${CODECOV_TOKEN};

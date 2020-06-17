@@ -82,7 +82,7 @@ fn read_test_with_ctx<
 ) {
     let tlb_cache = TLBCache::new(
         2048.into(),
-        TimedCacheValidator::new(Duration::from_millis(1000).into()),
+        TimedCacheValidator::new(Duration::from_millis(1000)),
     );
 
     if cache_size > 0 {
@@ -90,7 +90,7 @@ fn read_test_with_ctx<
             proc.sys_arch(),
             Length::from_mb(cache_size),
             PageType::PAGE_TABLE | PageType::READ_ONLY | PageType::WRITEABLE,
-            TimedCacheValidator::new(Duration::from_millis(10000).into()),
+            TimedCacheValidator::new(Duration::from_millis(10000)),
         );
 
         if use_tlb {

@@ -76,7 +76,7 @@ fn read_test_with_ctx<T: PhysicalMemory>(
             Architecture::X64,
             Length::from_mb(cache_size),
             PageType::PAGE_TABLE | PageType::READ_ONLY | PageType::WRITEABLE,
-            TimedCacheValidator::new(Duration::from_millis(10000).into()),
+            TimedCacheValidator::new(Duration::from_millis(10000)),
         );
 
         let mut mem = CachedMemoryAccess::with(&mut mem, cache);

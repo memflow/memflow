@@ -273,7 +273,7 @@ mod tests {
     fn test_name() {
         assert_eq!(
             qemu_arg_opt(
-                &vec!["-name".to_string(), "win10-test".to_string()],
+                &["-name".to_string(), "win10-test".to_string()],
                 "-name",
                 "guest"
             ),
@@ -281,7 +281,7 @@ mod tests {
         );
         assert_eq!(
             qemu_arg_opt(
-                &vec![
+                &[
                     "-test".to_string(),
                     "-name".to_string(),
                     "win10-test".to_string()
@@ -293,7 +293,7 @@ mod tests {
         );
         assert_eq!(
             qemu_arg_opt(
-                &vec!["-name".to_string(), "win10-test,arg=opt".to_string()],
+                &["-name".to_string(), "win10-test,arg=opt".to_string()],
                 "-name",
                 "guest"
             ),
@@ -301,7 +301,7 @@ mod tests {
         );
         assert_eq!(
             qemu_arg_opt(
-                &vec!["-name".to_string(), "guest=win10-test,arg=opt".to_string()],
+                &["-name".to_string(), "guest=win10-test,arg=opt".to_string()],
                 "-name",
                 "guest"
             ),
@@ -309,7 +309,7 @@ mod tests {
         );
         assert_eq!(
             qemu_arg_opt(
-                &vec!["-name".to_string(), "arg=opt,guest=win10-test".to_string()],
+                &["-name".to_string(), "arg=opt,guest=win10-test".to_string()],
                 "-name",
                 "guest"
             ),
@@ -317,7 +317,7 @@ mod tests {
         );
         assert_eq!(
             qemu_arg_opt(
-                &vec!["-name".to_string(), "arg=opt".to_string()],
+                &["-name".to_string(), "arg=opt".to_string()],
                 "-name",
                 "guest"
             ),
@@ -329,7 +329,7 @@ mod tests {
     fn test_machine() {
         assert_eq!(
             qemu_arg_opt(
-                &vec!["-machine".to_string(), "q35".to_string()],
+                &["-machine".to_string(), "q35".to_string()],
                 "-machine",
                 "type"
             ),
@@ -337,7 +337,7 @@ mod tests {
         );
         assert_eq!(
             qemu_arg_opt(
-                &vec![
+                &[
                     "-test".to_string(),
                     "-machine".to_string(),
                     "q35".to_string()
@@ -349,7 +349,7 @@ mod tests {
         );
         assert_eq!(
             qemu_arg_opt(
-                &vec!["-machine".to_string(), "q35,arg=opt".to_string()],
+                &["-machine".to_string(), "q35,arg=opt".to_string()],
                 "-machine",
                 "type"
             ),
@@ -357,7 +357,7 @@ mod tests {
         );
         assert_eq!(
             qemu_arg_opt(
-                &vec!["-machine".to_string(), "type=pc,arg=opt".to_string()],
+                &["-machine".to_string(), "type=pc,arg=opt".to_string()],
                 "-machine",
                 "type"
             ),
@@ -365,7 +365,7 @@ mod tests {
         );
         assert_eq!(
             qemu_arg_opt(
-                &vec![
+                &[
                     "-machine".to_string(),
                     "arg=opt,type=pc-i1440fx".to_string()
                 ],
@@ -376,7 +376,7 @@ mod tests {
         );
         assert_eq!(
             qemu_arg_opt(
-                &vec!["-machine".to_string(), "arg=opt".to_string()],
+                &["-machine".to_string(), "arg=opt".to_string()],
                 "-machine",
                 "type"
             ),

@@ -23,7 +23,7 @@ impl<'a, T: VirtualMemory + ?Sized> Copy for MemoryPeView<'a, T> {}
 impl<'a, T: VirtualMemory + ?Sized> Clone for MemoryPeView<'a, T> {
     fn clone(&self) -> Self {
         Self {
-            context: self.context.clone(),
+            context: self.context,
         }
     }
 }
@@ -131,11 +131,7 @@ unsafe impl<'a, T: VirtualMemory + ?Sized> Pe<'a> for MemoryPeView<'a, T> {
             let start = rva as usize;
             if rva == 0 {
                 Err(Error::Null)
-            }
-            //else if !usize::wrapping_add(image.as_ptr() as usize, start).aligned_to(align_of) {
-            //                Err(Error::Misaligned)
-            //          }
-            else if start + min_size_of > (*self.context.image_cache.get()).len() {
+            } else if start + min_size_of > (*self.context.image_cache.get()).len() {
                 Err(Error::Bounds)
             } else {
                 // TODO: remember cache

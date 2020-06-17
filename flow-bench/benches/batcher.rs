@@ -67,10 +67,10 @@ fn read_test_batcher<T: PhysicalMemory>(
     let mut batcher = mem.get_batcher();
     batcher.read_prealloc(chunk_size);
 
-    for i in 0..chunk_size {
+    for i in unsafe { TSLICE.iter_mut().take(chunk_size) } {
         batcher.read_into(
             (base_addr + Length::from(rng.gen_range(0, 0x2000))).into(),
-            unsafe { &mut TSLICE[i] },
+            i,
         );
     }
 

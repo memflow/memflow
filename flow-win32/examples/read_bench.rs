@@ -9,9 +9,7 @@ use std::time::{Duration, Instant};
 use flow_core::mem::cache::{
     CachedMemoryAccess, CachedVirtualTranslate, PageCache, TLBCache, TimedCacheValidator,
 };
-use flow_core::mem::{
-    PhysicalMemory, TranslateArch, VirtualMemory, VirtualMemoryBatcher, VirtualTranslate,
-};
+use flow_core::mem::{PhysicalMemory, TranslateArch, VirtualMemory, VirtualTranslate};
 use flow_core::process::{OsProcessInfo, OsProcessModuleInfo};
 use flow_core::types::{Address, Length, PageType};
 

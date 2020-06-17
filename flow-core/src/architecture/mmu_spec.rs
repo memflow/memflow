@@ -46,36 +46,6 @@ pub struct ArchMMUSpec {
 }
 
 impl ArchMMUSpec {
-    pub fn new(
-        virtual_address_splits: &'static [u8],
-        valid_final_page_steps: &'static [usize],
-        address_space_bits: u8,
-        pte_size: usize,
-        present_bit: u8,
-        writeable_bit: u8,
-        nx_bit: u8,
-        large_page_bit: u8,
-    ) -> ArchMMUSpec {
-        debug_assert!(
-            valid_final_page_steps
-                .iter()
-                .try_fold(0, |prev, &cur| if prev < cur { Ok(cur) } else { Err(()) })
-                .is_ok(),
-            "ArchMMUSpec::new(): valid_final_page_steps is not sorted"
-        );
-
-        ArchMMUSpec {
-            virtual_address_splits,
-            valid_final_page_steps,
-            address_space_bits,
-            pte_size,
-            present_bit,
-            writeable_bit,
-            nx_bit,
-            large_page_bit,
-        }
-    }
-
     /// Mask a page table entry address to retrieve the next page table entry
     ///
     /// This function uses virtual_address_splits to mask the first bits out in `pte_addr`, but

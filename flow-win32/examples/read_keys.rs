@@ -1,5 +1,4 @@
 use log::Level;
-use simple_logger;
 use std::{thread, time};
 
 use flow_core::error::Result;

@@ -306,12 +306,13 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
             // TODO: this wont work with tlb
             //println!("candidate: {:?}", candidate);
             let mut process = Win32Process::with_kernel(self, candidate.clone());
-            if let Ok(_) = process
+            if process
                 .module_info_list()?
                 .iter()
                 .inspect(|&module| println!("{:x} {}", module.base(), module.name()))
                 .find(|&module| module.name().to_lowercase() == name.to_lowercase())
                 .ok_or_else(|| Error::new(format!("unable to find module {}", name)))
+                .is_ok()
             {
                 return Ok(candidate.clone());
             }

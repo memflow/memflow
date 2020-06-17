@@ -68,6 +68,8 @@ impl<'a, T: VirtualMemory + ?Sized> MemoryPeViewContext<'a, T> {
         self.image_format
     }
 
+    // TODO: Remove this allow when docs get written
+    #[allow(clippy::missing_safety_doc)]
     pub unsafe fn update_cache(&self, addr: Address, mut len: Length) {
         if len.is_zero() {
             // this is a string read, we just estimate the length of the string here

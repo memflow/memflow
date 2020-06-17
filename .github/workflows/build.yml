@@ -45,7 +45,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
-    - run: rustup component add clippy
     - name: Cache cargo build
       uses: actions/cache@v1
       env:
@@ -55,6 +54,7 @@ jobs:
         key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/Cargo.lock') }}
         restore-keys: |
           ${{ runner.os }}-${{ env.cache-name }}-
+    - run: rustup component add clippy
     - name: Check formatting
       run: cargo fmt -- --check
     - uses: actions-rs/clippy-check@v1
@@ -66,6 +66,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+      - name: Set up Rust nightly
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly
+          override: true
       - name: Cache cargo build
         uses: actions/cache@v1
         env:
@@ -75,15 +81,13 @@ jobs:
           key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-${{ env.cache-name }}-
-      - name: Download grcov
-        run: |
-          curl -L https://github.com/mozilla/grcov/releases/latest/download/grcov-linux-x86_64.tar.bz2 | tar jxf -
+      - run: cargo install grcov
       - name: Run tests with coverage
         run: |
           export CARGO_INCREMENTAL=0
-          export RUSTFLAGS="-Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort"
+          export RUSTFLAGS="-Zprofile -Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off -Zpanic_abort_tests -Cpanic=abort"
           export RUSTDOCFLAGS="-Cpanic=abort"
           cargo build --all --all-features
           cargo test --all --all-features
-          grcov ./target/debug/ -s . -t lcov --llvm --branch --ignore-not-existing -o ./target/debug/coverage/
-          bash <(curl -s https://codecov.io/bash) -s ./target/debug/coverage/ -t ${CODECOV_TOKEN};
+          grcov ./target/debug/ -s . -t lcov --llvm --branch --ignore-not-existing -o ./target/debug/coverage
+          bash <(curl -s https://codecov.io/bash) -s ./target/debug/coverage -t ${CODECOV_TOKEN};

@@ -75,13 +75,15 @@ jobs:
           key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-${{ env.cache-name }}-
-      - name: Build
-        run: cargo build --all --all-features --verbose
       - name: Download grcov
         run: |
           curl -L https://github.com/mozilla/grcov/releases/latest/download/grcov-linux-x86_64.tar.bz2 | tar jxf -
       - name: Run tests with coverage
         run: |
-          export PATH=$PATH:.
-          COVERAGE_CACHE=1 grcov ./target/debug/ -s . -t lcov --llvm --branch --ignore-not-existing -o ./target/debug/$@.txt
-          bash <(curl -s https://codecov.io/bash) -s ./target/cov/ -t ${CODECOV_TOKEN};
+          export CARGO_INCREMENTAL=0
+          export RUSTFLAGS="-Zprofile -Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off -Zpanic_abort_tests -Cpanic=abort"
+          export RUSTDOCFLAGS="-Cpanic=abort"
+          cargo build --all --all-features
+          cargo test --all --all-features
+          grcov ./target/debug/ -s . -t lcov --llvm --branch --ignore-not-existing -o ./target/debug/coverage/
+          bash <(curl -s https://codecov.io/bash) -s ./target/debug/coverage/ -t ${CODECOV_TOKEN};

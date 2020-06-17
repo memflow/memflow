@@ -1,5 +1,5 @@
 #[macro_use]
-mod masks;
+pub mod masks;
 use masks::*;
 
 use log::trace;

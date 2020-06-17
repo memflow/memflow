@@ -17,15 +17,17 @@ either = "1.5.3"
 arrayvec = "0.5.1"
 x86_64 = { version = "0.11.0", optional = true, default-features = false, features = ["stable"] }
 rand = { version = "0.7.3", optional = true }
+rand_xorshift = { version = "0.2.0", optional = true }
 bumpalo = { version = "3.3.0", features = ["collections"] }
 
 [dev-dependencies]
 x86_64 = { version = "0.11.0", default-features = false, features = ["stable"] }
 rand = { version = "0.7.3" }
+rand_xorshift = "0.2.0"
 
 [features]
 default = []
 trace_mmu = [] # enables debug traces in the mmu (very verbose)
-dummy_mem = ["x86_64", "rand"]
+dummy_mem = ["x86_64", "rand", "rand_xorshift"]
 bridge = [] # enables the connector bridge (requires tokio)
 #emulator = ["unicorn"] # enables the process emulator (requires unicorn engine)

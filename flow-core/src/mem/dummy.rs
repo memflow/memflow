@@ -5,7 +5,8 @@ use crate::process::{OsProcessInfo, OsProcessModuleInfo};
 use crate::types::{Address, Length};
 
 use rand::seq::SliceRandom;
-use rand::{thread_rng, Rng};
+use rand::{thread_rng, Rng, SeedableRng};
+use rand_xorshift::XorShiftRng;
 use std::collections::VecDeque;
 
 use x86_64::{
@@ -147,6 +148,7 @@ pub struct DummyMemory {
     page_list: VecDeque<PageInfo>,
     pt_pages: Vec<PageInfo>,
     last_pid: i32,
+    rng: XorShiftRng,
 }
 
 impl PhysicalMemory for DummyMemory {
@@ -191,6 +193,14 @@ where
 
 impl DummyMemory {
     pub fn new(size: Length) -> Self {
+        Self::with_rng(size, SeedableRng::from_rng(thread_rng()).unwrap())
+    }
+
+    pub fn with_seed(size: Length, seed: u64) -> Self {
+        Self::with_rng(size, SeedableRng::seed_from_u64(seed))
+    }
+
+    pub fn with_rng(size: Length, mut rng: XorShiftRng) -> Self {
         let mem = vec![0_u8; size.as_usize()].into_boxed_slice();
 
         let mut page_prelist = vec![];
@@ -231,10 +241,10 @@ impl DummyMemory {
         let mut split = [2, 0, 0].to_vec();
 
         for _ in 0..2 {
-            page_prelist.shuffle(&mut thread_rng());
+            page_prelist.shuffle(&mut rng);
             for i in page_prelist {
                 let mut list = if split[i.size.to_idx()] == 0
-                    || (split[i.size.to_idx()] != 2 && thread_rng().gen::<bool>())
+                    || (split[i.size.to_idx()] != 2 && rng.gen::<bool>())
                 {
                     split[i.size.to_idx()] = std::cmp::max(split[i.size.to_idx()], 1);
                     i.split_down()
@@ -242,7 +252,7 @@ impl DummyMemory {
                     [i].to_vec()
                 };
 
-                list.shuffle(&mut thread_rng());
+                list.shuffle(&mut rng);
 
                 for o in list {
                     page_list.push(o);
@@ -257,6 +267,7 @@ impl DummyMemory {
             page_list: page_list.into(),
             pt_pages: vec![],
             last_pid: 0,
+            rng,
         }
     }
 
@@ -310,12 +321,28 @@ impl DummyMemory {
     }
 
     pub fn alloc_dtb(&mut self, map_size: Length, test_buf: &[u8]) -> (Address, Address) {
+        let virt_base = (Address::null()
+            + Length::from(
+                self.rng
+                    .gen_range(0x0001_0000_0000_u64, ((!0_u64) << 16) >> 16),
+            ))
+        .as_page_aligned(Length::from_gb(2));
+
+        (
+            self.alloc_dtb_const_base(virt_base, map_size, test_buf),
+            virt_base,
+        )
+    }
+
+    pub fn alloc_dtb_const_base(
+        &mut self,
+        virt_base: Address,
+        map_size: Length,
+        test_buf: &[u8],
+    ) -> Address {
         let mut cur_len = Length::from(0);
 
         let dtb = self.alloc_pt_page();
-        let virt_base = (Address::null()
-            + Length::from(thread_rng().gen_range(0x0001_0000_0000_u64, ((!0_u64) << 16) >> 16)))
-        .as_page_aligned(Length::from_gb(2));
 
         let mut pml4 = unsafe {
             &mut *(self
@@ -389,6 +416,6 @@ impl DummyMemory {
             cur_len += page_info.size.to_len();
         }
 
-        (dtb.addr, virt_base)
+        dtb.addr
     }
 }

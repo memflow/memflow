@@ -1,10 +1,9 @@
 ![](docs/logo.png)
 
+![build and test](https://github.com/memflow/memflow/workflows/Build%20and%20test/badge.svg?branch=dev)
+[![codecov](https://codecov.io/gh/memflow/memflow/branch/master/graph/badge.svg?token=XT7R158N6W)](https://codecov.io/gh/memflow/memflow)
+
 memflow - machine introspection framework
-
-#
-
-![Build and test](https://github.com/memflow/memflow/workflows/Build%20and%20test/badge.svg?branch=master)
 
 #
 

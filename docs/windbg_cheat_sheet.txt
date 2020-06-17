@@ -8,3 +8,7 @@ or
 !process calc.exe
 then
 dt nt!_EPROCESS <address>
+
+vtop:
+!vtop PFN VirtualAddress
+!vtop 0 VirtualAddress

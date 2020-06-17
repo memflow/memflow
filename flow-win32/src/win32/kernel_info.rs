@@ -56,6 +56,7 @@ impl KernelInfo {
         // start_block only contains the winload's dtb which might
         // be different to the one used in the actual kernel
         // so we might read the real dtb here in the future
+        info!("start_block.dtb={:x}", start_block.dtb);
         let kernel_dtb = start_block.dtb;
         //let kernel_dtb = virt_mem.virt_read_addr(eprocess_base + /*self.offsets.kproc_dtb*/ Length::from(0x18))?;
         info!("kernel_dtb={:x}", kernel_dtb);

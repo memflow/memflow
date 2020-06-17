@@ -2,9 +2,8 @@
 pub mod masks;
 use masks::*;
 
-use log::trace;
-
 use crate::types::{Address, Length, PageType, PhysicalAddress};
+use crate::vtop_trace;
 
 /// The `ArchMMUSpec` structure defines how a real memory management unit should behave when
 /// translating virtual memory addresses to physical ones.
@@ -101,9 +100,7 @@ impl ArchMMUSpec {
                 self.pte_size.to_le().trailing_zeros() as u8
             };
         let mask = make_bit_mask(min, max);
-        if cfg!(feature = "trace_mmu") {
-            trace!("pte_addr_mask={:b}", mask);
-        }
+        vtop_trace!("pte_addr_mask={:b}", mask);
         pte_addr.as_u64() & mask
     }
 
@@ -115,9 +112,7 @@ impl ArchMMUSpec {
 
     fn virt_addr_to_pte_offset(&self, virt_addr: Address, step: usize) -> u64 {
         let (min, max) = self.virt_addr_bit_range(step);
-        if cfg!(feature = "trace_mmu") {
-            trace!("virt_addr_bit_range for step {} = ({}, {})", step, min, max);
-        }
+        vtop_trace!("virt_addr_bit_range for step {} = ({}, {})", step, min, max);
 
         let shifted = virt_addr.as_u64() >> min;
         let mask = make_bit_mask(0, max - min - 1);

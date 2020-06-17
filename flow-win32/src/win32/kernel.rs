@@ -1,7 +1,7 @@
 use super::{KernelInfo, Win32Process, Win32ProcessInfo};
 use crate::error::{Error, Result};
 use crate::offsets::Win32Offsets;
-use crate::pe::{self, pe32, pe64, MemoryPeViewContext};
+use crate::pe::{pe32, pe64, MemoryPeViewContext};
 
 use log::trace;
 use std::fmt;

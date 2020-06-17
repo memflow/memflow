@@ -17,13 +17,14 @@ pub mod x86_pae;
 
 pub mod mmu_spec;
 
+#[macro_use]
+pub mod vtop_macros;
+
 use mmu_spec::ArchMMUSpec;
 
 use crate::error::{Error, Result};
 use crate::iter::{PageChunks, SplitAtIndex};
 use std::convert::TryFrom;
-
-use log::trace;
 
 use crate::mem::PhysicalMemory;
 use crate::types::{Address, Length, PageType, PhysicalAddress};
@@ -283,9 +284,8 @@ impl Architecture {
         addrs: &mut BumpVec<(Address, B, Address, [u8; 8])>,
     ) {
         let page_size = spec.pt_leaf_size(step);
-        if cfg!(feature = "trace_mmu") {
-            trace!("pt_leaf_size = {}", page_size);
-        }
+
+        vtop_trace!("pt_leaf_size = {}", page_size);
 
         mem.phys_read_iter(addrs.iter_mut().map(|(_, _, pt_addr, arr)| {
             arr.iter_mut().for_each(|x| *x = 0);
@@ -314,9 +314,7 @@ impl Architecture {
         VI: Iterator<Item = (Address, B)>,
         OV: Extend<(Result<PhysicalAddress>, Address, B)>,
     {
-        if cfg!(feature = "trace_mmu") {
-            trace!("virt_to_phys_iter_with_mmu");
-        }
+        vtop_trace!("virt_to_phys_iter_with_mmu");
 
         //TODO: build a tree to eliminate duplicate phys reads with multiple elements
         let mut data_to_translate = BumpVec::new_in(arena);
@@ -329,44 +327,34 @@ impl Architecture {
         }));
 
         for pt_step in 0..spec.split_count() {
-            if cfg!(feature = "trace_mmu") {
-                trace!("pt_step = {}", pt_step);
-            }
+            vtop_trace!("pt_step = {}", pt_step);
 
             let next_page_size = spec.page_size_step_unchecked(pt_step + 1);
-            if cfg!(feature = "trace_mmu") {
-                trace!("next_page_size = {}", next_page_size);
-            }
+            vtop_trace!("next_page_size = {:x}", next_page_size);
 
             //Loop through the data in reverse order to allow the data buffer grow on the back when
             //memory regions are split
             for i in (0..data_to_translate.len()).rev() {
                 let (addr, buf, pt_addr, tmp_arr) = data_to_translate.swap_remove(i);
-                if cfg!(feature = "trace_mmu") {
-                    trace!(
-                        "checking addr={}; pt_addr={}; tmp_arr={:?}",
-                        addr,
-                        pt_addr,
-                        tmp_arr
-                    );
-                }
+                vtop_trace!(
+                    "checking addr={:x}; buf.length()={:x}; pt_addr={:x}",
+                    addr,
+                    buf.length(),
+                    pt_addr
+                );
 
                 if !spec.check_entry(pt_addr, pt_step) {
                     //There has been an error in translation, push it to output with the associated buf
-                    if cfg!(feature = "trace_mmu") {
-                        trace!("check_entry failed");
-                    }
+                    vtop_trace!("check_entry failed");
                     out.extend(
                         Some((Err(Error::new("virt_to_phys failed")), addr, buf)).into_iter(),
                     );
                 } else if spec.is_final_mapping(pt_addr, pt_step) {
                     //We reached an actual page. The translation was successful
-                    if cfg!(feature = "trace_mmu") {
-                        trace!(
-                            "found final mapping: {:?}",
-                            spec.get_phys_page(pt_addr, addr, pt_step)
-                        );
-                    }
+                    vtop_trace!(
+                        "found final mapping: {:?}",
+                        spec.get_phys_page(pt_addr, addr, pt_step)
+                    );
                     out.extend(
                         Some((Ok(spec.get_phys_page(pt_addr, addr, pt_step)), addr, buf))
                             .into_iter(),
@@ -379,9 +367,7 @@ impl Architecture {
                     //assuming all pages are 4kb sized.
                     for (addr, buf) in buf.page_chunks(addr, next_page_size) {
                         let pt_addr = spec.vtop_step(pt_addr, addr, pt_step);
-                        if cfg!(feature = "trace_mmu") {
-                            trace!("pt_addr = {}", pt_addr);
-                        }
+                        vtop_trace!("pt_addr = {:x}", pt_addr);
                         data_to_translate.push((addr, buf, pt_addr, tmp_arr));
                     }
                 }

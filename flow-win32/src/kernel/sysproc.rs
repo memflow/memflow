@@ -9,10 +9,7 @@ use flow_core::types::{Address, Length};
 
 use byteorder::{ByteOrder, LittleEndian};
 
-use pelite::{
-    self,
-    pe64::exports::{Export, GetProcAddress},
-};
+use pelite::{self, pe64::exports::Export};
 
 pub fn find<T: VirtualMemory + ?Sized>(
     virt_mem: &mut T,

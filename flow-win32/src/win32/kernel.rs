@@ -58,25 +58,29 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
 
         let list_start = self.kernel_info.eprocess_base + self.offsets.eproc_link;
         let mut list_entry = list_start;
-        //let mut next_list_entry = reader.virt_read_addr(list_start + offsets.list_blink)?;
 
         loop {
             let eprocess = list_entry - self.offsets.eproc_link;
+            trace!("eprocess={}", eprocess);
+
+            // test flink + blink before adding the process
+            let flink_entry = reader.virt_read_addr(list_entry)?;
+            trace!("flink_entry={}", flink_entry);
+            let blink_entry = reader.virt_read_addr(list_entry + self.offsets.list_blink)?;
+            trace!("blink_entry={}", blink_entry);
+
+            if flink_entry.is_null() || blink_entry.is_null() || flink_entry == list_start {
+                break;
+            }
+
             trace!("found eprocess {:x}", eprocess);
             eprocs.push(eprocess);
 
-            // read next list entry
-            trace!(
-                "skipping to next entry at {:x} + {:x}",
-                list_entry,
-                self.offsets.list_blink
-            );
-            list_entry = reader.virt_read_addr(list_entry + self.offsets.list_blink)?;
-            if list_entry.is_null() || list_entry == list_start {
-                break;
-            }
+            // continue
+            list_entry = flink_entry;
         }
 
+        trace!("found {} eprocesses", eprocs.len());
         Ok(eprocs)
     }
 

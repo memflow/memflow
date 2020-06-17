@@ -11,6 +11,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
+    - name: Cache cargo build
+      uses: actions/cache@v1
+      env:
+        cache-name: cargo-build-target
+      with:
+        path: target
+        key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-${{ env.cache-name }}-
     - name: Build
       run: cargo build --all --all-features --verbose
     - name: Build examples
@@ -20,15 +29,65 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
+    - name: Cache cargo build
+      uses: actions/cache@v1
+      env:
+        cache-name: cargo-build-target
+      with:
+        path: target
+        key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-${{ env.cache-name }}-
     - name: Run all tests
       run: cargo test --all --all-features --verbose
 
-  clippy:
+  lint:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
+    - name: Cache cargo build
+      uses: actions/cache@v1
+      env:
+        cache-name: cargo-build-target
+      with:
+        path: target
+        key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-${{ env.cache-name }}-
     - run: rustup component add clippy
+    - name: Check formatting
+      run: cargo fmt -- --check
     - uses: actions-rs/clippy-check@v1
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         args: --all-targets --all-features
+
+  build-coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Rust nightly
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly
+          override: true
+      - name: Cache cargo build
+        uses: actions/cache@v1
+        env:
+          cache-name: cargo-build-target-coverage
+        with:
+          path: target
+          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ env.cache-name }}-
+      - run: cargo install grcov
+      - name: Run tests with coverage
+        run: |
+          export CARGO_INCREMENTAL=0
+          export RUSTFLAGS="-Zprofile -Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off -Zpanic_abort_tests -Cpanic=abort"
+          export RUSTDOCFLAGS="-Cpanic=abort"
+          cargo build --all --all-features
+          cargo test --all --all-features
+          grcov ./target/debug/ -s . -t lcov --llvm --branch --ignore-not-existing -o ./target/debug/coverage
+          bash <(curl -s https://codecov.io/bash) -f ./target/debug/coverage -t ${CODECOV_TOKEN};

@@ -51,11 +51,27 @@ pub trait FlowIters: Iterator {
 impl<T> FlowIters for T where T: Iterator {}
 
 pub trait PageChunks {
-    fn page_chunks(self, start_address: Address, page_size: Length) -> PageChunkIterator<Self>
+    fn page_chunks(
+        self,
+        start_address: Address,
+        page_size: Length,
+    ) -> PageChunkIterator<Self, fn(Address, &Self, Option<&Self>) -> bool>
     where
         Self: SplitAtIndex + Sized,
     {
-        PageChunkIterator::new(self, start_address, page_size)
+        PageChunkIterator::new(self, start_address, page_size, |_, _, _| true)
+    }
+
+    fn page_chunks_by<F: FnMut(Address, &Self, Option<&Self>) -> bool>(
+        self,
+        start_address: Address,
+        page_size: Length,
+        split_fn: F,
+    ) -> PageChunkIterator<Self, F>
+    where
+        Self: SplitAtIndex + Sized,
+    {
+        PageChunkIterator::new(self, start_address, page_size, split_fn)
     }
 }
 

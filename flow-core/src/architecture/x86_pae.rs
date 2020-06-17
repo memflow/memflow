@@ -34,3 +34,34 @@ pub fn page_size() -> Length {
 pub fn page_size_level(pt_level: u32) -> Length {
     get_mmu_spec().page_size_level(pt_level as usize)
 }
+
+//x64 tests MMU rigorously, here we will only test a few special cases
+#[cfg(test)]
+mod tests {
+    use super::super::mmu_spec::masks::*;
+    use super::get_mmu_spec;
+    use crate::types::{Address, Length};
+
+    #[test]
+    fn x86_pae_pte_bitmasks() {
+        let mmu = get_mmu_spec();
+        let mask_addr = Address::invalid();
+        assert_eq!(mmu.pte_addr_mask(mask_addr, 0), make_bit_mask(5, 35));
+        assert_eq!(mmu.pte_addr_mask(mask_addr, 1), make_bit_mask(12, 35));
+        assert_eq!(mmu.pte_addr_mask(mask_addr, 2), make_bit_mask(12, 35));
+    }
+
+    #[test]
+    fn x86_pae_pte_leaf_size() {
+        let mmu = get_mmu_spec();
+        assert_eq!(mmu.pt_leaf_size(0), Length::from(32));
+        assert_eq!(mmu.pt_leaf_size(1), Length::from_kb(4));
+    }
+
+    #[test]
+    fn x86_pae_page_size_level() {
+        let mmu = get_mmu_spec();
+        assert_eq!(mmu.page_size_level(1), Length::from_kb(4));
+        assert_eq!(mmu.page_size_level(2), Length::from_mb(2));
+    }
+}

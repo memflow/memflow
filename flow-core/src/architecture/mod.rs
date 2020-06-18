@@ -385,7 +385,7 @@ impl Architecture {
                         .into_iter()
                         .map(|(addr, buf, _, _)| (Err(Error::from(err.to_string())), addr, buf)),
                 );
-                return ();
+                return;
             }
         }
 

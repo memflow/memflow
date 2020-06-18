@@ -31,7 +31,7 @@ impl CacheValidator for TimedCacheValidator {
     }
 
     #[inline]
-    fn is_slot_valid(&mut self, slot_id: usize) -> bool {
+    fn is_slot_valid(&self, slot_id: usize) -> bool {
         self.last_time.duration_since(self.time[slot_id]) <= self.valid_time
     }
 

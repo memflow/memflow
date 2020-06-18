@@ -55,6 +55,37 @@ impl<T: CacheValidator> TLBCache<T> {
     }
 
     #[inline]
+    pub fn try_entry_ref(
+        &self,
+        dtb: Address,
+        addr: Address,
+        page_size: Length,
+    ) -> Option<TLBEntry> {
+        let page_address = addr.as_page_aligned(page_size);
+        let idx = self.get_cache_index(page_address, page_size);
+        let entry = self.entries[idx];
+        if entry.dtb == dtb
+            && entry.virt_page == page_address
+            && entry.phys_page.is_valid()
+            && entry.phys_page.has_page()
+            && self.validator.is_slot_valid(idx)
+        {
+            Some(TLBEntry {
+                dtb,
+                virt_addr: addr,
+                // TODO: this should be aware of huge pages
+                phys_addr: PhysicalAddress::with_page(
+                    entry.phys_page.address().as_page_aligned(page_size) + (addr - page_address),
+                    entry.phys_page.page_type(),
+                    page_size,
+                ),
+            })
+        } else {
+            None
+        }
+    }
+
+    #[inline]
     pub fn try_entry(
         &mut self,
         dtb: Address,

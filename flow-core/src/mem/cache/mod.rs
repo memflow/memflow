@@ -15,7 +15,7 @@ use crate::types::PageType;
 pub trait CacheValidator {
     fn allocate_slots(&mut self, slot_count: usize);
     fn update_validity(&mut self);
-    fn is_slot_valid(&mut self, slot_id: usize) -> bool;
+    fn is_slot_valid(&self, slot_id: usize) -> bool;
     fn validate_slot(&mut self, slot_id: usize);
     fn invalidate_slot(&mut self, slot_id: usize);
 }

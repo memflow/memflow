@@ -90,4 +90,4 @@ jobs:
           cargo build --all --all-features
           cargo test --all --all-features
           grcov ./target/debug/ -s . -t lcov --llvm --branch --ignore-not-existing -o ./target/debug/coverage
-          bash <(curl -s https://codecov.io/bash) -f ./target/debug/coverage -t ${CODECOV_TOKEN};
+          bash <(curl -s https://codecov.io/bash) -f ./target/debug/coverage -t ${{ secrets.CODECOV_TOKEN }};

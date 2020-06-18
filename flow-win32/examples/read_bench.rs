@@ -166,5 +166,7 @@ fn main() -> flow_core::Result<()> {
 
     read_bench(&mut mem_cached, &mut vat_cached, kernel_info).unwrap();
 
+    println!("TLB Hits {}\nTLB Miss {}", vat_cached.hitc, vat_cached.misc);
+
     Ok(())
 }

@@ -1,7 +1,7 @@
 [package]
 name = "flow-qemu-procfs"
 version = "0.1.0"
-authors = ["ko1N <ko1N1337@gmail.com>"]
+authors = ["ko1N <ko1N1337@gmail.com>", "Aurimas Blažulionis <0x60@pm.me>"]
 edition = "2018"
 
 [dependencies]

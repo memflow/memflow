@@ -215,7 +215,13 @@ pub fn seq_read<
         false,
         initialize_ctx,
     );
-    //seq_read_params(&mut group, format!("{}_tlb_nocache", group_name), 0, true, initialize_ctx);
+    seq_read_params(
+        &mut group,
+        format!("{}_tlb_nocache", group_name),
+        0,
+        true,
+        initialize_ctx,
+    );
     seq_read_params(
         &mut group,
         format!("{}_cache", group_name),
@@ -223,7 +229,13 @@ pub fn seq_read<
         false,
         initialize_ctx,
     );
-    //seq_read_params(&mut group, format!("{}_tlb_cache", group_name), 2, true, initialize_ctx);
+    seq_read_params(
+        &mut group,
+        format!("{}_tlb_cache", group_name),
+        2,
+        true,
+        initialize_ctx,
+    );
 }
 
 pub fn chunk_read<
@@ -250,7 +262,13 @@ pub fn chunk_read<
         false,
         initialize_ctx,
     );
-    //chunk_read_params(&mut group, format!("{}_tlb_nocache", group_name), 0, true, initialize_ctx);
+    chunk_read_params(
+        &mut group,
+        format!("{}_tlb_nocache", group_name),
+        0,
+        true,
+        initialize_ctx,
+    );
     chunk_read_params(
         &mut group,
         format!("{}_cache", group_name),
@@ -258,5 +276,11 @@ pub fn chunk_read<
         false,
         initialize_ctx,
     );
-    //chunk_read_params(&mut group, format!("{}_tlb_cache", group_name), 2, true, initialize_ctx);
+    chunk_read_params(
+        &mut group,
+        format!("{}_tlb_cache", group_name),
+        2,
+        true,
+        initialize_ctx,
+    );
 }

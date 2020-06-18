@@ -272,14 +272,10 @@ impl<'a, T: CacheValidator> PageCache<'a, T> {
 
                         let start = (addr.address() - aligned_addr).as_usize();
 
-                        match cached_page.validity {
-                            PageValidity::Valid(buf) => {
-                                let cached_buf =
-                                    buf.split_at_mut(start).1.split_at_mut(out.len()).0;
-                                out.copy_from_slice(cached_buf);
-                                self.put_page(cached_page.address, buf);
-                            }
-                            _ => {}
+                        if let PageValidity::Valid(buf) = cached_page.validity {
+                            let cached_buf = buf.split_at_mut(start).1.split_at_mut(out.len()).0;
+                            out.copy_from_slice(cached_buf);
+                            self.put_page(cached_page.address, buf);
                         }
                     }
                 }
@@ -334,7 +330,7 @@ mod tests {
     /// The predetermined seed was found to be problematic when it comes to memory overlap
     #[test]
     fn big_virt_buf() {
-        for &seed in &[0x3ffd235c5194dedf, thread_rng().gen_range(0, !0u64)] {
+        for &seed in &[0x3ffd_235c_5194_dedf, thread_rng().gen_range(0, !0u64)] {
             let mut dummy_mem = DummyMemory::with_seed(Length::from_mb(512), seed);
 
             let virt_size = Length::from_mb(18);

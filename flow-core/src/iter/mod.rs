@@ -50,12 +50,14 @@ pub trait FlowIters: Iterator {
 
 impl<T> FlowIters for T where T: Iterator {}
 
+type TrueFunc<T> = fn(Address, &T, Option<&T>) -> bool;
+
 pub trait PageChunks {
     fn page_chunks(
         self,
         start_address: Address,
         page_size: Length,
-    ) -> PageChunkIterator<Self, fn(Address, &Self, Option<&Self>) -> bool>
+    ) -> PageChunkIterator<Self, TrueFunc<Self>>
     where
         Self: SplitAtIndex + Sized,
     {

@@ -14,6 +14,8 @@ pub struct CachedVirtualTranslate<V: VirtualTranslate, Q: CacheValidator> {
     tlb: TLBCache<Q>,
     arch: Architecture,
     arena: Bump,
+    pub hitc: usize,
+    pub misc: usize,
 }
 
 impl<V: VirtualTranslate, Q: CacheValidator> CachedVirtualTranslate<V, Q> {
@@ -23,6 +25,8 @@ impl<V: VirtualTranslate, Q: CacheValidator> CachedVirtualTranslate<V, Q> {
             tlb,
             arch,
             arena: Bump::new(),
+            hitc: 0,
+            misc: 0,
         }
     }
 }
@@ -46,20 +50,29 @@ impl<V: VirtualTranslate, Q: CacheValidator> VirtualTranslate for CachedVirtualT
         let tlb = &self.tlb;
         let mut uncached_out = BumpVec::new_in(&self.arena);
 
+        let mut hitc = 0;
+        let mut misc = 0;
+
         let page_size = self.arch.page_size();
         let mut addrs = addrs
             .flat_map(|(addr, buf)| {
                 buf.page_chunks_by(addr, page_size, |addr, split, _| {
-                    tlb.try_entry_ref(dtb, addr + split.length(), page_size)
+                    tlb.try_entry(dtb, addr + split.length(), page_size)
                         .is_some()
+                        || tlb.try_entry(dtb, addr, page_size).is_some()
                 })
             })
             .filter_map(|(addr, buf)| {
-                if let Some(entry) = tlb.try_entry_ref(dtb, addr, page_size) {
+                if let Some(entry) = tlb.try_entry(dtb, addr, page_size) {
+                    hitc += 1;
                     debug_assert!(buf.length() <= page_size);
-                    out.extend(Some((Ok(entry.phys_addr), addr, buf)).into_iter());
+                    match entry {
+                        Ok(entry) => out.extend(Some((Ok(entry.phys_addr), addr, buf)).into_iter()),
+                        Err(error) => out.extend(Some((Err(error), addr, buf)).into_iter()),
+                    }
                     None
                 } else {
+                    misc += core::cmp::max(1, buf.length().as_usize() / page_size.as_usize());
                     Some((addr, buf))
                 }
             })
@@ -69,11 +82,17 @@ impl<V: VirtualTranslate, Q: CacheValidator> VirtualTranslate for CachedVirtualT
             self.vat
                 .virt_to_phys_iter(phys_mem, dtb, addrs, &mut uncached_out);
 
-            out.extend(uncached_out.into_iter().inspect(|(ret, addr, _)| {
+            out.extend(uncached_out.into_iter().inspect(|(ret, addr, buf)| {
                 if let Ok(paddr) = ret {
                     self.tlb.cache_entry(dtb, *addr, *paddr, page_size);
+                } else {
+                    self.tlb
+                        .cache_invalid_if_uncached(dtb, *addr, buf.length(), page_size);
                 }
             }));
+
+            self.hitc += hitc;
+            self.misc += misc;
         }
     }
 }

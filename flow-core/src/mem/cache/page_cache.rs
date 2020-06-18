@@ -369,7 +369,7 @@ mod tests {
                 arch,
                 Length::from_mb(2),
                 PageType::PAGE_TABLE | PageType::READ_ONLY,
-                TimedCacheValidator::new(coarsetime::Duration::from_secs(100)),
+                TimedCacheValidator::new(Duration::from_secs(100)),
             );
             let mut mem_cache = CachedMemoryAccess::with(&mut dummy_mem, cache);
             let mut buf_cache = vec![0_u8; buf_nocache.len()];
@@ -408,7 +408,7 @@ mod tests {
             arch,
             Length::from_mb(2),
             PageType::PAGE_TABLE | PageType::READ_ONLY | PageType::WRITEABLE,
-            TimedCacheValidator::new(coarsetime::Duration::from_secs(100)),
+            TimedCacheValidator::new(Duration::from_secs(100)),
         );
 
         let mut mem_cache = CachedMemoryAccess::with(&mut dummy_mem, cache);
@@ -461,7 +461,7 @@ mod tests {
             arch,
             Length::from_mb(2),
             PageType::PAGE_TABLE | PageType::READ_ONLY,
-            TimedCacheValidator::new(coarsetime::Duration::from_secs(100)),
+            TimedCacheValidator::new(Duration::from_secs(100)),
         );
 
         let mut mem_cache = CachedMemoryAccess::with(&mut dummy_mem, cache);
@@ -526,7 +526,7 @@ mod tests {
             arch,
             Length::from_kb(4),
             PageType::PAGE_TABLE | PageType::READ_ONLY,
-            TimedCacheValidator::new(coarsetime::Duration::from_secs(100)),
+            TimedCacheValidator::new(Duration::from_secs(100)),
         );
 
         let mut mem_cache = CachedMemoryAccess::with(&mut dummy_mem, cache);
@@ -584,7 +584,7 @@ mod tests {
             arch,
             Length::from_mb(2),
             PageType::PAGE_TABLE | PageType::READ_ONLY,
-            TimedCacheValidator::new(coarsetime::Duration::from_secs(100)),
+            TimedCacheValidator::new(Duration::from_secs(100)),
         );
 
         let mut mem_cache = CachedMemoryAccess::with(&mut dummy_mem, cache);
@@ -621,7 +621,7 @@ mod tests {
             Length::from(0x10),
             Length::from(0x10),
             PageType::PAGE_TABLE | PageType::READ_ONLY,
-            TimedCacheValidator::new(coarsetime::Duration::from_secs(100)),
+            TimedCacheValidator::new(Duration::from_secs(100)),
         );
 
         let mut mem_cache = CachedMemoryAccess::with(&mut dummy_mem, cache);
@@ -663,7 +663,7 @@ mod tests {
             arch,
             Length::from_mb(2),
             PageType::PAGE_TABLE | PageType::READ_ONLY,
-            TimedCacheValidator::new(coarsetime::Duration::from_secs(100)),
+            TimedCacheValidator::new(Duration::from_secs(100)),
         );
 
         let mut mem_cache = CachedMemoryAccess::with(&mut dummy_mem, cache);

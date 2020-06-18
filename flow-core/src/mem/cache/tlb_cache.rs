@@ -1,5 +1,6 @@
 use super::CacheValidator;
 use crate::types::{Address, Length, PhysicalAddress};
+use crate::{Error, Result};
 
 #[derive(Clone, Copy)]
 pub struct TLBEntry {
@@ -55,53 +56,21 @@ impl<T: CacheValidator> TLBCache<T> {
     }
 
     #[inline]
-    pub fn try_entry_ref(
+    pub fn try_entry(
         &self,
         dtb: Address,
         addr: Address,
         page_size: Length,
-    ) -> Option<TLBEntry> {
+    ) -> Option<Result<TLBEntry>> {
         let page_address = addr.as_page_aligned(page_size);
         let idx = self.get_cache_index(page_address, page_size);
         let entry = self.entries[idx];
-        if entry.dtb == dtb
-            && entry.virt_page == page_address
-            && entry.phys_page.is_valid()
-            && entry.phys_page.has_page()
-            && self.validator.is_slot_valid(idx)
-        {
-            Some(TLBEntry {
-                dtb,
-                virt_addr: addr,
-                // TODO: this should be aware of huge pages
-                phys_addr: PhysicalAddress::with_page(
-                    entry.phys_page.address().as_page_aligned(page_size) + (addr - page_address),
-                    entry.phys_page.page_type(),
-                    page_size,
-                ),
-            })
-        } else {
-            None
-        }
-    }
-
-    #[inline]
-    pub fn try_entry(
-        &mut self,
-        dtb: Address,
-        addr: Address,
-        page_size: Length,
-    ) -> Option<TLBEntry> {
-        let page_address = addr.as_page_aligned(page_size);
-        let idx = self.get_cache_index(page_address, page_size);
-        let entry = self.entries[idx];
-        if entry.dtb == dtb
-            && entry.virt_page == page_address
-            && entry.phys_page.is_valid()
-            && entry.phys_page.has_page()
-        {
-            if self.validator.is_slot_valid(idx) {
-                Some(TLBEntry {
+        if entry.dtb == dtb && entry.virt_page == page_address {
+            if entry.phys_page.is_valid()
+                && entry.phys_page.has_page()
+                && self.validator.is_slot_valid(idx)
+            {
+                Some(Ok(TLBEntry {
                     dtb,
                     virt_addr: addr,
                     // TODO: this should be aware of huge pages
@@ -111,10 +80,9 @@ impl<T: CacheValidator> TLBCache<T> {
                         entry.phys_page.page_type(),
                         page_size,
                     ),
-                })
+                }))
             } else {
-                self.entries[idx].dtb = Address::INVALID;
-                None
+                Some(Err(Error::new("tlb_cache: virt_to_phys failed")))
             }
         } else {
             None
@@ -135,6 +103,37 @@ impl<T: CacheValidator> TLBCache<T> {
             virt_page: in_addr.as_page_aligned(page_size),
             phys_page: out_page,
         };
-        self.validator.invalidate_slot(idx);
+        self.validator.validate_slot(idx);
+    }
+
+    #[inline]
+    pub fn cache_invalid_if_uncached(
+        &mut self,
+        dtb: Address,
+        in_addr: Address,
+        invalid_len: Length,
+        page_size: Length,
+    ) {
+        let page_addr = in_addr.as_page_aligned(page_size);
+        let end_addr = (in_addr + invalid_len + Length::from(1)).as_page_aligned(page_size);
+
+        for i in (page_addr.as_u64()..end_addr.as_u64())
+            .step_by(page_size.as_usize())
+            .take(self.entries.len())
+        {
+            let cur_page = Address::from(i);
+            let idx = self.get_cache_index(cur_page, page_size);
+
+            let entry = &mut self.entries[idx];
+            if entry.dtb == Address::INVALID
+                || !entry.phys_page.is_valid()
+                || !self.validator.is_slot_valid(idx)
+            {
+                entry.dtb = dtb;
+                entry.virt_page = cur_page;
+                entry.phys_page = PhysicalAddress::INVALID;
+                self.validator.validate_slot(idx);
+            }
+        }
     }
 }

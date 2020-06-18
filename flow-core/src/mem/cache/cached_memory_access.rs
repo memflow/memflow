@@ -1,4 +1,4 @@
-use super::{page_cache::PageCache, CacheValidator};
+use super::{page_cache::PageCache, page_cache::PageValidity, CacheValidator};
 use crate::error::Result;
 use crate::iter::PageChunks;
 use crate::mem::phys_mem::{PhysicalMemory, PhysicalReadIterator, PhysicalWriteIterator};
@@ -7,12 +7,12 @@ use bumpalo::Bump;
 
 pub struct CachedMemoryAccess<'a, T: PhysicalMemory, Q: CacheValidator> {
     mem: &'a mut T,
-    cache: PageCache<Q>,
+    cache: PageCache<'a, Q>,
     arena: Bump,
 }
 
 impl<'a, T: PhysicalMemory, Q: CacheValidator> CachedMemoryAccess<'a, T, Q> {
-    pub fn with(mem: &'a mut T, cache: PageCache<Q>) -> Self {
+    pub fn with(mem: &'a mut T, cache: PageCache<'a, Q>) -> Self {
         Self {
             mem,
             cache,
@@ -38,13 +38,14 @@ impl<'a, T: PhysicalMemory, Q: CacheValidator> PhysicalMemory for CachedMemoryAc
         let iter = iter.inspect(move |(addr, data)| {
             if cache.is_cached_page_type(addr.page_type()) {
                 for (paddr, data_chunk) in data.page_chunks(addr.address(), cache.page_size()) {
-                    let cached_page = cache.cached_page_mut(paddr);
-                    if cached_page.is_valid() {
+                    let mut cached_page = cache.cached_page_mut(paddr, false);
+                    if let PageValidity::Valid(buf) = &mut cached_page.validity {
                         // write-back into still valid cache pages
                         let start = (paddr - cached_page.address).as_usize();
-                        cached_page.buf[start..(start + data_chunk.len())]
-                            .copy_from_slice(data_chunk);
+                        buf[start..(start + data_chunk.len())].copy_from_slice(data_chunk);
                     }
+
+                    cache.put_entry(cached_page);
                 }
             }
         });

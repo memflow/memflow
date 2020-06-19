@@ -52,7 +52,7 @@ pub fn find<T: PhysicalMemory + ?Sized>(
                 mem.phys_read_raw_into(PhysicalAddress::NULL, &mut low16m)?;
                 x86::find(&low16m)
             }
-            _ => Err(Error::new("invalid architecture in win32 initialization")),
+            _ => Err(Error::InvalidArchitecture),
         }
     } else {
         // check all architectures
@@ -86,6 +86,6 @@ pub fn find<T: PhysicalMemory + ?Sized>(
             Err(e) => warn!("x86::find() error: {}", e),
         }
 
-        Err(Error::new("unable to find dtb"))
+        Err(Error::Initialization("unable to find dtb"))
     }
 }

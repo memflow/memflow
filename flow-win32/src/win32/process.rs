@@ -111,7 +111,7 @@ impl<T: VirtualMemory> Win32Process<T> {
             list_entry = match self.proc_info.proc_arch.bits() {
                 64 => self.virt_mem.virt_read_addr64(list_entry)?,
                 32 => self.virt_mem.virt_read_addr32(list_entry)?,
-                _ => return Err(Error::new("invalid architecture")),
+                _ => return Err(Error::InvalidArchitecture),
             };
             if list_entry.is_null() || list_entry == self.proc_info.peb_module {
                 break;
@@ -129,7 +129,7 @@ impl<T: VirtualMemory> Win32Process<T> {
             32 => self
                 .virt_mem
                 .virt_read_addr32(peb_module + self.proc_info.ldr_data_base_offs)?,
-            _ => return Err(Error::new("invalid architecture")),
+            _ => return Err(Error::InvalidArchitecture),
         };
         trace!("base={:x}", base);
 
@@ -142,7 +142,7 @@ impl<T: VirtualMemory> Win32Process<T> {
                 .virt_mem
                 .virt_read_addr32(peb_module + self.proc_info.ldr_data_size_offs)?
                 .as_usize(),
-            _ => return Err(Error::new("invalid architecture")),
+            _ => return Err(Error::InvalidArchitecture),
         };
         trace!("size={:x}", size);
 
@@ -177,7 +177,7 @@ impl<T: VirtualMemory> Win32Process<T> {
             .into_iter()
             .inspect(|module| trace!("{:x} {}", module.base(), module.name()))
             .find(|module| module.name() == name)
-            .ok_or_else(|| Error::new(format!("unable to find module {}", name)))
+            .ok_or_else(|| Error::ModuleInfo)
     }
 }
 

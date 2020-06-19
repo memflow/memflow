@@ -13,6 +13,7 @@ use flow_core::types::Address;
 
 use flow_qemu_procfs::Memory;
 
+use flow_win32::error::Result;
 use flow_win32::offsets::Win32Offsets;
 use flow_win32::win32::{Kernel, KernelInfo, Win32ModuleInfo, Win32Process};
 
@@ -94,7 +95,7 @@ fn read_bench<T: PhysicalMemory, V: VirtualTranslate>(
     phys_mem: &mut T,
     vat: &mut V,
     kernel_info: KernelInfo,
-) -> flow_core::Result<()> {
+) -> Result<()> {
     let offsets = Win32Offsets::try_with_guid(&kernel_info.kernel_guid)?;
     let mut kernel = Kernel::new(phys_mem, vat, offsets, kernel_info);
 
@@ -136,7 +137,7 @@ fn read_bench<T: PhysicalMemory, V: VirtualTranslate>(
     Ok(())
 }
 
-fn main() -> flow_core::Result<()> {
+fn main() -> Result<()> {
     let mut mem_sys = Memory::new()?;
     let kernel_info = KernelInfo::builder().mem(&mut mem_sys).build()?;
 

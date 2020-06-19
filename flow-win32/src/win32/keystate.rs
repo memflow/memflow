@@ -44,14 +44,14 @@ impl Keyboard {
         debug!("fetched {:x} bytes from win32kbase.sys", module_buf.len());
 
         // TODO: lazy
-        let pe = PeView::from_bytes(&module_buf).map_err(Error::new)?;
+        let pe = PeView::from_bytes(&module_buf).map_err(Error::from)?;
         let export_addr = match pe
             .get_export_by_name("gafAsyncKeyState")
-            .map_err(Error::new)?
+            .map_err(Error::from)?
         {
             Export::Symbol(s) => win32kbase_module_info.base() + *s as usize,
             Export::Forward(_) => {
-                return Err(Error::new(
+                return Err(Error::Other(
                     "export gafAsyncKeyState found but it is forwarded",
                 ))
             }

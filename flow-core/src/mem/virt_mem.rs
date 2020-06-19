@@ -4,7 +4,7 @@ pub mod virt_from_phys;
 pub use virt_from_phys::VirtualFromPhysical;
 
 use super::VirtualMemoryBatcher;
-use crate::error::Result;
+use crate::error::{Error, Result};
 use crate::types::{Address, Page, Pointer32, Pointer64};
 
 #[cfg(feature = "std")]
@@ -150,7 +150,7 @@ pub trait VirtualMemory {
         if let Some((n, _)) = buf.iter().enumerate().find(|(_, c)| **c == 0_u8) {
             buf.truncate(n);
         }
-        let v = CString::new(buf)?;
+        let v = CString::new(buf).map_err(|_| Error::Encoding)?;
         Ok(String::from(v.to_string_lossy()))
     }
 

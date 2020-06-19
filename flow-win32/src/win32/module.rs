@@ -36,7 +36,7 @@ impl Win32ModuleInfo {
                     self.base,
                     e
                 );
-                return Err(Error::new(e));
+                return Err(Error::ModuleInfo);
             }
         };
 
@@ -46,7 +46,7 @@ impl Win32ModuleInfo {
             pelite::Wrap::T64(opt64) => opt64.SizeOfImage,
         };
         if size_of_image == 0 {
-            return Err(Error::new("unable to read size_of_image"));
+            return Err(Error::ModuleInfo);
         }
         info!("found pe header with a size of {} bytes.", size_of_image);
         Ok(size_of_image)

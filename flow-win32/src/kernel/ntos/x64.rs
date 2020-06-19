@@ -59,7 +59,7 @@ pub fn find_with_va<T: VirtualMemory + ?Sized>(
                 name == "ntoskrnl.exe"
             })
             .ok_or_else(|| {
-                Error::new("find_x64_with_va: unable to locate ntoskrnl.exe via va hint")
+                Error::Initialization("find_x64_with_va: unable to locate ntoskrnl.exe via va hint")
             })
             .and_then(|(i, _, _)| Ok(va_base + i as u64 * architecture::x64::page_size() as u64));
 
@@ -78,11 +78,11 @@ pub fn find_with_va<T: VirtualMemory + ?Sized>(
         va_base -= size::mb(2) as u64;
     }
 
-    Err(Error::new(
+    Err(Error::Initialization(
         "find_x64_with_va: unable to locate ntoskrnl.exe via va hint",
     ))
 }
 
 pub fn find<T: VirtualMemory + ?Sized>(_mem: &mut T) -> Result<(Address, usize)> {
-    Err(Error::new("find_x64(): not implemented yet"))
+    Err(Error::Initialization("find_x64(): not implemented yet"))
 }

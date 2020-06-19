@@ -28,7 +28,7 @@ pub fn find<T: VirtualMemory + ?Sized>(
         Err(e) => warn!("{}", e),
     }
 
-    Err(Error::new("unable to find system eprocess"))
+    Err(Error::Initialization("unable to find system eprocess"))
 }
 
 // find from exported symbol
@@ -38,15 +38,15 @@ pub fn find_exported<T: VirtualMemory + ?Sized>(
     kernel_base: Address,
 ) -> Result<Address> {
     // PsInitialSystemProcess -> PsActiveProcessHead
-    let ctx = MemoryPeViewContext::new(virt_mem, kernel_base).map_err(Error::new)?;
-    let pe = pe::wrap_memory_pe_view(&ctx).map_err(Error::new)?;
+    let ctx = MemoryPeViewContext::new(virt_mem, kernel_base).map_err(Error::PE)?;
+    let pe = pe::wrap_memory_pe_view(&ctx).map_err(Error::PE)?;
     let sys_proc = match pe
         .get_export_by_name("PsInitialSystemProcess")
-        .map_err(Error::new)?
+        .map_err(Error::PE)?
     {
         Export::Symbol(s) => kernel_base + *s as usize,
         Export::Forward(_) => {
-            return Err(Error::new(
+            return Err(Error::Other(
                 "PsInitialSystemProcess found but it was a forwarded export",
             ))
         }
@@ -64,7 +64,7 @@ pub fn find_exported<T: VirtualMemory + ?Sized>(
             virt_mem.virt_read_raw_into(sys_proc, &mut buf)?;
             LittleEndian::read_u32(&buf).into()
         }
-        _ => return Err(Error::new("invalid architecture")),
+        _ => return Err(Error::InvalidArchitecture),
     };
     Ok(sys_proc_addr)
 }
@@ -97,7 +97,7 @@ pub fn find_in_section<T: VirtualMemory + ?Sized>(
         .ok_or_else(|| Error::new("unable to find section ALMOSTRO"))?;
     */
 
-    Err(Error::new(
+    Err(Error::Other(
         "sysproc::find_in_section(): not implemented yet",
     ))
 }

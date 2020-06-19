@@ -160,7 +160,7 @@ impl PhysicalMemory for DummyMemory {
                 out.copy_from_slice(&self.mem[addr.as_usize()..(addr.as_usize() + out.len())]);
                 Ok(())
             } else {
-                Err(Error::new("Read out of bounds"))
+                Err(Error::PhysicalMemory("read out of bounds"))
             }
         })
     }
@@ -174,7 +174,7 @@ impl PhysicalMemory for DummyMemory {
                 self.mem[addr.as_usize()..(addr.as_usize() + data.len())].copy_from_slice(data);
                 Ok(())
             } else {
-                Err(Error::new("Write out of bounds"))
+                Err(Error::PhysicalMemory("write out of bounds"))
             }
         })
     }

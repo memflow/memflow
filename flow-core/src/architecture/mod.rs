@@ -91,7 +91,7 @@ impl TryFrom<u8> for Architecture {
             1 => Ok(Architecture::X64),
             2 => Ok(Architecture::X86Pae),
             3 => Ok(Architecture::X86),
-            _ => Err(Error::new("Invalid Architecture value")),
+            _ => Err(Error::InvalidArchitecture),
         }
     }
 }
@@ -346,9 +346,7 @@ impl Architecture {
                 if !spec.check_entry(pt_addr, pt_step) {
                     //There has been an error in translation, push it to output with the associated buf
                     vtop_trace!("check_entry failed");
-                    out.extend(
-                        Some((Err(Error::new("virt_to_phys failed")), addr, buf)).into_iter(),
-                    );
+                    out.extend(Some((Err(Error::VirtualTranslate), addr, buf)).into_iter());
                 } else if spec.is_final_mapping(pt_addr, pt_step) {
                     //We reached an actual page. The translation was successful
                     vtop_trace!(
@@ -378,11 +376,11 @@ impl Architecture {
             } else if let Err(err) =
                 Self::read_pt_address_iter(mem, &spec, pt_step, &mut data_to_translate)
             {
-                vtop_trace!("read_pt_address_iter failue: {}", err);
+                vtop_trace!("read_pt_address_iter failure: {}", err);
                 out.extend(
                     data_to_translate
                         .into_iter()
-                        .map(|(addr, buf, _, _)| (Err(Error::from(err.to_string())), addr, buf)),
+                        .map(|(addr, buf, _, _)| (Err(err.clone()), addr, buf)),
                 );
                 return;
             }

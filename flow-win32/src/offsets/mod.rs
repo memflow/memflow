@@ -43,42 +43,47 @@ impl Win32Offsets {
     }
 
     pub fn try_with_pdb<P: AsRef<Path>>(pdb_path: P) -> Result<Self> {
-        let mut file = File::open(pdb_path)?;
+        let mut file = File::open(pdb_path)
+            .map_err(|_| Error::PDB("unable to open user-supplied pdb file"))?;
         let mut buffer = Vec::new();
-        file.read_to_end(&mut buffer)?;
+        file.read_to_end(&mut buffer)
+            .map_err(|_| Error::PDB("unable to read user-supplied pdb file"))?;
         Self::try_with_pdb_slice(&buffer[..])
     }
 
     pub fn try_with_pdb_slice(pdb_slice: &[u8]) -> Result<Self> {
-        let list = PdbStruct::with(pdb_slice, "_LIST_ENTRY").map_err(Error::new)?;
-        let kproc = PdbStruct::with(pdb_slice, "_KPROCESS").map_err(Error::new)?;
-        let eproc = PdbStruct::with(pdb_slice, "_EPROCESS").map_err(Error::new)?;
+        let list = PdbStruct::with(pdb_slice, "_LIST_ENTRY")
+            .map_err(|_| Error::PDB("_LIST_ENTRY not found"))?;
+        let kproc = PdbStruct::with(pdb_slice, "_KPROCESS")
+            .map_err(|_| Error::PDB("_KPROCESS not found"))?;
+        let eproc = PdbStruct::with(pdb_slice, "_EPROCESS")
+            .map_err(|_| Error::PDB("_EPROCESS not found"))?;
 
         let list_blink = list
             .find_field("Blink")
-            .ok_or_else(|| Error::new("_LIST_ENTRY::Blink not found"))?
+            .ok_or_else(|| Error::PDB("_LIST_ENTRY::Blink not found"))?
             .offset;
 
         let eproc_link = eproc
             .find_field("ActiveProcessLinks")
-            .ok_or_else(|| Error::new("_EPROCESS::ActiveProcessLinks not found"))?
+            .ok_or_else(|| Error::PDB("_EPROCESS::ActiveProcessLinks not found"))?
             .offset;
 
         let kproc_dtb = kproc
             .find_field("DirectoryTableBase")
-            .ok_or_else(|| Error::new("_KPROCESS::DirectoryTableBase not found"))?
+            .ok_or_else(|| Error::PDB("_KPROCESS::DirectoryTableBase not found"))?
             .offset;
         let eproc_pid = eproc
             .find_field("UniqueProcessId")
-            .ok_or_else(|| Error::new("_EPROCESS::UniqueProcessId not found"))?
+            .ok_or_else(|| Error::PDB("_EPROCESS::UniqueProcessId not found"))?
             .offset;
         let eproc_name = eproc
             .find_field("ImageFileName")
-            .ok_or_else(|| Error::new("_EPROCESS::ImageFileName not found"))?
+            .ok_or_else(|| Error::PDB("_EPROCESS::ImageFileName not found"))?
             .offset;
         let eproc_peb = eproc
             .find_field("Peb")
-            .ok_or_else(|| Error::new("_EPROCESS::Peb not found"))?
+            .ok_or_else(|| Error::PDB("_EPROCESS::Peb not found"))?
             .offset;
         let eproc_wow64 = match eproc.find_field("WoW64Process") {
             Some(f) => f.offset,

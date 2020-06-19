@@ -38,18 +38,20 @@ pub struct Memory {
 
 impl Memory {
     pub fn new() -> Result<Self> {
-        let prcs = procfs::process::all_processes().map_err(Error::new)?;
+        let prcs = procfs::process::all_processes()
+            .map_err(|_| Error::Connector("unable to list procfs processes"))?;
         let prc = prcs
             .iter()
             .find(|p| p.stat.comm == "qemu-system-x86")
-            .ok_or_else(|| Error::new("qemu process not found"))?;
+            .ok_or_else(|| Error::Connector("qemu process not found"))?;
         info!("qemu process found with pid {:?}", prc.stat.pid);
 
         Self::with_process(prc)
     }
 
     pub fn with_guest_name(name: &str) -> Result<Self> {
-        let prcs = procfs::process::all_processes().map_err(Error::new)?;
+        let prcs = procfs::process::all_processes()
+            .map_err(|_| Error::Connector("unable to list procefs processes"))?;
         let (prc, _) = prcs
             .iter()
             .filter(|p| p.stat.comm == "qemu-system-x86")
@@ -61,7 +63,7 @@ impl Memory {
                 }
             })
             .find(|(_, c)| qemu_arg_opt(c, "-name", "guest").unwrap_or_default() == name)
-            .ok_or_else(|| Error::new("qemu process not found"))?;
+            .ok_or_else(|| Error::Connector("qemu process not found"))?;
         info!(
             "qemu process with name {} found with pid {:?}",
             name, prc.stat.pid
@@ -72,8 +74,13 @@ impl Memory {
 
     fn with_process(prc: &procfs::process::Process) -> Result<Self> {
         // find machine architecture
-        let machine = qemu_arg_opt(&prc.cmdline().map_err(Error::new)?, "-machine", "type")
-            .unwrap_or_else(|| "pc".into());
+        let machine = qemu_arg_opt(
+            &prc.cmdline()
+                .map_err(|_| Error::Connector("unable to parse qemu arguments"))?,
+            "-machine",
+            "type",
+        )
+        .unwrap_or_else(|| "pc".into());
         info!("qemu process started with machine: {}", machine);
 
         // this is quite an ugly hack...
@@ -89,7 +96,9 @@ impl Memory {
         info!("qemu machine hardware offset: {:x}", hw_offset);
 
         // find biggest mapping
-        let mut maps = prc.maps().map_err(Error::new)?;
+        let mut maps = prc
+            .maps()
+            .map_err(|_| Error::Connector("unable to get qemu memory maps"))?;
         maps.sort_by(|b, a| {
             (a.address.1 - a.address.0)
                 .partial_cmp(&(b.address.1 - b.address.0))
@@ -97,7 +106,7 @@ impl Memory {
         });
         let map = maps
             .get(0)
-            .ok_or_else(|| Error::new("qemu memory map could not be read"))?;
+            .ok_or_else(|| Error::Connector("qemu memory map could not be read"))?;
         info!("qemu memory map found {:?}", map);
 
         let iov_max = unsafe { sysconf(_SC_IOV_MAX) } as usize;
@@ -154,12 +163,12 @@ impl Memory {
 
     fn vm_error() -> Error {
         match unsafe { *libc::__errno_location() } {
-            libc::EFAULT => Error::new("process_vm_readv failed: EFAULT (remote memory address is invalid)"),
-            libc::ENOMEM => Error::new("process_vm_readv failed: ENOMEM (unable to allocate memory for internal copies)"),
-            libc::EPERM => Error::new("process_vm_readv failed: EPERM (insifficient permissions to access the target address space)"),
-            libc::ESRCH => Error::new("process_vm_readv failed: ESRCH (process not found)"),
-            libc::EINVAL => Error::new("process_vm_readv failed: EINVAL (invalid value)"),
-            _ => Error::new("process_vm_readv failed: unknown error")
+            libc::EFAULT => Error::Connector("process_vm_readv failed: EFAULT (remote memory address is invalid)"),
+            libc::ENOMEM => Error::Connector("process_vm_readv failed: ENOMEM (unable to allocate memory for internal copies)"),
+            libc::EPERM => Error::Connector("process_vm_readv failed: EPERM (insifficient permissions to access the target address space)"),
+            libc::ESRCH => Error::Connector("process_vm_readv failed: ESRCH (process not found)"),
+            libc::EINVAL => Error::Connector("process_vm_readv failed: EINVAL (invalid value)"),
+            _ => Error::Connector("process_vm_readv failed: unknown error")
         }
     }
 }

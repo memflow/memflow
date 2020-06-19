@@ -37,7 +37,7 @@ pub fn find<T: VirtualMemory + ?Sized>(
         }
     }
 
-    Err(Error::new("unable to find ntoskrnl.exe"))
+    Err(Error::Initialization("unable to find ntoskrnl.exe"))
 }
 
 #[derive(Debug, Clone)]
@@ -51,12 +51,16 @@ pub fn find_guid<T: VirtualMemory + ?Sized>(
     virt_mem: &mut T,
     kernel_base: Address,
 ) -> Result<Win32GUID> {
-    let ctx = MemoryPeViewContext::new(virt_mem, kernel_base).map_err(Error::new)?;
-    let pe = pe::wrap_memory_pe_view(&ctx).map_err(Error::new)?;
+    let ctx = MemoryPeViewContext::new(virt_mem, kernel_base).map_err(Error::PE)?;
+    let pe = pe::wrap_memory_pe_view(&ctx).map_err(Error::PE)?;
 
     let debug = match pe.debug() {
         Ok(d) => d,
-        Err(_) => return Err(Error::new("unable to read debug_data in pe header")),
+        Err(_) => {
+            return Err(Error::Initialization(
+                "unable to read debug_data in pe header",
+            ))
+        }
     };
 
     let code_view = debug
@@ -64,14 +68,14 @@ pub fn find_guid<T: VirtualMemory + ?Sized>(
         .map(|e| e.entry())
         .filter_map(std::result::Result::ok)
         .find(|&e| e.as_code_view().is_some())
-        .ok_or_else(|| Error::new("unable to find codeview debug_data entry"))?
+        .ok_or_else(|| Error::Initialization("unable to find codeview debug_data entry"))?
         .as_code_view()
         .unwrap(); // TODO: fix unwrap
 
     let signature = match code_view {
         CodeView::Cv70 { image, .. } => image.Signature,
         CodeView::Cv20 { .. } => {
-            return Err(Error::new(
+            return Err(Error::Initialization(
                 "invalid code_view entry version 2 found, expected 7",
             ))
         }
@@ -91,7 +95,7 @@ fn generate_guid(signature: GUID, age: u32) -> Result<String> {
         signature.Data3,
         &signature.Data4,
     )
-    .map_err(Error::new)?;
+    .map_err(|_| Error::Initialization("unable to generate uuid from codeview"))?;
 
     Ok(format!(
         "{}{:X}",

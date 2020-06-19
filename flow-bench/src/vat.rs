@@ -5,7 +5,7 @@ use flow_core::mem::{
     VirtualTranslate,
 };
 
-use flow_core::{Address, Length, OsProcessInfo, OsProcessModuleInfo, PageType};
+use flow_core::{size, Address, OsProcessInfo, OsProcessModuleInfo, PageType};
 
 use rand::prelude::*;
 use rand::{prng::XorShiftRng as CurRng, Rng, SeedableRng};
@@ -28,7 +28,7 @@ fn vattest<T: PhysicalMemory, V: VirtualTranslate, P: OsProcessInfo, M: OsProces
     while done_size < translations {
         let base_addr = rng.gen_range(
             module.base().as_u64(),
-            module.base().as_u64() + module.size().as_u64(),
+            module.base().as_u64() + module.size() as u64,
         );
 
         for addr in bufs.iter_mut() {
@@ -88,7 +88,7 @@ fn vat_test_with_ctx<
     if cache_size > 0 {
         let cache = CachedMemoryAccess::builder()
             .arch(proc.sys_arch())
-            .cache_size(Length::from_mb(cache_size))
+            .cache_size(size::mb(cache_size as usize))
             .page_type_mask(PageType::PAGE_TABLE | PageType::READ_ONLY | PageType::WRITEABLE)
             .validator(TimedCacheValidator::new(Duration::from_millis(10000)));
 

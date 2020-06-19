@@ -29,5 +29,3 @@ rand_xorshift = "0.2.0"
 default = []
 trace_mmu = [] # enables debug traces in the mmu (very verbose)
 dummy_mem = ["x86_64", "rand", "rand_xorshift"]
-bridge = [] # enables the connector bridge (requires tokio)
-#emulator = ["unicorn"] # enables the process emulator (requires unicorn engine)

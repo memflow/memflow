@@ -2,7 +2,7 @@ use crate::error::{Error, Result};
 
 use flow_core::architecture::{Architecture, Endianess};
 use flow_core::mem::VirtualMemory;
-use flow_core::types::{Address, Length};
+use flow_core::types::Address;
 
 use byteorder::{BigEndian, ByteOrder, LittleEndian};
 use widestring::U16CString;
@@ -39,7 +39,7 @@ impl<'a, T: VirtualMemory> VirtualReadUnicodeString for T {
 
         // length is always the first entry
         let mut length = 0u16;
-        self.virt_read_into(addr + Length::zero(), &mut length)?;
+        self.virt_read_into(addr + 0, &mut length)?;
         if length == 0 {
             return Err(Error::new("unable to read unicode string length"));
         }
@@ -47,8 +47,8 @@ impl<'a, T: VirtualMemory> VirtualReadUnicodeString for T {
         // TODO: chek if length exceeds limit
         // buffer is either aligned at 4 or 8
         let buffer = match proc_arch.bits() {
-            64 => self.virt_read_addr64(addr + Length::from(8))?,
-            32 => self.virt_read_addr32(addr + Length::from(4))?,
+            64 => self.virt_read_addr64(addr + 8)?,
+            32 => self.virt_read_addr32(addr + 4)?,
             _ => {
                 return Err(Error::new("invalid proc_arch parameter"));
             }
@@ -63,7 +63,7 @@ impl<'a, T: VirtualMemory> VirtualReadUnicodeString for T {
         }
 
         // read buffer
-        let mut content = vec![0; Length::from(length + 2).as_usize()];
+        let mut content = vec![0; length as usize + 2];
         self.virt_read_raw_into(buffer, &mut content)?;
         content[length as usize] = 0;
         content[length as usize + 1] = 0;

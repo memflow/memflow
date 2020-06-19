@@ -1,5 +1,5 @@
 pub mod page_chunks;
-use crate::types::{Address, Length};
+use crate::types::Address;
 pub use page_chunks::*;
 
 mod double_buffered_iterator;
@@ -56,7 +56,7 @@ pub trait PageChunks {
     fn page_chunks(
         self,
         start_address: Address,
-        page_size: Length,
+        page_size: usize,
     ) -> PageChunkIterator<Self, TrueFunc<Self>>
     where
         Self: SplitAtIndex + Sized,
@@ -67,7 +67,7 @@ pub trait PageChunks {
     fn page_chunks_by<F: FnMut(Address, &Self, Option<&Self>) -> bool>(
         self,
         start_address: Address,
-        page_size: Length,
+        page_size: usize,
         split_fn: F,
     ) -> PageChunkIterator<Self, F>
     where

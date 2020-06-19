@@ -2,7 +2,7 @@
 //pub mod emulator;
 
 use crate::architecture::Architecture;
-use crate::types::{Address, Length};
+use crate::types::Address;
 
 pub trait OperatingSystem {}
 
@@ -23,7 +23,7 @@ pub trait OsProcessModuleInfo {
     fn parent_process(&self) -> Address;
 
     fn base(&self) -> Address;
-    fn size(&self) -> Length;
+    fn size(&self) -> usize;
     fn name(&self) -> String;
 }
 

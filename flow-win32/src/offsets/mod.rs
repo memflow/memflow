@@ -8,30 +8,28 @@ use std::path::Path;
 use crate::error::{Error, Result};
 use crate::kernel::ntos::Win32GUID;
 
-use flow_core::types::Length;
-
 #[derive(Debug, Clone)]
 pub struct Win32Offsets {
-    pub list_blink: Length,
-    pub eproc_link: Length,
+    pub list_blink: usize,
+    pub eproc_link: usize,
 
-    pub kproc_dtb: Length,
-    pub eproc_pid: Length,
-    pub eproc_name: Length,
-    pub eproc_peb: Length,
-    pub eproc_wow64: Length,
+    pub kproc_dtb: usize,
+    pub eproc_pid: usize,
+    pub eproc_name: usize,
+    pub eproc_peb: usize,
+    pub eproc_wow64: usize,
 
-    pub peb_ldr_x86: Length,
-    pub peb_ldr_x64: Length,
-    pub ldr_list_x86: Length,
-    pub ldr_list_x64: Length,
+    pub peb_ldr_x86: usize,
+    pub peb_ldr_x64: usize,
+    pub ldr_list_x86: usize,
+    pub ldr_list_x64: usize,
 
-    pub ldr_data_base_x86: Length,
-    pub ldr_data_base_x64: Length,
-    pub ldr_data_size_x86: Length,
-    pub ldr_data_size_x64: Length,
-    pub ldr_data_name_x86: Length,
-    pub ldr_data_name_x64: Length,
+    pub ldr_data_base_x86: usize,
+    pub ldr_data_base_x64: usize,
+    pub ldr_data_size_x86: usize,
+    pub ldr_data_size_x64: usize,
+    pub ldr_data_name_x86: usize,
+    pub ldr_data_name_x64: usize,
 }
 
 // initialize from pdb -> open pdb by file / by guid
@@ -72,7 +70,7 @@ impl Win32Offsets {
             .offset;
         let eproc_wow64 = match eproc.find_field("WoW64Process") {
             Some(f) => f.offset,
-            None => Length::zero(),
+            None => 0,
         };
 
         Ok(Self {
@@ -83,16 +81,16 @@ impl Win32Offsets {
             eproc_name,
             eproc_peb,
             eproc_wow64,
-            peb_ldr_x86: Length::from(0xC),        // _PEB::Ldr
-            peb_ldr_x64: Length::from(0x18),       // _PEB::Ldr
-            ldr_list_x86: Length::from(0xC),       // _PEB_LDR_DATA::InLoadOrderModuleList
-            ldr_list_x64: Length::from(0x10),      // _PEB_LDR_DATA::InLoadOrderModuleList
-            ldr_data_base_x86: Length::from(0x18), // _LDR_DATA_TABLE_ENTRY::DllBase
-            ldr_data_base_x64: Length::from(0x30), // _LDR_DATA_TABLE_ENTRY::DllBase
-            ldr_data_size_x86: Length::from(0x20), // _LDR_DATA_TABLE_ENTRY::SizeOfImage
-            ldr_data_size_x64: Length::from(0x40), // _LDR_DATA_TABLE_ENTRY::SizeOfImage
-            ldr_data_name_x86: Length::from(0x2C), // _LDR_DATA_TABLE_ENTRY::BaseDllName
-            ldr_data_name_x64: Length::from(0x58), // _LDR_DATA_TABLE_ENTRY::BaseDllName
+            peb_ldr_x86: 0xC,        // _PEB::Ldr
+            peb_ldr_x64: 0x18,       // _PEB::Ldr
+            ldr_list_x86: 0xC,       // _PEB_LDR_DATA::InLoadOrderModuleList
+            ldr_list_x64: 0x10,      // _PEB_LDR_DATA::InLoadOrderModuleList
+            ldr_data_base_x86: 0x18, // _LDR_DATA_TABLE_ENTRY::DllBase
+            ldr_data_base_x64: 0x30, // _LDR_DATA_TABLE_ENTRY::DllBase
+            ldr_data_size_x86: 0x20, // _LDR_DATA_TABLE_ENTRY::SizeOfImage
+            ldr_data_size_x64: 0x40, // _LDR_DATA_TABLE_ENTRY::SizeOfImage
+            ldr_data_name_x86: 0x2C, // _LDR_DATA_TABLE_ENTRY::BaseDllName
+            ldr_data_name_x64: 0x58, // _LDR_DATA_TABLE_ENTRY::BaseDllName
         })
     }
 

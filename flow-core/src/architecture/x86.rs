@@ -1,18 +1,17 @@
 use crate::architecture::Endianess;
-use crate::types::Length;
 
 use super::ArchMMUSpec;
 
-pub fn bits() -> u8 {
+pub const fn bits() -> u8 {
     32
 }
 
-pub fn endianess() -> Endianess {
+pub const fn endianess() -> Endianess {
     Endianess::LittleEndian
 }
 
-pub fn len_addr() -> Length {
-    Length::from(4)
+pub const fn size_addr() -> usize {
+    4
 }
 
 pub fn get_mmu_spec() -> ArchMMUSpec {
@@ -28,11 +27,11 @@ pub fn get_mmu_spec() -> ArchMMUSpec {
     }
 }
 
-pub fn page_size() -> Length {
+pub fn page_size() -> usize {
     page_size_level(1)
 }
 
-pub fn page_size_level(pt_level: u32) -> Length {
+pub fn page_size_level(pt_level: u32) -> usize {
     get_mmu_spec().page_size_level(pt_level as usize)
 }
 
@@ -41,7 +40,7 @@ pub fn page_size_level(pt_level: u32) -> Length {
 mod tests {
     use super::super::mmu_spec::masks::*;
     use super::get_mmu_spec;
-    use crate::types::{Address, Length};
+    use crate::types::{size, Address};
 
     #[test]
     fn x86_pte_bitmasks() {
@@ -55,14 +54,14 @@ mod tests {
     #[test]
     fn x86_pte_leaf_size() {
         let mmu = get_mmu_spec();
-        assert_eq!(mmu.pt_leaf_size(0), Length::from_kb(4));
-        assert_eq!(mmu.pt_leaf_size(1), Length::from_kb(4));
+        assert_eq!(mmu.pt_leaf_size(0), size::kb(4));
+        assert_eq!(mmu.pt_leaf_size(1), size::kb(4));
     }
 
     #[test]
     fn x86_page_size_level() {
         let mmu = get_mmu_spec();
-        assert_eq!(mmu.page_size_level(1), Length::from_kb(4));
-        assert_eq!(mmu.page_size_level(2), Length::from_mb(4));
+        assert_eq!(mmu.page_size_level(1), size::kb(4));
+        assert_eq!(mmu.page_size_level(2), size::mb(4));
     }
 }

@@ -2,7 +2,7 @@ use super::{CacheValidator, PageType};
 use crate::architecture::Architecture;
 use crate::iter::PageChunks;
 use crate::mem::phys_mem::{PhysicalMemory, PhysicalReadData, PhysicalReadIterator};
-use crate::types::{Address, Length, PhysicalAddress};
+use crate::types::{Address, PhysicalAddress};
 use bumpalo::{collections::Vec as BumpVec, Bump};
 use std::alloc::{alloc_zeroed, dealloc, Layout};
 
@@ -28,7 +28,7 @@ pub struct PageCache<'a, T: CacheValidator> {
     address: Box<[Address]>,
     page_refs: Box<[Option<&'a mut [u8]>]>,
     address_once_validated: Box<[Address]>,
-    page_size: Length,
+    page_size: usize,
     page_type_mask: PageType,
     pub validator: T,
     cache_ptr: *mut u8,
@@ -44,29 +44,27 @@ impl<'a, T: CacheValidator> Drop for PageCache<'a, T> {
 }
 
 impl<'a, T: CacheValidator> PageCache<'a, T> {
-    pub fn new(arch: Architecture, size: Length, page_type_mask: PageType, validator: T) -> Self {
+    pub fn new(arch: Architecture, size: usize, page_type_mask: PageType, validator: T) -> Self {
         Self::with_page_size(arch.page_size(), size, page_type_mask, validator)
     }
 
     pub fn with_page_size(
-        page_size: Length,
-        size: Length,
+        page_size: usize,
+        size: usize,
         page_type_mask: PageType,
         mut validator: T,
     ) -> Self {
-        let cache_entries = size.as_usize() / page_size.as_usize();
+        let cache_entries = size / page_size;
 
-        let layout =
-            Layout::from_size_align(cache_entries * page_size.as_usize(), page_size.as_usize())
-                .unwrap();
+        let layout = Layout::from_size_align(cache_entries * page_size, page_size).unwrap();
 
         let cache_ptr = unsafe { alloc_zeroed(layout) };
 
         let page_refs = (0..cache_entries)
             .map(|i| unsafe {
                 std::mem::transmute(std::slice::from_raw_parts_mut(
-                    cache_ptr.add(i * page_size.as_usize()),
-                    page_size.as_usize(),
+                    cache_ptr.add(i * page_size),
+                    page_size,
                 ))
             })
             .collect::<Vec<_>>()
@@ -87,8 +85,7 @@ impl<'a, T: CacheValidator> PageCache<'a, T> {
     }
 
     fn page_index(&self, addr: Address) -> usize {
-        (addr.as_page_aligned(self.page_size).as_usize() / self.page_size.as_usize())
-            % self.address.len()
+        (addr.as_page_aligned(self.page_size).as_usize() / self.page_size) % self.address.len()
     }
 
     fn take_page(&mut self, addr: Address, skip_validator: bool) -> PageValidity<'a> {
@@ -122,7 +119,7 @@ impl<'a, T: CacheValidator> PageCache<'a, T> {
         self.page_refs[page_index] = Some(page);
     }
 
-    pub fn page_size(&self) -> Length {
+    pub fn page_size(&self) -> usize {
         self.page_size
     }
 
@@ -173,7 +170,7 @@ impl<'a, T: CacheValidator> PageCache<'a, T> {
 
     pub fn split_to_chunks(
         (addr, out): PhysicalReadData<'_>,
-        page_size: Length,
+        page_size: usize,
     ) -> impl PhysicalReadIterator<'_> {
         out.page_chunks(addr.address(), page_size)
             .map(move |(paddr, chunk)| {
@@ -218,7 +215,7 @@ impl<'a, T: CacheValidator> PageCache<'a, T> {
                             match cached_page.validity {
                                 PageValidity::Valid(buf) => {
                                     let aligned_addr = paddr.as_page_aligned(self.page_size);
-                                    let start = (paddr - aligned_addr).as_usize();
+                                    let start = paddr - aligned_addr;
                                     let cached_buf =
                                         buf.split_at_mut(start).1.split_at_mut(out.len()).0;
                                     out.copy_from_slice(cached_buf);
@@ -270,7 +267,7 @@ impl<'a, T: CacheValidator> PageCache<'a, T> {
                         let cached_page = self.cached_page_mut(addr.address(), false);
                         let aligned_addr = cached_page.address.as_page_aligned(self.page_size);
 
-                        let start = (addr.address() - aligned_addr).as_usize();
+                        let start = addr.address() - aligned_addr;
 
                         if let PageValidity::Valid(buf) = cached_page.validity {
                             let cached_buf = buf.split_at_mut(start).1.split_at_mut(out.len()).0;
@@ -293,7 +290,7 @@ mod tests {
     use crate::mem::cache::page_cache::PageCache;
     use crate::mem::cache::timed_validator::TimedCacheValidator;
     use crate::mem::{VirtualFromPhysical, VirtualMemory};
-    use crate::types::{Address, Length, PhysicalAddress};
+    use crate::types::{size, Address, PhysicalAddress};
     use crate::*;
     use rand::{thread_rng, Rng};
 
@@ -331,18 +328,17 @@ mod tests {
     #[test]
     fn big_virt_buf() {
         for &seed in &[0x3ffd_235c_5194_dedf, thread_rng().gen_range(0, !0u64)] {
-            let mut dummy_mem = DummyMemory::with_seed(Length::from_mb(512), seed);
+            let mut dummy_mem = DummyMemory::with_seed(size::mb(512), seed);
 
-            let virt_size = Length::from_mb(18);
-            let mut test_buf = vec![0_u64; virt_size.as_usize() / 8];
+            let virt_size = size::mb(18);
+            let mut test_buf = vec![0_u64; virt_size / 8];
 
             for i in &mut test_buf {
                 *i = thread_rng().gen::<u64>();
             }
 
-            let test_buf = unsafe {
-                std::slice::from_raw_parts(test_buf.as_ptr() as *const u8, virt_size.as_usize())
-            };
+            let test_buf =
+                unsafe { std::slice::from_raw_parts(test_buf.as_ptr() as *const u8, virt_size) };
 
             let (dtb, virt_base) = dummy_mem.alloc_dtb(virt_size, &test_buf);
             let arch = Architecture::X64;
@@ -367,7 +363,7 @@ mod tests {
 
             let cache = PageCache::new(
                 arch,
-                Length::from_mb(2),
+                size::mb(2),
                 PageType::PAGE_TABLE | PageType::READ_ONLY,
                 TimedCacheValidator::new(Duration::from_secs(100)),
             );
@@ -394,9 +390,9 @@ mod tests {
 
     #[test]
     fn cache_invalidity_cached() {
-        let mut dummy_mem = DummyMemory::new(Length::from_mb(64));
+        let mut dummy_mem = DummyMemory::new(size::mb(64));
         let mem_ptr = &mut dummy_mem as *mut DummyMemory;
-        let virt_size = Length::from_mb(8);
+        let virt_size = size::mb(8);
         let mut buf_start = vec![0_u8; 64];
         for (i, item) in buf_start.iter_mut().enumerate() {
             *item = (i % 256) as u8;
@@ -406,7 +402,7 @@ mod tests {
 
         let cache = PageCache::new(
             arch,
-            Length::from_mb(2),
+            size::mb(2),
             PageType::PAGE_TABLE | PageType::READ_ONLY | PageType::WRITEABLE,
             TimedCacheValidator::new(Duration::from_secs(100)),
         );
@@ -446,9 +442,9 @@ mod tests {
 
     #[test]
     fn cache_invalidity_non_cached() {
-        let mut dummy_mem = DummyMemory::new(Length::from_mb(64));
+        let mut dummy_mem = DummyMemory::new(size::mb(64));
         let mem_ptr = &mut dummy_mem as *mut DummyMemory;
-        let virt_size = Length::from_mb(8);
+        let virt_size = size::mb(8);
         let mut buf_start = vec![0_u8; 64];
         for (i, item) in buf_start.iter_mut().enumerate() {
             *item = (i % 256) as u8;
@@ -459,7 +455,7 @@ mod tests {
         //alloc_dtb creates a page table with all writeable pages, we disable cache for them
         let cache = PageCache::new(
             arch,
-            Length::from_mb(2),
+            size::mb(2),
             PageType::PAGE_TABLE | PageType::READ_ONLY,
             TimedCacheValidator::new(Duration::from_secs(100)),
         );
@@ -503,18 +499,17 @@ mod tests {
     /// caches a different page in the entry before the said copy is operation is made.
     #[test]
     fn cache_phys_mem_overlap() {
-        let mut dummy_mem = DummyMemory::new(Length::from_mb(16));
+        let mut dummy_mem = DummyMemory::new(size::mb(16));
 
-        let buf_size = Length::from_kb(8);
-        let mut buf_start = vec![0_u8; buf_size.as_usize()];
+        let buf_size = size::kb(8);
+        let mut buf_start = vec![0_u8; buf_size];
         for (i, item) in buf_start.iter_mut().enumerate() {
             *item = ((i / 115) % 256) as u8;
         }
 
         let address = Address::from(0);
 
-        let addr =
-            PhysicalAddress::with_page(address, PageType::from_writeable_bit(false), 0x1000.into());
+        let addr = PhysicalAddress::with_page(address, PageType::from_writeable_bit(false), 0x1000);
 
         dummy_mem
             .phys_write_raw(addr, buf_start.as_slice())
@@ -524,14 +519,14 @@ mod tests {
 
         let cache = PageCache::new(
             arch,
-            Length::from_kb(4),
+            size::kb(4),
             PageType::PAGE_TABLE | PageType::READ_ONLY,
             TimedCacheValidator::new(Duration::from_secs(100)),
         );
 
         let mut mem_cache = CachedMemoryAccess::with(&mut dummy_mem, cache);
 
-        let mut buf_1 = vec![0_u8; buf_size.as_usize()];
+        let mut buf_1 = vec![0_u8; buf_size];
         mem_cache
             .phys_read_into(addr, buf_1.as_mut_slice())
             .unwrap();
@@ -543,12 +538,12 @@ mod tests {
         );
 
         let addr = PhysicalAddress::with_page(
-            address + Length::from_kb(4),
+            address + size::kb(4),
             PageType::from_writeable_bit(false),
-            0x1000.into(),
+            0x1000,
         );
 
-        let mut buf_2 = vec![0_u8; buf_size.as_usize()];
+        let mut buf_2 = vec![0_u8; buf_size];
         mem_cache
             .phys_read_into(addr, buf_2.as_mut_slice())
             .unwrap();
@@ -562,7 +557,7 @@ mod tests {
 
     #[test]
     fn cache_phys_mem() {
-        let mut dummy_mem = DummyMemory::new(Length::from_mb(16));
+        let mut dummy_mem = DummyMemory::new(size::mb(16));
 
         let mut buf_start = vec![0_u8; 64];
         for (i, item) in buf_start.iter_mut().enumerate() {
@@ -571,8 +566,7 @@ mod tests {
 
         let address = Address::from(0x5323);
 
-        let addr =
-            PhysicalAddress::with_page(address, PageType::from_writeable_bit(false), 0x1000.into());
+        let addr = PhysicalAddress::with_page(address, PageType::from_writeable_bit(false), 0x1000);
 
         dummy_mem
             .phys_write_raw(addr, buf_start.as_slice())
@@ -582,7 +576,7 @@ mod tests {
 
         let cache = PageCache::new(
             arch,
-            Length::from_mb(2),
+            size::mb(2),
             PageType::PAGE_TABLE | PageType::READ_ONLY,
             TimedCacheValidator::new(Duration::from_secs(100)),
         );
@@ -598,7 +592,7 @@ mod tests {
     }
     #[test]
     fn cache_phys_mem_diffpages() {
-        let mut dummy_mem = DummyMemory::new(Length::from_mb(16));
+        let mut dummy_mem = DummyMemory::new(size::mb(16));
 
         let mut buf_start = vec![0_u8; 64];
         for (i, item) in buf_start.iter_mut().enumerate() {
@@ -608,18 +602,17 @@ mod tests {
         let address = Address::from(0x5323);
 
         let addr1 =
-            PhysicalAddress::with_page(address, PageType::from_writeable_bit(false), 0x1000.into());
+            PhysicalAddress::with_page(address, PageType::from_writeable_bit(false), 0x1000);
 
-        let addr2 =
-            PhysicalAddress::with_page(address, PageType::from_writeable_bit(false), 0x100.into());
+        let addr2 = PhysicalAddress::with_page(address, PageType::from_writeable_bit(false), 0x100);
 
         dummy_mem
             .phys_write_raw(addr1, buf_start.as_slice())
             .unwrap();
 
         let cache = PageCache::with_page_size(
-            Length::from(0x10),
-            Length::from(0x10),
+            0x10,
+            0x10,
             PageType::PAGE_TABLE | PageType::READ_ONLY,
             TimedCacheValidator::new(Duration::from_secs(100)),
         );
@@ -650,8 +643,8 @@ mod tests {
 
     #[test]
     fn writeback() {
-        let mut dummy_mem = DummyMemory::new(Length::from_mb(16));
-        let virt_size = Length::from_mb(8);
+        let mut dummy_mem = DummyMemory::new(size::mb(16));
+        let virt_size = size::mb(8);
         let mut buf_start = vec![0_u8; 64];
         for (i, item) in buf_start.iter_mut().enumerate() {
             *item = (i % 256) as u8;
@@ -661,7 +654,7 @@ mod tests {
 
         let cache = PageCache::new(
             arch,
-            Length::from_mb(2),
+            size::mb(2),
             PageType::PAGE_TABLE | PageType::READ_ONLY,
             TimedCacheValidator::new(Duration::from_secs(100)),
         );
@@ -676,9 +669,7 @@ mod tests {
 
         assert_eq!(buf_start, buf_1);
         buf_1[16..20].copy_from_slice(&[255, 255, 255, 255]);
-        virt_mem
-            .virt_write(virt_base + Length::from(16), &buf_1[16..20])
-            .unwrap();
+        virt_mem.virt_write(virt_base + 16, &buf_1[16..20]).unwrap();
 
         let mut buf_2 = vec![0_u8; 64];
         virt_mem

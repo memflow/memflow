@@ -3,7 +3,7 @@ use crate::architecture::Architecture;
 use crate::error::Result;
 use crate::iter::PageChunks;
 use crate::mem::phys_mem::{PhysicalMemory, PhysicalReadIterator, PhysicalWriteIterator};
-use crate::types::{Length, PageType};
+use crate::types::{size, PageType};
 
 use bumpalo::Bump;
 
@@ -47,7 +47,7 @@ impl<'a, T: PhysicalMemory, Q: CacheValidator> PhysicalMemory for CachedMemoryAc
                     let mut cached_page = cache.cached_page_mut(paddr, false);
                     if let PageValidity::Valid(buf) = &mut cached_page.validity {
                         // write-back into still valid cache pages
-                        let start = (paddr - cached_page.address).as_usize();
+                        let start = paddr - cached_page.address;
                         buf[start..(start + data_chunk.len())].copy_from_slice(data_chunk);
                     }
 
@@ -63,8 +63,8 @@ impl<'a, T: PhysicalMemory, Q: CacheValidator> PhysicalMemory for CachedMemoryAc
 pub struct CachedMemoryAccessBuilder<T, Q> {
     mem: Option<T>,
     validator: Option<Q>,
-    page_size: Option<Length>,
-    cache_size: Length,
+    page_size: Option<usize>,
+    cache_size: usize,
     page_type_mask: PageType,
 }
 
@@ -74,7 +74,7 @@ impl<T: PhysicalMemory, Q: CacheValidator> Default for CachedMemoryAccessBuilder
             mem: None,
             validator: None,
             page_size: None,
-            cache_size: Length::from_mb(2),
+            cache_size: size::mb(2),
             page_type_mask: PageType::PAGE_TABLE | PageType::READ_ONLY,
         }
     }
@@ -103,12 +103,12 @@ impl<'a, T: PhysicalMemory, Q: CacheValidator> CachedMemoryAccessBuilder<T, Q> {
         self
     }
 
-    pub fn page_size(mut self, page_size: Length) -> Self {
+    pub fn page_size(mut self, page_size: usize) -> Self {
         self.page_size = Some(page_size);
         self
     }
 
-    pub fn cache_size(mut self, cache_size: Length) -> Self {
+    pub fn cache_size(mut self, cache_size: usize) -> Self {
         self.cache_size = cache_size;
         self
     }

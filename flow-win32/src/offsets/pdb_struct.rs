@@ -3,15 +3,13 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::path::Path;
 
-use flow_core::types::Length;
-
 mod data;
 use data::TypeSet;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PdbField {
     pub type_name: String,
-    pub offset: Length,
+    pub offset: usize,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -71,7 +69,7 @@ impl PdbStruct {
                     f.name.to_string().into_owned(),
                     PdbField {
                         type_name: f.type_name.clone(),
-                        offset: Length::from(f.offset),
+                        offset: f.offset as usize,
                     },
                 );
             });

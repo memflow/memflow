@@ -1,11 +1,7 @@
 pub mod address;
 pub use address::Address;
 
-pub mod length;
-pub use length::Length;
-
-pub mod offset;
-pub use offset::Offset;
+pub mod size;
 
 pub mod page;
 pub use page::{Page, PageType};

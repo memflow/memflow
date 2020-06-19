@@ -6,7 +6,7 @@ use crate::iter::{PageChunks, SplitAtIndex};
 use crate::mem::cache::CacheValidator;
 use crate::mem::virt_translate::VirtualTranslate;
 use crate::mem::PhysicalMemory;
-use crate::types::{Address, Length, PhysicalAddress};
+use crate::types::{Address, PhysicalAddress};
 
 use bumpalo::{collections::Vec as BumpVec, Bump};
 
@@ -76,8 +76,7 @@ impl<V: VirtualTranslate, Q: CacheValidator> VirtualTranslate for CachedVirtualT
                     }
                     None
                 } else {
-                    misc +=
-                        core::cmp::max(1, buf.length().as_usize() / arch.page_size().as_usize());
+                    misc += core::cmp::max(1, buf.length() / arch.page_size());
                     Some((addr, buf))
                 }
             })
@@ -105,7 +104,7 @@ impl<V: VirtualTranslate, Q: CacheValidator> VirtualTranslate for CachedVirtualT
 pub struct CachedVirtualTranslateBuilder<V, Q> {
     vat: Option<V>,
     validator: Option<Q>,
-    entries: Option<Length>,
+    entries: Option<usize>,
     arch: Option<Architecture>,
 }
 
@@ -114,7 +113,7 @@ impl<V: VirtualTranslate, Q: CacheValidator> Default for CachedVirtualTranslateB
         Self {
             vat: None,
             validator: None,
-            entries: Some(Length::from(2048)),
+            entries: Some(2048),
             arch: None,
         }
     }
@@ -142,7 +141,7 @@ impl<V: VirtualTranslate, Q: CacheValidator> CachedVirtualTranslateBuilder<V, Q>
         self
     }
 
-    pub fn entries(mut self, entries: Length) -> Self {
+    pub fn entries(mut self, entries: usize) -> Self {
         self.entries = Some(entries);
         self
     }

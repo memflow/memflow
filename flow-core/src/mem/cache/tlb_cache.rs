@@ -1,6 +1,6 @@
 use super::CacheValidator;
 use crate::architecture::Architecture;
-use crate::types::{Address, Length, PhysicalAddress};
+use crate::types::{Address, PhysicalAddress};
 use crate::{Error, Result};
 
 #[derive(Clone, Copy)]
@@ -42,18 +42,18 @@ pub struct TLBCache<T: CacheValidator> {
 }
 
 impl<T: CacheValidator> TLBCache<T> {
-    pub fn new(size: Length, mut validator: T) -> Self {
-        validator.allocate_slots(size.as_usize());
+    pub fn new(size: usize, mut validator: T) -> Self {
+        validator.allocate_slots(size);
 
         Self {
-            entries: vec![CachedEntry::INVALID; size.as_usize()].into_boxed_slice(),
+            entries: vec![CachedEntry::INVALID; size].into_boxed_slice(),
             validator,
         }
     }
 
     #[inline]
-    fn get_cache_index(&self, page_addr: Address, page_size: Length) -> usize {
-        ((page_addr.as_u64() / page_size.as_u64()) % (self.entries.len() as u64)) as usize
+    fn get_cache_index(&self, page_addr: Address, page_size: usize) -> usize {
+        ((page_addr.as_u64() / (page_size as u64)) % (self.entries.len() as u64)) as usize
     }
 
     #[inline]
@@ -114,15 +114,15 @@ impl<T: CacheValidator> TLBCache<T> {
         &mut self,
         dtb: Address,
         in_addr: Address,
-        invalid_len: Length,
+        invalid_len: usize,
         arch: Architecture,
     ) {
         let page_size = arch.page_size();
         let page_addr = in_addr.as_page_aligned(page_size);
-        let end_addr = (in_addr + invalid_len + Length::from(1)).as_page_aligned(page_size);
+        let end_addr = (in_addr + invalid_len + 1).as_page_aligned(page_size);
 
         for i in (page_addr.as_u64()..end_addr.as_u64())
-            .step_by(page_size.as_usize())
+            .step_by(page_size)
             .take(self.entries.len())
         {
             let cur_page = Address::from(i);

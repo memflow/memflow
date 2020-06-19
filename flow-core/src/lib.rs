@@ -22,7 +22,7 @@ pub use error::{Error, Result};
 
 #[macro_use]
 pub mod types;
-pub use types::{Address, Length, Offset, Page, PageType, PhysicalAddress, Pointer32, Pointer64};
+pub use types::{size, Address, Page, PageType, PhysicalAddress, Pointer32, Pointer64};
 
 pub mod architecture;
 pub use architecture::{Architecture, Endianess};

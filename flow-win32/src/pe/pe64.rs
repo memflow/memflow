@@ -12,7 +12,7 @@ use pelite::pe64::image::*;
 use pelite::pe64::{Align, Pe, PeObject};
 
 use flow_core::mem::VirtualMemory;
-use flow_core::types::{Address, Length};
+use flow_core::types::Address;
 
 /// View into a mapped PE image.
 pub struct MemoryPeView<'a, T: VirtualMemory + ?Sized> {
@@ -107,8 +107,7 @@ unsafe impl<'a, T: VirtualMemory + ?Sized> Pe<'a> for MemoryPeView<'a, T> {
     /// Slices the raw image buffer at the specified offset
     fn image_slice(&self, offset: usize, size: usize) -> Option<&'a [u8]> {
         unsafe {
-            self.context
-                .update_cache(Address::from(offset), Length::from(size));
+            self.context.update_cache(Address::from(offset), size);
             (*self.context.image_cache.get()).get(offset..offset.wrapping_add(size))
         }
     }
@@ -135,8 +134,7 @@ unsafe impl<'a, T: VirtualMemory + ?Sized> Pe<'a> for MemoryPeView<'a, T> {
                 Err(Error::Bounds)
             } else {
                 // TODO: remember cache
-                self.context
-                    .update_cache(Address::from(start), Length::from(min_size_of));
+                self.context.update_cache(Address::from(start), min_size_of);
                 Ok(&(*self.context.image_cache.get())[start..])
             }
         }
@@ -160,8 +158,7 @@ unsafe impl<'a, T: VirtualMemory + ?Sized> Pe<'a> for MemoryPeView<'a, T> {
         let end = address.wrapping_add(section_header.VirtualSize) as usize;
 
         unsafe {
-            self.context
-                .update_cache(Address::from(start), Length::from(start - end));
+            self.context.update_cache(Address::from(start), start - end);
             (*self.context.image_cache.get())
                 .get(start..end)
                 .ok_or(Error::Bounds)
@@ -200,8 +197,7 @@ unsafe impl<'a, T: VirtualMemory + ?Sized> Pe<'a> for MemoryPeView<'a, T> {
                     Err(Error::Bounds)
                 } else {
                     // TODO: remember cache
-                    self.context
-                        .update_cache(Address::from(start), Length::from(min_size_of));
+                    self.context.update_cache(Address::from(start), min_size_of);
                     Ok(&(*self.context.image_cache.get())[start..])
                 }
             }

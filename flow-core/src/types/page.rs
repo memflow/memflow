@@ -2,7 +2,7 @@
 This module contains data structures related to information about a page.
 */
 
-use super::{Address, Length};
+use super::Address;
 
 bitflags! {
     /// Describes the type of a page using a bitflag.
@@ -41,7 +41,7 @@ pub struct Page {
     /// Contains the base address of this page.
     pub page_base: Address,
     /// Contains the size of this page.
-    pub page_size: Length,
+    pub page_size: usize,
 }
 
 impl Page {
@@ -49,7 +49,7 @@ impl Page {
     pub const INVALID: Page = Page {
         page_type: PageType::UNKNOWN,
         page_base: Address::INVALID,
-        page_size: Length::zero(),
+        page_size: 0,
     };
 
     /// Returns a page that is invalid.
@@ -61,6 +61,6 @@ impl Page {
     Checks wether the page is valid or not.
     */
     pub fn is_valid(&self) -> bool {
-        self.page_base.is_valid() && !self.page_size.is_zero()
+        self.page_base.is_valid() && self.page_size != 0
     }
 }

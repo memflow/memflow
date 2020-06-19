@@ -2,7 +2,7 @@ use criterion::*;
 
 use flow_core::mem::{timed_validator::*, CachedMemoryAccess, PhysicalMemory};
 
-use flow_core::{Address, Architecture, Length, PageType, PhysicalAddress};
+use flow_core::{size, Address, Architecture, PageType, PhysicalAddress};
 
 use rand::prelude::*;
 use rand::{prng::XorShiftRng as CurRng, Rng, SeedableRng};
@@ -32,7 +32,7 @@ fn rwtest<T: PhysicalMemory>(
                         PhysicalAddress::with_page(
                             *addr,
                             PageType::from_writeable_bit(true),
-                            Length::from_kb(4),
+                            size::kb(4),
                         ),
                         buf.as_mut_slice(),
                     )
@@ -68,14 +68,14 @@ fn read_test_with_ctx<T: PhysicalMemory>(
 ) {
     let mut rng = CurRng::from_rng(thread_rng()).unwrap();
 
-    let start = Address::from(rng.gen_range(0, Length::from_mb(50).as_u64()));
-    let end = start + Length::from_mb(1);
+    let start = Address::from(rng.gen_range(0, size::mb(50)));
+    let end = start + size::mb(1);
 
     if cache_size > 0 {
         let mut mem = CachedMemoryAccess::builder()
             .mem(mem)
             .arch(Architecture::X64)
-            .cache_size(Length::from_mb(cache_size))
+            .cache_size(size::mb(cache_size as usize))
             .page_type_mask(PageType::PAGE_TABLE | PageType::READ_ONLY | PageType::WRITEABLE)
             .validator(TimedCacheValidator::new(Duration::from_millis(10000)))
             .build()

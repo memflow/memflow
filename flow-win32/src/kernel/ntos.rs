@@ -9,7 +9,7 @@ use crate::pe::{self, MemoryPeViewContext};
 use log::warn;
 
 use flow_core::mem::VirtualMemory;
-use flow_core::types::{Address, Length};
+use flow_core::types::Address;
 
 use pelite::{self, image::GUID, pe64::debug::CodeView};
 use uuid::{self, Uuid};
@@ -17,7 +17,7 @@ use uuid::{self, Uuid};
 pub fn find<T: VirtualMemory + ?Sized>(
     virt_mem: &mut T,
     start_block: &StartBlock,
-) -> Result<(Address, Length)> {
+) -> Result<(Address, usize)> {
     if start_block.arch.bits() == 64 {
         if !start_block.va.is_null() {
             match x64::find_with_va(virt_mem, start_block) {

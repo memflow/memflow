@@ -1,38 +1,38 @@
-use crate::types::{Address, Length};
+use crate::types::Address;
 use std::iter::*;
 
 pub trait SplitAtIndex {
-    fn split_at(&mut self, idx: Length) -> (Self, Option<Self>)
+    fn split_at(&mut self, idx: usize) -> (Self, Option<Self>)
     where
         Self: Sized;
 
-    fn length(&self) -> Length;
+    fn length(&self) -> usize;
 }
 
 impl SplitAtIndex for bool {
-    fn split_at(&mut self, _: Length) -> (Self, Option<Self>) {
+    fn split_at(&mut self, _: usize) -> (Self, Option<Self>) {
         (*self, None)
     }
 
-    fn length(&self) -> Length {
-        Length::from(1)
+    fn length(&self) -> usize {
+        1
     }
 }
 
 impl<T> SplitAtIndex for &[T] {
-    fn split_at(&mut self, idx: Length) -> (Self, Option<Self>) {
-        let (left, right) = (*self).split_at(core::cmp::min(self.len(), idx.as_usize()));
+    fn split_at(&mut self, idx: usize) -> (Self, Option<Self>) {
+        let (left, right) = (*self).split_at(core::cmp::min(self.len(), idx));
         (left, if right.is_empty() { None } else { Some(right) })
     }
 
-    fn length(&self) -> Length {
-        Length::from(self.len())
+    fn length(&self) -> usize {
+        self.len()
     }
 }
 
 impl<T> SplitAtIndex for &mut [T] {
-    fn split_at(&mut self, idx: Length) -> (Self, Option<Self>) {
-        let mid = core::cmp::min(self.len(), idx.as_usize());
+    fn split_at(&mut self, idx: usize) -> (Self, Option<Self>) {
+        let mid = core::cmp::min(self.len(), idx);
         let ptr = self.as_mut_ptr();
         (
             unsafe { core::slice::from_raw_parts_mut(ptr, mid) },
@@ -44,27 +44,27 @@ impl<T> SplitAtIndex for &mut [T] {
         )
     }
 
-    fn length(&self) -> Length {
-        Length::from(self.len())
+    fn length(&self) -> usize {
+        self.len()
     }
 }
 
 pub struct PageChunkIterator<T: SplitAtIndex, FS> {
     v: Option<T>,
     cur_address: Address,
-    page_size: Length,
+    page_size: usize,
     check_split_fn: FS,
-    cur_off: Length,
+    cur_off: usize,
 }
 
 impl<T: SplitAtIndex, FS> PageChunkIterator<T, FS> {
-    pub fn new(buf: T, start_address: Address, page_size: Length, check_split_fn: FS) -> Self {
+    pub fn new(buf: T, start_address: Address, page_size: usize, check_split_fn: FS) -> Self {
         Self {
             v: Some(buf),
             cur_address: start_address,
             page_size,
             check_split_fn,
-            cur_off: Length::from(0),
+            cur_off: 0,
         }
     }
 }
@@ -102,11 +102,9 @@ impl<T: SplitAtIndex, FS: FnMut(Address, &T, Option<&T>) -> bool> Iterator
     #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
         if let Some(buf) = &self.v {
-            let n = ((self.cur_address + buf.length() - Length::from(1))
-                .as_page_aligned(self.page_size)
+            let n = ((self.cur_address + buf.length() - 1).as_page_aligned(self.page_size)
                 - self.cur_address.as_page_aligned(self.page_size))
-            .as_usize()
-                / self.page_size.as_usize()
+                / self.page_size
                 + 1;
             (n, Some(n))
         } else {

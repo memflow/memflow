@@ -50,7 +50,7 @@ fn rwtest<T: VirtualMemory>(
             while done_size < read_size {
                 let base_addr = rng.gen_range(
                     module.base().as_u64(),
-                    module.base().as_u64() + module.size().as_u64(),
+                    module.base().as_u64() + module.size() as u64,
                 );
                 for (_, addr) in bufs.iter_mut() {
                     *addr = base_addr + rng.gen_range(0, 0x2000);
@@ -109,7 +109,7 @@ fn read_bench<T: PhysicalMemory, V: VirtualTranslate>(
         let mod_list: Vec<Win32ModuleInfo> = proc
             .module_info_list()?
             .into_iter()
-            .filter(|module| module.size() > 0x1000.into())
+            .filter(|module| module.size() > 0x1000)
             .collect();
 
         if !mod_list.is_empty() {

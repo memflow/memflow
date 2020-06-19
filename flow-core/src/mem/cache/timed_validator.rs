@@ -1,3 +1,5 @@
+use std::prelude::v1::*;
+
 use super::CacheValidator;
 pub use coarsetime::{Duration, Instant};
 

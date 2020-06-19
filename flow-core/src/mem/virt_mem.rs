@@ -1,3 +1,5 @@
+use std::prelude::v1::*;
+
 pub mod virt_from_phys;
 pub use virt_from_phys::VirtualFromPhysical;
 
@@ -5,6 +7,7 @@ use super::VirtualMemoryBatcher;
 use crate::error::Result;
 use crate::types::{Address, Page, Pointer32, Pointer64};
 
+#[cfg(feature = "std")]
 use std::ffi::CString;
 use std::mem::MaybeUninit;
 
@@ -140,6 +143,7 @@ pub trait VirtualMemory {
 
     // TODO: read into slice?
     // TODO: if len is shorter than string truncate it!
+    #[cfg(feature = "std")]
     fn virt_read_cstr(&mut self, addr: Address, len: usize) -> Result<String> {
         let mut buf = vec![0; len];
         self.virt_read_raw_into(addr, &mut buf)?;
@@ -150,7 +154,7 @@ pub trait VirtualMemory {
         Ok(String::from(v.to_string_lossy()))
     }
 
-    fn get_batcher(&mut self) -> VirtualMemoryBatcher<Self>
+    fn virt_batcher(&mut self) -> VirtualMemoryBatcher<Self>
     where
         Self: Sized,
     {

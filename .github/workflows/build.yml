@@ -10,61 +10,65 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-    - name: Cache cargo build
-      uses: actions/cache@v1
-      env:
-        cache-name: cargo-build-target
-      with:
-        path: target
-        key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/Cargo.lock') }}
-        restore-keys: |
-          ${{ runner.os }}-${{ env.cache-name }}-
-    - name: Build
-      run: cargo build --all --all-features --verbose
-    - name: Build examples
-      run: cargo build --all --all-features --examples --verbose
+      - run: sudo apt-get install libncurses-dev
+      - uses: actions/checkout@v2
+      - name: Cache cargo build
+        uses: actions/cache@v1
+        env:
+          cache-name: cargo-build-target
+        with:
+          path: target
+          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ env.cache-name }}-
+      - name: Build
+        run: cargo build --all --all-features --verbose
+      - name: Build examples
+        run: cargo build --all --all-features --examples --verbose
 
   test:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-    - name: Cache cargo build
-      uses: actions/cache@v1
-      env:
-        cache-name: cargo-build-target
-      with:
-        path: target
-        key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/Cargo.lock') }}
-        restore-keys: |
-          ${{ runner.os }}-${{ env.cache-name }}-
-    - name: Run all tests
-      run: cargo test --all --all-features --verbose
+      - run: sudo apt-get install libncurses-dev
+      - uses: actions/checkout@v2
+      - name: Cache cargo build
+        uses: actions/cache@v1
+        env:
+          cache-name: cargo-build-target
+        with:
+          path: target
+          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ env.cache-name }}-
+      - name: Run all tests
+        run: cargo test --all --all-features --verbose
 
   lint:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-    - name: Cache cargo build
-      uses: actions/cache@v1
-      env:
-        cache-name: cargo-build-target
-      with:
-        path: target
-        key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/Cargo.lock') }}
-        restore-keys: |
-          ${{ runner.os }}-${{ env.cache-name }}-
-    - run: rustup component add clippy
-    - name: Check formatting
-      run: cargo fmt -- --check
-    - uses: actions-rs/clippy-check@v1
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        args: --all-targets --all-features
+      - run: sudo apt-get install libncurses-dev
+      - uses: actions/checkout@v2
+      - name: Cache cargo build
+        uses: actions/cache@v1
+        env:
+          cache-name: cargo-build-target
+        with:
+          path: target
+          key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ env.cache-name }}-
+      - run: rustup component add clippy
+      - name: Check formatting
+        run: cargo fmt -- --check
+      - uses: actions-rs/clippy-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          args: --all-targets --all-features
 
   build-coverage:
     runs-on: ubuntu-latest
     steps:
+      - run: sudo apt-get install libncurses-dev
       - uses: actions/checkout@v2
       - name: Set up Rust nightly
         uses: actions-rs/toolchain@v1

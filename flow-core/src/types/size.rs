@@ -41,9 +41,9 @@ mod tests {
     fn test_from() {
         assert_eq!(kb(20), 20480usize);
         assert_eq!(kib(123), 15744usize);
-        assert_eq!(mb(20), 20971520usize);
-        assert_eq!(mib(52), 6815744usize);
-        assert_eq!(gb(20), 21474836480usize);
-        assert_eq!(gib(52), 6979321856usize);
+        assert_eq!(mb(20), 20_971_520_usize);
+        assert_eq!(mib(52), 6_815_744_usize);
+        assert_eq!(gb(20), 21_474_836_480_usize);
+        assert_eq!(gib(52), 6_979_321_856_usize);
     }
 }

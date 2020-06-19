@@ -6,7 +6,7 @@ use log::info;
 use byteorder::{ByteOrder, LittleEndian};
 
 use flow_core::architecture::{self, Architecture};
-use flow_core::types::{size, Address};
+use flow_core::types::size;
 
 // https://github.com/ufrisk/MemProcFS/blob/f2d15cf4fe4f19cfeea3dad52971fae2e491064b/vmm/vmmwininit.c#L560
 pub fn find_lowstub(stub: &[u8]) -> Result<StartBlock> {
@@ -21,8 +21,8 @@ pub fn find_lowstub(stub: &[u8]) -> Result<StartBlock> {
         .and_then(|c| {
             Ok(StartBlock {
                 arch: Architecture::X64,
-                va: Address::from(LittleEndian::read_u64(&c[0x70..])),
-                dtb: Address::from(LittleEndian::read_u64(&c[0xA0..])),
+                kernel_hint: LittleEndian::read_u64(&c[0x70..]).into(),
+                dtb: LittleEndian::read_u64(&c[0xA0..]).into(),
             })
         })
 }
@@ -66,8 +66,8 @@ pub fn find(mem: &[u8]) -> Result<StartBlock> {
         .and_then(|i| {
             Ok(StartBlock {
                 arch: Architecture::X64,
-                va: Address::from(0),
-                dtb: Address::from((i as u64) * architecture::x64::page_size() as u64),
+                kernel_hint: 0.into(),
+                dtb: ((i as u64) * architecture::x64::page_size() as u64).into(),
             })
         })
 }

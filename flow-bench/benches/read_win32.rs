@@ -17,7 +17,7 @@ fn initialize_virt_ctx(
 ) -> flow_core::Result<(Memory, TranslateArch, Win32ProcessInfo, Win32ModuleInfo)> {
     let mut phys_mem = Memory::new()?;
 
-    let kernel_info = KernelInfo::find(&mut phys_mem)?;
+    let kernel_info = KernelInfo::builder().mem(&mut phys_mem).build()?;
     let vat = TranslateArch::new(kernel_info.start_block.arch);
     let offsets = Win32Offsets::try_with_guid(&kernel_info.kernel_guid)?;
 

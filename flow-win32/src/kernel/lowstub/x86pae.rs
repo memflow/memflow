@@ -26,7 +26,7 @@ pub fn find(mem: &[u8]) -> Result<StartBlock> {
         .and_then(|(a, _)| {
             Ok(StartBlock {
                 arch: Architecture::X86Pae,
-                va: Address::from(0),
+                kernel_hint: 0.into(),
                 dtb: a,
             })
         })

@@ -51,8 +51,8 @@ pub fn find_guid<T: VirtualMemory + ?Sized>(
     virt_mem: &mut T,
     kernel_base: Address,
 ) -> Result<Win32GUID> {
-    let ctx = MemoryPeViewContext::new(virt_mem, kernel_base)?;
-    let pe = pe::wrap_memory_pe_view(&ctx)?;
+    let ctx = MemoryPeViewContext::new(virt_mem, kernel_base).map_err(Error::new)?;
+    let pe = pe::wrap_memory_pe_view(&ctx).map_err(Error::new)?;
 
     let debug = match pe.debug() {
         Ok(d) => d,
@@ -90,7 +90,8 @@ fn generate_guid(signature: GUID, age: u32) -> Result<String> {
         signature.Data2,
         signature.Data3,
         &signature.Data4,
-    )?;
+    )
+    .map_err(Error::new)?;
 
     Ok(format!(
         "{}{:X}",

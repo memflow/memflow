@@ -77,6 +77,8 @@ impl<'a, T: VirtualMemory> VirtualReadUnicodeString for T {
                 Endianess::BigEndian => BigEndian::read_u16(b),
             })
             .collect::<Vec<u16>>();
-        Ok(U16CString::from_vec_with_nul(content16)?.to_string_lossy())
+        Ok(U16CString::from_vec_with_nul(content16)
+            .map_err(Error::new)?
+            .to_string_lossy())
     }
 }

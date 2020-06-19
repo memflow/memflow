@@ -1,8 +1,11 @@
 pub mod pdb_struct;
 pub use pdb_struct::PdbStruct;
 
-pub mod pdb_cache;
+pub mod symstore;
+pub use symstore::*;
 
+use std::fs::File;
+use std::io::Read;
 use std::path::Path;
 
 use crate::error::{Error, Result};
@@ -32,15 +35,24 @@ pub struct Win32Offsets {
     pub ldr_data_name_x64: usize,
 }
 
-// initialize from pdb -> open pdb by file / by guid
-// initialize from guid
-// initialize manually
-
 impl Win32Offsets {
-    pub fn try_with_pdb(pdb_path: &Path) -> Result<Self> {
-        let list = PdbStruct::with(pdb_path, "_LIST_ENTRY")?;
-        let kproc = PdbStruct::with(pdb_path, "_KPROCESS")?;
-        let eproc = PdbStruct::with(pdb_path, "_EPROCESS")?;
+    pub fn try_with_guid(guid: &Win32GUID) -> Result<Self> {
+        let symstore = SymbolStore::default().no_cache();
+        let pdb = symstore.load(guid)?;
+        Self::try_with_pdb_slice(&pdb[..])
+    }
+
+    pub fn try_with_pdb<P: AsRef<Path>>(pdb_path: P) -> Result<Self> {
+        let mut file = File::open(pdb_path)?;
+        let mut pdb = Vec::new();
+        file.read_to_end(&mut pdb)?;
+        Self::try_with_pdb_slice(&pdb[..])
+    }
+
+    pub fn try_with_pdb_slice(pdb_slice: &[u8]) -> Result<Self> {
+        let list = PdbStruct::with(pdb_slice, "_LIST_ENTRY").map_err(Error::new)?;
+        let kproc = PdbStruct::with(pdb_slice, "_KPROCESS").map_err(Error::new)?;
+        let eproc = PdbStruct::with(pdb_slice, "_EPROCESS").map_err(Error::new)?;
 
         let list_blink = list
             .find_field("Blink")
@@ -92,10 +104,5 @@ impl Win32Offsets {
             ldr_data_name_x86: 0x2C, // _LDR_DATA_TABLE_ENTRY::BaseDllName
             ldr_data_name_x64: 0x58, // _LDR_DATA_TABLE_ENTRY::BaseDllName
         })
-    }
-
-    pub fn try_with_guid(guid: &Win32GUID) -> Result<Self> {
-        let pdb = pdb_cache::try_get_pdb(guid)?;
-        Self::try_with_pdb(&pdb)
     }
 }

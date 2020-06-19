@@ -36,7 +36,7 @@ impl Win32ModuleInfo {
                     self.base,
                     e
                 );
-                return Err(Error::from(e));
+                return Err(Error::new(e));
             }
         };
 

@@ -1,7 +1,7 @@
 pub mod cached_memory_access;
 pub mod cached_vat;
 
-#[cfg(feature="std")]
+#[cfg(feature = "std")]
 pub mod timed_validator;
 
 mod page_cache;
@@ -10,7 +10,7 @@ mod tlb_cache;
 pub use cached_memory_access::*;
 pub use cached_vat::*;
 
-#[cfg(feature="std")]
+#[cfg(feature = "std")]
 pub use timed_validator::*;
 
 use crate::types::PageType;

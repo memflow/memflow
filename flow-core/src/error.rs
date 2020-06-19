@@ -59,7 +59,7 @@ impl std::convert::From<String> for Error {
     }
 }
 
-#[cfg(feature="std")]
+#[cfg(feature = "std")]
 impl std::convert::From<std::io::Error> for Error {
     fn from(error: std::io::Error) -> Self {
         Self::new(error)
@@ -75,7 +75,7 @@ impl std::convert::From<std::option::NoneError> for Error {
 }
 */
 
-#[cfg(feature="std")]
+#[cfg(feature = "std")]
 impl std::convert::From<std::ffi::NulError> for Error {
     fn from(error: std::ffi::NulError) -> Self {
         Self::new(error)

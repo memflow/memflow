@@ -18,3 +18,7 @@ default-members = [
     #"flow-ffi",
     "flow-bench"
 ]
+
+exclude = [
+    "nostd-test"
+]

@@ -91,8 +91,8 @@ mod tests {
     fn pc_check_all_aligned_zero() {
         let arr = [0_u8; 0x1000];
 
-        for (addr, _chunk) in arr.page_chunks(0.into(), PAGE_SIZE.into()) {
-            assert_eq!(addr.as_page_aligned(PAGE_SIZE.into()), addr);
+        for (addr, _chunk) in arr.page_chunks(0.into(), PAGE_SIZE) {
+            assert_eq!(addr.as_page_aligned(PAGE_SIZE), addr);
         }
     }
 
@@ -100,7 +100,7 @@ mod tests {
     fn pc_check_all_chunks_equal() {
         let arr = [0_u8; 100 * PAGE_SIZE];
 
-        for (_addr, chunk) in arr.page_chunks(0.into(), PAGE_SIZE.into()) {
+        for (_addr, chunk) in arr.page_chunks(0.into(), PAGE_SIZE) {
             println!("{:x} {:x}", _addr, chunk.len());
             assert_eq!(chunk.len(), PAGE_SIZE);
         }
@@ -111,7 +111,7 @@ mod tests {
         const OFF: usize = 26;
         let arr = [0_u8; 100 * PAGE_SIZE + (PAGE_SIZE - OFF)];
 
-        let mut page_iter = arr.page_chunks(OFF.into(), PAGE_SIZE.into());
+        let mut page_iter = arr.page_chunks(OFF.into(), PAGE_SIZE);
 
         {
             let (addr, chunk) = page_iter.next().unwrap();
@@ -132,7 +132,7 @@ mod tests {
         let mut cur_len = 0;
         let mut prev_len = 0;
 
-        let mut page_iter = arr.page_chunks(OFF.into(), PAGE_SIZE.into());
+        let mut page_iter = arr.page_chunks(OFF.into(), PAGE_SIZE);
 
         {
             let (addr, chunk) = page_iter.next().unwrap();
@@ -158,23 +158,21 @@ mod tests {
         const PAGE_COUNT: usize = 5;
         let arr = [0_u8; PAGE_SIZE * PAGE_COUNT];
         assert_eq!(
-            arr.page_chunks(0.into(), PAGE_SIZE.into()).size_hint().0,
+            arr.page_chunks(0.into(), PAGE_SIZE).size_hint().0,
             PAGE_COUNT
         );
         assert_eq!(
-            arr.page_chunks(1.into(), PAGE_SIZE.into()).size_hint().0,
+            arr.page_chunks(1.into(), PAGE_SIZE).size_hint().0,
             PAGE_COUNT + 1
         );
         assert_eq!(
-            arr.page_chunks((PAGE_SIZE - 1).into(), PAGE_SIZE.into())
+            arr.page_chunks((PAGE_SIZE - 1).into(), PAGE_SIZE)
                 .size_hint()
                 .0,
             PAGE_COUNT + 1
         );
         assert_eq!(
-            arr.page_chunks(PAGE_SIZE.into(), PAGE_SIZE.into())
-                .size_hint()
-                .0,
+            arr.page_chunks(PAGE_SIZE.into(), PAGE_SIZE).size_hint().0,
             PAGE_COUNT
         );
     }

@@ -3,7 +3,10 @@
 do_setcap() {
 	for f in "$1/$2"*; do
 		if [[ -f $f && $f != *.* ]] ; then
-			setcap 'CAP_SYS_PTRACE=ep' $f
+			if [[ -z "$(getcap $f | grep -i cap_sys_ptrace)" ]]; then
+				echo setcap for $f
+				sudo setcap 'CAP_SYS_PTRACE=ep' $f
+			fi
 		fi
 	done
 }

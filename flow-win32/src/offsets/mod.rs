@@ -37,16 +37,16 @@ pub struct Win32Offsets {
 
 impl Win32Offsets {
     pub fn try_with_guid(guid: &Win32GUID) -> Result<Self> {
-        let symstore = SymbolStore::default().no_cache();
+        let symstore = SymbolStore::default();
         let pdb = symstore.load(guid)?;
         Self::try_with_pdb_slice(&pdb[..])
     }
 
     pub fn try_with_pdb<P: AsRef<Path>>(pdb_path: P) -> Result<Self> {
         let mut file = File::open(pdb_path)?;
-        let mut pdb = Vec::new();
-        file.read_to_end(&mut pdb)?;
-        Self::try_with_pdb_slice(&pdb[..])
+        let mut buffer = Vec::new();
+        file.read_to_end(&mut buffer)?;
+        Self::try_with_pdb_slice(&buffer[..])
     }
 
     pub fn try_with_pdb_slice(pdb_slice: &[u8]) -> Result<Self> {

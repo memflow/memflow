@@ -2,6 +2,8 @@
 PE view.
 */
 
+use std::prelude::v1::*;
+
 use super::MemoryPeViewContext;
 
 use std::cmp;

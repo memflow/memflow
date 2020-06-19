@@ -1,3 +1,5 @@
+use std::prelude::v1::*;
+
 use super::StartBlock;
 use crate::error::{Error, Result};
 use crate::pe::{self, MemoryPeViewContext};

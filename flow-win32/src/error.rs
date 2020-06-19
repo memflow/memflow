@@ -1,9 +1,16 @@
-use std::{convert, error, fmt, result, str};
+use std::prelude::v1::*;
+
+use std::{convert, fmt, result, str};
+
+#[cfg(feature="std")]
+use std::error;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 pub enum Error {
     /// Generic error type containing a string
     Other(&'static str),
+    /// IO error
+    IO(std::io::ErrorKind),
     /// Out of bounds.
     ///
     /// Catch-all for bounds check errors.
@@ -63,6 +70,13 @@ impl From<str::Utf8Error> for Error {
     }
 }
 
+/// Convert from std::io::Error
+impl From<std::io::Error> for Error {
+    fn from(error: std::io::Error) -> Error {
+        Error::IO(error.kind())
+    }
+}
+
 impl Error {
     /// Returns a simple string representation of the error.
     pub fn to_str(self) -> &'static str {
@@ -79,6 +93,7 @@ impl Error {
             Error::PE(_) => "error handling pe",
             Error::Encoding => "encoding error",
             Error::Unicode(_) => "error reading unicode string",
+            Error::IO(_) => "I/O error"
         }
     }
 
@@ -103,6 +118,7 @@ impl fmt::Display for Error {
     }
 }
 
+#[cfg(feature="std")]
 impl error::Error for Error {
     fn description(&self) -> &str {
         self.to_str()

@@ -2,6 +2,8 @@ mod pehelper;
 mod x64;
 mod x86;
 
+use std::prelude::v1::*;
+
 use crate::error::{Error, Result};
 use crate::kernel::StartBlock;
 use crate::pe::{self, MemoryPeViewContext};

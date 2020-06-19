@@ -1,5 +1,7 @@
 // https://github.com/willglynn/pdb/blob/master/examples/pdb2hpp.rs
 
+use std::prelude::v1::*;
+
 use log::{info, trace};
 use std::collections::BTreeSet;
 

@@ -7,9 +7,9 @@ use pelite::{util::Align16, Error, PeView, Result, Wrap};
 
 use flow_core::iter::PageChunks;
 use flow_core::mem::VirtualMemory;
-use flow_core::types::{Address, Length};
+use flow_core::types::{size, Address};
 
-const PE_PAGE_SIZE: Length = Length::from_kb(4);
+const PE_PAGE_SIZE: usize = size::kb(4);
 
 #[derive(Copy, Clone)]
 pub enum PeFormat {
@@ -46,7 +46,7 @@ impl<'a, T: VirtualMemory + ?Sized> MemoryPeViewContext<'a, T> {
 
         // create a map that contains all possible pages
         let mut image_pages =
-            vec![false; (size_of_image / PE_PAGE_SIZE.as_u32()) as usize].into_boxed_slice();
+            vec![false; (size_of_image / PE_PAGE_SIZE as u32) as usize].into_boxed_slice();
 
         // copy over header page
         image_cache[..image_header.len()].copy_from_slice(&image_header);
@@ -70,10 +70,10 @@ impl<'a, T: VirtualMemory + ?Sized> MemoryPeViewContext<'a, T> {
 
     // TODO: Remove this allow when docs get written
     #[allow(clippy::missing_safety_doc)]
-    pub unsafe fn update_cache(&self, addr: Address, mut len: Length) {
-        if len.is_zero() {
+    pub unsafe fn update_cache(&self, addr: Address, mut len: usize) {
+        if len == 0 {
             // this is a string read, we just estimate the length of the string here
-            len = Length::from_kb(1);
+            len = size::kb(1);
         }
 
         // TODO: use wraping here
@@ -84,13 +84,13 @@ impl<'a, T: VirtualMemory + ?Sized> MemoryPeViewContext<'a, T> {
 
         let slice = &mut (*self.image_cache.get())[start_addr.as_usize()..end_addr.as_usize()];
 
-        for (chunk_addr, chunk) in slice.page_chunks(start_addr, Length::from_kb(4)) {
+        for (chunk_addr, chunk) in slice.page_chunks(start_addr, size::kb(4)) {
             // chunk_addr is already page aligned
-            let page_idx = chunk_addr.as_usize() / PE_PAGE_SIZE.as_usize();
+            let page_idx = chunk_addr.as_usize() / PE_PAGE_SIZE;
             if !self.image_pages.borrow()[page_idx] {
                 self.virt_mem
                     .borrow_mut()
-                    .virt_read_raw_into(self.image_base + Length::from(chunk_addr.as_u64()), chunk)
+                    .virt_read_raw_into(self.image_base + chunk_addr.as_usize(), chunk)
                     .ok();
                 self.image_pages.borrow_mut()[page_idx] = true;
             }

@@ -6,7 +6,7 @@ use std::fmt;
 
 use flow_core::architecture::Architecture;
 use flow_core::mem::{PhysicalMemory, VirtualFromPhysical, VirtualMemory, VirtualTranslate};
-use flow_core::types::{Address, Length};
+use flow_core::types::Address;
 use flow_core::{OsProcessInfo, OsProcessModuleInfo};
 
 use log::trace;
@@ -30,9 +30,9 @@ pub struct Win32ProcessInfo {
     pub proc_arch: Architecture,
 
     // offsets for this process (either x86 or x64 offsets)
-    pub ldr_data_base_offs: Length,
-    pub ldr_data_size_offs: Length,
-    pub ldr_data_name_offs: Length,
+    pub ldr_data_base_offs: usize,
+    pub ldr_data_size_offs: usize,
+    pub ldr_data_name_offs: usize,
 }
 
 impl Win32ProcessInfo {
@@ -133,17 +133,17 @@ impl<T: VirtualMemory> Win32Process<T> {
         };
         trace!("base={:x}", base);
 
-        let size = Length::from(match self.proc_info.proc_arch.bits() {
+        let size = match self.proc_info.proc_arch.bits() {
             64 => self
                 .virt_mem
                 .virt_read_addr64(peb_module + self.proc_info.ldr_data_size_offs)?
-                .as_u64(),
+                .as_usize(),
             32 => self
                 .virt_mem
                 .virt_read_addr32(peb_module + self.proc_info.ldr_data_size_offs)?
-                .as_u64(),
+                .as_usize(),
             _ => return Err(Error::new("invalid architecture")),
-        });
+        };
         trace!("size={:x}", size);
 
         let name = self.virt_mem.virt_read_unicode_string(

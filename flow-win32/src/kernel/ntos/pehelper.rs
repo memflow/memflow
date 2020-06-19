@@ -4,7 +4,7 @@ use crate::pe::{self, MemoryPeViewContext};
 use log::info;
 
 use flow_core::mem::VirtualMemory;
-use flow_core::types::{Address, Length};
+use flow_core::types::Address;
 
 use pelite::Wrap;
 
@@ -22,7 +22,7 @@ pub fn try_get_pe_name<T: VirtualMemory + ?Sized>(
 pub fn try_get_pe_size<T: VirtualMemory + ?Sized>(
     virt_mem: &mut T,
     probe_addr: Address,
-) -> Result<Length> {
+) -> Result<usize> {
     let ctx = MemoryPeViewContext::new(virt_mem, probe_addr)?;
     let pe = pe::wrap_memory_pe_view(&ctx)?;
     let size = match pe.optional_header() {
@@ -33,5 +33,5 @@ pub fn try_get_pe_size<T: VirtualMemory + ?Sized>(
         "x64::try_get_pe_size: found pe header for image with a size of {} bytes.",
         size
     );
-    Ok(Length::from(size))
+    Ok(size as usize)
 }

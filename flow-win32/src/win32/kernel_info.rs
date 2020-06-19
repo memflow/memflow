@@ -4,14 +4,14 @@ use crate::kernel::{self, ntos::Win32GUID, StartBlock};
 use log::info;
 
 use flow_core::mem::{PhysicalMemory, VirtualFromPhysical};
-use flow_core::types::{Address, Length};
+use flow_core::types::Address;
 
 #[derive(Debug, Clone)]
 pub struct KernelInfo {
     pub start_block: StartBlock,
 
     pub kernel_base: Address,
-    pub kernel_size: Length,
+    pub kernel_size: usize,
     pub kernel_guid: Win32GUID,
     pub kernel_dtb: Address,
 

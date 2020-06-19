@@ -6,28 +6,28 @@ use byteorder::{ByteOrder, LittleEndian};
 use log::debug;
 
 use flow_core::mem::VirtualMemory;
-use flow_core::types::{Address, Length};
+use flow_core::types::{size, Address};
 
 use dataview::Pod;
 use pelite::image::IMAGE_DOS_HEADER;
 
-const LENGTH_256MB: Length = Length::from_mb(256);
-const LENGTH_8MB: Length = Length::from_mb(8);
-const LENGTH_4KB: Length = Length::from_kb(4);
+const SIZE_256MB: usize = size::mb(256);
+const SIZE_8MB: usize = size::mb(8);
+const SIZE_4KB: usize = size::kb(4);
 
 // https://github.com/ufrisk/MemProcFS/blob/f2d15cf4fe4f19cfeea3dad52971fae2e491064b/vmm/vmmwininit.c#L410
 pub fn find<T: VirtualMemory + ?Sized>(
     virt_mem: &mut T,
     _start_block: &StartBlock,
-) -> Result<(Address, Length)> {
+) -> Result<(Address, usize)> {
     debug!("x86::find: trying to find ntoskrnl.exe");
 
-    for base_addr in (0..LENGTH_256MB.as_u64()).step_by(LENGTH_8MB.as_usize()) {
-        let base_addr = Length::from_gb(2).as_u64() + base_addr;
+    for base_addr in (0..SIZE_256MB as u64).step_by(SIZE_8MB) {
+        let base_addr = size::gb(2) as u64 + base_addr;
         // search in each page in the first 8mb chunks in the first 64mb of virtual memory
-        let mem = virt_mem.virt_read_raw(Address::from(base_addr), LENGTH_8MB)?;
+        let mem = virt_mem.virt_read_raw(Address::from(base_addr), SIZE_8MB)?;
 
-        for addr in (0..LENGTH_8MB.as_u64()).step_by(LENGTH_4KB.as_usize()) {
+        for addr in (0..SIZE_8MB as u64).step_by(SIZE_4KB) {
             // TODO: potential endian mismatch in pod
             let view = Pod::as_data_view(&mem[addr as usize..]);
 

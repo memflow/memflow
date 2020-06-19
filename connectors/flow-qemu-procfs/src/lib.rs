@@ -5,8 +5,8 @@ use flow_core::*;
 use core::ffi::c_void;
 use libc::{c_ulong, iovec, pid_t, sysconf, _SC_IOV_MAX};
 
-const LENGTH_2GB: Length = Length::from_gb(2);
-const LENGTH_1GB: Length = Length::from_gb(1);
+const SIZE_2GB: usize = size::gb(2);
+const SIZE_1GB: usize = size::gb(1);
 
 fn qemu_arg_opt(args: &[String], argname: &str, argopt: &str) -> Option<String> {
     for (idx, arg) in args.iter().enumerate() {
@@ -32,7 +32,7 @@ fn qemu_arg_opt(args: &[String], argname: &str, argopt: &str) -> Option<String> 
 pub struct Memory {
     pub pid: pid_t,
     pub map: procfs::process::MemoryMap,
-    pub hw_offset: Length,
+    pub hw_offset: usize,
     temp_iov: Box<[iovec]>,
 }
 
@@ -80,10 +80,10 @@ impl Memory {
         let hw_offset = {
             if machine.contains("q35") {
                 // q35 -> subtract 2GB
-                LENGTH_2GB
+                SIZE_2GB
             } else {
                 // pc-i1440fx -> subtract 1GB
-                LENGTH_1GB
+                SIZE_1GB
             }
         };
         info!("qemu machine hardware offset: {:x}", hw_offset);
@@ -126,7 +126,7 @@ impl Memory {
         hw_offset: u64,
     ) -> bool {
         let ofs = map_address.0 + {
-            if addr.as_u64() <= LENGTH_2GB.as_u64() {
+            if addr.as_u64() <= (SIZE_2GB as u64) {
                 addr.as_u64()
             } else {
                 addr.as_u64() - hw_offset
@@ -183,7 +183,7 @@ impl PhysicalMemory for Memory {
                 liov,
                 riov,
                 self.map.address,
-                self.hw_offset.as_u64(),
+                self.hw_offset as u64,
             ) {
                 //We might want to zero out the memory here
             }
@@ -235,7 +235,7 @@ impl PhysicalMemory for Memory {
                 liov,
                 riov,
                 self.map.address,
-                self.hw_offset.as_u64(),
+                self.hw_offset as u64,
             );
 
             iov_next = iov_iter.next();

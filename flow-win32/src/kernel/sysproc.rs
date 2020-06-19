@@ -5,7 +5,7 @@ use crate::pe::{self, MemoryPeViewContext};
 use log::{debug, info, warn};
 
 use flow_core::mem::VirtualMemory;
-use flow_core::types::{Address, Length};
+use flow_core::types::{size, Address};
 
 use byteorder::{ByteOrder, LittleEndian};
 
@@ -41,7 +41,7 @@ pub fn find_exported<T: VirtualMemory + ?Sized>(
     let ctx = MemoryPeViewContext::new(virt_mem, kernel_base)?;
     let pe = pe::wrap_memory_pe_view(&ctx)?;
     let sys_proc = match pe.get_export_by_name("PsInitialSystemProcess")? {
-        Export::Symbol(s) => kernel_base + Length::from(*s),
+        Export::Symbol(s) => kernel_base + *s as usize,
         Export::Forward(_) => {
             return Err(Error::new(
                 "PsInitialSystemProcess found but it was a forwarded export",
@@ -51,7 +51,7 @@ pub fn find_exported<T: VirtualMemory + ?Sized>(
     info!("PsInitialSystemProcess found at 0x{:x}", sys_proc);
 
     // read containing value
-    let mut buf = vec![0u8; start_block.arch.len_addr().as_usize()];
+    let mut buf = vec![0u8; start_block.arch.size_addr()];
     let sys_proc_addr: Address = match start_block.arch.bits() {
         64 => {
             virt_mem.virt_read_raw_into(sys_proc, &mut buf)?;
@@ -78,7 +78,7 @@ pub fn find_in_section<T: VirtualMemory + ?Sized>(
     // scan for va of system process (dtb.va)
     // ... check if its 32 or 64bit
 
-    let mut header_buf = vec![0; Length::from_mb(32).as_usize()];
+    let mut header_buf = vec![0; size::mb(32)];
     virt_mem.virt_read_raw_into(ntos, &mut header_buf)?;
 
     /*

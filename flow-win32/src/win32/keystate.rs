@@ -5,7 +5,7 @@ use log::debug;
 
 use flow_core::mem::{PhysicalMemory, VirtualMemory, VirtualTranslate};
 use flow_core::process::OsProcessModuleInfo;
-use flow_core::types::{Address, Length};
+use flow_core::types::Address;
 
 use pelite::{self, pe64::exports::Export, PeView};
 
@@ -49,7 +49,7 @@ impl Keyboard {
             .get_export_by_name("gafAsyncKeyState")
             .map_err(Error::new)?
         {
-            Export::Symbol(s) => win32kbase_module_info.base() + Length::from(*s),
+            Export::Symbol(s) => win32kbase_module_info.base() + *s as usize,
             Export::Forward(_) => {
                 return Err(Error::new(
                     "export gafAsyncKeyState found but it is forwarded",

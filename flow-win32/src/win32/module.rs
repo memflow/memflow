@@ -4,7 +4,7 @@ use log::{info, trace};
 
 use flow_core::mem::VirtualMemory;
 use flow_core::process::OsProcessModuleInfo;
-use flow_core::types::{Address, Length};
+use flow_core::types::{size, Address};
 
 use pelite::{self, PeView};
 
@@ -14,7 +14,7 @@ pub struct Win32ModuleInfo {
     pub parent_eprocess: Address, // parent "reference"
 
     pub base: Address,
-    pub size: Length,
+    pub size: usize,
     pub name: String,
     // exports
     // sections
@@ -22,7 +22,7 @@ pub struct Win32ModuleInfo {
 
 impl Win32ModuleInfo {
     pub fn size_of_image<T: VirtualMemory>(&self, proc_mem: &mut T) -> Result<u32> {
-        let mut probe_buf = vec![0; Length::from_kb(4).as_usize()];
+        let mut probe_buf = vec![0; size::kb(4)];
         proc_mem.virt_read_raw_into(self.base, &mut probe_buf)?;
 
         let pe_probe = match PeView::from_bytes(&probe_buf) {
@@ -66,7 +66,7 @@ impl OsProcessModuleInfo for Win32ModuleInfo {
         self.base
     }
 
-    fn size(&self) -> Length {
+    fn size(&self) -> usize {
         self.size
     }
 

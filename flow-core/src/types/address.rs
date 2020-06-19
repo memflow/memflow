@@ -2,8 +2,6 @@
 Abstraction over a address on the target system.
 */
 
-use super::{Length, Offset};
-
 use std::default::Default;
 use std::fmt;
 use std::ops;
@@ -43,13 +41,6 @@ impl From<u64> for Address {
 impl From<usize> for Address {
     fn from(item: usize) -> Self {
         Self { 0: item as u64 }
-    }
-}
-
-/// Constructs an `Address` from a `Length`.
-impl From<Length> for Address {
-    fn from(item: Length) -> Self {
-        Self { 0: item.as_u64() }
     }
 }
 
@@ -215,19 +206,19 @@ impl Address {
     # Examples
 
     ```
-    use flow_core::types::{Address, Length};
+    use flow_core::types::{Address, size};
 
     pub fn test() {
         assert_eq!(
-            Address::from(0x1234).as_page_aligned(Length::from_kb(4)),
+            Address::from(0x1234).as_page_aligned(size::kb(4)),
             Address::from(0x1000)
         );
     }
     ```
     */
-    pub const fn as_page_aligned(self, page_size: Length) -> Address {
+    pub const fn as_page_aligned(self, page_size: usize) -> Address {
         Address {
-            0: self.0 - self.0 % page_size.as_u64(),
+            0: self.0 - self.0 % (page_size as u64),
         }
     }
 }
@@ -252,157 +243,101 @@ impl Default for Address {
 }
 
 /**
-Adds a `Length` to a `Address` which results in a `Address`.
-
+Adds a `usize` to a `Address` which results in a `Address`.
 # Examples
-
 ```
-use flow_core::types::{Address, Length};
-
+use flow_core::types::Address;
 fn test() {
-    assert_eq!(Address::from(10) + Length::from(5), Address::from(15));
+    assert_eq!(Address::from(10) + 5usize, Address::from(15));
 }
 ```
 */
-impl ops::Add<Length> for Address {
+impl ops::Add<usize> for Address {
     type Output = Self;
 
-    fn add(self, other: Length) -> Self {
+    fn add(self, other: usize) -> Self {
         Self {
-            0: self.0 + other.as_u64(),
+            0: self.0 + (other as u64),
         }
     }
 }
 
 /**
-Adds a `Length` to a `Address`.
+Adds a `usize` to a `Address`.
 
 # Examples
 
 ```
-use flow_core::types::{Address, Length};
-
+use flow_core::types::Address;
 fn test() {
     let mut addr = Address::from(10);
-    addr += Length::from(5);
+    addr += 5;
     assert_eq!(addr, Address::from(15));
 }
 ```
 */
-impl ops::AddAssign<Length> for Address {
-    fn add_assign(&mut self, other: Length) {
+impl ops::AddAssign<usize> for Address {
+    fn add_assign(&mut self, other: usize) {
         *self = Self {
-            0: self.0 + other.as_u64(),
+            0: self.0 + (other as u64),
         }
     }
 }
 
 // TODO: guarantee no underlfow
 /**
-Subtracts a `Address` from a `Address` resulting in a `Length`.
+Subtracts a `Address` from a `Address` resulting in a `usize`.
 
 # Examples
 
 ```
-use flow_core::types::{Address, Length};
+use flow_core::types::Address;
 
 fn test() {
-    assert_eq!(Address::from(10) - Length::from(5), Address::from(5));
+    assert_eq!(Address::from(10) - 5, Address::from(5));
 }
 ```
 */
 impl ops::Sub for Address {
-    type Output = Length;
+    type Output = usize;
 
-    fn sub(self, other: Self) -> Length {
-        Length::from(self.0 - other.0)
+    fn sub(self, other: Self) -> usize {
+        (self.0 - other.0) as usize
     }
 }
 
 // TODO: guarantee no underlfow
-/// Subtracts a `Length` from a `Address` resulting in a `Address`.
-impl ops::Sub<Length> for Address {
+/// Subtracts a `usize` from a `Address` resulting in a `Address`.
+impl ops::Sub<usize> for Address {
     type Output = Address;
 
-    fn sub(self, other: Length) -> Address {
-        Address::from(self.0 - other.as_u64())
-    }
-}
-
-/**
-Subtracts a `Length` from a `Address`.
-
-# Examples
-
-```
-use flow_core::types::{Address, Length};
-
-fn test() {
-    let mut addr = Address::from(10);
-    addr -= Length::from(5);
-    assert_eq!(addr, Address::from(5));
-}
-```
-*/
-impl ops::SubAssign<Length> for Address {
-    fn sub_assign(&mut self, other: Length) {
-        *self = Self {
-            0: self.0 - other.as_u64(),
+    fn sub(self, other: usize) -> Address {
+        Self {
+            0: self.0 - (other as u64),
         }
     }
 }
 
 /**
-Adds a `Offset` to a `Address` resulting in a `Address`.
+Subtracts a `usize` from a `Address`.
 
 # Examples
 
 ```
-use flow_core::types::{Address, Offset};
-
-fn test() {
-    assert_eq!(Address::from(10) + Offset::from(5), Address::from(15));
-    assert_eq!(Address::from(10) + Offset::from(-5), Address::from(5));
-}
-```
-*/
-#[allow(clippy::suspicious_op_assign_impl, clippy::suspicious_arithmetic_impl)]
-impl ops::Add<Offset> for Address {
-    type Output = Address;
-
-    fn add(self, other: Offset) -> Address {
-        Address::from(if other.as_i64() >= 0 {
-            self.0 + other.as_i64() as u64
-        } else {
-            self.0 - other.as_i64().abs() as u64
-        })
-    }
-}
-
-/**
-Subtract a `Offset` from a `Address`.
-
-# Examples
-
-```
-use flow_core::types::{Address, Length};
+use flow_core::types::Address;
 
 fn test() {
     let mut addr = Address::from(10);
-    addr += Length::from(5);
-    assert_eq!(addr, Address::from(15));
+    addr -= 5;
+    assert_eq!(addr, Address::from(5));
 }
+
 ```
 */
-#[allow(clippy::suspicious_op_assign_impl, clippy::suspicious_arithmetic_impl)]
-impl ops::AddAssign<Offset> for Address {
-    fn add_assign(&mut self, other: Offset) {
+impl ops::SubAssign<usize> for Address {
+    fn sub_assign(&mut self, other: usize) {
         *self = Self {
-            0: if other.as_i64() >= 0 {
-                self.0 + other.as_i64() as u64
-            } else {
-                self.0 - other.as_i64().abs() as u64
-            },
+            0: self.0 - (other as u64),
         }
     }
 }
@@ -432,6 +367,7 @@ impl fmt::Display for Address {
 
 #[cfg(test)]
 mod tests {
+    use super::super::size;
     use super::*;
 
     #[test]
@@ -449,26 +385,20 @@ mod tests {
     #[test]
     fn test_alignment() {
         assert_eq!(
-            Address::from(0x1234).as_page_aligned(Length::from_kb(4)),
+            Address::from(0x1234).as_page_aligned(size::kb(4)),
             Address::from(0x1000)
         );
         assert_eq!(
-            Address::from(0xFFF1_2345u64).as_page_aligned(Length::from_b(0x10000)),
+            Address::from(0xFFF1_2345u64).as_page_aligned(0x10000),
             Address::from(0xFFF1_0000u64)
         );
     }
 
     #[test]
     fn test_ops() {
-        assert_eq!(Address::from(10) + Length::from(5), Address::from(15));
+        assert_eq!(Address::from(10) + 5usize, Address::from(15));
 
-        assert_eq!(Address::from(10) - Address::from(5), Length::from(5));
-        assert_eq!(Address::from(100) - Length::from(5), Address::from(95));
-    }
-
-    #[test]
-    fn test_offset() {
-        assert_eq!(Address::from(10) + Offset::from(5), Address::from(15));
-        assert_eq!(Address::from(10) + Offset::from(-5), Address::from(5));
+        assert_eq!(Address::from(10) - Address::from(5), 5usize);
+        assert_eq!(Address::from(100) - 5usize, Address::from(95));
     }
 }

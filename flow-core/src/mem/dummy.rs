@@ -2,7 +2,7 @@ use crate::architecture::Architecture;
 use crate::error::{Error, Result};
 use crate::mem::{PhysicalMemory, PhysicalReadIterator, PhysicalWriteIterator};
 use crate::process::{OsProcessInfo, OsProcessModuleInfo};
-use crate::types::{Address, Length};
+use crate::types::{size, Address};
 
 use rand::seq::SliceRandom;
 use rand::{thread_rng, Rng, SeedableRng};
@@ -28,11 +28,11 @@ enum X64PageSize {
 }
 
 impl X64PageSize {
-    fn to_len(self) -> Length {
+    fn to_size(self) -> usize {
         match self {
-            X64PageSize::P4k => Length::from_kb(4),
-            X64PageSize::P2m => Length::from_mb(2),
-            X64PageSize::P1g => Length::from_gb(1),
+            X64PageSize::P4k => size::kb(4),
+            X64PageSize::P2m => size::mb(2),
+            X64PageSize::P1g => size::gb(1),
         }
     }
 
@@ -62,9 +62,9 @@ struct PageInfo {
 impl PageInfo {
     fn split_to_size(&self, new_size: X64PageSize) -> Vec<Self> {
         let mut ret = vec![];
-        for o in 0..(self.size.to_len().as_usize() / new_size.to_len().as_usize()) {
+        for o in 0..(self.size.to_size() / new_size.to_size()) {
             ret.push(PageInfo {
-                addr: self.addr + new_size.to_len() * o,
+                addr: self.addr + new_size.to_size() * o,
                 size: new_size,
             });
         }
@@ -78,13 +78,14 @@ impl PageInfo {
 
 pub struct DummyModule {
     base: Address,
-    size: Length,
+    size: usize,
 }
 
 impl OsProcessModuleInfo for DummyModule {
     fn address(&self) -> Address {
         Address::INVALID
     }
+
     fn parent_process(&self) -> Address {
         Address::INVALID
     }
@@ -92,9 +93,11 @@ impl OsProcessModuleInfo for DummyModule {
     fn base(&self) -> Address {
         self.base
     }
-    fn size(&self) -> Length {
+
+    fn size(&self) -> usize {
         self.size
     }
+
     fn name(&self) -> String {
         String::from("dummy.so")
     }
@@ -102,17 +105,16 @@ impl OsProcessModuleInfo for DummyModule {
 
 pub struct DummyProcess {
     address: Address,
-    map_size: Length,
+    map_size: usize,
     pid: i32,
     dtb: Address,
 }
 
 impl DummyProcess {
-    pub fn get_module(&self, min_size: Length) -> DummyModule {
+    pub fn get_module(&self, min_size: usize) -> DummyModule {
         DummyModule {
-            base: self.address
-                + Length::from(thread_rng().gen_range(0, self.map_size.as_u64() / 2)),
-            size: (thread_rng().gen_range(min_size.as_u64(), self.map_size.as_u64()) / 2).into(),
+            base: self.address + thread_rng().gen_range(0, self.map_size / 2),
+            size: (thread_rng().gen_range(min_size, self.map_size) / 2),
         }
     }
 }
@@ -192,35 +194,35 @@ where
 }
 
 impl DummyMemory {
-    pub fn new(size: Length) -> Self {
+    pub fn new(size: usize) -> Self {
         Self::with_rng(size, SeedableRng::from_rng(thread_rng()).unwrap())
     }
 
-    pub fn with_seed(size: Length, seed: u64) -> Self {
+    pub fn with_seed(size: usize, seed: u64) -> Self {
         Self::with_rng(size, SeedableRng::seed_from_u64(seed))
     }
 
-    pub fn with_rng(size: Length, mut rng: XorShiftRng) -> Self {
-        let mem = vec![0_u8; size.as_usize()].into_boxed_slice();
+    pub fn with_rng(size: usize, mut rng: XorShiftRng) -> Self {
+        let mem = vec![0_u8; size].into_boxed_slice();
 
         let mut page_prelist = vec![];
 
         let mut i = Address::from(0);
-        let size_addr = Address::from(size.as_u64());
+        let size_addr = Address::from(size);
 
         while i < size_addr {
             if let Some(page_info) = {
-                if size_addr - i >= X64PageSize::P1g.to_len() {
+                if size_addr - i >= X64PageSize::P1g.to_size() {
                     Some(PageInfo {
                         addr: i,
                         size: X64PageSize::P1g,
                     })
-                } else if size_addr - i >= X64PageSize::P2m.to_len() {
+                } else if size_addr - i >= X64PageSize::P2m.to_size() {
                     Some(PageInfo {
                         addr: i,
                         size: X64PageSize::P2m,
                     })
-                } else if size_addr - i >= X64PageSize::P4k.to_len() {
+                } else if size_addr - i >= X64PageSize::P4k.to_size() {
                     Some(PageInfo {
                         addr: i,
                         size: X64PageSize::P4k,
@@ -229,7 +231,7 @@ impl DummyMemory {
                     None
                 }
             } {
-                i += page_info.size.to_len();
+                i += page_info.size.to_size();
                 page_prelist.push(page_info);
             } else {
                 break;
@@ -289,7 +291,7 @@ impl DummyMemory {
         self.alloc_pt_page()
     }
 
-    pub fn alloc_process(&mut self, map_size: Length, test_buf: &[u8]) -> DummyProcess {
+    pub fn alloc_process(&mut self, map_size: usize, test_buf: &[u8]) -> DummyProcess {
         let (dtb, address) = self.alloc_dtb(map_size, test_buf);
 
         self.last_pid += 1;
@@ -320,13 +322,12 @@ impl DummyMemory {
         }
     }
 
-    pub fn alloc_dtb(&mut self, map_size: Length, test_buf: &[u8]) -> (Address, Address) {
+    pub fn alloc_dtb(&mut self, map_size: usize, test_buf: &[u8]) -> (Address, Address) {
         let virt_base = (Address::null()
-            + Length::from(
-                self.rng
-                    .gen_range(0x0001_0000_0000_u64, ((!0_u64) << 16) >> 16),
-            ))
-        .as_page_aligned(Length::from_gb(2));
+            + self
+                .rng
+                .gen_range(0x0001_0000_0000_usize, ((!0_usize) << 16) >> 16))
+        .as_page_aligned(size::gb(2));
 
         (
             self.alloc_dtb_const_base(virt_base, map_size, test_buf),
@@ -337,10 +338,10 @@ impl DummyMemory {
     pub fn alloc_dtb_const_base(
         &mut self,
         virt_base: Address,
-        map_size: Length,
+        map_size: usize,
         test_buf: &[u8],
     ) -> Address {
-        let mut cur_len = Length::from(0);
+        let mut cur_len = 0;
 
         let dtb = self.alloc_pt_page();
 
@@ -357,20 +358,17 @@ impl DummyMemory {
             unsafe { OffsetPageTable::new(&mut pml4, VirtAddr::from_ptr(self.mem.as_ptr())) };
 
         while cur_len < map_size {
-            let page_info = self.next_page_for_address(cur_len.as_u64().into());
+            let page_info = self.next_page_for_address(cur_len.into());
             let flags = PageTableFlags::PRESENT | PageTableFlags::WRITABLE;
 
-            if test_buf.len() >= (cur_len + page_info.size.to_len()).as_usize() {
+            if test_buf.len() >= (cur_len + page_info.size.to_size()) {
                 self.mem[page_info.addr.as_usize()
-                    ..(page_info.addr + page_info.size.to_len()).as_usize()]
-                    .copy_from_slice(
-                        &test_buf
-                            [cur_len.as_usize()..(cur_len + page_info.size.to_len()).as_usize()],
-                    );
-            } else if test_buf.len() > cur_len.as_usize() {
+                    ..(page_info.addr + page_info.size.to_size()).as_usize()]
+                    .copy_from_slice(&test_buf[cur_len..(cur_len + page_info.size.to_size())]);
+            } else if test_buf.len() > cur_len {
                 self.mem[page_info.addr.as_usize()
-                    ..(page_info.addr.as_usize() + test_buf.len() - cur_len.as_usize())]
-                    .copy_from_slice(&test_buf[cur_len.as_usize()..]);
+                    ..(page_info.addr.as_usize() + test_buf.len() - cur_len)]
+                    .copy_from_slice(&test_buf[cur_len..]);
             }
 
             unsafe {
@@ -413,7 +411,7 @@ impl DummyMemory {
                         .is_ok(),
                 };
             }
-            cur_len += page_info.size.to_len();
+            cur_len += page_info.size.to_size();
         }
 
         dtb.addr

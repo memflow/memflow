@@ -8,8 +8,6 @@ members = [
     "flow-win32",
     #"flow-ffi",
     "flow-bench",
-    #"connectors/flow-bridge",
-    #"connectors/flow-qemu-bridge",
     "connectors/flow-qemu-procfs",
     #"connectors/flow-pcileech",
 ]

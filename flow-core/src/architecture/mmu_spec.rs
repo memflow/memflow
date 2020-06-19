@@ -2,7 +2,7 @@
 pub mod masks;
 use masks::*;
 
-use crate::types::{Address, Length, PageType, PhysicalAddress};
+use crate::types::{Address, PageType, PhysicalAddress};
 use crate::vtop_trace;
 
 /// The `ArchMMUSpec` structure defines how a real memory management unit should behave when
@@ -111,9 +111,9 @@ impl ArchMMUSpec {
     /// # Arguments
     ///
     /// * `step` - the current step in the page walk
-    pub fn pt_leaf_size(&self, step: usize) -> Length {
+    pub fn pt_leaf_size(&self, step: usize) -> usize {
         let (min, max) = self.virt_addr_bit_range(step);
-        Length::from((1 << (max - min)) * self.pte_size)
+        (1 << (max - min)) * self.pte_size
     }
 
     /// Perform a virtual translation step, returning the next PTE address to read
@@ -134,9 +134,9 @@ impl ArchMMUSpec {
     /// # Arguments
     ///
     /// * `step` - the current step in the page walk
-    pub fn page_size_step_unchecked(&self, step: usize) -> Length {
+    pub fn page_size_step_unchecked(&self, step: usize) -> usize {
         let max_index_bits = self.virtual_address_splits[step..].iter().sum::<u8>();
-        Length::from(1u64 << max_index_bits)
+        (1u64 << max_index_bits) as usize
     }
 
     /// Get the page size of a specific page walk step
@@ -147,7 +147,7 @@ impl ArchMMUSpec {
     /// # Arguments
     ///
     /// * `step` - the current step in the page walk
-    pub fn page_size_step(&self, step: usize) -> Length {
+    pub fn page_size_step(&self, step: usize) -> usize {
         debug_assert!(self.valid_final_page_steps.binary_search(&step).is_ok());
         self.page_size_step_unchecked(step)
     }
@@ -161,7 +161,7 @@ impl ArchMMUSpec {
     /// # Arguments
     ///
     /// * `level` - page mapping level to get the size of (1 meaning the smallest page)
-    pub fn page_size_level(&self, level: usize) -> Length {
+    pub fn page_size_level(&self, level: usize) -> usize {
         self.page_size_step(self.virtual_address_splits.len() - level)
     }
 

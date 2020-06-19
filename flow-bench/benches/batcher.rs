@@ -1,15 +1,15 @@
 use criterion::*;
 
 use flow_core::mem::{PhysicalMemory, PhysicalReadIterator, PhysicalWriteIterator};
+use flow_core::types::{size, Address};
 use flow_core::Result;
-use flow_core::{Address, Length};
 
 //use flow_core::mem::dummy::DummyMemory as Memory;
 
 struct NullMem {}
 
 impl NullMem {
-    pub fn new(_: Length) -> Self {
+    pub fn new(_: usize) -> Self {
         Self {}
     }
 }
@@ -37,20 +37,15 @@ fn read_test_nobatcher<T: PhysicalMemory>(
     chunk_size: usize,
     mem: &mut T,
     mut rng: CurRng,
-    size: Length,
+    size: usize,
 ) {
-    let base_addr = Address::from(rng.gen_range(0, size.as_u64()));
+    let base_addr = Address::from(rng.gen_range(0, size));
 
     let _ = black_box(
         mem.phys_read_iter(
             unsafe { TSLICE }
                 .iter_mut()
-                .map(|buf| {
-                    (
-                        (base_addr + Length::from(rng.gen_range(0, 0x2000))).into(),
-                        &mut buf[..],
-                    )
-                })
+                .map(|buf| ((base_addr + rng.gen_range(0, 0x2000)).into(), &mut buf[..]))
                 .take(chunk_size),
         ),
     );
@@ -60,18 +55,15 @@ fn read_test_batcher<T: PhysicalMemory>(
     chunk_size: usize,
     mem: &mut T,
     mut rng: CurRng,
-    size: Length,
+    size: usize,
 ) {
-    let base_addr = Address::from(rng.gen_range(0, size.as_u64()));
+    let base_addr = Address::from(rng.gen_range(0, size));
 
     let mut batcher = mem.get_batcher();
     batcher.read_prealloc(chunk_size);
 
     for i in unsafe { TSLICE.iter_mut().take(chunk_size) } {
-        batcher.read_into(
-            (base_addr + Length::from(rng.gen_range(0, 0x2000))).into(),
-            i,
-        );
+        batcher.read_into((base_addr + rng.gen_range(0, 0x2000)).into(), i);
     }
 
     let _ = black_box(batcher.commit_rw());
@@ -85,7 +77,7 @@ fn read_test_with_ctx<T: PhysicalMemory>(
 ) {
     let rng = CurRng::from_rng(thread_rng()).unwrap();
 
-    let mem_size = Length::from_mb(64);
+    let mem_size = size::mb(64);
 
     if !use_batcher {
         bench.iter(|| read_test_nobatcher(chunk_size, mem, rng.clone(), mem_size));
@@ -151,7 +143,7 @@ criterion_group! {
 }
 
 fn dummy_read_group(c: &mut Criterion) {
-    chunk_read(c, "dummy", &|| Memory::new(Length::from_mb(64)));
+    chunk_read(c, "dummy", &|| Memory::new(size::mb(64)));
 }
 
 criterion_main!(dummy_read);

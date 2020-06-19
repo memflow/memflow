@@ -9,7 +9,7 @@ use std::fmt;
 use flow_core::architecture::Architecture;
 use flow_core::mem::{PhysicalMemory, VirtualFromPhysical, VirtualMemory, VirtualTranslate};
 use flow_core::process::{OperatingSystem, OsProcessInfo, OsProcessModuleInfo};
-use flow_core::types::{Address, Length};
+use flow_core::types::Address;
 
 use pelite::{
     self,
@@ -103,7 +103,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
                 32 => {
                     let pe = pe32::MemoryPeView::new(&pectx)?;
                     match pe.get_export("PsLoadedModuleList").map_err(Error::new)? {
-                        Export::Symbol(s) => self.kernel_info.kernel_base + Length::from(*s),
+                        Export::Symbol(s) => self.kernel_info.kernel_base + *s as usize,
                         Export::Forward(_) => {
                             return Err(Error::new(
                                 "PsLoadedModuleList found but it was a forwarded export",
@@ -114,7 +114,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
                 64 => {
                     let pe = pe64::MemoryPeView::new(&pectx)?;
                     match pe.get_export("PsLoadedModuleList").map_err(Error::new)? {
-                        Export::Symbol(s) => self.kernel_info.kernel_base + Length::from(*s),
+                        Export::Symbol(s) => self.kernel_info.kernel_base + *s as usize,
                         Export::Forward(_) => {
                             return Err(Error::new(
                                 "PsLoadedModuleList found but it was a forwarded export",
@@ -180,13 +180,13 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
         let pid: i32 = reader.virt_read(eprocess + self.offsets.eproc_pid)?;
         trace!("pid={}", pid);
 
-        let name = reader.virt_read_cstr(eprocess + self.offsets.eproc_name, Length::from(16))?;
+        let name = reader.virt_read_cstr(eprocess + self.offsets.eproc_name, 16)?;
         trace!("name={}", name);
 
         let dtb = reader.virt_read_addr(eprocess + self.offsets.kproc_dtb)?;
         trace!("dtb={:x}", dtb);
 
-        let wow64 = if self.offsets.eproc_wow64.is_zero() {
+        let wow64 = if self.offsets.eproc_wow64 == 0 {
             trace!("eproc_wow64=null; skipping wow64 detection");
             Address::null()
         } else {

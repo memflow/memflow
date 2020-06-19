@@ -3,7 +3,7 @@ pub use virt_from_phys::VirtualFromPhysical;
 
 use super::VirtualMemoryBatcher;
 use crate::error::Result;
-use crate::types::{Address, Length, Page, Pointer32, Pointer64};
+use crate::types::{Address, Page, Pointer32, Pointer64};
 
 use std::ffi::CString;
 use std::mem::MaybeUninit;
@@ -54,8 +54,8 @@ pub trait VirtualMemory {
         self.virt_read_raw_into(addr, out.as_bytes_mut())
     }
 
-    fn virt_read_raw(&mut self, addr: Address, len: Length) -> Result<Vec<u8>> {
-        let mut buf = vec![0u8; len.as_usize()];
+    fn virt_read_raw(&mut self, addr: Address, len: usize) -> Result<Vec<u8>> {
+        let mut buf = vec![0u8; len];
         self.virt_read_raw_into(addr, &mut *buf)?;
         Ok(buf)
     }
@@ -140,8 +140,8 @@ pub trait VirtualMemory {
 
     // TODO: read into slice?
     // TODO: if len is shorter than string truncate it!
-    fn virt_read_cstr(&mut self, addr: Address, len: Length) -> Result<String> {
-        let mut buf = vec![0; len.as_usize()];
+    fn virt_read_cstr(&mut self, addr: Address, len: usize) -> Result<String> {
+        let mut buf = vec![0; len];
         self.virt_read_raw_into(addr, &mut buf)?;
         if let Some((n, _)) = buf.iter().enumerate().find(|(_, c)| **c == 0_u8) {
             buf.truncate(n);

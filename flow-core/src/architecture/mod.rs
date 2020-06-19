@@ -27,7 +27,7 @@ use crate::iter::{PageChunks, SplitAtIndex};
 use std::convert::TryFrom;
 
 use crate::mem::PhysicalMemory;
-use crate::types::{Address, Length, PageType, PhysicalAddress};
+use crate::types::{Address, PageType, PhysicalAddress};
 
 use bumpalo::{collections::Vec as BumpVec, Bump};
 use byteorder::{ByteOrder, LittleEndian};
@@ -196,42 +196,41 @@ impl Architecture {
 
     ```
     use flow_core::architecture::Architecture;
-    use flow_core::types::Length;
+    use flow_core::types::size;
 
     pub fn test() {
         let arch = Architecture::X64;
-        assert_eq!(arch.page_size(), Length::from_kb(4));
+        assert_eq!(arch.page_size(), size::kb(4));
     }
     ```
     */
-    pub fn page_size(self) -> Length {
+    pub fn page_size(self) -> usize {
         self.get_mmu_spec().page_size_level(1)
     }
 
     /**
-    Returns the `Length` of a pointers width on a `Architecture`.
+    Returns the `usize` of a pointers width on a `Architecture`.
 
-    This function will return the pointer width as a `Length` value.
+    This function will return the pointer width as a `usize` value.
     See `Architecture::bits()` for more information.
 
     # Examples
 
     ```
     use flow_core::architecture::Architecture;
-    use flow_core::types::Length;
 
     pub fn test() {
         let arch = Architecture::X86;
-        assert_eq!(arch.len_addr(), Length::from(4));
+        assert_eq!(arch.size_addr(), 4);
     }
     ```
     */
-    pub fn len_addr(self) -> Length {
+    pub fn size_addr(self) -> usize {
         match self {
-            Architecture::Null => x64::len_addr(),
-            Architecture::X64 => x64::len_addr(),
-            Architecture::X86Pae => x86_pae::len_addr(),
-            Architecture::X86 => x86::len_addr(),
+            Architecture::Null => x64::size_addr(),
+            Architecture::X64 => x64::size_addr(),
+            Architecture::X86Pae => x86_pae::size_addr(),
+            Architecture::X86 => x86::size_addr(),
         }
     }
 

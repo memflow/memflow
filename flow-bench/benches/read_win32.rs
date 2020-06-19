@@ -39,7 +39,7 @@ fn initialize_virt_ctx(
             proc.module_info_list()
                 .unwrap_or_default()
                 .into_iter()
-                .filter(|module| module.size > 0x1000.into())
+                .filter(|module| module.size > 0x1000)
                 .collect()
         };
 

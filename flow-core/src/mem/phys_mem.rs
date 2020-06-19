@@ -1,5 +1,5 @@
 use super::PhysicalMemoryBatcher;
-use crate::types::{Length, PhysicalAddress};
+use crate::types::PhysicalAddress;
 use crate::Result;
 
 use std::mem::MaybeUninit;
@@ -81,8 +81,8 @@ pub trait PhysicalMemory {
         self.phys_read_raw_into(addr, out.as_bytes_mut())
     }
 
-    fn phys_read_raw(&mut self, addr: PhysicalAddress, len: Length) -> Result<Vec<u8>> {
-        let mut buf = vec![0u8; len.as_usize()];
+    fn phys_read_raw(&mut self, addr: PhysicalAddress, len: usize) -> Result<Vec<u8>> {
+        let mut buf = vec![0u8; len];
         self.phys_read_raw_into(addr, &mut *buf)?;
         Ok(buf)
     }

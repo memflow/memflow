@@ -18,12 +18,12 @@ pub fn find_with_va<T: VirtualMemory + ?Sized>(
 ) -> Result<(Address, usize)> {
     debug!(
         "x64::find_with_va: trying to find ntoskrnl.exe with va hint at {:x}",
-        start_block.va.as_u64()
+        start_block.kernel_hint.as_u64()
     );
 
     // va was found previously
-    let mut va_base = start_block.va.as_u64() & !0x0001_ffff;
-    while va_base + size::mb(16) as u64 > start_block.va.as_u64() {
+    let mut va_base = start_block.kernel_hint.as_u64() & !0x0001_ffff;
+    while va_base + size::mb(16) as u64 > start_block.kernel_hint.as_u64() {
         debug!("find_x64_with_va: probing at {:x}", va_base);
 
         let mut buf = vec![0; size::mb(2)];

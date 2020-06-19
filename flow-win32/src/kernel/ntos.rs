@@ -19,7 +19,7 @@ pub fn find<T: VirtualMemory + ?Sized>(
     start_block: &StartBlock,
 ) -> Result<(Address, usize)> {
     if start_block.arch.bits() == 64 {
-        if !start_block.va.is_null() {
+        if !start_block.kernel_hint.is_null() {
             match x64::find_with_va(virt_mem, start_block) {
                 Ok(b) => return Ok(b),
                 Err(e) => warn!("x64::find_with_va() error: {}", e),

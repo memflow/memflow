@@ -13,7 +13,7 @@ pub fn main() -> Result<()> {
     simple_logger::init_with_level(Level::Debug).unwrap();
 
     let mut mem_sys = Memory::new()?;
-    let kernel_info = KernelInfo::find(&mut mem_sys)?;
+    let kernel_info = KernelInfo::builder().mem(&mut mem_sys).build()?;
 
     let vat = TranslateArch::new(kernel_info.start_block.arch);
     let offsets = Win32Offsets::try_with_guid(&kernel_info.kernel_guid)?;

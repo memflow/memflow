@@ -20,19 +20,19 @@ pub struct KernelInfo {
 }
 
 impl KernelInfo {
-    pub fn builder<T: PhysicalMemory>() -> KernelInfoBuilder<T> {
-        KernelInfoBuilder::default()
+    pub fn scanner<T: PhysicalMemory>() -> KernelInfoScanner<T> {
+        KernelInfoScanner::default()
     }
 }
 
-pub struct KernelInfoBuilder<T: PhysicalMemory> {
+pub struct KernelInfoScanner<T: PhysicalMemory> {
     mem: Option<T>,
     arch: Option<Architecture>,
     kernel_hint: Option<Address>,
     dtb: Option<Address>,
 }
 
-impl<T: PhysicalMemory> Default for KernelInfoBuilder<T> {
+impl<T: PhysicalMemory> Default for KernelInfoScanner<T> {
     fn default() -> Self {
         Self {
             mem: None,
@@ -43,8 +43,8 @@ impl<T: PhysicalMemory> Default for KernelInfoBuilder<T> {
     }
 }
 
-impl<T: PhysicalMemory> KernelInfoBuilder<T> {
-    pub fn build(self) -> Result<KernelInfo> {
+impl<T: PhysicalMemory> KernelInfoScanner<T> {
+    pub fn scan(self) -> Result<KernelInfo> {
         let mut mem = self.mem.ok_or("mem must be initialized")?;
 
         let start_block = if self.arch.is_some() && self.dtb.is_some() && self.kernel_hint.is_some()

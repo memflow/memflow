@@ -139,7 +139,7 @@ fn read_bench<T: PhysicalMemory, V: VirtualTranslate>(
 
 fn main() -> Result<()> {
     let mut mem_sys = Memory::new()?;
-    let kernel_info = KernelInfo::builder().mem(&mut mem_sys).build()?;
+    let kernel_info = KernelInfo::scanner().mem(&mut mem_sys).scan()?;
 
     let mut vat = TranslateArch::new(kernel_info.start_block.arch);
 

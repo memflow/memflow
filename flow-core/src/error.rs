@@ -1,3 +1,5 @@
+use std::prelude::v1::*;
+
 pub type Result<T> = std::result::Result<T, Error>;
 
 pub struct Error {
@@ -57,6 +59,7 @@ impl std::convert::From<String> for Error {
     }
 }
 
+#[cfg(feature = "std")]
 impl std::convert::From<std::io::Error> for Error {
     fn from(error: std::io::Error) -> Self {
         Self::new(error)
@@ -72,14 +75,9 @@ impl std::convert::From<std::option::NoneError> for Error {
 }
 */
 
+#[cfg(feature = "std")]
 impl std::convert::From<std::ffi::NulError> for Error {
     fn from(error: std::ffi::NulError) -> Self {
-        Self::new(error)
-    }
-}
-
-impl std::convert::From<regex::Error> for Error {
-    fn from(error: regex::Error) -> Self {
         Self::new(error)
     }
 }

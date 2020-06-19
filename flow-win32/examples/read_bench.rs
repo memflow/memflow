@@ -58,7 +58,7 @@ fn rwtest<T: VirtualMemory>(
 
                 let now = Instant::now();
                 {
-                    let mut batcher = proc.virt_mem.get_batcher();
+                    let mut batcher = proc.virt_mem.virt_batcher();
 
                     for (buf, addr) in bufs.iter_mut() {
                         batcher.read_raw_into(Address::from(*addr), buf);
@@ -157,7 +157,9 @@ fn main() -> flow_core::Result<()> {
     let mut vat_cached = CachedVirtualTranslate::builder()
         .vat(vat)
         .arch(kernel_info.start_block.arch)
-        .validator(TimedCacheValidator::new(Duration::from_millis(1000).into()))
+        .validator(TimedCacheValidator::new(
+            Duration::from_millis(10000).into(),
+        ))
         .build()
         .unwrap();
 

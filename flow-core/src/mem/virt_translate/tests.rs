@@ -56,7 +56,7 @@ fn test_virt_read_small() {
     for (i, item) in buf.iter_mut().enumerate() {
         *item = i as u8;
     }
-    let (dtb, virt_base) = dummy_mem.alloc_dtb(buf.len().into(), &buf);
+    let (dtb, virt_base) = dummy_mem.alloc_dtb(buf.len(), &buf);
     let arch = Architecture::X64;
     let mut virt_mem = VirtualFromPhysical::new(&mut dummy_mem, arch, arch, dtb);
 
@@ -74,7 +74,7 @@ fn test_virt_write_small() {
     for (i, item) in input.iter_mut().enumerate() {
         *item = i as u8;
     }
-    let (dtb, virt_base) = dummy_mem.alloc_dtb(input.len().into(), &input);
+    let (dtb, virt_base) = dummy_mem.alloc_dtb(input.len(), &input);
     let arch = Architecture::X64;
     let mut virt_mem = VirtualFromPhysical::new(&mut dummy_mem, arch, arch, dtb);
 
@@ -91,7 +91,7 @@ fn test_virt_read_small_shifted() {
     for (i, item) in buf.iter_mut().enumerate() {
         *item = i as u8;
     }
-    let (dtb, virt_base) = dummy_mem.alloc_dtb(buf.len().into(), &buf);
+    let (dtb, virt_base) = dummy_mem.alloc_dtb(buf.len(), &buf);
     let arch = Architecture::X64;
     let mut virt_mem = VirtualFromPhysical::new(&mut dummy_mem, arch, arch, dtb);
 
@@ -111,7 +111,7 @@ fn test_virt_write_small_shifted() {
     for (i, item) in input.iter_mut().enumerate() {
         *item = i as u8;
     }
-    let (dtb, virt_base) = dummy_mem.alloc_dtb(input.len().into(), &input);
+    let (dtb, virt_base) = dummy_mem.alloc_dtb(input.len(), &input);
     let arch = Architecture::X64;
     let mut virt_mem = VirtualFromPhysical::new(&mut dummy_mem, arch, arch, dtb);
 
@@ -130,7 +130,7 @@ fn test_virt_read_medium() {
     for (i, item) in buf.iter_mut().enumerate() {
         *item = i as u8;
     }
-    let (dtb, virt_base) = dummy_mem.alloc_dtb(buf.len().into(), &buf);
+    let (dtb, virt_base) = dummy_mem.alloc_dtb(buf.len(), &buf);
     let arch = Architecture::X64;
     let mut virt_mem = VirtualFromPhysical::new(&mut dummy_mem, arch, arch, dtb);
 
@@ -148,7 +148,7 @@ fn test_virt_write_medium() {
     for (i, item) in input.iter_mut().enumerate() {
         *item = i as u8;
     }
-    let (dtb, virt_base) = dummy_mem.alloc_dtb(input.len().into(), &input);
+    let (dtb, virt_base) = dummy_mem.alloc_dtb(input.len(), &input);
     let arch = Architecture::X64;
     let mut virt_mem = VirtualFromPhysical::new(&mut dummy_mem, arch, arch, dtb);
 
@@ -165,7 +165,7 @@ fn test_virt_read_medium_shifted() {
     for (i, item) in buf.iter_mut().enumerate() {
         *item = i as u8;
     }
-    let (dtb, virt_base) = dummy_mem.alloc_dtb(buf.len().into(), &buf);
+    let (dtb, virt_base) = dummy_mem.alloc_dtb(buf.len(), &buf);
     let arch = Architecture::X64;
     let mut virt_mem = VirtualFromPhysical::new(&mut dummy_mem, arch, arch, dtb);
 
@@ -185,7 +185,7 @@ fn test_virt_write_medium_shifted() {
     for (i, item) in input.iter_mut().enumerate() {
         *item = i as u8;
     }
-    let (dtb, virt_base) = dummy_mem.alloc_dtb(input.len().into(), &input);
+    let (dtb, virt_base) = dummy_mem.alloc_dtb(input.len(), &input);
     let arch = Architecture::X64;
     let mut virt_mem = VirtualFromPhysical::new(&mut dummy_mem, arch, arch, dtb);
 
@@ -204,7 +204,7 @@ fn test_virt_read_big() {
     for (i, item) in buf.iter_mut().enumerate() {
         *item = i as u8;
     }
-    let (dtb, virt_base) = dummy_mem.alloc_dtb(buf.len().into(), &buf);
+    let (dtb, virt_base) = dummy_mem.alloc_dtb(buf.len(), &buf);
     let arch = Architecture::X64;
     let mut virt_mem = VirtualFromPhysical::new(&mut dummy_mem, arch, arch, dtb);
 
@@ -222,7 +222,7 @@ fn test_virt_write_big() {
     for (i, item) in input.iter_mut().enumerate() {
         *item = i as u8;
     }
-    let (dtb, virt_base) = dummy_mem.alloc_dtb(input.len().into(), &input);
+    let (dtb, virt_base) = dummy_mem.alloc_dtb(input.len(), &input);
     let arch = Architecture::X64;
     let mut virt_mem = VirtualFromPhysical::new(&mut dummy_mem, arch, arch, dtb);
 
@@ -239,7 +239,7 @@ fn test_virt_read_big_shifted() {
     for (i, item) in buf.iter_mut().enumerate() {
         *item = i as u8;
     }
-    let (dtb, virt_base) = dummy_mem.alloc_dtb(buf.len().into(), &buf);
+    let (dtb, virt_base) = dummy_mem.alloc_dtb(buf.len(), &buf);
     let arch = Architecture::X64;
     let mut virt_mem = VirtualFromPhysical::new(&mut dummy_mem, arch, arch, dtb);
 
@@ -259,7 +259,7 @@ fn test_virt_write_big_shifted() {
     for (i, item) in input.iter_mut().enumerate() {
         *item = i as u8;
     }
-    let (dtb, virt_base) = dummy_mem.alloc_dtb(input.len().into(), &input);
+    let (dtb, virt_base) = dummy_mem.alloc_dtb(input.len(), &input);
     let arch = Architecture::X64;
     let mut virt_mem = VirtualFromPhysical::new(&mut dummy_mem, arch, arch, dtb);
 

@@ -39,7 +39,7 @@ impl<'a, T: VirtualMemory> VirtualReadUnicodeString for T {
 
         // length is always the first entry
         let mut length = 0u16;
-        self.virt_read_into(addr + 0, &mut length)?;
+        self.virt_read_into(addr, &mut length)?;
         if length == 0 {
             return Err(Error::new("unable to read unicode string length"));
         }

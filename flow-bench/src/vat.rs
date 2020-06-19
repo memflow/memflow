@@ -1,8 +1,8 @@
 use criterion::*;
 
 use flow_core::mem::{
-    timed_validator::*, CachedMemoryAccess, CachedVirtualTranslate, PageCache, PhysicalMemory,
-    TLBCache, VirtualTranslate,
+    timed_validator::*, CachedMemoryAccess, CachedVirtualTranslate, PhysicalMemory,
+    VirtualTranslate,
 };
 
 use flow_core::{Address, Length, OsProcessInfo, OsProcessModuleInfo, PageType};
@@ -81,29 +81,27 @@ fn vat_test_with_ctx<
     use_tlb: bool,
     (mut mem, mut vat, proc, tmod): (T, V, P, M),
 ) {
-    let tlb_cache = TLBCache::new(
-        2048.into(),
-        TimedCacheValidator::new(Duration::from_millis(1000)),
-    );
+    let tlb_cache = CachedVirtualTranslate::builder()
+        .arch(proc.sys_arch())
+        .validator(TimedCacheValidator::new(Duration::from_millis(1000)));
 
     if cache_size > 0 {
-        let cache = PageCache::new(
-            proc.sys_arch(),
-            Length::from_mb(cache_size),
-            PageType::PAGE_TABLE | PageType::READ_ONLY | PageType::WRITEABLE,
-            TimedCacheValidator::new(Duration::from_millis(10000)),
-        );
+        let cache = CachedMemoryAccess::builder()
+            .arch(proc.sys_arch())
+            .cache_size(Length::from_mb(cache_size))
+            .page_type_mask(PageType::PAGE_TABLE | PageType::READ_ONLY | PageType::WRITEABLE)
+            .validator(TimedCacheValidator::new(Duration::from_millis(10000)));
 
         if use_tlb {
-            let mut mem = CachedMemoryAccess::with(&mut mem, cache);
-            let mut vat = CachedVirtualTranslate::with(vat, tlb_cache, proc.sys_arch());
+            let mut mem = cache.mem(mem).build().unwrap();
+            let mut vat = tlb_cache.vat(vat).build().unwrap();
             vat_test_with_mem(bench, &mut mem, &mut vat, chunks, translations, proc, tmod);
         } else {
-            let mut mem = CachedMemoryAccess::with(&mut mem, cache);
+            let mut mem = cache.mem(mem).build().unwrap();
             vat_test_with_mem(bench, &mut mem, &mut vat, chunks, translations, proc, tmod);
         }
     } else if use_tlb {
-        let mut vat = CachedVirtualTranslate::with(vat, tlb_cache, proc.sys_arch());
+        let mut vat = tlb_cache.vat(vat).build().unwrap();
         vat_test_with_mem(bench, &mut mem, &mut vat, chunks, translations, proc, tmod);
     } else {
         vat_test_with_mem(bench, &mut mem, &mut vat, chunks, translations, proc, tmod);

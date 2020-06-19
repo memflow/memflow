@@ -1,14 +1,13 @@
 pub mod cached_memory_access;
 pub mod cached_vat;
-pub mod page_cache;
 pub mod timed_validator;
-pub mod tlb_cache;
+
+mod page_cache;
+mod tlb_cache;
 
 pub use cached_memory_access::*;
 pub use cached_vat::*;
-pub use page_cache::*;
 pub use timed_validator::*;
-pub use tlb_cache::*;
 
 use crate::types::PageType;
 

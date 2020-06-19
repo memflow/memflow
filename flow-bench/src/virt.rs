@@ -1,8 +1,8 @@
 use criterion::*;
 
 use flow_core::mem::{
-    timed_validator::*, CachedMemoryAccess, CachedVirtualTranslate, PageCache, PhysicalMemory,
-    TLBCache, VirtualFromPhysical, VirtualMemory, VirtualTranslate,
+    timed_validator::*, CachedMemoryAccess, CachedVirtualTranslate, PhysicalMemory,
+    VirtualFromPhysical, VirtualMemory, VirtualTranslate,
 };
 
 use flow_core::{Address, Length, OsProcessInfo, OsProcessModuleInfo, PageType};
@@ -78,24 +78,22 @@ fn read_test_with_ctx<
     chunk_size: usize,
     chunks: usize,
     use_tlb: bool,
-    (mut mem, vat, proc, tmod): (T, V, P, M),
+    (mem, vat, proc, tmod): (T, V, P, M),
 ) {
-    let tlb_cache = TLBCache::new(
-        2048.into(),
-        TimedCacheValidator::new(Duration::from_millis(1000)),
-    );
+    let tlb_cache = CachedVirtualTranslate::builder()
+        .arch(proc.sys_arch())
+        .validator(TimedCacheValidator::new(Duration::from_millis(1000)));
 
     if cache_size > 0 {
-        let cache = PageCache::new(
-            proc.sys_arch(),
-            Length::from_mb(cache_size),
-            PageType::PAGE_TABLE | PageType::READ_ONLY | PageType::WRITEABLE,
-            TimedCacheValidator::new(Duration::from_millis(10000)),
-        );
+        let cache = CachedMemoryAccess::builder()
+            .arch(proc.sys_arch())
+            .cache_size(Length::from_mb(cache_size))
+            .page_type_mask(PageType::PAGE_TABLE | PageType::READ_ONLY | PageType::WRITEABLE)
+            .validator(TimedCacheValidator::new(Duration::from_millis(10000)));
 
         if use_tlb {
-            let mem = CachedMemoryAccess::with(&mut mem, cache);
-            let vat = CachedVirtualTranslate::with(vat, tlb_cache, proc.sys_arch());
+            let mem = cache.mem(mem).build().unwrap();
+            let vat = tlb_cache.vat(vat).build().unwrap();
             let mut virt_mem = VirtualFromPhysical::with_vat(
                 mem,
                 proc.sys_arch(),
@@ -105,7 +103,7 @@ fn read_test_with_ctx<
             );
             read_test_with_mem(bench, &mut virt_mem, chunk_size, chunks, tmod);
         } else {
-            let mem = CachedMemoryAccess::with(&mut mem, cache);
+            let mem = cache.mem(mem).build().unwrap();
             let mut virt_mem = VirtualFromPhysical::with_vat(
                 mem,
                 proc.sys_arch(),
@@ -116,7 +114,7 @@ fn read_test_with_ctx<
             read_test_with_mem(bench, &mut virt_mem, chunk_size, chunks, tmod);
         }
     } else if use_tlb {
-        let vat = CachedVirtualTranslate::with(vat, tlb_cache, proc.sys_arch());
+        let vat = tlb_cache.vat(vat).build().unwrap();
         let mut virt_mem =
             VirtualFromPhysical::with_vat(mem, proc.sys_arch(), proc.proc_arch(), proc.dtb(), vat);
         read_test_with_mem(bench, &mut virt_mem, chunk_size, chunks, tmod);

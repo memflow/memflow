@@ -1,3 +1,5 @@
+use std::prelude::v1::*;
+
 use super::CacheValidator;
 use crate::architecture::Architecture;
 use crate::types::{Address, PhysicalAddress};

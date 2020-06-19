@@ -1,3 +1,5 @@
+use std::prelude::v1::*;
+
 //#[cfg(feature = "emulator")]
 //pub mod emulator;
 

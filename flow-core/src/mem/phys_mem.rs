@@ -1,3 +1,5 @@
+use std::prelude::v1::*;
+
 use super::PhysicalMemoryBatcher;
 use crate::types::PhysicalAddress;
 use crate::Result;

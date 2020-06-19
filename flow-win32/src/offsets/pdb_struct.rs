@@ -1,6 +1,8 @@
 mod data;
-use data::TypeSet;
 
+use std::prelude::v1::*;
+
+use data::TypeSet;
 use std::collections::HashMap;
 use std::{fmt, io, result};
 

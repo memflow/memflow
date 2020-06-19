@@ -1,3 +1,5 @@
+use std::prelude::v1::*;
+
 use super::{KernelInfo, Win32Process, Win32ProcessInfo};
 use crate::error::{Error, Result};
 use crate::offsets::Win32Offsets;

@@ -3,6 +3,9 @@ This crate contains memflow's win32 implementation.
 It is used to interface with windows targets.
 */
 
+#![cfg_attr(not(feature = "std"), no_std)]
+extern crate no_std_compat as std;
+
 pub mod error;
 pub use error::*;
 

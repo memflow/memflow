@@ -1,6 +1,8 @@
 pub mod pe32;
 pub mod pe64;
 
+use std::prelude::v1::*;
+
 use std::cell::{RefCell, UnsafeCell};
 
 use pelite::{util::Align16, Error, PeView, Result, Wrap};

@@ -13,6 +13,7 @@ pelite = { git = "https://github.com/ko1n/pelite" }
 uuid = "0.8" # remove this if pelite has this built in
 pdb = "0.6.0"
 widestring = "0.4.0"
+no-std-compat = { version = "0.4.0", features = ["alloc"] }
 
 # symbolstore
 dirs = "2.0.2"
@@ -28,8 +29,11 @@ rand = "0.5"
 bencher = "0.1.5"
 
 [features]
-default = ["download_progress"]
+default = ["std", "download_progress"]
 download_progress = ["cursive", "indicatif"]
+std = ["no-std-compat/std"]
+collections = []
+alloc = []
 
 [[example]]
 name = "read_keys"

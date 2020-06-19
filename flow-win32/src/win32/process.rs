@@ -1,3 +1,5 @@
+use std::prelude::v1::*;
+
 use super::{Kernel, Win32ModuleInfo};
 use crate::error::{Error, Result};
 use crate::win32::VirtualReadUnicodeString;

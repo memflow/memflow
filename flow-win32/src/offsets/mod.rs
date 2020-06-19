@@ -4,6 +4,8 @@ pub use pdb_struct::PdbStruct;
 pub mod symstore;
 pub use symstore::*;
 
+use std::prelude::v1::*;
+
 use std::fs::File;
 use std::io::Read;
 use std::path::Path;

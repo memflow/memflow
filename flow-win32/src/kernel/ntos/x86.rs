@@ -1,3 +1,5 @@
+use std::prelude::v1::*;
+
 use super::pehelper;
 use crate::error::{Error, Result};
 use crate::kernel::StartBlock;

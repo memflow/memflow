@@ -2,6 +2,8 @@ mod x64;
 mod x86;
 mod x86pae;
 
+use std::prelude::v1::*;
+
 use crate::error::{Error, Result};
 
 use log::warn;

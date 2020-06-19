@@ -3,6 +3,7 @@ use flow_bench::{phys, vat, virt};
 
 use criterion::*;
 
+use flow_core::error::{Error, Result};
 use flow_core::mem::TranslateArch;
 use flow_qemu_procfs::Memory;
 
@@ -13,20 +14,25 @@ use flow_win32::{
 use rand::prelude::*;
 use rand::{prng::XorShiftRng as CurRng, Rng, SeedableRng};
 
-fn initialize_virt_ctx(
-) -> flow_core::Result<(Memory, TranslateArch, Win32ProcessInfo, Win32ModuleInfo)> {
+fn initialize_virt_ctx() -> Result<(Memory, TranslateArch, Win32ProcessInfo, Win32ModuleInfo)> {
     let mut phys_mem = Memory::new()?;
 
-    let kernel_info = KernelInfo::builder().mem(&mut phys_mem).build()?;
+    let kernel_info = KernelInfo::builder()
+        .mem(&mut phys_mem)
+        .build()
+        .map_err(|_| Error::Other("unable to find kernel"))?;
     let vat = TranslateArch::new(kernel_info.start_block.arch);
-    let offsets = Win32Offsets::try_with_guid(&kernel_info.kernel_guid)?;
+    let offsets = Win32Offsets::try_with_guid(&kernel_info.kernel_guid)
+        .map_err(|_| Error::Other("unable to initialize win32 offsets with guid"))?;
 
     // TODO: remove phys_mem + vat clone
     let mut kernel = Kernel::new(phys_mem.clone(), vat.clone(), offsets, kernel_info);
 
     let mut rng = CurRng::from_rng(thread_rng()).unwrap();
 
-    let proc_list = kernel.process_info_list()?;
+    let proc_list = kernel
+        .process_info_list()
+        .map_err(|_| Error::Other("unable to read process list"))?;
     for i in -100..(proc_list.len() as isize) {
         let idx = if i >= 0 {
             i as usize

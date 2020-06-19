@@ -60,7 +60,7 @@ pub fn find<T: VirtualMemory + ?Sized>(
         }
     }
 
-    Err(Error::new(
+    Err(Error::Initialization(
         "find_x86(): unable to locate ntoskrnl.exe in high mem",
     ))
 }

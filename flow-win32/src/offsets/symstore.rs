@@ -39,7 +39,9 @@ fn read_to_end<T: Read>(reader: &mut T, len: usize) -> Result<Vec<u8>> {
         pb.finish();
     });
 
-    reader.read_to_end(&mut buffer)?;
+    reader
+        .read_to_end(&mut buffer)
+        .map_err(|_| Error::SymbolStore("unable to read from http request"))?;
     finished.store(true, Ordering::Relaxed);
     thread.join().unwrap();
 
@@ -95,10 +97,7 @@ impl SymbolStore {
         println!("downloading pdb from {}", url);
         let resp = ureq::get(url).call();
         if !resp.ok() {
-            return Err(Error::new(format!(
-                "unable to download pdb: {}",
-                resp.status_line()
-            )));
+            return Err(Error::SymbolStore("unable to download pdb"));
         }
 
         assert!(resp.has("Content-Length"));
@@ -124,24 +123,30 @@ impl SymbolStore {
                     "reading pdb from local cache: {}",
                     cache_file.to_string_lossy()
                 );
-                let mut file = File::open(cache_file)?;
+                let mut file = File::open(cache_file)
+                    .map_err(|_| Error::SymbolStore("unable to open pdb in local cache"))?;
                 let mut buffer = Vec::new();
-                file.read_to_end(&mut buffer)?;
+                file.read_to_end(&mut buffer)
+                    .map_err(|_| Error::SymbolStore("unable to read pdb from local cache"))?;
                 buffer
             } else {
                 let buffer = self.download(guid)?;
 
                 if !cache_dir.exists() {
                     info!("creating cache directory {:?}", cache_dir.to_str());
-                    fs::create_dir_all(&cache_dir)?;
+                    fs::create_dir_all(&cache_dir).map_err(|_| {
+                        Error::SymbolStore("unable to create folder in local pdb cache")
+                    })?;
                 }
 
                 info!(
                     "writing pdb to local cache: {}",
                     cache_file.to_string_lossy()
                 );
-                let mut file = File::create(cache_file)?;
-                file.write_all(&buffer[..])?;
+                let mut file = File::create(cache_file)
+                    .map_err(|_| Error::SymbolStore("unable to create file in local pdb cache"))?;
+                file.write_all(&buffer[..])
+                    .map_err(|_| Error::SymbolStore("unable to write pdb to local cache"))?;
 
                 buffer
             };

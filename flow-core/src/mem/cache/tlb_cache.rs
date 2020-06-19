@@ -86,7 +86,7 @@ impl<T: CacheValidator> TLBCache<T> {
                     ),
                 }))
             } else {
-                Some(Err(Error::new("tlb_cache: virt_to_phys failed")))
+                Some(Err(Error::VirtualTranslate))
             }
         } else {
             None

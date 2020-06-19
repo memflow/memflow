@@ -99,31 +99,31 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
         let loaded_module_list = {
             // TODO: use pe wrap :)
             let pectx = MemoryPeViewContext::new(&mut reader, self.kernel_info.kernel_base)
-                .map_err(Error::new)?;
+                .map_err(Error::from)?;
             match self.kernel_info.start_block.arch.bits() {
                 32 => {
-                    let pe = pe32::MemoryPeView::new(&pectx).map_err(Error::new)?;
-                    match pe.get_export("PsLoadedModuleList").map_err(Error::new)? {
+                    let pe = pe32::MemoryPeView::new(&pectx).map_err(Error::from)?;
+                    match pe.get_export("PsLoadedModuleList").map_err(Error::from)? {
                         Export::Symbol(s) => self.kernel_info.kernel_base + *s as usize,
                         Export::Forward(_) => {
-                            return Err(Error::new(
+                            return Err(Error::Other(
                                 "PsLoadedModuleList found but it was a forwarded export",
                             ))
                         }
                     }
                 }
                 64 => {
-                    let pe = pe64::MemoryPeView::new(&pectx).map_err(Error::new)?;
-                    match pe.get_export("PsLoadedModuleList").map_err(Error::new)? {
+                    let pe = pe64::MemoryPeView::new(&pectx).map_err(Error::from)?;
+                    match pe.get_export("PsLoadedModuleList").map_err(Error::from)? {
                         Export::Symbol(s) => self.kernel_info.kernel_base + *s as usize,
                         Export::Forward(_) => {
-                            return Err(Error::new(
+                            return Err(Error::Other(
                                 "PsLoadedModuleList found but it was a forwarded export",
                             ))
                         }
                     }
                 }
-                _ => return Err(Error::new("invalid architecture")),
+                _ => return Err(Error::InvalidArchitecture),
             }
         };
 
@@ -142,7 +142,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
                     self.offsets.ldr_data_size_x86,
                     self.offsets.ldr_data_name_x86,
                 ),
-                _ => return Err(Error::new("invalid architecture")),
+                _ => return Err(Error::InvalidArchitecture),
             };
         trace!("ldr_data_base_offs={:x}", ldr_data_base_offs);
         trace!("ldr_data_size_offs={:x}", ldr_data_size_offs);
@@ -220,7 +220,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
                 }
             }
             32 => Architecture::X86,
-            _ => return Err(Error::new("invalid architecture")),
+            _ => return Err(Error::InvalidArchitecture),
         };
         trace!("proc_arch={:?}", proc_arch);
 
@@ -229,7 +229,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
         let (peb_ldr_offs, ldr_list_offs) = match proc_arch.bits() {
             64 => (self.offsets.peb_ldr_x64, self.offsets.ldr_list_x64),
             32 => (self.offsets.peb_ldr_x86, self.offsets.ldr_list_x86),
-            _ => return Err(Error::new("invalid architecture")),
+            _ => return Err(Error::InvalidArchitecture),
         };
         trace!("peb_ldr_offs={:x}", peb_ldr_offs);
         trace!("ldr_list_offs={:x}", ldr_list_offs);
@@ -260,7 +260,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
                 self.offsets.ldr_data_size_x86,
                 self.offsets.ldr_data_name_x86,
             ),
-            _ => return Err(Error::new("invalid architecture")),
+            _ => return Err(Error::InvalidArchitecture),
         };
         trace!("ldr_data_base_offs={:x}", ldr_data_base_offs);
         trace!("ldr_data_size_offs={:x}", ldr_data_size_offs);
@@ -316,14 +316,14 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
                 .iter()
                 .inspect(|&module| println!("{:x} {}", module.base(), module.name()))
                 .find(|&module| module.name().to_lowercase() == name.to_lowercase())
-                .ok_or_else(|| Error::new(format!("unable to find module {}", name)))
+                .ok_or_else(|| Error::ModuleInfo)
                 .is_ok()
             {
                 return Ok(candidate.clone());
             }
         }
 
-        Err(Error::new(format!("unable to find process {}", name)))
+        Err(Error::ProcessInfo)
     }
 }
 

@@ -30,7 +30,7 @@ fn check_page(base: Address, mem: &[u8]) -> bool {
 pub fn find(mem: &[u8]) -> Result<StartBlock> {
     mem.page_chunks(Address::from(0), architecture::x86::page_size())
         .find(|(a, c)| check_page(*a, c))
-        .ok_or_else(|| Error::new("unable to find x86 dtb in lowstub < 16M"))
+        .ok_or_else(|| Error::Initialization("unable to find x86 dtb in lowstub < 16M"))
         .and_then(|(a, _)| {
             Ok(StartBlock {
                 arch: Architecture::X86,

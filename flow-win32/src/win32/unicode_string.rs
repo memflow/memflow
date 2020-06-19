@@ -41,7 +41,7 @@ impl<'a, T: VirtualMemory> VirtualReadUnicodeString for T {
         let mut length = 0u16;
         self.virt_read_into(addr, &mut length)?;
         if length == 0 {
-            return Err(Error::new("unable to read unicode string length"));
+            return Err(Error::Unicode("unable to read unicode string length"));
         }
 
         // TODO: chek if length exceeds limit
@@ -50,16 +50,18 @@ impl<'a, T: VirtualMemory> VirtualReadUnicodeString for T {
             64 => self.virt_read_addr64(addr + 8)?,
             32 => self.virt_read_addr32(addr + 4)?,
             _ => {
-                return Err(Error::new("invalid proc_arch parameter"));
+                return Err(Error::InvalidArchitecture);
             }
         };
         if buffer.is_null() {
-            return Err(Error::new("unable to read unicode string length"));
+            return Err(Error::Unicode("unable to read unicode string length"));
         }
 
         // check if buffer length is mod 2 (utf-16)
         if length % 2 != 0 {
-            return Err(Error::new("unicode string length is not a multiple of two"));
+            return Err(Error::Unicode(
+                "unicode string length is not a multiple of two",
+            ));
         }
 
         // read buffer
@@ -78,7 +80,7 @@ impl<'a, T: VirtualMemory> VirtualReadUnicodeString for T {
             })
             .collect::<Vec<u16>>();
         Ok(U16CString::from_vec_with_nul(content16)
-            .map_err(Error::new)?
+            .map_err(|_| Error::Encoding)?
             .to_string_lossy())
     }
 }

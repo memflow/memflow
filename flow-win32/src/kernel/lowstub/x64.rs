@@ -17,7 +17,7 @@ pub fn find_lowstub(stub: &[u8]) -> Result<StartBlock> {
             (0xffff_f800_0000_0003 & LittleEndian::read_u64(&c[0x70..])) == 0xffff_f800_0000_0000
         }) // kernel entry
         .find(|c| (0xffff_ff00_0000_0fff & LittleEndian::read_u64(&c[0xA0..])) == 0) // pml4
-        .ok_or_else(|| Error::new("unable to find x64 dtb in lowstub < 1M"))
+        .ok_or_else(|| Error::Initialization("unable to find x64 dtb in lowstub < 1M"))
         .and_then(|c| {
             Ok(StartBlock {
                 arch: Architecture::X64,
@@ -62,7 +62,7 @@ fn _find(mem: &[u8]) -> Option<()> {
 pub fn find(mem: &[u8]) -> Result<StartBlock> {
     mem.chunks_exact(architecture::x64::page_size())
         .position(|c| _find(c).is_some())
-        .ok_or_else(|| Error::new("unable to find x64 dtb in lowstub < 16M"))
+        .ok_or_else(|| Error::Initialization("unable to find x64 dtb in lowstub < 16M"))
         .and_then(|i| {
             Ok(StartBlock {
                 arch: Architecture::X64,

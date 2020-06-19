@@ -161,7 +161,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> VirtualFromPhysical<T, V> {
         match self.proc_arch.bits() {
             64 => self.virt_read_addr64(addr),
             32 => self.virt_read_addr32(addr),
-            _ => Err(Error::new("invalid instruction set address size")),
+            _ => Err(Error::InvalidArchitecture),
         }
     }
 }

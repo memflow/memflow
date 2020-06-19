@@ -1,4 +1,8 @@
-use std::{convert, error, fmt, result, str};
+use std::prelude::v1::*;
+use std::{convert, fmt, result, str};
+
+#[cfg(feature = "std")]
+use std::error;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 pub enum Error {
@@ -49,38 +53,50 @@ impl From<str::Utf8Error> for Error {
 }
 
 impl Error {
+    /// Returns a tuple representing the error description and its string value.
+    pub fn to_str_pair(self) -> (&'static str, Option<&'static str>) {
+        match self {
+            Error::Other(e) => ("other error", Some(e)),
+            Error::Bounds => ("out of bounds", None),
+            Error::InvalidArchitecture => ("invalid architecture", None),
+            Error::Connector(e) => ("connector error", Some(e)),
+            Error::PhysicalMemory(e) => ("physical memory error", Some(e)),
+            Error::VirtualTranslate => ("virtual address translation failed", None),
+            Error::VirtualMemory(e) => ("virtual memory error", Some(e)),
+            Error::Encoding => ("encoding error", None),
+        }
+    }
+
     /// Returns a simple string representation of the error.
     pub fn to_str(self) -> &'static str {
-        match self {
-            Error::Other(_) => "other error",
-            Error::Bounds => "out of bounds",
-            Error::InvalidArchitecture => "invalid architecture",
-            Error::Connector(_) => "connector error",
-            Error::PhysicalMemory(_) => "physical memory error",
-            Error::VirtualTranslate => "virtual address translation failed",
-            Error::VirtualMemory(_) => "virtual memory error",
-            Error::Encoding => "encoding error",
-        }
+        self.to_str_pair().0
     }
 
     /// Returns the full string representation of the error.
     pub fn to_string(self) -> String {
-        match self {
-            Error::Other(e) => format!("other error: {}", e),
-            Error::Connector(e) => format!("connector error: {}", e),
-            Error::PhysicalMemory(e) => format!("physical write error: {}", e),
-            Error::VirtualMemory(e) => format!("virtual write error: {}", e),
-            _ => self.to_str().to_string(),
+        let (desc, value) = self.to_str_pair();
+
+        if let Some(value) = value {
+            format!("{}: {}", desc, value)
+        } else {
+            desc.to_string()
         }
     }
 }
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.write_str(&self.to_string())
+        let (desc, value) = self.to_str_pair();
+
+        if let Some(value) = value {
+            write!(f, "{}: {}", desc, value)
+        } else {
+            f.write_str(desc)
+        }
     }
 }
 
+#[cfg(feature = "std")]
 impl error::Error for Error {
     fn description(&self) -> &str {
         self.to_str()

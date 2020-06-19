@@ -71,17 +71,6 @@ impl Error {
     pub fn to_str(self) -> &'static str {
         self.to_str_pair().0
     }
-
-    /// Returns the full string representation of the error.
-    pub fn to_string(self) -> String {
-        let (desc, value) = self.to_str_pair();
-
-        if let Some(value) = value {
-            format!("{}: {}", desc, value)
-        } else {
-            desc.to_string()
-        }
-    }
 }
 
 impl fmt::Display for Error {

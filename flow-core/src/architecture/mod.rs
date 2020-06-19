@@ -380,7 +380,7 @@ impl Architecture {
                 out.extend(
                     data_to_translate
                         .into_iter()
-                        .map(|(addr, buf, _, _)| (Err(err.clone()), addr, buf)),
+                        .map(|(addr, buf, _, _)| (Err(err), addr, buf)),
                 );
                 return;
             }

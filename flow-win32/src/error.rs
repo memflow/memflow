@@ -9,8 +9,6 @@ use std::error;
 pub enum Error {
     /// Generic error type containing a string
     Other(&'static str),
-    /// IO error
-    IO(std::io::ErrorKind),
     /// Out of bounds.
     ///
     /// Catch-all for bounds check errors.
@@ -70,51 +68,40 @@ impl From<str::Utf8Error> for Error {
     }
 }
 
-/// Convert from std::io::Error
-impl From<std::io::Error> for Error {
-    fn from(error: std::io::Error) -> Error {
-        Error::IO(error.kind())
-    }
-}
-
 impl Error {
+    /// Returns a tuple representing the error description and its string value.
+    pub fn to_str_pair(self) -> (&'static str, Option<&'static str>) {
+        match self {
+            Error::Other(e) => ("other error", Some(e)),
+            Error::Bounds => ("out of bounds", None),
+            Error::InvalidArchitecture => ("invalid architecture", None),
+            Error::Initialization(e) => ("error during initialization", Some(e)),
+            Error::SymbolStore(e) => ("error in symbol store", Some(e)),
+            Error::ProcessInfo => ("error retrieving process info", None),
+            Error::ModuleInfo => ("error retrieving module info", None),
+            Error::Core(e) => ("error in core", Some(e.to_str())),
+            Error::PDB(e) => ("error handling pdb", Some(e)),
+            Error::PE(e) => ("error handling pe", Some(e.to_str())),
+            Error::Encoding => ("encoding error", None),
+            Error::Unicode(e) => ("error reading unicode string", Some(e)),
+        }
+    }
+
     /// Returns a simple string representation of the error.
     pub fn to_str(self) -> &'static str {
-        match self {
-            Error::Other(_) => "other error",
-            Error::Bounds => "out of bounds",
-            Error::InvalidArchitecture => "invalid architecture",
-            Error::Initialization(_) => "error during initialization",
-            Error::SymbolStore(_) => "error in symbol store",
-            Error::ProcessInfo => "error retrieving process info",
-            Error::ModuleInfo => "error retrieving module info",
-            Error::Core(_) => "error in core",
-            Error::PDB(_) => "error handling pdb",
-            Error::PE(_) => "error handling pe",
-            Error::Encoding => "encoding error",
-            Error::Unicode(_) => "error reading unicode string",
-            Error::IO(_) => "I/O error",
-        }
-    }
-
-    /// Returns the full string representation of the error.
-    pub fn to_string(self) -> String {
-        match self {
-            Error::Other(e) => format!("other error: {}", e),
-            Error::Initialization(e) => format!("error during initialization: {}", e),
-            Error::SymbolStore(e) => format!("error in symbol store: {}", e),
-            Error::Core(e) => format!("error in core: {}", e.to_string()),
-            Error::PDB(e) => format!("error handling pdb: {}", e),
-            Error::PE(e) => format!("error handling pe: {}", e.to_str()),
-            Error::Unicode(e) => format!("error reading unicode string: {}", e),
-            _ => self.to_str().to_string(),
-        }
+        self.to_str_pair().0
     }
 }
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.write_str(&self.to_string())
+        let (desc, value) = self.to_str_pair();
+
+        if let Some(value) = value {
+            write!(f, "{}: {}", desc, value)
+        } else {
+            f.write_str(desc)
+        }
     }
 }
 

@@ -1,3 +1,5 @@
+use std::prelude::v1::*;
+
 use crate::phys_mem::{
     PhysicalMemory, PhysicalReadData, PhysicalReadIterator, PhysicalWriteData,
     PhysicalWriteIterator,

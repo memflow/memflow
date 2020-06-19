@@ -9,13 +9,14 @@ It contains abstractions over [memory addresses](address/index.html),
 [abstractions over processes and modules](process/index.html).
 */
 
+#![cfg_attr(not(feature = "std"), no_std)]
+extern crate no_std_compat as std;
+
 #[macro_use]
 extern crate bitflags;
 
 #[macro_use]
 extern crate smallvec;
-
-extern crate either;
 
 pub mod error;
 pub use error::{Error, Result};

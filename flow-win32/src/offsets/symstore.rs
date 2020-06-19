@@ -51,7 +51,7 @@ fn read_to_end<T: Read>(reader: &mut T, len: usize) -> Result<Vec<u8>> {
 }
 
 #[cfg(not(feature = "download_progress"))]
-fn read_to_end<T: Read>(reader: &mut T, len: usize) -> Result<Vec<u8>> {
+fn read_to_end<T: Read>(reader: &mut T, _len: usize) -> Result<Vec<u8>> {
     let mut buffer = vec![];
     reader.read_to_end(&mut buffer)?;
     Ok(buffer)

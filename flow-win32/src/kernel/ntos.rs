@@ -13,8 +13,7 @@ use log::warn;
 use flow_core::mem::VirtualMemory;
 use flow_core::types::Address;
 
-use pelite::{self, image::GUID, pe64::debug::CodeView};
-use uuid::{self, Uuid};
+use pelite::{self, pe64::debug::CodeView};
 
 pub fn find<T: VirtualMemory + ?Sized>(
     virt_mem: &mut T,
@@ -85,23 +84,6 @@ pub fn find_guid<T: VirtualMemory + ?Sized>(
 
     Ok(Win32GUID {
         file_name: code_view.pdb_file_name().to_string(),
-        guid: generate_guid(signature, code_view.age())?,
+        guid: format!("{:X}{:X}", signature, code_view.age()),
     })
-}
-
-// TODO: this function might be omitted in the future if this is merged to pelite internally
-fn generate_guid(signature: GUID, age: u32) -> Result<String> {
-    let uuid = Uuid::from_fields(
-        signature.Data1,
-        signature.Data2,
-        signature.Data3,
-        &signature.Data4,
-    )
-    .map_err(|_| Error::Initialization("unable to generate uuid from codeview"))?;
-
-    Ok(format!(
-        "{}{:X}",
-        uuid.to_simple().to_string().to_uppercase(),
-        age
-    ))
 }

@@ -2,7 +2,7 @@ use std::prelude::v1::*;
 
 use std::{convert, fmt, result, str};
 
-#[cfg(feature="std")]
+#[cfg(feature = "std")]
 use std::error;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
@@ -93,7 +93,7 @@ impl Error {
             Error::PE(_) => "error handling pe",
             Error::Encoding => "encoding error",
             Error::Unicode(_) => "error reading unicode string",
-            Error::IO(_) => "I/O error"
+            Error::IO(_) => "I/O error",
         }
     }
 
@@ -118,7 +118,7 @@ impl fmt::Display for Error {
     }
 }
 
-#[cfg(feature="std")]
+#[cfg(feature = "std")]
 impl error::Error for Error {
     fn description(&self) -> &str {
         self.to_str()

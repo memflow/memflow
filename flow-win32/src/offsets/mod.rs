@@ -1,7 +1,11 @@
+#[cfg(feature = "symstore")]
 pub mod pdb_struct;
+#[cfg(feature = "symstore")]
 pub use pdb_struct::PdbStruct;
 
+#[cfg(feature = "symstore")]
 pub mod symstore;
+#[cfg(feature = "symstore")]
 pub use symstore::*;
 
 use std::prelude::v1::*;
@@ -38,12 +42,14 @@ pub struct Win32Offsets {
 }
 
 impl Win32Offsets {
+    #[cfg(feature = "symstore")]
     pub fn try_with_guid(guid: &Win32GUID) -> Result<Self> {
         let symstore = SymbolStore::default();
         let pdb = symstore.load(guid)?;
         Self::try_with_pdb_slice(&pdb[..])
     }
 
+    #[cfg(feature = "symstore")]
     pub fn try_with_pdb<P: AsRef<Path>>(pdb_path: P) -> Result<Self> {
         let mut file = File::open(pdb_path)
             .map_err(|_| Error::PDB("unable to open user-supplied pdb file"))?;
@@ -53,6 +59,7 @@ impl Win32Offsets {
         Self::try_with_pdb_slice(&buffer[..])
     }
 
+    #[cfg(feature = "symstore")]
     pub fn try_with_pdb_slice(pdb_slice: &[u8]) -> Result<Self> {
         let list = PdbStruct::with(pdb_slice, "_LIST_ENTRY")
             .map_err(|_| Error::PDB("_LIST_ENTRY not found"))?;

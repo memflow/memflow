@@ -1,4 +1,5 @@
 use super::CacheValidator;
+use crate::architecture::Architecture;
 use crate::types::{Address, Length, PhysicalAddress};
 use crate::{Error, Result};
 
@@ -60,8 +61,9 @@ impl<T: CacheValidator> TLBCache<T> {
         &self,
         dtb: Address,
         addr: Address,
-        page_size: Length,
+        arch: Architecture,
     ) -> Option<Result<TLBEntry>> {
+        let page_size = arch.page_size();
         let page_address = addr.as_page_aligned(page_size);
         let idx = self.get_cache_index(page_address, page_size);
         let entry = self.entries[idx];
@@ -95,8 +97,9 @@ impl<T: CacheValidator> TLBCache<T> {
         dtb: Address,
         in_addr: Address,
         out_page: PhysicalAddress,
-        page_size: Length,
+        arch: Architecture,
     ) {
+        let page_size = arch.page_size();
         let idx = self.get_cache_index(in_addr.as_page_aligned(page_size), page_size);
         self.entries[idx] = CachedEntry {
             dtb,
@@ -112,8 +115,9 @@ impl<T: CacheValidator> TLBCache<T> {
         dtb: Address,
         in_addr: Address,
         invalid_len: Length,
-        page_size: Length,
+        arch: Architecture,
     ) {
+        let page_size = arch.page_size();
         let page_addr = in_addr.as_page_aligned(page_size);
         let end_addr = (in_addr + invalid_len + Length::from(1)).as_page_aligned(page_size);
 

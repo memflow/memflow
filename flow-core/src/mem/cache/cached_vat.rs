@@ -1,11 +1,12 @@
 use crate::error::Result;
 
+use super::tlb_cache::TLBCache;
 use crate::architecture::Architecture;
 use crate::iter::{PageChunks, SplitAtIndex};
-use crate::mem::cache::{CacheValidator, TLBCache};
+use crate::mem::cache::CacheValidator;
 use crate::mem::virt_translate::VirtualTranslate;
 use crate::mem::PhysicalMemory;
-use crate::types::{Address, PhysicalAddress};
+use crate::types::{Address, Length, PhysicalAddress};
 
 use bumpalo::{collections::Vec as BumpVec, Bump};
 
@@ -19,6 +20,10 @@ pub struct CachedVirtualTranslate<V: VirtualTranslate, Q: CacheValidator> {
 }
 
 impl<V: VirtualTranslate, Q: CacheValidator> CachedVirtualTranslate<V, Q> {
+    pub fn builder() -> CachedVirtualTranslateBuilder<V, Q> {
+        CachedVirtualTranslateBuilder::default()
+    }
+
     pub fn with(vat: V, tlb: TLBCache<Q>, arch: Architecture) -> Self {
         Self {
             vat,
@@ -53,26 +58,26 @@ impl<V: VirtualTranslate, Q: CacheValidator> VirtualTranslate for CachedVirtualT
         let mut hitc = 0;
         let mut misc = 0;
 
-        let page_size = self.arch.page_size();
+        let arch = self.arch;
         let mut addrs = addrs
             .flat_map(|(addr, buf)| {
-                buf.page_chunks_by(addr, page_size, |addr, split, _| {
-                    tlb.try_entry(dtb, addr + split.length(), page_size)
-                        .is_some()
-                        || tlb.try_entry(dtb, addr, page_size).is_some()
+                buf.page_chunks_by(addr, arch.page_size(), |addr, split, _| {
+                    tlb.try_entry(dtb, addr + split.length(), arch).is_some()
+                        || tlb.try_entry(dtb, addr, arch).is_some()
                 })
             })
             .filter_map(|(addr, buf)| {
-                if let Some(entry) = tlb.try_entry(dtb, addr, page_size) {
+                if let Some(entry) = tlb.try_entry(dtb, addr, arch) {
                     hitc += 1;
-                    debug_assert!(buf.length() <= page_size);
+                    debug_assert!(buf.length() <= arch.page_size());
                     match entry {
                         Ok(entry) => out.extend(Some((Ok(entry.phys_addr), addr, buf)).into_iter()),
                         Err(error) => out.extend(Some((Err(error), addr, buf)).into_iter()),
                     }
                     None
                 } else {
-                    misc += core::cmp::max(1, buf.length().as_usize() / page_size.as_usize());
+                    misc +=
+                        core::cmp::max(1, buf.length().as_usize() / arch.page_size().as_usize());
                     Some((addr, buf))
                 }
             })
@@ -84,15 +89,66 @@ impl<V: VirtualTranslate, Q: CacheValidator> VirtualTranslate for CachedVirtualT
 
             out.extend(uncached_out.into_iter().inspect(|(ret, addr, buf)| {
                 if let Ok(paddr) = ret {
-                    self.tlb.cache_entry(dtb, *addr, *paddr, page_size);
+                    self.tlb.cache_entry(dtb, *addr, *paddr, arch);
                 } else {
                     self.tlb
-                        .cache_invalid_if_uncached(dtb, *addr, buf.length(), page_size);
+                        .cache_invalid_if_uncached(dtb, *addr, buf.length(), arch);
                 }
             }));
 
             self.hitc += hitc;
             self.misc += misc;
         }
+    }
+}
+
+pub struct CachedVirtualTranslateBuilder<V, Q> {
+    vat: Option<V>,
+    validator: Option<Q>,
+    entries: Option<Length>,
+    arch: Option<Architecture>,
+}
+
+impl<V: VirtualTranslate, Q: CacheValidator> Default for CachedVirtualTranslateBuilder<V, Q> {
+    fn default() -> Self {
+        Self {
+            vat: None,
+            validator: None,
+            entries: Some(Length::from(2048)),
+            arch: None,
+        }
+    }
+}
+
+impl<V: VirtualTranslate, Q: CacheValidator> CachedVirtualTranslateBuilder<V, Q> {
+    pub fn build(self) -> Result<CachedVirtualTranslate<V, Q>> {
+        Ok(CachedVirtualTranslate::with(
+            self.vat.ok_or("vat must be initialized")?,
+            TLBCache::new(
+                self.entries.ok_or("entries must be initialized")?,
+                self.validator.ok_or("validator must be initialized")?,
+            ),
+            self.arch.ok_or("arch must be initialized")?,
+        ))
+    }
+
+    pub fn vat(mut self, vat: V) -> Self {
+        self.vat = Some(vat);
+        self
+    }
+
+    pub fn validator(mut self, validator: Q) -> Self {
+        self.validator = Some(validator);
+        self
+    }
+
+    pub fn entries(mut self, entries: Length) -> Self {
+        self.entries = Some(entries);
+        self
+    }
+
+    pub fn arch(mut self, arch: Architecture) -> Self {
+        self.arch = Some(arch);
+        self
     }
 }

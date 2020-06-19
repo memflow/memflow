@@ -1,6 +1,6 @@
 use criterion::*;
 
-use flow_core::mem::{timed_validator::*, CachedMemoryAccess, PageCache, PhysicalMemory};
+use flow_core::mem::{timed_validator::*, CachedMemoryAccess, PhysicalMemory};
 
 use flow_core::{Address, Architecture, Length, PageType, PhysicalAddress};
 
@@ -72,14 +72,15 @@ fn read_test_with_ctx<T: PhysicalMemory>(
     let end = start + Length::from_mb(1);
 
     if cache_size > 0 {
-        let cache = PageCache::new(
-            Architecture::X64,
-            Length::from_mb(cache_size),
-            PageType::PAGE_TABLE | PageType::READ_ONLY | PageType::WRITEABLE,
-            TimedCacheValidator::new(Duration::from_millis(10000)),
-        );
+        let mut mem = CachedMemoryAccess::builder()
+            .mem(mem)
+            .arch(Architecture::X64)
+            .cache_size(Length::from_mb(cache_size))
+            .page_type_mask(PageType::PAGE_TABLE | PageType::READ_ONLY | PageType::WRITEABLE)
+            .validator(TimedCacheValidator::new(Duration::from_millis(10000)))
+            .build()
+            .unwrap();
 
-        let mut mem = CachedMemoryAccess::with(&mut mem, cache);
         read_test_with_mem(bench, &mut mem, chunk_size, chunks, (start, end));
     } else {
         read_test_with_mem(bench, &mut mem, chunk_size, chunks, (start, end));

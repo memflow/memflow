@@ -6,12 +6,10 @@ extern crate rand;
 use std::io::Write;
 use std::time::{Duration, Instant};
 
-use flow_core::mem::cache::{
-    CachedMemoryAccess, CachedVirtualTranslate, PageCache, TLBCache, TimedCacheValidator,
-};
+use flow_core::mem::cache::{CachedMemoryAccess, CachedVirtualTranslate, TimedCacheValidator};
 use flow_core::mem::{PhysicalMemory, TranslateArch, VirtualMemory, VirtualTranslate};
 use flow_core::process::{OsProcessInfo, OsProcessModuleInfo};
-use flow_core::types::{Address, Length, PageType};
+use flow_core::types::Address;
 
 use flow_qemu_procfs::Memory;
 
@@ -149,20 +147,19 @@ fn main() -> flow_core::Result<()> {
 
     println!();
     println!("Benchmarking cached reads:");
-    let cache = PageCache::new(
-        kernel_info.start_block.arch,
-        Length::from_mb(2),
-        PageType::PAGE_TABLE | PageType::READ_ONLY,
-        TimedCacheValidator::new(Duration::from_millis(1000).into()),
-    );
-    let mut mem_cached = CachedMemoryAccess::with(&mut mem_sys, cache);
+    let mut mem_cached = CachedMemoryAccess::builder()
+        .mem(mem_sys)
+        .arch(kernel_info.start_block.arch)
+        .validator(TimedCacheValidator::new(Duration::from_millis(1000).into()))
+        .build()
+        .unwrap();
 
-    let tlb_cache = TLBCache::new(
-        2048.into(),
-        TimedCacheValidator::new(Duration::from_millis(1000).into()),
-    );
-    let mut vat_cached =
-        CachedVirtualTranslate::with(&mut vat, tlb_cache, kernel_info.start_block.arch);
+    let mut vat_cached = CachedVirtualTranslate::builder()
+        .vat(vat)
+        .arch(kernel_info.start_block.arch)
+        .validator(TimedCacheValidator::new(Duration::from_millis(1000).into()))
+        .build()
+        .unwrap();
 
     read_bench(&mut mem_cached, &mut vat_cached, kernel_info).unwrap();
 

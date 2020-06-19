@@ -29,7 +29,7 @@ Implementing `PhysicalMemory` for a memory backend:
 use std::vec::Vec;
 
 use flow_core::mem::{PhysicalMemory, PhysicalReadIterator, PhysicalWriteIterator};
-use flow_core::types::{PhysicalAddress, ToDo, Done};
+use flow_core::types::PhysicalAddress;
 use flow_core::error::Result;
 
 pub struct MemoryBackend {

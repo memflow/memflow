@@ -10,7 +10,7 @@ members = [
     "flow-bench",
     "connectors/flow-qemu-procfs",
     #"connectors/flow-pcileech",
-    "nostd-test"
+    #"nostd-test"
 ]
 default-members = [
     "flow-core",

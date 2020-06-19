@@ -1,10 +1,10 @@
-use pdb::{self, FallibleIterator, Result};
-use std::collections::HashMap;
-use std::fs::File;
-use std::path::Path;
-
 mod data;
 use data::TypeSet;
+
+use std::collections::HashMap;
+use std::{fmt, io, result};
+
+use pdb::{FallibleIterator, Result, Source, SourceSlice, SourceView, TypeData, PDB};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PdbField {
@@ -18,9 +18,9 @@ pub struct PdbStruct {
 }
 
 impl PdbStruct {
-    pub fn with<P: AsRef<Path>>(filename: P, class_name: &str) -> Result<Self> {
-        let file = File::open(filename)?;
-        let mut pdb = pdb::PDB::open(file)?;
+    pub fn with(pdb_slice: &[u8], class_name: &str) -> Result<Self> {
+        let pdb_buffer = PdbSourceBuffer::new(pdb_slice);
+        let mut pdb = PDB::open(pdb_buffer)?;
 
         let type_information = pdb.type_information()?;
         let mut type_finder = type_information.finder();
@@ -33,7 +33,7 @@ impl PdbStruct {
             // keep building the index
             type_finder.update(&type_iter);
 
-            if let Ok(pdb::TypeData::Class(class)) = typ.parse() {
+            if let Ok(TypeData::Class(class)) = typ.parse() {
                 if class.name.as_bytes() == class_name.as_bytes()
                     && !class.properties.forward_reference()
                 {
@@ -80,5 +80,69 @@ impl PdbStruct {
 
     pub fn find_field(&self, name: &str) -> Option<&PdbField> {
         self.field_map.get(name)
+    }
+}
+
+pub struct PdbSourceBuffer<'a> {
+    bytes: &'a [u8],
+}
+
+impl<'a> PdbSourceBuffer<'a> {
+    pub fn new(bytes: &'a [u8]) -> Self {
+        Self { bytes }
+    }
+}
+
+impl<'a> fmt::Debug for PdbSourceBuffer<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "PdbSourceBuffer({} bytes)", self.bytes.len())
+    }
+}
+
+impl<'a, 's> Source<'s> for PdbSourceBuffer<'a> {
+    fn view(
+        &mut self,
+        slices: &[SourceSlice],
+    ) -> result::Result<Box<dyn SourceView<'s>>, io::Error> {
+        let len = slices.iter().fold(0 as usize, |acc, s| acc + s.size);
+
+        let mut v = PdbSourceBufferView {
+            bytes: Vec::with_capacity(len),
+        };
+        v.bytes.resize(len, 0);
+
+        let bytes = v.bytes.as_mut_slice();
+        let mut output_offset: usize = 0;
+        for slice in slices {
+            bytes[output_offset..(output_offset + slice.size)].copy_from_slice(
+                &self.bytes[slice.offset as usize..(slice.offset as usize + slice.size)],
+            );
+            output_offset += slice.size;
+        }
+
+        Ok(Box::new(v))
+    }
+}
+
+#[derive(Clone)]
+struct PdbSourceBufferView {
+    bytes: Vec<u8>,
+}
+
+impl fmt::Debug for PdbSourceBufferView {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "PdbSourceBufferView({} bytes)", self.bytes.len())
+    }
+}
+
+impl SourceView<'_> for PdbSourceBufferView {
+    fn as_slice(&self) -> &[u8] {
+        self.bytes.as_slice()
+    }
+}
+
+impl Drop for PdbSourceBufferView {
+    fn drop(&mut self) {
+        // no-op
     }
 }

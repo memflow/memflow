@@ -38,9 +38,12 @@ pub fn find_exported<T: VirtualMemory + ?Sized>(
     kernel_base: Address,
 ) -> Result<Address> {
     // PsInitialSystemProcess -> PsActiveProcessHead
-    let ctx = MemoryPeViewContext::new(virt_mem, kernel_base)?;
-    let pe = pe::wrap_memory_pe_view(&ctx)?;
-    let sys_proc = match pe.get_export_by_name("PsInitialSystemProcess")? {
+    let ctx = MemoryPeViewContext::new(virt_mem, kernel_base).map_err(Error::new)?;
+    let pe = pe::wrap_memory_pe_view(&ctx).map_err(Error::new)?;
+    let sys_proc = match pe
+        .get_export_by_name("PsInitialSystemProcess")
+        .map_err(Error::new)?
+    {
         Export::Symbol(s) => kernel_base + *s as usize,
         Export::Forward(_) => {
             return Err(Error::new(

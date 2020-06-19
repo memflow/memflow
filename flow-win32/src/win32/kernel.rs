@@ -98,10 +98,11 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
         // find PsLoadedModuleList
         let loaded_module_list = {
             // TODO: use pe wrap :)
-            let pectx = MemoryPeViewContext::new(&mut reader, self.kernel_info.kernel_base)?;
+            let pectx = MemoryPeViewContext::new(&mut reader, self.kernel_info.kernel_base)
+                .map_err(Error::new)?;
             match self.kernel_info.start_block.arch.bits() {
                 32 => {
-                    let pe = pe32::MemoryPeView::new(&pectx)?;
+                    let pe = pe32::MemoryPeView::new(&pectx).map_err(Error::new)?;
                     match pe.get_export("PsLoadedModuleList").map_err(Error::new)? {
                         Export::Symbol(s) => self.kernel_info.kernel_base + *s as usize,
                         Export::Forward(_) => {
@@ -112,7 +113,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
                     }
                 }
                 64 => {
-                    let pe = pe64::MemoryPeView::new(&pectx)?;
+                    let pe = pe64::MemoryPeView::new(&pectx).map_err(Error::new)?;
                     match pe.get_export("PsLoadedModuleList").map_err(Error::new)? {
                         Export::Symbol(s) => self.kernel_info.kernel_base + *s as usize,
                         Export::Forward(_) => {

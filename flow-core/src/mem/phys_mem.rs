@@ -113,7 +113,7 @@ pub trait PhysicalMemory {
         self.phys_write_raw(addr, data.as_bytes())
     }
 
-    fn get_batcher(&mut self) -> PhysicalMemoryBatcher<Self>
+    fn phys_batcher(&mut self) -> PhysicalMemoryBatcher<Self>
     where
         Self: Sized,
     {

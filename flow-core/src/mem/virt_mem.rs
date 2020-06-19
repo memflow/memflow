@@ -150,7 +150,7 @@ pub trait VirtualMemory {
         Ok(String::from(v.to_string_lossy()))
     }
 
-    fn get_batcher(&mut self) -> VirtualMemoryBatcher<Self>
+    fn virt_batcher(&mut self) -> VirtualMemoryBatcher<Self>
     where
         Self: Sized,
     {

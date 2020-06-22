@@ -31,6 +31,7 @@ use crate::types::{Address, PageType, PhysicalAddress};
 
 use bumpalo::{collections::Vec as BumpVec, Bump};
 use byteorder::{ByteOrder, LittleEndian};
+use std::collections::BTreeMap;
 
 /**
 Identifies the byte order of a architecture
@@ -276,27 +277,36 @@ impl Architecture {
         }
     }
 
-    fn read_pt_address_iter<T: PhysicalMemory + ?Sized, B>(
+    fn read_pt_address_iter<'a, T: PhysicalMemory + ?Sized, B>(
         mem: &mut T,
         spec: &ArchMMUSpec,
         step: usize,
-        addrs: &mut BumpVec<(Address, B, Address, [u8; 8])>,
+        addr_map: &mut BTreeMap<Address, usize>,
+        addrs: &mut BumpVec<(Address, BumpVec<'a, TranslateData<B>>, [u8; 8])>,
     ) -> Result<()> {
         let page_size = spec.pt_leaf_size(step);
 
-        vtop_trace!("pt_leaf_size = {}", page_size);
-
-        mem.phys_read_iter(addrs.iter_mut().map(|(_, _, pt_addr, arr)| {
-            arr.iter_mut().for_each(|x| *x = 0);
+        mem.phys_read_iter(addrs.iter_mut().map(|(pt_addr, _, arr)| {
             (
                 PhysicalAddress::with_page(*pt_addr, PageType::PAGE_TABLE, page_size),
                 &mut arr[..],
             )
         }))?;
 
-        addrs
-            .iter_mut()
-            .for_each(|(_, _, pt_addr, buf)| *pt_addr = Address::from(LittleEndian::read_u64(buf)));
+        addr_map.clear();
+
+        //Filter out duplicate reads
+        for i in (0..addrs.len()).rev() {
+            let (orig_pt_addr, vec, buf) = addrs.swap_remove(i);
+            let pt_addr = Address::from(LittleEndian::read_u64(&buf[..]));
+
+            if spec.pte_addr_mask(orig_pt_addr, step) != spec.pte_addr_mask(pt_addr, step) {
+                if let None = addr_map.get_mut(&pt_addr) {
+                    addr_map.insert(pt_addr, i);
+                    addrs.push((pt_addr, vec, buf));
+                }
+            }
+        }
 
         Ok(())
     }
@@ -316,76 +326,145 @@ impl Architecture {
     {
         vtop_trace!("virt_to_phys_iter_with_mmu");
 
-        //TODO: build a tree to eliminate duplicate phys reads with multiple elements
         let mut data_to_translate = BumpVec::new_in(arena);
+        //TODO: BTreeMap using bump arena
+        let mut data_to_translate_map = std::collections::BTreeMap::new();
 
-        data_to_translate.extend(addrs.map(|(addr, buf)| {
-            (
-                addr, buf, dtb,
-                [0; 8], //TODO: What to do with this? PTE size may be 128-bit in further MMU impls
-            )
-        }));
+        data_to_translate_map.insert(dtb, 0);
+
+        data_to_translate.push((
+            dtb,
+            {
+                let mut vec = BumpVec::new_in(arena);
+                vec.extend(addrs.map(|(addr, buf)| TranslateData { addr, buf }));
+                vec
+            },
+            [0; 8], //TODO: What to do with this? PTE size may be 128-bit in further MMU impls
+        ));
 
         for pt_step in 0..spec.split_count() {
-            vtop_trace!("pt_step = {}", pt_step);
+            vtop_trace!(
+                "pt_step = {}, data_to_translate.len() = {:x}",
+                pt_step,
+                data_to_translate.len()
+            );
 
             let next_page_size = spec.page_size_step_unchecked(pt_step + 1);
-            vtop_trace!("next_page_size = {:x}", next_page_size);
+            let pt_leaf_count = spec.pt_leaf_size(pt_step) / spec.pte_size;
+
+            vtop_trace!(
+                "next_page_size = {:x}, pt_leaf_count = {:x}",
+                next_page_size,
+                pt_leaf_count
+            );
 
             //Loop through the data in reverse order to allow the data buffer grow on the back when
             //memory regions are split
             for i in (0..data_to_translate.len()).rev() {
-                let (addr, buf, pt_addr, tmp_arr) = data_to_translate.swap_remove(i);
-                vtop_trace!(
-                    "checking addr={:x}; buf.length()={:x}; pt_addr={:x}",
-                    addr,
-                    buf.length(),
-                    pt_addr
-                );
+                let (pt_addr, vec, _) = data_to_translate.swap_remove(i);
+                data_to_translate_map
+                    .remove(&pt_addr)
+                    .expect("bug in virt_to_phys_iter_with_mmu");
+                vtop_trace!("checking pt_addr={:x}, elems={:x}", pt_addr, vec.len());
 
-                if !spec.check_entry(pt_addr, pt_step) {
+                if !spec.check_entry(pt_addr, pt_step)
+                    || (pt_step > 0
+                        && dtb.as_u64() == spec.pte_addr_mask(Address::from(pt_addr), pt_step))
+                {
                     //There has been an error in translation, push it to output with the associated buf
                     vtop_trace!("check_entry failed");
-                    out.extend(Some((Err(Error::VirtualTranslate), addr, buf)).into_iter());
+                    out.extend(
+                        vec.into_iter()
+                            .map(|entry| (Err(Error::VirtualTranslate), entry.addr, entry.buf)),
+                    );
                 } else if spec.is_final_mapping(pt_addr, pt_step) {
                     //We reached an actual page. The translation was successful
-                    vtop_trace!(
-                        "found final mapping: {:?}",
-                        spec.get_phys_page(pt_addr, addr, pt_step)
-                    );
-                    out.extend(
-                        Some((Ok(spec.get_phys_page(pt_addr, addr, pt_step)), addr, buf))
-                            .into_iter(),
-                    );
+                    vtop_trace!("found final mapping: {:x}", pt_addr);
+                    out.extend(vec.into_iter().map(|entry| {
+                        (
+                            Ok(spec.get_phys_page(pt_addr, entry.addr, pt_step)),
+                            entry.addr,
+                            entry.buf,
+                        )
+                    }));
                 } else {
                     //We still need to continue the page walk
+                    for e in vec.into_iter() {
+                        //As an optimization, divide and conquer the input memory regions.
+                        //Potential speedups of 4x for up to 2M sequential regions, and 2x for up to 1G sequential regions,
+                        //assuming all pages are 4kb sized.
+                        //TODO: have the list sorted so we can split it up more efficiently
+                        for (addr, buf) in e
+                            .buf
+                            .page_chunks(e.addr, next_page_size)
+                            .take(pt_leaf_count)
+                        {
+                            let pt_addr = spec.vtop_step(pt_addr, addr, pt_step);
+                            vtop_trace!("pt_addr = {:x}", pt_addr);
 
-                    //As an optimization, divide and conquer the input memory regions.
-                    //Potential speedups of 4x for up to 2M sequential regions, and 2x for up to 1G sequential regions,
-                    //assuming all pages are 4kb sized.
-                    for (addr, buf) in buf.page_chunks(addr, next_page_size) {
-                        let pt_addr = spec.vtop_step(pt_addr, addr, pt_step);
-                        vtop_trace!("pt_addr = {:x}", pt_addr);
-                        data_to_translate.push((addr, buf, pt_addr, tmp_arr));
+                            let eidx = *data_to_translate_map.entry(pt_addr).or_insert_with(|| {
+                                let ret = data_to_translate.len();
+                                data_to_translate.push((pt_addr, BumpVec::new_in(arena), [0; 8]));
+                                ret
+                            });
+
+                            let e = data_to_translate.get_mut(eidx).unwrap();
+
+                            e.1.push(TranslateData { addr, buf });
+                        }
                     }
                 }
             }
 
             if data_to_translate.is_empty() {
                 break;
-            } else if let Err(err) =
-                Self::read_pt_address_iter(mem, &spec, pt_step, &mut data_to_translate)
-            {
+            }
+
+            if let Err(err) = Self::read_pt_address_iter(
+                mem,
+                &spec,
+                pt_step,
+                &mut data_to_translate_map,
+                &mut data_to_translate,
+            ) {
                 vtop_trace!("read_pt_address_iter failure: {}", err);
                 out.extend(
                     data_to_translate
                         .into_iter()
-                        .map(|(addr, buf, _, _)| (Err(err), addr, buf)),
+                        .flat_map(|(_, vec, _)| vec.into_iter())
+                        .map(|data| (Err(err), data.addr, data.buf)),
                 );
                 return;
             }
         }
 
         debug_assert!(data_to_translate.is_empty());
+    }
+}
+
+use std::cmp::Ordering;
+
+struct TranslateData<T> {
+    pub addr: Address,
+    pub buf: T,
+}
+
+impl<T: SplitAtIndex> Ord for TranslateData<T> {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.addr.cmp(&other.addr)
+    }
+}
+
+impl<T: SplitAtIndex> Eq for TranslateData<T> {}
+
+impl<T> PartialOrd for TranslateData<T> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        self.addr.partial_cmp(&other.addr)
+    }
+}
+
+impl<T> PartialEq for TranslateData<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.addr == other.addr
     }
 }

@@ -4,13 +4,6 @@ pub fn make_bit_mask<T: core::convert::TryInto<u8>>(a: T, b: T) -> u64 {
         & !(((1 as u64) << a.try_into().ok().unwrap()) - 1)
 }
 
-#[macro_export]
-macro_rules! get_bit {
-    ($a:expr, $b:expr) => {
-        ($a & ((1 as u64) << $b)) != 0
-    };
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

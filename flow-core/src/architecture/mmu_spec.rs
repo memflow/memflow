@@ -188,7 +188,7 @@ impl ArchMMUSpec {
 
         PhysicalAddress::with_page(
             phys_addr,
-            PageType::from_writeable_bit(get_bit!(pte_addr.as_u64(), self.writeable_bit)),
+            PageType::from_writeable_bit(pte_addr.bit_at(self.writeable_bit)),
             self.page_size_step(step),
         )
     }
@@ -200,7 +200,7 @@ impl ArchMMUSpec {
     /// * `pte_addr` - current page table entry
     /// * `step` - the current step in the page walk
     pub fn check_entry(&self, pte_addr: Address, step: usize) -> bool {
-        step == 0 || get_bit!(pte_addr.as_u64(), self.present_bit)
+        step == 0 || pte_addr.bit_at(self.present_bit)
     }
 
     /// Check if the current page table entry contains a physical page
@@ -216,7 +216,7 @@ impl ArchMMUSpec {
     /// * `step` - the current step the page walk
     pub fn is_final_mapping(&self, pte_addr: Address, step: usize) -> bool {
         (step == self.virtual_address_splits.len() - 1)
-            || (get_bit!(pte_addr.as_u64(), self.large_page_bit)
+            || (pte_addr.bit_at(self.large_page_bit)
                 && self.valid_final_page_steps.binary_search(&step).is_ok())
     }
 }

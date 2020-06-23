@@ -300,7 +300,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
 
             teb,
 
-            peb: real_peb, // TODO: store native + real peb
+            peb: real_peb, // TODO: store native + real peb - the wow64 Peb could be made an Option<>
             peb_module,
 
             sys_arch,

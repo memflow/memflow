@@ -156,9 +156,12 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
             pid: 0,
             name: "ntoskrnl.exe".to_string(),
             dtb: self.kernel_info.kernel_dtb,
-            wow64: Address::null(),
+            ethread: Address::NULL, // TODO: see below
+            wow64: Address::NULL,
 
-            peb: Address::null(),
+            teb: Address::NULL, // TODO: see below
+
+            peb: Address::NULL,
             peb_module,
 
             sys_arch: self.kernel_info.start_block.arch,
@@ -194,23 +197,14 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
             Address::null()
         } else {
             trace!(
-                "eproc_wow64=${:x}; trying to read wow64 pointer",
+                "eproc_wow64={:x}; trying to read wow64 pointer",
                 self.offsets.eproc_wow64
             );
             reader.virt_read_addr(eprocess + self.offsets.eproc_wow64)?
         };
         trace!("wow64={:x}", wow64);
 
-        // read peb
-        let peb = if wow64.is_null() {
-            trace!("reading peb for native process");
-            reader.virt_read_addr(eprocess + self.offsets.eproc_peb)?
-        } else {
-            trace!("reading peb for wow64 process");
-            reader.virt_read_addr(wow64)?
-        };
-        trace!("peb={:x}", peb);
-
+        // determine process architecture
         let sys_arch = self.kernel_info.start_block.arch;
         trace!("sys_arch={:?}", sys_arch);
         let proc_arch = match sys_arch.bits() {
@@ -226,8 +220,42 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
         };
         trace!("proc_arch={:?}", proc_arch);
 
+        // read native_peb (either the process peb or the peb containing the wow64 helpers)
+        let native_peb = reader.virt_read_addr(eprocess + self.offsets.eproc_peb)?;
+        trace!("native_peb={:x}", native_peb);
+
+        // find first ethread
+        let ethread = reader.virt_read_addr(eprocess + self.offsets.eproc_thread_list)?
+            - self.offsets.ethread_list_entry;
+        trace!("ethread={:x}", ethread);
+
+        // TODO: does this need to be read with the process ctx?
+        let teb = if wow64.is_null() {
+            reader.virt_read_addr(ethread + self.offsets.kthread_teb)?
+        } else {
+            reader.virt_read_addr(ethread + self.offsets.kthread_teb)? + 0x2000
+        };
+        trace!("teb={:x}", teb);
+
+        // construct reader with process dtb
+        // TODO: can tlb be used here already?
+        let mut proc_reader = VirtualFromPhysical::new(
+            &mut self.phys_mem,
+            self.kernel_info.start_block.arch,
+            proc_arch,
+            dtb,
+        );
+
         // from here on out we are in the process context
         // we will be using the process type architecture now
+        let real_peb = if wow64.is_null() {
+            proc_reader.virt_read_addr(teb + self.offsets.teb_peb)?
+        } else {
+            proc_reader.virt_read_addr(teb + self.offsets.teb_peb_x86)?
+        };
+        trace!("real_peb={:x}", real_peb);
+
+        // retrieve peb offsets
         let (peb_ldr_offs, ldr_list_offs) = match proc_arch.bits() {
             64 => (self.offsets.peb_ldr_x64, self.offsets.ldr_list_x64),
             32 => (self.offsets.peb_ldr_x86, self.offsets.ldr_list_x86),
@@ -236,15 +264,8 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
         trace!("peb_ldr_offs={:x}", peb_ldr_offs);
         trace!("ldr_list_offs={:x}", ldr_list_offs);
 
-        // construct reader with process dtb
-        // TODO: this wont work with tlb
-        let mut proc_reader = VirtualFromPhysical::new(
-            &mut self.phys_mem,
-            self.kernel_info.start_block.arch,
-            proc_arch,
-            dtb,
-        );
-        let peb_ldr = proc_reader.virt_read_addr(peb + peb_ldr_offs)?;
+        let peb_ldr =
+            proc_reader.virt_read_addr(real_peb /* TODO: can we have both? */ + peb_ldr_offs)?;
         trace!("peb_ldr={:x}", peb_ldr);
 
         let peb_module = proc_reader.virt_read_addr(peb_ldr + ldr_list_offs)?;
@@ -274,9 +295,12 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
             pid,
             name,
             dtb,
+            ethread,
             wow64,
 
-            peb,
+            teb,
+
+            peb: real_peb, // TODO: store native + real peb
             peb_module,
 
             sys_arch,
@@ -304,19 +328,19 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
             .iter()
             .inspect(|process| trace!("{} {}", process.pid(), process.name()))
             .filter(|process| {
-                process.name().to_lowercase() == name[..name.len().min(15)].to_lowercase()
+                process.name().to_lowercase() == name[..name.len().min(14)].to_lowercase()
             })
             .collect::<Vec<_>>();
 
         for &candidate in candidates.iter() {
             // TODO: properly probe pe header here and check ImageBase
             // TODO: this wont work with tlb
-            //println!("candidate: {:?}", candidate);
+            trace!("inspecting candidate process: {:?}", candidate);
             let mut process = Win32Process::with_kernel(self, candidate.clone());
             if process
                 .module_info_list()?
                 .iter()
-                .inspect(|&module| println!("{:x} {}", module.base(), module.name()))
+                .inspect(|&module| trace!("{:x} {}", module.base(), module.name()))
                 .find(|&module| module.name().to_lowercase() == name.to_lowercase())
                 .ok_or_else(|| Error::ModuleInfo)
                 .is_ok()

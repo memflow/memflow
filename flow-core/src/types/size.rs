@@ -1,6 +1,6 @@
 /*!
 This module contains helper functions for creating various byte sizes.
-All function are const and will be [optimized](https://rust.godbolt.org/z/_7cuxH) by rustc.
+All function are const and will be [optimized](https://rust.godbolt.org/z/T6LiwJ) by rustc.
 */
 
 /// Returns a usize representing the length in bytes from the given number of kilobytes.

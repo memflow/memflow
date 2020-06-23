@@ -26,7 +26,13 @@ pub struct Win32Offsets {
     pub eproc_pid: usize,
     pub eproc_name: usize,
     pub eproc_peb: usize,
+    pub eproc_thread_list: usize,
     pub eproc_wow64: usize,
+
+    pub kthread_teb: usize,
+    pub ethread_list_entry: usize,
+    pub teb_peb: usize,
+    pub teb_peb_x86: usize,
 
     pub peb_ldr_x86: usize,
     pub peb_ldr_x64: usize,
@@ -67,6 +73,11 @@ impl Win32Offsets {
             .map_err(|_| Error::PDB("_KPROCESS not found"))?;
         let eproc = PdbStruct::with(pdb_slice, "_EPROCESS")
             .map_err(|_| Error::PDB("_EPROCESS not found"))?;
+        let ethread =
+            PdbStruct::with(pdb_slice, "_ETHREAD").map_err(|_| Error::PDB("_ETHREAD not found"))?;
+        let kthread =
+            PdbStruct::with(pdb_slice, "_KTHREAD").map_err(|_| Error::PDB("_KTHREAD not found"))?;
+        let teb = PdbStruct::with(pdb_slice, "_TEB").map_err(|_| Error::PDB("_TEB not found"))?;
 
         let list_blink = list
             .find_field("Blink")
@@ -94,23 +105,66 @@ impl Win32Offsets {
             .find_field("Peb")
             .ok_or_else(|| Error::PDB("_EPROCESS::Peb not found"))?
             .offset;
-        let eproc_wow64 = match eproc.find_field("WoW64Process") {
+        let eproc_thread_list = eproc
+            .find_field("ThreadListHead")
+            .ok_or_else(|| Error::PDB("_EPROCESS::ThreadListHead not found"))?
+            .offset;
+
+        // windows 10 uses an uppercase W whereas older windows versions (windows 7) uses a lowercase w
+        let eproc_wow64 = match eproc
+            .find_field("WoW64Process")
+            .or_else(|| eproc.find_field("Wow64Process"))
+        {
             Some(f) => f.offset,
             None => 0,
+        };
+
+        // threads
+        let kthread_teb = kthread
+            .find_field("Teb")
+            .ok_or_else(|| Error::PDB("_KTHREAD::Teb not found"))?
+            .offset;
+        let ethread_list_entry = ethread
+            .find_field("ThreadListEntry")
+            .ok_or_else(|| Error::PDB("_ETHREAD::ThreadListEntry not found"))?
+            .offset;
+        let teb_peb = teb
+            .find_field("ProcessEnvironmentBlock")
+            .ok_or_else(|| Error::PDB("_TEB::ProcessEnvironmentBlock not found"))?
+            .offset;
+        let teb_peb_x86 = if let Ok(teb32) =
+            PdbStruct::with(pdb_slice, "_TEB32").map_err(|_| Error::PDB("_TEB32 not found"))
+        {
+            teb32
+                .find_field("ProcessEnvironmentBlock")
+                .ok_or_else(|| Error::PDB("_TEB32::ProcessEnvironmentBlock not found"))?
+                .offset
+        } else {
+            0
         };
 
         Ok(Self {
             list_blink,
             eproc_link,
+
             kproc_dtb,
+
             eproc_pid,
             eproc_name,
             eproc_peb,
+            eproc_thread_list,
             eproc_wow64,
-            peb_ldr_x86: 0xC,        // _PEB::Ldr
-            peb_ldr_x64: 0x18,       // _PEB::Ldr
-            ldr_list_x86: 0xC,       // _PEB_LDR_DATA::InLoadOrderModuleList
-            ldr_list_x64: 0x10,      // _PEB_LDR_DATA::InLoadOrderModuleList
+
+            kthread_teb,
+            ethread_list_entry,
+            teb_peb,
+            teb_peb_x86,
+
+            peb_ldr_x86: 0xC,   // _PEB::Ldr
+            peb_ldr_x64: 0x18,  // _PEB::Ldr
+            ldr_list_x86: 0xC,  // _PEB_LDR_DATA::InLoadOrderModuleList
+            ldr_list_x64: 0x10, // _PEB_LDR_DATA::InLoadOrderModuleList
+
             ldr_data_base_x86: 0x18, // _LDR_DATA_TABLE_ENTRY::DllBase
             ldr_data_base_x64: 0x30, // _LDR_DATA_TABLE_ENTRY::DllBase
             ldr_data_size_x86: 0x20, // _LDR_DATA_TABLE_ENTRY::SizeOfImage

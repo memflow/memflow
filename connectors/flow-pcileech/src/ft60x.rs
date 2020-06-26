@@ -1,12 +1,5 @@
-// ----------------------------------------------------------------------------
-// Facade implementation of FTDI functions using functionality provided by
-// a basic implmentation of FTDI library.
-// NB! functionality below is by no way complete - only minimal functionality
-// required by PCILeech use is implemented ...
-// ----------------------------------------------------------------------------
-
-// https://github.com/ufrisk/LeechCore/blob/0c1aa94be8ad32ece13fb2532a4cfccb9254b694/leechcore/oscompatibility.c#L186
-
+/// This module provides a wrapper around libusb to communicate with a FT60x chip directly.
+/// The main interface will be through the chip configuration and read/write pipe functions.
 mod chip;
 pub use chip::{ChannelConfig, FifoMode, OptionalFeatureSupport};
 
@@ -40,6 +33,8 @@ pub struct FT60x {
 }
 
 impl FT60x {
+    /// Tries to open a usb connection to a FT60x chip connected via libusb.
+    // TODO: handle multiple devices at the same time
     pub fn new() -> Result<Self> {
         let (dev, desc) = DeviceList::new()
             .map_err(|_| Error::Connector("unable to get usb device list"))?
@@ -168,13 +163,12 @@ impl FT60x {
         }
     }
 
-    // TODO: impl for pod? + _raw
+    /// Write to the ft60x chip
     pub fn write_pipe(&mut self, data: &[u8]) -> Result<()> {
         self.write_bulk_raw(FTDI_ENDPOINT_OUT, data)
     }
 
-    // TODO: implement this in a blocking manner
-    // TODO: impl for pod? + _raw
+    /// Read from the ft60x chip
     pub fn read_pipe(&mut self, data: &mut [u8]) -> Result<usize> {
         self.send_read_request(data.len() as u32)?;
         self.handle
@@ -188,7 +182,7 @@ impl FT60x {
         self.write_bulk_raw(FTDI_ENDPOINT_SESSION_OUT, req.as_bytes())
     }
 
-    // Does a bulk write and validates the sent size
+    /// Does a raw bulk write to the chip and validates the sent size
     fn write_bulk_raw(&self, endpoint: u8, buf: &[u8]) -> Result<()> {
         // TODO: customizable write_bulk timeout
         let bytes = self

@@ -177,7 +177,9 @@ impl FT60x {
     // TODO: impl for pod? + _raw
     pub fn read_pipe(&mut self, data: &mut [u8]) -> Result<usize> {
         self.send_read_request(data.len() as u32)?;
-        self.handle.read_bulk(FTDI_ENDPOINT_IN, data, Duration::from_millis(1000)).map_err(|_| Error::Connector("unable to read from ft60x"))
+        self.handle
+            .read_bulk(FTDI_ENDPOINT_IN, data, Duration::from_millis(1000))
+            .map_err(|_| Error::Connector("unable to read from ft60x"))
     }
 
     /// Sends a ControlRequest to issue a read with a given size
@@ -189,11 +191,16 @@ impl FT60x {
     // Does a bulk write and validates the sent size
     fn write_bulk_raw(&self, endpoint: u8, buf: &[u8]) -> Result<()> {
         // TODO: customizable write_bulk timeout
-        let bytes = self.handle.write_bulk(endpoint, buf, Duration::from_millis(1000)).map_err(|_| Error::Connector("unable to write to ft60x"))?;
+        let bytes = self
+            .handle
+            .write_bulk(endpoint, buf, Duration::from_millis(1000))
+            .map_err(|_| Error::Connector("unable to write to ft60x"))?;
         if bytes == buf.len() {
             Ok(())
         } else {
-            Err(Error::Connector("unable to write the entire buffer to the ft60x"))
+            Err(Error::Connector(
+                "unable to write the entire buffer to the ft60x",
+            ))
         }
     }
 }

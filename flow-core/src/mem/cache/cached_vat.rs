@@ -67,6 +67,7 @@ impl<V: VirtualTranslate, Q: CacheValidator> VirtualTranslate for CachedVirtualT
                 })
             })
             .filter_map(|(addr, buf)| {
+                //TODO: do not loop around endlessly if a large memory region is passed through
                 if let Some(entry) = tlb.try_entry(dtb, addr, arch) {
                     hitc += 1;
                     debug_assert!(buf.length() <= arch.page_size());

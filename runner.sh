@@ -1,6 +1,9 @@
 #!/bin/bash
 
+CWD=$(pwd)
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
-bash ${DIR}/setperms.sh
+cd $DIR
+bash setperms.sh
+cd $CWD
 
 exec $@

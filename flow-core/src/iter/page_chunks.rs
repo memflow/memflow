@@ -7,6 +7,10 @@ pub trait SplitAtIndex {
         Self: Sized;
 
     fn length(&self) -> usize;
+
+    fn size_hint(&self) -> usize {
+        self.length()
+    }
 }
 
 impl SplitAtIndex for bool {
@@ -16,6 +20,24 @@ impl SplitAtIndex for bool {
 
     fn length(&self) -> usize {
         1
+    }
+}
+
+impl SplitAtIndex for u64 {
+    fn split_at(&mut self, idx: usize) -> (Self, Option<Self>) {
+        if (*self as usize) < idx {
+            (*self, None)
+        } else {
+            (idx as u64, Some(*self - idx as u64))
+        }
+    }
+
+    fn length(&self) -> usize {
+        *self as usize
+    }
+
+    fn size_hint(&self) -> usize {
+        std::mem::size_of_val(self)
     }
 }
 
@@ -80,7 +102,13 @@ impl<T: SplitAtIndex, FS: FnMut(Address, &T, Option<&T>) -> bool> Iterator
 
         if let Some(mut buf) = v {
             loop {
-                let next_len = (self.cur_address + self.page_size).as_page_aligned(self.page_size)
+                let next_len = Address::from(
+                    self.cur_address
+                        .as_u64()
+                        .checked_add(self.page_size as u64)
+                        .unwrap_or(!0u64),
+                )
+                .as_page_aligned(self.page_size)
                     - self.cur_address
                     + self.cur_off;
                 let (head, tail) = buf.split_at(next_len);
@@ -102,7 +130,7 @@ impl<T: SplitAtIndex, FS: FnMut(Address, &T, Option<&T>) -> bool> Iterator
     #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
         if let Some(buf) = &self.v {
-            let n = ((self.cur_address + buf.length() - 1).as_page_aligned(self.page_size)
+            let n = ((self.cur_address + buf.size_hint() - 1).as_page_aligned(self.page_size)
                 - self.cur_address.as_page_aligned(self.page_size))
                 / self.page_size
                 + 1;

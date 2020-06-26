@@ -490,4 +490,3 @@ impl Architecture {
         debug_assert!(data_to_translate.is_empty());
     }
 }
-

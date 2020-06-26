@@ -19,7 +19,7 @@ impl TranslateArch {
     pub fn new(sys_arch: Architecture) -> Self {
         Self {
             sys_arch,
-            arena: Bump::new(),
+            arena: Bump::with_capacity(0x4000),
         }
     }
 }

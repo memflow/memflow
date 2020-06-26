@@ -158,9 +158,7 @@ fn main() -> Result<()> {
     let mut vat_cached = CachedVirtualTranslate::builder()
         .vat(vat)
         .arch(kernel_info.start_block.arch)
-        .validator(TimedCacheValidator::new(
-            Duration::from_millis(10000).into(),
-        ))
+        .validator(TimedCacheValidator::new(Duration::from_millis(1000).into()))
         .build()
         .unwrap();
 

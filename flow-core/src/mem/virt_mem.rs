@@ -45,6 +45,8 @@ pub trait VirtualMemory {
 
     fn virt_page_info(&mut self, addr: Address) -> Result<Page>;
 
+    fn virt_page_map(&mut self, gap_size: usize) -> Vec<(Address, usize)>;
+
     // read helpers
     fn virt_read_raw_into(&mut self, addr: Address, out: &mut [u8]) -> Result<()> {
         self.virt_read_raw_iter(Some((addr, out)).into_iter())
@@ -174,6 +176,10 @@ impl<'a, T: VirtualMemory> VirtualMemory for &'a mut T {
 
     fn virt_page_info(&mut self, addr: Address) -> Result<Page> {
         (*self).virt_page_info(addr)
+    }
+
+    fn virt_page_map(&mut self, gap_size: usize) -> Vec<(Address, usize)> {
+        (*self).virt_page_map(gap_size)
     }
 }
 

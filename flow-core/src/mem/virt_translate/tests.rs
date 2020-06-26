@@ -50,6 +50,19 @@ fn test_vtop() {
 }
 
 #[test]
+fn test_virt_page_map() {
+    let mut dummy_mem = DummyMemory::new(size::mb(16));
+    let (dtb, virt_base) = dummy_mem.alloc_dtb(size::mb(2), &[]);
+    let arch = Architecture::X64;
+    let mut virt_mem = VirtualFromPhysical::new(&mut dummy_mem, arch, arch, dtb);
+
+    let page_map = virt_mem.virt_page_map();
+    assert!(page_map.len() == 1);
+    assert_eq!(page_map[0].0, virt_base);
+    assert_eq!(page_map[0].1, size::mb(2));
+}
+
+#[test]
 fn test_virt_read_small() {
     let mut dummy_mem = DummyMemory::new(size::mb(2));
     let mut buf = vec![0u8; 256];

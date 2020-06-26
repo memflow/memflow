@@ -31,7 +31,7 @@ use crate::types::{Address, PageType, PhysicalAddress};
 
 use bumpalo::{collections::Vec as BumpVec, Bump};
 use byteorder::{ByteOrder, LittleEndian};
-use std::collections::BTreeMap;
+use vector_trees::{BVecTreeMap as BTreeMap, Vector};
 
 /**
 Identifies the byte order of a architecture
@@ -277,13 +277,19 @@ impl Architecture {
         }
     }
 
-    fn read_pt_address_iter<'a, T: PhysicalMemory + ?Sized, B>(
+    fn read_pt_address_iter<'a, T, B, V, OV>(
         mem: &mut T,
         spec: &ArchMMUSpec,
         step: usize,
-        addr_map: &mut BTreeMap<Address, usize>,
+        addr_map: &mut BTreeMap<V, Address, usize>,
         addrs: &mut BumpVec<(Address, BumpVec<'a, TranslateData<B>>, [u8; 8])>,
-    ) -> Result<()> {
+        err_out: &mut OV,
+    ) -> Result<()>
+    where
+        T: PhysicalMemory + ?Sized,
+        OV: Extend<(Result<PhysicalAddress>, Address, B)>,
+        V: Vector<vector_trees::btree::BVecTreeNode<Address, usize>>,
+    {
         let page_size = spec.pt_leaf_size(step);
 
         mem.phys_read_iter(addrs.iter_mut().map(|(pt_addr, _, arr)| {
@@ -293,7 +299,8 @@ impl Architecture {
             )
         }))?;
 
-        addr_map.clear();
+        //Not clearing would eliminate null reads
+        //addr_map.clear();
 
         //Filter out duplicate reads
         for i in (0..addrs.len()).rev() {
@@ -304,9 +311,17 @@ impl Architecture {
                 if let None = addr_map.get_mut(&pt_addr) {
                     addr_map.insert(pt_addr, i);
                     addrs.push((pt_addr, vec, buf));
+                    continue;
                 }
             }
+
+            err_out.extend(
+                vec.into_iter()
+                    .map(|entry| (Err(Error::VirtualTranslate), entry.addr, entry.buf)),
+            );
         }
+
+        addr_map.clear();
 
         Ok(())
     }
@@ -327,10 +342,7 @@ impl Architecture {
         vtop_trace!("virt_to_phys_iter_with_mmu");
 
         let mut data_to_translate = BumpVec::new_in(arena);
-        //TODO: BTreeMap using bump arena
-        let mut data_to_translate_map = std::collections::BTreeMap::new();
-
-        data_to_translate_map.insert(dtb, 0);
+        let mut data_to_translate_map = BTreeMap::new_in(BumpVec::new_in(arena));
 
         data_to_translate.push((
             dtb,
@@ -362,9 +374,6 @@ impl Architecture {
             //memory regions are split
             for i in (0..data_to_translate.len()).rev() {
                 let (pt_addr, vec, _) = data_to_translate.swap_remove(i);
-                data_to_translate_map
-                    .remove(&pt_addr)
-                    .expect("bug in virt_to_phys_iter_with_mmu");
                 vtop_trace!("checking pt_addr={:x}, elems={:x}", pt_addr, vec.len());
 
                 if !spec.check_entry(pt_addr, pt_step)
@@ -402,11 +411,22 @@ impl Architecture {
                             let pt_addr = spec.vtop_step(pt_addr, addr, pt_step);
                             vtop_trace!("pt_addr = {:x}", pt_addr);
 
-                            let eidx = *data_to_translate_map.entry(pt_addr).or_insert_with(|| {
+                            let entry = data_to_translate_map.get_mut(&pt_addr);
+
+                            let eidx = if let Some(idx) = entry {
+                                *idx
+                            } else {
+                                let ret = data_to_translate.len();
+                                data_to_translate.push((pt_addr, BumpVec::new_in(arena), [0; 8]));
+                                data_to_translate_map.insert(pt_addr, ret);
+                                ret
+                            };
+
+                            /*data_to_translate_map.entry(pt_addr).or_insert_with(|| {
                                 let ret = data_to_translate.len();
                                 data_to_translate.push((pt_addr, BumpVec::new_in(arena), [0; 8]));
                                 ret
-                            });
+                            });*/
 
                             let e = data_to_translate.get_mut(eidx).unwrap();
 
@@ -426,6 +446,7 @@ impl Architecture {
                 pt_step,
                 &mut data_to_translate_map,
                 &mut data_to_translate,
+                out,
             ) {
                 vtop_trace!("read_pt_address_iter failure: {}", err);
                 out.extend(

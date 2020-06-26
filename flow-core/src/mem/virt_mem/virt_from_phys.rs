@@ -1,3 +1,5 @@
+use std::prelude::v1::*;
+
 use super::{VirtualReadIterator, VirtualWriteIterator};
 use crate::architecture::Architecture;
 use crate::error::{Error, Result};
@@ -8,6 +10,7 @@ use crate::mem::{
 use crate::process::OsProcessInfo;
 use crate::types::{Address, Page};
 use bumpalo::{collections::Vec as BumpVec, Bump};
+use itertools::Itertools;
 
 /**
 The `VirtualFromPhysical` struct provides a default implementation to access virtual memory
@@ -207,5 +210,39 @@ impl<T: PhysicalMemory, V: VirtualTranslate> VirtualMemory for VirtualFromPhysic
     fn virt_page_info(&mut self, addr: Address) -> Result<Page> {
         let paddr = self.vat.virt_to_phys(&mut self.phys_mem, self.dtb, addr)?;
         Ok(paddr.containing_page())
+    }
+
+    fn virt_page_map(&mut self, gap_length: usize) -> Vec<(Address, usize)> {
+        self.arena.reset();
+        let mut out = BumpVec::new_in(&self.arena);
+
+        //TODO: Pass full address range and let vtop clamp it
+        let highmem_addr: u64 = (1u64 << 48).overflowing_neg().0;
+
+        self.vat.virt_to_phys_iter(
+            &mut self.phys_mem,
+            self.dtb,
+            [
+                (Address::from(0), (1u64 << 47)),
+                (highmem_addr.into(), !0u64 - highmem_addr),
+            ]
+            .iter()
+            .map(|&x| x),
+            &mut out,
+        );
+
+        out.sort_by(|(_, a, _), (_, b, _)| a.cmp(b));
+
+        out.into_iter()
+            .filter(|(res, _, _)| res.is_ok())
+            .map(|(_, a, s)| (a, s as usize))
+            .coalesce(|a, b| {
+                if b.0 - (a.0 + a.1) <= gap_length {
+                    Ok((a.0, b.0 + b.1 - a.0))
+                } else {
+                    Err((a, b))
+                }
+            })
+            .collect()
     }
 }

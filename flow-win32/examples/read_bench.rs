@@ -159,7 +159,7 @@ fn main() -> Result<()> {
         .vat(vat)
         .arch(kernel_info.start_block.arch)
         .validator(TimedCacheValidator::new(
-            Duration::from_millis(10000).into(),
+            Duration::from_millis(1000).into(),
         ))
         .build()
         .unwrap();

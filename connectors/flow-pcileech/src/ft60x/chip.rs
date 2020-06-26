@@ -84,15 +84,15 @@ pub struct ControlRequest {
 
 impl ControlRequest {
     pub fn new(idx: u32, pipe: u8, cmd: u8, len: u32) -> Self {
-        Self{
-idx,
-pipe,
-cmd,
-unknown1: 0,
-unknown2: 0,
-len,
-unknown3: 0,
-unknown4: 0,
+        Self {
+            idx,
+            pipe,
+            cmd,
+            unknown1: 0,
+            unknown2: 0,
+            len,
+            unknown3: 0,
+            unknown4: 0,
         }
     }
 }

@@ -108,7 +108,6 @@ pub fn find_version<T: VirtualMemory + ?Sized>(
     );
 
     /*
-
     let winver_bytes = pe
         .resources()?
         .root()?

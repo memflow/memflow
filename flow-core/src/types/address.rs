@@ -208,18 +208,33 @@ impl Address {
     ```
     use flow_core::types::{Address, size};
 
-    pub fn test() {
-        assert_eq!(
-            Address::from(0x1234).as_page_aligned(size::kb(4)),
-            Address::from(0x1000)
-        );
-    }
+    let addr = Address::from(0x1234);
+    let aligned = addr.as_page_aligned(size::kb(4));
+    assert_eq!(aligned, Address::from(0x1000));
     ```
     */
     pub const fn as_page_aligned(self, page_size: usize) -> Address {
         Address {
             0: self.0 - self.0 % (page_size as u64),
         }
+    }
+
+    /**
+    Returns true or false wether the bit at the specified index is either 0 or 1.
+    An index of 0 will check the least significant bit.
+
+    # Examples
+
+    ```
+    use flow_core::types::Address;
+
+    let addr = Address::from(2);
+    let bit = addr.bit_at(1);
+    assert_eq!(bit, true);
+    ```
+    */
+    pub const fn bit_at(self, idx: u8) -> bool {
+        (self.0 & ((1 as u64) << idx)) != 0
     }
 }
 
@@ -392,6 +407,24 @@ mod tests {
             Address::from(0xFFF1_2345u64).as_page_aligned(0x10000),
             Address::from(0xFFF1_0000u64)
         );
+    }
+
+    #[test]
+    fn test_bits() {
+        assert_eq!(Address::from(1).bit_at(0), true);
+        assert_eq!(Address::from(1).bit_at(1), false);
+        assert_eq!(Address::from(1).bit_at(2), false);
+        assert_eq!(Address::from(1).bit_at(3), false);
+
+        assert_eq!(Address::from(2).bit_at(0), false);
+        assert_eq!(Address::from(2).bit_at(1), true);
+        assert_eq!(Address::from(2).bit_at(2), false);
+        assert_eq!(Address::from(2).bit_at(3), false);
+
+        assert_eq!(Address::from(13).bit_at(0), true);
+        assert_eq!(Address::from(13).bit_at(1), false);
+        assert_eq!(Address::from(13).bit_at(2), true);
+        assert_eq!(Address::from(13).bit_at(3), true);
     }
 
     #[test]

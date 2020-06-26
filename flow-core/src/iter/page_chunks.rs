@@ -102,7 +102,13 @@ impl<T: SplitAtIndex, FS: FnMut(Address, &T, Option<&T>) -> bool> Iterator
 
         if let Some(mut buf) = v {
             loop {
-                let next_len = (self.cur_address + self.page_size).as_page_aligned(self.page_size)
+                let next_len = Address::from(
+                    self.cur_address
+                        .as_u64()
+                        .checked_add(self.page_size as u64)
+                        .unwrap_or(!0u64),
+                )
+                .as_page_aligned(self.page_size)
                     - self.cur_address
                     + self.cur_off;
                 let (head, tail) = buf.split_at(next_len);

@@ -33,6 +33,35 @@ use bumpalo::{collections::Vec as BumpVec, Bump};
 use byteorder::{ByteOrder, LittleEndian};
 use vector_trees::{BVecTreeMap as BTreeMap, Vector};
 
+use std::cmp::Ordering;
+
+type TranslateVec<'a, T> = BumpVec<'a, (Address, BumpVec<'a, TranslateData<T>>, [u8; 8])>;
+
+struct TranslateData<T> {
+    pub addr: Address,
+    pub buf: T,
+}
+
+impl<T: SplitAtIndex> Ord for TranslateData<T> {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.addr.cmp(&other.addr)
+    }
+}
+
+impl<T: SplitAtIndex> Eq for TranslateData<T> {}
+
+impl<T> PartialOrd for TranslateData<T> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        self.addr.partial_cmp(&other.addr)
+    }
+}
+
+impl<T> PartialEq for TranslateData<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.addr == other.addr
+    }
+}
+
 /**
 Identifies the byte order of a architecture
 */
@@ -282,7 +311,7 @@ impl Architecture {
         spec: &ArchMMUSpec,
         step: usize,
         addr_map: &mut BTreeMap<V, Address, usize>,
-        addrs: &mut BumpVec<(Address, BumpVec<'a, TranslateData<B>>, [u8; 8])>,
+        addrs: &mut TranslateVec<'a, B>,
         err_out: &mut OV,
     ) -> Result<()>
     where
@@ -307,12 +336,12 @@ impl Architecture {
             let (orig_pt_addr, vec, buf) = addrs.swap_remove(i);
             let pt_addr = Address::from(LittleEndian::read_u64(&buf[..]));
 
-            if spec.pte_addr_mask(orig_pt_addr, step) != spec.pte_addr_mask(pt_addr, step) {
-                if let None = addr_map.get_mut(&pt_addr) {
-                    addr_map.insert(pt_addr, i);
-                    addrs.push((pt_addr, vec, buf));
-                    continue;
-                }
+            if spec.pte_addr_mask(orig_pt_addr, step) != spec.pte_addr_mask(pt_addr, step)
+                && addr_map.get_mut(&pt_addr).is_none()
+            {
+                addr_map.insert(pt_addr, i);
+                addrs.push((pt_addr, vec, buf));
+                continue;
             }
 
             err_out.extend(
@@ -377,8 +406,7 @@ impl Architecture {
                 vtop_trace!("checking pt_addr={:x}, elems={:x}", pt_addr, vec.len());
 
                 if !spec.check_entry(pt_addr, pt_step)
-                    || (pt_step > 0
-                        && dtb.as_u64() == spec.pte_addr_mask(Address::from(pt_addr), pt_step))
+                    || (pt_step > 0 && dtb.as_u64() == spec.pte_addr_mask(pt_addr, pt_step))
                 {
                     //There has been an error in translation, push it to output with the associated buf
                     vtop_trace!("check_entry failed");
@@ -463,29 +491,3 @@ impl Architecture {
     }
 }
 
-use std::cmp::Ordering;
-
-struct TranslateData<T> {
-    pub addr: Address,
-    pub buf: T,
-}
-
-impl<T: SplitAtIndex> Ord for TranslateData<T> {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.addr.cmp(&other.addr)
-    }
-}
-
-impl<T: SplitAtIndex> Eq for TranslateData<T> {}
-
-impl<T> PartialOrd for TranslateData<T> {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.addr.partial_cmp(&other.addr)
-    }
-}
-
-impl<T> PartialEq for TranslateData<T> {
-    fn eq(&self, other: &Self) -> bool {
-        self.addr == other.addr
-    }
-}

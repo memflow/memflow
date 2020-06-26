@@ -217,7 +217,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> VirtualMemory for VirtualFromPhysic
         let mut out = BumpVec::new_in(&self.arena);
 
         //TODO: Pass full address range and let vtop clamp it
-        let highmem_addr: u64 = (1u64 << 48).overflowing_neg().0;
+        let highmem_addr: u64 = (1u64 << 47).overflowing_neg().0;
 
         self.vat.virt_to_phys_iter(
             &mut self.phys_mem,
@@ -227,7 +227,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> VirtualMemory for VirtualFromPhysic
                 (highmem_addr.into(), !0u64 - highmem_addr),
             ]
             .iter()
-            .map(|&x| x),
+            .copied(),
             &mut out,
         );
 

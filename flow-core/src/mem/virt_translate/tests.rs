@@ -56,7 +56,7 @@ fn test_virt_page_map() {
     let arch = Architecture::X64;
     let mut virt_mem = VirtualFromPhysical::new(&mut dummy_mem, arch, arch, dtb);
 
-    let page_map = virt_mem.virt_page_map();
+    let page_map = virt_mem.virt_page_map(0);
     assert!(page_map.len() == 1);
     assert_eq!(page_map[0].0, virt_base);
     assert_eq!(page_map[0].1, size::mb(2));

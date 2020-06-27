@@ -5,9 +5,6 @@ use flow_core::*;
 use core::ffi::c_void;
 use libc::{c_ulong, iovec, pid_t, sysconf, _SC_IOV_MAX};
 
-const SIZE_2GB: usize = size::gb(2);
-const SIZE_1GB: usize = size::gb(1);
-
 fn qemu_arg_opt(args: &[String], argname: &str, argopt: &str) -> Option<String> {
     for (idx, arg) in args.iter().enumerate() {
         if arg == argname {
@@ -158,7 +155,7 @@ impl Memory {
                 (map_base + size::gb(3)).into(),
             ); // section: [4gb - max] -> map to 3gb
         }
-        info!("qemu machine mem_map: {:?}", mem_map);
+        println!("qemu machine mem_map: {:?}", mem_map);
 
         let iov_max = unsafe { sysconf(_SC_IOV_MAX) } as usize;
 

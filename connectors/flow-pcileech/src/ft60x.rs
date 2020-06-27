@@ -10,7 +10,7 @@ use rusb::{
 use std::mem::size_of;
 use std::time::Duration;
 
-use log::{info, trace, warn};
+use log::{info, trace};
 
 use flow_core::error::{Error, Result};
 

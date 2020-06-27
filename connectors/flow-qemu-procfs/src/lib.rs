@@ -31,8 +31,7 @@ fn qemu_arg_opt(args: &[String], argname: &str, argopt: &str) -> Option<String> 
 #[derive(Clone)]
 pub struct Memory {
     pub pid: pid_t,
-    pub map: procfs::process::MemoryMap,
-    pub hw_offset: usize,
+    pub mem_map: MemoryMap,
     temp_iov: Box<[iovec]>,
 }
 
@@ -73,29 +72,7 @@ impl Memory {
     }
 
     fn with_process(prc: &procfs::process::Process) -> Result<Self> {
-        // find machine architecture
-        let machine = qemu_arg_opt(
-            &prc.cmdline()
-                .map_err(|_| Error::Connector("unable to parse qemu arguments"))?,
-            "-machine",
-            "type",
-        )
-        .unwrap_or_else(|| "pc".into());
-        info!("qemu process started with machine: {}", machine);
-
-        // this is quite an ugly hack...
-        let hw_offset = {
-            if machine.contains("q35") {
-                // q35 -> subtract 2GB
-                SIZE_2GB
-            } else {
-                // pc-i1440fx -> subtract 1GB
-                SIZE_1GB
-            }
-        };
-        info!("qemu machine hardware offset: {:x}", hw_offset);
-
-        // find biggest mapping
+        // find biggest memory mapping in qemu process
         let mut maps = prc
             .maps()
             .map_err(|_| Error::Connector("unable to get qemu memory maps"))?;
@@ -109,12 +86,61 @@ impl Memory {
             .ok_or_else(|| Error::Connector("qemu memory map could not be read"))?;
         info!("qemu memory map found {:?}", map);
 
+        let map_base = map.address.0 as usize;
+        let map_size = (map.address.1 - map.address.0) as usize;
+        info!("qemu memory map size: {:x}", map_size);
+
+        // TODO: instead of hardcoding the memory regions per machine we could just use the hmp to retrieve the proper ranges:
+        // sudo virsh qemu-monitor-command win10 --hmp 'info mtree -f' | grep pc\.ram
+
+        // find machine architecture
+        let machine = qemu_arg_opt(
+            &prc.cmdline()
+                .map_err(|_| Error::Connector("unable to parse qemu arguments"))?,
+            "-machine",
+            "type",
+        )
+        .unwrap_or_else(|| "pc".into());
+        info!("qemu process started with machine: {}", machine);
+
+        let mut mem_map = MemoryMap::new();
+        if machine.contains("q35") {
+            // q35 -> subtract 2GB
+            /*
+            0000000000000000-000000000009ffff (prio 0, ram): pc.ram KVM
+            00000000000c0000-00000000000c3fff (prio 0, rom): pc.ram @00000000000c0000 KVM
+            0000000000100000-000000007fffffff (prio 0, ram): pc.ram @0000000000100000 KVM
+            0000000100000000-000000047fffffff (prio 0, ram): pc.ram @0000000080000000 KVM
+            */
+            // we add both regions additionally shifted to the proper qemu memory map address
+            /*mem_map.push(
+                map_base.into(),
+                size::mb(1),
+                map_base.into(),
+            ); // section: [start - 1mb] -> map to start
+            */
+            mem_map.push(
+                (map_base + size::mb(1)).into(),
+                size::gb(2) - size::mb(1),
+                (map_base + size::mb(1)).into(),
+            ); // section: [1mb - 2gb] -> map to 1mb
+            mem_map.push(
+                (map_base + size::gb(4)).into(),
+                map_size + size::gb(2) - size::gb(4),
+                (map_base + size::gb(2)).into(),
+            ); // section: [4gb - max] -> map to 2gb
+        } else {
+            // pc-i1440fx -> subtract 1GB
+            //            SIZE_1GB
+            panic!();
+        }
+        info!("qemu machine mem_map: {:?}", mem_map);
+
         let iov_max = unsafe { sysconf(_SC_IOV_MAX) } as usize;
 
         Ok(Self {
             pid: prc.stat.pid,
-            map: map.clone(),
-            hw_offset,
+            mem_map,
             temp_iov: vec![
                 iovec {
                     iov_base: std::ptr::null_mut::<c_void>(),
@@ -131,34 +157,25 @@ impl Memory {
         data: &[u8],
         liov: &mut iovec,
         riov: &mut iovec,
-        map_address: (u64, u64),
-        hw_offset: u64,
+        mem_map: &MemoryMap,
     ) -> bool {
-        let ofs = map_address.0 + {
-            if addr.as_u64() <= (SIZE_2GB as u64) {
-                addr.as_u64()
-            } else {
-                addr.as_u64() - hw_offset
-            }
-        };
+        if let Ok(real_addr) = mem_map.map(addr.address()) {
+            let iov_len = data.len();
 
-        let iov_len = if ofs < map_address.0 || ofs + data.len() as u64 > map_address.1 {
-            0
+            *liov = iovec {
+                iov_base: data.as_ptr() as *mut c_void,
+                iov_len,
+            };
+
+            *riov = iovec {
+                iov_base: real_addr.as_u64() as *mut c_void,
+                iov_len,
+            };
+
+            iov_len == data.len()
         } else {
-            data.len()
-        };
-
-        *liov = iovec {
-            iov_base: data.as_ptr() as *mut c_void,
-            iov_len,
-        };
-
-        *riov = iovec {
-            iov_base: ofs as *mut c_void,
-            iov_len,
-        };
-
-        iov_len == data.len()
+            false
+        }
     }
 
     fn vm_error() -> Error {
@@ -186,15 +203,9 @@ impl PhysicalMemory for Memory {
         while let Some((addr, out)) = elem {
             let (cnt, (liov, riov)) = iov_next.unwrap();
 
-            if !Self::fill_iovec(
-                &addr,
-                out,
-                liov,
-                riov,
-                self.map.address,
-                self.hw_offset as u64,
-            ) {
+            if !Self::fill_iovec(&addr, out, liov, riov, &self.mem_map) {
                 //We might want to zero out the memory here
+                //out.iter_mut().for_each(|b| *b = 0);
             }
 
             iov_next = iov_iter.next();
@@ -238,14 +249,7 @@ impl PhysicalMemory for Memory {
         while let Some((addr, out)) = elem {
             let (cnt, (liov, riov)) = iov_next.unwrap();
 
-            Self::fill_iovec(
-                &addr,
-                out,
-                liov,
-                riov,
-                self.map.address,
-                self.hw_offset as u64,
-            );
+            Self::fill_iovec(&addr, out, liov, riov, &self.mem_map);
 
             iov_next = iov_iter.next();
             elem = iter.next();

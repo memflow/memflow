@@ -22,10 +22,12 @@ indicatif = { version = "0.15.0", optional = true }
 
 [dev_dependencies]
 simple_logger = "1.0.1"
-flow-qemu-procfs = { path = "../connectors/flow-qemu-procfs" }
 win_key_codes = "0.1.2"
 rand = "0.5"
 bencher = "0.1.5"
+
+[target.'cfg(target_os = "linux")'.dev-dependencies]
+flow-qemu-procfs = { path = "../connectors/flow-qemu-procfs" }
 
 [features]
 default = ["std", "download_progress", "symstore"]
@@ -38,7 +40,9 @@ symstore = ["dirs", "ureq", "pdb"]
 [[example]]
 name = "read_keys"
 path = "examples/read_keys.rs"
+required-features = ["flow-qemu-procfs"]
 
 [[example]]
 name = "read_bench"
 path = "examples/read_bench.rs"
+required-features = ["flow-qemu-procfs"]

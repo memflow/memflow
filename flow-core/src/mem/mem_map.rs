@@ -1,23 +1,33 @@
 use crate::error::{Error, Result};
 use crate::types::Address;
 
+use std::default::Default;
+use std::fmt;
 use std::prelude::v1::*;
 
+#[derive(Clone)]
 pub struct MemoryMap {
     mappings: Vec<MemoryMapping>,
 }
 
+#[derive(Clone)]
 struct MemoryMapping {
     base: Address,
     size: usize,
     real_base: Address,
 }
 
-impl MemoryMap {
-    pub fn new() -> Self {
+impl Default for MemoryMap {
+    fn default() -> Self {
         Self {
             mappings: Vec::new(),
         }
+    }
+}
+
+impl MemoryMap {
+    pub fn new() -> Self {
+        MemoryMap::default()
     }
 
     /// Adds a new memory mapping to this memory map
@@ -44,6 +54,25 @@ impl MemoryMap {
         } else {
             Ok(mapping.real_base + (addr - mapping.base))
         }
+    }
+}
+
+impl fmt::Debug for MemoryMap {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        for m in self.mappings.iter() {
+            write!(f, "{:?}", m)?;
+        }
+        Ok(())
+    }
+}
+
+impl fmt::Debug for MemoryMapping {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "MemoryMapping: base={:x} size={:x} real_base={:x}",
+            self.base, self.size, self.real_base
+        )
     }
 }
 

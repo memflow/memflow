@@ -16,7 +16,8 @@ default-members = [
     "flow-core",
     "flow-win32",
     #"flow-ffi",
-    "flow-bench"
+    "flow-bench",
+    "connectors/flow-pcileech",
 ]
 
 exclude = [

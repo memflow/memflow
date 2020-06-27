@@ -18,6 +18,8 @@ pub const FPGA_CONFIG_PCIE: u16 = 0x0001;
 pub const FPGA_CONFIG_SPACE_READONLY: u16 = 0x0000;
 pub const FPGA_CONFIG_SPACE_READWRITE: u16 = 0x8000;
 
+// TODO: remove unused
+#[allow(unused)]
 pub struct PhyConfig {
     magic: u8,           // 8 bit
     tp_cfg: u8,          // 4 bit
@@ -193,6 +195,7 @@ impl Device {
         Ok((PhyConfigWr { 0: wr_raw }, PhyConfigRd { 0: rd_raw }))
     }
 
+    #[allow(clippy::uninit_assumed_init)]
     fn read_config<T: Pod>(&mut self, addr: u16, flags: u16) -> Result<T> {
         let mut obj: T = unsafe { MaybeUninit::uninit().assume_init() };
         self.read_config_into_raw(addr, obj.as_bytes_mut(), flags)?;
@@ -268,7 +271,7 @@ impl Device {
     }
 
     fn read_config_into_raw(&mut self, addr: u16, buf: &mut [u8], flags: u16) -> Result<()> {
-        if buf.len() == 0 || buf.len() > size::kb(4) || addr > size::kb(4) as u16 {
+        if buf.is_empty() || buf.len() > size::kb(4) || addr > size::kb(4) as u16 {
             return Err(Error::Connector("invalid config address requested"));
         }
 
@@ -287,7 +290,7 @@ impl Device {
     }
 
     fn write_config_raw(&mut self, addr: u16, buf: &[u8], flags: u16) -> Result<()> {
-        if buf.len() == 0 || buf.len() > 0x200 || addr > size::kb(4) as u16 {
+        if buf.is_empty() || buf.len() > 0x200 || addr > size::kb(4) as u16 {
             return Err(Error::Connector("invalid config address to write"));
         }
 

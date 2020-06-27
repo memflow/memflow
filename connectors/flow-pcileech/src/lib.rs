@@ -3,6 +3,7 @@ mod ft60x;
 
 use flow_core::*;
 
+#[allow(unused)]
 pub struct Memory {
     device: fpga::Device,
 }
@@ -16,7 +17,7 @@ impl Memory {
 }
 
 impl PhysicalMemory for Memory {
-    fn phys_read_iter<'a, PI: PhysicalReadIterator<'a>>(&'a mut self, mut iter: PI) -> Result<()> {
+    fn phys_read_iter<'a, PI: PhysicalReadIterator<'a>>(&'a mut self, mut _iter: PI) -> Result<()> {
         Err(Error::Connector(
             "flow-pcileech::phys_read_iter not implemented",
         ))
@@ -24,7 +25,7 @@ impl PhysicalMemory for Memory {
 
     fn phys_write_iter<'a, PI: PhysicalWriteIterator<'a>>(
         &'a mut self,
-        mut iter: PI,
+        mut _iter: PI,
     ) -> Result<()> {
         Err(Error::Connector(
             "flow-pcileech::phys_write_iter not implemented",

@@ -112,27 +112,51 @@ impl Memory {
             0000000000100000-000000007fffffff (prio 0, ram): pc.ram @0000000000100000 KVM
             0000000100000000-000000047fffffff (prio 0, ram): pc.ram @0000000080000000 KVM
             */
-            // we add both regions additionally shifted to the proper qemu memory map address
-            /*mem_map.push(
-                map_base.into(),
-                size::mb(1),
-                map_base.into(),
-            ); // section: [start - 1mb] -> map to start
-            */
-            mem_map.push(
-                (map_base + size::mb(1)).into(),
-                size::gb(2) - size::mb(1),
+            // we add all regions additionally shifted to the proper qemu memory map address
+            mem_map.push_range(Address::NULL, size::kb(640).into(), map_base.into()); // section: [start - 640kb] -> map to start
+            mem_map.push_range(
+                size::mb(1).into(),
+                size::gb(2).into(),
                 (map_base + size::mb(1)).into(),
             ); // section: [1mb - 2gb] -> map to 1mb
-            mem_map.push(
-                (map_base + size::gb(4)).into(),
-                map_size + size::gb(2) - size::gb(4),
+            mem_map.push_range(
+                size::gb(4).into(),
+                (map_size + size::gb(2)).into(),
                 (map_base + size::gb(2)).into(),
             ); // section: [4gb - max] -> map to 2gb
         } else {
-            // pc-i1440fx -> subtract 1GB
-            //            SIZE_1GB
-            panic!();
+            // pc-i1440fx
+            /*
+            0000000000000000-00000000000bffff (prio 0, ram): pc.ram KVM
+            00000000000c0000-00000000000cafff (prio 0, rom): pc.ram @00000000000c0000 KVM
+            00000000000cb000-00000000000cdfff (prio 0, ram): pc.ram @00000000000cb000 KVM
+            00000000000ce000-00000000000e7fff (prio 0, rom): pc.ram @00000000000ce000 KVM
+            00000000000e8000-00000000000effff (prio 0, ram): pc.ram @00000000000e8000 KVM
+            00000000000f0000-00000000000fffff (prio 0, rom): pc.ram @00000000000f0000 KVM
+            0000000000100000-00000000bfffffff (prio 0, ram): pc.ram @0000000000100000 KVM
+            0000000100000000-000000023fffffff (prio 0, ram): pc.ram @00000000c0000000 KVM
+            */
+            mem_map.push_range(Address::NULL, size::kb(768).into(), map_base.into()); // section: [start - 768kb] -> map to start
+            mem_map.push_range(
+                size::kb(812).into(),
+                size::kb(824).into(),
+                (map_base + size::kb(812)).into(),
+            ); // section: [768kb - 812kb] -> map to 768kb
+            mem_map.push_range(
+                size::kb(928).into(),
+                size::kb(960).into(),
+                (map_base + size::kb(928)).into(),
+            ); // section: [928kb - 960kb] -> map to 928kb
+            mem_map.push_range(
+                size::mb(1).into(),
+                size::gb(3).into(),
+                (map_base + size::mb(1)).into(),
+            ); // section: [1mb - 3gb] -> map to 1mb
+            mem_map.push_range(
+                size::gb(4).into(),
+                (map_size + size::gb(1)).into(),
+                (map_base + size::gb(3)).into(),
+            ); // section: [4gb - max] -> map to 3gb
         }
         info!("qemu machine mem_map: {:?}", mem_map);
 
@@ -174,6 +198,7 @@ impl Memory {
 
             iov_len == data.len()
         } else {
+            println!("failed to read memory at {:X}", addr.address());
             false
         }
     }
@@ -204,7 +229,7 @@ impl PhysicalMemory for Memory {
             let (cnt, (liov, riov)) = iov_next.unwrap();
 
             if !Self::fill_iovec(&addr, out, liov, riov, &self.mem_map) {
-                //We might want to zero out the memory here
+                // We might want to zero out the memory here
                 //out.iter_mut().for_each(|b| *b = 0);
             }
 

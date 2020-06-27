@@ -50,7 +50,7 @@ impl MemoryMap {
         MemoryMap::default()
     }
 
-    /// Adds a new memory mapping to this memory map.
+    /// Adds a new memory mapping to this memory map by specifying base address and size of the mapping.
     pub fn push(&mut self, base: Address, size: usize, real_base: Address) {
         // TODO: sort by base
         // TODO: check overlapping regions and return error
@@ -59,6 +59,11 @@ impl MemoryMap {
             size,
             real_base,
         })
+    }
+
+    /// Adds a new memory mapping to this memory map by specifying a range (base address and end addresses) of the mapping.
+    pub fn push_range(&mut self, base: Address, end: Address, real_base: Address) {
+        self.push(base, end - base, real_base)
     }
 
     /// Maps a linear address to a hardware address.

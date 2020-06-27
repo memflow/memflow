@@ -53,6 +53,7 @@ impl MemoryMap {
     /// Adds a new memory mapping to this memory map.
     pub fn push(&mut self, base: Address, size: usize, real_base: Address) {
         // TODO: sort by base
+        // TODO: check overlapping regions and return error
         self.mappings.push(MemoryMapping {
             base,
             size,
@@ -62,7 +63,7 @@ impl MemoryMap {
 
     /// Maps a linear address to a hardware address.
     /// Returns `Error::Bounds` if the address is not contained within any memory region.
-    pub fn map(&mut self, addr: Address) -> Result<Address> {
+    pub fn map(&self, addr: Address) -> Result<Address> {
         let mapping = self
             .mappings
             .iter()
@@ -72,7 +73,8 @@ impl MemoryMap {
         if mapping.base == mapping.real_base {
             Ok(addr)
         } else {
-            Ok(mapping.real_base + (addr - mapping.base))
+            // subtract first so we don't run into potential wrapping issues
+            Ok((addr - mapping.base + mapping.real_base.as_usize()).into())
         }
     }
 }
@@ -90,7 +92,7 @@ impl fmt::Debug for MemoryMapping {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "MemoryMapping: base={:x} size={:x} real_base={:x}",
+            "MemoryMapping: base={:x} size={:x} real_base={:x}\n",
             self.base, self.size, self.real_base
         )
     }

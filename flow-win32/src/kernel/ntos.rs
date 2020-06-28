@@ -87,3 +87,40 @@ pub fn find_guid<T: VirtualMemory + ?Sized>(
         guid: format!("{:X}{:X}", signature, code_view.age()),
     })
 }
+
+// TODO: move to pe::...
+pub fn find_version<T: VirtualMemory + ?Sized>(
+    virt_mem: &mut T,
+    kernel_base: Address,
+) -> Result<()> {
+    let ctx = MemoryPeViewContext::new(virt_mem, kernel_base).map_err(Error::PE)?;
+    let pe = pe::wrap_memory_pe_view(&ctx).map_err(Error::PE)?;
+
+    //    println!("resources:\n{:?}", pe.resources()?);
+
+    //   let verRes = pe.resources()?.find("VERSION").map_err(|_| Error::Other("unable to get winver"))?;
+    //  println!("ver: {:?}", verRes);
+    println!(
+        "version: {:?}",
+        pe.resources()?
+            .version_info()
+            .map_err(|_| Error::Other("unable to get winver"))?
+    );
+
+    /*
+    let winver_bytes = pe
+        .resources()?
+        .root()?
+        .get_dir("#VERSION".into()).map_err(|_| Error::Other("unable to get winver"))?
+        .get_dir("#1".into()).map_err(|_| Error::Other("unable to get winver"))?
+        .first().map_err(|_| Error::Other("unable to get winver"))?
+        .data().ok_or_else(|| Error::Other("unable to get winver"))?
+        .bytes()?;
+    println!("winver_bytes: {:?}", winver_bytes);
+    let winver = String::from_utf8(winver_bytes.to_vec());
+
+    println!("winver: {:?}", winver);
+    */
+
+    Ok(())
+}

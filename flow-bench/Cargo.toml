@@ -10,13 +10,17 @@ rand = "0.5"
 # This branch provides throughput plots
 criterion = { git = "https://github.com/h33p/criterion.rs.git", branch = "tput" }
 flow-win32 = { path = "../flow-win32" }
-flow-qemu-procfs = { path = "../connectors/flow-qemu-procfs" }
 
 [dev-dependencies]
 flow-core = { path = "../flow-core", features = ["dummy_mem"] }
 rand = "0.5"
-# This branch provides throughput plots
 flow-win32 = { path = "../flow-win32" }
+
+[target.'cfg(target_os = "linux")'.dev-dependencies]
+flow-qemu-procfs = { path = "../connectors/flow-qemu-procfs" }
+
+[features]
+default = []
 
 [[bench]]
 name = "read_dummy"
@@ -25,6 +29,7 @@ harness = false
 [[bench]]
 name = "read_win32"
 harness = false
+required-features = ["flow-qemu-procfs"]
 
 [[bench]]
 name = "batcher"

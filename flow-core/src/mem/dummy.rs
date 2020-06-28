@@ -326,7 +326,7 @@ impl DummyMemory {
         let virt_base = (Address::null()
             + self
                 .rng
-                .gen_range(0x0001_0000_0000_usize, ((!0_usize) << 16) >> 16))
+                .gen_range(0x0001_0000_0000_usize, ((!0_usize) << 20) >> 20))
         .as_page_aligned(size::gb(2));
 
         (

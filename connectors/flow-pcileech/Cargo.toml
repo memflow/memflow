@@ -7,9 +7,13 @@ edition = "2018"
 [dependencies]
 flow-core = { path = "../../flow-core" }
 log = { version = "0.4.8", default-features = false }
+rusb = "0.6.0"
+dataview = "0.1"
+bitfield = "0.13.2"
 
 [dev-dependencies]
 clap = "2.33.0"
+simple_logger = "1.0.1"
 
 [[example]]
 name = "read_pcileech"

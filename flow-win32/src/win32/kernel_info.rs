@@ -86,6 +86,8 @@ impl<T: PhysicalMemory> KernelInfoScanner<T> {
         let kernel_guid = kernel::ntos::find_guid(&mut virt_mem, kernel_base)?;
         info!("kernel_guid={:?}", kernel_guid);
 
+        //kernel::ntos::find_version(&mut virt_mem, kernel_base).ok();
+
         // find eprocess base
         let eprocess_base = kernel::sysproc::find(&mut virt_mem, &start_block, kernel_base)?;
         info!("eprocess_base={:x}", eprocess_base);

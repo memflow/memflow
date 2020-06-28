@@ -9,14 +9,15 @@ members = [
     #"flow-ffi",
     "flow-bench",
     "connectors/flow-qemu-procfs",
-    #"connectors/flow-pcileech",
+    "connectors/flow-pcileech",
     #"nostd-test"
 ]
 default-members = [
     "flow-core",
     "flow-win32",
     #"flow-ffi",
-    "flow-bench"
+    "flow-bench",
+    "connectors/flow-pcileech",
 ]
 
 exclude = [

@@ -1,3 +1,8 @@
+use log::Level;
+
+use flow_pcileech::*;
+
 fn main() {
-    println!("Hello World");
+    simple_logger::init_with_level(Level::Trace).unwrap();
+    Memory::new().unwrap();
 }

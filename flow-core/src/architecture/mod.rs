@@ -16,11 +16,13 @@ pub mod x86;
 pub mod x86_pae;
 
 pub mod mmu_spec;
+pub mod translate_data;
 
 #[macro_use]
 pub mod vtop_macros;
 
 use mmu_spec::ArchMMUSpec;
+use translate_data::{TranslateData, TranslateVec};
 
 use crate::error::{Error, Result};
 use crate::iter::{PageChunks, SplitAtIndex};
@@ -32,35 +34,6 @@ use crate::types::{Address, PageType, PhysicalAddress};
 use bumpalo::{collections::Vec as BumpVec, Bump};
 use byteorder::{ByteOrder, LittleEndian};
 use vector_trees::{BVecTreeMap as BTreeMap, Vector};
-
-use std::cmp::Ordering;
-
-type TranslateVec<'a, T> = BumpVec<'a, (Address, BumpVec<'a, TranslateData<T>>, [u8; 8])>;
-
-struct TranslateData<T> {
-    pub addr: Address,
-    pub buf: T,
-}
-
-impl<T: SplitAtIndex> Ord for TranslateData<T> {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.addr.cmp(&other.addr)
-    }
-}
-
-impl<T: SplitAtIndex> Eq for TranslateData<T> {}
-
-impl<T> PartialOrd for TranslateData<T> {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.addr.partial_cmp(&other.addr)
-    }
-}
-
-impl<T> PartialEq for TranslateData<T> {
-    fn eq(&self, other: &Self) -> bool {
-        self.addr == other.addr
-    }
-}
 
 /**
 Identifies the byte order of a architecture
@@ -256,12 +229,7 @@ impl Architecture {
     ```
     */
     pub fn size_addr(self) -> usize {
-        match self {
-            Architecture::Null => x64::size_addr(),
-            Architecture::X64 => x64::size_addr(),
-            Architecture::X86Pae => x86_pae::size_addr(),
-            Architecture::X86 => x86::size_addr(),
-        }
+        self.get_mmu_spec().addr_size as usize
     }
 
     /**
@@ -377,7 +345,7 @@ impl Architecture {
             dtb,
             {
                 let mut vec = BumpVec::new_in(arena);
-                vec.extend(addrs.map(|(addr, buf)| TranslateData { addr, buf }));
+                addrs.for_each(|data| spec.virt_addr_filter(data, &mut vec, out));
                 vec
             },
             [0; 8], //TODO: What to do with this? PTE size may be 128-bit in further MMU impls
@@ -391,13 +359,8 @@ impl Architecture {
             );
 
             let next_page_size = spec.page_size_step_unchecked(pt_step + 1);
-            let pt_leaf_count = spec.pt_leaf_size(pt_step) / spec.pte_size;
 
-            vtop_trace!(
-                "next_page_size = {:x}, pt_leaf_count = {:x}",
-                next_page_size,
-                pt_leaf_count
-            );
+            vtop_trace!("next_page_size = {:x}", next_page_size);
 
             //Loop through the data in reverse order to allow the data buffer grow on the back when
             //memory regions are split
@@ -431,11 +394,7 @@ impl Architecture {
                         //Potential speedups of 4x for up to 2M sequential regions, and 2x for up to 1G sequential regions,
                         //assuming all pages are 4kb sized.
                         //TODO: have the list sorted so we can split it up more efficiently
-                        for (addr, buf) in e
-                            .buf
-                            .page_chunks(e.addr, next_page_size)
-                            .take(pt_leaf_count)
-                        {
+                        for (addr, buf) in e.buf.page_chunks(e.addr, next_page_size) {
                             let pt_addr = spec.vtop_step(pt_addr, addr, pt_step);
                             vtop_trace!("pt_addr = {:x}", pt_addr);
 

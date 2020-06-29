@@ -1,5 +1,5 @@
+extern crate flow_connector;
 extern crate flow_core;
-extern crate flow_qemu_procfs;
 extern crate flow_win32;
 extern crate rand;
 
@@ -11,7 +11,7 @@ use flow_core::mem::{PhysicalMemory, TranslateArch, VirtualMemory, VirtualTransl
 use flow_core::process::{OsProcessInfo, OsProcessModuleInfo};
 use flow_core::types::Address;
 
-use flow_qemu_procfs::Memory;
+use flow_connector::Memory;
 
 use flow_win32::error::Result;
 use flow_win32::offsets::Win32Offsets;

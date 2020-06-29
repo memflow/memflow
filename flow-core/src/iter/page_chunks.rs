@@ -4,7 +4,25 @@ use std::iter::*;
 pub trait SplitAtIndex {
     fn split_at(&mut self, idx: usize) -> (Self, Option<Self>)
     where
+        Self: Sized,
+    {
+        self.split_inclusive_at(idx - 1)
+    }
+
+    fn split_inclusive_at(&mut self, idx: usize) -> (Self, Option<Self>)
+    where
         Self: Sized;
+
+    fn split_at_rev(&mut self, idx: usize) -> (Option<Self>, Self)
+    where
+        Self: Sized,
+    {
+        let (left, right) = self.split_at(self.length() - idx);
+        (
+            if left.length() == 0 { None } else { Some(left) },
+            right.unwrap(),
+        )
+    }
 
     fn length(&self) -> usize;
 
@@ -14,8 +32,12 @@ pub trait SplitAtIndex {
 }
 
 impl SplitAtIndex for bool {
-    fn split_at(&mut self, _: usize) -> (Self, Option<Self>) {
+    fn split_inclusive_at(&mut self, _: usize) -> (Self, Option<Self>) {
         (*self, None)
+    }
+
+    fn split_at_rev(&mut self, _: usize) -> (Option<Self>, Self) {
+        (None, *self)
     }
 
     fn length(&self) -> usize {
@@ -24,8 +46,16 @@ impl SplitAtIndex for bool {
 }
 
 impl SplitAtIndex for u64 {
+    fn split_inclusive_at(&mut self, idx: usize) -> (Self, Option<Self>) {
+        if *self == 0 || (*self as usize - 1) <= idx {
+            (*self, None)
+        } else {
+            (idx as u64 + 1, Some(*self - idx as u64 - 1))
+        }
+    }
+
     fn split_at(&mut self, idx: usize) -> (Self, Option<Self>) {
-        if (*self as usize) < idx {
+        if (*self as usize) <= idx {
             (*self, None)
         } else {
             (idx as u64, Some(*self - idx as u64))
@@ -42,6 +72,12 @@ impl SplitAtIndex for u64 {
 }
 
 impl<T> SplitAtIndex for &[T] {
+    fn split_inclusive_at(&mut self, idx: usize) -> (Self, Option<Self>) {
+        let mid = core::cmp::min(self.len(), core::cmp::min(self.len(), idx) + 1);
+        let (left, right) = (*self).split_at(mid);
+        (left, if right.is_empty() { None } else { Some(right) })
+    }
+
     fn split_at(&mut self, idx: usize) -> (Self, Option<Self>) {
         let (left, right) = (*self).split_at(core::cmp::min(self.len(), idx));
         (left, if right.is_empty() { None } else { Some(right) })
@@ -53,6 +89,19 @@ impl<T> SplitAtIndex for &[T] {
 }
 
 impl<T> SplitAtIndex for &mut [T] {
+    fn split_inclusive_at(&mut self, idx: usize) -> (Self, Option<Self>) {
+        let mid = core::cmp::min(self.len(), core::cmp::min(self.len(), idx) + 1);
+        let ptr = self.as_mut_ptr();
+        (
+            unsafe { core::slice::from_raw_parts_mut(ptr, mid) },
+            if mid != self.len() {
+                Some(unsafe { core::slice::from_raw_parts_mut(ptr.add(mid), self.len() - mid) })
+            } else {
+                None
+            },
+        )
+    }
+
     fn split_at(&mut self, idx: usize) -> (Self, Option<Self>) {
         let mid = core::cmp::min(self.len(), idx);
         let ptr = self.as_mut_ptr();
@@ -102,24 +151,28 @@ impl<T: SplitAtIndex, FS: FnMut(Address, &T, Option<&T>) -> bool> Iterator
 
         if let Some(mut buf) = v {
             loop {
-                let next_len = Address::from(
+                let end_len = Address::from(
                     self.cur_address
                         .as_u64()
-                        .checked_add(self.page_size as u64)
-                        .unwrap_or(!0u64),
+                        .wrapping_add(self.page_size as u64),
                 )
                 .as_page_aligned(self.page_size)
-                    - self.cur_address
-                    + self.cur_off;
-                let (head, tail) = buf.split_at(next_len);
+                .as_usize()
+                .wrapping_sub(self.cur_address.as_usize() + 1)
+                .wrapping_add(self.cur_off);
+
+                let (head, tail) = buf.split_inclusive_at(end_len);
                 if tail.is_some() && !(self.check_split_fn)(self.cur_address, &head, tail.as_ref())
                 {
-                    self.cur_off = next_len;
+                    self.cur_off = end_len + 1;
                 } else {
-                    let (head, tail) = buf.split_at(next_len);
+                    let (head, tail) = buf.split_inclusive_at(end_len);
                     self.v = tail;
-                    self.cur_address += next_len;
-                    return Some((self.cur_address - next_len, head));
+                    let next_address =
+                        Address::from(self.cur_address.as_usize().wrapping_add(end_len + 1));
+                    let ret = Some((self.cur_address, head));
+                    self.cur_address = next_address;
+                    return ret;
                 }
             }
         }

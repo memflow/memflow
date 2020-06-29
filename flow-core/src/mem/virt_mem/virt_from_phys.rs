@@ -216,18 +216,10 @@ impl<T: PhysicalMemory, V: VirtualTranslate> VirtualMemory for VirtualFromPhysic
         self.arena.reset();
         let mut out = BumpVec::new_in(&self.arena);
 
-        //TODO: Pass full address range and let vtop clamp it
-        let highmem_addr: u64 = (1u64 << 47).overflowing_neg().0;
-
         self.vat.virt_to_phys_iter(
             &mut self.phys_mem,
             self.dtb,
-            [
-                (Address::from(0), (1u64 << 47)),
-                (highmem_addr.into(), !0u64 - highmem_addr),
-            ]
-            .iter()
-            .copied(),
+            Some((Address::from(0), !0u64)).into_iter(),
             &mut out,
         );
 

@@ -2,8 +2,11 @@
 pub mod masks;
 use masks::*;
 
+use super::translate_data::TranslateData;
+use crate::iter::SplitAtIndex;
 use crate::types::{Address, PageType, PhysicalAddress};
 use crate::vtop_trace;
+use crate::{Error, Result};
 
 /// The `ArchMMUSpec` structure defines how a real memory management unit should behave when
 /// translating virtual memory addresses to physical ones.
@@ -22,26 +25,26 @@ use crate::vtop_trace;
 /// Our virtual to physical memory ranslation code is the same for both architectures, in fact, it
 /// is also the same for the x86 (non-PAE) architecture that has different PTE and pointer sizes.
 /// All that differentiates the translation process is the data inside this structure.
-///
-/// * `virtual_address_splits` - defines the way virtual addresses gets split (the last element being
-/// the final physical page offset, and thus treated a bit differently)
-/// * `valid_final_page_steps` - defines at which page mapping steps we can return a large page.
-/// Steps are indexed from 0, and the list has to be sorted, otherwise the code may fail.
-/// * `address_space_bits` - define the address space upper bound (32 for x86, 52 for x86_64,
-/// etc.).
-/// * `pte_size` - size of an individual page table entry in bytes.
-/// * `present_bit` - index of a bit in PTE defining whether the page is present or not.
-/// * `writeable_bit` - index of a bit in PTE defining if the page is writeable.
-/// * `nx_bit` - index of a bit in PTE defining if the page is non-executable.
-/// * `large_page_bit` - index of a bit in PTE defining if the PTE points to a large page.
 pub struct ArchMMUSpec {
+    /// defines the way virtual addresses gets split (the last element
+    /// being the final physical page offset, and thus treated a bit differently)
     pub virtual_address_splits: &'static [u8],
+    /// defines at which page mapping steps we can return a large page.
+    /// Steps are indexed from 0, and the list has to be sorted, otherwise the code may fail.
     pub valid_final_page_steps: &'static [usize],
+    /// define the address space upper bound (32 for x86, 52 for x86_64)
     pub address_space_bits: u8,
+    /// native pointer size in bytes for the architecture.
+    pub addr_size: u8,
+    /// size of an individual page table entry in bytes.
     pub pte_size: usize,
+    /// index of a bit in PTE defining whether the page is present or not.
     pub present_bit: u8,
+    /// index of a bit in PTE defining if the page is writeable.
     pub writeable_bit: u8,
+    /// index of a bit in PTE defining if the page is non-executable.
     pub nx_bit: u8,
+    /// index of a bit in PTE defining if the PTE points to a large page.
     pub large_page_bit: u8,
 }
 
@@ -72,6 +75,59 @@ impl ArchMMUSpec {
         let mask = make_bit_mask(min, max);
         vtop_trace!("pte_addr_mask={:b}", mask);
         pte_addr.as_u64() & mask
+    }
+
+    /// Filter out the input virtual address range to be in bounds
+    ///
+    ///
+    /// # Arguments
+    ///
+    /// * `(addr, buf)` - an address and buffer pair that gets split and filtered
+    /// * `valid_out` - output collection that contains valid splits
+    /// * `fail_out` - the final collection where the function will push rejected ranges to
+    ///
+    /// # Remarks
+    ///
+    /// This function cuts the input virtual address to be inside range `(-2^address_space_bits;
+    /// +2^address_space_bits)`. It may result in 2 ranges, and it may have up to 2 failed ranges
+    pub fn virt_addr_filter<B, VO, FO>(
+        &self,
+        (addr, buf): (Address, B),
+        valid_out: &mut VO,
+        fail_out: &mut FO,
+    ) where
+        B: SplitAtIndex,
+        VO: Extend<TranslateData<B>>,
+        FO: Extend<(Result<PhysicalAddress>, Address, B)>,
+    {
+        let mut tr_data = TranslateData { addr, buf };
+
+        let (mut left, reject) =
+            tr_data.split_inclusive_at(make_bit_mask(0, self.addr_size * 8 - 1) as usize);
+
+        if let Some(data) = reject {
+            fail_out.extend(Some((Err(Error::VirtualTranslate), data.addr, data.buf)));
+        }
+
+        let virt_range = 1usize << (self.virt_addr_bit_range(0).1 - 1);
+
+        let (lower, higher) = left.split_at(virt_range);
+
+        if lower.length() > 0 {
+            valid_out.extend(Some(lower).into_iter());
+        }
+
+        if let Some(mut data) = higher {
+            let (reject, higher) = data.split_at_rev(virt_range);
+
+            if higher.length() > 0 {
+                valid_out.extend(Some(higher).into_iter());
+            }
+
+            if let Some(data) = reject {
+                fail_out.extend(Some((Err(Error::VirtualTranslate), data.addr, data.buf)));
+            }
+        }
     }
 
     fn virt_addr_bit_range(&self, step: usize) -> (u8, u8) {

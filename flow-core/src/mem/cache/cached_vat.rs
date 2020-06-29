@@ -54,12 +54,21 @@ impl<V: VirtualTranslate, Q: CacheValidator> VirtualTranslate for CachedVirtualT
 
         let tlb = &self.tlb;
         let mut uncached_out = BumpVec::new_in(&self.arena);
+        let mut uncached_in = BumpVec::new_in(&self.arena);
 
         let mut hitc = 0;
         let mut misc = 0;
 
         let arch = self.arch;
         let mut addrs = addrs
+            .filter_map(|(addr, buf)| {
+                if tlb.is_read_too_long(arch, buf.length()) {
+                    uncached_in.push((addr, buf));
+                    None
+                } else {
+                    Some((addr, buf))
+                }
+            })
             .flat_map(|(addr, buf)| {
                 buf.page_chunks_by(addr, arch.page_size(), |addr, split, _| {
                     tlb.try_entry(dtb, addr + split.length(), arch).is_some()
@@ -67,7 +76,6 @@ impl<V: VirtualTranslate, Q: CacheValidator> VirtualTranslate for CachedVirtualT
                 })
             })
             .filter_map(|(addr, buf)| {
-                //TODO: do not loop around endlessly if a large memory region is passed through
                 if let Some(entry) = tlb.try_entry(dtb, addr, arch) {
                     hitc += 1;
                     debug_assert!(buf.length() <= arch.page_size());
@@ -86,19 +94,24 @@ impl<V: VirtualTranslate, Q: CacheValidator> VirtualTranslate for CachedVirtualT
         if addrs.peek().is_some() {
             self.vat
                 .virt_to_phys_iter(phys_mem, dtb, addrs, &mut uncached_out);
-
-            out.extend(uncached_out.into_iter().inspect(|(ret, addr, buf)| {
-                if let Ok(paddr) = ret {
-                    self.tlb.cache_entry(dtb, *addr, *paddr, arch);
-                } else {
-                    self.tlb
-                        .cache_invalid_if_uncached(dtb, *addr, buf.length(), arch);
-                }
-            }));
-
-            self.hitc += hitc;
-            self.misc += misc;
         }
+
+        let uncached_iter = uncached_in.into_iter();
+
+        self.vat
+            .virt_to_phys_iter(phys_mem, dtb, uncached_iter, out);
+
+        out.extend(uncached_out.into_iter().inspect(|(ret, addr, buf)| {
+            if let Ok(paddr) = ret {
+                self.tlb.cache_entry(dtb, *addr, *paddr, arch);
+            } else {
+                self.tlb
+                    .cache_invalid_if_uncached(dtb, *addr, buf.length(), arch);
+            }
+        }));
+
+        self.hitc += hitc;
+        self.misc += misc;
     }
 }
 

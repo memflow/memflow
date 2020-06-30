@@ -45,12 +45,12 @@ impl SplitAtIndex for bool {
     }
 }
 
-impl SplitAtIndex for u64 {
+impl SplitAtIndex for usize {
     fn split_inclusive_at(&mut self, idx: usize) -> (Self, Option<Self>) {
-        if *self == 0 || (*self as usize - 1) <= idx {
+        if *self == 0 || *self - 1 <= idx {
             (*self, None)
         } else {
-            (idx as u64 + 1, Some(*self - idx as u64 - 1))
+            (idx + 1, Some(*self - idx - 1))
         }
     }
 
@@ -58,16 +58,48 @@ impl SplitAtIndex for u64 {
         if (*self as usize) <= idx {
             (*self, None)
         } else {
-            (idx as u64, Some(*self - idx as u64))
+            (idx, Some(*self - idx))
         }
     }
 
     fn length(&self) -> usize {
-        *self as usize
+        *self
     }
 
     fn size_hint(&self) -> usize {
         std::mem::size_of_val(self)
+    }
+}
+
+impl<T: SplitAtIndex> SplitAtIndex for (Address, T) {
+    fn split_inclusive_at(&mut self, idx: usize) -> (Self, Option<Self>) {
+        let (left, right) = self.1.split_inclusive_at(idx);
+
+        if let Some(right) = right {
+            let left_len = left.length();
+            ((self.0, left), Some((self.0 + left_len, right)))
+        } else {
+            ((self.0, left), None)
+        }
+    }
+
+    fn split_at(&mut self, idx: usize) -> (Self, Option<Self>) {
+        let (left, right) = self.1.split_at(idx);
+
+        if let Some(right) = right {
+            let left_len = left.length();
+            ((self.0, left), Some((self.0 + left_len, right)))
+        } else {
+            ((self.0, left), None)
+        }
+    }
+
+    fn length(&self) -> usize {
+        self.1.length()
+    }
+
+    fn size_hint(&self) -> usize {
+        std::mem::size_of_val(&self.0) + self.1.size_hint()
     }
 }
 

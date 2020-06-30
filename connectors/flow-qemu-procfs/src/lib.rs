@@ -213,7 +213,9 @@ impl Memory {
 }
 
 impl PhysicalMemory for Memory {
-    fn phys_read_iter<'a, PI: PhysicalReadIterator<'a>>(&'a mut self, mut iter: PI) -> Result<()> {
+    fn phys_read_raw_list(&mut self, data: &mut [PhysicalReadData]) -> Result<()> {
+        let mut iter = data.iter_mut();
+
         let max_iov = self.temp_iov.len() / 2;
         let (iov_local, iov_remote) = self.temp_iov.split_at_mut(max_iov);
 
@@ -256,10 +258,9 @@ impl PhysicalMemory for Memory {
         Ok(())
     }
 
-    fn phys_write_iter<'a, PI: PhysicalWriteIterator<'a>>(
-        &'a mut self,
-        mut iter: PI,
-    ) -> Result<()> {
+    fn phys_write_raw_list(&mut self, data: &[PhysicalWriteData]) -> Result<()> {
+        let mut iter = data.iter();
+
         let max_iov = self.temp_iov.len() / 2;
         let (iov_local, iov_remote) = self.temp_iov.split_at_mut(max_iov);
 

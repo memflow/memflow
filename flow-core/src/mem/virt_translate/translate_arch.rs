@@ -1,6 +1,6 @@
 use super::VirtualTranslate;
 use crate::architecture::Architecture;
-use crate::error::Result;
+use crate::error::Error;
 use crate::iter::SplitAtIndex;
 use crate::mem::PhysicalMemory;
 use crate::types::{Address, PhysicalAddress};
@@ -31,20 +31,22 @@ impl Clone for TranslateArch {
 }
 
 impl VirtualTranslate for TranslateArch {
-    fn virt_to_phys_iter<T, B, VI, OV>(
+    fn virt_to_phys_iter<T, B, VI, VO, FO>(
         &mut self,
         phys_mem: &mut T,
         dtb: Address,
         addrs: VI,
-        out: &mut OV,
+        out: &mut VO,
+        out_fail: &mut FO,
     ) where
         T: PhysicalMemory + ?Sized,
         B: SplitAtIndex,
         VI: Iterator<Item = (Address, B)>,
-        OV: Extend<(Result<PhysicalAddress>, Address, B)>,
+        VO: Extend<(PhysicalAddress, B)>,
+        FO: Extend<(Error, Address, B)>,
     {
         self.arena.reset();
         self.sys_arch
-            .virt_to_phys_iter(phys_mem, dtb, addrs, out, &self.arena)
+            .virt_to_phys_iter(phys_mem, dtb, addrs, out, out_fail, &self.arena)
     }
 }

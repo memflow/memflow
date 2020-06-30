@@ -202,7 +202,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> VirtualMemory for VirtualFromPhysic
             &mut ExtendVoid::void(),
         );
 
-        self.phys_mem.phys_write_raw_list(&mut translation)
+        self.phys_mem.phys_write_raw_list(&translation)
     }
 
     fn virt_page_info(&mut self, addr: Address) -> Result<Page> {

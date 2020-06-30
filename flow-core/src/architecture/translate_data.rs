@@ -3,7 +3,7 @@ use crate::types::Address;
 use bumpalo::collections::Vec as BumpVec;
 use std::cmp::Ordering;
 
-pub type TranslateVec<'a, T> = BumpVec<'a, (Address, BumpVec<'a, TranslateData<T>>, [u8; 8])>;
+pub type TranslateVec<'a, T> = BumpVec<'a, (Address, BumpVec<'a, TranslateData<T>>)>;
 
 pub struct TranslateData<T> {
     pub addr: Address,

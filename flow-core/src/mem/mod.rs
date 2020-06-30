@@ -22,7 +22,10 @@ pub mod dummy;
 
 pub use cache::*; // TODO: specify pub declarations
 pub use mem_map::MemoryMap;
-pub use phys_mem::{PhysicalMemory, PhysicalReadIterator, PhysicalWriteIterator};
+pub use phys_mem::{
+    PhysicalMemory, PhysicalReadData, PhysicalReadIterator, PhysicalWriteData,
+    PhysicalWriteIterator,
+};
 pub use phys_mem_batcher::PhysicalMemoryBatcher;
 pub use virt_mem::{VirtualFromPhysical, VirtualMemory};
 pub use virt_mem_batcher::VirtualMemoryBatcher;

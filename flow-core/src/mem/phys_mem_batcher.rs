@@ -31,16 +31,16 @@ impl<'a, T: PhysicalMemory> PhysicalMemoryBatcher<'a, T> {
     }
 
     pub fn commit_rw(&mut self) -> Result<()> {
-        let read_list = replace(&mut self.read_list, vec![]);
+        let mut read_list = replace(&mut self.read_list, vec![]);
 
         if !read_list.is_empty() {
-            self.pmem.phys_read_iter(read_list.into_iter())?;
+            self.pmem.phys_read_raw_list(&mut read_list)?;
         }
 
         let write_list = replace(&mut self.write_list, vec![]);
 
         if !write_list.is_empty() {
-            self.pmem.phys_write_iter(write_list.into_iter())?;
+            self.pmem.phys_write_raw_list(&write_list)?;
         }
 
         Ok(())

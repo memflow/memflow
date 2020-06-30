@@ -6,7 +6,7 @@ use super::translate_data::TranslateData;
 use crate::iter::SplitAtIndex;
 use crate::types::{Address, PageType, PhysicalAddress};
 use crate::vtop_trace;
-use crate::{Error, Result};
+use crate::Error;
 
 /// The `ArchMMUSpec` structure defines how a real memory management unit should behave when
 /// translating virtual memory addresses to physical ones.
@@ -98,7 +98,7 @@ impl ArchMMUSpec {
     ) where
         B: SplitAtIndex,
         VO: Extend<TranslateData<B>>,
-        FO: Extend<(Result<PhysicalAddress>, Address, B)>,
+        FO: Extend<(Error, Address, B)>,
     {
         let mut tr_data = TranslateData { addr, buf };
 
@@ -106,7 +106,7 @@ impl ArchMMUSpec {
             tr_data.split_inclusive_at(make_bit_mask(0, self.addr_size * 8 - 1) as usize);
 
         if let Some(data) = reject {
-            fail_out.extend(Some((Err(Error::VirtualTranslate), data.addr, data.buf)));
+            fail_out.extend(Some((Error::VirtualTranslate, data.addr, data.buf)));
         }
 
         let virt_range = 1usize << (self.virt_addr_bit_range(0).1 - 1);
@@ -125,7 +125,7 @@ impl ArchMMUSpec {
             }
 
             if let Some(data) = reject {
-                fail_out.extend(Some((Err(Error::VirtualTranslate), data.addr, data.buf)));
+                fail_out.extend(Some((Error::VirtualTranslate, data.addr, data.buf)));
             }
         }
     }

@@ -28,7 +28,7 @@ use crate::error::{Error, Result};
 use crate::iter::{PageChunks, SplitAtIndex};
 use std::convert::TryFrom;
 
-use crate::mem::PhysicalMemory;
+use crate::mem::{PhysicalMemory, PhysicalReadData};
 use crate::types::{Address, PageType, PhysicalAddress};
 
 use bumpalo::{collections::Vec as BumpVec, Bump};
@@ -249,107 +249,145 @@ impl Architecture {
     ) -> Result<PhysicalAddress> {
         let arena = Bump::new();
         let mut vec = BumpVec::new_in(&arena);
-        self.virt_to_phys_iter(mem, dtb, Some((addr, false)).into_iter(), &mut vec, &arena);
-        vec.pop().unwrap().0
+        let mut vec_fail = BumpVec::new_in(&arena);
+        self.virt_to_phys_iter(
+            mem,
+            dtb,
+            Some((addr, false)).into_iter(),
+            &mut vec,
+            &mut vec_fail,
+            &arena,
+        );
+        if let Some(ret) = vec.pop() {
+            Ok(ret.0)
+        } else {
+            Err(vec_fail.pop().unwrap().0)
+        }
     }
 
     pub fn virt_to_phys_iter<
         T: PhysicalMemory + ?Sized,
         B: SplitAtIndex,
         VI: Iterator<Item = (Address, B)>,
-        OV: Extend<(Result<PhysicalAddress>, Address, B)>,
+        VO: Extend<(PhysicalAddress, B)>,
+        FO: Extend<(Error, Address, B)>,
     >(
         self,
         mem: &mut T,
         dtb: Address,
         addrs: VI,
-        out: &mut OV,
+        out: &mut VO,
+        out_fail: &mut FO,
         arena: &Bump,
     ) {
         match self {
             Architecture::Null => {
-                out.extend(addrs.map(|(addr, buf)| (Ok(PhysicalAddress::from(addr)), addr, buf)))
+                out.extend(addrs.map(|(addr, buf)| (PhysicalAddress::from(addr), buf)))
             }
-            _ => Self::virt_to_phys_iter_with_mmu(mem, dtb, addrs, out, arena, self.get_mmu_spec()),
+            _ => Self::virt_to_phys_iter_with_mmu(
+                mem,
+                dtb,
+                addrs,
+                out,
+                out_fail,
+                arena,
+                self.get_mmu_spec(),
+            ),
         }
     }
 
-    fn read_pt_address_iter<'a, T, B, V, OV>(
+    fn read_pt_address_iter<'a, T, B, V, FO>(
         mem: &mut T,
         spec: &ArchMMUSpec,
         step: usize,
         addr_map: &mut BTreeMap<V, Address, usize>,
         addrs: &mut TranslateVec<'a, B>,
-        err_out: &mut OV,
+        pt_buf: &mut BumpVec<u8>,
+        pt_read: &mut BumpVec<PhysicalReadData>,
+        err_out: &mut FO,
     ) -> Result<()>
     where
         T: PhysicalMemory + ?Sized,
-        OV: Extend<(Result<PhysicalAddress>, Address, B)>,
+        FO: Extend<(Error, Address, B)>,
         V: Vector<vector_trees::btree::BVecTreeNode<Address, usize>>,
     {
+        //TODO: use spec.pt_leaf_size(step) (need to handle LittleEndian::read_u64)
+        let pte_size = 8;
         let page_size = spec.pt_leaf_size(step);
 
-        mem.phys_read_iter(addrs.iter_mut().map(|(pt_addr, _, arr)| {
-            (
-                PhysicalAddress::with_page(*pt_addr, PageType::PAGE_TABLE, page_size),
-                &mut arr[..],
-            )
-        }))?;
+        pt_buf.clear();
+        pt_buf.resize(pte_size * addrs.len(), 0);
+
+        debug_assert!(pt_read.is_empty());
+
+        //This is safe, because pt_read gets cleared at the end of the function
+        let pt_read: &mut BumpVec<PhysicalReadData> = unsafe { std::mem::transmute(pt_read) };
+
+        for (chunk, &(addr, _)) in pt_buf.chunks_exact_mut(pte_size).zip(addrs.iter()) {
+            pt_read.push((
+                PhysicalAddress::with_page(addr, PageType::PAGE_TABLE, page_size),
+                chunk,
+            ));
+        }
+
+        mem.phys_read_raw_list(pt_read)?;
 
         //Not clearing would eliminate null reads
         //addr_map.clear();
 
         //Filter out duplicate reads
         for i in (0..addrs.len()).rev() {
-            let (orig_pt_addr, vec, buf) = addrs.swap_remove(i);
+            let (orig_pt_addr, vec) = addrs.swap_remove(i);
+            let (_, buf) = pt_read.swap_remove(i);
             let pt_addr = Address::from(LittleEndian::read_u64(&buf[..]));
 
             if spec.pte_addr_mask(orig_pt_addr, step) != spec.pte_addr_mask(pt_addr, step)
                 && addr_map.get_mut(&pt_addr).is_none()
             {
                 addr_map.insert(pt_addr, i);
-                addrs.push((pt_addr, vec, buf));
+                addrs.push((pt_addr, vec));
                 continue;
             }
 
             err_out.extend(
                 vec.into_iter()
-                    .map(|entry| (Err(Error::VirtualTranslate), entry.addr, entry.buf)),
+                    .map(|entry| (Error::VirtualTranslate, entry.addr, entry.buf)),
             );
         }
 
         addr_map.clear();
+        pt_read.clear();
 
         Ok(())
     }
 
-    fn virt_to_phys_iter_with_mmu<T, B, VI, OV>(
+    fn virt_to_phys_iter_with_mmu<T, B, VI, VO, FO>(
         mem: &mut T,
         dtb: Address,
         addrs: VI,
-        out: &mut OV,
+        out: &mut VO,
+        out_fail: &mut FO,
         arena: &Bump,
         spec: ArchMMUSpec,
     ) where
         T: PhysicalMemory + ?Sized,
         B: SplitAtIndex,
         VI: Iterator<Item = (Address, B)>,
-        OV: Extend<(Result<PhysicalAddress>, Address, B)>,
+        VO: Extend<(PhysicalAddress, B)>,
+        FO: Extend<(Error, Address, B)>,
     {
         vtop_trace!("virt_to_phys_iter_with_mmu");
 
         let mut data_to_translate = BumpVec::new_in(arena);
+        let mut data_pt_read: BumpVec<PhysicalReadData> = BumpVec::new_in(arena);
+        let mut data_pt_buf = BumpVec::new_in(arena);
         let mut data_to_translate_map = BTreeMap::new_in(BumpVec::new_in(arena));
 
-        data_to_translate.push((
-            dtb,
-            {
-                let mut vec = BumpVec::new_in(arena);
-                addrs.for_each(|data| spec.virt_addr_filter(data, &mut vec, out));
-                vec
-            },
-            [0; 8], //TODO: What to do with this? PTE size may be 128-bit in further MMU impls
-        ));
+        data_to_translate.push((dtb, {
+            let mut vec = BumpVec::new_in(arena);
+            addrs.for_each(|data| spec.virt_addr_filter(data, &mut vec, out_fail));
+            vec
+        }));
 
         for pt_step in 0..spec.split_count() {
             vtop_trace!(
@@ -365,7 +403,7 @@ impl Architecture {
             //Loop through the data in reverse order to allow the data buffer grow on the back when
             //memory regions are split
             for i in (0..data_to_translate.len()).rev() {
-                let (pt_addr, vec, _) = data_to_translate.swap_remove(i);
+                let (pt_addr, vec) = data_to_translate.swap_remove(i);
                 vtop_trace!("checking pt_addr={:x}, elems={:x}", pt_addr, vec.len());
 
                 if !spec.check_entry(pt_addr, pt_step)
@@ -373,19 +411,15 @@ impl Architecture {
                 {
                     //There has been an error in translation, push it to output with the associated buf
                     vtop_trace!("check_entry failed");
-                    out.extend(
+                    out_fail.extend(
                         vec.into_iter()
-                            .map(|entry| (Err(Error::VirtualTranslate), entry.addr, entry.buf)),
+                            .map(|entry| (Error::VirtualTranslate, entry.addr, entry.buf)),
                     );
                 } else if spec.is_final_mapping(pt_addr, pt_step) {
                     //We reached an actual page. The translation was successful
                     vtop_trace!("found final mapping: {:x}", pt_addr);
                     out.extend(vec.into_iter().map(|entry| {
-                        (
-                            Ok(spec.get_phys_page(pt_addr, entry.addr, pt_step)),
-                            entry.addr,
-                            entry.buf,
-                        )
+                        (spec.get_phys_page(pt_addr, entry.addr, pt_step), entry.buf)
                     }));
                 } else {
                     //We still need to continue the page walk
@@ -404,7 +438,7 @@ impl Architecture {
                                 *idx
                             } else {
                                 let ret = data_to_translate.len();
-                                data_to_translate.push((pt_addr, BumpVec::new_in(arena), [0; 8]));
+                                data_to_translate.push((pt_addr, BumpVec::new_in(arena)));
                                 data_to_translate_map.insert(pt_addr, ret);
                                 ret
                             };
@@ -433,14 +467,16 @@ impl Architecture {
                 pt_step,
                 &mut data_to_translate_map,
                 &mut data_to_translate,
-                out,
+                &mut data_pt_buf,
+                &mut data_pt_read,
+                out_fail,
             ) {
                 vtop_trace!("read_pt_address_iter failure: {}", err);
-                out.extend(
+                out_fail.extend(
                     data_to_translate
                         .into_iter()
-                        .flat_map(|(_, vec, _)| vec.into_iter())
-                        .map(|data| (Err(err), data.addr, data.buf)),
+                        .flat_map(|(_, vec)| vec.into_iter())
+                        .map(|data| (err, data.addr, data.buf)),
                 );
                 return;
             }

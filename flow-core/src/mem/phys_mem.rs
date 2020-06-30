@@ -28,7 +28,7 @@ Implementing `PhysicalMemory` for a memory backend:
 ```
 use std::vec::Vec;
 
-use flow_core::mem::{PhysicalMemory, PhysicalReadIterator, PhysicalWriteIterator};
+use flow_core::mem::{PhysicalMemory, PhysicalReadData, PhysicalWriteData};
 use flow_core::types::PhysicalAddress;
 use flow_core::error::Result;
 
@@ -37,19 +37,23 @@ pub struct MemoryBackend {
 }
 
 impl PhysicalMemory for MemoryBackend {
-    fn phys_read_iter<'a, PI: PhysicalReadIterator<'a>>(
-        &'a mut self,
-        iter: PI
+    fn phys_read_raw_list(
+        &mut self,
+        data: &mut [PhysicalReadData]
     ) -> Result<()> {
-        iter.for_each(|(addr, out)| out.copy_from_slice(&self.mem[addr.as_usize()..(addr.as_usize() + out.len())]));
+        data
+            .iter_mut()
+            .for_each(|(addr, out)| out.copy_from_slice(&self.mem[addr.as_usize()..(addr.as_usize() + out.len())]));
         Ok(())
     }
 
-    fn phys_write_iter<'a, PI: PhysicalWriteIterator<'a>>(
-        &'a mut self,
-        iter: PI
+    fn phys_write_raw_list(
+        &mut self,
+        data: &[PhysicalWriteData]
     ) -> Result<()> {
-        iter.for_each(|(addr, data)| self.mem[addr.as_usize()..(addr.as_usize() + data.len())].copy_from_slice(data));
+        data
+            .iter()
+            .for_each(|(addr, data)| self.mem[addr.as_usize()..(addr.as_usize() + data.len())].copy_from_slice(data));
         Ok(())
     }
 }
@@ -68,12 +72,12 @@ fn read<T: PhysicalMemory>(mem: &mut T) {
 ```
 */
 pub trait PhysicalMemory {
-    fn phys_read_iter<'a, PI: PhysicalReadIterator<'a>>(&'a mut self, iter: PI) -> Result<()>;
-    fn phys_write_iter<'a, PI: PhysicalWriteIterator<'a>>(&'a mut self, iter: PI) -> Result<()>;
+    fn phys_read_raw_list(&mut self, data: &mut [PhysicalReadData]) -> Result<()>;
+    fn phys_write_raw_list(&mut self, data: &[PhysicalWriteData]) -> Result<()>;
 
     // read helpers
     fn phys_read_raw_into(&mut self, addr: PhysicalAddress, out: &mut [u8]) -> Result<()> {
-        self.phys_read_iter(Some((addr, out)).into_iter())
+        self.phys_read_raw_list(&mut [(addr, out)])
     }
 
     fn phys_read_into<T: Pod + ?Sized>(&mut self, addr: PhysicalAddress, out: &mut T) -> Result<()>
@@ -105,7 +109,7 @@ pub trait PhysicalMemory {
 
     // write helpers
     fn phys_write_raw(&mut self, addr: PhysicalAddress, data: &[u8]) -> Result<()> {
-        self.phys_write_iter(Some((addr, data)).into_iter())
+        self.phys_write_raw_list(&[(addr, data)])
     }
 
     fn phys_write<T: Pod + ?Sized>(&mut self, addr: PhysicalAddress, data: &T) -> Result<()>
@@ -125,12 +129,12 @@ pub trait PhysicalMemory {
 
 // forward impls
 impl<'a, T: PhysicalMemory> PhysicalMemory for &'a mut T {
-    fn phys_read_iter<'b, PI: PhysicalReadIterator<'b>>(&'b mut self, iter: PI) -> Result<()> {
-        (*self).phys_read_iter(iter)
+    fn phys_read_raw_list(&mut self, data: &mut [PhysicalReadData]) -> Result<()> {
+        (*self).phys_read_raw_list(data)
     }
 
-    fn phys_write_iter<'b, PI: PhysicalWriteIterator<'b>>(&'b mut self, iter: PI) -> Result<()> {
-        (*self).phys_write_iter(iter)
+    fn phys_write_raw_list(&mut self, data: &[PhysicalWriteData]) -> Result<()> {
+        (*self).phys_write_raw_list(data)
     }
 }
 

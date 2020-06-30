@@ -28,13 +28,13 @@ impl<'a, T: VirtualMemory> VirtualMemoryBatcher<'a, T> {
         let read_list = replace(&mut self.read_list, vec![]);
 
         if !read_list.is_empty() {
-            self.vmem.virt_read_raw_iter(read_list.into_iter())?;
+            self.vmem.virt_read_iter(read_list.into_iter())?;
         }
 
         let write_list = replace(&mut self.write_list, vec![]);
 
         if !write_list.is_empty() {
-            self.vmem.virt_write_raw_iter(write_list.into_iter())?;
+            self.vmem.virt_write_iter(write_list.into_iter())?;
         }
 
         Ok(())

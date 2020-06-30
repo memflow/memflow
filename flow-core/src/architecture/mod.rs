@@ -296,6 +296,8 @@ impl Architecture {
         }
     }
 
+    //TODO: Clean this up to have less args
+    #[allow(clippy::too_many_arguments)]
     fn read_pt_address_iter<'a, T, B, V, FO>(
         mem: &mut T,
         spec: &ArchMMUSpec,

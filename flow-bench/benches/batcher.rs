@@ -1,7 +1,7 @@
 use criterion::*;
 
-use flow_core::mem::{PhysicalMemory, PhysicalReadIterator, PhysicalWriteIterator};
-use flow_core::types::{size, Address};
+use flow_core::mem::{PhysicalMemory, PhysicalReadData, PhysicalWriteData};
+use flow_core::types::{size, Address, PhysicalAddress};
 use flow_core::Result;
 
 //use flow_core::mem::dummy::DummyMemory as Memory;
@@ -15,13 +15,13 @@ impl NullMem {
 }
 
 impl PhysicalMemory for NullMem {
-    fn phys_read_iter<'a, PI: PhysicalReadIterator<'a>>(&'a mut self, iter: PI) -> Result<()> {
-        black_box(iter.count());
+    fn phys_read_raw_list(&mut self, data: &mut [PhysicalReadData]) -> Result<()> {
+        black_box(data.iter_mut().count());
         Ok(())
     }
 
-    fn phys_write_iter<'a, PI: PhysicalWriteIterator<'a>>(&'a mut self, iter: PI) -> Result<()> {
-        black_box(iter.count());
+    fn phys_write_raw_list(&mut self, data: &[PhysicalWriteData]) -> Result<()> {
+        black_box(data.iter().count());
         Ok(())
     }
 }
@@ -38,17 +38,15 @@ fn read_test_nobatcher<T: PhysicalMemory>(
     mem: &mut T,
     mut rng: CurRng,
     size: usize,
+    tbuf: &mut [(PhysicalAddress, &mut [u8])],
 ) {
     let base_addr = Address::from(rng.gen_range(0, size));
 
-    let _ = black_box(
-        mem.phys_read_iter(
-            unsafe { TSLICE }
-                .iter_mut()
-                .map(|buf| ((base_addr + rng.gen_range(0, 0x2000)).into(), &mut buf[..]))
-                .take(chunk_size),
-        ),
-    );
+    for (addr, _) in tbuf.iter_mut().take(chunk_size) {
+        *addr = (base_addr + rng.gen_range(0, 0x2000)).into();
+    }
+
+    let _ = black_box(mem.phys_read_raw_list(&mut tbuf[..chunk_size]));
 }
 
 fn read_test_batcher<T: PhysicalMemory>(
@@ -79,8 +77,23 @@ fn read_test_with_ctx<T: PhysicalMemory>(
 
     let mem_size = size::mb(64);
 
+    let mut tbuf = vec![];
+
+    tbuf.extend(
+        unsafe { TSLICE }
+            .iter_mut()
+            .map(|arr| {
+                (PhysicalAddress::INVALID, unsafe {
+                    std::mem::transmute(&mut arr[..])
+                })
+            })
+            .take(chunk_size),
+    );
+
     if !use_batcher {
-        bench.iter(|| read_test_nobatcher(chunk_size, mem, rng.clone(), mem_size));
+        bench.iter(move || {
+            read_test_nobatcher(chunk_size, mem, rng.clone(), mem_size, &mut tbuf[..])
+        });
     } else {
         bench.iter(|| read_test_batcher(chunk_size, mem, rng.clone(), mem_size));
     }

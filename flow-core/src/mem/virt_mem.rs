@@ -39,9 +39,9 @@ fn read<T: VirtualMemory>(virt_mem: &mut T) {
 ```
 */
 pub trait VirtualMemory {
-    fn virt_read_raw_iter<'a, VI: VirtualReadIterator<'a>>(&mut self, iter: VI) -> Result<()>;
+    fn virt_read_iter<'a, VI: VirtualReadIterator<'a>>(&mut self, iter: VI) -> Result<()>;
 
-    fn virt_write_raw_iter<'a, VI: VirtualWriteIterator<'a>>(&mut self, iter: VI) -> Result<()>;
+    fn virt_write_iter<'a, VI: VirtualWriteIterator<'a>>(&mut self, iter: VI) -> Result<()>;
 
     fn virt_page_info(&mut self, addr: Address) -> Result<Page>;
 
@@ -49,7 +49,7 @@ pub trait VirtualMemory {
 
     // read helpers
     fn virt_read_raw_into(&mut self, addr: Address, out: &mut [u8]) -> Result<()> {
-        self.virt_read_raw_iter(Some((addr, out)).into_iter())
+        self.virt_read_iter(Some((addr, out)).into_iter())
     }
 
     fn virt_read_into<T: Pod + ?Sized>(&mut self, addr: Address, out: &mut T) -> Result<()>
@@ -81,7 +81,7 @@ pub trait VirtualMemory {
 
     // write helpers
     fn virt_write_raw(&mut self, addr: Address, data: &[u8]) -> Result<()> {
-        self.virt_write_raw_iter(Some((addr, data)).into_iter())
+        self.virt_write_iter(Some((addr, data)).into_iter())
     }
 
     fn virt_write<T: Pod + ?Sized>(&mut self, addr: Address, data: &T) -> Result<()>
@@ -166,12 +166,12 @@ pub trait VirtualMemory {
 
 // forward impls
 impl<'a, T: VirtualMemory> VirtualMemory for &'a mut T {
-    fn virt_read_raw_iter<'b, VI: VirtualReadIterator<'b>>(&mut self, iter: VI) -> Result<()> {
-        (*self).virt_read_raw_iter(iter)
+    fn virt_read_iter<'b, VI: VirtualReadIterator<'b>>(&mut self, iter: VI) -> Result<()> {
+        (*self).virt_read_iter(iter)
     }
 
-    fn virt_write_raw_iter<'b, VI: VirtualWriteIterator<'b>>(&mut self, iter: VI) -> Result<()> {
-        (*self).virt_write_raw_iter(iter)
+    fn virt_write_iter<'b, VI: VirtualWriteIterator<'b>>(&mut self, iter: VI) -> Result<()> {
+        (*self).virt_write_iter(iter)
     }
 
     fn virt_page_info(&mut self, addr: Address) -> Result<Page> {

@@ -35,7 +35,7 @@ fn rwtest<T: VirtualMemory, M: OsProcessModuleInfo>(
                     *addr = (base_addr + rng.gen_range(0, 0x2000)).into();
                 }
 
-                let _ = virt_mem.virt_read_raw_iter(
+                let _ = virt_mem.virt_read_iter(
                     bufs.iter_mut()
                         .map(|(addr, buf)| (*addr, buf.as_mut_slice())),
                 );

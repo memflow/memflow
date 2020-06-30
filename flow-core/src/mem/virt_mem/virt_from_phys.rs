@@ -170,7 +170,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> VirtualFromPhysical<T, V> {
 }
 
 impl<T: PhysicalMemory, V: VirtualTranslate> VirtualMemory for VirtualFromPhysical<T, V> {
-    fn virt_read_raw_iter<'a, VI: VirtualReadIterator<'a>>(&mut self, iter: VI) -> Result<()> {
+    fn virt_read_iter<'a, VI: VirtualReadIterator<'a>>(&mut self, iter: VI) -> Result<()> {
         self.arena.reset();
         let mut translation = BumpVec::with_capacity_in(iter.size_hint().0, &self.arena);
         self.vat
@@ -190,7 +190,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> VirtualMemory for VirtualFromPhysic
         self.phys_mem.phys_read_iter(iter)
     }
 
-    fn virt_write_raw_iter<'a, VI: VirtualWriteIterator<'a>>(&mut self, iter: VI) -> Result<()> {
+    fn virt_write_iter<'a, VI: VirtualWriteIterator<'a>>(&mut self, iter: VI) -> Result<()> {
         self.arena.reset();
         let mut translation = BumpVec::with_capacity_in(iter.size_hint().0, &self.arena);
         self.vat

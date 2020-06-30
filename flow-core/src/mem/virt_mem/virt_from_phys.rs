@@ -1,6 +1,6 @@
 use std::prelude::v1::*;
 
-use super::{VirtualReadIterator, VirtualWriteIterator};
+use super::{VirtualReadData, VirtualWriteData};
 use crate::architecture::Architecture;
 use crate::error::{Error, Result};
 use crate::iter::ExtendVoid;
@@ -171,14 +171,14 @@ impl<T: PhysicalMemory, V: VirtualTranslate> VirtualFromPhysical<T, V> {
 }
 
 impl<T: PhysicalMemory, V: VirtualTranslate> VirtualMemory for VirtualFromPhysical<T, V> {
-    fn virt_read_iter<'a, VI: VirtualReadIterator<'a>>(&mut self, iter: VI) -> Result<()> {
+    fn virt_read_raw_list(&mut self, data: &mut [VirtualReadData]) -> Result<()> {
         self.arena.reset();
-        let mut translation = BumpVec::with_capacity_in(iter.size_hint().0, &self.arena);
+        let mut translation = BumpVec::with_capacity_in(data.len(), &self.arena);
 
         self.vat.virt_to_phys_iter(
             &mut self.phys_mem,
             self.dtb,
-            iter,
+            data.iter_mut().map(|(a, b)| (*a, &mut b[..])),
             &mut translation,
             &mut ExtendVoid::new(|(_, _, out): (_, _, &mut [u8])| {
                 for v in out.iter_mut() {
@@ -190,14 +190,14 @@ impl<T: PhysicalMemory, V: VirtualTranslate> VirtualMemory for VirtualFromPhysic
         self.phys_mem.phys_read_raw_list(&mut translation)
     }
 
-    fn virt_write_iter<'a, VI: VirtualWriteIterator<'a>>(&mut self, iter: VI) -> Result<()> {
+    fn virt_write_raw_list(&mut self, data: &[VirtualWriteData]) -> Result<()> {
         self.arena.reset();
-        let mut translation = BumpVec::with_capacity_in(iter.size_hint().0, &self.arena);
+        let mut translation = BumpVec::with_capacity_in(data.len(), &self.arena);
 
         self.vat.virt_to_phys_iter(
             &mut self.phys_mem,
             self.dtb,
-            iter,
+            data.iter().copied(),
             &mut translation,
             &mut ExtendVoid::void(),
         );

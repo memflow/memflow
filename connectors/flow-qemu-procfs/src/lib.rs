@@ -1,4 +1,4 @@
-use log::info;
+use log::{info, trace};
 
 use flow_core::*;
 
@@ -155,7 +155,7 @@ impl Memory {
                 (map_base + size::gb(3)).into(),
             ); // section: [4gb - max] -> map to 3gb
         }
-        println!("qemu machine mem_map: {:?}", mem_map);
+        info!("qemu machine mem_map: {:?}", mem_map);
 
         let iov_max = unsafe { sysconf(_SC_IOV_MAX) } as usize;
 
@@ -173,31 +173,18 @@ impl Memory {
         })
     }
 
-    pub fn fill_iovec(
-        addr: &PhysicalAddress,
-        data: &[u8],
-        liov: &mut iovec,
-        riov: &mut iovec,
-        mem_map: &MemoryMap,
-    ) -> bool {
-        if let Ok(real_addr) = mem_map.map(addr.address()) {
-            let iov_len = data.len();
+    pub fn fill_iovec(addr: &Address, data: &[u8], liov: &mut iovec, riov: &mut iovec) {
+        let iov_len = data.len();
 
-            *liov = iovec {
-                iov_base: data.as_ptr() as *mut c_void,
-                iov_len,
-            };
+        *liov = iovec {
+            iov_base: data.as_ptr() as *mut c_void,
+            iov_len,
+        };
 
-            *riov = iovec {
-                iov_base: real_addr.as_u64() as *mut c_void,
-                iov_len,
-            };
-
-            iov_len == data.len()
-        } else {
-            println!("failed to read memory at {:X}", addr.address());
-            false
-        }
+        *riov = iovec {
+            iov_base: addr.as_u64() as *mut c_void,
+            iov_len,
+        };
     }
 
     fn vm_error() -> Error {
@@ -214,10 +201,20 @@ impl Memory {
 
 impl PhysicalMemory for Memory {
     fn phys_read_raw_list(&mut self, data: &mut [PhysicalReadData]) -> Result<()> {
-        let mut iter = data.iter_mut();
+        let mem_map = &self.mem_map;
+        let temp_iov = &mut self.temp_iov;
 
-        let max_iov = self.temp_iov.len() / 2;
-        let (iov_local, iov_remote) = self.temp_iov.split_at_mut(max_iov);
+        let mut iter = data.iter_mut().filter_map(|(addr, buf)| {
+            if let Ok(real_addr) = mem_map.map(addr.address()) {
+                Some((real_addr, buf))
+            } else {
+                trace!("physical address out of range {:X}", addr.address());
+                None
+            }
+        });
+
+        let max_iov = temp_iov.len() / 2;
+        let (iov_local, iov_remote) = temp_iov.split_at_mut(max_iov);
 
         let mut elem = iter.next();
 
@@ -227,10 +224,7 @@ impl PhysicalMemory for Memory {
         while let Some((addr, out)) = elem {
             let (cnt, (liov, riov)) = iov_next.unwrap();
 
-            if !Self::fill_iovec(&addr, out, liov, riov, &self.mem_map) {
-                // We might want to zero out the memory here
-                //out.iter_mut().for_each(|b| *b = 0);
-            }
+            Self::fill_iovec(&addr, out, liov, riov);
 
             iov_next = iov_iter.next();
             elem = iter.next();
@@ -259,10 +253,20 @@ impl PhysicalMemory for Memory {
     }
 
     fn phys_write_raw_list(&mut self, data: &[PhysicalWriteData]) -> Result<()> {
-        let mut iter = data.iter();
+        let mem_map = &self.mem_map;
+        let temp_iov = &mut self.temp_iov;
 
-        let max_iov = self.temp_iov.len() / 2;
-        let (iov_local, iov_remote) = self.temp_iov.split_at_mut(max_iov);
+        let mut iter = data.iter().filter_map(|(addr, buf)| {
+            if let Ok(real_addr) = mem_map.map(addr.address()) {
+                Some((real_addr, buf))
+            } else {
+                trace!("physical address out of range {:X}", addr.address());
+                None
+            }
+        });
+
+        let max_iov = temp_iov.len() / 2;
+        let (iov_local, iov_remote) = temp_iov.split_at_mut(max_iov);
 
         let mut elem = iter.next();
 
@@ -272,7 +276,7 @@ impl PhysicalMemory for Memory {
         while let Some((addr, out)) = elem {
             let (cnt, (liov, riov)) = iov_next.unwrap();
 
-            Self::fill_iovec(&addr, out, liov, riov, &self.mem_map);
+            Self::fill_iovec(&addr, out, liov, riov);
 
             iov_next = iov_iter.next();
             elem = iter.next();

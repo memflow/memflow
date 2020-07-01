@@ -1,8 +1,9 @@
 use std::prelude::v1::*;
 
-use super::{VirtualReadIterator, VirtualWriteIterator};
+use super::{VirtualReadData, VirtualWriteData};
 use crate::architecture::Architecture;
 use crate::error::{Error, Result};
+use crate::iter::ExtendVoid;
 use crate::mem::{
     virt_translate::{TranslateArch, VirtualTranslate},
     PhysicalMemory, VirtualMemory,
@@ -170,41 +171,38 @@ impl<T: PhysicalMemory, V: VirtualTranslate> VirtualFromPhysical<T, V> {
 }
 
 impl<T: PhysicalMemory, V: VirtualTranslate> VirtualMemory for VirtualFromPhysical<T, V> {
-    fn virt_read_raw_iter<'a, VI: VirtualReadIterator<'a>>(&mut self, iter: VI) -> Result<()> {
+    fn virt_read_raw_list(&mut self, data: &mut [VirtualReadData]) -> Result<()> {
         self.arena.reset();
-        let mut translation = BumpVec::with_capacity_in(iter.size_hint().0, &self.arena);
-        self.vat
-            .virt_to_phys_iter(&mut self.phys_mem, self.dtb, iter, &mut translation);
+        let mut translation = BumpVec::with_capacity_in(data.len(), &self.arena);
 
-        let iter = translation.into_iter().filter_map(|(paddr, _, out)| {
-            if let Ok(paddr) = paddr {
-                Some((paddr, out))
-            } else {
+        self.vat.virt_to_phys_iter(
+            &mut self.phys_mem,
+            self.dtb,
+            data.iter_mut().map(|(a, b)| (*a, &mut b[..])),
+            &mut translation,
+            &mut ExtendVoid::new(|(_, _, out): (_, _, &mut [u8])| {
                 for v in out.iter_mut() {
-                    *v = 0
+                    *v = 0;
                 }
-                None
-            }
-        });
+            }),
+        );
 
-        self.phys_mem.phys_read_iter(iter)
+        self.phys_mem.phys_read_raw_list(&mut translation)
     }
 
-    fn virt_write_raw_iter<'a, VI: VirtualWriteIterator<'a>>(&mut self, iter: VI) -> Result<()> {
+    fn virt_write_raw_list(&mut self, data: &[VirtualWriteData]) -> Result<()> {
         self.arena.reset();
-        let mut translation = BumpVec::with_capacity_in(iter.size_hint().0, &self.arena);
-        self.vat
-            .virt_to_phys_iter(&mut self.phys_mem, self.dtb, iter, &mut translation);
+        let mut translation = BumpVec::with_capacity_in(data.len(), &self.arena);
 
-        let iter = translation.into_iter().filter_map(|(paddr, _, out)| {
-            if let Ok(paddr) = paddr {
-                Some((paddr, out))
-            } else {
-                None
-            }
-        });
+        self.vat.virt_to_phys_iter(
+            &mut self.phys_mem,
+            self.dtb,
+            data.iter().copied(),
+            &mut translation,
+            &mut ExtendVoid::void(),
+        );
 
-        self.phys_mem.phys_write_iter(iter)
+        self.phys_mem.phys_write_raw_list(&translation)
     }
 
     fn virt_page_info(&mut self, addr: Address) -> Result<Page> {
@@ -216,26 +214,18 @@ impl<T: PhysicalMemory, V: VirtualTranslate> VirtualMemory for VirtualFromPhysic
         self.arena.reset();
         let mut out = BumpVec::new_in(&self.arena);
 
-        //TODO: Pass full address range and let vtop clamp it
-        let highmem_addr: u64 = (1u64 << 47).overflowing_neg().0;
-
         self.vat.virt_to_phys_iter(
             &mut self.phys_mem,
             self.dtb,
-            [
-                (Address::from(0), (1u64 << 47)),
-                (highmem_addr.into(), !0u64 - highmem_addr),
-            ]
-            .iter()
-            .copied(),
+            Some((Address::from(0), (Address::from(0), !0usize))).into_iter(),
             &mut out,
+            &mut ExtendVoid::void(),
         );
 
-        out.sort_by(|(_, a, _), (_, b, _)| a.cmp(b));
+        out.sort_by(|(_, (a, _)), (_, (b, _))| a.cmp(b));
 
         out.into_iter()
-            .filter(|(res, _, _)| res.is_ok())
-            .map(|(_, a, s)| (a, s as usize))
+            .map(|(_, a)| a)
             .coalesce(|a, b| {
                 if b.0 - (a.0 + a.1) <= gap_length {
                     Ok((a.0, b.0 + b.1 - a.0))

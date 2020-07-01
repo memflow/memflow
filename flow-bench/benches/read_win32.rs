@@ -3,9 +3,9 @@ use flow_bench::{phys, vat, virt};
 
 use criterion::*;
 
+use flow_connector::Memory;
 use flow_core::error::{Error, Result};
 use flow_core::mem::TranslateArch;
-use flow_qemu_procfs::Memory;
 
 use flow_win32::{
     Kernel, KernelInfo, Win32ModuleInfo, Win32Offsets, Win32Process, Win32ProcessInfo,

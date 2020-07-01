@@ -198,19 +198,16 @@ impl CoreDump {
 }
 
 impl PhysicalMemory for CoreDump {
-    fn phys_read_iter<'a, PI: PhysicalReadIterator<'a>>(&'a mut self, iter: PI) -> Result<()> {
-        for (addr, out) in iter {
+    fn phys_read_raw_list(&mut self, data: &mut [PhysicalReadData]) -> Result<()> {
+        for (addr, buf) in data.iter_mut() {
             let real_addr = self.mem_map.map(addr.address())?;
             self.file.seek(SeekFrom::Start(real_addr.as_u64())).ok();
-            self.file.read_exact(out).ok();
+            self.file.read_exact(buf).ok();
         }
         Ok(())
     }
 
-    fn phys_write_iter<'a, PI: PhysicalWriteIterator<'a>>(
-        &'a mut self,
-        mut _iter: PI,
-    ) -> Result<()> {
+    fn phys_write_raw_list(&mut self, _data: &[PhysicalWriteData]) -> Result<()> {
         Err(Error::Connector("write to coredump is not implemented"))
     }
 }

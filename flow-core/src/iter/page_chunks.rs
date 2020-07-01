@@ -24,6 +24,12 @@ pub trait SplitAtIndex {
         )
     }
 
+    fn unsplit(&mut self, _left: Self, _right: Option<Self>)
+    where
+        Self: Sized,
+    {
+    }
+
     fn length(&self) -> usize;
 
     fn size_hint(&self) -> usize {
@@ -67,7 +73,7 @@ impl SplitAtIndex for usize {
     }
 
     fn size_hint(&self) -> usize {
-        std::mem::size_of_val(self)
+        1
     }
 }
 
@@ -99,7 +105,7 @@ impl<T: SplitAtIndex> SplitAtIndex for (Address, T) {
     }
 
     fn size_hint(&self) -> usize {
-        std::mem::size_of_val(&self.0) + self.1.size_hint()
+        self.1.size_hint()
     }
 }
 
@@ -197,8 +203,8 @@ impl<T: SplitAtIndex, FS: FnMut(Address, &T, Option<&T>) -> bool> Iterator
                 if tail.is_some() && !(self.check_split_fn)(self.cur_address, &head, tail.as_ref())
                 {
                     self.cur_off = end_len + 1;
+                    buf.unsplit(head, tail);
                 } else {
-                    let (head, tail) = buf.split_inclusive_at(end_len);
                     self.v = tail;
                     let next_address =
                         Address::from(self.cur_address.as_usize().wrapping_add(end_len + 1));

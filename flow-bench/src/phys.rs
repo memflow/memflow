@@ -20,23 +20,29 @@ fn rwtest<T: PhysicalMemory>(
 
     for i in chunk_sizes {
         for o in chunk_counts {
-            let mut bufs = vec![(Address::null(), vec![0 as u8; *i]); *o];
+            let mut vbufs = vec![vec![0 as u8; *i]; *o];
             let mut done_size = 0;
 
             while done_size < read_size {
                 let base_addr = rng.gen_range(start.as_u64(), end.as_u64());
 
-                let _ = mem.phys_read_iter(bufs.iter_mut().map(|(addr, buf)| {
-                    *addr = (base_addr + rng.gen_range(0, 0x2000)).into();
+                let mut bufs = Vec::with_capacity(*o);
+
+                bufs.extend(vbufs.iter_mut().map(|vec| {
+                    let addr = (base_addr + rng.gen_range(0, 0x2000)).into();
+
                     (
                         PhysicalAddress::with_page(
-                            *addr,
+                            addr,
                             PageType::from_writeable_bit(true),
                             size::kb(4),
                         ),
-                        buf.as_mut_slice(),
+                        vec.as_mut_slice(),
                     )
                 }));
+
+                let _ = mem.phys_read_raw_list(&mut bufs);
+
                 done_size += *i * *o;
             }
 

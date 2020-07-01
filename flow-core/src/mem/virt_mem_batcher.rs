@@ -5,7 +5,6 @@ use crate::virt_mem::{
     VirtualMemory, VirtualReadData, VirtualReadIterator, VirtualWriteData, VirtualWriteIterator,
 };
 use crate::Result;
-use core::mem::replace;
 
 use dataview::Pod;
 
@@ -25,16 +24,14 @@ impl<'a, T: VirtualMemory> VirtualMemoryBatcher<'a, T> {
     }
 
     pub fn commit_rw(&mut self) -> Result<()> {
-        let read_list = replace(&mut self.read_list, vec![]);
-
-        if !read_list.is_empty() {
-            self.vmem.virt_read_raw_iter(read_list.into_iter())?;
+        if !self.read_list.is_empty() {
+            self.vmem.virt_read_raw_list(&mut self.read_list)?;
+            self.read_list.clear();
         }
 
-        let write_list = replace(&mut self.write_list, vec![]);
-
-        if !write_list.is_empty() {
-            self.vmem.virt_write_raw_iter(write_list.into_iter())?;
+        if !self.write_list.is_empty() {
+            self.vmem.virt_write_raw_list(&self.write_list)?;
+            self.write_list.clear();
         }
 
         Ok(())

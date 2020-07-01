@@ -5,6 +5,7 @@ use flow_core::mem::{
     VirtualTranslate,
 };
 
+use flow_core::iter::ExtendVoid;
 use flow_core::{size, Address, OsProcessInfo, OsProcessModuleInfo, PageType};
 
 use rand::prelude::*;
@@ -41,6 +42,7 @@ fn vattest<T: PhysicalMemory, V: VirtualTranslate, P: OsProcessInfo, M: OsProces
             proc.dtb(),
             bufs.iter_mut().map(|x| (*x, false)),
             &mut out,
+            &mut ExtendVoid::new(|_| {}),
         );
 
         done_size += chunk_count;

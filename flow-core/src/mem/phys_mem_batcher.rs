@@ -6,7 +6,6 @@ use crate::phys_mem::{
 };
 use crate::types::PhysicalAddress;
 use crate::Result;
-use core::mem::replace;
 
 use dataview::Pod;
 
@@ -31,16 +30,14 @@ impl<'a, T: PhysicalMemory> PhysicalMemoryBatcher<'a, T> {
     }
 
     pub fn commit_rw(&mut self) -> Result<()> {
-        let read_list = replace(&mut self.read_list, vec![]);
-
-        if !read_list.is_empty() {
-            self.pmem.phys_read_iter(read_list.into_iter())?;
+        if !self.read_list.is_empty() {
+            self.pmem.phys_read_raw_list(&mut self.read_list)?;
+            self.read_list.clear();
         }
 
-        let write_list = replace(&mut self.write_list, vec![]);
-
-        if !write_list.is_empty() {
-            self.pmem.phys_write_iter(write_list.into_iter())?;
+        if !self.write_list.is_empty() {
+            self.pmem.phys_write_raw_list(&self.write_list)?;
+            self.write_list.clear();
         }
 
         Ok(())

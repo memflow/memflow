@@ -1,4 +1,4 @@
-use crate::error::Result;
+use crate::error::{Error, Result};
 
 use super::tlb_cache::TLBCache;
 use crate::architecture::Architecture;
@@ -37,29 +37,42 @@ impl<V: VirtualTranslate, Q: CacheValidator> CachedVirtualTranslate<V, Q> {
 }
 
 impl<V: VirtualTranslate, Q: CacheValidator> VirtualTranslate for CachedVirtualTranslate<V, Q> {
-    fn virt_to_phys_iter<T, B, VI, OV>(
+    fn virt_to_phys_iter<T, B, VI, VO, FO>(
         &mut self,
         phys_mem: &mut T,
         dtb: Address,
         addrs: VI,
-        out: &mut OV,
+        out: &mut VO,
+        out_fail: &mut FO,
     ) where
         T: PhysicalMemory + ?Sized,
         B: SplitAtIndex,
         VI: Iterator<Item = (Address, B)>,
-        OV: Extend<(Result<PhysicalAddress>, Address, B)>,
+        VO: Extend<(PhysicalAddress, B)>,
+        FO: Extend<(Error, Address, B)>,
     {
         self.tlb.validator.update_validity();
         self.arena.reset();
 
-        let tlb = &self.tlb;
+        let tlb = &mut self.tlb;
+        let vat = &mut self.vat;
         let mut uncached_out = BumpVec::new_in(&self.arena);
+        let mut uncached_out_fail = BumpVec::new_in(&self.arena);
+        let mut uncached_in = BumpVec::new_in(&self.arena);
 
         let mut hitc = 0;
         let mut misc = 0;
 
         let arch = self.arch;
         let mut addrs = addrs
+            .filter_map(|(addr, buf)| {
+                if tlb.is_read_too_long(arch, buf.length()) {
+                    uncached_in.push((addr, buf));
+                    None
+                } else {
+                    Some((addr, buf))
+                }
+            })
             .flat_map(|(addr, buf)| {
                 buf.page_chunks_by(addr, arch.page_size(), |addr, split, _| {
                     tlb.try_entry(dtb, addr + split.length(), arch).is_some()
@@ -67,38 +80,49 @@ impl<V: VirtualTranslate, Q: CacheValidator> VirtualTranslate for CachedVirtualT
                 })
             })
             .filter_map(|(addr, buf)| {
-                //TODO: do not loop around endlessly if a large memory region is passed through
                 if let Some(entry) = tlb.try_entry(dtb, addr, arch) {
                     hitc += 1;
                     debug_assert!(buf.length() <= arch.page_size());
                     match entry {
-                        Ok(entry) => out.extend(Some((Ok(entry.phys_addr), addr, buf)).into_iter()),
-                        Err(error) => out.extend(Some((Err(error), addr, buf)).into_iter()),
+                        Ok(entry) => out.extend(Some((entry.phys_addr, buf))),
+                        Err(error) => out_fail.extend(Some((error, addr, buf))),
                     }
                     None
                 } else {
                     misc += core::cmp::max(1, buf.length() / arch.page_size());
-                    Some((addr, buf))
+                    Some((addr, (addr, buf)))
                 }
             })
             .peekable();
 
         if addrs.peek().is_some() {
-            self.vat
-                .virt_to_phys_iter(phys_mem, dtb, addrs, &mut uncached_out);
-
-            out.extend(uncached_out.into_iter().inspect(|(ret, addr, buf)| {
-                if let Ok(paddr) = ret {
-                    self.tlb.cache_entry(dtb, *addr, *paddr, arch);
-                } else {
-                    self.tlb
-                        .cache_invalid_if_uncached(dtb, *addr, buf.length(), arch);
-                }
-            }));
-
-            self.hitc += hitc;
-            self.misc += misc;
+            vat.virt_to_phys_iter(
+                phys_mem,
+                dtb,
+                addrs,
+                &mut uncached_out,
+                &mut uncached_out_fail,
+            );
         }
+
+        let mut uncached_iter = uncached_in.into_iter().peekable();
+
+        if uncached_iter.peek().is_some() {
+            vat.virt_to_phys_iter(phys_mem, dtb, uncached_iter, out, out_fail);
+        }
+
+        out.extend(uncached_out.into_iter().map(|(paddr, (addr, buf))| {
+            tlb.cache_entry(dtb, addr, paddr, arch);
+            (paddr, buf)
+        }));
+
+        out_fail.extend(uncached_out_fail.into_iter().map(|(err, vaddr, (_, buf))| {
+            tlb.cache_invalid_if_uncached(dtb, vaddr, buf.length(), arch);
+            (err, vaddr, buf)
+        }));
+
+        self.hitc += hitc;
+        self.misc += misc;
     }
 }
 

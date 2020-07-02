@@ -1,6 +1,8 @@
 use crate::error::{Error, Result};
 use crate::types::Address;
 
+use crate::iter::SplitAtIndex;
+
 use std::default::Default;
 use std::fmt;
 use std::prelude::v1::*;
@@ -45,12 +47,14 @@ impl Default for MemoryMap {
 
 impl MemoryMap {
     /// Constructs a new memory map.
+    ///
     /// This function is identical to `MemoryMap::default()`.
     pub fn new() -> Self {
         MemoryMap::default()
     }
 
     /// Adds a new memory mapping to this memory map by specifying base address and size of the mapping.
+    ///
     /// When adding overlapping memory regions this function will panic!
     pub fn push(&mut self, base: Address, size: usize, real_base: Address) {
         // bounds check
@@ -70,32 +74,138 @@ impl MemoryMap {
             real_base,
         });
 
-        // sort by biggest size (so the biggest mappings will be scanned first)
         self.mappings
-            .sort_by(|a, b| b.size.partial_cmp(&a.size).unwrap());
+            .sort_by(|a, b| a.base.partial_cmp(&b.base).unwrap());
     }
 
     /// Adds a new memory mapping to this memory map by specifying a range (base address and end addresses) of the mapping.
+    ///
     /// When adding overlapping memory regions this function will panic!
     pub fn push_range(&mut self, base: Address, end: Address, real_base: Address) {
         self.push(base, end - base, real_base)
     }
 
-    /// Maps a linear address to a hardware address.
-    /// Returns `Error::Bounds` if the address is not contained within any memory region.
-    pub fn map(&self, addr: Address) -> Result<Address> {
-        let mapping = self
-            .mappings
-            .iter()
-            .find(|m| m.base <= addr && addr < m.base + m.size)
-            .ok_or_else(|| Error::Bounds)?;
+    /// Maps a linear address range to a hardware address range.
+    ///
+    /// Invalid regions get pushed to the `out_fail` parameter
+    pub fn map<'a, T: 'a + SplitAtIndex, V: Extend<(Address, T)>>(
+        &'a self,
+        addr: Address,
+        buf: T,
+        out_fail: &'a mut V,
+    ) -> impl Iterator<Item = (Address, T)> + 'a {
+        MemoryMapIterator::new(&self.mappings, Some((addr, buf)).into_iter(), out_fail)
+    }
 
-        if mapping.base == mapping.real_base {
-            Ok(addr)
-        } else {
-            // subtract first so we don't run into potential wrapping issues
-            Ok((addr - mapping.base + mapping.real_base.as_usize()).into())
+    /// Maps a address range iterator to a hardware address range.
+    ///
+    /// Invalid regions get pushed to the `out_fail` parameter
+    pub fn map_iter<
+        'a,
+        T: 'a + SplitAtIndex,
+        I: 'a + Iterator<Item = (Address, T)>,
+        V: Extend<(Address, T)>,
+    >(
+        &'a self,
+        iter: I,
+        out_fail: &'a mut V,
+    ) -> impl Iterator<Item = (Address, T)> + 'a {
+        MemoryMapIterator::new(&self.mappings, iter, out_fail)
+    }
+}
+
+pub struct MemoryMapIterator<'a, I, T, F> {
+    map: &'a Vec<MemoryMapping>,
+    in_iter: I,
+    fail_out: &'a mut F,
+    cur_elem: Option<(Address, T)>,
+    cur_map_pos: usize,
+}
+
+impl<'a, I: Iterator<Item = (Address, T)>, T: SplitAtIndex, F: Extend<(Address, T)>>
+    MemoryMapIterator<'a, I, T, F>
+{
+    fn new(map: &'a Vec<MemoryMapping>, in_iter: I, fail_out: &'a mut F) -> Self {
+        Self {
+            map,
+            in_iter,
+            fail_out,
+            cur_elem: None,
+            cur_map_pos: 0,
         }
+    }
+
+    fn get_next(&mut self) -> Option<(Address, T)> {
+        if let Some((mut addr, mut buf)) = self.cur_elem.take() {
+            for (i, map_elem) in self.map.iter().enumerate().skip(self.cur_map_pos) {
+                if map_elem.base + map_elem.size > addr {
+                    let offset = map_elem
+                        .base
+                        .as_usize()
+                        .checked_sub(addr.as_usize())
+                        .unwrap_or(0);
+
+                    let (left_reject, right) = buf.split_at(offset);
+
+                    if left_reject.length() > 0 {
+                        self.fail_out.extend(Some((addr, left_reject)));
+                    }
+
+                    addr += offset;
+
+                    if let Some(mut leftover) = right {
+                        let off = map_elem.base + map_elem.size - addr;
+                        let (ret, keep) = leftover.split_at(off);
+
+                        self.cur_elem = keep
+                            .map(|x| {
+                                //If memory is in right order, this will skip the current mapping,
+                                //but not reset the search
+                                self.cur_map_pos = i + 1;
+                                (addr + ret.length(), x)
+                            })
+                            .or_else(|| {
+                                self.cur_map_pos = 0;
+                                self.in_iter.next()
+                            });
+
+                        let off = addr - map_elem.base;
+                        return Some((map_elem.real_base + off, ret));
+                    }
+
+                    break;
+                }
+            }
+        }
+        None
+    }
+}
+
+impl<'a, I: Iterator<Item = (Address, T)>, T: SplitAtIndex, F: Extend<(Address, T)>> Iterator
+    for MemoryMapIterator<'a, I, T, F>
+{
+    type Item = (Address, T);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        //Could optimize this and move over to new method, but would need to fuse the iter
+        if self.cur_elem.is_none() {
+            self.cur_elem = self.in_iter.next();
+        }
+
+        let mut ret = None;
+
+        while self.cur_elem.is_some() {
+            ret = self.get_next();
+
+            if ret.is_some() {
+                break;
+            }
+
+            self.cur_elem = self.in_iter.next();
+            self.cur_map_pos = 0;
+        }
+
+        ret
     }
 }
 

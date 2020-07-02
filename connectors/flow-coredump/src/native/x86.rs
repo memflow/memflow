@@ -86,7 +86,6 @@ pub fn try_parse_coredump32(file: &mut File) -> Result<MemoryMap> {
     file.read_exact(header.as_bytes_mut())
         .map_err(|_| Error::Connector("unable to read coredump 32 header"))?;
 
-    println!("header.signature {:x}", header.signature);
     if header.signature != DUMP_SIGNATURE {
         return Err(Error::Connector("header signature is not valid"));
     }

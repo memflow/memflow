@@ -128,7 +128,7 @@ pub trait PhysicalMemory {
 }
 
 // forward impls
-impl<'a, T: PhysicalMemory> PhysicalMemory for &'a mut T {
+impl<'a, T: PhysicalMemory + ?Sized> PhysicalMemory for &'a mut T {
     fn phys_read_raw_list(&mut self, data: &mut [PhysicalReadData]) -> Result<()> {
         (*self).phys_read_raw_list(data)
     }

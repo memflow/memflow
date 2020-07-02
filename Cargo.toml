@@ -8,6 +8,7 @@ members = [
     "flow-win32",
     #"flow-ffi",
     "flow-bench",
+    "connectors/flow-coredump",
     "connectors/flow-qemu-procfs",
     "connectors/flow-pcileech",
     #"nostd-test"
@@ -17,6 +18,7 @@ default-members = [
     "flow-win32",
     #"flow-ffi",
     "flow-bench",
+    "connectors/flow-coredump",
     "connectors/flow-pcileech",
 ]
 

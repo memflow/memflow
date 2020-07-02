@@ -204,14 +204,13 @@ impl PhysicalMemory for Memory {
         let mem_map = &self.mem_map;
         let temp_iov = &mut self.temp_iov;
 
-        let mut iter = data.iter_mut().filter_map(|(addr, buf)| {
-            if let Ok(real_addr) = mem_map.map(addr.address()) {
-                Some((real_addr, buf))
-            } else {
-                trace!("physical address out of range {:X}", addr.address());
-                None
-            }
-        });
+        let mut void = ExtendVoid::new(|_| {});
+        let mut iter = mem_map.map_iter(
+            data.iter_mut()
+                .map(|(addr, buf)| (addr.address(), &mut **buf)),
+            &mut void,
+        );
+        //trace!("physical address out of range {:X}", addr.address());
 
         let max_iov = temp_iov.len() / 2;
         let (iov_local, iov_remote) = temp_iov.split_at_mut(max_iov);
@@ -256,14 +255,12 @@ impl PhysicalMemory for Memory {
         let mem_map = &self.mem_map;
         let temp_iov = &mut self.temp_iov;
 
-        let mut iter = data.iter().filter_map(|(addr, buf)| {
-            if let Ok(real_addr) = mem_map.map(addr.address()) {
-                Some((real_addr, buf))
-            } else {
-                trace!("physical address out of range {:X}", addr.address());
-                None
-            }
-        });
+        let mut void = ExtendVoid::new(|_| {});
+        let mut iter = mem_map.map_iter(
+            data.iter().map(|(addr, buf)| (addr.address(), *buf)),
+            &mut void,
+        );
+        //let mut iter = mem_map.map_iter(data.iter(), &mut ExtendVoid::new(|_|{}));
 
         let max_iov = temp_iov.len() / 2;
         let (iov_local, iov_remote) = temp_iov.split_at_mut(max_iov);

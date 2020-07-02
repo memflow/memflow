@@ -28,6 +28,7 @@ pub struct PhysicalMemoryDescriptor64 {
     pub runs: [PhysicalMemoryRun64; PHYSICAL_MEMORY_MAX_RUNS],
 }
 
+/// A 64bit Microsoft Windows Coredump Header
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct CoreDumpHeader64 {
@@ -63,9 +64,9 @@ pub struct CoreDumpHeader64 {
     pub suite_mask: u32,                                   // 0x1044
     pub writer_status: u32,                                // 0x1048
     pub unused0: u8,                                       // 0x104c
-    pub kd_secondary_version: u8, // 0x104d Present only for W2K3 SP1 and better
-    pub unused1: [u8; 2],         // 0x104e
-    pub reserved0: [u8; 4016],    // 0x1050
+    pub kd_secondary_version: u8,                          // 0x104d only on W2K3 SP1 and up
+    pub unused1: [u8; 2],                                  // 0x104e
+    pub reserved0: [u8; 4016],                             // 0x1050
 } // size: 0x2000
 
 #[allow(clippy::uninit_assumed_init)]
@@ -77,7 +78,8 @@ impl CoreDumpHeader64 {
 
 unsafe impl Pod for CoreDumpHeader64 {}
 
-pub fn try_parse_coredump64(file: &mut File) -> Result<MemoryMap> {
+/// Tries to parse a file handle as a Microsoft Windows 64bit Coredump.
+pub fn parse_coredump64(file: &mut File) -> Result<MemoryMap> {
     let mut header = CoreDumpHeader64::uninit();
 
     file.seek(SeekFrom::Start(0))
@@ -94,7 +96,7 @@ pub fn try_parse_coredump64(file: &mut File) -> Result<MemoryMap> {
         return Err(Error::Connector("header dump flag is not valid"));
     }
 
-    if header.dump_type != DUMP_TYPE_FULL {
+    if header.dump_type != CoreDumpType::Full as u32 {
         return Err(Error::Connector(
             "invalid dump type, only full dumps are supported",
         ));

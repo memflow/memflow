@@ -44,19 +44,21 @@ impl PhysicalMemory for CoreDump {
 }
 
 #[cfg(test)]
-mod tests{
+mod tests {
     use super::*;
     use std::path::PathBuf;
 
     #[test]
     fn parse_win10_64bit() {
-        let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("resources/test/coredump_win10_64bit_stripped.raw");
+        let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("resources/test/coredump_win10_64bit_stripped.raw");
         CoreDump::open(path).unwrap();
     }
 
     #[test]
     fn parse_win7_32bit() {
-        let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("resources/test/coredump_win7_32bit_stripped.raw");
+        let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("resources/test/coredump_win7_32bit_stripped.raw");
         CoreDump::open(path).unwrap();
     }
 }

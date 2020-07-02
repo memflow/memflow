@@ -26,6 +26,7 @@ pub struct PhysicalMemoryDescriptor32 {
     pub runs: [PhysicalMemoryRun32; PHYSICAL_MEMORY_MAX_RUNS],
 }
 
+/// A 32bit Microsoft Windows Coredump Header
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct CoreDumpHeader32 {
@@ -77,7 +78,8 @@ impl CoreDumpHeader32 {
 
 unsafe impl Pod for CoreDumpHeader32 {}
 
-pub fn try_parse_coredump32(file: &mut File) -> Result<MemoryMap> {
+/// Tries to parse a file handle as a Microsoft Windows 32bit Coredump.
+pub fn parse_coredump32(file: &mut File) -> Result<MemoryMap> {
     let mut header = CoreDumpHeader32::uninit();
 
     file.seek(SeekFrom::Start(0))
@@ -94,7 +96,7 @@ pub fn try_parse_coredump32(file: &mut File) -> Result<MemoryMap> {
         return Err(Error::Connector("header dump flag is not valid"));
     }
 
-    if header.dump_type != DUMP_TYPE_FULL {
+    if header.dump_type != CoreDumpType::Full as u32 {
         return Err(Error::Connector(
             "invalid dump type, only full dumps are supported",
         ));

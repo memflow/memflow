@@ -1,7 +1,7 @@
 use std::ffi::{c_void, CStr};
 use std::os::raw::c_char;
-use std::ptr;
 use std::path::PathBuf;
+use std::ptr;
 
 use flow_core::mem::PhysicalMemory;
 use flow_coredump::CoreDump;

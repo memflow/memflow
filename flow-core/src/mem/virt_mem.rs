@@ -165,7 +165,7 @@ pub trait VirtualMemory {
 }
 
 // forward impls
-impl<'a, T: VirtualMemory> VirtualMemory for &'a mut T {
+impl<'a, T: VirtualMemory + ?Sized> VirtualMemory for &'a mut T {
     fn virt_read_raw_list(&mut self, data: &mut [VirtualReadData]) -> Result<()> {
         (*self).virt_read_raw_list(data)
     }

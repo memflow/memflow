@@ -11,6 +11,7 @@ use rand::prelude::*;
 use rand::{prng::XorShiftRng as CurRng, Rng, SeedableRng};
 
 fn rwtest<T: VirtualMemory, M: OsProcessModuleInfo>(
+    bench: &mut Bencher,
     virt_mem: &mut T,
     module: &M,
     chunk_sizes: &[usize],
@@ -45,7 +46,9 @@ fn rwtest<T: VirtualMemory, M: OsProcessModuleInfo>(
                     )
                 }));
 
-                let _ = virt_mem.virt_read_raw_list(bufs.as_mut_slice());
+                bench.iter(|| {
+                    let _ = black_box(virt_mem.virt_read_raw_list(bufs.as_mut_slice()));
+                });
                 done_size += *i * *o;
             }
 
@@ -63,15 +66,14 @@ pub fn read_test_with_mem<T: VirtualMemory, M: OsProcessModuleInfo>(
     chunks: usize,
     tmod: M,
 ) {
-    bench.iter(|| {
-        black_box(rwtest(
-            virt_mem,
-            &tmod,
-            &[chunk_size],
-            &[chunks],
-            chunk_size,
-        ));
-    });
+    black_box(rwtest(
+        bench,
+        virt_mem,
+        &tmod,
+        &[chunk_size],
+        &[chunks],
+        chunk_size,
+    ));
 }
 
 fn read_test_with_ctx<

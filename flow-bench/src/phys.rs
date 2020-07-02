@@ -8,6 +8,7 @@ use rand::prelude::*;
 use rand::{prng::XorShiftRng as CurRng, Rng, SeedableRng};
 
 fn rwtest<T: PhysicalMemory>(
+    bench: &mut Bencher,
     mem: &mut T,
     (start, end): (Address, Address),
     chunk_sizes: &[usize],
@@ -41,7 +42,9 @@ fn rwtest<T: PhysicalMemory>(
                     )
                 }));
 
-                let _ = mem.phys_read_raw_list(&mut bufs);
+                bench.iter(|| {
+                    let _ = black_box(mem.phys_read_raw_list(&mut bufs));
+                });
 
                 done_size += *i * *o;
             }
@@ -60,9 +63,14 @@ pub fn read_test_with_mem<T: PhysicalMemory>(
     chunks: usize,
     start_end: (Address, Address),
 ) {
-    bench.iter(|| {
-        black_box(rwtest(mem, start_end, &[chunk_size], &[chunks], chunk_size));
-    });
+    black_box(rwtest(
+        bench,
+        mem,
+        start_end,
+        &[chunk_size],
+        &[chunks],
+        chunk_size,
+    ));
 }
 
 fn read_test_with_ctx<T: PhysicalMemory>(

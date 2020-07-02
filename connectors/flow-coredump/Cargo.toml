@@ -8,6 +8,10 @@ edition = "2018"
 flow-core = { path = "../../flow-core" }
 log = { version = "0.4.8", default-features = false }
 dataview = "0.1"
+memmap = { version = "0.7", optional = true }
+
+[features]
+default = ["memmap"]
 
 [dev-dependencies]
 flow-win32 = { path = "../../flow-win32" }

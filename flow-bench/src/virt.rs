@@ -5,12 +5,13 @@ use flow_core::mem::{
     VirtualFromPhysical, VirtualMemory, VirtualTranslate,
 };
 
-use flow_core::{size, Address, OsProcessInfo, OsProcessModuleInfo, PageType};
+use flow_core::{size, OsProcessInfo, OsProcessModuleInfo, PageType};
 
 use rand::prelude::*;
 use rand::{prng::XorShiftRng as CurRng, Rng, SeedableRng};
 
 fn rwtest<T: VirtualMemory, M: OsProcessModuleInfo>(
+    bench: &mut Bencher,
     virt_mem: &mut T,
     module: &M,
     chunk_sizes: &[usize],
@@ -23,7 +24,7 @@ fn rwtest<T: VirtualMemory, M: OsProcessModuleInfo>(
 
     for i in chunk_sizes {
         for o in chunk_counts {
-            let mut bufs = vec![(Address::null(), vec![0 as u8; *i]); *o];
+            let mut vbufs = vec![vec![0 as u8; *i]; *o];
             let mut done_size = 0;
 
             while done_size < read_size {
@@ -31,14 +32,23 @@ fn rwtest<T: VirtualMemory, M: OsProcessModuleInfo>(
                     module.base().as_u64(),
                     module.base().as_u64() + module.size() as u64,
                 );
+
+                let mut bufs = Vec::with_capacity(*o);
+
                 for (addr, _) in bufs.iter_mut() {
                     *addr = (base_addr + rng.gen_range(0, 0x2000)).into();
                 }
 
-                let _ = virt_mem.virt_read_raw_iter(
-                    bufs.iter_mut()
-                        .map(|(addr, buf)| (*addr, buf.as_mut_slice())),
-                );
+                bufs.extend(vbufs.iter_mut().map(|vec| {
+                    (
+                        (base_addr + rng.gen_range(0, 0x2000)).into(),
+                        vec.as_mut_slice(),
+                    )
+                }));
+
+                bench.iter(|| {
+                    let _ = black_box(virt_mem.virt_read_raw_list(bufs.as_mut_slice()));
+                });
                 done_size += *i * *o;
             }
 
@@ -56,15 +66,14 @@ pub fn read_test_with_mem<T: VirtualMemory, M: OsProcessModuleInfo>(
     chunks: usize,
     tmod: M,
 ) {
-    bench.iter(|| {
-        black_box(rwtest(
-            virt_mem,
-            &tmod,
-            &[chunk_size],
-            &[chunks],
-            chunk_size,
-        ));
-    });
+    black_box(rwtest(
+        bench,
+        virt_mem,
+        &tmod,
+        &[chunk_size],
+        &[chunks],
+        chunk_size,
+    ));
 }
 
 fn read_test_with_ctx<

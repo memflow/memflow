@@ -7,23 +7,25 @@ pub use translate_arch::TranslateArch;
 #[cfg(test)]
 mod tests;
 
-use crate::error::Result;
+use crate::error::{Error, Result};
 
 use crate::mem::PhysicalMemory;
 use crate::types::{Address, PhysicalAddress};
 
 pub trait VirtualTranslate {
-    fn virt_to_phys_iter<T, B, VI, OV>(
+    fn virt_to_phys_iter<T, B, VI, VO, FO>(
         &mut self,
         phys_mem: &mut T,
         dtb: Address,
         addrs: VI,
-        out: &mut OV,
+        out: &mut VO,
+        out_fail: &mut FO,
     ) where
         T: PhysicalMemory + ?Sized,
         B: SplitAtIndex,
         VI: Iterator<Item = (Address, B)>,
-        OV: Extend<(Result<PhysicalAddress>, Address, B)>;
+        VO: Extend<(PhysicalAddress, B)>,
+        FO: Extend<(Error, Address, B)>;
 
     // helpers
     fn virt_to_phys<T: PhysicalMemory + ?Sized>(
@@ -32,26 +34,39 @@ pub trait VirtualTranslate {
         dtb: Address,
         vaddr: Address,
     ) -> Result<PhysicalAddress> {
-        let mut out = Vec::with_capacity(1);
-        self.virt_to_phys_iter(phys_mem, dtb, Some((vaddr, false)).into_iter(), &mut out);
-        out.pop().unwrap().0
+        let mut vec = vec![]; //Vec::new_in(&arena);
+        let mut vec_fail = vec![]; //BumpVec::new_in(&arena);
+        self.virt_to_phys_iter(
+            phys_mem,
+            dtb,
+            Some((vaddr, 1)).into_iter(),
+            &mut vec,
+            &mut vec_fail,
+        );
+        if let Some(ret) = vec.pop() {
+            Ok(ret.0)
+        } else {
+            Err(vec_fail.pop().unwrap().0)
+        }
     }
 }
 
 // forward impls
-impl<'a, T: VirtualTranslate> VirtualTranslate for &'a mut T {
-    fn virt_to_phys_iter<U, B, VI, OV>(
+impl<'a, T: VirtualTranslate + ?Sized> VirtualTranslate for &'a mut T {
+    fn virt_to_phys_iter<U, B, VI, VO, FO>(
         &mut self,
         phys_mem: &mut U,
         dtb: Address,
         addrs: VI,
-        out: &mut OV,
+        out: &mut VO,
+        out_fail: &mut FO,
     ) where
         U: PhysicalMemory + ?Sized,
         B: SplitAtIndex,
         VI: Iterator<Item = (Address, B)>,
-        OV: Extend<(Result<PhysicalAddress>, Address, B)>,
+        VO: Extend<(PhysicalAddress, B)>,
+        FO: Extend<(Error, Address, B)>,
     {
-        (*self).virt_to_phys_iter(phys_mem, dtb, addrs, out)
+        (*self).virt_to_phys_iter(phys_mem, dtb, addrs, out, out_fail)
     }
 }

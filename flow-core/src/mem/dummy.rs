@@ -1,6 +1,6 @@
 use crate::architecture::Architecture;
 use crate::error::{Error, Result};
-use crate::mem::{PhysicalMemory, PhysicalReadIterator, PhysicalWriteIterator};
+use crate::mem::{PhysicalMemory, PhysicalReadData, PhysicalWriteData};
 use crate::process::{OsProcessInfo, OsProcessModuleInfo};
 use crate::types::{size, Address};
 
@@ -154,8 +154,8 @@ pub struct DummyMemory {
 }
 
 impl PhysicalMemory for DummyMemory {
-    fn phys_read_iter<'b, PI: PhysicalReadIterator<'b>>(&'b mut self, mut iter: PI) -> Result<()> {
-        iter.try_for_each(move |(addr, out)| {
+    fn phys_read_raw_list(&mut self, data: &mut [PhysicalReadData]) -> Result<()> {
+        data.iter_mut().try_for_each(move |(addr, out)| {
             if addr.address().as_usize() + out.len() <= self.mem.len() {
                 out.copy_from_slice(&self.mem[addr.as_usize()..(addr.as_usize() + out.len())]);
                 Ok(())
@@ -165,11 +165,8 @@ impl PhysicalMemory for DummyMemory {
         })
     }
 
-    fn phys_write_iter<'b, PI: PhysicalWriteIterator<'b>>(
-        &'b mut self,
-        mut iter: PI,
-    ) -> Result<()> {
-        iter.try_for_each(move |(addr, data)| {
+    fn phys_write_raw_list(&mut self, data: &[PhysicalWriteData]) -> Result<()> {
+        data.iter().try_for_each(move |(addr, data)| {
             if addr.address().as_usize() + data.len() <= self.mem.len() {
                 self.mem[addr.as_usize()..(addr.as_usize() + data.len())].copy_from_slice(data);
                 Ok(())

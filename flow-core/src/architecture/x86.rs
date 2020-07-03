@@ -10,15 +10,12 @@ pub const fn endianess() -> Endianess {
     Endianess::LittleEndian
 }
 
-pub const fn size_addr() -> usize {
-    4
-}
-
 pub fn get_mmu_spec() -> ArchMMUSpec {
     ArchMMUSpec {
         virtual_address_splits: &[10, 10, 12],
         valid_final_page_steps: &[1, 2],
         address_space_bits: 32,
+        addr_size: 4,
         pte_size: 4,
         present_bit: 0,
         writeable_bit: 1,

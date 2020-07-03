@@ -24,7 +24,7 @@ pub unsafe extern "C" fn qemu_procfs_init() -> *mut c_void {
 #[no_mangle]
 pub unsafe extern "C" fn qemu_procfs_free(ptr: *mut c_void) {
     if !ptr.is_null() {
-        let mut _mem: Box<Box<dyn MemoryBackend>> = std::mem::transmute(ptr as *mut _);
+        let mut _mem: Box<Box<dyn PhysicalMemory>> = std::mem::transmute(ptr as *mut _);
         // drop _mem
     }
 }

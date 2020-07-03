@@ -59,6 +59,11 @@ impl<T: CacheValidator> TLBCache<T> {
     }
 
     #[inline]
+    pub fn is_read_too_long(&self, arch: Architecture, size: usize) -> bool {
+        size / arch.page_size() > self.entries.len()
+    }
+
+    #[inline]
     pub fn try_entry(
         &self,
         dtb: Address,

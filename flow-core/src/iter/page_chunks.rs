@@ -1,6 +1,13 @@
 use crate::types::Address;
 use std::iter::*;
 
+/// This trait indicates that it is safe to not have to call unsplit for the object
+///
+/// Some objects implementing `SplitAtIndex` may only do so by mutating its internal state, however,
+/// if it is possible to do without doing so, implement this trait as well to allow structures that
+/// use splittable objects, but may not call unsplit afterwards use your type genericly.
+pub trait SplitAtIndexNoMutation: SplitAtIndex {}
+
 pub trait SplitAtIndex {
     fn split_at(&mut self, idx: usize) -> (Self, Option<Self>)
     where
@@ -43,6 +50,8 @@ pub trait SplitAtIndex {
     }
 }
 
+impl SplitAtIndexNoMutation for usize {}
+
 impl SplitAtIndex for usize {
     fn split_inclusive_at(&mut self, idx: usize) -> (Self, Option<Self>) {
         if *self == 0 || *self - 1 <= idx {
@@ -68,6 +77,8 @@ impl SplitAtIndex for usize {
         1
     }
 }
+
+impl<T: SplitAtIndexNoMutation> SplitAtIndexNoMutation for (Address, T) {}
 
 impl<T: SplitAtIndex> SplitAtIndex for (Address, T) {
     fn split_inclusive_at(&mut self, idx: usize) -> (Self, Option<Self>) {
@@ -101,6 +112,8 @@ impl<T: SplitAtIndex> SplitAtIndex for (Address, T) {
     }
 }
 
+impl<T> SplitAtIndexNoMutation for &[T] {}
+
 impl<T> SplitAtIndex for &[T] {
     fn split_inclusive_at(&mut self, idx: usize) -> (Self, Option<Self>) {
         let mid = core::cmp::min(self.len(), core::cmp::min(self.len(), idx) + 1);
@@ -117,6 +130,8 @@ impl<T> SplitAtIndex for &[T] {
         self.len()
     }
 }
+
+impl<T> SplitAtIndexNoMutation for &mut [T] {}
 
 impl<T> SplitAtIndex for &mut [T] {
     fn split_inclusive_at(&mut self, idx: usize) -> (Self, Option<Self>) {

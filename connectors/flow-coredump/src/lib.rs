@@ -39,7 +39,7 @@ pub struct CoreDump {
     file: File,
     #[cfg(feature = "memmap")]
     file_map: Mmap,
-    mem_map: MemoryMap,
+    mem_map: MemoryMap<(Address, usize)>,
 }
 
 impl CoreDump {
@@ -98,7 +98,7 @@ impl PhysicalMemory for CoreDump {
     #[cfg(feature = "memmap")]
     fn phys_read_raw_list(&mut self, data: &mut [PhysicalReadData]) -> Result<()> {
         let mut void = ExtendVoid::void();
-        for (real_addr, buf) in self.mem_map.map_iter(
+        for ((real_addr, _), buf) in self.mem_map.map_iter(
             data.iter_mut().map(|(addr, buf)| (*addr, &mut **buf)),
             &mut void,
         ) {

@@ -28,7 +28,7 @@ fn qemu_arg_opt(args: &[String], argname: &str, argopt: &str) -> Option<String> 
 #[derive(Clone)]
 pub struct Memory {
     pub pid: pid_t,
-    pub mem_map: MemoryMap,
+    pub mem_map: MemoryMap<(Address, usize)>,
     temp_iov: Box<[iovec]>,
 }
 
@@ -218,7 +218,7 @@ impl PhysicalMemory for Memory {
         let mut iov_iter = iov_local.iter_mut().zip(iov_remote.iter_mut()).enumerate();
         let mut iov_next = iov_iter.next();
 
-        while let Some((addr, out)) = elem {
+        while let Some(((addr, _), out)) = elem {
             let (cnt, (liov, riov)) = iov_next.unwrap();
 
             Self::fill_iovec(&addr, out, liov, riov);
@@ -265,7 +265,7 @@ impl PhysicalMemory for Memory {
         let mut iov_iter = iov_local.iter_mut().zip(iov_remote.iter_mut()).enumerate();
         let mut iov_next = iov_iter.next();
 
-        while let Some((addr, out)) = elem {
+        while let Some(((addr, _), out)) = elem {
             let (cnt, (liov, riov)) = iov_next.unwrap();
 
             Self::fill_iovec(&addr, out, liov, riov);

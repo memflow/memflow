@@ -48,11 +48,12 @@ fn rwtest<T: VirtualMemory>(
             let mut calls = 0;
             let mut bufs = vec![(vec![0 as u8; *i], 0); *o];
 
+            let base_addr = rng.gen_range(
+                module.base().as_u64(),
+                module.base().as_u64() + module.size() as u64,
+            );
+
             while done_size < read_size {
-                let base_addr = rng.gen_range(
-                    module.base().as_u64(),
-                    module.base().as_u64() + module.size() as u64,
-                );
                 for (_, addr) in bufs.iter_mut() {
                     *addr = base_addr + rng.gen_range(0, 0x2000);
                 }
@@ -100,7 +101,7 @@ fn read_bench<T: PhysicalMemory, V: VirtualTranslate>(
     let mut kernel = Kernel::new(phys_mem, vat, offsets, kernel_info);
 
     let proc_list = kernel.process_info_list()?;
-    let mut rng = CurRng::seed_from_u64(0);
+    let mut rng = CurRng::seed_from_u64(rand::thread_rng().gen_range(0, !0u64));
     loop {
         let mut proc = Win32Process::with_kernel(
             &mut kernel,

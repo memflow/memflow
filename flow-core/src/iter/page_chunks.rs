@@ -4,14 +4,14 @@ use std::iter::*;
 pub trait SplitAtIndex {
     fn split_at(&mut self, idx: usize) -> (Self, Option<Self>)
     where
-        Self: Sized,
-    {
-        self.split_inclusive_at(idx - 1)
-    }
+        Self: Sized;
 
     fn split_inclusive_at(&mut self, idx: usize) -> (Self, Option<Self>)
     where
-        Self: Sized;
+        Self: Sized,
+    {
+        self.split_inclusive_at(idx + 1)
+    }
 
     fn split_at_rev(&mut self, idx: usize) -> (Option<Self>, Self)
     where
@@ -38,7 +38,7 @@ pub trait SplitAtIndex {
 }
 
 impl SplitAtIndex for bool {
-    fn split_inclusive_at(&mut self, _: usize) -> (Self, Option<Self>) {
+    fn split_at(&mut self, _: usize) -> (Self, Option<Self>) {
         (*self, None)
     }
 

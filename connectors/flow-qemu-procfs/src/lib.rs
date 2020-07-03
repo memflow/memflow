@@ -204,10 +204,9 @@ impl PhysicalMemory for Memory {
         let mem_map = &self.mem_map;
         let temp_iov = &mut self.temp_iov;
 
-        let mut void = ExtendVoid::new(|_| {});
+        let mut void = ExtendVoid::void();
         let mut iter = mem_map.map_iter(
-            data.iter_mut()
-                .map(|(addr, buf)| (addr.address(), &mut **buf)),
+            data.iter_mut().map(|(addr, buf)| (*addr, &mut **buf)),
             &mut void,
         );
         //trace!("physical address out of range {:X}", addr.address());
@@ -255,11 +254,8 @@ impl PhysicalMemory for Memory {
         let mem_map = &self.mem_map;
         let temp_iov = &mut self.temp_iov;
 
-        let mut void = ExtendVoid::new(|_| {});
-        let mut iter = mem_map.map_iter(
-            data.iter().map(|(addr, buf)| (addr.address(), *buf)),
-            &mut void,
-        );
+        let mut void = ExtendVoid::void();
+        let mut iter = mem_map.map_iter(data.iter().copied(), &mut void);
         //let mut iter = mem_map.map_iter(data.iter(), &mut ExtendVoid::new(|_|{}));
 
         let max_iov = temp_iov.len() / 2;

@@ -1,5 +1,5 @@
 use crate::error::{Error, Result};
-use crate::types::Address;
+use crate::types::{Address, PhysicalAddress};
 
 use crate::iter::SplitAtIndex;
 
@@ -103,14 +103,18 @@ impl MemoryMap {
     pub fn map_iter<
         'a,
         T: 'a + SplitAtIndex,
-        I: 'a + Iterator<Item = (Address, T)>,
+        I: 'a + Iterator<Item = (PhysicalAddress, T)>,
         V: Extend<(Address, T)>,
     >(
         &'a self,
         iter: I,
         out_fail: &'a mut V,
     ) -> impl Iterator<Item = (Address, T)> + 'a {
-        MemoryMapIterator::new(&self.mappings, iter, out_fail)
+        MemoryMapIterator::new(
+            &self.mappings,
+            iter.map(|(addr, buf)| (addr.address(), buf)),
+            out_fail,
+        )
     }
 }
 

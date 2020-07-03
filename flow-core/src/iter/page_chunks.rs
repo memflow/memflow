@@ -10,7 +10,13 @@ pub trait SplitAtIndex {
     where
         Self: Sized,
     {
-        self.split_inclusive_at(idx + 1)
+        if idx == usize::MAX && self.length() != 0 {
+            //This is a pretty sketchy implementation, but it will be correct when overflows are a problem.
+            let (_, right) = self.split_at(0);
+            (right.unwrap(), None)
+        } else {
+            self.split_at(idx + 1)
+        }
     }
 
     fn split_at_rev(&mut self, idx: usize) -> (Option<Self>, Self)
@@ -34,20 +40,6 @@ pub trait SplitAtIndex {
 
     fn size_hint(&self) -> usize {
         self.length()
-    }
-}
-
-impl SplitAtIndex for bool {
-    fn split_at(&mut self, _: usize) -> (Self, Option<Self>) {
-        (*self, None)
-    }
-
-    fn split_at_rev(&mut self, _: usize) -> (Option<Self>, Self) {
-        (None, *self)
-    }
-
-    fn length(&self) -> usize {
-        1
     }
 }
 

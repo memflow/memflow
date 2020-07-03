@@ -36,19 +36,18 @@ impl<T: SplitAtIndex> SplitAtIndex for TranslateData<T> {
         Self: Sized,
     {
         let addr = self.addr;
+
+        println!("SPLITT {:x}", self.length());
+
         let (bleft, bright) = self.buf.split_inclusive_at(idx);
         let bl_len = bleft.length();
 
         (
             TranslateData { addr, buf: bleft },
-            if let Some(buf) = bright {
-                Some(TranslateData {
-                    buf,
-                    addr: addr + bl_len,
-                })
-            } else {
-                None
-            },
+            bright.map(|buf| TranslateData {
+                buf,
+                addr: addr + bl_len,
+            }),
         )
     }
 
@@ -62,14 +61,10 @@ impl<T: SplitAtIndex> SplitAtIndex for TranslateData<T> {
 
         (
             TranslateData { addr, buf: bleft },
-            if let Some(buf) = bright {
-                Some(TranslateData {
-                    buf,
-                    addr: addr + bl_len,
-                })
-            } else {
-                None
-            },
+            bright.map(|buf| TranslateData {
+                buf,
+                addr: addr + bl_len,
+            }),
         )
     }
 

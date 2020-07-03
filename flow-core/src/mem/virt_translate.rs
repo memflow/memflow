@@ -39,7 +39,7 @@ pub trait VirtualTranslate {
         self.virt_to_phys_iter(
             phys_mem,
             dtb,
-            Some((vaddr, false)).into_iter(),
+            Some((vaddr, 1)).into_iter(),
             &mut vec,
             &mut vec_fail,
         );

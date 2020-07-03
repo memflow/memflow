@@ -253,7 +253,7 @@ impl Architecture {
         self.virt_to_phys_iter(
             mem,
             dtb,
-            Some((addr, false)).into_iter(),
+            Some((addr, 1)).into_iter(),
             &mut vec,
             &mut vec_fail,
             &arena,

@@ -74,11 +74,9 @@ impl<T: CacheValidator> TLBCache<T> {
         let page_address = addr.as_page_aligned(page_size);
         let idx = self.get_cache_index(page_address, page_size);
         let entry = self.entries[idx];
-        if entry.dtb == dtb && entry.virt_page == page_address {
-            if entry.phys_page.is_valid()
-                && entry.phys_page.has_page()
-                && self.validator.is_slot_valid(idx)
-            {
+        if entry.dtb == dtb && entry.virt_page == page_address && self.validator.is_slot_valid(idx)
+        {
+            if entry.phys_page.is_valid() && entry.phys_page.has_page() {
                 Some(Ok(TLBEntry {
                     dtb,
                     virt_addr: addr,

@@ -102,7 +102,6 @@ pub fn parse_coredump64(file: &mut File) -> Result<MemoryMap> {
         ));
     }
 
-    // TODO: dynamic switching with support for both archs
     if header.machine_image_type != IMAGE_FILE_MACHINE_AMD64 {
         return Err(Error::Connector("invalid machine image type"));
     }
@@ -118,9 +117,6 @@ pub fn parse_coredump64(file: &mut File) -> Result<MemoryMap> {
     let mut mem_map = MemoryMap::new();
 
     let mut real_base = 0x2000;
-
-    // TODO: dirty fix until we fixed ranges in mem_map
-    mem_map.push_range(Address::NULL, 0x1000.into(), Address::NULL);
 
     for i in 0..header.physical_memory_block.number_of_runs {
         let base = header.physical_memory_block.runs[i as usize].base_page << 12;

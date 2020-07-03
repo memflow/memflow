@@ -79,7 +79,7 @@ impl CoreDumpHeader64 {
 unsafe impl Pod for CoreDumpHeader64 {}
 
 /// Tries to parse a file handle as a Microsoft Windows 64bit Coredump.
-pub fn parse_coredump64(file: &mut File) -> Result<MemoryMap> {
+pub fn parse_coredump64(file: &mut File) -> Result<MemoryMap<(Address, usize)>> {
     let mut header = CoreDumpHeader64::uninit();
 
     file.seek(SeekFrom::Start(0))
@@ -126,7 +126,7 @@ pub fn parse_coredump64(file: &mut File) -> Result<MemoryMap> {
             "adding memory mapping: base={:x} size={:x} real_base={:x}",
             base, size, real_base
         );
-        mem_map.push(base.into(), size as usize, real_base.into());
+        mem_map.push_remap(base.into(), size as usize, real_base.into());
 
         real_base += size;
     }

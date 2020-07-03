@@ -212,6 +212,15 @@ impl<'a, T: SplitAtIndex> TranslationChunk<'a, T> {
 }
 
 impl<'a, T: SplitAtIndex> SplitAtIndex for (&'a Bump, TranslationChunk<'a, T>) {
+    fn split_at(&mut self, idx: usize) -> (Self, Option<Self>) {
+        if idx == 0 {
+            let chunk = self.1.consume_mut(self.0);
+            ((self.0, self.1.consume_mut(self.0)), Some((self.0, chunk)))
+        } else {
+            self.split_inclusive_at(idx - 1)
+        }
+    }
+
     fn split_inclusive_at(&mut self, idx: usize) -> (Self, Option<Self>) {
         let chunk = self.1.consume_mut(self.0);
         let (left, right) = chunk.split_at_inclusive(idx, self.0);

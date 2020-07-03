@@ -47,7 +47,7 @@ fn vat_test_with_mem<
             vat.virt_to_phys_iter(
                 phys_mem,
                 proc.dtb(),
-                bufs.iter_mut().map(|x| (*x, false)),
+                bufs.iter_mut().map(|x| (*x, 1)),
                 &mut out,
                 &mut ExtendVoid::new(|_| {}),
             );

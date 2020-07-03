@@ -1,4 +1,4 @@
-use log::{info, trace};
+use log::info;
 
 use flow_core::*;
 
@@ -209,7 +209,6 @@ impl PhysicalMemory for Memory {
             data.iter_mut().map(|(addr, buf)| (*addr, &mut **buf)),
             &mut void,
         );
-        //trace!("physical address out of range {:X}", addr.address());
 
         let max_iov = temp_iov.len() / 2;
         let (iov_local, iov_remote) = temp_iov.split_at_mut(max_iov);

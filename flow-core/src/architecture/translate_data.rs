@@ -37,8 +37,6 @@ impl<T: SplitAtIndex> SplitAtIndex for TranslateData<T> {
     {
         let addr = self.addr;
 
-        println!("SPLITT {:x}", self.length());
-
         let (bleft, bright) = self.buf.split_inclusive_at(idx);
         let bl_len = bleft.length();
 

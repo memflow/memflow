@@ -1,4 +1,3 @@
-use crate::error::{Error, Result};
 use crate::types::{Address, PhysicalAddress};
 
 use crate::iter::SplitAtIndex;
@@ -16,6 +15,7 @@ use std::prelude::v1::*;
 ///
 /// ```
 /// use flow_core::mem::MemoryMap;
+/// use flow_core::iter::ExtendVoid;
 ///
 /// let mut map = MemoryMap::new();
 /// map.push(0x1000.into(), 0x1000, 0.into());      // push region from 0x1000 - 0x1FFF
@@ -23,7 +23,10 @@ use std::prelude::v1::*;
 ///
 /// println!("{:?}", map);
 ///
-/// let hw_addr = map.map(0x10ff.into());
+/// // handle unmapped memory regions by using ExtendVoid::new, or just ignore them
+/// let mut failed_void = ExtendVoid::void();
+///
+/// let hw_addr = map.map(0x10ff.into(), 8, &mut failed_void);
 /// ```
 #[derive(Clone)]
 pub struct MemoryMap {
@@ -119,7 +122,7 @@ impl MemoryMap {
 }
 
 pub struct MemoryMapIterator<'a, I, T, F> {
-    map: &'a Vec<MemoryMapping>,
+    map: &'a [MemoryMapping],
     in_iter: I,
     fail_out: &'a mut F,
     cur_elem: Option<(Address, T)>,
@@ -129,7 +132,7 @@ pub struct MemoryMapIterator<'a, I, T, F> {
 impl<'a, I: Iterator<Item = (Address, T)>, T: SplitAtIndex, F: Extend<(Address, T)>>
     MemoryMapIterator<'a, I, T, F>
 {
-    fn new(map: &'a Vec<MemoryMapping>, in_iter: I, fail_out: &'a mut F) -> Self {
+    fn new(map: &'a [MemoryMapping], in_iter: I, fail_out: &'a mut F) -> Self {
         Self {
             map,
             in_iter,
@@ -143,11 +146,7 @@ impl<'a, I: Iterator<Item = (Address, T)>, T: SplitAtIndex, F: Extend<(Address, 
         if let Some((mut addr, mut buf)) = self.cur_elem.take() {
             for (i, map_elem) in self.map.iter().enumerate().skip(self.cur_map_pos) {
                 if map_elem.base + map_elem.size > addr {
-                    let offset = map_elem
-                        .base
-                        .as_usize()
-                        .checked_sub(addr.as_usize())
-                        .unwrap_or(0);
+                    let offset = map_elem.base.as_usize().saturating_sub(addr.as_usize());
 
                     let (left_reject, right) = buf.split_at(offset);
 
@@ -239,6 +238,7 @@ impl fmt::Debug for MemoryMapping {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::iter::ExtendVoid;
 
     #[test]
     fn test_mapping() {
@@ -246,8 +246,15 @@ mod tests {
         map.push(0x1000.into(), 0x1000, 0.into());
         map.push(0x3000.into(), 0x1000, 0x2000.into());
 
-        assert_eq!(map.map(0x10ff.into()), Ok(Address::from(0x00ff)));
-        assert_eq!(map.map(0x30ff.into()), Ok(Address::from(0x20ff)));
+        let mut void_panic = ExtendVoid::new(|x| panic!("Should not have mapped {:?}", x));
+        assert_eq!(
+            map.map(0x10ff.into(), 1, &mut void_panic).next(),
+            Some((Address::from(0x00ff), 1))
+        );
+        assert_eq!(
+            map.map(0x30ff.into(), 1, &mut void_panic).next(),
+            Some((Address::from(0x20ff), 1))
+        );
     }
 
     #[test]
@@ -256,10 +263,19 @@ mod tests {
         map.push(0x1000.into(), 0x1000, 0.into());
         map.push(0x3000.into(), 0x1000, 0x2000.into());
 
-        assert_eq!(map.map(0x3000.into()), Ok(Address::from(0x2000)));
-        assert_eq!(map.map(0x3fff.into()), Ok(Address::from(0x2fff)));
-        assert_eq!(map.map(0x2fff.into()).is_err(), true);
-        assert_eq!(map.map(0x4000.into()).is_err(), true);
+        let mut void_panic = ExtendVoid::new(|x| panic!("Should not have mapped {:?}", x));
+        let mut void = ExtendVoid::void();
+
+        assert_eq!(
+            map.map(0x3000.into(), 1, &mut void_panic).next(),
+            Some((Address::from(0x2000), 1))
+        );
+        assert_eq!(
+            map.map(0x3fff.into(), 1, &mut void_panic).next(),
+            Some((Address::from(0x2fff), 1))
+        );
+        assert_eq!(map.map(0x2fff.into(), 1, &mut void).next(), None);
+        assert_eq!(map.map(0x4000.into(), 1, &mut void).next(), None);
     }
 
     #[test]
@@ -268,10 +284,11 @@ mod tests {
         map.push(0x1000.into(), 0x1000, 0.into());
         map.push(0x3000.into(), 0x1000, 0x2000.into());
 
-        assert_eq!(map.map(0x00ff.into()).is_err(), true);
-        assert_eq!(map.map(0x20ff.into()).is_err(), true);
-        assert_eq!(map.map(0x4000.into()).is_err(), true);
-        assert_eq!(map.map(0x40ff.into()).is_err(), true);
+        let mut void = ExtendVoid::void();
+        assert_eq!(map.map(0x00ff.into(), 1, &mut void).next(), None);
+        assert_eq!(map.map(0x20ff.into(), 1, &mut void).next(), None);
+        assert_eq!(map.map(0x4000.into(), 1, &mut void).next(), None);
+        assert_eq!(map.map(0x40ff.into(), 1, &mut void).next(), None);
     }
 
     #[test]
@@ -280,8 +297,15 @@ mod tests {
         map.push_range(0x1000.into(), 0x2000.into(), 0.into());
         map.push_range(0x3000.into(), 0x4000.into(), 0x2000.into());
 
-        assert_eq!(map.map(0x10ff.into()), Ok(Address::from(0x00ff)));
-        assert_eq!(map.map(0x30ff.into()), Ok(Address::from(0x20ff)));
+        let mut void_panic = ExtendVoid::new(|x| panic!("Should not have mapped {:?}", x));
+        assert_eq!(
+            map.map(0x10ff.into(), 1, &mut void_panic).next(),
+            Some((Address::from(0x00ff), 1))
+        );
+        assert_eq!(
+            map.map(0x30ff.into(), 1, &mut void_panic).next(),
+            Some((Address::from(0x20ff), 1))
+        );
     }
 
     #[test]
@@ -290,10 +314,19 @@ mod tests {
         map.push_range(0x1000.into(), 0x2000.into(), 0.into());
         map.push_range(0x3000.into(), 0x4000.into(), 0x2000.into());
 
-        assert_eq!(map.map(0x3000.into()), Ok(Address::from(0x2000)));
-        assert_eq!(map.map(0x3fff.into()), Ok(Address::from(0x2fff)));
-        assert_eq!(map.map(0x2fff.into()).is_err(), true);
-        assert_eq!(map.map(0x4000.into()).is_err(), true);
+        let mut void_panic = ExtendVoid::new(|x| panic!("Should not have mapped {:?}", x));
+        let mut void = ExtendVoid::void();
+
+        assert_eq!(
+            map.map(0x3000.into(), 1, &mut void_panic).next(),
+            Some((Address::from(0x2000), 1))
+        );
+        assert_eq!(
+            map.map(0x3fff.into(), 1, &mut void_panic).next(),
+            Some((Address::from(0x2fff), 1))
+        );
+        assert_eq!(map.map(0x2fff.into(), 1, &mut void).next(), None);
+        assert_eq!(map.map(0x4000.into(), 1, &mut void).next(), None);
     }
 
     #[test]
@@ -302,10 +335,19 @@ mod tests {
         map.push_range(0x1000.into(), 0x2000.into(), 0.into());
         map.push_range(0x2000.into(), 0x3000.into(), 0x2000.into());
 
-        assert_eq!(map.map(0x2000.into()), Ok(Address::from(0x2000)));
-        assert_eq!(map.map(0x2fff.into()), Ok(Address::from(0x2fff)));
-        assert_eq!(map.map(0x3fff.into()).is_err(), true);
-        assert_eq!(map.map(0x3000.into()).is_err(), true);
+        let mut void_panic = ExtendVoid::new(|x| panic!("Should not have mapped {:?}", x));
+        let mut void = ExtendVoid::void();
+
+        assert_eq!(
+            map.map(0x2000.into(), 1, &mut void_panic).next(),
+            Some((Address::from(0x2000), 1))
+        );
+        assert_eq!(
+            map.map(0x2fff.into(), 1, &mut void_panic).next(),
+            Some((Address::from(0x2fff), 1))
+        );
+        assert_eq!(map.map(0x3fff.into(), 1, &mut void).next(), None);
+        assert_eq!(map.map(0x3000.into(), 1, &mut void).next(), None);
     }
 
     #[test]

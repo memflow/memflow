@@ -84,8 +84,11 @@ impl CoreDump {
 impl PhysicalMemory for CoreDump {
     #[cfg(not(feature = "memmap"))]
     fn phys_read_raw_list(&mut self, data: &mut [PhysicalReadData]) -> Result<()> {
-        for (addr, buf) in data.iter_mut() {
-            let real_addr = self.mem_map.map(addr.address())?;
+        let mut void = ExtendVoid::void();
+        for (real_addr, buf) in self.mem_map.map_iter(
+            data.iter_mut().map(|(addr, buf)| (*addr, &mut **buf)),
+            &mut void,
+        ) {
             self.file.seek(SeekFrom::Start(real_addr.as_u64())).ok();
             self.file.read_exact(buf).ok();
         }
@@ -94,8 +97,11 @@ impl PhysicalMemory for CoreDump {
 
     #[cfg(feature = "memmap")]
     fn phys_read_raw_list(&mut self, data: &mut [PhysicalReadData]) -> Result<()> {
-        for (addr, buf) in data.iter_mut() {
-            let real_addr = self.mem_map.map(addr.address())?;
+        let mut void = ExtendVoid::void();
+        for (real_addr, buf) in self.mem_map.map_iter(
+            data.iter_mut().map(|(addr, buf)| (*addr, &mut **buf)),
+            &mut void,
+        ) {
             buf.copy_from_slice(
                 &self.file_map[real_addr.as_usize()..(real_addr + buf.len()).as_usize()],
             );

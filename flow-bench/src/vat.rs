@@ -5,18 +5,25 @@ use flow_core::mem::{
     VirtualTranslate,
 };
 
+use flow_core::iter::ExtendVoid;
 use flow_core::{size, Address, OsProcessInfo, OsProcessModuleInfo, PageType};
 
 use rand::prelude::*;
 use rand::{prng::XorShiftRng as CurRng, Rng, SeedableRng};
 
-fn vattest<T: PhysicalMemory, V: VirtualTranslate, P: OsProcessInfo, M: OsProcessModuleInfo>(
+fn vat_test_with_mem<
+    T: PhysicalMemory,
+    V: VirtualTranslate,
+    P: OsProcessInfo,
+    M: OsProcessModuleInfo,
+>(
+    bench: &mut Bencher,
     phys_mem: &mut T,
     vat: &mut V,
-    proc: &P,
-    module: &M,
     chunk_count: usize,
     translations: usize,
+    proc: P,
+    module: M,
 ) -> usize {
     let mut rng = CurRng::from_rng(thread_rng()).unwrap();
 
@@ -35,37 +42,22 @@ fn vattest<T: PhysicalMemory, V: VirtualTranslate, P: OsProcessInfo, M: OsProces
             *addr = (base_addr + rng.gen_range(0, 0x2000)).into();
         }
 
-        out.clear();
-        vat.virt_to_phys_iter(
-            phys_mem,
-            proc.dtb(),
-            bufs.iter_mut().map(|x| (*x, false)),
-            &mut out,
-        );
+        bench.iter(|| {
+            out.clear();
+            vat.virt_to_phys_iter(
+                phys_mem,
+                proc.dtb(),
+                bufs.iter_mut().map(|x| (*x, 1)),
+                &mut out,
+                &mut ExtendVoid::new(|_| {}),
+            );
+            black_box(&out);
+        });
 
         done_size += chunk_count;
     }
 
     done_size
-}
-
-pub fn vat_test_with_mem<
-    T: PhysicalMemory,
-    V: VirtualTranslate,
-    P: OsProcessInfo,
-    M: OsProcessModuleInfo,
->(
-    bench: &mut Bencher,
-    phys_mem: &mut T,
-    vat: &mut V,
-    chunks: usize,
-    translations: usize,
-    proc: P,
-    tmod: M,
-) {
-    bench.iter(|| {
-        black_box(vattest(phys_mem, vat, &proc, &tmod, chunks, translations));
-    });
 }
 
 fn vat_test_with_ctx<

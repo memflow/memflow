@@ -8,6 +8,7 @@ use rand::prelude::*;
 use rand::{prng::XorShiftRng as CurRng, Rng, SeedableRng};
 
 fn rwtest<T: PhysicalMemory>(
+    bench: &mut Bencher,
     mem: &mut T,
     (start, end): (Address, Address),
     chunk_sizes: &[usize],
@@ -20,23 +21,31 @@ fn rwtest<T: PhysicalMemory>(
 
     for i in chunk_sizes {
         for o in chunk_counts {
-            let mut bufs = vec![(Address::null(), vec![0 as u8; *i]); *o];
+            let mut vbufs = vec![vec![0 as u8; *i]; *o];
             let mut done_size = 0;
 
             while done_size < read_size {
                 let base_addr = rng.gen_range(start.as_u64(), end.as_u64());
 
-                let _ = mem.phys_read_iter(bufs.iter_mut().map(|(addr, buf)| {
-                    *addr = (base_addr + rng.gen_range(0, 0x2000)).into();
+                let mut bufs = Vec::with_capacity(*o);
+
+                bufs.extend(vbufs.iter_mut().map(|vec| {
+                    let addr = (base_addr + rng.gen_range(0, 0x2000)).into();
+
                     (
                         PhysicalAddress::with_page(
-                            *addr,
+                            addr,
                             PageType::from_writeable_bit(true),
                             size::kb(4),
                         ),
-                        buf.as_mut_slice(),
+                        vec.as_mut_slice(),
                     )
                 }));
+
+                bench.iter(|| {
+                    let _ = black_box(mem.phys_read_raw_list(&mut bufs));
+                });
+
                 done_size += *i * *o;
             }
 
@@ -54,9 +63,14 @@ pub fn read_test_with_mem<T: PhysicalMemory>(
     chunks: usize,
     start_end: (Address, Address),
 ) {
-    bench.iter(|| {
-        black_box(rwtest(mem, start_end, &[chunk_size], &[chunks], chunk_size));
-    });
+    black_box(rwtest(
+        bench,
+        mem,
+        start_end,
+        &[chunk_size],
+        &[chunks],
+        chunk_size,
+    ));
 }
 
 fn read_test_with_ctx<T: PhysicalMemory>(

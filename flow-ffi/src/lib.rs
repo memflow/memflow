@@ -1,5 +1,5 @@
 pub mod log;
 
-pub mod qemu_procfs;
+pub mod connectors;
 
 pub mod win32;

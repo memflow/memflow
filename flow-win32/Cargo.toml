@@ -27,7 +27,7 @@ rand = "0.5"
 bencher = "0.1.5"
 
 [target.'cfg(target_os = "linux")'.dev-dependencies]
-flow-qemu-procfs = { path = "../connectors/flow-qemu-procfs" }
+flow-connector = { package = "flow-qemu-procfs", path = "../connectors/flow-qemu-procfs" }
 
 [features]
 default = ["std", "download_progress", "symstore"]
@@ -40,9 +40,7 @@ symstore = ["dirs", "ureq", "pdb"]
 [[example]]
 name = "read_keys"
 path = "examples/read_keys.rs"
-required-features = ["flow-qemu-procfs"]
 
 [[example]]
 name = "read_bench"
 path = "examples/read_bench.rs"
-required-features = ["flow-qemu-procfs"]

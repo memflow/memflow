@@ -17,16 +17,13 @@ impl Memory {
 }
 
 impl PhysicalMemory for Memory {
-    fn phys_read_iter<'a, PI: PhysicalReadIterator<'a>>(&'a mut self, mut _iter: PI) -> Result<()> {
+    fn phys_read_raw_list(&mut self, _data: &mut [PhysicalReadData]) -> Result<()> {
         Err(Error::Connector(
             "flow-pcileech::phys_read_iter not implemented",
         ))
     }
 
-    fn phys_write_iter<'a, PI: PhysicalWriteIterator<'a>>(
-        &'a mut self,
-        mut _iter: PI,
-    ) -> Result<()> {
+    fn phys_write_raw_list(&mut self, _data: &[PhysicalWriteData]) -> Result<()> {
         Err(Error::Connector(
             "flow-pcileech::phys_write_iter not implemented",
         ))

@@ -183,15 +183,15 @@ impl<'a, T: CacheValidator> PageCache<'a, T> {
             })
     }
 
-    pub fn cached_read<'b, F: PhysicalMemory, PI: PhysicalReadIterator<'b>>(
-        &'b mut self,
-        mem: &'b mut F,
-        iter: PI,
+    pub fn cached_read<F: PhysicalMemory>(
+        &mut self,
+        mem: &mut F,
+        data: &mut [PhysicalReadData],
         arena: &Bump,
     ) -> Result<(), crate::Error> {
         let page_size = self.page_size;
 
-        let mut iter = iter;
+        let mut iter = data.iter_mut();
 
         {
             let mut next = iter.next();
@@ -238,7 +238,7 @@ impl<'a, T: CacheValidator> PageCache<'a, T> {
                             }
                         });
                 } else {
-                    wlist.push((addr, out));
+                    wlist.push((*addr, out));
                 }
 
                 next = iter.next();
@@ -248,21 +248,19 @@ impl<'a, T: CacheValidator> PageCache<'a, T> {
                     || wlistcache.len() >= 64
                     || clist.len() >= 64
                 {
-                    if !wlist.is_empty() || !wlistcache.is_empty() {
-                        mem.phys_read_iter(
-                            wlist.into_iter().chain(
-                                wlistcache
-                                    .iter_mut()
-                                    .map(|(addr, buf)| (*addr, &mut (**buf))),
-                            ),
-                        )?;
+                    if !wlist.is_empty() {
+                        mem.phys_read_raw_list(&mut wlist)?;
+                        wlist.clear();
+                    }
+
+                    if !wlistcache.is_empty() {
+                        mem.phys_read_raw_list(&mut wlistcache)?;
 
                         wlistcache
                             .into_iter()
                             .for_each(|(addr, buf)| self.validate_page(addr.address(), buf));
 
                         wlistcache = BumpVec::new_in(arena);
-                        wlist = BumpVec::new_in(arena);
                     }
 
                     while let Some((addr, out)) = clist.pop() {

@@ -3,7 +3,7 @@ use std::{thread, time};
 
 use flow_core::mem::TranslateArch;
 
-use flow_qemu_procfs::Memory;
+use flow_connector::Memory;
 
 use flow_win32::error::Result;
 use flow_win32::offsets::Win32Offsets;

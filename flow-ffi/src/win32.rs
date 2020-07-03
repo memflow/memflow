@@ -1,10 +1,11 @@
-use crate::mem::MemoryBackend;
-
+/*
 use std::ffi::c_void;
 use std::ptr;
 
-use flow_win32::{Win32, Win32Offsets};
+use flow_win32::*;
+*/
 
+/*
 /// # Safety
 ///
 /// this function has to be called with an initialized memory backend
@@ -61,3 +62,4 @@ pub unsafe extern "C" fn win32_offsets_free(offsets: *mut Win32Offsets) {
         // drop _offsets
     }
 }
+*/

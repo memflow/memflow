@@ -62,12 +62,29 @@ impl<M: SplitAtIndexNoMutation> Default for MemoryMap<M> {
     }
 }
 
+impl<M: SplitAtIndexNoMutation> IntoIterator for MemoryMap<M> {
+    type Item = (Address, M);
+    type IntoIter =
+        std::iter::Map<std::vec::IntoIter<MemoryMapping<M>>, fn(MemoryMapping<M>) -> Self::Item>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.mappings
+            .into_iter()
+            .map(|map| (map.base, map.output.into_inner()))
+    }
+}
+
 impl<M: SplitAtIndexNoMutation> MemoryMap<M> {
     /// Constructs a new memory map.
     ///
     /// This function is identical to `MemoryMap::default()`.
     pub fn new() -> Self {
         MemoryMap::default()
+    }
+
+    /// Iterator over memory mappings
+    pub fn iter(&self) -> impl Iterator<Item = &MemoryMapping<M>> {
+        self.mappings.iter()
     }
 
     /// Maps a linear address range to a hardware address range.

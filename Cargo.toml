@@ -11,6 +11,8 @@ members = [
     "connectors/flow-coredump",
     "connectors/flow-qemu-procfs",
     "connectors/flow-pcileech",
+    "connectors/flow-kvm",
+    "connectors/flow-mmap"
     #"nostd-test"
 ]
 default-members = [

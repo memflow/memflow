@@ -16,7 +16,7 @@ pub fn main() -> Result<()> {
     let kernel_info = KernelInfo::scanner().mem(&mut mem_sys).scan()?;
 
     let vat = TranslateArch::new(kernel_info.start_block.arch);
-    let offsets = Win32Offsets::try_with_guid(&kernel_info.kernel_guid)?;
+    let offsets = Win32Offsets::try_with_kernel_info(&kernel_info)?;
     let mut kernel = Kernel::new(mem_sys, vat, offsets, kernel_info);
 
     let kbd = Keyboard::try_with(&mut kernel)?;

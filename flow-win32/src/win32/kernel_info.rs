@@ -13,7 +13,7 @@ pub struct KernelInfo {
 
     pub kernel_base: Address,
     pub kernel_size: usize,
-    pub kernel_guid: Win32GUID,
+    pub kernel_guid: Option<Win32GUID>,
     pub kernel_dtb: Address,
 
     pub eprocess_base: Address,
@@ -83,7 +83,7 @@ impl<T: PhysicalMemory> KernelInfoScanner<T> {
         info!("kernel_base={} kernel_size={}", kernel_base, kernel_size);
 
         // get ntoskrnl.exe guid
-        let kernel_guid = kernel::ntos::find_guid(&mut virt_mem, kernel_base)?;
+        let kernel_guid = kernel::ntos::find_guid(&mut virt_mem, kernel_base).ok();
         info!("kernel_guid={:?}", kernel_guid);
 
         //kernel::ntos::find_version(&mut virt_mem, kernel_base).ok();

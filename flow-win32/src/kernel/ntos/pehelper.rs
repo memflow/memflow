@@ -22,7 +22,7 @@ pub fn try_get_pe_name<T: VirtualMemory + ?Sized>(
         .dll_name()
         .map_err(|_| Error::Initialization("unable to get dll name"))?
         .to_str()?;
-    info!("x64::try_get_pe_name: found pe header for {}", name);
+    info!("try_get_pe_name: found pe header for {}", name);
     Ok(name.to_string())
 }
 
@@ -37,7 +37,7 @@ pub fn try_get_pe_size<T: VirtualMemory + ?Sized>(
         Wrap::T64(header) => header.SizeOfImage,
     };
     info!(
-        "x64::try_get_pe_size: found pe header for image with a size of {} bytes.",
+        "try_get_pe_size: found pe header for image with a size of {} bytes.",
         size
     );
     Ok(size as usize)

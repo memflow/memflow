@@ -248,10 +248,17 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
 
         // from here on out we are in the process context
         // we will be using the process type architecture now
-        let real_peb = if wow64.is_null() {
+        let teb_peb = if wow64.is_null() {
             proc_reader.virt_read_addr(teb + self.offsets.teb_peb)?
         } else {
             proc_reader.virt_read_addr(teb + self.offsets.teb_peb_x86)?
+        };
+        trace!("teb_peb={:x}", teb_peb);
+
+        let real_peb = if !teb_peb.is_null() {
+            teb_peb
+        } else {
+            proc_reader.virt_read_addr(eprocess + self.offsets.eproc_peb)?
         };
         trace!("real_peb={:x}", real_peb);
 

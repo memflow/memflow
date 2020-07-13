@@ -16,6 +16,7 @@ use std::path::Path;
 
 use crate::error::{Error, Result};
 use crate::kernel::ntos::Win32GUID;
+use crate::kernel_info::KernelInfo;
 
 #[derive(Debug, Clone)]
 pub struct Win32Offsets {
@@ -53,6 +54,17 @@ impl Win32Offsets {
         let symstore = SymbolStore::default();
         let pdb = symstore.load(guid)?;
         Self::try_with_pdb_slice(&pdb[..])
+    }
+
+    #[cfg(feature = "symstore")]
+    pub fn try_with_kernel_info(info: &KernelInfo) -> Result<Self> {
+        if let Some(guid) = info.kernel_guid.as_ref() {
+            Self::try_with_guid(guid)
+        } else {
+            Err(Error::Other(
+                "Win32Offsets::try_with_kernel_info: KernelInfo does not have a guid",
+            ))
+        }
     }
 
     #[cfg(feature = "symstore")]

@@ -39,10 +39,13 @@ impl<'a, T: VirtualMemory + ?Sized> MemoryPeViewContext<'a, T> {
         let view = PeView::from_bytes(image_header.as_ref())?;
 
         // TODO: check if size_of_image < 0x1000 or too huge / or use SizeOfHeaders
-        let size_of_image = match view.optional_header() {
-            pelite::Wrap::T32(opt32) => opt32.SizeOfImage,
-            pelite::Wrap::T64(opt64) => opt64.SizeOfImage,
-        };
+        let size_of_image = std::cmp::max(
+            match view.optional_header() {
+                pelite::Wrap::T32(opt32) => opt32.SizeOfImage,
+                pelite::Wrap::T64(opt64) => opt64.SizeOfImage,
+            },
+            PE_PAGE_SIZE as u32,
+        );
 
         let mut image_cache = vec![0u8; size_of_image as usize].into_boxed_slice();
 

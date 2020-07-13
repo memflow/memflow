@@ -22,7 +22,7 @@ fn initialize_virt_ctx() -> Result<(Memory, TranslateArch, Win32ProcessInfo, Win
         .scan()
         .map_err(|_| Error::Other("unable to find kernel"))?;
     let vat = TranslateArch::new(kernel_info.start_block.arch);
-    let offsets = Win32Offsets::try_with_guid(&kernel_info.kernel_guid)
+    let offsets = Win32Offsets::try_with_kernel_info(&kernel_info)
         .map_err(|_| Error::Other("unable to initialize win32 offsets with guid"))?;
 
     // TODO: remove phys_mem + vat clone

@@ -4,7 +4,6 @@ use super::pehelper;
 use crate::error::{Error, Result};
 use crate::kernel::StartBlock;
 
-use byteorder::{ByteOrder, LittleEndian};
 use log::debug;
 
 use flow_core::architecture;
@@ -43,14 +42,6 @@ pub fn find_with_va<T: VirtualMemory + ?Sized>(
             .inspect(|(i, _, _)| {
                 debug!(
                     "find_x64_with_va: found potential header flags at offset {:x}",
-                    i * architecture::x64::page_size()
-                )
-            })
-            .flat_map(|(i, c, p)| c.chunks_exact(8).map(move |c| (i, c, p)))
-            .filter(|(_, c, _)| LittleEndian::read_u64(&c) == 0x4544_4f43_4c4f_4f50) // POOLCODE
-            .inspect(|(i, _, _)| {
-                debug!(
-                    "find_x64_with_va: found potential POOLCODE flag at offset {:x}",
                     i * architecture::x64::page_size()
                 )
             })

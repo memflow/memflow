@@ -62,10 +62,12 @@ impl<M: SplitAtIndexNoMutation> Default for MemoryMap<M> {
     }
 }
 
+type InnerIter<M> = std::vec::IntoIter<MemoryMapping<M>>;
+type InnerFunc<T, M> = fn(MemoryMapping<M>) -> T;
+
 impl<M: SplitAtIndexNoMutation> IntoIterator for MemoryMap<M> {
     type Item = (Address, M);
-    type IntoIter =
-        std::iter::Map<std::vec::IntoIter<MemoryMapping<M>>, fn(MemoryMapping<M>) -> Self::Item>;
+    type IntoIter = std::iter::Map<InnerIter<M>, InnerFunc<Self::Item, M>>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.mappings
@@ -131,7 +133,15 @@ impl<M: SplitAtIndexNoMutation> MemoryMap<M> {
                 || m.base <= end && end < m.base + m.output.borrow().length()
             {
                 // overlapping memory regions should not be possible
-                panic!();
+                panic!(
+                    "MemoryMap::push overlapping regions: {:x}-{:x} ({:x}) | {:x}-{:x} ({:x})",
+                    base,
+                    base + output.length(),
+                    output.length(),
+                    m.base,
+                    m.base + m.output.borrow().length(),
+                    m.output.borrow().length()
+                );
             }
         }
 
@@ -158,8 +168,14 @@ impl MemoryMap<(Address, usize)> {
     /// Adds a new memory mapping to this memory map by specifying a range (base address and end addresses) of the mapping.
     ///
     /// When adding overlapping memory regions this function will panic!
+    ///
+    /// If end < base, the function will do nothing
     pub fn push_range(&mut self, base: Address, end: Address, real_base: Address) -> &mut Self {
-        self.push_remap(base, end - base, real_base)
+        if end > base {
+            self.push_remap(base, end - base, real_base)
+        } else {
+            self
+        }
     }
 }
 

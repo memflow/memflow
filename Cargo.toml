@@ -12,7 +12,8 @@ members = [
     "connectors/flow-qemu-procfs",
     "connectors/flow-pcileech",
     "connectors/flow-kvm",
-    "connectors/flow-mmap"
+    "connectors/flow-mmap",
+    "connectors/flow-stdio",
     #"nostd-test"
 ]
 default-members = [
@@ -22,6 +23,8 @@ default-members = [
     "flow-bench",
     "connectors/flow-coredump",
     "connectors/flow-pcileech",
+    "connectors/flow-mmap",
+    "connectors/flow-stdio",
 ]
 
 exclude = [

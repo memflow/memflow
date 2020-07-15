@@ -41,6 +41,12 @@ impl<M: Copy> Clone for MemoryMap<M> {
     }
 }
 
+impl<M> std::convert::AsRef<MemoryMap<M>> for MemoryMap<M> {
+    fn as_ref(&self) -> &Self {
+        self
+    }
+}
+
 pub struct MemoryMapping<M> {
     base: Address,
     output: std::cell::RefCell<M>,
@@ -92,6 +98,9 @@ impl<M: SplitAtIndexNoMutation> MemoryMap<M> {
 
     /// Maps a linear address range to a hardware address range.
     ///
+    /// Output element lengths will both match, so there is no need to do additonal clipping
+    /// (for buf-to-buf copies).
+    ///
     /// Invalid regions get pushed to the `out_fail` parameter. This function requries `self`
     pub fn map<'a, T: 'a + SplitAtIndex, V: Extend<(Address, T)>>(
         &'a self,
@@ -103,6 +112,9 @@ impl<M: SplitAtIndexNoMutation> MemoryMap<M> {
     }
 
     /// Maps a address range iterator to a hardware address range.
+    ///
+    /// Output element lengths will both match, so there is no need to do additonal clipping
+    /// (for buf-to-buf copies).
     ///
     /// Invalid regions get pushed to the `out_fail` parameter
     pub fn map_iter<
@@ -262,7 +274,10 @@ impl<
                             });
 
                         let off = addr - map_elem.base;
-                        return Some((output.split_at(off).1.unwrap(), ret));
+                        return Some((
+                            output.split_at(off).1.unwrap().split_at(ret.length()).0,
+                            ret,
+                        ));
                     }
 
                     break;

@@ -23,6 +23,7 @@ pub struct PhysicalMemoryDescriptor<T: Pod> {
 
 pub fn parse_full_dump<T: Copy + Pod + Into<u64>>(
     descriptor: PhysicalMemoryDescriptor<T>,
+    header_size: usize,
 ) -> Result<MemoryMap<(Address, usize)>> {
     let number_of_runs = descriptor.number_of_runs.into();
 
@@ -34,7 +35,8 @@ pub fn parse_full_dump<T: Copy + Pod + Into<u64>>(
 
     let mut mem_map = MemoryMap::new();
 
-    let mut real_base = 0x2000;
+    // start runs from right after header size (x86: 0x1000 / x64: 0x2000)
+    let mut real_base = header_size as u64;
 
     for i in 0..number_of_runs {
         let base = descriptor.runs[i as usize].base_page.into() << 12;

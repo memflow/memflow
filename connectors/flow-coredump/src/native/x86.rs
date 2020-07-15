@@ -3,6 +3,7 @@ use super::*;
 
 use std::fs::File;
 use std::io::{Read, Seek, SeekFrom};
+use std::mem::size_of;
 use std::mem::MaybeUninit;
 
 use dataview::Pod;
@@ -89,7 +90,10 @@ pub fn parse_coredump32(file: &mut File) -> Result<MemoryMap<(Address, usize)>> 
     info!("32-bit Microsoft Crash Dump verified");
 
     match header.dump_type {
-        dump_type::FULL => full_memory_dump::parse_full_dump(header.physical_memory_block),
+        dump_type::FULL => full_memory_dump::parse_full_dump(
+            header.physical_memory_block,
+            size_of::<CoreDumpHeader32>(),
+        ),
         dump_type::BIT_MAP => bitmap_dump::parse_bitmap_dump(file),
         _ => Err(Error::Connector(
             "invalid dump type, only full and bitmap dumps are supported",

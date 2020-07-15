@@ -2,6 +2,7 @@ use crate::types::{Address, PhysicalAddress};
 
 use crate::iter::{SplitAtIndex, SplitAtIndexNoMutation};
 
+use std::cmp::Ordering;
 use std::default::Default;
 use std::fmt;
 use std::prelude::v1::*;
@@ -125,10 +126,18 @@ impl<M: SplitAtIndexNoMutation> MemoryMap<M> {
     ///
     /// When adding overlapping memory regions this function will panic!
     pub fn push(&mut self, base: Address, output: M) -> &mut Self {
-        // bounds check
-        for m in self.mappings.iter() {
+        let mapping = MemoryMapping {
+            base,
+            output: output.into(),
+        };
+
+        let mut shift_idx = self.mappings.len();
+
+        // bounds check. In reverse order, because most likely
+        // all mappings will be inserted in increasing order
+        for (i, m) in self.mappings.iter().enumerate().rev() {
             let start = base;
-            let end = base + output.length();
+            let end = base + mapping.output.borrow().length();
             if m.base <= start && start < m.base + m.output.borrow().length()
                 || m.base <= end && end < m.base + m.output.borrow().length()
             {
@@ -136,22 +145,19 @@ impl<M: SplitAtIndexNoMutation> MemoryMap<M> {
                 panic!(
                     "MemoryMap::push overlapping regions: {:x}-{:x} ({:x}) | {:x}-{:x} ({:x})",
                     base,
-                    base + output.length(),
-                    output.length(),
+                    end,
+                    mapping.output.borrow().length(),
                     m.base,
                     m.base + m.output.borrow().length(),
                     m.output.borrow().length()
                 );
+            } else if m.base + m.output.borrow().length() <= start {
+                shift_idx = i + 1;
+                break;
             }
         }
 
-        self.mappings.push(MemoryMapping {
-            base,
-            output: output.into(),
-        });
-
-        self.mappings
-            .sort_by(|a, b| a.base.partial_cmp(&b.base).unwrap());
+        self.mappings.insert(shift_idx, mapping);
 
         self
     }
@@ -178,6 +184,8 @@ impl MemoryMap<(Address, usize)> {
         }
     }
 }
+
+const MIN_BSEARCH_THRESH: usize = 32;
 
 pub struct MemoryMapIterator<'a, I, M, T, F> {
     map: &'a [MemoryMapping<M>],
@@ -207,6 +215,20 @@ impl<
 
     fn get_next(&mut self) -> Option<(M, T)> {
         if let Some((mut addr, mut buf)) = self.cur_elem.take() {
+            if self.map.len() >= MIN_BSEARCH_THRESH && self.cur_map_pos == 0 {
+                self.cur_map_pos = match self.map.binary_search_by(|map_elem| {
+                    if map_elem.base > addr {
+                        Ordering::Greater
+                    } else if map_elem.base + map_elem.output.borrow().length() <= addr {
+                        Ordering::Less
+                    } else {
+                        Ordering::Equal
+                    }
+                }) {
+                    Ok(idx) | Err(idx) => idx,
+                };
+            }
+
             for (i, map_elem) in self.map.iter().enumerate().skip(self.cur_map_pos) {
                 let output = &mut *map_elem.output.borrow_mut();
                 if map_elem.base + output.length() > addr {

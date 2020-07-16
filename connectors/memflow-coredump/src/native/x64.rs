@@ -7,8 +7,8 @@ use std::mem::size_of;
 use std::mem::MaybeUninit;
 
 use dataview::Pod;
-use memflow_core::*;
 use log::info;
+use memflow_core::*;
 
 pub const DUMP_VALID_DUMP64: u32 = 0x34365544;
 pub const IMAGE_FILE_MACHINE_AMD64: u32 = 0x8664;

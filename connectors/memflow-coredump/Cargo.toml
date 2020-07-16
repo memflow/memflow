@@ -13,7 +13,6 @@ memflow-core = { path = "../../memflow-core" }
 log = { version = "0.4.8", default-features = false }
 dataview = "0.1"
 memflow-mmap = { path = "../memflow-mmap/", features = ["filemap"], optional = true }
-memflow-stdio = { path = "../memflow-stdio/", optional = true }
 
 [dev-dependencies]
 memflow-win32 = { path = "../../memflow-win32" }

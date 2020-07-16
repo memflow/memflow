@@ -3,8 +3,8 @@ use super::*;
 use std::convert::Into;
 
 use dataview::Pod;
-use memflow_core::*;
 use log::debug;
+use memflow_core::*;
 
 #[repr(C)]
 #[derive(Copy, Clone)]

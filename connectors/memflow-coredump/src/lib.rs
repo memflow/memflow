@@ -32,9 +32,9 @@ if let Ok(mut mem) = create_connector(path) {
 ```
 */
 
-#[cfg(feature = "memflow-mmap")]
-pub type CoreDump<'a> = memflow_mmap::ReadMappedFilePhysicalMemory<'a>;
-#[cfg(not(feature = "memflow-mmap"))]
+#[cfg(feature = "filemap")]
+pub type CoreDump<'a> = ReadMappedFilePhysicalMemory<'a>;
+#[cfg(not(feature = "filemap"))]
 pub type CoreDump<'a> = IOPhysicalMemory<File>;
 
 /// Opens a Microsoft Windows Coredump

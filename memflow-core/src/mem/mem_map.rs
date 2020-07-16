@@ -16,7 +16,7 @@ use std::prelude::v1::*;
 ///
 /// ```
 /// use memflow_core::mem::MemoryMap;
-/// use memflow_core::iter::ExtendVoid;
+/// use memflow_core::iter::FnExtend;
 ///
 /// let mut map = MemoryMap::new();
 /// map.push_remap(0x1000.into(), 0x1000, 0.into());      // push region from 0x1000 - 0x1FFF
@@ -24,8 +24,8 @@ use std::prelude::v1::*;
 ///
 /// println!("{:?}", map);
 ///
-/// // handle unmapped memory regions by using ExtendVoid::new, or just ignore them
-/// let mut failed_void = ExtendVoid::void();
+/// // handle unmapped memory regions by using FnExtend::new, or just ignore them
+/// let mut failed_void = FnExtend::void();
 ///
 /// let hw_addr = map.map(0x10ff.into(), 8, &mut failed_void);
 /// ```
@@ -364,7 +364,7 @@ impl fmt::Debug for MemoryMapping<&mut [u8]> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::iter::ExtendVoid;
+    use crate::iter::FnExtend;
 
     #[test]
     fn test_mapping() {
@@ -372,7 +372,7 @@ mod tests {
         map.push_remap(0x1000.into(), 0x1000, 0.into());
         map.push_remap(0x3000.into(), 0x1000, 0x2000.into());
 
-        let mut void_panic = ExtendVoid::new(|x| panic!("Should not have mapped {:?}", x));
+        let mut void_panic = FnExtend::new(|x| panic!("Should not have mapped {:?}", x));
         assert_eq!(
             (map.map(0x10ff.into(), 1, &mut void_panic).next().unwrap().0).0,
             Address::from(0x00ff)
@@ -389,8 +389,8 @@ mod tests {
         map.push_remap(0x1000.into(), 0x1000, 0.into());
         map.push_remap(0x3000.into(), 0x1000, 0x2000.into());
 
-        let mut void_panic = ExtendVoid::new(|x| panic!("Should not have mapped {:?}", x));
-        let mut void = ExtendVoid::void();
+        let mut void_panic = FnExtend::new(|x| panic!("Should not have mapped {:?}", x));
+        let mut void = FnExtend::void();
 
         assert_eq!(
             (map.map(0x3000.into(), 1, &mut void_panic).next().unwrap().0).0,
@@ -410,7 +410,7 @@ mod tests {
         map.push_remap(0x1000.into(), 0x1000, 0.into());
         map.push_remap(0x3000.into(), 0x1000, 0x2000.into());
 
-        let mut void = ExtendVoid::void();
+        let mut void = FnExtend::void();
         assert_eq!(map.map(0x00ff.into(), 1, &mut void).next(), None);
         assert_eq!(map.map(0x20ff.into(), 1, &mut void).next(), None);
         assert_eq!(map.map(0x4000.into(), 1, &mut void).next(), None);
@@ -423,7 +423,7 @@ mod tests {
         map.push_range(0x1000.into(), 0x2000.into(), 0.into());
         map.push_range(0x3000.into(), 0x4000.into(), 0x2000.into());
 
-        let mut void_panic = ExtendVoid::new(|x| panic!("Should not have mapped {:?}", x));
+        let mut void_panic = FnExtend::new(|x| panic!("Should not have mapped {:?}", x));
         assert_eq!(
             (map.map(0x10ff.into(), 1, &mut void_panic).next().unwrap().0).0,
             Address::from(0x00ff)
@@ -440,8 +440,8 @@ mod tests {
         map.push_range(0x1000.into(), 0x2000.into(), 0.into());
         map.push_range(0x3000.into(), 0x4000.into(), 0x2000.into());
 
-        let mut void_panic = ExtendVoid::new(|x| panic!("Should not have mapped {:?}", x));
-        let mut void = ExtendVoid::void();
+        let mut void_panic = FnExtend::new(|x| panic!("Should not have mapped {:?}", x));
+        let mut void = FnExtend::void();
 
         assert_eq!(
             (map.map(0x3000.into(), 1, &mut void_panic).next().unwrap().0).0,
@@ -461,8 +461,8 @@ mod tests {
         map.push_range(0x1000.into(), 0x2000.into(), 0.into());
         map.push_range(0x2000.into(), 0x3000.into(), 0x2000.into());
 
-        let mut void_panic = ExtendVoid::new(|x| panic!("Should not have mapped {:?}", x));
-        let mut void = ExtendVoid::void();
+        let mut void_panic = FnExtend::new(|x| panic!("Should not have mapped {:?}", x));
+        let mut void = FnExtend::void();
 
         assert_eq!(
             (map.map(0x2000.into(), 1, &mut void_panic).next().unwrap().0).0,

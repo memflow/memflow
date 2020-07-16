@@ -1,9 +1,9 @@
+use log::{debug, info};
 use memflow_core::mem::MemoryMap;
 use memflow_core::mem::PhysicalMemory;
 use memflow_core::{Error, Result};
-use memflow_mmap::MappedPhysicalMemory;
-use log::{debug, info};
 use memflow_kvm_ioctl::VMHandle;
+use memflow_mmap::MappedPhysicalMemory;
 
 pub fn create_connector(pid: Option<i32>) -> Result<impl PhysicalMemory> {
     let vm = VMHandle::try_open(pid).map_err(|_| Error::Connector("Failed to get VM handle"))?;

@@ -204,7 +204,7 @@ impl PhysicalMemory for Memory {
         let mem_map = &self.mem_map;
         let temp_iov = &mut self.temp_iov;
 
-        let mut void = ExtendVoid::void();
+        let mut void = FnExtend::void();
         let mut iter = mem_map.map_iter(
             data.iter_mut().map(|(addr, buf)| (*addr, &mut **buf)),
             &mut void,
@@ -253,9 +253,9 @@ impl PhysicalMemory for Memory {
         let mem_map = &self.mem_map;
         let temp_iov = &mut self.temp_iov;
 
-        let mut void = ExtendVoid::void();
+        let mut void = FnExtend::void();
         let mut iter = mem_map.map_iter(data.iter().copied(), &mut void);
-        //let mut iter = mem_map.map_iter(data.iter(), &mut ExtendVoid::new(|_|{}));
+        //let mut iter = mem_map.map_iter(data.iter(), &mut FnExtend::new(|_|{}));
 
         let max_iov = temp_iov.len() / 2;
         let (iov_local, iov_remote) = temp_iov.split_at_mut(max_iov);

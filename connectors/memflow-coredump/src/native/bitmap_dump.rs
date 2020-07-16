@@ -3,8 +3,8 @@ use std::io::Read;
 use std::mem::MaybeUninit;
 
 use dataview::Pod;
-use memflow_core::*;
 use log::{debug, info};
+use memflow_core::*;
 
 const BMP_SIGNATURE: u32 = 0x504D4446; // 'PMDF'
 const VALID_DUMP: u32 = 0x504D5544; // 'PMUD'

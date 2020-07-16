@@ -8,7 +8,8 @@ use memflow_core::mem::dummy::{DummyMemory as Memory, DummyModule, DummyProcess}
 use memflow_core::mem::TranslateArch;
 use memflow_core::types::size;
 
-fn initialize_virt_ctx() -> memflow_core::Result<(Memory, TranslateArch, DummyProcess, DummyModule)> {
+fn initialize_virt_ctx() -> memflow_core::Result<(Memory, TranslateArch, DummyProcess, DummyModule)>
+{
     let mut mem = Memory::new(size::mb(64));
 
     let vat = TranslateArch::new(Architecture::X64);

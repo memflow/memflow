@@ -5,7 +5,7 @@ use memflow_core::mem::{
     VirtualTranslate,
 };
 
-use memflow_core::iter::ExtendVoid;
+use memflow_core::iter::FnExtend;
 use memflow_core::{size, Address, OsProcessInfo, OsProcessModuleInfo, PageType};
 
 use rand::prelude::*;
@@ -49,7 +49,7 @@ fn vat_test_with_mem<
                 proc.dtb(),
                 bufs.iter_mut().map(|x| (*x, 1)),
                 &mut out,
-                &mut ExtendVoid::new(|_| {}),
+                &mut FnExtend::new(|_| {}),
             );
             black_box(&out);
         });

@@ -3,7 +3,7 @@ use std::prelude::v1::*;
 use super::{VirtualReadData, VirtualWriteData};
 use crate::architecture::Architecture;
 use crate::error::{Error, Result};
-use crate::iter::ExtendVoid;
+use crate::iter::FnExtend;
 use crate::mem::{
     virt_translate::{TranslateArch, VirtualTranslate},
     PhysicalMemory, VirtualMemory,
@@ -180,7 +180,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> VirtualMemory for VirtualFromPhysic
             self.dtb,
             data.iter_mut().map(|(a, b)| (*a, &mut b[..])),
             &mut translation,
-            &mut ExtendVoid::new(|(_, _, out): (_, _, &mut [u8])| {
+            &mut FnExtend::new(|(_, _, out): (_, _, &mut [u8])| {
                 for v in out.iter_mut() {
                     *v = 0;
                 }
@@ -199,7 +199,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> VirtualMemory for VirtualFromPhysic
             self.dtb,
             data.iter().copied(),
             &mut translation,
-            &mut ExtendVoid::void(),
+            &mut FnExtend::void(),
         );
 
         self.phys_mem.phys_write_raw_list(&translation)
@@ -219,7 +219,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> VirtualMemory for VirtualFromPhysic
             self.dtb,
             Some((Address::from(0), (Address::from(0), !0usize))).into_iter(),
             &mut out,
-            &mut ExtendVoid::void(),
+            &mut FnExtend::void(),
         );
 
         out.sort_by(|(_, (a, _)), (_, (b, _))| a.cmp(b));

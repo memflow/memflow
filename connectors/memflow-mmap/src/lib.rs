@@ -1,4 +1,4 @@
-use memflow_core::iter::ExtendVoid;
+use memflow_core::iter::FnExtend;
 use memflow_core::mem::{MemoryMap, PhysicalMemory, PhysicalReadData, PhysicalWriteData};
 use memflow_core::types::Address;
 use memflow_core::{Error, Result};
@@ -187,7 +187,7 @@ impl<'a, F: AsRef<MemoryMap<&'a mut [u8]>>> PhysicalMemory
     for MappedPhysicalMemory<&'a mut [u8], F>
 {
     fn phys_read_raw_list(&mut self, data: &mut [PhysicalReadData]) -> Result<()> {
-        let mut void = ExtendVoid::void();
+        let mut void = FnExtend::void();
         for (mapped_buf, buf) in self.info.as_ref().map_iter(
             data.iter_mut().map(|(addr, buf)| (*addr, &mut **buf)),
             &mut void,
@@ -198,7 +198,7 @@ impl<'a, F: AsRef<MemoryMap<&'a mut [u8]>>> PhysicalMemory
     }
 
     fn phys_write_raw_list(&mut self, data: &[PhysicalWriteData]) -> Result<()> {
-        let mut void = ExtendVoid::void();
+        let mut void = FnExtend::void();
         for (mapped_buf, buf) in self.info.as_ref().map_iter(data.iter().copied(), &mut void) {
             mapped_buf.copy_from_slice(buf);
         }
@@ -209,7 +209,7 @@ impl<'a, F: AsRef<MemoryMap<&'a mut [u8]>>> PhysicalMemory
 
 impl<'a, F: AsRef<MemoryMap<&'a [u8]>>> PhysicalMemory for MappedPhysicalMemory<&'a [u8], F> {
     fn phys_read_raw_list(&mut self, data: &mut [PhysicalReadData]) -> Result<()> {
-        let mut void = ExtendVoid::void();
+        let mut void = FnExtend::void();
         for (mapped_buf, buf) in self.info.as_ref().map_iter(
             data.iter_mut().map(|(addr, buf)| (*addr, &mut **buf)),
             &mut void,

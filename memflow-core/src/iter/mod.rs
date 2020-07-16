@@ -9,7 +9,7 @@ mod doublepeek;
 use doublepeek::*;
 
 pub mod void;
-pub use void::ExtendVoid;
+pub use void::FnExtend;
 
 pub trait FlowIters: Iterator {
     /// Split an iterator to chunks, process them, and produce another iterator back

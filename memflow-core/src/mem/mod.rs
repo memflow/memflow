@@ -22,7 +22,10 @@ pub mod virt_translate;
 pub mod dummy;
 
 pub use cache::*; // TODO: specify pub declarations
-pub use connectors::IOPhysicalMemory;
+pub use connectors::{
+    IOPhysicalMemory, MappedPhysicalMemory, ReadMappedFilePhysicalMemory,
+    WriteMappedFilePhysicalMemory,
+};
 pub use mem_map::MemoryMap;
 pub use phys_mem::{
     PhysicalMemory, PhysicalReadData, PhysicalReadIterator, PhysicalWriteData,

@@ -9,10 +9,9 @@ repository = "https://github.com/memflow/memflow"
 readme = "README.md"
 
 [dependencies]
-memflow-core = { path = "../../memflow-core" }
+memflow-core = { path = "../../memflow-core", features = ["filemap"] }
 log = { version = "0.4.8", default-features = false }
 dataview = "0.1"
-memflow-mmap = { path = "../memflow-mmap/", features = ["filemap"], optional = true }
 
 [dev-dependencies]
 memflow-win32 = { path = "../../memflow-win32" }
@@ -20,7 +19,8 @@ clap = "2.33.0"
 simple_logger = "1.0.1"
 
 [features]
-default = ["memflow-mmap"]
+default = ["filemap"]
+filemap = []
 
 [[example]]
 name = "read_coredump"

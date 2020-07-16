@@ -1,7 +1,7 @@
-use memflow_core::iter::FnExtend;
-use memflow_core::mem::{MemoryMap, PhysicalMemory, PhysicalReadData, PhysicalWriteData};
-use memflow_core::types::Address;
-use memflow_core::{Error, Result};
+use crate::iter::FnExtend;
+use crate::mem::{MemoryMap, PhysicalMemory, PhysicalReadData, PhysicalWriteData};
+use crate::types::Address;
+use crate::{Error, Result};
 
 #[cfg(feature = "filemap")]
 use memmap::{Mmap, MmapMut, MmapOptions};

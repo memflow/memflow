@@ -12,7 +12,6 @@ members = [
     "connectors/memflow-qemu-procfs",
     "connectors/memflow-pcileech",
     "connectors/memflow-kvm",
-    "connectors/memflow-mmap",
     #"nostd-test"
 ]
 default-members = [
@@ -22,7 +21,6 @@ default-members = [
     "memflow-bench",
     "connectors/memflow-coredump",
     "connectors/memflow-pcileech",
-    "connectors/memflow-mmap",
 ]
 
 exclude = [

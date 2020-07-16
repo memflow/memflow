@@ -11,5 +11,5 @@ panic = "abort"
 panic = "abort"
 
 [dependencies]
-#flow-core = { path = "../flow-core/", default-features = false }
-flow-win32 = { path = "../flow-win32/", default-features = false }
+#memflow-core = { path = "../memflow-core/", default-features = false }
+memflow-win32 = { path = "../memflow-win32/", default-features = false }

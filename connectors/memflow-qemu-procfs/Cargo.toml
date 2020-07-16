@@ -1,0 +1,23 @@
+[package]
+name = "memflow-qemu-procfs"
+version = "0.1.0"
+authors = ["ko1N <ko1N1337@gmail.com>", "Aurimas Blažulionis <0x60@pm.me>"]
+edition = "2018"
+description = "qemu procfs connector for the memflow physical memory introspection framework"
+homepage = "https://github.com/memflow/memflow"
+repository = "https://github.com/memflow/memflow"
+readme = "README.md"
+
+[dependencies]
+memflow-core = { path = "../../memflow-core" }
+log = { version = "0.4.8", default-features = false }
+simple_logger = "1.0.1"
+procfs = "0.7.8"
+libc = "0.2.70"
+
+[dev-dependencies]
+clap = "2.33.0"
+
+[[example]]
+name = "read_procfs"
+path = "examples/read_procfs.rs"

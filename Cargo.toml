@@ -4,27 +4,27 @@ debug = true
 
 [workspace]
 members = [
-    "flow-core",
-    "flow-win32",
-    "flow-ffi",
-    "flow-bench",
-    "connectors/flow-coredump",
-    "connectors/flow-qemu-procfs",
-    "connectors/flow-pcileech",
-    "connectors/flow-kvm",
-    "connectors/flow-mmap",
-    "connectors/flow-stdio",
+    "memflow-core",
+    "memflow-win32",
+    "memflow-ffi",
+    "memflow-bench",
+    "connectors/memflow-coredump",
+    "connectors/memflow-qemu-procfs",
+    "connectors/memflow-pcileech",
+    "connectors/memflow-kvm",
+    "connectors/memflow-mmap",
+    "connectors/memflow-stdio",
     #"nostd-test"
 ]
 default-members = [
-    "flow-core",
-    "flow-win32",
-    "flow-ffi",
-    "flow-bench",
-    "connectors/flow-coredump",
-    "connectors/flow-pcileech",
-    "connectors/flow-mmap",
-    "connectors/flow-stdio",
+    "memflow-core",
+    "memflow-win32",
+    "memflow-ffi",
+    "memflow-bench",
+    "connectors/memflow-coredump",
+    "connectors/memflow-pcileech",
+    "connectors/memflow-mmap",
+    "connectors/memflow-stdio",
 ]
 
 exclude = [

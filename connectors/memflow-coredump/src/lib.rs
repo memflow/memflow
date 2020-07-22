@@ -5,6 +5,7 @@ use std::fs::OpenOptions;
 use std::path::Path;
 
 use memflow_core::*;
+use memflow_derive::*;
 
 use std::fs::File;
 
@@ -26,7 +27,7 @@ use memflow_coredump::create_connector;
 
 let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
     .join("resources/test/coredump_win10_64bit_stripped.raw");
-if let Ok(mut mem) = create_connector(path) {
+if let Ok(mut mem) = create_connector(path.to_str().unwrap()) {
     println!("Coredump connector initialized");
 }
 ```
@@ -57,8 +58,9 @@ pub fn parse_file<P: AsRef<Path>>(path: P) -> Result<(MemoryMap<(Address, usize)
 ///
 /// This function will return a connector reading the underlying data of the core dump.
 /// The type of connector depends on the feature flags of the crate.
-pub fn create_connector<'a, P: AsRef<Path>>(path: P) -> Result<CoreDump<'a>> {
-    let (map, file) = parse_file(path)?;
+#[connector(name = "coredump")]
+pub fn create_connector<'a>(args: &str) -> Result<CoreDump<'a>> {
+    let (map, file) = parse_file(args)?;
     CoreDump::try_with_filemap(file, map)
 }
 

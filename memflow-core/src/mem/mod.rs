@@ -23,8 +23,8 @@ pub mod dummy;
 
 pub use cache::*; // TODO: specify pub declarations
 pub use connectors::{
-    IOPhysicalMemory, MappedPhysicalMemory, ReadMappedFilePhysicalMemory,
-    WriteMappedFilePhysicalMemory,
+    ConnectorPlugin, IOPhysicalMemory, MappedPhysicalMemory, ReadMappedFilePhysicalMemory,
+    WriteMappedFilePhysicalMemory, MEMFLOW_PLUGIN_VERSION,
 };
 pub use mem_map::MemoryMap;
 pub use phys_mem::{

@@ -1,0 +1,19 @@
+[package]
+name = "memflow-derive"
+version = "0.1.0"
+authors = ["ko1N <ko1N1337@gmail.com>"]
+edition = "2018"
+license = "MIT"
+description = "derive macros for the memflow physical memory introspection framework"
+homepage = "https://github.com/memflow/memflow"
+repository = "https://github.com/memflow/memflow"
+readme = "README.md"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+proc-macro2 = "1.0"
+syn = "1.0"
+quote = "1.0"
+darling = "0.10"

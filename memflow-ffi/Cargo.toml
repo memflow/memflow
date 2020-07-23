@@ -21,8 +21,8 @@ memflow-coredump = { path = "../connectors/memflow-coredump" }
 log = "0.4.8"
 simple_logger = "1.0.1"
 
-[target.'cfg(target_os = "linux")'.dependencies]
-memflow-qemu-procfs = { path = "../connectors/memflow-qemu-procfs", optional = true }
+#[target.'cfg(target_os = "linux")'.dependencies]
+#memflow-qemu-procfs = { path = "../connectors/memflow-qemu-procfs", optional = true }
 
 [features]
 default = []

@@ -21,7 +21,7 @@ rand = "0.5"
 memflow-win32 = { path = "../memflow-win32" }
 
 [target.'cfg(target_os = "linux")'.dev-dependencies]
-memflow-connector = { package = "memflow-qemu-procfs", path = "../connectors/memflow-qemu-procfs" }
+memflow-qemu-procfs = { package = "memflow-qemu-procfs", path = "../connectors/memflow-qemu-procfs" }
 
 [features]
 default = []

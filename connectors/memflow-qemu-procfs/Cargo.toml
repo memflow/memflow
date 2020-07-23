@@ -10,6 +10,7 @@ readme = "README.md"
 
 [dependencies]
 memflow-core = { path = "../../memflow-core" }
+memflow-derive = { path = "../../memflow-derive" }
 log = { version = "0.4.8", default-features = false }
 simple_logger = "1.0.1"
 procfs = "0.7.8"

@@ -55,7 +55,7 @@ pub fn parse_file<P: AsRef<Path>>(path: P) -> Result<(MemoryMap<(Address, usize)
     Ok((mem_map, file))
 }
 
-/// Create a Microsoft Windows Coredump Connector
+/// Creates a new Microsoft Windows Coredump Connector instance.
 ///
 /// This function will return a connector reading the underlying data of the core dump.
 /// The type of connector depends on the feature flags of the crate.

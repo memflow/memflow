@@ -30,8 +30,8 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
 
     let connector_name = args.name;
 
-    let input = parse_macro_input!(input as ItemFn);
-    let func_name = &input.sig.ident;
+    let func = parse_macro_input!(input as ItemFn);
+    let func_name = &func.sig.ident;
 
     let gen = quote! {
         #[doc(hidden)]
@@ -50,7 +50,7 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
             Ok(Box::new(connector))
         }
 
-        #input
+        #func
     };
     gen.into()
 }

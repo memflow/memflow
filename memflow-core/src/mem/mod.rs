@@ -10,7 +10,6 @@ TODO: more documentation
 */
 
 pub mod cache;
-pub mod connectors;
 pub mod mem_map;
 pub mod phys_mem;
 pub mod phys_mem_batcher;
@@ -22,7 +21,6 @@ pub mod virt_translate;
 pub mod dummy;
 
 pub use cache::*; // TODO: specify pub declarations
-pub use connectors::*;
 pub use mem_map::MemoryMap;
 pub use phys_mem::{
     PhysicalMemory, PhysicalReadData, PhysicalReadIterator, PhysicalWriteData,

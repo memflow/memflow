@@ -39,13 +39,13 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
 
         #[doc(hidden)]
         #[no_mangle]
-        pub static MEMFLOW_CONNECTOR: memflow_core::ConnectorDescriptor = memflow_core::ConnectorDescriptor {
-            connector_version: memflow_core::MEMFLOW_CONNECTOR_VERSION,
+        pub static MEMFLOW_CONNECTOR: memflow_core::connector::ConnectorDescriptor = memflow_core::connector::ConnectorDescriptor {
+            connector_version: memflow_core::connector::MEMFLOW_CONNECTOR_VERSION,
             name: CONNECTOR_NAME,
             factory: connector_factory,
         };
 
-        pub extern "C" fn connector_factory(args: &str) -> memflow_core::Result<Box<dyn memflow_core::PhysicalMemory>> {
+        pub extern "C" fn connector_factory(args: &str) -> memflow_core::error::Result<Box<dyn memflow_core::mem::PhysicalMemory>> {
             let connector = #func_name(args)?;
             Ok(Box::new(connector))
         }

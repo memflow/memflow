@@ -1,3 +1,11 @@
+/*!
+Module with basic types used in memflow.
+
+This module contains types for handling virtual and physical addresses.
+It also contains types for handling pointers, pages and
+it exposes different size helpers.
+*/
+
 pub mod address;
 pub use address::Address;
 

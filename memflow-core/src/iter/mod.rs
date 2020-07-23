@@ -1,3 +1,7 @@
+/*!
+Special purpose iterators for interfacing with memory in memflow.
+*/
+
 pub mod page_chunks;
 use crate::types::Address;
 pub use page_chunks::*;

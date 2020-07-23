@@ -1,5 +1,6 @@
 use log::{debug, info};
-use memflow_core::mem::{MappedPhysicalMemory, MemoryMap, PhysicalMemory};
+use memflow_core::connector::MappedPhysicalMemory;
+use memflow_core::mem::{MemoryMap, PhysicalMemory};
 use memflow_core::{Error, Result};
 use memflow_kvm_ioctl::VMHandle;
 

@@ -1,3 +1,7 @@
+/*!
+Traits for OS independent process abstraction.
+*/
+
 use std::prelude::v1::*;
 
 //#[cfg(feature = "emulator")]
@@ -8,6 +12,7 @@ use crate::types::Address;
 
 pub trait OperatingSystem {}
 
+/// Trait describing OS independent process information.
 pub trait OsProcessInfo {
     fn address(&self) -> Address;
 
@@ -20,6 +25,7 @@ pub trait OsProcessInfo {
 }
 
 // TODO: Range impl for base to size?
+/// Trait describing OS independent module information.
 pub trait OsProcessModuleInfo {
     fn address(&self) -> Address;
     fn parent_process(&self) -> Address;

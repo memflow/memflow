@@ -10,6 +10,16 @@ struct ConnectorFactoryArgs {
     version: Option<String>,
 }
 
+// We should add conditional compilation for the crate-type here
+// so our rust libraries who use a connector wont export those functions
+// again by themselves (e.g. the ffi).
+//
+// This would also lead to possible duplicated symbols if
+// multiple connectors are imported.
+//
+// See https://github.com/rust-lang/rust/issues/20267 for the tracking issue.
+//
+// #[cfg(crate_type = "cdylib")]
 #[proc_macro_attribute]
 pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
     let attr_args = parse_macro_input!(args as AttributeArgs);
@@ -29,8 +39,8 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
 
         #[doc(hidden)]
         #[no_mangle]
-        pub static CONNECTOR_DECLARATION: memflow_core::ConnectorPlugin = memflow_core::ConnectorPlugin {
-            memflow_plugin_version: memflow_core::MEMFLOW_PLUGIN_VERSION,
+        pub static MEMFLOW_CONNECTOR: memflow_core::ConnectorDescriptor = memflow_core::ConnectorDescriptor {
+            connector_version: memflow_core::MEMFLOW_CONNECTOR_VERSION,
             name: CONNECTOR_NAME,
             factory: connector_factory,
         };

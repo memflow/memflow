@@ -12,6 +12,10 @@ pub enum Error {
     ///
     /// Catch-all for bounds check errors.
     Bounds,
+    /// IO error
+    ///
+    /// Catch-all for io related errors.
+    IO(&'static str),
     /// Invalid Architecture error.
     ///
     /// The architecture provided is not a valid argument for the given function.
@@ -58,6 +62,7 @@ impl Error {
         match self {
             Error::Other(e) => ("other error", Some(e)),
             Error::Bounds => ("out of bounds", None),
+            Error::IO(e) => ("io error", Some(e)),
             Error::InvalidArchitecture => ("invalid architecture", None),
             Error::Connector(e) => ("connector error", Some(e)),
             Error::PhysicalMemory(e) => ("physical memory error", Some(e)),

@@ -1,5 +1,7 @@
+#[cfg(feature = "plugins")]
 pub mod plugin;
-pub use plugin::{ConnectorPlugin, MEMFLOW_PLUGIN_VERSION};
+#[cfg(feature = "plugins")]
+pub use plugin::{ConnectorDescriptor, ConnectorInventory, MEMFLOW_CONNECTOR_VERSION};
 
 pub mod fileio;
 pub use fileio::IOPhysicalMemory;

@@ -24,12 +24,14 @@ bumpalo = { version = "3.4.0", features = ["collections"] }
 no-std-compat = { version = "0.4.0", features = ["alloc"] }
 itertools = { version = "0.9.0", default-features = false }
 vector-trees = { git = "https://github.com/h33p/vector-trees", features = ["bumpalo"] }
+libloading = { version = "0.6", optional = true }
 memmap = { version = "0.7", optional = true }
 
 [dev-dependencies]
 x86_64 = { version = "0.11.0", default-features = false, features = ["stable"] }
 rand = { version = "0.7.3" }
 rand_xorshift = "0.2.0"
+memflow-derive = { path = "../memflow-derive" }
 
 [features]
 default = ["std", "filemap"]
@@ -39,3 +41,4 @@ std = ["coarsetime", "no-std-compat/std"]
 collections = []
 alloc = []
 filemap = ["memmap"]
+plugins = ["libloading"]

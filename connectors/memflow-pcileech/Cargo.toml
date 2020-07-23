@@ -10,6 +10,7 @@ readme = "README.md"
 
 [dependencies]
 memflow-core = { path = "../../memflow-core" }
+memflow-derive = { path = "../../memflow-derive" }
 log = { version = "0.4.8", default-features = false }
 rusb = "0.6.0"
 dataview = "0.1"

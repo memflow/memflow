@@ -1,6 +1,7 @@
 use log::info;
 
 use memflow_core::*;
+use memflow_derive::connector;
 
 use core::ffi::c_void;
 use libc::{c_ulong, iovec, pid_t, sysconf, _SC_IOV_MAX};
@@ -26,13 +27,13 @@ fn qemu_arg_opt(args: &[String], argname: &str, argopt: &str) -> Option<String> 
 }
 
 #[derive(Clone)]
-pub struct Memory {
+pub struct QemuProcfs {
     pub pid: pid_t,
     pub mem_map: MemoryMap<(Address, usize)>,
     temp_iov: Box<[iovec]>,
 }
 
-impl Memory {
+impl QemuProcfs {
     pub fn new() -> Result<Self> {
         let prcs = procfs::process::all_processes()
             .map_err(|_| Error::Connector("unable to list procfs processes"))?;
@@ -199,7 +200,7 @@ impl Memory {
     }
 }
 
-impl PhysicalMemory for Memory {
+impl PhysicalMemory for QemuProcfs {
     fn phys_read_raw_list(&mut self, data: &mut [PhysicalReadData]) -> Result<()> {
         let mem_map = &self.mem_map;
         let temp_iov = &mut self.temp_iov;
@@ -295,6 +296,13 @@ impl PhysicalMemory for Memory {
 
         Ok(())
     }
+}
+
+// TODO: handle args properly
+/// Creates a new Qemu Procfs Connector instance.
+#[connector(name = "qemu_procfs")]
+pub fn create_connector(_args: &str) -> Result<QemuProcfs> {
+    QemuProcfs::new()
 }
 
 #[cfg(test)]

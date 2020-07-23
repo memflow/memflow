@@ -7,7 +7,7 @@ use memflow_core::*;
 fn main() {
     simple_logger::init_with_level(Level::Debug).unwrap();
 
-    let mut conn = match memflow_qemu_procfs::Memory::new() {
+    let mut conn = match memflow_qemu_procfs::create_connector("") {
         Ok(br) => br,
         Err(e) => {
             info!("couldn't open memory read context: {:?}", e);

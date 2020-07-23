@@ -3,9 +3,9 @@ use memflow_bench::{phys, vat, virt};
 
 use criterion::*;
 
-use memflow_connector::Memory;
 use memflow_core::error::{Error, Result};
 use memflow_core::mem::TranslateArch;
+use memflow_qemu_procfs::{create_connector, QemuProcfs};
 
 use memflow_win32::{
     Kernel, KernelInfo, Win32ModuleInfo, Win32Offsets, Win32Process, Win32ProcessInfo,
@@ -14,8 +14,8 @@ use memflow_win32::{
 use rand::prelude::*;
 use rand::{prng::XorShiftRng as CurRng, Rng, SeedableRng};
 
-fn initialize_virt_ctx() -> Result<(Memory, TranslateArch, Win32ProcessInfo, Win32ModuleInfo)> {
-    let mut phys_mem = Memory::new()?;
+fn initialize_virt_ctx() -> Result<(QemuProcfs, TranslateArch, Win32ProcessInfo, Win32ModuleInfo)> {
+    let mut phys_mem = create_connector("")?;
 
     let kernel_info = KernelInfo::scanner()
         .mem(&mut phys_mem)
@@ -41,8 +41,8 @@ fn initialize_virt_ctx() -> Result<(Memory, TranslateArch, Win32ProcessInfo, Win
         };
 
         let mod_list: Vec<Win32ModuleInfo> = {
-            let mut proc = Win32Process::with_kernel(&mut kernel, proc_list[idx].clone());
-            proc.module_info_list()
+            let mut prc = Win32Process::with_kernel(&mut kernel, proc_list[idx].clone());
+            prc.module_info_list()
                 .unwrap_or_default()
                 .into_iter()
                 .filter(|module| module.size > 0x1000)
@@ -61,8 +61,8 @@ fn initialize_virt_ctx() -> Result<(Memory, TranslateArch, Win32ProcessInfo, Win
 fn win32_read_group(c: &mut Criterion) {
     virt::seq_read(c, "win32", &initialize_virt_ctx);
     virt::chunk_read(c, "win32", &initialize_virt_ctx);
-    phys::seq_read(c, "win32", &|| Memory::new());
-    phys::chunk_read(c, "win32", &|| Memory::new());
+    phys::seq_read(c, "win32", &|| create_connector(""));
+    phys::chunk_read(c, "win32", &|| create_connector(""));
     vat::chunk_vat(c, "win32", &initialize_virt_ctx);
 }
 

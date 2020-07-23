@@ -2,14 +2,15 @@ use std::ffi::c_void;
 use std::ptr;
 
 use memflow_core::mem::PhysicalMemory;
-use memflow_qemu_procfs::Memory;
+use memflow_qemu_procfs::create_connector;
 
+/*
 /// # Safety
 ///
 /// this function might return a null pointer when the qemu_procfs backend cannot be initialized
 #[no_mangle]
 pub unsafe extern "C" fn qemu_procfs_init() -> *mut c_void {
-    match Memory::new() {
+    match create_connector("") {
         Ok(m) => {
             let inner: Box<dyn PhysicalMemory> = Box::new(m);
             Box::into_raw(Box::new(inner)) as *mut c_void
@@ -28,3 +29,4 @@ pub unsafe extern "C" fn qemu_procfs_free(ptr: *mut c_void) {
         // drop _mem
     }
 }
+*/

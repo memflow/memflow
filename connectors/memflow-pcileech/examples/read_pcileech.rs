@@ -1,8 +1,8 @@
 use log::Level;
 
-use memflow_pcileech::*;
+use memflow_pcileech::create_connector;
 
 fn main() {
     simple_logger::init_with_level(Level::Trace).unwrap();
-    Memory::new().unwrap();
+    create_connector("").unwrap();
 }

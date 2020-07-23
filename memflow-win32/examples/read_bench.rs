@@ -11,7 +11,7 @@ use memflow_core::mem::{PhysicalMemory, TranslateArch, VirtualMemory, VirtualTra
 use memflow_core::process::{OsProcessInfo, OsProcessModuleInfo};
 use memflow_core::types::{size, Address};
 
-use memflow_connector::Memory;
+use memflow_connector::create_connector;
 
 use memflow_win32::error::Result;
 use memflow_win32::offsets::Win32Offsets;
@@ -147,7 +147,7 @@ fn read_bench<T: PhysicalMemory, V: VirtualTranslate>(
 }
 
 fn main() -> Result<()> {
-    let mut mem_sys = Memory::new()?;
+    let mut mem_sys = create_connector("")?;
     let kernel_info = KernelInfo::scanner().mem(&mut mem_sys).scan()?;
 
     let mut vat = TranslateArch::new(kernel_info.start_block.arch);

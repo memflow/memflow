@@ -12,7 +12,7 @@ readme = "README.md"
 crate-type = ["lib", "cdylib"]
 
 [dependencies]
-memflow-core = { path = "../../memflow-core", features = ["filemap"] }
+memflow-core = { path = "../../memflow-core", features = ["filemap", "plugins"] }
 memflow-derive = { path = "../../memflow-derive" }
 log = { version = "0.4.8", default-features = false }
 dataview = "0.1"

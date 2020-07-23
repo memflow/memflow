@@ -171,7 +171,8 @@ impl<'a, T: SplitAtIndex> TranslationChunk<'a, T> {
                     if left.length() > 0 {
                         left_min = std::cmp::min(left_min, left.addr);
                         left_max = std::cmp::max(left_max, left.addr + left.length());
-                        std::mem::replace(data, left);
+                        //std::mem::replace(data, left);
+                        *data = left;
                     } else {
                         self.vec.swap_remove(i);
                     }

@@ -10,21 +10,20 @@ use memflow_core::types::size;
 
 // https://github.com/ufrisk/MemProcFS/blob/f2d15cf4fe4f19cfeea3dad52971fae2e491064b/vmm/vmmwininit.c#L560
 pub fn find_lowstub(stub: &[u8]) -> Result<StartBlock> {
-    stub.chunks_exact(architecture::x64::page_size())
+    Ok(stub
+        .chunks_exact(architecture::x64::page_size())
         .skip(1)
         .filter(|c| (0xffff_ffff_ffff_00ff & LittleEndian::read_u64(&c)) == 0x0000_0001_0006_00E9) // start bytes
         .filter(|c| {
             (0xffff_f800_0000_0003 & LittleEndian::read_u64(&c[0x70..])) == 0xffff_f800_0000_0000
         }) // kernel entry
         .find(|c| (0xffff_ff00_0000_0fff & LittleEndian::read_u64(&c[0xA0..])) == 0) // pml4
-        .ok_or_else(|| Error::Initialization("unable to find x64 dtb in lowstub < 1M"))
-        .and_then(|c| {
-            Ok(StartBlock {
-                arch: Architecture::X64,
-                kernel_hint: LittleEndian::read_u64(&c[0x70..]).into(),
-                dtb: LittleEndian::read_u64(&c[0xA0..]).into(),
-            })
+        .map(|c| StartBlock {
+            arch: Architecture::X64,
+            kernel_hint: LittleEndian::read_u64(&c[0x70..]).into(),
+            dtb: LittleEndian::read_u64(&c[0xA0..]).into(),
         })
+        .ok_or_else(|| Error::Initialization("unable to find x64 dtb in lowstub < 1M"))?)
 }
 
 fn _find(mem: &[u8]) -> Option<()> {
@@ -62,12 +61,10 @@ fn _find(mem: &[u8]) -> Option<()> {
 pub fn find(mem: &[u8]) -> Result<StartBlock> {
     mem.chunks_exact(architecture::x64::page_size())
         .position(|c| _find(c).is_some())
-        .ok_or_else(|| Error::Initialization("unable to find x64 dtb in lowstub < 16M"))
-        .and_then(|i| {
-            Ok(StartBlock {
-                arch: Architecture::X64,
-                kernel_hint: 0.into(),
-                dtb: ((i as u64) * architecture::x64::page_size() as u64).into(),
-            })
+        .map(|i| StartBlock {
+            arch: Architecture::X64,
+            kernel_hint: 0.into(),
+            dtb: ((i as u64) * architecture::x64::page_size() as u64).into(),
         })
+        .ok_or_else(|| Error::Initialization("unable to find x64 dtb in lowstub < 16M"))
 }

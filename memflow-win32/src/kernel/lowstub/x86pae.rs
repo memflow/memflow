@@ -22,12 +22,10 @@ fn check_page(addr: Address, mem: &[u8]) -> bool {
 pub fn find(mem: &[u8]) -> Result<StartBlock> {
     mem.page_chunks(Address::from(0), architecture::x86_pae::page_size())
         .find(|(a, c)| check_page(*a, c))
-        .ok_or_else(|| Error::Initialization("unable to find x86_pae dtb in lowstub < 16M"))
-        .and_then(|(a, _)| {
-            Ok(StartBlock {
-                arch: Architecture::X86Pae,
-                kernel_hint: 0.into(),
-                dtb: a,
-            })
+        .map(|(a, _)| StartBlock {
+            arch: Architecture::X86Pae,
+            kernel_hint: 0.into(),
+            dtb: a,
         })
+        .ok_or_else(|| Error::Initialization("unable to find x86_pae dtb in lowstub < 16M"))
 }

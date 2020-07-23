@@ -51,10 +51,10 @@ pub fn find_with_va<T: VirtualMemory + ?Sized>(
                 let name = pehelper::try_get_pe_name(virt_mem, probe_addr).unwrap_or_default();
                 name == "ntoskrnl.exe"
             })
+            .map(|(i, _, _)| va_base + i as u64 * architecture::x64::page_size() as u64)
             .ok_or_else(|| {
                 Error::Initialization("find_x64_with_va: unable to locate ntoskrnl.exe via va hint")
-            })
-            .and_then(|(i, _, _)| Ok(va_base + i as u64 * architecture::x64::page_size() as u64));
+            });
 
         match res {
             Ok(a) => {
@@ -63,9 +63,7 @@ pub fn find_with_va<T: VirtualMemory + ?Sized>(
                 let size_of_image = pehelper::try_get_pe_size(virt_mem, addr)?;
                 return Ok((addr, size_of_image));
             }
-            Err(e) => {
-                debug!("{:?}", e);
-            }
+            Err(e) => debug!("{:?}", e),
         }
 
         va_base -= size::mb(2) as u64;

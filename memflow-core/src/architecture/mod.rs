@@ -1,6 +1,5 @@
 /*!
-This module contains all architecture definitions currently
-supported by memflow.
+Module for handling different architectures in memflow.
 
 Each architecture is wrapped in the `Architecture` enum
 and all function calls are dispatched into their own

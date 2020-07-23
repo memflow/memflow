@@ -19,17 +19,19 @@ extern crate bitflags;
 extern crate smallvec;
 
 pub mod error;
-pub use error::{Error, Result};
+pub use error::*;
 
 #[macro_use]
 pub mod types;
-pub use types::{size, Address, Page, PageType, PhysicalAddress, Pointer32, Pointer64};
+pub use types::*;
 
 pub mod architecture;
-pub use architecture::{Architecture, Endianess};
+pub use architecture::*;
 
 pub mod mem;
 pub use mem::*;
+
+pub mod connector;
 
 pub mod process;
 pub use process::*;

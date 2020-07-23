@@ -4,6 +4,7 @@ use native::*;
 use std::fs::OpenOptions;
 use std::path::Path;
 
+use memflow_core::connector::*;
 use memflow_core::*;
 use memflow_derive::connector;
 

@@ -12,8 +12,18 @@ pub const MEMFLOW_CONNECTOR_VERSION: i32 = 1;
 
 /// Describes a connector plugin
 pub struct ConnectorDescriptor {
+    /// The connector plugin api version for when the connector was built.
+    /// This has to be set to `MEMFLOW_CONNECTOR_VERSION` of memflow_core.
+    ///
+    /// If the versions mismatch the plugin will refuse to load.
     pub connector_version: i32,
+
+    /// The name of the connector plugin.
+    /// This name will be used when loading a plugin from a plugin inventory.
     pub name: &'static str,
+
+    /// The factory function for the connector.
+    /// Calling this function will produce new connector instances.
     pub factory: extern "C" fn(args: &str) -> Result<Box<dyn PhysicalMemory>>,
 }
 
@@ -37,7 +47,7 @@ impl ConnectorInventory {
     ///
     /// Creating a inventory:
     /// ```
-    /// use memflow_core::ConnectorInventory;
+    /// use memflow_core::connector::ConnectorInventory;
     ///
     /// let inventory = unsafe {
     ///     ConnectorInventory::new("./")
@@ -82,7 +92,7 @@ impl ConnectorInventory {
     ///
     /// Creating a connector instance:
     /// ```no_run
-    /// use memflow_core::ConnectorInventory;
+    /// use memflow_core::connector::ConnectorInventory;
     ///
     /// let inventory = unsafe {
     ///     ConnectorInventory::new("./")

@@ -1,3 +1,7 @@
+/*!
+General purpose memflow core errors.
+*/
+
 use std::prelude::v1::*;
 use std::{convert, fmt, result, str};
 

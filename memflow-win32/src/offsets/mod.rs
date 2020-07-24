@@ -15,8 +15,13 @@ use std::io::Read;
 use std::path::Path;
 
 use crate::error::{Error, Result};
-use crate::kernel::ntos::Win32GUID;
 use crate::kernel_info::KernelInfo;
+
+#[derive(Debug, Clone)]
+pub struct Win32GUID {
+    pub file_name: String,
+    pub guid: String,
+}
 
 #[derive(Debug, Clone)]
 pub struct Win32Offsets {
@@ -184,5 +189,35 @@ impl Win32Offsets {
             ldr_data_name_x86: 0x2C, // _LDR_DATA_TABLE_ENTRY::BaseDllName
             ldr_data_name_x64: 0x58, // _LDR_DATA_TABLE_ENTRY::BaseDllName
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn download_pdb() {
+        let offsets = Win32Offsets::try_with_guid(&Win32GUID {
+            file_name: "ntkrnlmp.pdb".to_string(),
+            guid: "3844DBB920174967BE7AA4A2C20430FA2".to_string(),
+        })
+        .unwrap();
+
+        assert_eq!(offsets.list_blink, 8);
+        assert_eq!(offsets.eproc_link, 392);
+
+        assert_eq!(offsets.kproc_dtb, 40);
+
+        assert_eq!(offsets.eproc_pid, 384);
+        assert_eq!(offsets.eproc_name, 736);
+        assert_eq!(offsets.eproc_peb, 824);
+        assert_eq!(offsets.eproc_thread_list, 776);
+        assert_eq!(offsets.eproc_wow64, 800);
+
+        assert_eq!(offsets.kthread_teb, 184);
+        assert_eq!(offsets.ethread_list_entry, 1056);
+        assert_eq!(offsets.teb_peb, 96);
+        assert_eq!(offsets.teb_peb_x86, 48);
     }
 }

@@ -1,7 +1,7 @@
 use std::prelude::v1::*;
 
 use crate::error::{Error, Result};
-use crate::kernel::ntos::Win32GUID;
+use crate::offsets::Win32GUID;
 
 use std::fs::{self, File};
 use std::io::{Read, Write};

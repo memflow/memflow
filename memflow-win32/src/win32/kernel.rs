@@ -329,6 +329,15 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
         Ok(list)
     }
 
+    pub fn process_info_pid(&mut self, pid: i32) -> Result<Win32ProcessInfo> {
+        let process_info_list = self.process_info_list()?;
+        process_info_list
+            .into_iter()
+            .inspect(|process| trace!("{} {}", process.pid(), process.name()))
+            .find(|process| process.pid == pid)
+            .ok_or_else(|| Error::Other("pid not found"))
+    }
+
     pub fn process_info(&mut self, name: &str) -> Result<Win32ProcessInfo> {
         let process_info_list = self.process_info_list()?;
         let candidates = process_info_list

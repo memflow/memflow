@@ -3,6 +3,7 @@ use memflow_bench::{phys, vat, virt};
 
 use criterion::*;
 
+use memflow_core::connector::ConnectorArgs;
 use memflow_core::error::{Error, Result};
 use memflow_core::mem::TranslateArch;
 use memflow_qemu_procfs::{create_connector, QemuProcfs};
@@ -15,7 +16,7 @@ use rand::prelude::*;
 use rand::{prng::XorShiftRng as CurRng, Rng, SeedableRng};
 
 fn initialize_virt_ctx() -> Result<(QemuProcfs, TranslateArch, Win32ProcessInfo, Win32ModuleInfo)> {
-    let mut phys_mem = create_connector("")?;
+    let mut phys_mem = create_connector(&ConnectorArgs::new())?;
 
     let kernel_info = KernelInfo::scanner()
         .mem(&mut phys_mem)
@@ -61,8 +62,8 @@ fn initialize_virt_ctx() -> Result<(QemuProcfs, TranslateArch, Win32ProcessInfo,
 fn win32_read_group(c: &mut Criterion) {
     virt::seq_read(c, "win32", &initialize_virt_ctx);
     virt::chunk_read(c, "win32", &initialize_virt_ctx);
-    phys::seq_read(c, "win32", &|| create_connector(""));
-    phys::chunk_read(c, "win32", &|| create_connector(""));
+    phys::seq_read(c, "win32", &|| create_connector(&ConnectorArgs::new()));
+    phys::chunk_read(c, "win32", &|| create_connector(&ConnectorArgs::new()));
     vat::chunk_vat(c, "win32", &initialize_virt_ctx);
 }
 

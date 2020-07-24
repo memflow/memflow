@@ -24,11 +24,13 @@ If neither attempt succeeds the function will fail with an `Error::Conector` err
 
 ```
 use std::path::PathBuf;
+
+use memflow_core::connector::ConnectorArgs;
 use memflow_coredump::create_connector;
 
 let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
     .join("resources/test/coredump_win10_64bit_stripped.raw");
-if let Ok(mut mem) = create_connector(path.to_str().unwrap()) {
+if let Ok(mut mem) = create_connector(&ConnectorArgs::with_default(path.to_str().unwrap())) {
     println!("Coredump connector initialized");
 }
 ```
@@ -37,7 +39,7 @@ if let Ok(mut mem) = create_connector(path.to_str().unwrap()) {
 #[cfg(feature = "filemap")]
 pub type CoreDump<'a> = ReadMappedFilePhysicalMemory<'a>;
 #[cfg(not(feature = "filemap"))]
-pub type CoreDump<'a> = IOPhysicalMemory<File>;
+pub type CoreDump<'a> = FileIOMemory<File>;
 
 /// Opens a Microsoft Windows Coredump
 ///
@@ -60,8 +62,11 @@ pub fn parse_file<P: AsRef<Path>>(path: P) -> Result<(MemoryMap<(Address, usize)
 /// This function will return a connector reading the underlying data of the core dump.
 /// The type of connector depends on the feature flags of the crate.
 #[connector(name = "coredump")]
-pub fn create_connector<'a>(args: &str) -> Result<CoreDump<'a>> {
-    let (map, file) = parse_file(args)?;
+pub fn create_connector<'a>(args: &ConnectorArgs) -> Result<CoreDump<'a>> {
+    let (map, file) = parse_file(
+        args.get_default()
+            .ok_or_else(|| Error::Connector("no path specified"))?,
+    )?;
     CoreDump::try_with_filemap(file, map)
 }
 

@@ -1,6 +1,7 @@
 use log::Level;
 use std::{thread, time};
 
+use memflow_core::connector::ConnectorArgs;
 use memflow_core::mem::TranslateArch;
 
 use memflow_connector::create_connector;
@@ -12,7 +13,7 @@ use memflow_win32::win32::{Kernel, KernelInfo, Keyboard};
 pub fn main() -> Result<()> {
     simple_logger::init_with_level(Level::Debug).unwrap();
 
-    let mut mem_sys = create_connector("")?;
+    let mut mem_sys = create_connector(&ConnectorArgs::new())?;
     let kernel_info = KernelInfo::scanner().mem(&mut mem_sys).scan()?;
 
     let vat = TranslateArch::new(kernel_info.start_block.arch);

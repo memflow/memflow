@@ -1,6 +1,8 @@
 use crate::error::{Error, Result};
 use crate::mem::PhysicalMemory;
 
+use super::ConnectorArgs;
+
 use std::fs::read_dir;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
@@ -24,7 +26,7 @@ pub struct ConnectorDescriptor {
 
     /// The factory function for the connector.
     /// Calling this function will produce new connector instances.
-    pub factory: extern "C" fn(args: &str) -> Result<Box<dyn PhysicalMemory>>,
+    pub factory: extern "C" fn(args: &ConnectorArgs) -> Result<Box<dyn PhysicalMemory>>,
 }
 
 /// Holds an inventory of available connector plugins.
@@ -92,13 +94,13 @@ impl ConnectorInventory {
     ///
     /// Creating a connector instance:
     /// ```no_run
-    /// use memflow_core::connector::ConnectorInventory;
+    /// use memflow_core::connector::{ConnectorInventory, ConnectorArgs};
     ///
     /// let inventory = unsafe {
     ///     ConnectorInventory::new("./")
     /// }.unwrap();
     /// let connector = unsafe {
-    ///     inventory.create_connector("coredump", "")
+    ///     inventory.create_connector("coredump", &ConnectorArgs::new())
     /// }.unwrap();
     /// ```
     ///
@@ -107,17 +109,18 @@ impl ConnectorInventory {
     /// use memflow_core::error::Result;
     /// use memflow_core::types::size;
     /// use memflow_core::mem::dummy::DummyMemory;
+    /// use memflow_core::connector::ConnectorArgs;
     /// use memflow_derive::connector;
     ///
     /// #[connector(name = "dummy")]
-    /// pub fn create_connector(_args: &str) -> Result<DummyMemory> {
+    /// pub fn create_connector(_args: &ConnectorArgs) -> Result<DummyMemory> {
     ///     Ok(DummyMemory::new(size::mb(16)))
     /// }
     /// ```
     pub unsafe fn create_connector(
         &self,
         name: &str,
-        args: &str,
+        args: &ConnectorArgs,
     ) -> Result<Box<dyn PhysicalMemory>> {
         let connector = self
             .connectors
@@ -126,12 +129,36 @@ impl ConnectorInventory {
             .ok_or_else(|| Error::Connector("connector not found"))?;
         connector.create(args)
     }
+
+    /// Creates a connector in the same way `create_connector` does but without any arguments provided.
+    ///
+    /// # Safety
+    ///
+    /// See the above safety section.
+    /// This function essentially just wraps the above function.
+    ///
+    /// # Examples
+    ///
+    /// Creating a connector instance:
+    /// ```no_run
+    /// use memflow_core::connector::{ConnectorInventory, ConnectorArgs};
+    ///
+    /// let inventory = unsafe {
+    ///     ConnectorInventory::new("./")
+    /// }.unwrap();
+    /// let connector = unsafe {
+    ///     inventory.create_connector_default("coredump")
+    /// }.unwrap();
+    /// ```
+    pub unsafe fn create_connector_default(&self, name: &str) -> Result<Box<dyn PhysicalMemory>> {
+        self.create_connector(name, &ConnectorArgs::default())
+    }
 }
 
 struct Connector {
     _library: Rc<Library>,
     name: String,
-    factory: extern "C" fn(args: &str) -> Result<Box<dyn PhysicalMemory>>,
+    factory: extern "C" fn(args: &ConnectorArgs) -> Result<Box<dyn PhysicalMemory>>,
 }
 
 impl Connector {
@@ -155,7 +182,7 @@ impl Connector {
         })
     }
 
-    pub unsafe fn create(&self, args: &str) -> Result<Box<dyn PhysicalMemory>> {
+    pub unsafe fn create(&self, args: &ConnectorArgs) -> Result<Box<dyn PhysicalMemory>> {
         (self.factory)(args)
     }
 }

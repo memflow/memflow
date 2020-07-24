@@ -1,5 +1,6 @@
 use log::info;
 
+use memflow_core::connector::ConnectorArgs;
 use memflow_core::*;
 use memflow_derive::connector;
 
@@ -301,7 +302,7 @@ impl PhysicalMemory for QemuProcfs {
 // TODO: handle args properly
 /// Creates a new Qemu Procfs Connector instance.
 #[connector(name = "qemu_procfs")]
-pub fn create_connector(_args: &str) -> Result<QemuProcfs> {
+pub fn create_connector(_args: &ConnectorArgs) -> Result<QemuProcfs> {
     QemuProcfs::new()
 }
 

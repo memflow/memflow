@@ -2,12 +2,13 @@ use std::time::Instant;
 
 use log::{info, Level};
 
+use memflow_core::connector::ConnectorArgs;
 use memflow_core::*;
 
 fn main() {
     simple_logger::init_with_level(Level::Debug).unwrap();
 
-    let mut conn = match memflow_qemu_procfs::create_connector("") {
+    let mut conn = match memflow_qemu_procfs::create_connector(&ConnectorArgs::new()) {
         Ok(br) => br,
         Err(e) => {
             info!("couldn't open memory read context: {:?}", e);

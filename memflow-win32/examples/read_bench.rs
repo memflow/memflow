@@ -6,6 +6,7 @@ extern crate rand;
 use std::io::Write;
 use std::time::{Duration, Instant};
 
+use memflow_core::connector::ConnectorArgs;
 use memflow_core::mem::cache::{CachedMemoryAccess, CachedVirtualTranslate, TimedCacheValidator};
 use memflow_core::mem::{PhysicalMemory, TranslateArch, VirtualMemory, VirtualTranslate};
 use memflow_core::process::{OsProcessInfo, OsProcessModuleInfo};
@@ -147,7 +148,7 @@ fn read_bench<T: PhysicalMemory, V: VirtualTranslate>(
 }
 
 fn main() -> Result<()> {
-    let mut mem_sys = create_connector("")?;
+    let mut mem_sys = create_connector(&ConnectorArgs::new())?;
     let kernel_info = KernelInfo::scanner().mem(&mut mem_sys).scan()?;
 
     let mut vat = TranslateArch::new(kernel_info.start_block.arch);

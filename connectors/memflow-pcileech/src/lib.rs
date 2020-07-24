@@ -1,6 +1,7 @@
 mod fpga;
 mod ft60x;
 
+use memflow_core::connector::ConnectorArgs;
 use memflow_core::*;
 use memflow_derive::connector;
 
@@ -34,6 +35,6 @@ impl PhysicalMemory for PciLeech {
 // TODO: handle args properly
 /// Creates a new Pcileech Connector instance.
 #[connector(name = "pcileech")]
-pub fn create_connector(_args: &str) -> Result<PciLeech> {
+pub fn create_connector(_args: &ConnectorArgs) -> Result<PciLeech> {
     PciLeech::new()
 }

@@ -5,18 +5,34 @@ use crate::types::Address;
 
 use std::io::{Read, Seek, SeekFrom, Write};
 
-pub struct IOPhysicalMemory<T> {
+/// Accesses physical memory via file i/o.
+///
+/// This backend helper works in tandem with MappedPhysicalMemory.
+///
+/// # Examples
+/// ```
+/// use memflow_core::connector::FileIOMemory;
+/// use memflow_core::mem::MemoryMap;
+///
+/// use std::fs::File;
+///
+/// fn open(file: &File) {
+///     let map = MemoryMap::new();
+///     let connector = FileIOMemory::try_with_reader(file, map);
+/// }
+/// ```
+pub struct FileIOMemory<T> {
     reader: T,
     mem_map: MemoryMap<(Address, usize)>,
 }
 
-impl<T: Seek + Read + Write> IOPhysicalMemory<T> {
+impl<T: Seek + Read + Write> FileIOMemory<T> {
     pub fn try_with_reader(reader: T, mem_map: MemoryMap<(Address, usize)>) -> Result<Self> {
         Ok(Self { reader, mem_map })
     }
 }
 
-impl<T: Seek + Read + Write> PhysicalMemory for IOPhysicalMemory<T> {
+impl<T: Seek + Read + Write> PhysicalMemory for FileIOMemory<T> {
     fn phys_read_raw_list(&mut self, data: &mut [PhysicalReadData]) -> Result<()> {
         let mut void = FnExtend::void();
         for ((file_off, _), buf) in self.mem_map.map_iter(

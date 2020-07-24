@@ -2,6 +2,7 @@ use std::ffi::{c_void, CStr};
 use std::os::raw::c_char;
 use std::ptr;
 
+use memflow_core::connector::ConnectorArgs;
 use memflow_core::mem::PhysicalMemory;
 use memflow_coredump::create_connector;
 
@@ -16,7 +17,7 @@ pub unsafe extern "C" fn coredump_open(path: *const c_char) -> *mut c_void {
 
     let c_path = CStr::from_ptr(path);
     let pathbuf = c_path.to_string_lossy();
-    match create_connector(&pathbuf) {
+    match create_connector(&ConnectorArgs::with_default(&pathbuf)) {
         Ok(m) => {
             let inner: Box<dyn PhysicalMemory> = Box::new(m);
             Box::into_raw(Box::new(inner)) as *mut c_void

@@ -1,6 +1,6 @@
 use log::{debug, info};
 
-use memflow_core::connector::MappedPhysicalMemory;
+use memflow_core::connector::{ConnectorArgs, MappedPhysicalMemory};
 use memflow_core::mem::{MemoryMap, PhysicalMemory};
 use memflow_core::{Error, Result};
 use memflow_derive::connector;
@@ -8,9 +8,13 @@ use memflow_kvm_ioctl::VMHandle;
 
 // TODO: properly parse args
 /// Creates a new KVM Connector instance.
-#[connector(name = "pcileech")]
-pub fn create_connector(args: &str) -> Result<impl PhysicalMemory> {
-    let pid = args.parse::<i32>().ok();
+#[connector(name = "kvm")]
+pub fn create_connector(args: &ConnectorArgs) -> Result<impl PhysicalMemory> {
+    let pid = args
+        .get_default()
+        .ok_or_else(|| Error::Connector("no pid specified"))?
+        .parse::<i32>()
+        .ok();
     let vm = VMHandle::try_open(pid).map_err(|_| Error::Connector("Failed to get VM handle"))?;
     let (pid, memslots) = vm
         .info(64)

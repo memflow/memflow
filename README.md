@@ -21,3 +21,13 @@ memflow - machine introspection framework
 - setup ptrace permissions with `setperms.sh` script, or run `setcap 'CAP_SYS_PTRACE=ep'` on target executable
 - run one of the examples with `cargo run --release --example`
 - or run the benchmarks `cargo bench` (can pass regex filters)
+
+## Running Examples
+
+All examples support the memflow plugin inventory system.
+
+Run memflow_win32/read_keys example with a procfs connector:
+`cargo run --example read_keys -- -vv -i target/release -c qemu_procfs -a [vmname]`
+
+Run memflow_win32/read_bench example with a coredump connector:
+`cargo run --example read_bench --release -- -vv -i target/release -c coredump -a coredump_win10_64bit.raw`

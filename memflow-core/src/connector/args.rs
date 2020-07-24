@@ -42,6 +42,7 @@ impl ConnectorArgs {
     pub fn try_parse_str(args: &str) -> Result<Self> {
         let mut map = HashMap::new();
 
+        // if args != "" {
         let split = args.split(',');
         for (i, kv) in split.clone().enumerate() {
             let kvsplit = kv.split('=').collect::<Vec<_>>();
@@ -51,6 +52,7 @@ impl ConnectorArgs {
                 map.insert("default".to_string(), kv.to_string());
             }
         }
+        // }
 
         Ok(Self { map })
     }
@@ -121,5 +123,12 @@ mod tests {
             .insert("arg2", "test2");
         assert_eq!(args.get("arg1").unwrap(), "test1");
         assert_eq!(args.get("arg2").unwrap(), "test2");
+    }
+
+    #[test]
+    pub fn parse_empty() {
+        let argstr = "opt1=test1,test0";
+        let args = ConnectorArgs::try_from(argstr).unwrap();
+        assert_eq!(args.get_default(), None);
     }
 }

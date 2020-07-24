@@ -8,6 +8,9 @@ homepage = "https://github.com/memflow/memflow"
 repository = "https://github.com/memflow/memflow"
 readme = "README.md"
 
+[lib]
+crate-type = ["lib", "cdylib"]
+
 [dependencies]
 memflow-kvm-ioctl = { git = "ssh://git@github.com/memflow/memflow-kvm-module.git" }
 memflow-core = { path = "../../memflow-core" }

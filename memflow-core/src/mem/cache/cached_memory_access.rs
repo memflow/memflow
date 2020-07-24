@@ -7,14 +7,14 @@ use crate::types::{size, PageType};
 
 use bumpalo::Bump;
 
-pub struct CachedMemoryAccess<'a, T: PhysicalMemory, Q: CacheValidator> {
-    mem: T,
+pub struct CachedMemoryAccess<'a, T: PhysicalMemory + ?Sized, Q: CacheValidator> {
+    mem: &'a mut T,
     cache: PageCache<'a, Q>,
     arena: Bump,
 }
 
-impl<'a, T: PhysicalMemory, Q: CacheValidator> CachedMemoryAccess<'a, T, Q> {
-    pub fn with(mem: T, cache: PageCache<'a, Q>) -> Self {
+impl<'a, T: PhysicalMemory + ?Sized, Q: CacheValidator> CachedMemoryAccess<'a, T, Q> {
+    pub fn with(mem: &'a mut T, cache: PageCache<'a, Q>) -> Self {
         Self {
             mem,
             cache,
@@ -22,13 +22,15 @@ impl<'a, T: PhysicalMemory, Q: CacheValidator> CachedMemoryAccess<'a, T, Q> {
         }
     }
 
-    pub fn builder() -> CachedMemoryAccessBuilder<T, Q> {
-        CachedMemoryAccessBuilder::default()
+    pub fn builder(mem: &'a mut T) -> CachedMemoryAccessBuilder<'a, T, Q> {
+        CachedMemoryAccessBuilder::new(mem)
     }
 }
 
 // forward PhysicalMemory trait fncs
-impl<'a, T: PhysicalMemory, Q: CacheValidator> PhysicalMemory for CachedMemoryAccess<'a, T, Q> {
+impl<'a, T: PhysicalMemory + ?Sized, Q: CacheValidator> PhysicalMemory
+    for CachedMemoryAccess<'a, T, Q>
+{
     fn phys_read_raw_list(&mut self, data: &mut [PhysicalReadData]) -> Result<()> {
         self.cache.validator.update_validity();
         self.arena.reset();
@@ -60,30 +62,28 @@ impl<'a, T: PhysicalMemory, Q: CacheValidator> PhysicalMemory for CachedMemoryAc
     }
 }
 
-pub struct CachedMemoryAccessBuilder<T, Q> {
-    mem: Option<T>,
+pub struct CachedMemoryAccessBuilder<'a, T: ?Sized, Q> {
+    mem: &'a mut T,
     validator: Option<Q>,
     page_size: Option<usize>,
     cache_size: usize,
     page_type_mask: PageType,
 }
 
-impl<T: PhysicalMemory, Q: CacheValidator> Default for CachedMemoryAccessBuilder<T, Q> {
-    fn default() -> Self {
+impl<'a, T: PhysicalMemory + ?Sized, Q: CacheValidator> CachedMemoryAccessBuilder<'a, T, Q> {
+    pub fn new(mem: &'a mut T) -> Self {
         Self {
-            mem: None,
+            mem,
             validator: None,
             page_size: None,
             cache_size: size::mb(2),
             page_type_mask: PageType::PAGE_TABLE | PageType::READ_ONLY,
         }
     }
-}
 
-impl<'a, T: PhysicalMemory, Q: CacheValidator> CachedMemoryAccessBuilder<T, Q> {
     pub fn build(self) -> Result<CachedMemoryAccess<'a, T, Q>> {
         Ok(CachedMemoryAccess::with(
-            self.mem.ok_or("mem must be initialized")?,
+            self.mem,
             PageCache::with_page_size(
                 self.page_size.ok_or("page_size must be initialized")?,
                 self.cache_size,
@@ -91,11 +91,6 @@ impl<'a, T: PhysicalMemory, Q: CacheValidator> CachedMemoryAccessBuilder<T, Q> {
                 self.validator.ok_or("validator must be initialized")?,
             ),
         ))
-    }
-
-    pub fn mem(mut self, mem: T) -> Self {
-        self.mem = Some(mem);
-        self
     }
 
     pub fn validator(mut self, validator: Q) -> Self {

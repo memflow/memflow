@@ -1,7 +1,7 @@
 use crate::error::{Error, Result};
 use crate::kernel::StartBlock;
 
-use byteorder::{ByteOrder, LittleEndian};
+use std::convert::TryInto;
 
 use memflow_core::architecture::{self, Architecture};
 use memflow_core::iter::PageChunks;
@@ -9,9 +9,9 @@ use memflow_core::types::Address;
 
 fn check_page(addr: Address, mem: &[u8]) -> bool {
     for (i, chunk) in mem.to_vec().chunks_exact(8).enumerate() {
-        if (i < 4
-            && LittleEndian::read_u64(chunk) != addr.as_u64() + ((i as u64 * 8) << 9) + 0x1001)
-            || (i >= 4 && LittleEndian::read_u64(chunk) != 0)
+        let byte = u64::from_le_bytes(chunk[0..8].try_into().unwrap());
+        if (i < 4 && byte != addr.as_u64() + ((i as u64 * 8) << 9) + 0x1001)
+            || (i >= 4 && byte != 0)
         {
             return false;
         }

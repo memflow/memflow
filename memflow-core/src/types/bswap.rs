@@ -157,6 +157,30 @@ mod tests {
     }
 
     #[test]
+    fn swap_i32() {
+        let mut num = 1234i32;
+        num.byte_swap();
+        num.byte_swap();
+        assert_eq!(num, 1234);
+    }
+
+    #[test]
+    fn swap_i64() {
+        let mut num = 1234i64;
+        num.byte_swap();
+        num.byte_swap();
+        assert_eq!(num, 1234);
+    }
+
+    #[test]
+    fn swap_i128() {
+        let mut num = 1234i128;
+        num.byte_swap();
+        num.byte_swap();
+        assert_eq!(num, 1234);
+    }
+
+    #[test]
     fn swap_slice_i16() {
         let mut slice = [1234i16, 50, 64, 128, 200];
         slice.byte_swap();

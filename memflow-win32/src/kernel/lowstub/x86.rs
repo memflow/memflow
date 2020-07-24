@@ -1,7 +1,8 @@
 use crate::error::{Error, Result};
 use crate::kernel::StartBlock;
 
-use byteorder::{ByteOrder, LittleEndian};
+use std::convert::TryInto;
+
 use memflow_core::architecture::{self, Architecture};
 use memflow_core::iter::PageChunks;
 use memflow_core::types::Address;
@@ -11,7 +12,8 @@ fn check_page(base: Address, mem: &[u8]) -> bool {
         return false;
     }
 
-    if (LittleEndian::read_u32(&mem[0xc00..]) & 0xffff_f003) != (base.as_u32() + 0x3) {
+    let byte = u32::from_le_bytes(mem[0xc00..0xc00 + 8].try_into().unwrap());
+    if (byte & 0xffff_f003) != (base.as_u32() + 0x3) {
         return false;
     }
 

@@ -4,12 +4,12 @@ use super::StartBlock;
 use crate::error::{Error, Result};
 use crate::pe::{self, MemoryPeViewContext};
 
+use std::convert::TryInto;
+
 use log::{debug, info, warn};
 
 use memflow_core::mem::VirtualMemory;
 use memflow_core::types::{size, Address};
-
-use byteorder::{ByteOrder, LittleEndian};
 
 use pelite::{self, pe64::exports::Export};
 
@@ -59,12 +59,14 @@ pub fn find_exported<T: VirtualMemory + ?Sized>(
     let mut buf = vec![0u8; start_block.arch.size_addr()];
     let sys_proc_addr: Address = match start_block.arch.bits() {
         64 => {
+            // TODO: replace by virt_read_into with ByteSwap
             virt_mem.virt_read_raw_into(sys_proc, &mut buf)?;
-            LittleEndian::read_u64(&buf).into()
+            u64::from_le_bytes(buf[0..8].try_into().unwrap()).into()
         }
         32 => {
+            // TODO: replace by virt_read_into with ByteSwap
             virt_mem.virt_read_raw_into(sys_proc, &mut buf)?;
-            LittleEndian::read_u32(&buf).into()
+            u32::from_le_bytes(buf[0..8].try_into().unwrap()).into()
         }
         _ => return Err(Error::InvalidArchitecture),
     };

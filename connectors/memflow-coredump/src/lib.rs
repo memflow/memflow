@@ -6,7 +6,7 @@ use std::path::Path;
 
 use memflow_core::connector::*;
 use memflow_core::*;
-use memflow_derive::connector;
+use memflow_derive::*;
 
 use std::fs::File;
 

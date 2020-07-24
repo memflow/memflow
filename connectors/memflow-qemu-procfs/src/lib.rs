@@ -175,7 +175,7 @@ impl QemuProcfs {
         })
     }
 
-    pub fn fill_iovec(addr: &Address, data: &[u8], liov: &mut iovec, riov: &mut iovec) {
+    fn fill_iovec(addr: &Address, data: &[u8], liov: &mut iovec, riov: &mut iovec) {
         let iov_len = data.len();
 
         *liov = iovec {
@@ -302,8 +302,12 @@ impl PhysicalMemory for QemuProcfs {
 // TODO: handle args properly
 /// Creates a new Qemu Procfs Connector instance.
 #[connector(name = "qemu_procfs")]
-pub fn create_connector(_args: &ConnectorArgs) -> Result<QemuProcfs> {
-    QemuProcfs::new()
+pub fn create_connector(args: &ConnectorArgs) -> Result<QemuProcfs> {
+    if let Some(name) = args.get("name").or_else(|| args.get_default()) {
+        QemuProcfs::with_guest_name(name)
+    } else {
+        QemuProcfs::new()
+    }
 }
 
 #[cfg(test)]

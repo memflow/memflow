@@ -14,8 +14,6 @@ pub fn find_lowstub(stub: &[u8]) -> Result<StartBlock> {
         .chunks_exact(architecture::x64::page_size())
         .skip(1)
         .filter(|c| {
-            println!("{:?}", &c[0..8]);
-            println!("len: {:?}", c.len());
             (0xffff_ffff_ffff_00ff & u64::from_le_bytes(c[0..8].try_into().unwrap()))
                 == 0x0000_0001_0006_00E9
         }) // start bytes

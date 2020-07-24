@@ -1,9 +1,9 @@
 use crate::error::{Error, Result};
 use crate::kernel::StartBlock;
 
-use log::info;
+use std::convert::TryInto;
 
-use byteorder::{ByteOrder, LittleEndian};
+use log::info;
 
 use memflow_core::architecture::{self, Architecture};
 use memflow_core::types::size;
@@ -13,15 +13,23 @@ pub fn find_lowstub(stub: &[u8]) -> Result<StartBlock> {
     Ok(stub
         .chunks_exact(architecture::x64::page_size())
         .skip(1)
-        .filter(|c| (0xffff_ffff_ffff_00ff & LittleEndian::read_u64(&c)) == 0x0000_0001_0006_00E9) // start bytes
         .filter(|c| {
-            (0xffff_f800_0000_0003 & LittleEndian::read_u64(&c[0x70..])) == 0xffff_f800_0000_0000
+            println!("{:?}", &c[0..8]);
+            println!("len: {:?}", c.len());
+            (0xffff_ffff_ffff_00ff & u64::from_le_bytes(c[0..8].try_into().unwrap()))
+                == 0x0000_0001_0006_00E9
+        }) // start bytes
+        .filter(|c| {
+            (0xffff_f800_0000_0003 & u64::from_le_bytes(c[0x70..0x70 + 8].try_into().unwrap()))
+                == 0xffff_f800_0000_0000
         }) // kernel entry
-        .find(|c| (0xffff_ff00_0000_0fff & LittleEndian::read_u64(&c[0xA0..])) == 0) // pml4
+        .find(|c| {
+            (0xffff_ff00_0000_0fff & u64::from_le_bytes(c[0xa0..0xa0 + 8].try_into().unwrap())) == 0
+        }) // pml4
         .map(|c| StartBlock {
             arch: Architecture::X64,
-            kernel_hint: LittleEndian::read_u64(&c[0x70..]).into(),
-            dtb: LittleEndian::read_u64(&c[0xA0..]).into(),
+            kernel_hint: u64::from_le_bytes(c[0x70..0x70 + 8].try_into().unwrap()).into(),
+            dtb: u64::from_le_bytes(c[0xa0..0xa0 + 8].try_into().unwrap()).into(),
         })
         .ok_or_else(|| Error::Initialization("unable to find x64 dtb in lowstub < 1M"))?)
 }
@@ -48,7 +56,7 @@ fn _find(mem: &[u8]) -> Option<()> {
     // TODO: global define / config setting
     let max_mem = size::gb(16) as u64;
 
-    let pte = LittleEndian::read_u64(&mem);
+    let pte = u64::from_le_bytes(mem[0..8].try_into().unwrap());
     if (pte & 0x0000_0000_0000_0087) == 0x3 || (pte & 0x0000_ffff_ffff_f000) > max_mem {
         return None;
     }

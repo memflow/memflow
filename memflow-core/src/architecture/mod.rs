@@ -25,13 +25,12 @@ use translate_data::{TranslateVec, TranslationChunk};
 
 use crate::error::{Error, Result};
 use crate::iter::{PageChunks, SplitAtIndex};
-use std::convert::TryFrom;
+use std::convert::{TryFrom, TryInto};
 
 use crate::mem::{PhysicalMemory, PhysicalReadData};
 use crate::types::{Address, PageType, PhysicalAddress};
 
 use bumpalo::{collections::Vec as BumpVec, Bump};
-use byteorder::{ByteOrder, LittleEndian};
 use vector_trees::{BVecTreeMap as BTreeMap, Vector};
 
 /// Identifies the byte order of a architecture
@@ -351,7 +350,7 @@ impl Architecture {
         for i in (0..addrs.len()).rev() {
             let mut chunk = addrs.swap_remove(i);
             let (_, buf) = pt_read.swap_remove(i);
-            let pt_addr = Address::from(LittleEndian::read_u64(&buf[..]));
+            let pt_addr = Address::from(u64::from_le_bytes(buf[0..8].try_into().unwrap()));
 
             if spec.pte_addr_mask(chunk.pt_addr, step) != spec.pte_addr_mask(pt_addr, step)
                 && (prev_addr.is_none()

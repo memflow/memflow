@@ -2,11 +2,12 @@ use std::prelude::v1::*;
 
 use crate::error::{Error, Result};
 
+use std::convert::TryInto;
+
 use memflow_core::architecture::{Architecture, Endianess};
 use memflow_core::mem::VirtualMemory;
 use memflow_core::types::Address;
 
-use byteorder::{BigEndian, ByteOrder, LittleEndian};
 use widestring::U16CString;
 
 pub trait VirtualReadUnicodeString {
@@ -76,9 +77,11 @@ impl<'a, T: VirtualMemory> VirtualReadUnicodeString for T {
 
         let content16 = content
             .chunks_exact(2)
+            .map(|b| b[0..2].try_into().map_err(|_| Error::Bounds))
+            .filter_map(Result::ok)
             .map(|b| match proc_arch.endianess() {
-                Endianess::LittleEndian => LittleEndian::read_u16(b),
-                Endianess::BigEndian => BigEndian::read_u16(b),
+                Endianess::LittleEndian => u16::from_le_bytes(b),
+                Endianess::BigEndian => u16::from_be_bytes(b),
             })
             .collect::<Vec<u16>>();
         Ok(U16CString::from_vec_with_nul(content16)

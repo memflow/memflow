@@ -6,6 +6,7 @@ use std::prelude::v1::*;
 
 use crate::error::{Error, Result};
 use crate::kernel::StartBlock;
+use crate::offsets::Win32GUID;
 use crate::pe::{self, MemoryPeViewContext};
 
 use log::warn;
@@ -39,12 +40,6 @@ pub fn find<T: VirtualMemory + ?Sized>(
     }
 
     Err(Error::Initialization("unable to find ntoskrnl.exe"))
-}
-
-#[derive(Debug, Clone)]
-pub struct Win32GUID {
-    pub file_name: String,
-    pub guid: String,
 }
 
 // TODO: move to pe::...

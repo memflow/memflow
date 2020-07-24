@@ -5,7 +5,7 @@ use crate::error::{Error, Result};
 use crate::offsets::Win32Offsets;
 use crate::pe::{pe32, pe64, MemoryPeViewContext};
 
-use log::trace;
+use log::{info, trace};
 use std::fmt;
 
 use memflow_core::architecture::Architecture;
@@ -26,18 +26,45 @@ pub struct Kernel<T: PhysicalMemory, V: VirtualTranslate> {
     pub offsets: Win32Offsets,
 
     pub kernel_info: KernelInfo,
+    pub sysproc_dtb: Address,
 }
 
 impl<T: PhysicalMemory, V: VirtualTranslate> OperatingSystem for Kernel<T, V> {}
 
 impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
-    pub fn new(phys_mem: T, vat: V, offsets: Win32Offsets, kernel_info: KernelInfo) -> Self {
+    pub fn new(
+        mut phys_mem: T,
+        mut vat: V,
+        offsets: Win32Offsets,
+        kernel_info: KernelInfo,
+    ) -> Self {
+        // start_block only contains the winload's dtb which might
+        // be different to the one used in the actual kernel.
+        // In case of a failure this will fall back to the winload dtb.
+        let sysproc_dtb = {
+            let mut reader = VirtualFromPhysical::with_vat(
+                &mut phys_mem,
+                kernel_info.start_block.arch,
+                kernel_info.start_block.arch,
+                kernel_info.start_block.dtb,
+                &mut vat,
+            );
+
+            if let Ok(dtb) = reader.virt_read_addr(kernel_info.eprocess_base + offsets.kproc_dtb) {
+                dtb
+            } else {
+                kernel_info.start_block.dtb
+            }
+        };
+        info!("sysproc_dtb={:x}", sysproc_dtb);
+
         Self {
             phys_mem,
             vat,
             offsets,
 
             kernel_info,
+            sysproc_dtb,
         }
     }
 
@@ -52,7 +79,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
             &mut self.phys_mem,
             self.kernel_info.start_block.arch,
             self.kernel_info.start_block.arch,
-            self.kernel_info.kernel_dtb,
+            self.sysproc_dtb,
             &mut self.vat,
         );
 
@@ -92,7 +119,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
             &mut self.phys_mem,
             self.kernel_info.start_block.arch,
             self.kernel_info.start_block.arch,
-            self.kernel_info.kernel_dtb,
+            self.sysproc_dtb,
             &mut self.vat,
         );
 
@@ -155,7 +182,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
 
             pid: 0,
             name: "ntoskrnl.exe".to_string(),
-            dtb: self.kernel_info.kernel_dtb,
+            dtb: self.sysproc_dtb,
             ethread: Address::NULL, // TODO: see below
             wow64: Address::NULL,
 
@@ -179,7 +206,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
             &mut self.phys_mem,
             self.kernel_info.start_block.arch,
             self.kernel_info.start_block.arch,
-            self.kernel_info.kernel_dtb,
+            self.sysproc_dtb,
             &mut self.vat,
         );
 

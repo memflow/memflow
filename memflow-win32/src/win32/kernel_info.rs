@@ -1,5 +1,6 @@
 use crate::error::Result;
-use crate::kernel::{self, ntos::Win32GUID, StartBlock};
+use crate::kernel::{self, StartBlock};
+use crate::offsets::Win32GUID;
 
 use log::info;
 
@@ -14,7 +15,6 @@ pub struct KernelInfo {
     pub kernel_base: Address,
     pub kernel_size: usize,
     pub kernel_guid: Option<Win32GUID>,
-    pub kernel_dtb: Address,
 
     pub eprocess_base: Address,
 }
@@ -93,12 +93,9 @@ impl<T: PhysicalMemory> KernelInfoScanner<T> {
         info!("eprocess_base={:x}", eprocess_base);
 
         // start_block only contains the winload's dtb which might
-        // be different to the one used in the actual kernel
-        // so we might read the real dtb here in the future
+        // be different to the one used in the actual kernel.
+        // see Kernel::new() for more information.
         info!("start_block.dtb={:x}", start_block.dtb);
-        let kernel_dtb = start_block.dtb;
-        //let kernel_dtb = virt_mem.virt_read_addr(eprocess_base + /*self.offsets.kproc_dtb*/ Length::from(0x18))?;
-        info!("kernel_dtb={:x}", kernel_dtb);
 
         Ok(KernelInfo {
             start_block,
@@ -106,7 +103,6 @@ impl<T: PhysicalMemory> KernelInfoScanner<T> {
             kernel_base,
             kernel_size,
             kernel_guid,
-            kernel_dtb,
 
             eprocess_base,
         })

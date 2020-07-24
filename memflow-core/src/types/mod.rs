@@ -22,3 +22,6 @@ pub use pointer32::Pointer32;
 
 pub mod pointer64;
 pub use pointer64::Pointer64;
+
+pub mod bswap;
+pub use bswap::ByteSwap;

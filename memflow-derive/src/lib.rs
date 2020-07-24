@@ -1,7 +1,7 @@
 use darling::FromMeta;
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{parse_macro_input, AttributeArgs, ItemFn};
+use syn::{parse_macro_input, AttributeArgs, Data, DeriveInput, Fields, ItemFn};
 
 #[derive(Debug, FromMeta)]
 struct ConnectorFactoryArgs {
@@ -52,5 +52,38 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
 
         #func
     };
+    gen.into()
+}
+
+#[proc_macro_derive(ByteSwap)]
+pub fn byteswap_derive(input: TokenStream) -> TokenStream {
+    // TODO: parse struct fields
+    let input = parse_macro_input!(input as DeriveInput);
+    let name = &input.ident;
+
+    let mut gen_inner = quote!();
+    match input.data {
+        Data::Struct(data) => match data.fields {
+            Fields::Named(named) => {
+                for field in named.named.iter() {
+                    let name = field.ident.as_ref().unwrap();
+                    gen_inner.extend(quote!(
+                        self.#name.byte_swap();
+                    ));
+                }
+            }
+            _ => unimplemented!(),
+        },
+        _ => unimplemented!(),
+    };
+
+    let gen = quote!(
+        impl ByteSwap for #name {
+            fn byte_swap(&mut self) {
+                #gen_inner
+            }
+        }
+    );
+
     gen.into()
 }

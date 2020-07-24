@@ -34,14 +34,17 @@ use bumpalo::{collections::Vec as BumpVec, Bump};
 use byteorder::{ByteOrder, LittleEndian};
 use vector_trees::{BVecTreeMap as BTreeMap, Vector};
 
-/**
-Identifies the byte order of a architecture
-*/
+/// Identifies the byte order of a architecture
+///
+/// This enum is used when reading/writing to/from the memory of a target system.
+/// The memory will be automatically converted to the endianess memflow is currently running on.
+///
+/// See the [wikipedia article](https://en.wikipedia.org/wiki/Endianness) for more information on the subject.
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Endianess {
-    /// little endianess
+    /// Little Endianess
     LittleEndian,
-    /// big endianess
+    /// Big Endianess
     BigEndian,
 }
 

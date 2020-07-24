@@ -27,7 +27,9 @@ memflow - machine introspection framework
 All examples support the memflow plugin inventory system.
 
 Run memflow_win32/read_keys example with a procfs connector:
+
 `cargo run --example read_keys -- -vv -i target/release -c qemu_procfs -a [vmname]`
 
 Run memflow_win32/read_bench example with a coredump connector:
+
 `cargo run --example read_bench --release -- -vv -i target/release -c coredump -a coredump_win10_64bit.raw`

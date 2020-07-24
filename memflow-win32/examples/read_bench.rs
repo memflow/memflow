@@ -1,18 +1,13 @@
-extern crate memflow_connector;
-extern crate memflow_core;
-extern crate memflow_win32;
-extern crate rand;
-
 use std::io::Write;
 use std::time::{Duration, Instant};
 
-use memflow_core::connector::ConnectorArgs;
-use memflow_core::mem::cache::{CachedMemoryAccess, CachedVirtualTranslate, TimedCacheValidator};
-use memflow_core::mem::{PhysicalMemory, TranslateArch, VirtualMemory, VirtualTranslate};
-use memflow_core::process::{OsProcessInfo, OsProcessModuleInfo};
-use memflow_core::types::{size, Address};
+use clap::*;
+use log::Level;
 
-use memflow_connector::create_connector;
+use memflow_core::connector::*;
+use memflow_core::mem::*;
+use memflow_core::process::*;
+use memflow_core::types::*;
 
 use memflow_win32::error::Result;
 use memflow_win32::offsets::Win32Offsets;
@@ -93,7 +88,7 @@ fn rwtest<T: VirtualMemory>(
     );
 }
 
-fn read_bench<T: PhysicalMemory, V: VirtualTranslate>(
+fn read_bench<T: PhysicalMemory + ?Sized, V: VirtualTranslate>(
     phys_mem: &mut T,
     vat: &mut V,
     kernel_info: KernelInfo,
@@ -104,12 +99,12 @@ fn read_bench<T: PhysicalMemory, V: VirtualTranslate>(
     let proc_list = kernel.process_info_list()?;
     let mut rng = CurRng::seed_from_u64(rand::thread_rng().gen_range(0, !0u64));
     loop {
-        let mut proc = Win32Process::with_kernel(
+        let mut prc = Win32Process::with_kernel(
             &mut kernel,
             proc_list[rng.gen_range(0, proc_list.len())].clone(),
         );
 
-        let mod_list: Vec<Win32ModuleInfo> = proc
+        let mod_list: Vec<Win32ModuleInfo> = prc
             .module_info_list()?
             .into_iter()
             .filter(|module| module.size() > 0x1000)
@@ -121,10 +116,10 @@ fn read_bench<T: PhysicalMemory, V: VirtualTranslate>(
                 "Found test module {} ({:x}) in {}",
                 tmod.name(),
                 tmod.size(),
-                proc.proc_info.name(),
+                prc.proc_info.name(),
             );
 
-            let mem_map = proc.virt_mem.virt_page_map(size::gb(1));
+            let mem_map = prc.virt_mem.virt_page_map(size::gb(1));
 
             println!("Memory map (with up to 1GB gaps):");
 
@@ -133,7 +128,7 @@ fn read_bench<T: PhysicalMemory, V: VirtualTranslate>(
             }
 
             rwtest(
-                &mut proc,
+                &mut prc,
                 tmod,
                 &[0x10000, 0x1000, 0x100, 0x10, 0x8],
                 &[32, 8, 1],
@@ -148,18 +143,64 @@ fn read_bench<T: PhysicalMemory, V: VirtualTranslate>(
 }
 
 fn main() -> Result<()> {
-    let mut mem_sys = create_connector(&ConnectorArgs::new())?;
-    let kernel_info = KernelInfo::scanner().mem(&mut mem_sys).scan()?;
+    let matches = App::new("read_keys example")
+        .version(crate_version!())
+        .author(crate_authors!())
+        .arg(Arg::with_name("verbose").short("v").multiple(true))
+        .arg(
+            Arg::with_name("inventory")
+                .long("inventory")
+                .short("i")
+                .takes_value(true)
+                .default_value("./"),
+        )
+        .arg(
+            Arg::with_name("connector")
+                .long("connector")
+                .short("c")
+                .takes_value(true)
+                .required(true),
+        )
+        .arg(
+            Arg::with_name("args")
+                .long("args")
+                .short("a")
+                .takes_value(true)
+                .default_value(""),
+        )
+        .get_matches();
+
+    // set log level
+    match matches.occurrences_of("verbose") {
+        1 => simple_logger::init_with_level(Level::Warn).unwrap(),
+        2 => simple_logger::init_with_level(Level::Info).unwrap(),
+        3 => simple_logger::init_with_level(Level::Debug).unwrap(),
+        4 => simple_logger::init_with_level(Level::Trace).unwrap(),
+        _ => simple_logger::init_with_level(Level::Error).unwrap(),
+    }
+
+    // create inventory + connector
+    let inventory =
+        unsafe { ConnectorInventory::new(matches.value_of("inventory").unwrap()) }.unwrap();
+    let mut connector = unsafe {
+        inventory.create_connector(
+            matches.value_of("connector").unwrap(),
+            &ConnectorArgs::try_parse_str(matches.value_of("args").unwrap()).unwrap(),
+        )
+    }
+    .unwrap();
+
+    // scan for win32 kernel
+    let kernel_info = KernelInfo::scanner(&mut *connector).scan()?;
 
     let mut vat = TranslateArch::new(kernel_info.start_block.arch);
 
     println!("Benchmarking uncached reads:");
-    read_bench(&mut mem_sys, &mut vat, kernel_info.clone()).unwrap();
+    read_bench(&mut *connector, &mut vat, kernel_info.clone()).unwrap();
 
     println!();
     println!("Benchmarking cached reads:");
-    let mut mem_cached = CachedMemoryAccess::builder()
-        .mem(mem_sys)
+    let mut mem_cached = CachedMemoryAccess::builder(&mut *connector)
         .arch(kernel_info.start_block.arch)
         .validator(TimedCacheValidator::new(Duration::from_millis(1000).into()))
         .build()

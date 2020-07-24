@@ -18,8 +18,7 @@ use rand::{prng::XorShiftRng as CurRng, Rng, SeedableRng};
 fn initialize_virt_ctx() -> Result<(QemuProcfs, TranslateArch, Win32ProcessInfo, Win32ModuleInfo)> {
     let mut phys_mem = create_connector(&ConnectorArgs::new())?;
 
-    let kernel_info = KernelInfo::scanner()
-        .mem(&mut phys_mem)
+    let kernel_info = KernelInfo::scanner(&mut phys_mem)
         .scan()
         .map_err(|_| Error::Other("unable to find kernel"))?;
     let vat = TranslateArch::new(kernel_info.start_block.arch);

@@ -87,49 +87,39 @@ fn read_test_with_ctx<
     chunk_size: usize,
     chunks: usize,
     use_tlb: bool,
-    (mem, vat, proc, tmod): (T, V, P, M),
+    (mut mem, vat, prc, tmod): (T, V, P, M),
 ) {
     let tlb_cache = CachedVirtualTranslate::builder()
-        .arch(proc.sys_arch())
+        .arch(prc.sys_arch())
         .validator(TimedCacheValidator::new(Duration::from_millis(1000)));
 
     if cache_size > 0 {
-        let cache = CachedMemoryAccess::builder()
-            .arch(proc.sys_arch())
+        let cache = CachedMemoryAccess::builder(&mut mem)
+            .arch(prc.sys_arch())
             .cache_size(size::mb(cache_size as usize))
             .page_type_mask(PageType::PAGE_TABLE | PageType::READ_ONLY | PageType::WRITEABLE)
             .validator(TimedCacheValidator::new(Duration::from_millis(10000)));
 
         if use_tlb {
-            let mem = cache.mem(mem).build().unwrap();
+            let mem = cache.build().unwrap();
             let vat = tlb_cache.vat(vat).build().unwrap();
-            let mut virt_mem = VirtualFromPhysical::with_vat(
-                mem,
-                proc.sys_arch(),
-                proc.proc_arch(),
-                proc.dtb(),
-                vat,
-            );
+            let mut virt_mem =
+                VirtualFromPhysical::with_vat(mem, prc.sys_arch(), prc.proc_arch(), prc.dtb(), vat);
             read_test_with_mem(bench, &mut virt_mem, chunk_size, chunks, tmod);
         } else {
-            let mem = cache.mem(mem).build().unwrap();
-            let mut virt_mem = VirtualFromPhysical::with_vat(
-                mem,
-                proc.sys_arch(),
-                proc.proc_arch(),
-                proc.dtb(),
-                vat,
-            );
+            let mem = cache.build().unwrap();
+            let mut virt_mem =
+                VirtualFromPhysical::with_vat(mem, prc.sys_arch(), prc.proc_arch(), prc.dtb(), vat);
             read_test_with_mem(bench, &mut virt_mem, chunk_size, chunks, tmod);
         }
     } else if use_tlb {
         let vat = tlb_cache.vat(vat).build().unwrap();
         let mut virt_mem =
-            VirtualFromPhysical::with_vat(mem, proc.sys_arch(), proc.proc_arch(), proc.dtb(), vat);
+            VirtualFromPhysical::with_vat(mem, prc.sys_arch(), prc.proc_arch(), prc.dtb(), vat);
         read_test_with_mem(bench, &mut virt_mem, chunk_size, chunks, tmod);
     } else {
         let mut virt_mem =
-            VirtualFromPhysical::with_vat(mem, proc.sys_arch(), proc.proc_arch(), proc.dtb(), vat);
+            VirtualFromPhysical::with_vat(mem, prc.sys_arch(), prc.proc_arch(), prc.dtb(), vat);
         read_test_with_mem(bench, &mut virt_mem, chunk_size, chunks, tmod);
     }
 }

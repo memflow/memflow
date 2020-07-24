@@ -8,6 +8,9 @@ homepage = "https://github.com/memflow/memflow"
 repository = "https://github.com/memflow/memflow"
 readme = "README.md"
 
+[lib]
+crate-type = ["lib", "cdylib"]
+
 [dependencies]
 memflow-core = { path = "../../memflow-core" }
 memflow-derive = { path = "../../memflow-derive" }

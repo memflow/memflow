@@ -20,33 +20,29 @@ pub struct KernelInfo {
 }
 
 impl KernelInfo {
-    pub fn scanner<T: PhysicalMemory>() -> KernelInfoScanner<T> {
-        KernelInfoScanner::default()
+    pub fn scanner<T: PhysicalMemory + ?Sized>(mem: &mut T) -> KernelInfoScanner<T> {
+        KernelInfoScanner::new(mem)
     }
 }
 
-pub struct KernelInfoScanner<T: PhysicalMemory> {
-    mem: Option<T>,
+pub struct KernelInfoScanner<'a, T: ?Sized> {
+    mem: &'a mut T,
     arch: Option<Architecture>,
     kernel_hint: Option<Address>,
     dtb: Option<Address>,
 }
 
-impl<T: PhysicalMemory> Default for KernelInfoScanner<T> {
-    fn default() -> Self {
+impl<'a, T: PhysicalMemory + ?Sized> KernelInfoScanner<'a, T> {
+    pub fn new(mem: &'a mut T) -> Self {
         Self {
-            mem: None,
+            mem,
             arch: None,
             kernel_hint: None,
             dtb: None,
         }
     }
-}
 
-impl<T: PhysicalMemory> KernelInfoScanner<T> {
-    pub fn scan(self) -> Result<KernelInfo> {
-        let mut mem = self.mem.ok_or("mem must be initialized")?;
-
+    pub fn scan(mut self) -> Result<KernelInfo> {
         let start_block = if self.arch.is_some() && self.dtb.is_some() && self.kernel_hint.is_some()
         {
             // construct start block from user supplied hints
@@ -57,7 +53,7 @@ impl<T: PhysicalMemory> KernelInfoScanner<T> {
             }
         } else {
             // find start_block in lowstub base
-            let mut sb = kernel::lowstub::find(&mut mem, self.arch)?;
+            let mut sb = kernel::lowstub::find(&mut self.mem, self.arch)?;
             if self.kernel_hint.is_some() && sb.kernel_hint.is_null() {
                 sb.kernel_hint = self.kernel_hint.unwrap()
             }
@@ -72,7 +68,7 @@ impl<T: PhysicalMemory> KernelInfoScanner<T> {
 
         // construct virtual memory object for start_block
         let mut virt_mem = VirtualFromPhysical::new(
-            &mut mem,
+            &mut self.mem,
             start_block.arch,
             start_block.arch,
             start_block.dtb,
@@ -106,11 +102,6 @@ impl<T: PhysicalMemory> KernelInfoScanner<T> {
 
             eprocess_base,
         })
-    }
-
-    pub fn mem(mut self, mem: T) -> Self {
-        self.mem = Some(mem);
-        self
     }
 
     pub fn arch(mut self, arch: Architecture) -> Self {

@@ -71,32 +71,32 @@ fn vat_test_with_ctx<
     chunks: usize,
     translations: usize,
     use_tlb: bool,
-    (mut mem, mut vat, proc, tmod): (T, V, P, M),
+    (mut mem, mut vat, prc, tmod): (T, V, P, M),
 ) {
     let tlb_cache = CachedVirtualTranslate::builder()
-        .arch(proc.sys_arch())
+        .arch(prc.sys_arch())
         .validator(TimedCacheValidator::new(Duration::from_millis(1000)));
 
     if cache_size > 0 {
-        let cache = CachedMemoryAccess::builder()
-            .arch(proc.sys_arch())
+        let cache = CachedMemoryAccess::builder(&mut mem)
+            .arch(prc.sys_arch())
             .cache_size(size::mb(cache_size as usize))
             .page_type_mask(PageType::PAGE_TABLE | PageType::READ_ONLY | PageType::WRITEABLE)
             .validator(TimedCacheValidator::new(Duration::from_millis(10000)));
 
         if use_tlb {
-            let mut mem = cache.mem(mem).build().unwrap();
+            let mut mem = cache.build().unwrap();
             let mut vat = tlb_cache.vat(vat).build().unwrap();
-            vat_test_with_mem(bench, &mut mem, &mut vat, chunks, translations, proc, tmod);
+            vat_test_with_mem(bench, &mut mem, &mut vat, chunks, translations, prc, tmod);
         } else {
-            let mut mem = cache.mem(mem).build().unwrap();
-            vat_test_with_mem(bench, &mut mem, &mut vat, chunks, translations, proc, tmod);
+            let mut mem = cache.build().unwrap();
+            vat_test_with_mem(bench, &mut mem, &mut vat, chunks, translations, prc, tmod);
         }
     } else if use_tlb {
         let mut vat = tlb_cache.vat(vat).build().unwrap();
-        vat_test_with_mem(bench, &mut mem, &mut vat, chunks, translations, proc, tmod);
+        vat_test_with_mem(bench, &mut mem, &mut vat, chunks, translations, prc, tmod);
     } else {
-        vat_test_with_mem(bench, &mut mem, &mut vat, chunks, translations, proc, tmod);
+        vat_test_with_mem(bench, &mut mem, &mut vat, chunks, translations, prc, tmod);
     }
 }
 

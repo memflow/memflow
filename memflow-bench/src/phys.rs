@@ -86,8 +86,7 @@ fn read_test_with_ctx<T: PhysicalMemory>(
     let end = start + size::mb(1);
 
     if cache_size > 0 {
-        let mut mem = CachedMemoryAccess::builder()
-            .mem(mem)
+        let mut mem = CachedMemoryAccess::builder(&mut mem)
             .arch(Architecture::X64)
             .cache_size(size::mb(cache_size as usize))
             .page_type_mask(PageType::PAGE_TABLE | PageType::READ_ONLY | PageType::WRITEABLE)

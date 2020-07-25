@@ -1,0 +1,28 @@
+[package]
+name = "memflow-pcileech"
+version = "0.1.0"
+authors = ["ko1N <ko1N1337@gmail.com>"]
+edition = "2018"
+description = "pcileech fpga connector for the memflow physical memory introspection framework"
+homepage = "https://github.com/memflow/memflow"
+repository = "https://github.com/memflow/memflow"
+readme = "README.md"
+
+[lib]
+crate-type = ["lib", "cdylib"]
+
+[dependencies]
+memflow-core = { path = "../../memflow-core" }
+memflow-derive = { path = "../../memflow-derive" }
+log = { version = "0.4.8", default-features = false }
+rusb = "0.6.0"
+dataview = "0.1"
+bitfield = "0.13.2"
+
+[dev-dependencies]
+clap = "2.33.0"
+simple_logger = "1.0.1"
+
+[[example]]
+name = "read_pcileech"
+path = "examples/read_pcileech.rs"

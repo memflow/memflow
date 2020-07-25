@@ -1,0 +1,28 @@
+[package]
+name = "memflow-ffi"
+version = "0.1.0"
+authors = ["ko1N <ko1N1337@gmail.com>"]
+edition = "2018"
+license = "MIT"
+description = "c bindings for the memflow physical memory introspection framework"
+homepage = "https://github.com/memflow/memflow"
+repository = "https://github.com/memflow/memflow"
+readme = "README.md"
+
+[lib]
+name = "memflow_ffi"
+crate-type = ["cdylib"]
+
+[dependencies]
+memflow-core = { path = "../memflow-core" }
+memflow-win32 = { path = "../memflow-win32" }
+memflow-coredump = { path = "../connectors/memflow-coredump" }
+
+log = "0.4.8"
+simple_logger = "1.0.1"
+
+#[target.'cfg(target_os = "linux")'.dependencies]
+#memflow-qemu-procfs = { path = "../connectors/memflow-qemu-procfs", optional = true }
+
+[features]
+default = []

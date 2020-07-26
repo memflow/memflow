@@ -1,3 +1,7 @@
+/*!
+Basic connector which works on mapped memory.
+*/
+
 use crate::iter::FnExtend;
 use crate::mem::{MemoryMap, PhysicalMemory, PhysicalReadData, PhysicalWriteData};
 use crate::types::Address;

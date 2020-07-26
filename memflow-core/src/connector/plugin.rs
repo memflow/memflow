@@ -1,3 +1,7 @@
+/*!
+Connector Plugin interface.
+*/
+
 use crate::error::{Error, Result};
 use crate::mem::PhysicalMemory;
 
@@ -155,13 +159,42 @@ impl ConnectorInventory {
     }
 }
 
-struct Connector {
+/// Stores a connector plugin library instance.
+///
+/// # Examples
+///
+/// Creating a connector instance:
+/// ```no_run
+/// use memflow_core::connector::{Connector, ConnectorArgs};
+///
+/// let connector_lib = unsafe {
+///     Connector::try_with("./connector.so")
+/// }.unwrap();
+///
+/// let connector = unsafe {
+///     connector_lib.create(&ConnectorArgs::new())
+/// }.unwrap();
+/// ```
+pub struct Connector {
     _library: Rc<Library>,
     name: String,
     factory: extern "C" fn(args: &ConnectorArgs) -> Result<Box<dyn PhysicalMemory>>,
 }
 
 impl Connector {
+    /// Tries to initialize a connector from a `Path`.
+    /// The path must point to a valid dynamic library that implements
+    /// the memflow plugin interface.
+    ///
+    /// If the plugin doesn ot contain the necessary exports or the version does
+    /// not match the current api version this function will return an `Error::Connector`.
+    ///
+    /// # Safety
+    ///
+    /// Loading third party libraries is inherently unsafe and the compiler
+    /// cannot guarantee that the implementation of the library
+    /// matches the one specified here. This is especially true if
+    /// the loaded library implements the necessary interface manually.
     pub unsafe fn try_with<P: AsRef<Path>>(path: P) -> Result<Self> {
         let library =
             Library::new(path.as_ref()).map_err(|_| Error::Connector("unable to load library"))?;
@@ -182,6 +215,17 @@ impl Connector {
         })
     }
 
+    /// Creates a new connector instance from this library.
+    /// The connector is initialized with the arguments provided to this function.
+    ///
+    /// # Safety
+    ///
+    /// Loading third party libraries is inherently unsafe and the compiler
+    /// cannot guarantee that the implementation of the library
+    /// matches the one specified here. This is especially true if
+    /// the loaded library implements the necessary interface manually.
+    ///
+    /// It is adviced to use a proc macro for defining a connector plugin.
     pub unsafe fn create(&self, args: &ConnectorArgs) -> Result<Box<dyn PhysicalMemory>> {
         (self.factory)(args)
     }

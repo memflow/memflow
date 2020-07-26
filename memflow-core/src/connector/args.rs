@@ -1,3 +1,7 @@
+/*!
+Connector argument handler.
+*/
+
 use crate::error::{Error, Result};
 
 use core::convert::TryFrom;
@@ -29,16 +33,30 @@ pub struct ConnectorArgs {
 }
 
 impl ConnectorArgs {
+    /// Creates an empty `ConnectorArgs` struct.
     pub fn new() -> Self {
         Self {
             map: HashMap::new(),
         }
     }
 
+    /// Creates a `ConnectorArgs` struct with a default (unnamed) value.
     pub fn with_default(value: &str) -> Self {
         Self::new().insert("default", value)
     }
 
+    /// Tries to create a `ConnectorArgs` structure from an argument string.
+    ///
+    /// The argument string is a string of comma seperated key-value pairs.
+    ///
+    /// An argument string can just contain keys and values:
+    /// `opt1=val1,opt2=val2,opt3=val3`
+    ///
+    /// The argument string can also contain a default value as the first entry
+    /// which will be placed as a default argument:
+    /// `default_value,opt1=val1,opt2=val2`
+    ///
+    /// This function can be used to initialize a connector from user input.
     pub fn try_parse_str(args: &str) -> Result<Self> {
         let mut map = HashMap::new();
 
@@ -57,15 +75,35 @@ impl ConnectorArgs {
         Ok(Self { map })
     }
 
+    /// Consumes self, inserts the given key-value pair and returns the self again.
+    ///
+    /// This function can be used as a builder pattern when programatically
+    /// configuring connectors.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use memflow_core::connector::ConnectorArgs;
+    ///
+    /// let args = ConnectorArgs::new()
+    ///     .insert("arg1", "test1")
+    ///     .insert("arg2", "test2");
+    /// ```
     pub fn insert(mut self, key: &str, value: &str) -> Self {
         self.map.insert(key.to_string(), value.to_string());
         self
     }
 
+    /// Tries to retrieve an entry from the options map.
+    /// If the entry was not found this function returns a `None` value.
     pub fn get(&self, key: &str) -> Option<&String> {
         self.map.get(key)
     }
 
+    /// Tries to retrieve the default entry from the options map.
+    /// If the entry was not found this function returns a `None` value.
+    ///
+    /// This function is a convenience wrapper for `args.get("default")`.
     pub fn get_default(&self) -> Option<&String> {
         self.get("default")
     }

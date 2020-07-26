@@ -6,7 +6,6 @@ use criterion::*;
 use memflow_core::connector::ConnectorArgs;
 use memflow_core::error::{Error, Result};
 use memflow_core::mem::TranslateArch;
-use memflow_qemu_procfs::{create_connector, QemuProcfs};
 
 use memflow_win32::{
     Kernel, KernelInfo, Win32ModuleInfo, Win32Offsets, Win32Process, Win32ProcessInfo,

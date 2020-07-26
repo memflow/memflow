@@ -104,7 +104,7 @@ impl<'a> MappedPhysicalMemory<&'a [u8], MMAPInfo<'a>> {
         let file_map = unsafe {
             MmapOptions::new()
                 .map(&file)
-                .map_err(|_| Error::Connector("unable to map coredump file"))?
+                .map_err(|_| Error::Connector("unable to map file"))?
         };
 
         Self::try_with_bufmap(file_map, map)
@@ -117,7 +117,7 @@ impl<'a> MappedPhysicalMemory<&'a mut [u8], MMAPInfoMut<'a>> {
         let file_map = unsafe {
             MmapOptions::new()
                 .map_mut(&file)
-                .map_err(|_| Error::Connector("unable to map coredump file"))?
+                .map_err(|_| Error::Connector("unable to map file"))?
         };
 
         Self::try_with_bufmap_mut(file_map, map)

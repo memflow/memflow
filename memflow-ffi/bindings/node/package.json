@@ -2,7 +2,7 @@
   "name": "memflow-bindings",
   "version": "0.1.0",
   "dependencies": {
-    "ffi-napi": "^2.4.5",
-    "node-gyp": "^6.0.1"
+    "ffi-napi": "^2.5.0",
+    "node-gyp": "^6.1.0"
   }
 }

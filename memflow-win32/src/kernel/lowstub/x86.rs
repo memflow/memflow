@@ -12,8 +12,8 @@ fn check_page(base: Address, mem: &[u8]) -> bool {
         return false;
     }
 
-    let byte = u32::from_le_bytes(mem[0xc00..0xc00 + 8].try_into().unwrap());
-    if (byte & 0xffff_f003) != (base.as_u32() + 0x3) {
+    let dword = u32::from_le_bytes(mem[0xc00..0xc00 + 8].try_into().unwrap());
+    if (dword & 0xffff_f003) != (base.as_u32() + 0x3) {
         return false;
     }
 

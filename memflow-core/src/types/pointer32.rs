@@ -4,6 +4,7 @@
 
 use crate::error::Result;
 use crate::mem::VirtualMemory;
+use crate::types::ByteSwap;
 
 use std::marker::PhantomData;
 use std::mem::size_of;
@@ -247,3 +248,9 @@ impl<T: ?Sized> fmt::Display for Pointer32<T> {
 }
 
 unsafe impl<T: ?Sized + 'static> Pod for Pointer32<T> {}
+
+impl<T: ?Sized + 'static> ByteSwap for Pointer32<T> {
+    fn byte_swap(&mut self) {
+        self.address.byte_swap();
+    }
+}

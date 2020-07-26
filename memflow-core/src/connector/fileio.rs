@@ -1,3 +1,7 @@
+/*!
+Basic connector which works on file i/o operations (`Seek`, `Read`, `Write`).
+*/
+
 use crate::error::{Error, Result};
 use crate::iter::FnExtend;
 use crate::mem::{MemoryMap, PhysicalMemory, PhysicalReadData, PhysicalWriteData};

@@ -1,5 +1,5 @@
 /*!
-General purpose memflow core errors.
+Specialized `Error` and `Result` types for memflow.
 */
 
 use std::prelude::v1::*;
@@ -8,6 +8,7 @@ use std::{convert, fmt, result, str};
 #[cfg(feature = "std")]
 use std::error;
 
+/// Specialized `Error` type for memflow errors.
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 pub enum Error {
     /// Generic error type containing a string
@@ -101,5 +102,5 @@ impl error::Error for Error {
     }
 }
 
-/// Specialized `Result` type for flow-win32 errors.
+/// Specialized `Result` type for memflow errors.
 pub type Result<T> = result::Result<T, Error>;

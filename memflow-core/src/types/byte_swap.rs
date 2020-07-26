@@ -1,3 +1,9 @@
+/*!
+Trait for byte-swappable basic types.
+
+The trait is used in conjunction with the `#[derive(ByteSwap)]` derive macro.
+*/
+
 use core::marker::PhantomData;
 
 /// A trait specifying that a type/struct can be byte swapped.

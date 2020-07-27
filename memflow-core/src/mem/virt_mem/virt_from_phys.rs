@@ -175,6 +175,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> VirtualMemory for VirtualFromPhysic
         self.arena.reset();
         let mut translation = BumpVec::with_capacity_in(data.len(), &self.arena);
 
+        let mut partial_read = false;
         self.vat.virt_to_phys_iter(
             &mut self.phys_mem,
             self.dtb,
@@ -184,25 +185,37 @@ impl<T: PhysicalMemory, V: VirtualTranslate> VirtualMemory for VirtualFromPhysic
                 for v in out.iter_mut() {
                     *v = 0;
                 }
+                partial_read = true;
             }),
         );
 
-        self.phys_mem.phys_read_raw_list(&mut translation)
+        self.phys_mem.phys_read_raw_list(&mut translation)?;
+        match partial_read {
+            false => Ok(()),
+            true => Err(Error::PartialVirtualRead),
+        }
     }
 
     fn virt_write_raw_list(&mut self, data: &[VirtualWriteData]) -> Result<()> {
         self.arena.reset();
         let mut translation = BumpVec::with_capacity_in(data.len(), &self.arena);
 
+        let mut partial_read = false;
         self.vat.virt_to_phys_iter(
             &mut self.phys_mem,
             self.dtb,
             data.iter().copied(),
             &mut translation,
-            &mut FnExtend::void(),
+            &mut FnExtend::new(|(_, _, _): (_, _, _)| {
+                partial_read = true;
+            }),
         );
 
-        self.phys_mem.phys_write_raw_list(&translation)
+        self.phys_mem.phys_write_raw_list(&translation)?;
+        match partial_read {
+            false => Ok(()),
+            true => Err(Error::PartialVirtualRead),
+        }
     }
 
     fn virt_page_info(&mut self, addr: Address) -> Result<Page> {

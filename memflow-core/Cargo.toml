@@ -33,11 +33,11 @@ rand_xorshift = "0.2.0"
 memflow-derive = { path = "../memflow-derive" }
 
 [features]
-default = ["std", "filemap"]
+default = ["std", "plugins", "filemap"]
 trace_mmu = [] # enables debug traces in the mmu (very verbose)
 dummy_mem = ["x86_64", "rand", "rand_xorshift"]
 std = ["coarsetime", "no-std-compat/std"]
 collections = []
 alloc = []
-filemap = ["memmap"]
 plugins = ["libloading"]
+filemap = ["memmap"]

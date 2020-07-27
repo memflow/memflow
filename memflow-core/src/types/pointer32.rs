@@ -4,7 +4,7 @@
 
 use crate::error::Result;
 use crate::mem::VirtualMemory;
-use crate::types::ByteSwap;
+use crate::types::{Address, ByteSwap};
 
 use std::marker::PhantomData;
 use std::mem::size_of;
@@ -192,6 +192,12 @@ impl<T: ?Sized> From<u32> for Pointer32<T> {
             address,
             phantom_data: PhantomData,
         }
+    }
+}
+impl<T: ?Sized> From<Pointer32<T>> for Address {
+    #[inline(always)]
+    fn from(ptr: Pointer32<T>) -> Address {
+        ptr.address.into()
     }
 }
 impl<T: ?Sized> From<Pointer32<T>> for u32 {

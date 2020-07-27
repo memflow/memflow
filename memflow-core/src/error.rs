@@ -42,12 +42,12 @@ pub enum Error {
     /// A read/write from/to the virtual memory has failed.
     VirtualMemory(&'static str),
     /// Partial Virtual Read Error
-    /// 
+    ///
     /// Error when a read from virtual memory only completed partially.
     /// This can usually happen when trying to read a page that is currently paged out.
     PartialVirtualRead,
     /// Partial Virtual Write Error
-    /// 
+    ///
     /// Error when a write from virtual memory only completed partially.
     /// This can usually happen when trying to read a page that is currently paged out.
     PartialVirtualWrite,
@@ -72,6 +72,14 @@ impl From<str::Utf8Error> for Error {
 }
 
 impl Error {
+    pub fn is_partial_read(self) -> bool {
+        self == Error::PartialVirtualRead
+    }
+
+    pub fn is_partial_write(self) -> bool {
+        self == Error::PartialVirtualWrite
+    }
+
     /// Returns a tuple representing the error description and its string value.
     pub fn to_str_pair(self) -> (&'static str, Option<&'static str>) {
         match self {

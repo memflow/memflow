@@ -33,7 +33,7 @@ pub enum Error {
     ///
     /// A read/write from/to the physical memory has failed.
     PhysicalMemory(&'static str),
-    /// VirtualTranslate error.
+    /// VirtualTranslate Error
     ///
     /// Error when trying to translate virtual to physical memory addresses.
     VirtualTranslate,
@@ -41,6 +41,16 @@ pub enum Error {
     ///
     /// A read/write from/to the virtual memory has failed.
     VirtualMemory(&'static str),
+    /// Partial Virtual Read Error
+    /// 
+    /// Error when a read from virtual memory only completed partially.
+    /// This can usually happen when trying to read a page that is currently paged out.
+    PartialVirtualRead,
+    /// Partial Virtual Write Error
+    /// 
+    /// Error when a write from virtual memory only completed partially.
+    /// This can usually happen when trying to read a page that is currently paged out.
+    PartialVirtualWrite,
     /// Encoding error.
     ///
     /// Catch-all for string related errors such as lacking a nul terminator.
@@ -73,6 +83,8 @@ impl Error {
             Error::PhysicalMemory(e) => ("physical memory error", Some(e)),
             Error::VirtualTranslate => ("virtual address translation failed", None),
             Error::VirtualMemory(e) => ("virtual memory error", Some(e)),
+            Error::PartialVirtualRead => ("partial virtual read error", None),
+            Error::PartialVirtualWrite => ("partial virtual write error", None),
             Error::Encoding => ("encoding error", None),
         }
     }

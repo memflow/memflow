@@ -5,6 +5,7 @@ use crate::architecture::Architecture;
 use crate::iter::PageChunks;
 use crate::mem::phys_mem::{PhysicalMemory, PhysicalReadData, PhysicalReadIterator};
 use crate::types::{Address, PhysicalAddress};
+use crate::error::Result;
 use bumpalo::{collections::Vec as BumpVec, Bump};
 use std::alloc::{alloc_zeroed, dealloc, Layout};
 
@@ -188,7 +189,7 @@ impl<'a, T: CacheValidator> PageCache<'a, T> {
         mem: &mut F,
         data: &mut [PhysicalReadData],
         arena: &Bump,
-    ) -> Result<(), crate::Error> {
+    ) -> Result<()> {
         let page_size = self.page_size;
 
         let mut iter = data.iter_mut();

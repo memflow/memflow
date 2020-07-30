@@ -4,8 +4,9 @@ use super::pehelper;
 use crate::error::{Error, Result};
 use crate::kernel::StartBlock;
 
-use log::{debug, warn};
+use log::debug;
 
+use memflow_core::error::PartialResultExt;
 use memflow_core::architecture;
 use memflow_core::mem::VirtualMemory;
 use memflow_core::types::{size, Address};
@@ -28,13 +29,7 @@ pub fn find_with_va<T: VirtualMemory + ?Sized>(
         debug!("x64::find_with_va: probing at {:x}", va_base);
 
         let mut buf = vec![0; size::mb(2)];
-        match virt_mem.virt_read_raw_into(Address::from(va_base), &mut buf) {
-            Ok(_) => (),
-            Err(e) if e.is_partial_read() => {
-                warn!("x64::find_with_va: first 2mb section could only be read partially")
-            }
-            Err(e) => return Err(Error::Core(e)),
-        };
+        virt_mem.virt_read_raw_into(Address::from(va_base), &mut buf).data_part()?;
 
         let res = buf
             .chunks_exact(architecture::x64::page_size())

@@ -4,7 +4,7 @@ pub mod virt_from_phys;
 pub use virt_from_phys::VirtualFromPhysical;
 
 use super::VirtualMemoryBatcher;
-use crate::error::{Error, Result};
+use crate::error::{Error, Result, PartialResult, PartialResultExt};
 use crate::types::{Address, Page, Pointer32, Pointer64};
 
 #[cfg(feature = "std")]
@@ -39,30 +39,29 @@ fn read<T: VirtualMemory>(virt_mem: &mut T) {
 ```
 */
 pub trait VirtualMemory {
-    fn virt_read_raw_list(&mut self, data: &mut [VirtualReadData]) -> Result<()>;
+    fn virt_read_raw_list(&mut self, data: &mut [VirtualReadData]) -> PartialResult<()>;
 
-    fn virt_write_raw_list(&mut self, data: &[VirtualWriteData]) -> Result<()>;
+    fn virt_write_raw_list(&mut self, data: &[VirtualWriteData]) -> PartialResult<()>;
 
     fn virt_page_info(&mut self, addr: Address) -> Result<Page>;
 
     fn virt_page_map(&mut self, gap_size: usize) -> Vec<(Address, usize)>;
 
     // read helpers
-    fn virt_read_raw_into(&mut self, addr: Address, out: &mut [u8]) -> Result<()> {
+    fn virt_read_raw_into(&mut self, addr: Address, out: &mut [u8]) -> PartialResult<()> {
         self.virt_read_raw_list(&mut [(addr, out)])
     }
 
-    fn virt_read_into<T: Pod + ?Sized>(&mut self, addr: Address, out: &mut T) -> Result<()>
+    fn virt_read_into<T: Pod + ?Sized>(&mut self, addr: Address, out: &mut T) -> PartialResult<()>
     where
         Self: Sized,
     {
         self.virt_read_raw_into(addr, out.as_bytes_mut())
     }
 
-    fn virt_read_raw(&mut self, addr: Address, len: usize) -> Result<Vec<u8>> {
+    fn virt_read_raw(&mut self, addr: Address, len: usize) -> PartialResult<Vec<u8>> {
         let mut buf = vec![0u8; len];
-        self.virt_read_raw_into(addr, &mut *buf)?;
-        Ok(buf)
+        self.virt_read_raw_into(addr, &mut *buf).map_data(|_| buf)
     }
 
     /// # Safety
@@ -70,21 +69,20 @@ pub trait VirtualMemory {
     /// this function will overwrite the contents of 'obj' so we can just allocate an unitialized memory section.
     /// this function should only be used with [repr(C)] structs.
     #[allow(clippy::uninit_assumed_init)]
-    fn virt_read<T: Pod + Sized>(&mut self, addr: Address) -> Result<T>
+    fn virt_read<T: Pod + Sized>(&mut self, addr: Address) -> PartialResult<T>
     where
         Self: Sized,
     {
         let mut obj: T = unsafe { MaybeUninit::uninit().assume_init() };
-        self.virt_read_into(addr, &mut obj)?;
-        Ok(obj)
+        self.virt_read_into(addr, &mut obj).map_data(|_| obj)
     }
 
     // write helpers
-    fn virt_write_raw(&mut self, addr: Address, data: &[u8]) -> Result<()> {
+    fn virt_write_raw(&mut self, addr: Address, data: &[u8]) -> PartialResult<()> {
         self.virt_write_raw_list(&[(addr, data)])
     }
 
-    fn virt_write<T: Pod + ?Sized>(&mut self, addr: Address, data: &T) -> Result<()>
+    fn virt_write<T: Pod + ?Sized>(&mut self, addr: Address, data: &T) -> PartialResult<()>
     where
         Self: Sized,
     {
@@ -92,18 +90,18 @@ pub trait VirtualMemory {
     }
 
     // specific read helpers
-    fn virt_read_addr32(&mut self, addr: Address) -> Result<Address>
+    fn virt_read_addr32(&mut self, addr: Address) -> PartialResult<Address>
     where
         Self: Sized,
     {
-        Ok(self.virt_read::<u32>(addr)?.into())
+        self.virt_read::<u32>(addr).map_data(|d| d.into())
     }
 
-    fn virt_read_addr64(&mut self, addr: Address) -> Result<Address>
+    fn virt_read_addr64(&mut self, addr: Address) -> PartialResult<Address>
     where
         Self: Sized,
     {
-        Ok(self.virt_read::<u64>(addr)?.into())
+        self.virt_read::<u64>(addr).map_data(|d| d.into())
     }
 
     // read pointer wrappers
@@ -111,14 +109,14 @@ pub trait VirtualMemory {
         &mut self,
         ptr: Pointer32<U>,
         out: &mut U,
-    ) -> Result<()>
+    ) -> PartialResult<()>
     where
         Self: Sized,
     {
         self.virt_read_into(ptr.address.into(), out)
     }
 
-    fn virt_read_ptr32<U: Pod + Sized>(&mut self, ptr: Pointer32<U>) -> Result<U>
+    fn virt_read_ptr32<U: Pod + Sized>(&mut self, ptr: Pointer32<U>) -> PartialResult<U>
     where
         Self: Sized,
     {
@@ -129,14 +127,14 @@ pub trait VirtualMemory {
         &mut self,
         ptr: Pointer64<U>,
         out: &mut U,
-    ) -> Result<()>
+    ) -> PartialResult<()>
     where
         Self: Sized,
     {
         self.virt_read_into(ptr.address.into(), out)
     }
 
-    fn virt_read_ptr64<U: Pod + Sized>(&mut self, ptr: Pointer64<U>) -> Result<U>
+    fn virt_read_ptr64<U: Pod + Sized>(&mut self, ptr: Pointer64<U>) -> PartialResult<U>
     where
         Self: Sized,
     {
@@ -144,11 +142,11 @@ pub trait VirtualMemory {
     }
 
     // TODO: read into slice?
-    // TODO: if len is shorter than string truncate it!
+    // TODO: if len is shorter than string -> dynamically double length up to an upper bound
     #[cfg(feature = "std")]
-    fn virt_read_cstr(&mut self, addr: Address, len: usize) -> Result<String> {
+    fn virt_read_cstr(&mut self, addr: Address, len: usize) -> PartialResult<String> {
         let mut buf = vec![0; len];
-        self.virt_read_raw_into(addr, &mut buf)?;
+        self.virt_read_raw_into(addr, &mut buf).data_part()?;
         if let Some((n, _)) = buf.iter().enumerate().find(|(_, c)| **c == 0_u8) {
             buf.truncate(n);
         }
@@ -166,11 +164,11 @@ pub trait VirtualMemory {
 
 // forward impls
 impl<'a, T: VirtualMemory + ?Sized> VirtualMemory for &'a mut T {
-    fn virt_read_raw_list(&mut self, data: &mut [VirtualReadData]) -> Result<()> {
+    fn virt_read_raw_list(&mut self, data: &mut [VirtualReadData]) -> PartialResult<()> {
         (*self).virt_read_raw_list(data)
     }
 
-    fn virt_write_raw_list(&mut self, data: &[VirtualWriteData]) -> Result<()> {
+    fn virt_write_raw_list(&mut self, data: &[VirtualWriteData]) -> PartialResult<()> {
         (*self).virt_write_raw_list(data)
     }
 

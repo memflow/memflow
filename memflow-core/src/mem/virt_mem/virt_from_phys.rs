@@ -2,7 +2,7 @@ use std::prelude::v1::*;
 
 use super::{VirtualReadData, VirtualWriteData};
 use crate::architecture::Architecture;
-use crate::error::{Error, Result};
+use crate::error::{Error, Result, PartialError, PartialResult};
 use crate::iter::FnExtend;
 use crate::mem::{
     virt_translate::{TranslateArch, VirtualTranslate},
@@ -10,6 +10,7 @@ use crate::mem::{
 };
 use crate::process::OsProcessInfo;
 use crate::types::{Address, Page};
+
 use bumpalo::{collections::Vec as BumpVec, Bump};
 use itertools::Itertools;
 
@@ -161,17 +162,17 @@ impl<T: PhysicalMemory, V: VirtualTranslate> VirtualFromPhysical<T, V> {
     }
 
     /// A wrapper around `virt_read_addr64` and `virt_read_addr32` that will use the pointer size of this context's process.
-    pub fn virt_read_addr(&mut self, addr: Address) -> Result<Address> {
+    pub fn virt_read_addr(&mut self, addr: Address) -> PartialResult<Address> {
         match self.proc_arch.bits() {
             64 => self.virt_read_addr64(addr),
             32 => self.virt_read_addr32(addr),
-            _ => Err(Error::InvalidArchitecture),
+            _ => Err(PartialError::Error(Error::InvalidArchitecture)),
         }
     }
 }
 
 impl<T: PhysicalMemory, V: VirtualTranslate> VirtualMemory for VirtualFromPhysical<T, V> {
-    fn virt_read_raw_list(&mut self, data: &mut [VirtualReadData]) -> Result<()> {
+    fn virt_read_raw_list(&mut self, data: &mut [VirtualReadData]) -> PartialResult<()> {
         self.arena.reset();
         let mut translation = BumpVec::with_capacity_in(data.len(), &self.arena);
 
@@ -192,11 +193,11 @@ impl<T: PhysicalMemory, V: VirtualTranslate> VirtualMemory for VirtualFromPhysic
         self.phys_mem.phys_read_raw_list(&mut translation)?;
         match partial_read {
             false => Ok(()),
-            true => Err(Error::PartialVirtualRead),
+            true => Err(PartialError::PartialVirtualRead(())),
         }
     }
 
-    fn virt_write_raw_list(&mut self, data: &[VirtualWriteData]) -> Result<()> {
+    fn virt_write_raw_list(&mut self, data: &[VirtualWriteData]) -> PartialResult<()> {
         self.arena.reset();
         let mut translation = BumpVec::with_capacity_in(data.len(), &self.arena);
 
@@ -214,7 +215,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> VirtualMemory for VirtualFromPhysic
         self.phys_mem.phys_write_raw_list(&translation)?;
         match partial_read {
             false => Ok(()),
-            true => Err(Error::PartialVirtualRead),
+            true => Err(PartialError::PartialVirtualRead(())),
         }
     }
 

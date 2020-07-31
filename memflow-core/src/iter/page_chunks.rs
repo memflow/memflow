@@ -17,7 +17,7 @@ pub trait SplitAtIndex {
     where
         Self: Sized,
     {
-        if idx == usize::MAX && self.length() != 0 {
+        if idx == core::usize::MAX && self.length() != 0 {
             //This is a pretty sketchy implementation, but it will be correct when overflows are a problem.
             let (_, right) = self.split_at(0);
             (right.unwrap(), None)

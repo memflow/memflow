@@ -2,7 +2,7 @@ use std::prelude::v1::*;
 
 use super::{VirtualReadData, VirtualWriteData};
 use crate::architecture::Architecture;
-use crate::error::{Error, Result, PartialError, PartialResult};
+use crate::error::{Error, PartialError, PartialResult, Result};
 use crate::iter::FnExtend;
 use crate::mem::{
     virt_translate::{TranslateArch, VirtualTranslate},

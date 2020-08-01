@@ -4,7 +4,7 @@ pub mod virt_from_phys;
 pub use virt_from_phys::VirtualFromPhysical;
 
 use super::VirtualMemoryBatcher;
-use crate::error::{Error, Result, PartialResult, PartialResultExt};
+use crate::error::{Error, PartialResult, PartialResultExt, Result};
 use crate::types::{Address, Page, Pointer32, Pointer64};
 
 #[cfg(feature = "std")]

@@ -12,25 +12,32 @@ struct ByteSwapDeriveGeneric<T: ByteSwap> {
 }
 
 #[derive(ByteSwap)]
-struct ByteSwapDeriveWhere<T> where T: ByteSwap {
+struct ByteSwapDeriveWhere<T>
+where
+    T: ByteSwap,
+{
+    pub val: T,
+}
+
+#[derive(ByteSwap)]
+struct ByteSwapDeriveImplicit<T> {
     pub val: T,
 }
 
 #[derive(ByteSwap)]
 struct ByteSwapDeriveSlice {
-    pub slice: [u8; 32]
+    pub slice: [u8; 32],
 }
 
 #[derive(ByteSwap)]
 struct ByteSwapDeriveStructSlice {
-    pub slice: [ByteSwapDeriveSlice; 128]
+    pub slice: [ByteSwapDeriveSlice; 128],
 }
 
 #[derive(ByteSwap)]
 struct ByteSwapDeriveStructGenericSlice<T: ByteSwap> {
-    pub slice: [ByteSwapDeriveGeneric<T>; 128]
+    pub slice: [ByteSwapDeriveGeneric<T>; 128],
 }
 
 #[test]
-pub fn compiles() {
-}
+pub fn compiles() {}

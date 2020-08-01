@@ -14,7 +14,7 @@ pub enum Error {
     /// Generic error type containing a string
     Other(&'static str),
     /// Partial error.
-    /// 
+    ///
     /// Catch-all for partial errors which have been
     /// converted into full errors.
     Partial,
@@ -112,7 +112,7 @@ impl error::Error for Error {
 #[derive(Copy, Clone, Eq, PartialEq, Hash)]
 pub enum PartialError<T> {
     /// Hard Error
-    /// 
+    ///
     /// Catch-all for all hard errors
     Error(Error),
     /// Partial Virtual Read Error

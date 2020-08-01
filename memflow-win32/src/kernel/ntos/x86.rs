@@ -6,9 +6,9 @@ use crate::kernel::StartBlock;
 
 use log::debug;
 
-use memflow_core::PartialResultExt;
 use memflow_core::mem::VirtualMemory;
 use memflow_core::types::{size, Address};
+use memflow_core::PartialResultExt;
 
 use dataview::Pod;
 use pelite::image::IMAGE_DOS_HEADER;
@@ -28,7 +28,9 @@ pub fn find<T: VirtualMemory + ?Sized>(
         let base_addr = size::gb(2) as u64 + base_addr;
         // search in each page in the first 8mb chunks in the first 64mb of virtual memory
         let mut buf = vec![0; SIZE_8MB];
-        virt_mem.virt_read_raw_into(base_addr.into(), &mut buf).data_part()?;
+        virt_mem
+            .virt_read_raw_into(base_addr.into(), &mut buf)
+            .data_part()?;
 
         for addr in (0..SIZE_8MB as u64).step_by(SIZE_4KB) {
             // TODO: potential endian mismatch in pod

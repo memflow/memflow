@@ -2,10 +2,10 @@ use std::prelude::v1::*;
 
 use super::{CacheValidator, PageType};
 use crate::architecture::Architecture;
+use crate::error::Result;
 use crate::iter::PageChunks;
 use crate::mem::phys_mem::{PhysicalMemory, PhysicalReadData, PhysicalReadIterator};
 use crate::types::{Address, PhysicalAddress};
-use crate::error::Result;
 use bumpalo::{collections::Vec as BumpVec, Bump};
 use std::alloc::{alloc_zeroed, dealloc, Layout};
 

@@ -41,7 +41,8 @@ impl Keyboard {
         // read with user_process dtb
         let module_buf = user_process
             .virt_mem
-            .virt_read_raw(win32kbase_module_info.base(), win32kbase_module_info.size()).data_part()?;
+            .virt_read_raw(win32kbase_module_info.base(), win32kbase_module_info.size())
+            .data_part()?;
         debug!("fetched {:x} bytes from win32kbase.sys", module_buf.len());
 
         // TODO: lazy

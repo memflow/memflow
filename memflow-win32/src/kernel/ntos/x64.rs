@@ -6,8 +6,8 @@ use crate::kernel::StartBlock;
 
 use log::debug;
 
-use memflow_core::error::PartialResultExt;
 use memflow_core::architecture;
+use memflow_core::error::PartialResultExt;
 use memflow_core::mem::VirtualMemory;
 use memflow_core::types::{size, Address};
 
@@ -29,7 +29,9 @@ pub fn find_with_va<T: VirtualMemory + ?Sized>(
         debug!("x64::find_with_va: probing at {:x}", va_base);
 
         let mut buf = vec![0; size::mb(2)];
-        virt_mem.virt_read_raw_into(Address::from(va_base), &mut buf).data_part()?;
+        virt_mem
+            .virt_read_raw_into(Address::from(va_base), &mut buf)
+            .data_part()?;
 
         let res = buf
             .chunks_exact(architecture::x64::page_size())

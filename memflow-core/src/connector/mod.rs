@@ -10,15 +10,19 @@ The plugins system is feature gated behind the `plugins` feature.
 */
 
 pub mod args;
-pub use args::*;
+#[doc(hidden)]
+pub use args::ConnectorArgs;
 
 #[cfg(feature = "plugins")]
 pub mod plugin;
+#[doc(hidden)]
 #[cfg(feature = "plugins")]
-pub use plugin::{ConnectorDescriptor, ConnectorInventory, MEMFLOW_CONNECTOR_VERSION};
+pub use plugin::{Connector, ConnectorDescriptor, ConnectorInventory, MEMFLOW_CONNECTOR_VERSION};
 
 pub mod fileio;
+#[doc(hidden)]
 pub use fileio::FileIOMemory;
 
 pub mod mmap;
+#[doc(hidden)]
 pub use mmap::{MappedPhysicalMemory, ReadMappedFilePhysicalMemory, WriteMappedFilePhysicalMemory};

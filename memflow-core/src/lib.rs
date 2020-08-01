@@ -19,22 +19,30 @@ extern crate bitflags;
 extern crate smallvec;
 
 pub mod error;
+#[doc(hidden)]
 pub use error::*;
 
 #[macro_use]
 pub mod types;
+#[doc(hidden)]
 pub use types::*;
 
 pub mod architecture;
+#[doc(hidden)]
 pub use architecture::*;
 
 pub mod mem;
+#[doc(hidden)]
 pub use mem::*;
 
 pub mod connector;
+#[doc(hidden)]
+pub use connector::*;
 
 pub mod process;
+#[doc(hidden)]
 pub use process::*;
 
 pub mod iter;
+#[doc(hidden)]
 pub use iter::*;

@@ -6,6 +6,7 @@ use crate::kernel::StartBlock;
 
 use log::debug;
 
+use memflow_core::PartialResultExt;
 use memflow_core::mem::VirtualMemory;
 use memflow_core::types::{size, Address};
 
@@ -26,11 +27,12 @@ pub fn find<T: VirtualMemory + ?Sized>(
     for base_addr in (0..SIZE_256MB as u64).step_by(SIZE_8MB) {
         let base_addr = size::gb(2) as u64 + base_addr;
         // search in each page in the first 8mb chunks in the first 64mb of virtual memory
-        let mem = virt_mem.virt_read_raw(Address::from(base_addr), SIZE_8MB)?;
+        let mut buf = vec![0; SIZE_8MB];
+        virt_mem.virt_read_raw_into(base_addr.into(), &mut buf).data_part()?;
 
         for addr in (0..SIZE_8MB as u64).step_by(SIZE_4KB) {
             // TODO: potential endian mismatch in pod
-            let view = Pod::as_data_view(&mem[addr as usize..]);
+            let view = Pod::as_data_view(&buf[addr as usize..]);
 
             // check for dos header signature (MZ) // TODO: create global
             if view.read::<IMAGE_DOS_HEADER>(0).e_magic != 0x5a4d {

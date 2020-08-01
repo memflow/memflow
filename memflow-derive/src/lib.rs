@@ -1,7 +1,7 @@
 use darling::FromMeta;
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{parse_macro_input, AttributeArgs, Data, DeriveInput, Fields, ItemFn};
+use syn::{parse_macro_input, AttributeArgs, Data, DeriveInput, Fields, ItemFn, GenericParam};
 
 #[derive(Debug, FromMeta)]
 struct ConnectorFactoryArgs {
@@ -34,9 +34,11 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
     let func_name = &func.sig.ident;
 
     let gen = quote! {
+        #[cfg(feature = "plugin")]
         #[doc(hidden)]
         pub static CONNECTOR_NAME: &str = #connector_name;
 
+        #[cfg(feature = "plugin")]
         #[doc(hidden)]
         #[no_mangle]
         pub static MEMFLOW_CONNECTOR: memflow_core::connector::ConnectorDescriptor = memflow_core::connector::ConnectorDescriptor {
@@ -45,6 +47,7 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
             factory: connector_factory,
         };
 
+        #[cfg(feature = "plugin")]
         pub extern "C" fn connector_factory(args: &memflow_core::connector::ConnectorArgs) -> memflow_core::error::Result<Box<dyn memflow_core::mem::PhysicalMemory>> {
             let connector = #func_name(args)?;
             Ok(Box::new(connector))
@@ -60,6 +63,26 @@ pub fn byteswap_derive(input: TokenStream) -> TokenStream {
     // TODO: parse struct fields
     let input = parse_macro_input!(input as DeriveInput);
     let name = &input.ident;
+    let generics = &input.generics.params;
+
+    let where_generics = &input.generics.where_clause;
+    let mut impl_generics = quote!();
+    let mut type_generics = quote!();
+    for param in generics.iter() {
+        match param {
+            GenericParam::Type(ty) => {
+                let id = &ty.ident;
+                impl_generics.extend(quote!(#ty));
+                type_generics.extend(quote!(#id));
+            },
+            GenericParam::Lifetime(lt) => {
+                impl_generics.extend(quote!(#lt));
+                type_generics.extend(quote!(#lt));
+            },
+            GenericParam::Const(_cnst) => {
+            },
+        }
+    }
 
     let mut gen_inner = quote!();
     match input.data {
@@ -78,7 +101,7 @@ pub fn byteswap_derive(input: TokenStream) -> TokenStream {
     };
 
     let gen = quote!(
-        impl ByteSwap for #name {
+        impl<#impl_generics> ByteSwap for #name<#type_generics> #where_generics {
             fn byte_swap(&mut self) {
                 #gen_inner
             }

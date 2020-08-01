@@ -8,9 +8,6 @@ members = [
     "memflow-win32",
     "memflow-ffi",
     "memflow-bench",
-    "connectors/memflow-coredump",
-    "connectors/memflow-qemu-procfs",
-    "connectors/memflow-pcileech",
     "connectors/memflow-kvm",
     #"nostd-test"
 ]
@@ -19,8 +16,6 @@ default-members = [
     "memflow-win32",
     "memflow-ffi",
     "memflow-bench",
-    "connectors/memflow-coredump",
-    "connectors/memflow-pcileech",
 ]
 
 exclude = [

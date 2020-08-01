@@ -3,6 +3,7 @@ use crate::error::{Error, Result};
 
 use log::debug;
 
+use memflow_core::error::PartialResultExt;
 use memflow_core::mem::{PhysicalMemory, VirtualMemory, VirtualTranslate};
 use memflow_core::process::OsProcessModuleInfo;
 use memflow_core::types::Address;
@@ -40,7 +41,7 @@ impl Keyboard {
         // read with user_process dtb
         let module_buf = user_process
             .virt_mem
-            .virt_read_raw(win32kbase_module_info.base(), win32kbase_module_info.size())?;
+            .virt_read_raw(win32kbase_module_info.base(), win32kbase_module_info.size()).data_part()?;
         debug!("fetched {:x} bytes from win32kbase.sys", module_buf.len());
 
         // TODO: lazy

@@ -32,10 +32,10 @@ clap = "2.33.0"
 
 [features]
 default = ["std", "download_progress", "symstore"]
-download_progress = ["cursive", "indicatif"]
 std = ["no-std-compat/std"]
 collections = []
 alloc = []
+download_progress = ["cursive", "indicatif"]
 symstore = ["dirs", "ureq", "pdb"]
 
 [[example]]

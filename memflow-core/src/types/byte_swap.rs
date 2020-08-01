@@ -1,3 +1,9 @@
+/*!
+Trait for byte-swappable basic types.
+
+The trait is used in conjunction with the `#[derive(ByteSwap)]` derive macro.
+*/
+
 use core::marker::PhantomData;
 
 /// A trait specifying that a type/struct can be byte swapped.
@@ -149,9 +155,19 @@ mod tests {
     use super::*;
 
     #[test]
+    fn swap_i8() {
+        let mut num = 100i8;
+        num.byte_swap();
+        assert_eq!(num, 100i8.swap_bytes());
+        num.byte_swap();
+        assert_eq!(num, 100);
+    }
+
+    #[test]
     fn swap_i16() {
         let mut num = 1234i16;
         num.byte_swap();
+        assert_eq!(num, 1234i16.swap_bytes());
         num.byte_swap();
         assert_eq!(num, 1234);
     }
@@ -160,6 +176,7 @@ mod tests {
     fn swap_i32() {
         let mut num = 1234i32;
         num.byte_swap();
+        assert_eq!(num, 1234i32.swap_bytes());
         num.byte_swap();
         assert_eq!(num, 1234);
     }
@@ -168,6 +185,7 @@ mod tests {
     fn swap_i64() {
         let mut num = 1234i64;
         num.byte_swap();
+        assert_eq!(num, 1234i64.swap_bytes());
         num.byte_swap();
         assert_eq!(num, 1234);
     }
@@ -176,6 +194,52 @@ mod tests {
     fn swap_i128() {
         let mut num = 1234i128;
         num.byte_swap();
+        assert_eq!(num, 1234i128.swap_bytes());
+        num.byte_swap();
+        assert_eq!(num, 1234);
+    }
+
+    #[test]
+    fn swap_u8() {
+        let mut num = 100u8;
+        num.byte_swap();
+        assert_eq!(num, 100u8.swap_bytes());
+        num.byte_swap();
+        assert_eq!(num, 100);
+    }
+
+    #[test]
+    fn swap_u16() {
+        let mut num = 1234u16;
+        num.byte_swap();
+        assert_eq!(num, 1234u16.swap_bytes());
+        num.byte_swap();
+        assert_eq!(num, 1234);
+    }
+
+    #[test]
+    fn swap_u32() {
+        let mut num = 1234u32;
+        num.byte_swap();
+        assert_eq!(num, 1234u32.swap_bytes());
+        num.byte_swap();
+        assert_eq!(num, 1234);
+    }
+
+    #[test]
+    fn swap_u64() {
+        let mut num = 1234u64;
+        num.byte_swap();
+        assert_eq!(num, 1234u64.swap_bytes());
+        num.byte_swap();
+        assert_eq!(num, 1234);
+    }
+
+    #[test]
+    fn swap_u128() {
+        let mut num = 1234u128;
+        num.byte_swap();
+        assert_eq!(num, 1234u128.swap_bytes());
         num.byte_swap();
         assert_eq!(num, 1234);
     }
@@ -184,6 +248,7 @@ mod tests {
     fn swap_slice_i16() {
         let mut slice = [1234i16, 50, 64, 128, 200];
         slice.byte_swap();
+        assert_eq!(slice[0], 1234i16.swap_bytes());
         slice.byte_swap();
         assert_eq!(slice[0], 1234);
     }

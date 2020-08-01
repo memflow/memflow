@@ -54,6 +54,13 @@ impl From<memflow_core::Error> for Error {
     }
 }
 
+/// Convert from flow_core::PartialError
+impl<T> From<memflow_core::PartialError<T>> for Error {
+    fn from(_error: memflow_core::PartialError<T>) -> Error {
+        Error::Core(memflow_core::Error::Partial)
+    }
+}
+
 /// Convert from pelite::Error
 impl From<pelite::Error> for Error {
     fn from(error: pelite::Error) -> Error {

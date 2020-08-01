@@ -2,8 +2,9 @@
 32-bit Pointer abstraction.
 */
 
-use crate::error::Result;
+use crate::error::PartialResult;
 use crate::mem::VirtualMemory;
+use crate::types::{Address, ByteSwap};
 
 use std::marker::PhantomData;
 use std::mem::size_of;
@@ -104,14 +105,14 @@ impl<T: ?Sized> Pointer32<T> {
 
 /// This function will deref the pointer directly into a Pod type.
 impl<T: Pod + ?Sized> Pointer32<T> {
-    pub fn deref_into<U: VirtualMemory>(self, mem: &mut U, out: &mut T) -> Result<()> {
+    pub fn deref_into<U: VirtualMemory>(self, mem: &mut U, out: &mut T) -> PartialResult<()> {
         mem.virt_read_ptr32_into(self, out)
     }
 }
 
 /// This function will return the Object this pointer is pointing towards.
 impl<T: Pod + Sized> Pointer32<T> {
-    pub fn deref<U: VirtualMemory>(self, mem: &mut U) -> Result<T> {
+    pub fn deref<U: VirtualMemory>(self, mem: &mut U) -> PartialResult<T> {
         mem.virt_read_ptr32(self)
     }
 }
@@ -193,6 +194,12 @@ impl<T: ?Sized> From<u32> for Pointer32<T> {
         }
     }
 }
+impl<T: ?Sized> From<Pointer32<T>> for Address {
+    #[inline(always)]
+    fn from(ptr: Pointer32<T>) -> Address {
+        ptr.address.into()
+    }
+}
 impl<T: ?Sized> From<Pointer32<T>> for u32 {
     #[inline(always)]
     fn from(ptr: Pointer32<T>) -> u32 {
@@ -247,3 +254,9 @@ impl<T: ?Sized> fmt::Display for Pointer32<T> {
 }
 
 unsafe impl<T: ?Sized + 'static> Pod for Pointer32<T> {}
+
+impl<T: ?Sized + 'static> ByteSwap for Pointer32<T> {
+    fn byte_swap(&mut self) {
+        self.address.byte_swap();
+    }
+}

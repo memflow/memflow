@@ -4,7 +4,7 @@ use crate::types::Address;
 use crate::virt_mem::{
     VirtualMemory, VirtualReadData, VirtualReadIterator, VirtualWriteData, VirtualWriteIterator,
 };
-use crate::Result;
+use crate::error::PartialResult;
 
 use dataview::Pod;
 
@@ -23,7 +23,7 @@ impl<'a, T: VirtualMemory> VirtualMemoryBatcher<'a, T> {
         }
     }
 
-    pub fn commit_rw(&mut self) -> Result<()> {
+    pub fn commit_rw(&mut self) -> PartialResult<()> {
         if !self.read_list.is_empty() {
             self.vmem.virt_read_raw_list(&mut self.read_list)?;
             self.read_list.clear();

@@ -66,6 +66,13 @@ impl From<str::Utf8Error> for Error {
     }
 }
 
+/// Convert from PartialError
+impl<T> From<PartialError<T>> for Error {
+    fn from(_err: PartialError<T>) -> Self {
+        Error::Partial
+    }
+}
+
 impl Error {
     /// Returns a tuple representing the error description and its string value.
     pub fn to_str_pair(self) -> (&'static str, Option<&'static str>) {

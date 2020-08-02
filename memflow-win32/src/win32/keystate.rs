@@ -10,11 +10,13 @@ use memflow_core::types::Address;
 
 use pelite::{self, pe64::exports::Export, PeView};
 
+#[derive(Clone, Debug)]
 pub struct Keyboard {
     user_process_info: Win32ProcessInfo,
     key_state_addr: Address,
 }
 
+#[derive(Clone)]
 pub struct KeyboardState {
     buffer: [u8; 256 * 2 / 8],
 }

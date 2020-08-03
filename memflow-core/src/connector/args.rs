@@ -66,7 +66,7 @@ impl ConnectorArgs {
             let kvsplit = kv.split('=').collect::<Vec<_>>();
             if kvsplit.len() == 2 {
                 map.insert(kvsplit[0].to_string(), kvsplit[1].to_string());
-            } else if i == 0 {
+            } else if i == 0 && kv != "" {
                 map.insert("default".to_string(), kv.to_string());
             }
         }

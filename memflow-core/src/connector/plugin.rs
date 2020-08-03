@@ -56,28 +56,73 @@ impl ConnectorInventory {
     /// use memflow_core::connector::ConnectorInventory;
     ///
     /// let inventory = unsafe {
-    ///     ConnectorInventory::new("./")
+    ///     ConnectorInventory::with_path("./")
     /// }.unwrap();
     /// ```
-    pub unsafe fn new<P: AsRef<Path>>(path: P) -> Result<Self> {
+    pub unsafe fn with_path<P: AsRef<Path>>(path: P) -> Result<Self> {
         let mut dir = PathBuf::default();
         dir.push(path);
+
+        let mut ret = Self { connectors: vec![] };
+        ret.add_dir(dir)?;
+        Ok(ret)
+    }
+
+    /// Creates a new inventory of connectors by searching PATH.
+    ///
+    /// # Safety
+    ///
+    /// Loading third party libraries is inherently unsafe and the compiler
+    /// cannot guarantee that the implementation of the library
+    /// matches the one specified here. This is especially true if
+    /// the loaded library implements the necessary interface manually.
+    ///
+    /// # Examples
+    ///
+    /// Creating an inventory:
+    /// ```
+    /// use memflow_core::connector::ConnectorInventory;
+    ///
+    /// let inventory = unsafe {
+    ///     ConnectorInventory::try_new()
+    /// }.unwrap();
+    /// ```
+    pub unsafe fn try_new() -> Result<Self> {
+        match std::env::var_os("PATH") {
+            Some(paths) => {
+                let mut ret = Self { connectors: vec![] };
+
+                for mut path in std::env::split_paths(&paths) {
+                    path.push("memflow");
+                    ret.add_dir(path).ok();
+                }
+
+                Ok(ret)
+            }
+            None => Err(Error::Other("PATH is not set")),
+        }
+    }
+
+    /// Adds a library directory to the inventory
+    ///
+    /// # Safety
+    ///
+    /// Same as previous functions - compiler can not guarantee the safety of
+    /// third party library implementations.
+    pub unsafe fn add_dir(&mut self, dir: PathBuf) -> Result<&mut Self> {
         if !dir.is_dir() {
-            return Err(Error::IO("inventory requires a valid path as argument"));
+            return Err(Error::IO("invalid path argument"));
         }
 
-        let mut connectors = Vec::new();
-
-        // TODO: handle sub directories
         for entry in read_dir(dir).map_err(|_| Error::IO("unable to read directory"))? {
             let entry = entry.map_err(|_| Error::IO("unable to read directory entry"))?;
             if let Ok(connector) = Connector::try_with(entry.path()) {
                 println!("connector loaded: {:?}", entry.path());
-                connectors.push(connector);
+                self.connectors.push(connector);
             }
         }
 
-        Ok(Self { connectors })
+        Ok(self)
     }
 
     /// Tries to create a new connector instance for the connector with the given name.
@@ -101,7 +146,7 @@ impl ConnectorInventory {
     /// use memflow_core::connector::{ConnectorInventory, ConnectorArgs};
     ///
     /// let inventory = unsafe {
-    ///     ConnectorInventory::new("./")
+    ///     ConnectorInventory::with_path("./")
     /// }.unwrap();
     /// let connector = unsafe {
     ///     inventory.create_connector("coredump", &ConnectorArgs::new())
@@ -125,7 +170,7 @@ impl ConnectorInventory {
         &self,
         name: &str,
         args: &ConnectorArgs,
-    ) -> Result<Box<dyn PhysicalMemory>> {
+    ) -> Result<ConnectorInstance> {
         let connector = self
             .connectors
             .iter()
@@ -148,13 +193,13 @@ impl ConnectorInventory {
     /// use memflow_core::connector::{ConnectorInventory, ConnectorArgs};
     ///
     /// let inventory = unsafe {
-    ///     ConnectorInventory::new("./")
+    ///     ConnectorInventory::with_path("./")
     /// }.unwrap();
     /// let connector = unsafe {
     ///     inventory.create_connector_default("coredump")
     /// }.unwrap();
     /// ```
-    pub unsafe fn create_connector_default(&self, name: &str) -> Result<Box<dyn PhysicalMemory>> {
+    pub unsafe fn create_connector_default(&self, name: &str) -> Result<ConnectorInstance> {
         self.create_connector(name, &ConnectorArgs::default())
     }
 }
@@ -176,7 +221,7 @@ impl ConnectorInventory {
 /// }.unwrap();
 /// ```
 pub struct Connector {
-    _library: Rc<Library>,
+    library: Rc<Library>,
     name: String,
     factory: extern "C" fn(args: &ConnectorArgs) -> Result<Box<dyn PhysicalMemory>>,
 }
@@ -209,7 +254,7 @@ impl Connector {
         }
 
         Ok(Self {
-            _library: Rc::new(library),
+            library: Rc::new(library),
             name: desc.name.to_string(),
             factory: desc.factory,
         })
@@ -226,8 +271,31 @@ impl Connector {
     /// the loaded library implements the necessary interface manually.
     ///
     /// It is adviced to use a proc macro for defining a connector plugin.
-    pub unsafe fn create(&self, args: &ConnectorArgs) -> Result<Box<dyn PhysicalMemory>> {
-        (self.factory)(args)
+    pub unsafe fn create(&self, args: &ConnectorArgs) -> Result<ConnectorInstance> {
+        let connector = (self.factory)(args)?;
+        Ok(ConnectorInstance {
+            connector,
+            _library: self.library.clone(),
+        })
+    }
+}
+
+pub struct ConnectorInstance {
+    connector: Box<dyn PhysicalMemory>,
+    _library: Rc<Library>,
+}
+
+impl std::ops::Deref for ConnectorInstance {
+    type Target = dyn PhysicalMemory;
+
+    fn deref(&self) -> &Self::Target {
+        &*self.connector
+    }
+}
+
+impl std::ops::DerefMut for ConnectorInstance {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut *self.connector
     }
 }
 

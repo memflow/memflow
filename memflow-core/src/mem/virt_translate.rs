@@ -67,6 +67,6 @@ impl<'a, T: VirtualTranslate + ?Sized> VirtualTranslate for &'a mut T {
         VO: Extend<(PhysicalAddress, B)>,
         FO: Extend<(Error, Address, B)>,
     {
-        (*self).virt_to_phys_iter(phys_mem, dtb, addrs, out, out_fail)
+        (**self).virt_to_phys_iter(phys_mem, dtb, addrs, out, out_fail)
     }
 }

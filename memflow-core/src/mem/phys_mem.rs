@@ -128,15 +128,17 @@ pub trait PhysicalMemory {
 }
 
 // forward impls
-impl<'a, T: PhysicalMemory + ?Sized> PhysicalMemory for &'a mut T {
+impl<T: PhysicalMemory + ?Sized, P: std::ops::DerefMut<Target = T>> PhysicalMemory for P {
     fn phys_read_raw_list(&mut self, data: &mut [PhysicalReadData]) -> Result<()> {
-        (*self).phys_read_raw_list(data)
+        (**self).phys_read_raw_list(data)
     }
 
     fn phys_write_raw_list(&mut self, data: &[PhysicalWriteData]) -> Result<()> {
-        (*self).phys_write_raw_list(data)
+        (**self).phys_write_raw_list(data)
     }
 }
+
+//}
 
 // iterator helpers
 pub type PhysicalReadData<'a> = (PhysicalAddress, &'a mut [u8]);

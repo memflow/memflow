@@ -53,6 +53,10 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
             Ok(Box::new(connector))
         }
 
+        pub fn static_connector_factory(args: &memflow_core::connector::ConnectorArgs) -> memflow_core::error::Result<impl memflow_core::mem::PhysicalMemory> {
+            #func_name(args)
+        }
+
         #func
     };
     gen.into()

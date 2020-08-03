@@ -163,21 +163,21 @@ pub trait VirtualMemory {
 }
 
 // forward impls
-impl<'a, T: VirtualMemory + ?Sized> VirtualMemory for &'a mut T {
+impl<T: VirtualMemory + ?Sized, P: std::ops::DerefMut<Target = T>> VirtualMemory for P {
     fn virt_read_raw_list(&mut self, data: &mut [VirtualReadData]) -> PartialResult<()> {
-        (*self).virt_read_raw_list(data)
+        (**self).virt_read_raw_list(data)
     }
 
     fn virt_write_raw_list(&mut self, data: &[VirtualWriteData]) -> PartialResult<()> {
-        (*self).virt_write_raw_list(data)
+        (**self).virt_write_raw_list(data)
     }
 
     fn virt_page_info(&mut self, addr: Address) -> Result<Page> {
-        (*self).virt_page_info(addr)
+        (**self).virt_page_info(addr)
     }
 
     fn virt_page_map(&mut self, gap_size: usize) -> Vec<(Address, usize)> {
-        (*self).virt_page_map(gap_size)
+        (**self).virt_page_map(gap_size)
     }
 }
 

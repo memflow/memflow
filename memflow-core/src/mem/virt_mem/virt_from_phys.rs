@@ -191,9 +191,10 @@ impl<T: PhysicalMemory, V: VirtualTranslate> VirtualMemory for VirtualFromPhysic
         );
 
         self.phys_mem.phys_read_raw_list(&mut translation)?;
-        match partial_read {
-            false => Ok(()),
-            true => Err(PartialError::PartialVirtualRead(())),
+        if !partial_read {
+            Ok(())
+        } else {
+            Err(PartialError::PartialVirtualRead(()))
         }
     }
 
@@ -213,9 +214,10 @@ impl<T: PhysicalMemory, V: VirtualTranslate> VirtualMemory for VirtualFromPhysic
         );
 
         self.phys_mem.phys_write_raw_list(&translation)?;
-        match partial_read {
-            false => Ok(()),
-            true => Err(PartialError::PartialVirtualRead(())),
+        if !partial_read {
+            Ok(())
+        } else {
+            Err(PartialError::PartialVirtualRead(()))
         }
     }
 

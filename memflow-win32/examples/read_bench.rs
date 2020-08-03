@@ -148,13 +148,6 @@ fn main() -> Result<()> {
         .author(crate_authors!())
         .arg(Arg::with_name("verbose").short("v").multiple(true))
         .arg(
-            Arg::with_name("inventory")
-                .long("inventory")
-                .short("i")
-                .takes_value(true)
-                .default_value("./"),
-        )
-        .arg(
             Arg::with_name("connector")
                 .long("connector")
                 .short("c")
@@ -180,8 +173,7 @@ fn main() -> Result<()> {
     }
 
     // create inventory + connector
-    let inventory =
-        unsafe { ConnectorInventory::new(matches.value_of("inventory").unwrap()) }.unwrap();
+    let inventory = unsafe { ConnectorInventory::try_new() }.unwrap();
     let mut connector = unsafe {
         inventory.create_connector(
             matches.value_of("connector").unwrap(),

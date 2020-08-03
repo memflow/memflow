@@ -8,7 +8,6 @@ members = [
     "memflow-win32",
     "memflow-ffi",
     "memflow-bench",
-    "connectors/memflow-kvm",
     #"nostd-test"
 ]
 default-members = [

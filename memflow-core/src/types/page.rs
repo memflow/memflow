@@ -15,17 +15,43 @@ bitflags! {
         const WRITEABLE = 0b0000_0100;
         /// The page is read only.
         const READ_ONLY = 0b0000_1000;
+        /// The page is not executable.
+        const NOEXEC = 0b00001_0000;
     }
 }
 
-// TODO: removeme - this is not very ergonomic
 impl PageType {
-    pub fn from_writeable_bit(writeable: bool) -> Self {
-        if writeable {
-            PageType::WRITEABLE
+    pub fn write(mut self, flag: bool) -> Self {
+        self &= !(PageType::WRITEABLE | PageType::READ_ONLY | PageType::UNKNOWN);
+        if flag {
+            self | PageType::WRITEABLE
         } else {
-            PageType::READ_ONLY
+            self | PageType::READ_ONLY
         }
+    }
+
+    pub fn noexec(mut self, flag: bool) -> Self {
+        self &= !(PageType::NOEXEC);
+        if flag {
+            self | PageType::NOEXEC
+        } else {
+            self
+        }
+    }
+
+    pub fn page_table(mut self, flag: bool) -> Self {
+        self &= !(PageType::PAGE_TABLE | PageType::UNKNOWN);
+        if flag {
+            self | PageType::PAGE_TABLE
+        } else {
+            self
+        }
+    }
+}
+
+impl Default for PageType {
+    fn default() -> Self {
+        PageType::UNKNOWN
     }
 }
 

@@ -226,14 +226,19 @@ impl<T: PhysicalMemory, V: VirtualTranslate> VirtualMemory for VirtualFromPhysic
         Ok(paddr.containing_page())
     }
 
-    fn virt_page_map(&mut self, gap_length: usize) -> Vec<(Address, usize)> {
+    fn virt_page_map_range(
+        &mut self,
+        gap_length: usize,
+        start: Address,
+        end: Address,
+    ) -> Vec<(Address, usize)> {
         self.arena.reset();
         let mut out = BumpVec::new_in(&self.arena);
 
         self.vat.virt_to_phys_iter(
             &mut self.phys_mem,
             self.dtb,
-            Some((Address::from(0), (Address::from(0), !0usize))).into_iter(),
+            Some((start, (start, end - start))).into_iter(),
             &mut out,
             &mut FnExtend::void(),
         );

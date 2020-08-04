@@ -244,7 +244,9 @@ impl ArchMMUSpec {
 
         PhysicalAddress::with_page(
             phys_addr,
-            PageType::from_writeable_bit(pte_addr.bit_at(self.writeable_bit)),
+            PageType::default()
+                .write(pte_addr.bit_at(self.writeable_bit))
+                .noexec(pte_addr.bit_at(self.nx_bit)),
             self.page_size_step(step),
         )
     }

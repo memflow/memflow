@@ -510,7 +510,7 @@ mod tests {
 
         let address = Address::from(0);
 
-        let addr = PhysicalAddress::with_page(address, PageType::from_writeable_bit(false), 0x1000);
+        let addr = PhysicalAddress::with_page(address, PageType::default().write(false), 0x1000);
 
         dummy_mem
             .phys_write_raw(addr, buf_start.as_slice())
@@ -540,7 +540,7 @@ mod tests {
 
         let addr = PhysicalAddress::with_page(
             address + size::kb(4),
-            PageType::from_writeable_bit(false),
+            PageType::default().write(false),
             0x1000,
         );
 
@@ -567,7 +567,7 @@ mod tests {
 
         let address = Address::from(0x5323);
 
-        let addr = PhysicalAddress::with_page(address, PageType::from_writeable_bit(false), 0x1000);
+        let addr = PhysicalAddress::with_page(address, PageType::default().write(false), 0x1000);
 
         dummy_mem
             .phys_write_raw(addr, buf_start.as_slice())
@@ -602,10 +602,9 @@ mod tests {
 
         let address = Address::from(0x5323);
 
-        let addr1 =
-            PhysicalAddress::with_page(address, PageType::from_writeable_bit(false), 0x1000);
+        let addr1 = PhysicalAddress::with_page(address, PageType::default().write(false), 0x1000);
 
-        let addr2 = PhysicalAddress::with_page(address, PageType::from_writeable_bit(false), 0x100);
+        let addr2 = PhysicalAddress::with_page(address, PageType::default().write(false), 0x100);
 
         dummy_mem
             .phys_write_raw(addr1, buf_start.as_slice())

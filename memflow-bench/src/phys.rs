@@ -35,7 +35,7 @@ fn rwtest<T: PhysicalMemory>(
                     (
                         PhysicalAddress::with_page(
                             addr,
-                            PageType::from_writeable_bit(true),
+                            PageType::default().write(true),
                             size::kb(4),
                         ),
                         vec.as_mut_slice(),

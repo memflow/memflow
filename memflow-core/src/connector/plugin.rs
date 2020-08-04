@@ -11,6 +11,8 @@ use std::fs::read_dir;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 
+use log::debug;
+
 use libloading::Library;
 
 /// Exported memflow plugin version
@@ -272,7 +274,17 @@ impl Connector {
     ///
     /// It is adviced to use a proc macro for defining a connector plugin.
     pub unsafe fn create(&self, args: &ConnectorArgs) -> Result<ConnectorInstance> {
-        let connector = (self.factory)(args)?;
+        let connector_res = (self.factory)(args);
+
+        if let Err(err) = connector_res {
+            debug!("{}", err)
+        }
+
+        // We do not want to return error with data from the shared library
+        // that may get unloaded before it gets displayed
+        let connector =
+            connector_res.map_err(|_| Error::Connector("Failed to create a connector"))?;
+
         Ok(ConnectorInstance {
             connector,
             _library: self.library.clone(),

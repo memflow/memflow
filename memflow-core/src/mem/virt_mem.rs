@@ -45,7 +45,12 @@ pub trait VirtualMemory {
 
     fn virt_page_info(&mut self, addr: Address) -> Result<Page>;
 
-    fn virt_page_map(&mut self, gap_size: usize) -> Vec<(Address, usize)>;
+    fn virt_page_map_range(
+        &mut self,
+        gap_size: usize,
+        start: Address,
+        end: Address,
+    ) -> Vec<(Address, usize)>;
 
     // read helpers
     fn virt_read_raw_into(&mut self, addr: Address, out: &mut [u8]) -> PartialResult<()> {
@@ -87,6 +92,11 @@ pub trait VirtualMemory {
         Self: Sized,
     {
         self.virt_write_raw(addr, data.as_bytes())
+    }
+
+    // page map helpers
+    fn virt_page_map(&mut self, gap_size: usize) -> Vec<(Address, usize)> {
+        self.virt_page_map_range(gap_size, Address::null(), Address::invalid())
     }
 
     // specific read helpers
@@ -176,8 +186,13 @@ impl<T: VirtualMemory + ?Sized, P: std::ops::DerefMut<Target = T>> VirtualMemory
         (**self).virt_page_info(addr)
     }
 
-    fn virt_page_map(&mut self, gap_size: usize) -> Vec<(Address, usize)> {
-        (**self).virt_page_map(gap_size)
+    fn virt_page_map_range(
+        &mut self,
+        gap_size: usize,
+        start: Address,
+        end: Address,
+    ) -> Vec<(Address, usize)> {
+        (**self).virt_page_map_range(gap_size, start, end)
     }
 }
 

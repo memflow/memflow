@@ -7,7 +7,7 @@ use crate::types::{size, PageType};
 
 use bumpalo::Bump;
 
-pub struct CachedMemoryAccess<'a, T: PhysicalMemory + ?Sized, Q: CacheValidator> {
+pub struct CachedMemoryAccess<'a, T: ?Sized, Q> {
     mem: &'a mut T,
     cache: PageCache<'a, Q>,
     arena: Bump,

@@ -27,7 +27,7 @@ impl<'a> CacheEntry<'a> {
     }
 }
 
-pub struct PageCache<'a, T: CacheValidator> {
+pub struct PageCache<'a, T> {
     address: Box<[Address]>,
     page_refs: Box<[Option<&'a mut [u8]>]>,
     address_once_validated: Box<[Address]>,
@@ -38,7 +38,7 @@ pub struct PageCache<'a, T: CacheValidator> {
     cache_layout: Layout,
 }
 
-impl<'a, T: CacheValidator> Drop for PageCache<'a, T> {
+impl<'a, T> Drop for PageCache<'a, T> {
     fn drop(&mut self) {
         unsafe {
             dealloc(self.cache_ptr, self.cache_layout);

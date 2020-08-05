@@ -10,7 +10,7 @@ use crate::types::{Address, PhysicalAddress};
 
 use bumpalo::{collections::Vec as BumpVec, Bump};
 
-pub struct CachedVirtualTranslate<V: VirtualTranslate, Q: CacheValidator> {
+pub struct CachedVirtualTranslate<V, Q> {
     vat: V,
     tlb: TLBCache<Q>,
     arch: Architecture,

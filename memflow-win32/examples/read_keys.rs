@@ -4,7 +4,7 @@ use clap::*;
 use log::Level;
 
 use memflow_core::connector::*;
-use memflow_core::mem::TranslateArch;
+use memflow_core::mem::{CachedMemoryAccess, TranslateArch};
 
 use memflow_win32::error::Result;
 use memflow_win32::offsets::Win32Offsets;
@@ -52,10 +52,27 @@ pub fn main() -> Result<()> {
 
     // scan for win32 kernel
     let kernel_info = KernelInfo::scanner(&mut *connector).scan()?;
-
-    let vat = TranslateArch::new(kernel_info.start_block.arch);
     let offsets = Win32Offsets::try_with_kernel_info(&kernel_info)?;
-    let mut kernel = Kernel::new(&mut *connector, vat, offsets, kernel_info);
+
+    // TODO: builder testing
+    let vat = TranslateArch::new(kernel_info.start_block.arch);
+
+    let mut connector_cached = CachedMemoryAccess::builder(&mut connector)
+        .arch(kernel_info.start_block.arch)
+        .build()
+        .unwrap();
+
+    /*
+        let vat_cached = CachedVirtualTranslate::builder()
+            .vat(vat)
+            .arch(kernel_info.start_block.arch)
+            .validator(TimedCacheValidator::new(
+                Duration::from_millis(10000).into(),
+            ))
+            .build()
+            .unwrap();
+    */
+    let mut kernel = Kernel::new(&mut connector_cached, vat, offsets, kernel_info);
 
     // fetch keyboard state
     let kbd = Keyboard::try_with(&mut kernel)?;

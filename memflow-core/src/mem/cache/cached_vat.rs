@@ -19,6 +19,23 @@ pub struct CachedVirtualTranslate<V: VirtualTranslate, Q: CacheValidator> {
     pub misc: usize,
 }
 
+//unsafe impl<V: VirtualTranslate + Send, Q: CacheValidator + Send> Send for CachedVirtualTranslate<V, Q> {}
+
+impl<V: VirtualTranslate + Clone, Q: CacheValidator + Clone> Clone
+    for CachedVirtualTranslate<V, Q>
+{
+    fn clone(&self) -> Self {
+        Self {
+            vat: self.vat.clone(),
+            tlb: self.tlb.clone(),
+            arch: self.arch,
+            arena: Bump::new(),
+            hitc: self.hitc,
+            misc: self.misc,
+        }
+    }
+}
+
 impl<V: VirtualTranslate, Q: CacheValidator> CachedVirtualTranslate<V, Q> {
     pub fn builder() -> CachedVirtualTranslateBuilder<V, Q> {
         CachedVirtualTranslateBuilder::default()

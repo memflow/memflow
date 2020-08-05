@@ -48,7 +48,7 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
         };
 
         #[cfg(feature = "plugin")]
-        pub extern "C" fn connector_factory(args: &memflow_core::connector::ConnectorArgs) -> memflow_core::error::Result<Box<dyn memflow_core::mem::PhysicalMemory>> {
+        pub extern "C" fn connector_factory(args: &memflow_core::connector::ConnectorArgs) -> memflow_core::error::Result<memflow_core::connector::PluginConnector> {
             let connector = #func_name(args)?;
             Ok(Box::new(connector))
         }

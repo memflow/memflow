@@ -157,7 +157,7 @@ impl<V: VirtualTranslate> CachedVirtualTranslateBuilder<V, TimedCacheValidator> 
     fn new(vat: V) -> Self {
         Self {
             vat,
-            validator: TimedCacheValidator::new(Duration::from_millis(1000).into()),
+            validator: TimedCacheValidator::new(Duration::from_millis(1000)),
             entries: Some(2048),
             arch: None,
         }
@@ -182,7 +182,7 @@ impl<V: VirtualTranslate, Q: CacheValidator> CachedVirtualTranslateBuilder<V, Q>
     ) -> CachedVirtualTranslateBuilder<V, QN> {
         CachedVirtualTranslateBuilder {
             vat: self.vat,
-            validator: validator,
+            validator,
             entries: self.entries,
             arch: self.arch,
         }

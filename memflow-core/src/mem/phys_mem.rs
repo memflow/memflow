@@ -138,8 +138,6 @@ impl<T: PhysicalMemory + ?Sized, P: std::ops::DerefMut<Target = T>> PhysicalMemo
     }
 }
 
-//}
-
 // iterator helpers
 pub type PhysicalReadData<'a> = (PhysicalAddress, &'a mut [u8]);
 pub trait PhysicalReadIterator<'a>: Iterator<Item = PhysicalReadData<'a>> + 'a {}

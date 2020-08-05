@@ -20,7 +20,7 @@ use pelite::{
 };
 
 #[derive(Clone)]
-pub struct Kernel<T: PhysicalMemory, V: VirtualTranslate> {
+pub struct Kernel<T, V> {
     pub phys_mem: T,
     pub vat: V,
     pub offsets: Win32Offsets,

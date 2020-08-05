@@ -38,7 +38,7 @@ impl CachedEntry {
 }
 
 #[derive(Clone)]
-pub struct TLBCache<T: CacheValidator> {
+pub struct TLBCache<T> {
     entries: Box<[CachedEntry]>,
     pub validator: T,
 }

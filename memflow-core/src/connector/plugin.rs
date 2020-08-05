@@ -9,7 +9,7 @@ use super::ConnectorArgs;
 
 use std::fs::read_dir;
 use std::path::{Path, PathBuf};
-use std::rc::Rc;
+use std::sync::Arc;
 
 use log::debug;
 
@@ -17,6 +17,9 @@ use libloading::Library;
 
 /// Exported memflow plugin version
 pub const MEMFLOW_CONNECTOR_VERSION: i32 = 1;
+
+/// Type of all plugin based connectors
+pub type PluginConnector = Box<dyn PhysicalMemory + Send>;
 
 /// Describes a connector plugin
 pub struct ConnectorDescriptor {
@@ -32,7 +35,7 @@ pub struct ConnectorDescriptor {
 
     /// The factory function for the connector.
     /// Calling this function will produce new connector instances.
-    pub factory: extern "C" fn(args: &ConnectorArgs) -> Result<Box<dyn PhysicalMemory>>,
+    pub factory: extern "C" fn(args: &ConnectorArgs) -> Result<PluginConnector>,
 }
 
 /// Holds an inventory of available connector plugins.
@@ -223,9 +226,9 @@ impl ConnectorInventory {
 /// }.unwrap();
 /// ```
 pub struct Connector {
-    library: Rc<Library>,
+    library: Arc<Library>,
     name: String,
-    factory: extern "C" fn(args: &ConnectorArgs) -> Result<Box<dyn PhysicalMemory>>,
+    factory: extern "C" fn(args: &ConnectorArgs) -> Result<PluginConnector>,
 }
 
 impl Connector {
@@ -256,7 +259,7 @@ impl Connector {
         }
 
         Ok(Self {
-            library: Rc::new(library),
+            library: Arc::new(library),
             name: desc.name.to_string(),
             factory: desc.factory,
         })
@@ -293,8 +296,8 @@ impl Connector {
 }
 
 pub struct ConnectorInstance {
-    connector: Box<dyn PhysicalMemory>,
-    _library: Rc<Library>,
+    connector: PluginConnector,
+    _library: Arc<Library>,
 }
 
 impl std::ops::Deref for ConnectorInstance {

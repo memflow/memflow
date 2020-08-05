@@ -17,7 +17,9 @@ pub use args::ConnectorArgs;
 pub mod plugin;
 #[doc(hidden)]
 #[cfg(feature = "plugins")]
-pub use plugin::{Connector, ConnectorDescriptor, ConnectorInventory, MEMFLOW_CONNECTOR_VERSION};
+pub use plugin::{
+    Connector, ConnectorDescriptor, ConnectorInventory, PluginConnector, MEMFLOW_CONNECTOR_VERSION,
+};
 
 pub mod fileio;
 #[doc(hidden)]

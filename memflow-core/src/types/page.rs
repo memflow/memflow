@@ -16,7 +16,7 @@ bitflags! {
         /// The page is read only.
         const READ_ONLY = 0b0000_1000;
         /// The page is not executable.
-        const NOEXEC = 0b00001_0000;
+        const NOEXEC = 0b0001_0000;
     }
 }
 

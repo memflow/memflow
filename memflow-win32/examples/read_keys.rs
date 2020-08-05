@@ -4,7 +4,7 @@ use clap::*;
 use log::Level;
 
 use memflow_core::connector::*;
-use memflow_core::mem::{CachedMemoryAccess, TranslateArch};
+use memflow_core::mem::{CachedMemoryAccess, CachedVirtualTranslate, TranslateArch};
 
 use memflow_win32::error::Result;
 use memflow_win32::offsets::Win32Offsets;
@@ -62,17 +62,12 @@ pub fn main() -> Result<()> {
         .build()
         .unwrap();
 
-    /*
-        let vat_cached = CachedVirtualTranslate::builder()
-            .vat(vat)
-            .arch(kernel_info.start_block.arch)
-            .validator(TimedCacheValidator::new(
-                Duration::from_millis(10000).into(),
-            ))
-            .build()
-            .unwrap();
-    */
-    let mut kernel = Kernel::new(&mut connector_cached, vat, offsets, kernel_info);
+    let vat_cached = CachedVirtualTranslate::builder(vat)
+        .arch(kernel_info.start_block.arch)
+        .build()
+        .unwrap();
+
+    let mut kernel = Kernel::new(&mut connector_cached, vat_cached, offsets, kernel_info);
 
     // fetch keyboard state
     let kbd = Keyboard::try_with(&mut kernel)?;

@@ -73,10 +73,6 @@ fn vat_test_with_ctx<
     use_tlb: bool,
     (mut mem, mut vat, prc, tmod): (T, V, P, M),
 ) {
-    let tlb_cache = CachedVirtualTranslate::builder()
-        .arch(prc.sys_arch())
-        .validator(TimedCacheValidator::new(Duration::from_millis(1000)));
-
     if cache_size > 0 {
         let cache = CachedMemoryAccess::builder(&mut mem)
             .arch(prc.sys_arch())
@@ -86,14 +82,20 @@ fn vat_test_with_ctx<
 
         if use_tlb {
             let mut mem = cache.build().unwrap();
-            let mut vat = tlb_cache.vat(vat).build().unwrap();
+            let mut vat = CachedVirtualTranslate::builder(vat)
+                .arch(prc.sys_arch())
+                .build()
+                .unwrap();
             vat_test_with_mem(bench, &mut mem, &mut vat, chunks, translations, prc, tmod);
         } else {
             let mut mem = cache.build().unwrap();
             vat_test_with_mem(bench, &mut mem, &mut vat, chunks, translations, prc, tmod);
         }
     } else if use_tlb {
-        let mut vat = tlb_cache.vat(vat).build().unwrap();
+        let mut vat = CachedVirtualTranslate::builder(vat)
+            .arch(prc.sys_arch())
+            .build()
+            .unwrap();
         vat_test_with_mem(bench, &mut mem, &mut vat, chunks, translations, prc, tmod);
     } else {
         vat_test_with_mem(bench, &mut mem, &mut vat, chunks, translations, prc, tmod);

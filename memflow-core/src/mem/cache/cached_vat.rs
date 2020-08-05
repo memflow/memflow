@@ -3,12 +3,13 @@ use crate::error::{Error, Result};
 use super::tlb_cache::TLBCache;
 use crate::architecture::Architecture;
 use crate::iter::{PageChunks, SplitAtIndex};
-use crate::mem::cache::CacheValidator;
+use crate::mem::cache::{CacheValidator, TimedCacheValidator};
 use crate::mem::virt_translate::VirtualTranslate;
 use crate::mem::PhysicalMemory;
 use crate::types::{Address, PhysicalAddress};
 
 use bumpalo::{collections::Vec as BumpVec, Bump};
+use coarsetime::Duration;
 
 pub struct CachedVirtualTranslate<V, Q> {
     vat: V,
@@ -37,10 +38,6 @@ impl<V: VirtualTranslate + Clone, Q: CacheValidator + Clone> Clone
 }
 
 impl<V: VirtualTranslate, Q: CacheValidator> CachedVirtualTranslate<V, Q> {
-    pub fn builder() -> CachedVirtualTranslateBuilder<V, Q> {
-        CachedVirtualTranslateBuilder::default()
-    }
-
     pub fn with(vat: V, tlb: TLBCache<Q>, arch: Architecture) -> Self {
         Self {
             vat,
@@ -50,6 +47,12 @@ impl<V: VirtualTranslate, Q: CacheValidator> CachedVirtualTranslate<V, Q> {
             hitc: 0,
             misc: 0,
         }
+    }
+}
+
+impl<V: VirtualTranslate> CachedVirtualTranslate<V, TimedCacheValidator> {
+    pub fn builder(vat: V) -> CachedVirtualTranslateBuilder<V, TimedCacheValidator> {
+        CachedVirtualTranslateBuilder::new(vat)
     }
 }
 
@@ -144,17 +147,17 @@ impl<V: VirtualTranslate, Q: CacheValidator> VirtualTranslate for CachedVirtualT
 }
 
 pub struct CachedVirtualTranslateBuilder<V, Q> {
-    vat: Option<V>,
-    validator: Option<Q>,
+    vat: V,
+    validator: Q,
     entries: Option<usize>,
     arch: Option<Architecture>,
 }
 
-impl<V: VirtualTranslate, Q: CacheValidator> Default for CachedVirtualTranslateBuilder<V, Q> {
-    fn default() -> Self {
+impl<V: VirtualTranslate> CachedVirtualTranslateBuilder<V, TimedCacheValidator> {
+    fn new(vat: V) -> Self {
         Self {
-            vat: None,
-            validator: None,
+            vat,
+            validator: TimedCacheValidator::new(Duration::from_millis(1000).into()),
             entries: Some(2048),
             arch: None,
         }
@@ -164,23 +167,25 @@ impl<V: VirtualTranslate, Q: CacheValidator> Default for CachedVirtualTranslateB
 impl<V: VirtualTranslate, Q: CacheValidator> CachedVirtualTranslateBuilder<V, Q> {
     pub fn build(self) -> Result<CachedVirtualTranslate<V, Q>> {
         Ok(CachedVirtualTranslate::with(
-            self.vat.ok_or("vat must be initialized")?,
+            self.vat,
             TLBCache::new(
                 self.entries.ok_or("entries must be initialized")?,
-                self.validator.ok_or("validator must be initialized")?,
+                self.validator,
             ),
             self.arch.ok_or("arch must be initialized")?,
         ))
     }
 
-    pub fn vat(mut self, vat: V) -> Self {
-        self.vat = Some(vat);
-        self
-    }
-
-    pub fn validator(mut self, validator: Q) -> Self {
-        self.validator = Some(validator);
-        self
+    pub fn validator<QN: CacheValidator>(
+        self,
+        validator: QN,
+    ) -> CachedVirtualTranslateBuilder<V, QN> {
+        CachedVirtualTranslateBuilder {
+            vat: self.vat,
+            validator: validator,
+            entries: self.entries,
+            arch: self.arch,
+        }
     }
 
     pub fn entries(mut self, entries: usize) -> Self {

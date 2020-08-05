@@ -89,10 +89,6 @@ fn read_test_with_ctx<
     use_tlb: bool,
     (mut mem, vat, prc, tmod): (T, V, P, M),
 ) {
-    let tlb_cache = CachedVirtualTranslate::builder()
-        .arch(prc.sys_arch())
-        .validator(TimedCacheValidator::new(Duration::from_millis(1000)));
-
     if cache_size > 0 {
         let cache = CachedMemoryAccess::builder(&mut mem)
             .arch(prc.sys_arch())
@@ -102,7 +98,10 @@ fn read_test_with_ctx<
 
         if use_tlb {
             let mem = cache.build().unwrap();
-            let vat = tlb_cache.vat(vat).build().unwrap();
+            let vat = CachedVirtualTranslate::builder(vat)
+                .arch(prc.sys_arch())
+                .build()
+                .unwrap();
             let mut virt_mem =
                 VirtualFromPhysical::with_vat(mem, prc.sys_arch(), prc.proc_arch(), prc.dtb(), vat);
             read_test_with_mem(bench, &mut virt_mem, chunk_size, chunks, tmod);
@@ -113,7 +112,10 @@ fn read_test_with_ctx<
             read_test_with_mem(bench, &mut virt_mem, chunk_size, chunks, tmod);
         }
     } else if use_tlb {
-        let vat = tlb_cache.vat(vat).build().unwrap();
+        let vat = CachedVirtualTranslate::builder(vat)
+            .arch(prc.sys_arch())
+            .build()
+            .unwrap();
         let mut virt_mem =
             VirtualFromPhysical::with_vat(mem, prc.sys_arch(), prc.proc_arch(), prc.dtb(), vat);
         read_test_with_mem(bench, &mut virt_mem, chunk_size, chunks, tmod);

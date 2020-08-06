@@ -13,9 +13,9 @@ jobs:
       - run: sudo apt-get install libncurses-dev libncursesw5-dev
       - uses: actions/checkout@v2
       - name: Build
-        run: cargo build --all --all-features --verbose
+        run: cargo build --workspace --all-features --verbose
       - name: Build examples
-        run: cargo build --all --all-features --examples --verbose
+        run: cargo build --workspace --all-features --examples --verbose
 
   test:
     runs-on: ubuntu-latest
@@ -23,7 +23,7 @@ jobs:
       - run: sudo apt-get install libncurses-dev libncursesw5-dev
       - uses: actions/checkout@v2
       - name: Run all tests
-        run: cargo test --all --all-features --verbose
+        run: cargo test --workspace --all-features --verbose
 
   lint:
     runs-on: ubuntu-latest
@@ -55,7 +55,7 @@ jobs:
           export CARGO_INCREMENTAL=0
           export RUSTFLAGS="-Zprofile -Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off -Zpanic_abort_tests -Cpanic=abort"
           export RUSTDOCFLAGS="-Cpanic=abort"
-          cargo build --all --all-features
-          cargo test --all --all-features
+          cargo build --workspace --all-features
+          cargo test --workspace --exclude memflow-derive --all-features
           grcov ./target/debug/ -s . -t lcov --llvm --branch --ignore-not-existing -o ./target/debug/coverage
           bash <(curl -s https://codecov.io/bash) -f ./target/debug/coverage -t ${{ secrets.CODECOV_TOKEN }};

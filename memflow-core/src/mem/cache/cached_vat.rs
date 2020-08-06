@@ -9,7 +9,6 @@ use crate::mem::PhysicalMemory;
 use crate::types::{Address, PhysicalAddress};
 
 use bumpalo::{collections::Vec as BumpVec, Bump};
-use coarsetime::Duration;
 
 pub struct CachedVirtualTranslate<V, Q> {
     vat: V,
@@ -157,7 +156,7 @@ impl<V: VirtualTranslate> CachedVirtualTranslateBuilder<V, TimedCacheValidator> 
     fn new(vat: V) -> Self {
         Self {
             vat,
-            validator: TimedCacheValidator::new(Duration::from_millis(1000)),
+            validator: TimedCacheValidator::default(),
             entries: Some(2048),
             arch: None,
         }

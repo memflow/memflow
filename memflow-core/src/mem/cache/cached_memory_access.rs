@@ -6,7 +6,6 @@ use crate::mem::phys_mem::{PhysicalMemory, PhysicalReadData, PhysicalWriteData};
 use crate::types::{size, PageType};
 
 use bumpalo::Bump;
-use coarsetime::Duration;
 
 pub struct CachedMemoryAccess<'a, T: ?Sized, Q> {
     mem: &'a mut T,
@@ -77,7 +76,7 @@ impl<'a, T: PhysicalMemory + ?Sized> CachedMemoryAccessBuilder<'a, T, TimedCache
     pub fn new(mem: &'a mut T) -> Self {
         Self {
             mem,
-            validator: TimedCacheValidator::new(Duration::from_millis(1000)),
+            validator: TimedCacheValidator::default(),
             page_size: None,
             cache_size: size::mb(2),
             page_type_mask: PageType::PAGE_TABLE | PageType::READ_ONLY,

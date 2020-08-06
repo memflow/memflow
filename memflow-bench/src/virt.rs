@@ -1,8 +1,8 @@
 use criterion::*;
 
 use memflow_core::mem::{
-    timed_validator::*, CachedMemoryAccess, CachedVirtualTranslate, PhysicalMemory,
-    VirtualFromPhysical, VirtualMemory, VirtualTranslate,
+    CachedMemoryAccess, CachedVirtualTranslate, PhysicalMemory, VirtualFromPhysical, VirtualMemory,
+    VirtualTranslate,
 };
 
 use memflow_core::{size, OsProcessInfo, OsProcessModuleInfo, PageType};
@@ -93,8 +93,7 @@ fn read_test_with_ctx<
         let cache = CachedMemoryAccess::builder(&mut mem)
             .arch(prc.sys_arch())
             .cache_size(size::mb(cache_size as usize))
-            .page_type_mask(PageType::PAGE_TABLE | PageType::READ_ONLY | PageType::WRITEABLE)
-            .validator(TimedCacheValidator::new(Duration::from_millis(10000)));
+            .page_type_mask(PageType::PAGE_TABLE | PageType::READ_ONLY | PageType::WRITEABLE);
 
         if use_tlb {
             let mem = cache.build().unwrap();

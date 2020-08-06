@@ -10,6 +10,12 @@ pub struct TimedCacheValidator {
     last_time: Instant,
 }
 
+impl Default for TimedCacheValidator {
+    fn default() -> Self {
+        Self::new(Duration::from_millis(1000))
+    }
+}
+
 impl TimedCacheValidator {
     pub fn new(valid_time: Duration) -> Self {
         Self {

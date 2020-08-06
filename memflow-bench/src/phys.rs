@@ -1,6 +1,6 @@
 use criterion::*;
 
-use memflow_core::mem::{timed_validator::*, CachedMemoryAccess, PhysicalMemory};
+use memflow_core::mem::{CachedMemoryAccess, PhysicalMemory};
 
 use memflow_core::{size, Address, Architecture, PageType, PhysicalAddress};
 
@@ -90,7 +90,6 @@ fn read_test_with_ctx<T: PhysicalMemory>(
             .arch(Architecture::X64)
             .cache_size(size::mb(cache_size as usize))
             .page_type_mask(PageType::PAGE_TABLE | PageType::READ_ONLY | PageType::WRITEABLE)
-            .validator(TimedCacheValidator::new(Duration::from_millis(10000)))
             .build()
             .unwrap();
 

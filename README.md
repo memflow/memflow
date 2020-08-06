@@ -8,9 +8,9 @@ memflow - machine introspection framework
 #
 
 ## building
-- run `cargo build --release --all --all-features` to build everything
-- run `cargo build --release --all --all-features --examples` to build all examples
-- run `cargo test --all --all-features` to run all tests
+- run `cargo build --release --workspace --all-features` to build everything
+- run `cargo build --release --workspace --all-features --examples` to build all examples
+- run `cargo test --workspace --all-features` to run all tests
 - run `cargo bench` to run all benchmarks
 - run `cargo clippy --all-targets --all-features -- -D warnings` to run clippy linting on everything
 

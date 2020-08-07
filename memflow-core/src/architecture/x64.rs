@@ -23,14 +23,6 @@ pub fn get_mmu_spec() -> ArchMMUSpec {
     }
 }
 
-pub fn page_size() -> usize {
-    page_size_level(1)
-}
-
-pub fn page_size_level(pt_level: u32) -> usize {
-    get_mmu_spec().page_size_level(pt_level as usize)
-}
-
 #[cfg(test)]
 mod tests {
     use super::super::mmu_spec::masks::*;

@@ -18,7 +18,7 @@ use libloading::Library;
 /// Exported memflow plugin version
 pub const MEMFLOW_CONNECTOR_VERSION: i32 = 1;
 
-/// Type of all plugin based connectors
+/// Type of all initial plugin based connectors
 pub type PluginConnector = Box<dyn PhysicalMemory + Send>;
 
 /// Describes a connector plugin
@@ -295,6 +295,10 @@ impl Connector {
     }
 }
 
+/// Describes initialized connector instance
+///
+/// This structure is returned by `Connector`. It is needed to maintain reference
+/// counts to the loaded plugin library.
 pub struct ConnectorInstance {
     connector: PluginConnector,
     _library: Arc<Library>,

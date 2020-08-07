@@ -12,9 +12,9 @@ use log::info;
 
 #[cfg(feature = "download_progress")]
 use {
-    cursive::utils::{Counter, ProgressReader},
-    indicatif::{ProgressBar, ProgressStyle},
-    std::sync::atomic::{AtomicBool, Ordering},
+    pbr::ProgressBar,
+    progress_streams::ProgressReader,
+    std::sync::atomic::{AtomicBool, AtomicUsize, Ordering},
     std::sync::Arc,
 };
 
@@ -22,23 +22,25 @@ use {
 fn read_to_end<T: Read>(reader: &mut T, len: usize) -> Result<Vec<u8>> {
     let mut buffer = vec![];
 
-    let counter = Counter::new(0);
-    let mut reader = ProgressReader::new(counter.clone(), reader);
-
-    let pb = ProgressBar::new(len as u64);
-    pb.set_style(ProgressStyle::default_bar()
-                 .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {bytes}/{total_bytes} ({eta})")
-                 .progress_chars("#>-"));
+    let total = Arc::new(AtomicUsize::new(0));
+    let mut reader = ProgressReader::new(reader, |progress: usize| {
+        total.fetch_add(progress, Ordering::SeqCst);
+    });
+    let mut pb = ProgressBar::new(len as u64);
 
     let finished = Arc::new(AtomicBool::new(false));
-    let finished_thread = finished.clone();
-    let thread = std::thread::spawn(move || {
-        while !finished_thread.load(Ordering::Relaxed) {
-            let progress = counter.get();
-            pb.set_position(progress as u64)
-        }
-        pb.finish();
-    });
+    let thread = {
+        let finished_thread = finished.clone();
+        let total_thread = total.clone();
+
+        std::thread::spawn(move || {
+            while !finished_thread.load(Ordering::Relaxed) {
+                pb.set(total_thread.load(Ordering::SeqCst) as u64);
+                std::thread::sleep(std::time::Duration::from_millis(10));
+            }
+            pb.finish();
+        })
+    };
 
     reader
         .read_to_end(&mut buffer)

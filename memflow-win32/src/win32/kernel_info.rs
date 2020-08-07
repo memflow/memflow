@@ -1,6 +1,6 @@
 use crate::error::Result;
 use crate::kernel::{self, StartBlock};
-use crate::kernel::{Win32BuildNumber, Win32GUID};
+use crate::kernel::{Win32GUID, Win32Version};
 
 use log::info;
 
@@ -16,7 +16,7 @@ pub struct KernelInfo {
     pub kernel_size: usize,
 
     pub kernel_guid: Option<Win32GUID>,
-    pub kernel_build_number: Option<Win32BuildNumber>,
+    pub kernel_build_number: Option<Win32Version>,
 
     pub eprocess_base: Address,
 }

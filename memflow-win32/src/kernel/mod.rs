@@ -4,6 +4,8 @@ pub mod sysproc;
 
 pub use lowstub::StartBlock;
 
+use std::fmt;
+
 #[derive(Debug, Clone)]
 pub struct Win32GUID {
     pub file_name: String,
@@ -20,18 +22,50 @@ impl Win32GUID {
 }
 
 #[derive(Debug, Clone)]
-pub struct Win32BuildNumber(u32);
+pub struct Win32Version {
+    nt_major_version: u32,
+    nt_minor_version: u32,
+    nt_build_number: u32,
+}
 
-impl Win32BuildNumber {
-    pub fn new(nt_build_number: u32) -> Self {
-        Self { 0: nt_build_number }
+impl Win32Version {
+    pub fn new(nt_major_version: u32, nt_minor_version: u32, nt_build_number: u32) -> Self {
+        Self {
+            nt_major_version,
+            nt_minor_version,
+            nt_build_number,
+        }
+    }
+
+    pub fn major_version(&self) -> u32 {
+        self.nt_major_version
+    }
+
+    pub fn minor_version(&self) -> u32 {
+        self.nt_minor_version
     }
 
     pub fn build_number(&self) -> u32 {
-        self.0 & 0xFFFF
+        self.nt_build_number & 0xFFFF
     }
 
     pub fn is_checked_build(&self) -> bool {
-        (self.0 & 0xF0000000) == 0xC0000000
+        (self.nt_build_number & 0xF0000000) == 0xC0000000
+    }
+}
+
+impl fmt::Display for Win32Version {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if self.nt_major_version != 0 {
+            write!(
+                f,
+                "{}.{}.{}",
+                self.major_version(),
+                self.minor_version(),
+                self.build_number()
+            )
+        } else {
+            write!(f, "{}", self.build_number())
+        }
     }
 }

@@ -4,11 +4,12 @@ mod x86;
 
 use std::prelude::v1::*;
 
-use super::{StartBlock, Win32BuildNumber, Win32GUID};
-use crate::error::{Error, Result};
+use super::{StartBlock, Win32GUID, Win32Version};
+use crate::error::{Error, PartialResultExt, Result};
 use crate::pe::{self, MemoryPeView, MemoryPeViewContext};
 
 use log::{info, warn};
+use std::convert::TryInto;
 
 use memflow_core::mem::VirtualMemory;
 use memflow_core::types::Address;
@@ -93,27 +94,67 @@ fn get_export<T: VirtualMemory>(pe: &MemoryPeView<T>, name: &str) -> Result<usiz
 pub fn find_builder_number<T: VirtualMemory>(
     virt_mem: &mut T,
     kernel_base: Address,
-) -> Result<Win32BuildNumber> {
+) -> Result<Win32Version> {
     let ctx = MemoryPeViewContext::new(virt_mem, kernel_base).map_err(Error::PE)?;
     let pe = pe::wrap_memory_pe_view(&ctx).map_err(Error::PE)?;
 
     // NtBuildNumber
-    let nt_build_number_ref = kernel_base + get_export(&pe, "NtBuildNumber")?;
+    let nt_build_number_ref = get_export(&pe, "NtBuildNumber")?;
+    let rtl_get_version_ref = get_export(&pe, "RtlGetVersion");
 
+    let nt_build_number: u32 = virt_mem.virt_read(kernel_base + nt_build_number_ref)?;
+    info!("nt_build_number: {}", nt_build_number);
+    if nt_build_number == 0 {
+        return Err(Error::Initialization("unable to fetch nt build number"));
+    }
+
+    // TODO: these reads should be optional
+    // try to find major/minor version
     // read from KUSER_SHARED_DATA. these fields exist since nt 4.0 so they have to exist in case NtBuildNumber exists.
-    /*
-    let nt_major_version: u32 = virt_mem.virt_read((0x7ffe0000 + 0x026C).into())?;
-    let nt_minor_version: u32 = virt_mem.virt_read((0x7ffe0000 + 0x0270).into())?;
-    info!("nt_version: {}.{}", nt_major_version, nt_minor_version);
-    */
+    let mut nt_major_version: u32 = virt_mem
+        .virt_read((0x7ffe0000 + 0x026C).into())
+        .data_part()?;
+    let mut nt_minor_version: u32 = virt_mem
+        .virt_read((0x7ffe0000 + 0x0270).into())
+        .data_part()?;
 
-    let nt_build_number: u32 = virt_mem.virt_read(nt_build_number_ref)?;
-    //info!("nt_build_number: {}", nt_build_number);
+    // fallback on x64: try to parse RtlGetVersion assembly
+    if nt_major_version == 0 && rtl_get_version_ref.is_ok() {
+        let mut buf = [0u8; 0x100];
+        virt_mem
+            .virt_read_into(kernel_base + rtl_get_version_ref.unwrap(), &mut buf)
+            .data_part()?;
 
-    let build_number = Win32BuildNumber::new(nt_build_number);
+        nt_major_version = 0;
+        nt_minor_version = 0;
 
-    info!("build_number: {}", build_number.build_number());
-    info!("checked_build: {}", build_number.is_checked_build());
+        for i in 0..0xf0 {
+            if nt_major_version == 0
+                && nt_minor_version == 0
+                && u32::from_le_bytes(buf[i..i + 4].try_into().unwrap()) == 0x441c748
+            {
+                nt_major_version =
+                    u16::from_le_bytes(buf[i + 4..i + 4 + 2].try_into().unwrap()) as u32;
+                nt_minor_version = (buf[i + 5] & 0xF) as u32;
+            }
 
-    Ok(build_number)
+            if nt_major_version == 0
+                && u32::from_le_bytes(buf[i..i + 4].try_into().unwrap()) & 0xFFFFF == 0x441c7
+            {
+                nt_major_version = buf[i + 3] as u32;
+            }
+
+            if nt_minor_version == 0
+                && u32::from_le_bytes(buf[i..i + 4].try_into().unwrap()) & 0xFFFFF == 0x841c7
+            {
+                nt_major_version = buf[i + 3] as u32;
+            }
+        }
+    }
+
+    // construct Win32BuildNumber object (major and minor version might be null but build number should be set)
+    let version = Win32Version::new(nt_major_version, nt_minor_version, nt_build_number);
+    info!("kernel version: {}", version);
+
+    Ok(version)
 }

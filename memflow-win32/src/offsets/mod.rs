@@ -219,6 +219,7 @@ mod tests {
 
     #[test]
     fn download_pdb() {
+        // TODO: symbol store with no local cache
         let offsets = Win32Offsets::try_with_guid(&Win32GUID {
             file_name: "ntkrnlmp.pdb".to_string(),
             guid: "3844DBB920174967BE7AA4A2C20430FA2".to_string(),

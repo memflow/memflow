@@ -9,7 +9,10 @@ use log::{info, trace};
 use std::fmt;
 
 use memflow_core::architecture::Architecture;
-use memflow_core::mem::{PhysicalMemory, VirtualFromPhysical, VirtualMemory, VirtualTranslate};
+use memflow_core::mem::{
+    CachedMemoryAccess, CachedVirtualTranslate, PhysicalMemory, TimedCacheValidator, TranslateArch,
+    VirtualFromPhysical, VirtualMemory, VirtualTranslate,
+};
 use memflow_core::process::{OperatingSystem, OsProcessInfo, OsProcessModuleInfo};
 use memflow_core::types::Address;
 
@@ -396,8 +399,220 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
     }
 }
 
+impl<T: PhysicalMemory> Kernel<T, TranslateArch> {
+    pub fn builder(connector: T) -> KernelBuilder<T, T, TranslateArch> {
+        KernelBuilder::<T, T, TranslateArch>::new(connector)
+    }
+}
+
 impl<T: PhysicalMemory, V: VirtualTranslate> fmt::Debug for Kernel<T, V> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{:?}", self.kernel_info)
     }
+}
+
+/// Builder for a Windows Kernel structure.
+///
+/// This function encapsulates the entire setup process for a Windows target
+/// and will make sure the user gets a properly initialized object at the end.
+///
+/// This function is a high level abstraction over the individual parts of initialization a Windows target:
+/// - Scanning for the ntoskrnl and retrieving the `KernelInfo` struct.
+/// - Retrieving the Offsets for the target Windows version.
+/// - Creating a struct which implements `VirtualTranslate` for virtual to physical address translations.
+/// - Optionally wrapping the Connector or the `VirtualTranslate` object into a cached object.
+/// - Initialization of the Kernel structure itself.
+///
+/// # Examples
+///
+/// Using the builder with default values:
+/// ```
+/// use memflow_core::PhysicalMemory;
+/// use memflow_win32::Kernel;
+///
+/// fn test<T: PhysicalMemory>(connector: T) {
+///     let _kernel = Kernel::builder(connector)
+///         .build()
+///         .unwrap();
+/// }
+/// ```
+///
+/// Using the builder with default cache configurations:
+/// ```
+/// use memflow_core::PhysicalMemory;
+/// use memflow_win32::Kernel;
+///
+/// fn test<T: PhysicalMemory>(connector: T) {
+///     let _kernel = Kernel::builder(connector)
+///         .build_default_caches()
+///         .build()
+///         .unwrap();
+/// }
+/// ```
+///
+/// Customizing the caches:
+/// ```
+/// use memflow_core::{PhysicalMemory, CachedMemoryAccess, CachedVirtualTranslate};
+/// use memflow_win32::Kernel;
+///
+/// fn test<T: PhysicalMemory>(connector: T) {
+///     let _kernel = Kernel::builder(connector)
+///     .build_page_cache(|connector, arch| {
+///         CachedMemoryAccess::builder(connector)
+///             .arch(arch)
+///             .build()
+///             .unwrap()
+///     })
+///     .build_vat_cache(|vat, arch| {
+///         CachedVirtualTranslate::builder(vat)
+///             .arch(arch)
+///             .build()
+///             .unwrap()
+///     })
+///     .build()
+///     .unwrap();
+/// }
+/// ```
+///
+/// # Remarks
+///
+/// Manual initialization of the above examples would look like the following:
+/// ```
+/// use memflow_core::{TranslateArch, PhysicalMemory, CachedMemoryAccess, CachedVirtualTranslate};
+/// use memflow_win32::{KernelInfo, Win32Offsets, Kernel};
+///
+/// fn test<T: PhysicalMemory>(mut connector: T) {
+///     // Use the ntoskrnl scanner to find the relevant KernelInfo (start_block, arch, dtb, ntoskrnl, etc)
+///     let kernel_info = KernelInfo::scanner(&mut connector).scan().unwrap();
+///     // Download the corresponding pdb from the default symbol store
+///     let offsets = Win32Offsets::try_with_kernel_info(&kernel_info).unwrap();
+///
+///     // Create a struct for doing virtual to physical memory translations
+///     let vat = TranslateArch::new(kernel_info.start_block.arch);
+///
+///     // Create a Page Cache layer with default values
+///     let mut connector_cached = CachedMemoryAccess::builder(connector)
+///         .arch(kernel_info.start_block.arch)
+///         .build()
+///         .unwrap();
+///
+///     // Create a TLB Cache layer with default values
+///     let vat_cached = CachedVirtualTranslate::builder(vat)
+///         .arch(kernel_info.start_block.arch)
+///         .build()
+///         .unwrap();
+///
+///     // Initialize the final Kernel object
+///     let _kernel = Kernel::new(&mut connector_cached, vat_cached, offsets, kernel_info);
+/// }
+/// ```
+pub struct KernelBuilder<T, TK, VK> {
+    connector: T,
+
+    build_page_cache: Box<dyn FnOnce(T, Architecture) -> TK>,
+    build_vat_cache: Box<dyn FnOnce(TranslateArch, Architecture) -> VK>,
+}
+
+impl<T> KernelBuilder<T, T, TranslateArch>
+where
+    T: PhysicalMemory,
+{
+    pub fn new(connector: T) -> KernelBuilder<T, T, TranslateArch> {
+        KernelBuilder {
+            connector,
+            build_page_cache: Box::new(|connector, _| connector),
+            build_vat_cache: Box::new(|vat, _| vat),
+        }
+    }
+}
+
+impl<'a, T, TK, VK> KernelBuilder<T, TK, VK>
+where
+    T: PhysicalMemory,
+    TK: PhysicalMemory,
+    VK: VirtualTranslate,
+{
+    pub fn build_default_caches(
+        self,
+    ) -> KernelBuilder<
+        T,
+        CachedMemoryAccess<'a, T, TimedCacheValidator>,
+        CachedVirtualTranslate<TranslateArch, TimedCacheValidator>,
+    > {
+        KernelBuilder {
+            connector: self.connector,
+
+            build_page_cache: Box::new(|connector, arch| {
+                CachedMemoryAccess::builder(connector)
+                    .arch(arch)
+                    .build()
+                    .unwrap()
+            }),
+            build_vat_cache: Box::new(|vat, arch| {
+                CachedVirtualTranslate::builder(vat)
+                    .arch(arch)
+                    .build()
+                    .unwrap()
+            }),
+        }
+    }
+
+    pub fn build_page_cache<TKN, F: FnOnce(T, Architecture) -> TKN + 'static>(
+        self,
+        func: F,
+    ) -> KernelBuilder<T, TKN, VK>
+    where
+        TKN: PhysicalMemory,
+    {
+        KernelBuilder {
+            connector: self.connector,
+
+            build_page_cache: Box::new(func),
+            build_vat_cache: self.build_vat_cache,
+        }
+    }
+
+    pub fn build_vat_cache<VKN, F: FnOnce(TranslateArch, Architecture) -> VKN + 'static>(
+        self,
+        func: F,
+    ) -> KernelBuilder<T, TK, VKN>
+    where
+        VKN: VirtualTranslate,
+    {
+        KernelBuilder {
+            connector: self.connector,
+
+            build_page_cache: self.build_page_cache,
+            build_vat_cache: Box::new(func),
+        }
+    }
+
+    pub fn build(mut self) -> Result<Kernel<TK, VK>> {
+        // find kernel_info
+        let kernel_info = KernelInfo::scanner(&mut self.connector).scan()?;
+
+        // acquire offsets from the symbol store
+        let offsets = Win32Offsets::try_with_kernel_info(&kernel_info)?;
+
+        // create a vat object
+        let vat = TranslateArch::new(kernel_info.start_block.arch);
+
+        // create caches
+        let kernel_connector =
+            (self.build_page_cache)(self.connector, kernel_info.start_block.arch);
+        let kernel_vat = (self.build_vat_cache)(vat, kernel_info.start_block.arch);
+
+        // create the final kernel object
+        Ok(Kernel::new(
+            kernel_connector,
+            kernel_vat,
+            offsets,
+            kernel_info,
+        ))
+    }
+
+    // builder configurations:
+    // symbol_store()
+    // kernel_info_builder()
+    // offset_builder()
 }

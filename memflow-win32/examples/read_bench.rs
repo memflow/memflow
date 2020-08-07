@@ -183,16 +183,16 @@ fn main() -> Result<()> {
     .unwrap();
 
     // scan for win32 kernel
-    let kernel_info = KernelInfo::scanner(&mut *connector).scan()?;
+    let kernel_info = KernelInfo::scanner(&mut connector).scan()?;
 
     let mut vat = TranslateArch::new(kernel_info.start_block.arch);
 
     println!("Benchmarking uncached reads:");
-    read_bench(&mut *connector, &mut vat, kernel_info.clone()).unwrap();
+    read_bench(&mut connector, &mut vat, kernel_info.clone()).unwrap();
 
     println!();
     println!("Benchmarking cached reads:");
-    let mut mem_cached = CachedMemoryAccess::builder(&mut *connector)
+    let mut mem_cached = CachedMemoryAccess::builder(&mut connector)
         .arch(kernel_info.start_block.arch)
         .build()
         .unwrap();

@@ -40,7 +40,7 @@ pub fn main() -> Result<()> {
 
     // create inventory + connector
     let inventory = unsafe { ConnectorInventory::try_new() }.unwrap();
-    let mut connector = unsafe {
+    let connector = unsafe {
         inventory.create_connector(
             matches.value_of("connector").unwrap(),
             &ConnectorArgs::try_parse_str(matches.value_of("args").unwrap()).unwrap(),

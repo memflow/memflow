@@ -5,6 +5,9 @@ use crate::error::{Error, Result};
 use crate::offsets::Win32Offsets;
 use crate::pe::{pe32, pe64, MemoryPeViewContext};
 
+#[cfg(feature = "symstore")]
+use crate::offsets::SymbolStore;
+
 use log::{info, trace};
 use std::fmt;
 
@@ -485,7 +488,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> fmt::Debug for Kernel<T, V> {
 ///     // Use the ntoskrnl scanner to find the relevant KernelInfo (start_block, arch, dtb, ntoskrnl, etc)
 ///     let kernel_info = KernelInfo::scanner(&mut connector).scan().unwrap();
 ///     // Download the corresponding pdb from the default symbol store
-///     let offsets = Win32Offsets::try_with_kernel_info(&kernel_info).unwrap();
+///     let offsets = Win32Offsets::builder().kernel_info(&kernel_info).build().unwrap();
 ///
 ///     // Create a struct for doing virtual to physical memory translations
 ///     let vat = TranslateArch::new(kernel_info.start_block.arch);
@@ -509,6 +512,9 @@ impl<T: PhysicalMemory, V: VirtualTranslate> fmt::Debug for Kernel<T, V> {
 pub struct KernelBuilder<T, TK, VK> {
     connector: T,
 
+    #[cfg(feature = "symstore")]
+    symbol_store: Option<SymbolStore>,
+
     build_page_cache: Box<dyn FnOnce(T, Architecture) -> TK>,
     build_vat_cache: Box<dyn FnOnce(TranslateArch, Architecture) -> VK>,
 }
@@ -520,6 +526,10 @@ where
     pub fn new(connector: T) -> KernelBuilder<T, T, TranslateArch> {
         KernelBuilder {
             connector,
+
+            #[cfg(feature = "symstore")]
+            symbol_store: None,
+
             build_page_cache: Box::new(|connector, _| connector),
             build_vat_cache: Box::new(|vat, _| vat),
         }
@@ -532,6 +542,38 @@ where
     TK: PhysicalMemory,
     VK: VirtualTranslate,
 {
+    pub fn build(mut self) -> Result<Kernel<TK, VK>> {
+        // find kernel_info
+        let kernel_info = KernelInfo::scanner(&mut self.connector).scan()?;
+
+        // TODO: symstore
+
+        // acquire offsets from the symbol store
+        let offsets = Win32Offsets::builder().kernel_info(&kernel_info).build()?;
+
+        // create a vat object
+        let vat = TranslateArch::new(kernel_info.start_block.arch);
+
+        // create caches
+        let kernel_connector =
+            (self.build_page_cache)(self.connector, kernel_info.start_block.arch);
+        let kernel_vat = (self.build_vat_cache)(vat, kernel_info.start_block.arch);
+
+        // create the final kernel object
+        Ok(Kernel::new(
+            kernel_connector,
+            kernel_vat,
+            offsets,
+            kernel_info,
+        ))
+    }
+
+    #[cfg(feature = "symstore")]
+    pub fn symbol_store(mut self, symbol_store: SymbolStore) -> Self {
+        self.symbol_store = Some(symbol_store);
+        self
+    }
+
     pub fn build_default_caches(
         self,
     ) -> KernelBuilder<
@@ -541,6 +583,8 @@ where
     > {
         KernelBuilder {
             connector: self.connector,
+
+            symbol_store: self.symbol_store,
 
             build_page_cache: Box::new(|connector, arch| {
                 CachedMemoryAccess::builder(connector)
@@ -567,6 +611,8 @@ where
         KernelBuilder {
             connector: self.connector,
 
+            symbol_store: self.symbol_store,
+
             build_page_cache: Box::new(func),
             build_vat_cache: self.build_vat_cache,
         }
@@ -582,37 +628,14 @@ where
         KernelBuilder {
             connector: self.connector,
 
+            symbol_store: self.symbol_store,
+
             build_page_cache: self.build_page_cache,
             build_vat_cache: Box::new(func),
         }
     }
 
-    pub fn build(mut self) -> Result<Kernel<TK, VK>> {
-        // find kernel_info
-        let kernel_info = KernelInfo::scanner(&mut self.connector).scan()?;
-
-        // acquire offsets from the symbol store
-        let offsets = Win32Offsets::try_with_kernel_info(&kernel_info)?;
-
-        // create a vat object
-        let vat = TranslateArch::new(kernel_info.start_block.arch);
-
-        // create caches
-        let kernel_connector =
-            (self.build_page_cache)(self.connector, kernel_info.start_block.arch);
-        let kernel_vat = (self.build_vat_cache)(vat, kernel_info.start_block.arch);
-
-        // create the final kernel object
-        Ok(Kernel::new(
-            kernel_connector,
-            kernel_vat,
-            offsets,
-            kernel_info,
-        ))
-    }
-
     // builder configurations:
-    // symbol_store()
     // kernel_info_builder()
     // offset_builder()
 }

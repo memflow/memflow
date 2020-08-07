@@ -91,7 +91,7 @@ fn get_export<T: VirtualMemory>(pe: &MemoryPeView<T>, name: &str) -> Result<usiz
     Ok(export)
 }
 
-pub fn find_builder_number<T: VirtualMemory>(
+pub fn find_winver<T: VirtualMemory>(
     virt_mem: &mut T,
     kernel_base: Address,
 ) -> Result<Win32Version> {

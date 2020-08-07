@@ -293,6 +293,7 @@ mod tests {
     use crate::mem::{VirtualFromPhysical, VirtualMemory};
     use crate::types::{size, Address, PhysicalAddress};
     use crate::*;
+    use coarsetime::Duration;
     use rand::{thread_rng, Rng};
 
     fn diff_regions<'a>(

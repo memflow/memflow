@@ -1,8 +1,26 @@
+/*!
+Validators are used when working with caches and determine for how long
+a specific cache entry stays valid.
+
+This validator limits the cache time based on an actual time instant.
+Internally it uses the [coarsetime](https://docs.rs/coarsetime/0.1.14/coarsetime/) crate as a less
+computation intensive alternative for [std::time](https://doc.rust-lang.org/std/time/index.html).
+Therefor the Duration has to be converted (e.g. via the .into() trait) when constructing this validator.
+
+The default implementation will set the cache time to 1 second.
+*/
 use std::prelude::v1::*;
 
 use super::CacheValidator;
-pub use coarsetime::{Duration, Instant};
+use coarsetime::{Duration, Instant};
 
+/// Validator for limiting the cache time based on a time `Instant`
+///
+/// # Remarks
+///
+/// This validator is only available when being compiled with `std`.
+/// When using `no_std` you might want to use another validator.
+/// TODO: add other validators here
 #[derive(Clone)]
 pub struct TimedCacheValidator {
     time: Vec<Instant>,
@@ -10,6 +28,7 @@ pub struct TimedCacheValidator {
     last_time: Instant,
 }
 
+/// Creates a validator with a cache timeout of 1 second.
 impl Default for TimedCacheValidator {
     fn default() -> Self {
         Self::new(Duration::from_millis(1000))
@@ -17,6 +36,15 @@ impl Default for TimedCacheValidator {
 }
 
 impl TimedCacheValidator {
+    /// Creates a new TimedCacheValidator with a customizable Duration.
+    ///
+    /// # Examples:
+    /// ```
+    /// use std::time::Duration;
+    /// use memflow_core::mem::TimedCacheValidator;
+    ///
+    /// let _ = TimedCacheValidator::new(Duration::from_millis(5000).into());
+    /// ```
     pub fn new(valid_time: Duration) -> Self {
         Self {
             time: vec![],

@@ -5,6 +5,9 @@ use std::{convert, fmt, result, str};
 #[cfg(feature = "std")]
 use std::error;
 
+// forward declare partial result extension from core for easier access
+pub use memflow_core::PartialResultExt;
+
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 pub enum Error {
     /// Generic error type containing a string

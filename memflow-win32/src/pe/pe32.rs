@@ -17,12 +17,12 @@ use memflow_core::mem::VirtualMemory;
 use memflow_core::types::Address;
 
 /// View into a mapped PE image.
-pub struct MemoryPeView<'a, T: VirtualMemory + ?Sized> {
+pub struct MemoryPeView<'a, T: VirtualMemory> {
     context: &'a MemoryPeViewContext<'a, T>,
 }
 
-impl<'a, T: VirtualMemory + ?Sized> Copy for MemoryPeView<'a, T> {}
-impl<'a, T: VirtualMemory + ?Sized> Clone for MemoryPeView<'a, T> {
+impl<'a, T: VirtualMemory> Copy for MemoryPeView<'a, T> {}
+impl<'a, T: VirtualMemory> Clone for MemoryPeView<'a, T> {
     fn clone(&self) -> Self {
         Self {
             context: self.context,
@@ -30,7 +30,7 @@ impl<'a, T: VirtualMemory + ?Sized> Clone for MemoryPeView<'a, T> {
     }
 }
 
-impl<'a, T: VirtualMemory + ?Sized> MemoryPeView<'a, T> {
+impl<'a, T: VirtualMemory> MemoryPeView<'a, T> {
     /// Constructs a view from a `VirtualMemory` reader.
     ///
     /// # Errors
@@ -105,7 +105,7 @@ impl<'a, T: VirtualMemory + ?Sized> MemoryPeView<'a, T> {
 
 //----------------------------------------------------------------
 
-unsafe impl<'a, T: VirtualMemory + ?Sized> Pe<'a> for MemoryPeView<'a, T> {
+unsafe impl<'a, T: VirtualMemory> Pe<'a> for MemoryPeView<'a, T> {
     /// Slices the raw image buffer at the specified offset
     fn image_slice(&self, offset: usize, size: usize) -> Option<&'a [u8]> {
         unsafe {
@@ -207,7 +207,7 @@ unsafe impl<'a, T: VirtualMemory + ?Sized> Pe<'a> for MemoryPeView<'a, T> {
     }
 }
 
-unsafe impl<'a, T: VirtualMemory + ?Sized> PeObject<'a> for MemoryPeView<'a, T> {
+unsafe impl<'a, T: VirtualMemory> PeObject<'a> for MemoryPeView<'a, T> {
     fn image(&self) -> &'a [u8] {
         unsafe { &*self.context.image_cache.get() }
     }

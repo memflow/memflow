@@ -21,10 +21,7 @@ pub struct StartBlock {
 }
 
 // bcdedit /set firstmegabytepolicyuseall
-pub fn find<T: PhysicalMemory + ?Sized>(
-    mem: &mut T,
-    arch: Option<Architecture>,
-) -> Result<StartBlock> {
+pub fn find<T: PhysicalMemory>(mem: &mut T, arch: Option<Architecture>) -> Result<StartBlock> {
     if let Some(arch) = arch {
         match arch {
             Architecture::X64 => {

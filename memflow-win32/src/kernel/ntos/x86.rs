@@ -18,7 +18,7 @@ const SIZE_8MB: usize = size::mb(8);
 const SIZE_4KB: usize = size::kb(4);
 
 // https://github.com/ufrisk/MemProcFS/blob/f2d15cf4fe4f19cfeea3dad52971fae2e491064b/vmm/vmmwininit.c#L410
-pub fn find<T: VirtualMemory + ?Sized>(
+pub fn find<T: VirtualMemory>(
     virt_mem: &mut T,
     _start_block: &StartBlock,
 ) -> Result<(Address, usize)> {

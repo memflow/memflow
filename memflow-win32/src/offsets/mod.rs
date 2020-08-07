@@ -1,12 +1,10 @@
 #[cfg(feature = "symstore")]
 pub mod pdb_struct;
 #[cfg(feature = "symstore")]
-pub use pdb_struct::PdbStruct;
+pub mod symstore;
 
 #[cfg(feature = "symstore")]
-pub mod symstore;
-#[cfg(feature = "symstore")]
-pub use symstore::*;
+pub use {pdb_struct::PdbStruct, symstore::*};
 
 use std::prelude::v1::*;
 
@@ -15,13 +13,36 @@ use std::io::Read;
 use std::path::Path;
 
 use crate::error::{Error, Result};
+use crate::kernel::Win32GUID;
 use crate::kernel_info::KernelInfo;
 
-#[derive(Debug, Clone)]
-pub struct Win32GUID {
-    pub file_name: String,
-    pub guid: String,
+// TEST CODE START
+pub struct Win32OffsetBuilder {
+    #[cfg(feature = "symstore")]
+    symbol_store: Option<SymbolStore>,
 }
+
+impl Default for Win32OffsetBuilder {
+    fn default() -> Self {
+        Self {
+            #[cfg(feature = "symstore")]
+            symbol_store: None,
+        }
+    }
+}
+
+impl Win32OffsetBuilder {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn symbol_store(mut self, symbol_store: SymbolStore) -> Self {
+        self.symbol_store = Some(symbol_store);
+        self
+    }
+}
+
+// TEST CODE END
 
 #[derive(Debug, Clone)]
 pub struct Win32Offsets {

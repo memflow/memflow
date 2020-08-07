@@ -10,10 +10,7 @@ use memflow_core::types::Address;
 
 use pelite::Wrap;
 
-pub fn try_get_pe_name<T: VirtualMemory + ?Sized>(
-    virt_mem: &mut T,
-    probe_addr: Address,
-) -> Result<String> {
+pub fn try_get_pe_name<T: VirtualMemory>(virt_mem: &mut T, probe_addr: Address) -> Result<String> {
     let ctx = MemoryPeViewContext::new(virt_mem, probe_addr).map_err(Error::PE)?;
     let pe = pe::wrap_memory_pe_view(&ctx).map_err(Error::PE)?;
     let name = pe
@@ -26,10 +23,7 @@ pub fn try_get_pe_name<T: VirtualMemory + ?Sized>(
     Ok(name.to_string())
 }
 
-pub fn try_get_pe_size<T: VirtualMemory + ?Sized>(
-    virt_mem: &mut T,
-    probe_addr: Address,
-) -> Result<usize> {
+pub fn try_get_pe_size<T: VirtualMemory>(virt_mem: &mut T, probe_addr: Address) -> Result<usize> {
     let ctx = MemoryPeViewContext::new(virt_mem, probe_addr).map_err(Error::PE)?;
     let pe = pe::wrap_memory_pe_view(&ctx).map_err(Error::PE)?;
     let size = match pe.optional_header() {

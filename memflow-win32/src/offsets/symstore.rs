@@ -11,13 +11,12 @@ use dirs::home_dir;
 use log::info;
 
 #[cfg(feature = "download_progress")]
-use cursive::utils::{Counter, ProgressReader};
-#[cfg(feature = "download_progress")]
-use indicatif::{ProgressBar, ProgressStyle};
-#[cfg(feature = "download_progress")]
-use std::sync::atomic::{AtomicBool, Ordering};
-#[cfg(feature = "download_progress")]
-use std::sync::Arc;
+use {
+    cursive::utils::{Counter, ProgressReader},
+    indicatif::{ProgressBar, ProgressStyle},
+    std::sync::atomic::{AtomicBool, Ordering},
+    std::sync::Arc,
+};
 
 #[cfg(feature = "download_progress")]
 fn read_to_end<T: Read>(reader: &mut T, len: usize) -> Result<Vec<u8>> {
@@ -73,46 +72,8 @@ impl Default for SymbolStore {
 }
 
 impl SymbolStore {
-    pub fn base_url(mut self, base_url: &str) -> Self {
-        self.base_url = base_url.to_string();
-        self
-    }
-
-    pub fn no_cache(mut self) -> Self {
-        self.cache_path = None;
-        self
-    }
-
-    pub fn cache_path<P: AsRef<Path>>(mut self, cache_path: P) -> Self {
-        self.cache_path = Some(cache_path.as_ref().to_path_buf());
-        self
-    }
-
-    pub fn download(&self, guid: &Win32GUID) -> Result<Vec<u8>> {
-        let pdb_url = format!("{}/{}/{}", self.base_url, guid.file_name, guid.guid);
-
-        self.download_file(&format!("{}/{}", pdb_url, guid.file_name))
-            .or_else(|_| self.download_file(&format!("{}/{}", pdb_url, "file.ptr")))
-    }
-
-    fn download_file(&self, url: &str) -> Result<Vec<u8>> {
-        println!("downloading pdb from {}", url);
-        let resp = ureq::get(url).call();
-        if !resp.ok() {
-            return Err(Error::SymbolStore("unable to download pdb"));
-        }
-
-        assert!(resp.has("Content-Length"));
-        let len = resp
-            .header("Content-Length")
-            .and_then(|s| s.parse::<usize>().ok())
-            .unwrap();
-
-        let mut reader = resp.into_reader();
-        let buffer = read_to_end(&mut reader, len)?;
-
-        assert_eq!(buffer.len(), len);
-        Ok(buffer)
+    pub fn new() -> Self {
+        Self::default()
     }
 
     pub fn load(&self, guid: &Win32GUID) -> Result<Vec<u8>> {
@@ -157,5 +118,48 @@ impl SymbolStore {
         } else {
             self.download(guid)
         }
+    }
+
+    fn download(&self, guid: &Win32GUID) -> Result<Vec<u8>> {
+        let pdb_url = format!("{}/{}/{}", self.base_url, guid.file_name, guid.guid);
+
+        self.download_file(&format!("{}/{}", pdb_url, guid.file_name))
+            .or_else(|_| self.download_file(&format!("{}/{}", pdb_url, "file.ptr")))
+    }
+
+    fn download_file(&self, url: &str) -> Result<Vec<u8>> {
+        println!("downloading pdb from {}", url);
+        let resp = ureq::get(url).call();
+        if !resp.ok() {
+            return Err(Error::SymbolStore("unable to download pdb"));
+        }
+
+        assert!(resp.has("Content-Length"));
+        let len = resp
+            .header("Content-Length")
+            .and_then(|s| s.parse::<usize>().ok())
+            .unwrap();
+
+        let mut reader = resp.into_reader();
+        let buffer = read_to_end(&mut reader, len)?;
+
+        assert_eq!(buffer.len(), len);
+        Ok(buffer)
+    }
+
+    // symbol store configurations
+    pub fn base_url(mut self, base_url: &str) -> Self {
+        self.base_url = base_url.to_string();
+        self
+    }
+
+    pub fn no_cache(mut self) -> Self {
+        self.cache_path = None;
+        self
+    }
+
+    pub fn cache_path<P: AsRef<Path>>(mut self, cache_path: P) -> Self {
+        self.cache_path = Some(cache_path.as_ref().to_path_buf());
+        self
     }
 }

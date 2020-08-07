@@ -14,7 +14,7 @@ use memflow_core::types::{size, Address};
 use dataview::Pod;
 use pelite::image::IMAGE_DOS_HEADER;
 
-pub fn find_with_va<T: VirtualMemory + ?Sized>(
+pub fn find_with_va<T: VirtualMemory>(
     virt_mem: &mut T,
     start_block: &StartBlock,
 ) -> Result<(Address, usize)> {
@@ -77,6 +77,6 @@ pub fn find_with_va<T: VirtualMemory + ?Sized>(
     ))
 }
 
-pub fn find<T: VirtualMemory + ?Sized>(_mem: &mut T) -> Result<(Address, usize)> {
+pub fn find<T: VirtualMemory>(_mem: &mut T) -> Result<(Address, usize)> {
     Err(Error::Initialization("find_x64(): not implemented yet"))
 }

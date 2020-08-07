@@ -13,7 +13,7 @@ use memflow_core::types::{size, Address};
 
 use pelite::{self, pe64::exports::Export};
 
-pub fn find<T: VirtualMemory + ?Sized>(
+pub fn find<T: VirtualMemory>(
     virt_mem: &mut T,
     start_block: &StartBlock,
     ntos: Address,
@@ -34,7 +34,7 @@ pub fn find<T: VirtualMemory + ?Sized>(
 }
 
 // find from exported symbol
-pub fn find_exported<T: VirtualMemory + ?Sized>(
+pub fn find_exported<T: VirtualMemory>(
     virt_mem: &mut T,
     start_block: &StartBlock,
     kernel_base: Address,
@@ -66,7 +66,7 @@ pub fn find_exported<T: VirtualMemory + ?Sized>(
         32 => {
             // TODO: replace by virt_read_into with ByteSwap
             virt_mem.virt_read_raw_into(sys_proc, &mut buf)?;
-            u32::from_le_bytes(buf[0..8].try_into().unwrap()).into()
+            u32::from_le_bytes(buf[0..4].try_into().unwrap()).into()
         }
         _ => return Err(Error::InvalidArchitecture),
     };
@@ -76,7 +76,7 @@ pub fn find_exported<T: VirtualMemory + ?Sized>(
 // scan in pdb
 
 // scan in section
-pub fn find_in_section<T: VirtualMemory + ?Sized>(
+pub fn find_in_section<T: VirtualMemory>(
     virt_mem: &mut T,
     _start_block: &StartBlock,
     ntos: Address,

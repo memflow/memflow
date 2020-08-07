@@ -4,19 +4,18 @@ mod x86;
 
 use std::prelude::v1::*;
 
+use super::{StartBlock, Win32BuildNumber, Win32GUID};
 use crate::error::{Error, Result};
-use crate::kernel::StartBlock;
-use crate::offsets::Win32GUID;
-use crate::pe::{self, MemoryPeViewContext};
+use crate::pe::{self, MemoryPeView, MemoryPeViewContext};
 
-use log::warn;
+use log::{info, warn};
 
 use memflow_core::mem::VirtualMemory;
 use memflow_core::types::Address;
 
-use pelite::{self, pe64::debug::CodeView};
+use pelite::{self, pe64::debug::CodeView, pe64::exports::Export};
 
-pub fn find<T: VirtualMemory + ?Sized>(
+pub fn find<T: VirtualMemory>(
     virt_mem: &mut T,
     start_block: &StartBlock,
 ) -> Result<(Address, usize)> {
@@ -43,10 +42,7 @@ pub fn find<T: VirtualMemory + ?Sized>(
 }
 
 // TODO: move to pe::...
-pub fn find_guid<T: VirtualMemory + ?Sized>(
-    virt_mem: &mut T,
-    kernel_base: Address,
-) -> Result<Win32GUID> {
+pub fn find_guid<T: VirtualMemory>(virt_mem: &mut T, kernel_base: Address) -> Result<Win32GUID> {
     let ctx = MemoryPeViewContext::new(virt_mem, kernel_base).map_err(Error::PE)?;
     let pe = pe::wrap_memory_pe_view(&ctx).map_err(Error::PE)?;
 
@@ -66,7 +62,7 @@ pub fn find_guid<T: VirtualMemory + ?Sized>(
         .find(|&e| e.as_code_view().is_some())
         .ok_or_else(|| Error::Initialization("unable to find codeview debug_data entry"))?
         .as_code_view()
-        .unwrap(); // TODO: fix unwrap
+        .ok_or_else(|| Error::PE(pelite::Error::Unmapped))?;
 
     let signature = match code_view {
         CodeView::Cv70 { image, .. } => image.Signature,
@@ -77,45 +73,47 @@ pub fn find_guid<T: VirtualMemory + ?Sized>(
         }
     };
 
-    Ok(Win32GUID {
-        file_name: code_view.pdb_file_name().to_string(),
-        guid: format!("{:X}{:X}", signature, code_view.age()),
-    })
+    let file_name = code_view.pdb_file_name().to_str()?;
+    let guid = format!("{:X}{:X}", signature, code_view.age());
+    Ok(Win32GUID::new(file_name, &guid))
 }
 
-// TODO: move to pe::...
-pub fn find_version<T: VirtualMemory + ?Sized>(
+fn get_export<T: VirtualMemory>(pe: &MemoryPeView<T>, name: &str) -> Result<usize> {
+    info!("trying to find {} export", name);
+    let export = match pe.get_export_by_name(name).map_err(Error::PE)? {
+        Export::Symbol(s) => *s as usize,
+        Export::Forward(_) => {
+            return Err(Error::Other("Export found but it was a forwarded export"))
+        }
+    };
+    info!("{} found at 0x{:x}", name, export);
+    Ok(export)
+}
+
+pub fn find_builder_number<T: VirtualMemory>(
     virt_mem: &mut T,
     kernel_base: Address,
-) -> Result<()> {
+) -> Result<Win32BuildNumber> {
     let ctx = MemoryPeViewContext::new(virt_mem, kernel_base).map_err(Error::PE)?;
     let pe = pe::wrap_memory_pe_view(&ctx).map_err(Error::PE)?;
 
-    //    println!("resources:\n{:?}", pe.resources()?);
+    // NtBuildNumber
+    let nt_build_number_ref = kernel_base + get_export(&pe, "NtBuildNumber")?;
 
-    //   let verRes = pe.resources()?.find("VERSION").map_err(|_| Error::Other("unable to get winver"))?;
-    //  println!("ver: {:?}", verRes);
-    println!(
-        "version: {:?}",
-        pe.resources()?
-            .version_info()
-            .map_err(|_| Error::Other("unable to get winver"))?
-    );
-
+    // read from KUSER_SHARED_DATA. these fields exist since nt 4.0 so they have to exist in case NtBuildNumber exists.
     /*
-    let winver_bytes = pe
-        .resources()?
-        .root()?
-        .get_dir("#VERSION".into()).map_err(|_| Error::Other("unable to get winver"))?
-        .get_dir("#1".into()).map_err(|_| Error::Other("unable to get winver"))?
-        .first().map_err(|_| Error::Other("unable to get winver"))?
-        .data().ok_or_else(|| Error::Other("unable to get winver"))?
-        .bytes()?;
-    println!("winver_bytes: {:?}", winver_bytes);
-    let winver = String::from_utf8(winver_bytes.to_vec());
-
-    println!("winver: {:?}", winver);
+    let nt_major_version: u32 = virt_mem.virt_read((0x7ffe0000 + 0x026C).into())?;
+    let nt_minor_version: u32 = virt_mem.virt_read((0x7ffe0000 + 0x0270).into())?;
+    info!("nt_version: {}.{}", nt_major_version, nt_minor_version);
     */
 
-    Ok(())
+    let nt_build_number: u32 = virt_mem.virt_read(nt_build_number_ref)?;
+    //info!("nt_build_number: {}", nt_build_number);
+
+    let build_number = Win32BuildNumber::new(nt_build_number);
+
+    info!("build_number: {}", build_number.build_number());
+    info!("checked_build: {}", build_number.is_checked_build());
+
+    Ok(build_number)
 }

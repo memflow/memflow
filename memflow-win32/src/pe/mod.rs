@@ -20,7 +20,7 @@ pub enum PeFormat {
 }
 
 /// Wrapping Context to enable the MemoryPeView to be Copy-able
-pub struct MemoryPeViewContext<'a, T: VirtualMemory + ?Sized> {
+pub struct MemoryPeViewContext<'a, T> {
     virt_mem: RefCell<&'a mut T>,
     image_base: Address,
     image_format: PeFormat,
@@ -28,7 +28,7 @@ pub struct MemoryPeViewContext<'a, T: VirtualMemory + ?Sized> {
     image_cache: UnsafeCell<Box<[u8]>>,
 }
 
-impl<'a, T: VirtualMemory + ?Sized> MemoryPeViewContext<'a, T> {
+impl<'a, T: VirtualMemory> MemoryPeViewContext<'a, T> {
     pub fn new(virt_mem: &'a mut T, image_base: Address) -> Result<Self> {
         // read the first page of the image
         let mut image_header = Align16([0u8; 0x1000]).0;
@@ -106,7 +106,7 @@ impl<'a, T: VirtualMemory + ?Sized> MemoryPeViewContext<'a, T> {
 /// Format agnostic lazy PE view.
 pub type MemoryPeView<'a, T> = Wrap<pe32::MemoryPeView<'a, T>, pe64::MemoryPeView<'a, T>>;
 
-pub fn wrap_memory_pe_view<'a, T: VirtualMemory + ?Sized>(
+pub fn wrap_memory_pe_view<'a, T: VirtualMemory>(
     context: &'a MemoryPeViewContext<'a, T>,
 ) -> Result<MemoryPeView<'a, T>> {
     match context.image_format() {

@@ -5,10 +5,9 @@ use log::Level;
 
 use memflow_core::connector::*;
 
-use memflow_win32::error::Result;
 use memflow_win32::win32::{Kernel, Keyboard};
 
-pub fn main() -> Result<()> {
+pub fn main() {
     let matches = App::new("read_keys example")
         .version(crate_version!())
         .author(crate_authors!())
@@ -48,16 +47,26 @@ pub fn main() -> Result<()> {
     }
     .unwrap();
 
+    // sym store test
+    /*
+    let store = SymbolStore::default()
+        .base_url("http://something")
+        .no_cache()
+        .cache_path("~/.memflow/");
+
+    let pdb = store.load(GUID);
+    */
+
     let mut kernel = Kernel::builder(connector)
         .build_default_caches()
         .build()
         .unwrap();
 
     // fetch keyboard state
-    let kbd = Keyboard::try_with(&mut kernel)?;
+    let kbd = Keyboard::try_with(&mut kernel).unwrap();
 
     loop {
-        let kbs = kbd.state_with_kernel(&mut kernel)?;
+        let kbs = kbd.state_with_kernel(&mut kernel).unwrap();
         println!("space down: {:?}", kbs.is_down(win_key_codes::VK_SPACE));
         thread::sleep(time::Duration::from_millis(1000));
     }

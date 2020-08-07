@@ -1,6 +1,6 @@
 use crate::error::Result;
 use crate::kernel::{self, StartBlock};
-use crate::offsets::Win32GUID;
+use crate::kernel::{Win32BuildNumber, Win32GUID};
 
 use log::info;
 
@@ -14,7 +14,9 @@ pub struct KernelInfo {
 
     pub kernel_base: Address,
     pub kernel_size: usize,
+
     pub kernel_guid: Option<Win32GUID>,
+    pub kernel_build_number: Option<Win32BuildNumber>,
 
     pub eprocess_base: Address,
 }
@@ -82,7 +84,9 @@ impl<T: PhysicalMemory> KernelInfoScanner<T> {
         let kernel_guid = kernel::ntos::find_guid(&mut virt_mem, kernel_base).ok();
         info!("kernel_guid={:?}", kernel_guid);
 
-        //kernel::ntos::find_version(&mut virt_mem, kernel_base).ok();
+        let kernel_build_number =
+            kernel::ntos::find_builder_number(&mut virt_mem, kernel_base).ok();
+        info!("kernel_build_number={:?}", kernel_build_number);
 
         // find eprocess base
         let eprocess_base = kernel::sysproc::find(&mut virt_mem, &start_block, kernel_base)?;
@@ -98,7 +102,9 @@ impl<T: PhysicalMemory> KernelInfoScanner<T> {
 
             kernel_base,
             kernel_size,
+
             kernel_guid,
+            kernel_build_number,
 
             eprocess_base,
         })

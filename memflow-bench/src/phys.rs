@@ -56,7 +56,7 @@ fn rwtest<T: PhysicalMemory>(
     total_size
 }
 
-pub fn read_test_with_mem<T: PhysicalMemory>(
+fn read_test_with_mem<T: PhysicalMemory>(
     bench: &mut Bencher,
     mem: &mut T,
     chunk_size: usize,

@@ -4,8 +4,8 @@ pub mod cached_vat;
 #[cfg(feature = "std")]
 pub mod timed_validator;
 
-pub mod page_cache;
-pub mod tlb_cache;
+mod page_cache;
+mod tlb_cache;
 
 #[doc(hidden)]
 pub use cached_memory_access::*;

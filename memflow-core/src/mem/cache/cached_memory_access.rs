@@ -38,6 +38,10 @@ use crate::types::{size, PageType};
 
 use bumpalo::Bump;
 
+/// The cache object that can use as a drop-in replacement for any Connector.
+///
+/// Since this cache implements `PhysicalMemory` it can be used as a replacement
+/// in all structs and functions that require a `PhysicalMemory` object.
 pub struct CachedMemoryAccess<'a, T, Q> {
     mem: T,
     cache: PageCache<'a, Q>,
@@ -47,29 +51,10 @@ pub struct CachedMemoryAccess<'a, T, Q> {
 impl<'a, T: PhysicalMemory, Q: CacheValidator> CachedMemoryAccess<'a, T, Q> {
     /// Constructs a new cache based on the given `PageCache`.
     ///
-    /// This function is used when manually constructing a cache.
-    /// In most circumstances it however is easier to just use the [builder](../builder.html).
+    /// This function is used when manually constructing a cache inside of the memflow-core crate itself.
     ///
-    /// # Examples
-    ///
-    /// ```
-    /// use std::time::Duration;
-    ///
-    /// use memflow_core::types::{size, PageType};
-    /// use memflow_core::architecture::Architecture;
-    /// use memflow_core::mem::{PhysicalMemory, TimedCacheValidator, cache::page_cache::PageCache, CachedMemoryAccess};
-    ///
-    /// fn build<T: PhysicalMemory>(mem: T) {
-    ///     let cache = PageCache::new(
-    ///         Architecture::X64,
-    ///         size::mb(2),
-    ///         PageType::PAGE_TABLE | PageType::READ_ONLY,
-    ///         TimedCacheValidator::new(Duration::from_secs(100).into()),
-    ///     );
-    ///
-    ///     let cache = CachedMemoryAccess::with(mem, cache);
-    /// }
-    /// ```
+    /// For general usage it is advised to just use the [builder](struct.CachedMemoryAccessBuilder.html)
+    /// to construct the cache.
     pub fn with(mem: T, cache: PageCache<'a, Q>) -> Self {
         Self {
             mem,

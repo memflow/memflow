@@ -2,7 +2,7 @@
 
 ![build and test](https://github.com/memflow/memflow/workflows/Build%20and%20test/badge.svg?branch=dev)
 [![codecov](https://codecov.io/gh/memflow/memflow/branch/master/graph/badge.svg?token=XT7R158N6W)](https://codecov.io/gh/memflow/memflow)
-[![Discord Chat](https://img.shields.io/discord/738739624976973835?label=Discord%20Chat)](https://discord.gg/afsEtMR)
+[![Discord](https://img.shields.io/discord/738739624976973835?color=blue&label=Discord)](https://discord.gg/afsEtMR)
 
 memflow - machine introspection framework
 

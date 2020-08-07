@@ -10,17 +10,17 @@ When reading/writing data from/to the target it is necessary
 that memflow know the proper byte order of the target system.
 */
 
-pub mod x64;
-pub mod x86;
-pub mod x86_pae;
+mod x64;
+mod x86;
+mod x86_pae;
 
-pub mod mmu_spec;
-pub mod translate_data;
+mod mmu_spec;
+pub(crate) mod translate_data;
 
 #[macro_use]
-pub mod vtop_macros;
+pub(crate) mod vtop_macros;
 
-use mmu_spec::ArchMMUSpec;
+pub use mmu_spec::ArchMMUSpec;
 use translate_data::{TranslateVec, TranslationChunk};
 
 use crate::error::{Error, Result};

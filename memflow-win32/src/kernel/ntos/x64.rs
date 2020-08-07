@@ -6,7 +6,7 @@ use crate::kernel::StartBlock;
 
 use log::debug;
 
-use memflow_core::architecture;
+use memflow_core::architecture::Architecture;
 use memflow_core::error::PartialResultExt;
 use memflow_core::mem::VirtualMemory;
 use memflow_core::types::{size, Address};
@@ -34,7 +34,7 @@ pub fn find_with_va<T: VirtualMemory>(
             .data_part()?;
 
         let res = buf
-            .chunks_exact(architecture::x64::page_size())
+            .chunks_exact(Architecture::X64.page_size())
             .enumerate()
             .map(|(i, c)| {
                 let view = Pod::as_data_view(&c[..]);
@@ -45,16 +45,16 @@ pub fn find_with_va<T: VirtualMemory>(
             .inspect(|(i, _, _)| {
                 debug!(
                     "find_x64_with_va: found potential header flags at offset {:x}",
-                    i * architecture::x64::page_size()
+                    i * Architecture::X64.page_size()
                 )
             })
             .find(|(i, _, _)| {
                 let probe_addr =
-                    Address::from(va_base + (*i as u64) * architecture::x64::page_size() as u64);
+                    Address::from(va_base + (*i as u64) * Architecture::X64.page_size() as u64);
                 let name = pehelper::try_get_pe_name(virt_mem, probe_addr).unwrap_or_default();
                 name == "ntoskrnl.exe"
             })
-            .map(|(i, _, _)| va_base + i as u64 * architecture::x64::page_size() as u64)
+            .map(|(i, _, _)| va_base + i as u64 * Architecture::X64.page_size() as u64)
             .ok_or_else(|| {
                 Error::Initialization("find_x64_with_va: unable to locate ntoskrnl.exe via va hint")
             });

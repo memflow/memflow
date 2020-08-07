@@ -217,6 +217,7 @@ impl<T: SplitAtIndex, FS: FnMut(Address, &T, Option<&T>) -> bool> Iterator
                         Address::from(self.cur_address.as_usize().wrapping_add(end_len + 1));
                     let ret = Some((self.cur_address, head));
                     self.cur_address = next_address;
+                    self.cur_off = 0;
                     return ret;
                 }
             }
@@ -236,10 +237,5 @@ impl<T: SplitAtIndex, FS: FnMut(Address, &T, Option<&T>) -> bool> Iterator
         } else {
             (0, Some(0))
         }
-    }
-
-    #[inline]
-    fn count(self) -> usize {
-        self.size_hint().0
     }
 }

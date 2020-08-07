@@ -1,8 +1,8 @@
 /*!
-Special purpose iterators for interfacing with memory in memflow.
+Special purpose iterators for memflow.
 */
 
-pub mod page_chunks;
+mod page_chunks;
 use crate::types::Address;
 pub use page_chunks::*;
 
@@ -10,9 +10,9 @@ mod double_buffered_iterator;
 use double_buffered_iterator::*;
 
 mod doublepeek;
-use doublepeek::*;
+pub use doublepeek::*;
 
-pub mod void;
+mod void;
 pub use void::FnExtend;
 
 pub trait FlowIters: Iterator {
@@ -47,6 +47,10 @@ pub trait FlowIters: Iterator {
         DoubleBufferedMapIterator::new(self, fi, fo)
     }
 
+    /// Create an iterator that allows to peek 2 elements at a time
+    ///
+    /// Provides `double_peek`, and `is_next_last` methods on an iterator.
+    /// 2 elements get consumed by the iterator.
     fn double_peekable(self) -> DoublePeekingIterator<Self>
     where
         Self: Sized,
@@ -59,7 +63,40 @@ impl<T> FlowIters for T where T: Iterator {}
 
 type TrueFunc<T> = fn(Address, &T, Option<&T>) -> bool;
 
+/// Page aligned chunks
 pub trait PageChunks {
+    /// Create a page aligned chunk iterator
+    ///
+    /// This function is useful when there is a need to work with buffers
+    /// without crossing page boundaries, while the buffer itself may not
+    /// be page aligned
+    ///
+    /// # Arguments
+    ///
+    /// * `start_address` - starting address of the remote buffer
+    /// * `page_size` - size of a single page
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use memflow_core::iter::PageChunks;
+    ///
+    /// // Misaligned buffer length
+    /// let buffer = vec![0; 0x1492];
+    /// const PAGE_SIZE: usize = 0x100;
+    ///
+    /// // Misaligned starting address. Get the number of pages the buffer touches
+    /// let page_count = buffer
+    ///     .page_chunks(0x2c4.into(), PAGE_SIZE)
+    ///     .count();
+    ///
+    /// assert_eq!(buffer.len() / PAGE_SIZE, 20);
+    /// assert_eq!(page_count, 22);
+    ///
+    /// println!("{}", page_count);
+    ///
+    /// ```
+
     fn page_chunks(
         self,
         start_address: Address,
@@ -71,6 +108,52 @@ pub trait PageChunks {
         PageChunkIterator::new(self, start_address, page_size, |_, _, _| true)
     }
 
+    /// Craete a page aligned chunk iterator with configurable splitting
+    ///
+    /// This the same function as `page_chunks`, but allows to configure
+    /// whether the page should be split or combined. This allows to pick
+    /// a few sequential pages to work with. Also useful when filtering out
+    /// uneeded pages, while keeping the rest unchunked.
+    ///
+    /// This behavior is configured by the `split_fn`.
+    ///
+    /// # Arguments
+    ///
+    /// * `start_address` - starting address of the buffer
+    /// * `page_size` - size of a single page
+    /// * `split_fn` - page split check function. Receives current address,
+    /// current (temporary) page split, and the memory region afterwards (if exists).
+    /// Hast to return `true` if this region should be split off, and `false` if not.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use memflow_core::iter::PageChunks;
+    ///
+    /// let buffer = vec![0; 0x10000];
+    /// const PAGE_SIZE: usize = 0x100;
+    /// const PFN_MAGIC: usize = 6;
+    ///
+    /// // Normal chunk count
+    /// let page_count = buffer.page_chunks(0.into(), PAGE_SIZE).count();
+    ///
+    /// // We want to split off pages with the "magic" frame numbers
+    /// // that are divisible by 6.
+    /// // The rest - kept as is, linear.
+    /// let chunk_count = buffer
+    ///     .page_chunks_by(0.into(), PAGE_SIZE, |addr, cur_split, _| {
+    ///         ((addr.as_usize() / PAGE_SIZE) % PFN_MAGIC) == 0
+    ///         || (((addr + cur_split.len()).as_usize() / PAGE_SIZE) % PFN_MAGIC) == 0
+    ///     })
+    ///     .count();
+    ///
+    /// println!("{} {}", page_count, chunk_count);
+    ///
+    /// assert_eq!(page_count, 256);
+    /// assert_eq!(chunk_count, 86);
+    ///
+    /// ```
+    ///
     fn page_chunks_by<F: FnMut(Address, &Self, Option<&Self>) -> bool>(
         self,
         start_address: Address,

@@ -1,4 +1,9 @@
-// bit mask macros
+/// Create a bit mask
+///
+/// # Arguments
+///
+/// * `a` - starting bit
+/// * `b` - ending bit (exclusive)
 pub fn make_bit_mask<T: core::convert::TryInto<u8>>(a: T, b: T) -> u64 {
     (0xffff_ffff_ffff_ffff >> (63 - b.try_into().ok().unwrap()))
         & !(((1 as u64) << a.try_into().ok().unwrap()) - 1)

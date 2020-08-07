@@ -129,12 +129,13 @@ pub fn find_builder_number<T: VirtualMemory>(
         nt_minor_version = 0;
 
         for i in 0..0xf0 {
-            if nt_major_version == 0 && nt_minor_version == 0 {
-                if u32::from_le_bytes(buf[i..i + 4].try_into().unwrap()) & 0xFFFFF == 0x441c748 {
-                    nt_major_version =
-                        u16::from_le_bytes(buf[i + 4..i + 4 + 2].try_into().unwrap()) as u32;
-                    nt_minor_version = (buf[i + 5] & 0xF) as u32;
-                }
+            if nt_major_version == 0
+                && nt_minor_version == 0
+                && u32::from_le_bytes(buf[i..i + 4].try_into().unwrap()) == 0x441c748
+            {
+                nt_major_version =
+                    u16::from_le_bytes(buf[i + 4..i + 4 + 2].try_into().unwrap()) as u32;
+                nt_minor_version = (buf[i + 5] & 0xF) as u32;
             }
 
             if nt_major_version == 0

@@ -90,7 +90,7 @@ impl ArchMMUSpec {
     ///
     /// This function cuts the input virtual address to be inside range `(-2^address_space_bits;
     /// +2^address_space_bits)`. It may result in 2 ranges, and it may have up to 2 failed ranges
-    pub fn virt_addr_filter<B, VO, FO>(
+    pub(crate) fn virt_addr_filter<B, VO, FO>(
         &self,
         (addr, buf): (Address, B),
         valid_out: &mut VO,

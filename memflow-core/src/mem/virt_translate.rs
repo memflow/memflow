@@ -52,7 +52,7 @@ pub trait VirtualTranslate {
 }
 
 // forward impls
-impl<'a, T: VirtualTranslate + ?Sized> VirtualTranslate for &'a mut T {
+impl<'a, T: VirtualTranslate + ?Sized, P: std::ops::DerefMut<Target = T>> VirtualTranslate for P {
     fn virt_to_phys_iter<U, B, VI, VO, FO>(
         &mut self,
         phys_mem: &mut U,

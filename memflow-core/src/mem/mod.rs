@@ -20,13 +20,20 @@ pub mod virt_translate;
 #[cfg(any(feature = "dummy_mem", test))]
 pub mod dummy;
 
+#[doc(hidden)]
 pub use cache::*; // TODO: specify pub declarations
+#[doc(hidden)]
 pub use mem_map::MemoryMap;
+#[doc(hidden)]
 pub use phys_mem::{
     PhysicalMemory, PhysicalReadData, PhysicalReadIterator, PhysicalWriteData,
     PhysicalWriteIterator,
 };
+#[doc(hidden)]
 pub use phys_mem_batcher::PhysicalMemoryBatcher;
+#[doc(hidden)]
 pub use virt_mem::{VirtualFromPhysical, VirtualMemory};
+#[doc(hidden)]
 pub use virt_mem_batcher::VirtualMemoryBatcher;
+#[doc(hidden)]
 pub use virt_translate::{TranslateArch, VirtualTranslate};

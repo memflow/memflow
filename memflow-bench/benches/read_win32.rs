@@ -32,7 +32,9 @@ fn initialize_virt_ctx() -> Result<(
         .scan()
         .map_err(|_| Error::Other("unable to find kernel"))?;
     let mut vat = TranslateArch::new(kernel_info.start_block.arch);
-    let offsets = Win32Offsets::try_with_kernel_info(&kernel_info)
+    let offsets = Win32Offsets::builder()
+        .kernel_info(&kernel_info)
+        .build()
         .map_err(|_| Error::Other("unable to initialize win32 offsets with guid"))?;
 
     let mut kernel = Kernel::new(&mut phys_mem, &mut vat, offsets, kernel_info);

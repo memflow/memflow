@@ -13,36 +13,8 @@ use std::io::Read;
 use std::path::Path;
 
 use crate::error::{Error, Result};
-use crate::kernel::Win32GUID;
+use crate::kernel::{Win32GUID, Win32Version};
 use crate::kernel_info::KernelInfo;
-
-// TEST CODE START
-pub struct Win32OffsetBuilder {
-    #[cfg(feature = "symstore")]
-    symbol_store: Option<SymbolStore>,
-}
-
-impl Default for Win32OffsetBuilder {
-    fn default() -> Self {
-        Self {
-            #[cfg(feature = "symstore")]
-            symbol_store: None,
-        }
-    }
-}
-
-impl Win32OffsetBuilder {
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    pub fn symbol_store(mut self, symbol_store: SymbolStore) -> Self {
-        self.symbol_store = Some(symbol_store);
-        self
-    }
-}
-
-// TEST CODE END
 
 #[derive(Debug, Clone)]
 pub struct Win32Offsets {
@@ -75,36 +47,16 @@ pub struct Win32Offsets {
 }
 
 impl Win32Offsets {
-    #[cfg(feature = "symstore")]
-    pub fn try_with_guid(guid: &Win32GUID) -> Result<Self> {
-        let symstore = SymbolStore::default();
-        let pdb = symstore.load(guid)?;
-        Self::try_with_pdb_slice(&pdb[..])
-    }
-
-    #[cfg(feature = "symstore")]
-    pub fn try_with_kernel_info(info: &KernelInfo) -> Result<Self> {
-        if let Some(guid) = info.kernel_guid.as_ref() {
-            Self::try_with_guid(guid)
-        } else {
-            Err(Error::Other(
-                "Win32Offsets::try_with_kernel_info: KernelInfo does not have a guid",
-            ))
-        }
-    }
-
-    #[cfg(feature = "symstore")]
-    pub fn try_with_pdb<P: AsRef<Path>>(pdb_path: P) -> Result<Self> {
+    pub fn from_pdb<P: AsRef<Path>>(pdb_path: P) -> Result<Self> {
         let mut file = File::open(pdb_path)
             .map_err(|_| Error::PDB("unable to open user-supplied pdb file"))?;
         let mut buffer = Vec::new();
         file.read_to_end(&mut buffer)
             .map_err(|_| Error::PDB("unable to read user-supplied pdb file"))?;
-        Self::try_with_pdb_slice(&buffer[..])
+        Self::from_pdb_slice(&buffer[..])
     }
 
-    #[cfg(feature = "symstore")]
-    pub fn try_with_pdb_slice(pdb_slice: &[u8]) -> Result<Self> {
+    pub fn from_pdb_slice(pdb_slice: &[u8]) -> Result<Self> {
         let list = PdbStruct::with(pdb_slice, "_LIST_ENTRY")
             .map_err(|_| Error::PDB("_LIST_ENTRY not found"))?;
         let kproc = PdbStruct::with(pdb_slice, "_KPROCESS")
@@ -211,6 +163,92 @@ impl Win32Offsets {
             ldr_data_name_x64: 0x58, // _LDR_DATA_TABLE_ENTRY::BaseDllName
         })
     }
+
+    pub fn builder() -> Win32OffsetBuilder {
+        Win32OffsetBuilder::default()
+    }
+}
+
+pub struct Win32OffsetBuilder {
+    #[cfg(feature = "symstore")]
+    symbol_store: SymbolStore,
+
+    guid: Option<Win32GUID>,
+    winver: Option<Win32Version>,
+}
+
+impl Default for Win32OffsetBuilder {
+    fn default() -> Self {
+        Self {
+            #[cfg(feature = "symstore")]
+            symbol_store: SymbolStore::default(),
+
+            guid: None,
+            winver: None,
+        }
+    }
+}
+
+impl Win32OffsetBuilder {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn build(self) -> Result<Win32Offsets> {
+        if self.guid.is_none() && self.winver.is_none() {
+            return Err(Error::Other(
+                "building win32 offsets requires either a guid or winver",
+            ));
+        }
+
+        // try to build via symbol store
+        if let Ok(offs) = self.build_with_symbol_store() {
+            return Ok(offs);
+        }
+
+        // use static offset list
+        Err(Error::Other("not found"))
+    }
+
+    #[cfg(feature = "symstore")]
+    fn build_with_symbol_store(&self) -> Result<Win32Offsets> {
+        if self.guid.is_some() {
+            let pdb = self.symbol_store.load(self.guid.as_ref().unwrap())?;
+            Win32Offsets::from_pdb_slice(&pdb[..])
+        } else {
+            Err(Error::Other("symbol store can only be used with a guid"))
+        }
+    }
+
+    #[cfg(not(feature = "symstore"))]
+    fn build_with_symbol_store(&self) -> Result<Win32Offsets> {
+        Err(Error::Other("symbol store deactivated"))
+    }
+
+    pub fn symbol_store(mut self, symbol_store: SymbolStore) -> Self {
+        self.symbol_store = symbol_store;
+        self
+    }
+
+    pub fn guid(mut self, guid: Win32GUID) -> Self {
+        self.guid = Some(guid);
+        self
+    }
+
+    pub fn winver(mut self, winver: Win32Version) -> Self {
+        self.winver = Some(winver);
+        self
+    }
+
+    pub fn kernel_info(mut self, kernel_info: &KernelInfo) -> Self {
+        if self.guid.is_none() {
+            self.guid = kernel_info.kernel_guid.clone();
+        }
+        if self.winver.is_none() {
+            self.winver = kernel_info.kernel_winver.clone();
+        }
+        self
+    }
 }
 
 #[cfg(test)]
@@ -220,11 +258,16 @@ mod tests {
     #[test]
     fn download_pdb() {
         // TODO: symbol store with no local cache
-        let offsets = Win32Offsets::try_with_guid(&Win32GUID {
+
+        let guid = Win32GUID {
             file_name: "ntkrnlmp.pdb".to_string(),
             guid: "3844DBB920174967BE7AA4A2C20430FA2".to_string(),
-        })
-        .unwrap();
+        };
+        let offsets = Win32Offsets::builder()
+            .symbol_store(SymbolStore::new().no_cache())
+            .guid(guid)
+            .build()
+            .unwrap();
 
         assert_eq!(offsets.list_blink, 8);
         assert_eq!(offsets.eproc_link, 392);

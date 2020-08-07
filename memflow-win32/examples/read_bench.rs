@@ -93,7 +93,7 @@ fn read_bench<T: PhysicalMemory + ?Sized, V: VirtualTranslate>(
     vat: &mut V,
     kernel_info: KernelInfo,
 ) -> Result<()> {
-    let offsets = Win32Offsets::try_with_kernel_info(&kernel_info)?;
+    let offsets = Win32Offsets::builder().kernel_info(&kernel_info).build()?;
     let mut kernel = Kernel::new(phys_mem, vat, offsets, kernel_info);
 
     let proc_list = kernel.process_info_list()?;

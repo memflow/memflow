@@ -20,20 +20,20 @@ pub struct KernelInfo {
 }
 
 impl KernelInfo {
-    pub fn scanner<T: PhysicalMemory + ?Sized>(mem: &mut T) -> KernelInfoScanner<T> {
+    pub fn scanner<T: PhysicalMemory>(mem: T) -> KernelInfoScanner<T> {
         KernelInfoScanner::new(mem)
     }
 }
 
-pub struct KernelInfoScanner<'a, T: ?Sized> {
-    mem: &'a mut T,
+pub struct KernelInfoScanner<T> {
+    mem: T,
     arch: Option<Architecture>,
     kernel_hint: Option<Address>,
     dtb: Option<Address>,
 }
 
-impl<'a, T: PhysicalMemory + ?Sized> KernelInfoScanner<'a, T> {
-    pub fn new(mem: &'a mut T) -> Self {
+impl<T: PhysicalMemory> KernelInfoScanner<T> {
+    pub fn new(mem: T) -> Self {
         Self {
             mem,
             arch: None,

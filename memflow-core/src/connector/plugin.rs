@@ -11,7 +11,7 @@ use std::fs::read_dir;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use log::debug;
+use log::{info, debug};
 
 use libloading::Library;
 
@@ -119,10 +119,12 @@ impl ConnectorInventory {
             return Err(Error::IO("invalid path argument"));
         }
 
+        info!("scanning {:?} for connectors", dir);
+
         for entry in read_dir(dir).map_err(|_| Error::IO("unable to read directory"))? {
             let entry = entry.map_err(|_| Error::IO("unable to read directory entry"))?;
             if let Ok(connector) = Connector::try_with(entry.path()) {
-                println!("connector loaded: {:?}", entry.path());
+                info!("adding connector: {:?}", entry.path());
                 self.connectors.push(connector);
             }
         }

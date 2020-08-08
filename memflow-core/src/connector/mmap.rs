@@ -14,9 +14,11 @@ use std::fs::File;
 
 pub struct MMAPInfo<'a> {
     mem_map: MemoryMap<&'a [u8]>,
+    #[cfg(feature = "filemap")]
     _buf: Mmap,
 }
 
+#[cfg(feature = "filemap")]
 impl<'a> AsRef<MemoryMap<&'a [u8]>> for MMAPInfo<'a> {
     fn as_ref(&self) -> &MemoryMap<&'a [u8]> {
         &self.mem_map
@@ -25,9 +27,11 @@ impl<'a> AsRef<MemoryMap<&'a [u8]>> for MMAPInfo<'a> {
 
 pub struct MMAPInfoMut<'a> {
     mem_map: MemoryMap<&'a mut [u8]>,
+    #[cfg(feature = "filemap")]
     _buf: MmapMut,
 }
 
+#[cfg(feature = "filemap")]
 impl<'a> AsRef<MemoryMap<&'a mut [u8]>> for MMAPInfoMut<'a> {
     fn as_ref(&self) -> &MemoryMap<&'a mut [u8]> {
         &self.mem_map
@@ -126,6 +130,7 @@ impl<'a> MappedPhysicalMemory<&'a mut [u8], MMAPInfoMut<'a>> {
 
 pub type ReadMappedFilePhysicalMemory<'a> = MappedPhysicalMemory<&'a [u8], MMAPInfo<'a>>;
 
+#[cfg(feature = "filemap")]
 impl<'a> ReadMappedFilePhysicalMemory<'a> {
     pub fn try_with_bufmap(buf: Mmap, map: MemoryMap<(Address, usize)>) -> Result<Self> {
         let mut new_map = MemoryMap::new();
@@ -158,6 +163,7 @@ impl<'a> ReadMappedFilePhysicalMemory<'a> {
 pub type WriteMappedFilePhysicalMemory<'a> = MappedPhysicalMemory<&'a mut [u8], MMAPInfoMut<'a>>;
 
 //TODO: Dedup this code. And make it safer?
+#[cfg(feature = "filemap")]
 impl<'a> WriteMappedFilePhysicalMemory<'a> {
     pub fn try_with_bufmap_mut(mut buf: MmapMut, map: MemoryMap<(Address, usize)>) -> Result<Self> {
         let mut new_map = MemoryMap::new();

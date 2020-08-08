@@ -34,7 +34,7 @@ toml = "0.5"
 
 [features]
 default = ["std", "serde_derive", "symstore", "download_progress"]
-std = ["no-std-compat/std"]
+std = ["no-std-compat/std", "memflow-core/std"]
 collections = []
 alloc = []
 serde_derive = ["serde", "memflow-core/serde_derive"]

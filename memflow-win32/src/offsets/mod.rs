@@ -3,6 +3,10 @@ pub mod pdb_struct;
 #[cfg(feature = "symstore")]
 pub mod symstore;
 
+pub mod offset_data;
+#[doc(hidden)]
+pub use offset_data::Win32OffsetsData;
+
 #[cfg(feature = "symstore")]
 pub use {pdb_struct::PdbStruct, symstore::*};
 
@@ -16,44 +20,10 @@ use crate::error::{Error, Result};
 use crate::kernel::{Win32GUID, Win32Version};
 use crate::win32::KernelInfo;
 
+#[repr(transparent)]
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize))]
-pub struct Win32OffsetsFile {
-    pub kernel_guid: Option<Win32GUID>,
-    pub kernel_winver: Option<Win32Version>,
-    pub offsets: Win32Offsets,
-}
-
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(::serde::Serialize))]
-pub struct Win32Offsets {
-    pub list_blink: usize,
-    pub eproc_link: usize,
-
-    pub kproc_dtb: usize,
-    pub eproc_pid: usize,
-    pub eproc_name: usize,
-    pub eproc_peb: usize,
-    pub eproc_thread_list: usize,
-    pub eproc_wow64: usize,
-
-    pub kthread_teb: usize,
-    pub ethread_list_entry: usize,
-    pub teb_peb: usize,
-    pub teb_peb_x86: usize,
-
-    pub peb_ldr_x86: usize,
-    pub peb_ldr_x64: usize,
-    pub ldr_list_x86: usize,
-    pub ldr_list_x64: usize,
-
-    pub ldr_data_base_x86: usize,
-    pub ldr_data_base_x64: usize,
-    pub ldr_data_size_x86: usize,
-    pub ldr_data_size_x64: usize,
-    pub ldr_data_name_x86: usize,
-    pub ldr_data_name_x64: usize,
-}
+pub struct Win32Offsets(pub Win32OffsetsData);
 
 impl Win32Offsets {
     pub fn from_pdb<P: AsRef<Path>>(pdb_path: P) -> Result<Self> {
@@ -143,33 +113,35 @@ impl Win32Offsets {
         };
 
         Ok(Self {
-            list_blink,
-            eproc_link,
+            0: Win32OffsetsData {
+                list_blink,
+                eproc_link,
 
-            kproc_dtb,
+                kproc_dtb,
 
-            eproc_pid,
-            eproc_name,
-            eproc_peb,
-            eproc_thread_list,
-            eproc_wow64,
+                eproc_pid,
+                eproc_name,
+                eproc_peb,
+                eproc_thread_list,
+                eproc_wow64,
 
-            kthread_teb,
-            ethread_list_entry,
-            teb_peb,
-            teb_peb_x86,
+                kthread_teb,
+                ethread_list_entry,
+                teb_peb,
+                teb_peb_x86,
 
-            peb_ldr_x86: 0xC,   // _PEB::Ldr
-            peb_ldr_x64: 0x18,  // _PEB::Ldr
-            ldr_list_x86: 0xC,  // _PEB_LDR_DATA::InLoadOrderModuleList
-            ldr_list_x64: 0x10, // _PEB_LDR_DATA::InLoadOrderModuleList
+                peb_ldr_x86: 0xC,   // _PEB::Ldr
+                peb_ldr_x64: 0x18,  // _PEB::Ldr
+                ldr_list_x86: 0xC,  // _PEB_LDR_DATA::InLoadOrderModuleList
+                ldr_list_x64: 0x10, // _PEB_LDR_DATA::InLoadOrderModuleList
 
-            ldr_data_base_x86: 0x18, // _LDR_DATA_TABLE_ENTRY::DllBase
-            ldr_data_base_x64: 0x30, // _LDR_DATA_TABLE_ENTRY::DllBase
-            ldr_data_size_x86: 0x20, // _LDR_DATA_TABLE_ENTRY::SizeOfImage
-            ldr_data_size_x64: 0x40, // _LDR_DATA_TABLE_ENTRY::SizeOfImage
-            ldr_data_name_x86: 0x2C, // _LDR_DATA_TABLE_ENTRY::BaseDllName
-            ldr_data_name_x64: 0x58, // _LDR_DATA_TABLE_ENTRY::BaseDllName
+                ldr_data_base_x86: 0x18, // _LDR_DATA_TABLE_ENTRY::DllBase
+                ldr_data_base_x64: 0x30, // _LDR_DATA_TABLE_ENTRY::DllBase
+                ldr_data_size_x86: 0x20, // _LDR_DATA_TABLE_ENTRY::SizeOfImage
+                ldr_data_size_x64: 0x40, // _LDR_DATA_TABLE_ENTRY::SizeOfImage
+                ldr_data_name_x86: 0x2C, // _LDR_DATA_TABLE_ENTRY::BaseDllName
+                ldr_data_name_x64: 0x58, // _LDR_DATA_TABLE_ENTRY::BaseDllName
+            },
         })
     }
 
@@ -278,20 +250,20 @@ mod tests {
             .build()
             .unwrap();
 
-        assert_eq!(offsets.list_blink, 8);
-        assert_eq!(offsets.eproc_link, 392);
+        assert_eq!(offsets.0.list_blink, 8);
+        assert_eq!(offsets.0.eproc_link, 392);
 
-        assert_eq!(offsets.kproc_dtb, 40);
+        assert_eq!(offsets.0.kproc_dtb, 40);
 
-        assert_eq!(offsets.eproc_pid, 384);
-        assert_eq!(offsets.eproc_name, 736);
-        assert_eq!(offsets.eproc_peb, 824);
-        assert_eq!(offsets.eproc_thread_list, 776);
-        assert_eq!(offsets.eproc_wow64, 800);
+        assert_eq!(offsets.0.eproc_pid, 384);
+        assert_eq!(offsets.0.eproc_name, 736);
+        assert_eq!(offsets.0.eproc_peb, 824);
+        assert_eq!(offsets.0.eproc_thread_list, 776);
+        assert_eq!(offsets.0.eproc_wow64, 800);
 
-        assert_eq!(offsets.kthread_teb, 184);
-        assert_eq!(offsets.ethread_list_entry, 1056);
-        assert_eq!(offsets.teb_peb, 96);
-        assert_eq!(offsets.teb_peb_x86, 48);
+        assert_eq!(offsets.0.kthread_teb, 184);
+        assert_eq!(offsets.0.ethread_list_entry, 1056);
+        assert_eq!(offsets.0.teb_peb, 96);
+        assert_eq!(offsets.0.teb_peb_x86, 48);
     }
 }

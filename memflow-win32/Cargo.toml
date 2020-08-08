@@ -32,6 +32,11 @@ bencher = "0.1.5"
 clap = "2.33.0"
 toml = "0.5"
 
+[build_dependencies]
+toml = "0.5"
+dataview = "0.1"
+serde = { version = "1.0", features = ["derive"] }
+
 [features]
 default = ["std", "serde_derive", "symstore", "download_progress"]
 std = ["no-std-compat/std", "memflow-core/std"]

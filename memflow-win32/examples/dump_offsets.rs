@@ -1,5 +1,3 @@
-use std::{thread, time};
-
 use clap::*;
 use log::Level;
 use std::fs::File;

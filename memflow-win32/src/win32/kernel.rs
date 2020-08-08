@@ -2,7 +2,7 @@ use std::prelude::v1::*;
 
 use super::{KernelInfo, Win32Process, Win32ProcessInfo};
 use crate::error::{Error, Result};
-use crate::offsets::Win32Offsets;
+use crate::offsets::{self, Win32Offsets};
 use crate::pe::{pe32, pe64, MemoryPeViewContext};
 
 #[cfg(feature = "symstore")]
@@ -169,14 +169,14 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
         let (ldr_data_base_offs, ldr_data_size_offs, ldr_data_name_offs) =
             match self.kernel_info.start_block.arch.bits() {
                 64 => (
-                    self.offsets.0.ldr_data_base_x64,
-                    self.offsets.0.ldr_data_size_x64,
-                    self.offsets.0.ldr_data_name_x64,
+                    offsets::x64::LDR_DATA_BASE,
+                    offsets::x64::LDR_DATA_SIZE,
+                    offsets::x64::LDR_DATA_NAME,
                 ),
                 32 => (
-                    self.offsets.0.ldr_data_base_x86,
-                    self.offsets.0.ldr_data_size_x86,
-                    self.offsets.0.ldr_data_name_x86,
+                    offsets::x86::LDR_DATA_BASE,
+                    offsets::x86::LDR_DATA_SIZE,
+                    offsets::x86::LDR_DATA_NAME,
                 ),
                 _ => return Err(Error::InvalidArchitecture),
             };
@@ -298,8 +298,8 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
 
         // retrieve peb offsets
         let (peb_ldr_offs, ldr_list_offs) = match proc_arch.bits() {
-            64 => (self.offsets.0.peb_ldr_x64, self.offsets.0.ldr_list_x64),
-            32 => (self.offsets.0.peb_ldr_x86, self.offsets.0.ldr_list_x86),
+            64 => (offsets::x64::PEB_LDR, offsets::x64::LDR_LIST),
+            32 => (offsets::x86::PEB_LDR, offsets::x86::LDR_LIST),
             _ => return Err(Error::InvalidArchitecture),
         };
         trace!("peb_ldr_offs={:x}", peb_ldr_offs);
@@ -315,14 +315,14 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
         // determine the offsets to be used when working with this process
         let (ldr_data_base_offs, ldr_data_size_offs, ldr_data_name_offs) = match proc_arch.bits() {
             64 => (
-                self.offsets.0.ldr_data_base_x64,
-                self.offsets.0.ldr_data_size_x64,
-                self.offsets.0.ldr_data_name_x64,
+                offsets::x64::LDR_DATA_BASE,
+                offsets::x64::LDR_DATA_SIZE,
+                offsets::x64::LDR_DATA_NAME,
             ),
             32 => (
-                self.offsets.0.ldr_data_base_x86,
-                self.offsets.0.ldr_data_size_x86,
-                self.offsets.0.ldr_data_name_x86,
+                offsets::x86::LDR_DATA_BASE,
+                offsets::x86::LDR_DATA_SIZE,
+                offsets::x86::LDR_DATA_NAME,
             ),
             _ => return Err(Error::InvalidArchitecture),
         };

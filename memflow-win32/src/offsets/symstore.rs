@@ -58,6 +58,7 @@ fn read_to_end<T: Read>(reader: &mut T, _len: usize) -> Result<Vec<u8>> {
     Ok(buffer)
 }
 
+#[derive(Debug, Clone)]
 pub struct SymbolStore {
     base_url: String,
     cache_path: Option<PathBuf>,

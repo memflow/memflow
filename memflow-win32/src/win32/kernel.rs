@@ -546,10 +546,8 @@ where
         // find kernel_info
         let kernel_info = KernelInfo::scanner(&mut self.connector).scan()?;
 
-        // TODO: symstore
-
         // acquire offsets from the symbol store
-        let offsets = Win32Offsets::builder().kernel_info(&kernel_info).build()?;
+        let offsets = self.build_offsets(&kernel_info)?;
 
         // create a vat object
         let vat = TranslateArch::new(kernel_info.start_block.arch);
@@ -566,6 +564,20 @@ where
             offsets,
             kernel_info,
         ))
+    }
+
+    #[cfg(feature = "symstore")]
+    fn build_offsets(&self, kernel_info: &KernelInfo) -> Result<Win32Offsets> {
+        let mut builder = Win32Offsets::builder();
+        if let Some(store) = &self.symbol_store {
+            builder = builder.symbol_store(store.clone());
+        }
+        builder.kernel_info(kernel_info).build()
+    }
+
+    #[cfg(not(feature = "symstore"))]
+    fn build_offsets(&self, kernel_info: &KernelInfo) -> Result<Win32Offsets> {
+        Win32Offsets::builder().kernel_info(&kernel_info).build()
     }
 
     #[cfg(feature = "symstore")]

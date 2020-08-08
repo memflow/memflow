@@ -56,7 +56,8 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
                 &mut vat,
             );
 
-            if let Ok(dtb) = reader.virt_read_addr(kernel_info.eprocess_base + offsets.kproc_dtb) {
+            if let Ok(dtb) = reader.virt_read_addr(kernel_info.eprocess_base + offsets.0.kproc_dtb)
+            {
                 dtb
             } else {
                 kernel_info.start_block.dtb
@@ -91,17 +92,17 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
 
         let mut eprocs = Vec::new();
 
-        let list_start = self.kernel_info.eprocess_base + self.offsets.eproc_link;
+        let list_start = self.kernel_info.eprocess_base + self.offsets.0.eproc_link;
         let mut list_entry = list_start;
 
         loop {
-            let eprocess = list_entry - self.offsets.eproc_link;
+            let eprocess = list_entry - self.offsets.0.eproc_link;
             trace!("eprocess={}", eprocess);
 
             // test flink + blink before adding the process
             let flink_entry = reader.virt_read_addr(list_entry)?;
             trace!("flink_entry={}", flink_entry);
-            let blink_entry = reader.virt_read_addr(list_entry + self.offsets.list_blink)?;
+            let blink_entry = reader.virt_read_addr(list_entry + self.offsets.0.list_blink)?;
             trace!("blink_entry={}", blink_entry);
 
             if flink_entry.is_null() || blink_entry.is_null() || flink_entry == list_start {
@@ -168,14 +169,14 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
         let (ldr_data_base_offs, ldr_data_size_offs, ldr_data_name_offs) =
             match self.kernel_info.start_block.arch.bits() {
                 64 => (
-                    self.offsets.ldr_data_base_x64,
-                    self.offsets.ldr_data_size_x64,
-                    self.offsets.ldr_data_name_x64,
+                    self.offsets.0.ldr_data_base_x64,
+                    self.offsets.0.ldr_data_size_x64,
+                    self.offsets.0.ldr_data_name_x64,
                 ),
                 32 => (
-                    self.offsets.ldr_data_base_x86,
-                    self.offsets.ldr_data_size_x86,
-                    self.offsets.ldr_data_name_x86,
+                    self.offsets.0.ldr_data_base_x86,
+                    self.offsets.0.ldr_data_size_x86,
+                    self.offsets.0.ldr_data_name_x86,
                 ),
                 _ => return Err(Error::InvalidArchitecture),
             };
@@ -216,24 +217,24 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
             &mut self.vat,
         );
 
-        let pid: i32 = reader.virt_read(eprocess + self.offsets.eproc_pid)?;
+        let pid: i32 = reader.virt_read(eprocess + self.offsets.0.eproc_pid)?;
         trace!("pid={}", pid);
 
-        let name = reader.virt_read_cstr(eprocess + self.offsets.eproc_name, 16)?;
+        let name = reader.virt_read_cstr(eprocess + self.offsets.0.eproc_name, 16)?;
         trace!("name={}", name);
 
-        let dtb = reader.virt_read_addr(eprocess + self.offsets.kproc_dtb)?;
+        let dtb = reader.virt_read_addr(eprocess + self.offsets.0.kproc_dtb)?;
         trace!("dtb={:x}", dtb);
 
-        let wow64 = if self.offsets.eproc_wow64 == 0 {
+        let wow64 = if self.offsets.0.eproc_wow64 == 0 {
             trace!("eproc_wow64=null; skipping wow64 detection");
             Address::null()
         } else {
             trace!(
                 "eproc_wow64={:x}; trying to read wow64 pointer",
-                self.offsets.eproc_wow64
+                self.offsets.0.eproc_wow64
             );
-            reader.virt_read_addr(eprocess + self.offsets.eproc_wow64)?
+            reader.virt_read_addr(eprocess + self.offsets.0.eproc_wow64)?
         };
         trace!("wow64={:x}", wow64);
 
@@ -254,19 +255,19 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
         trace!("proc_arch={:?}", proc_arch);
 
         // read native_peb (either the process peb or the peb containing the wow64 helpers)
-        let native_peb = reader.virt_read_addr(eprocess + self.offsets.eproc_peb)?;
+        let native_peb = reader.virt_read_addr(eprocess + self.offsets.0.eproc_peb)?;
         trace!("native_peb={:x}", native_peb);
 
         // find first ethread
-        let ethread = reader.virt_read_addr(eprocess + self.offsets.eproc_thread_list)?
-            - self.offsets.ethread_list_entry;
+        let ethread = reader.virt_read_addr(eprocess + self.offsets.0.eproc_thread_list)?
+            - self.offsets.0.ethread_list_entry;
         trace!("ethread={:x}", ethread);
 
         // TODO: does this need to be read with the process ctx?
         let teb = if wow64.is_null() {
-            reader.virt_read_addr(ethread + self.offsets.kthread_teb)?
+            reader.virt_read_addr(ethread + self.offsets.0.kthread_teb)?
         } else {
-            reader.virt_read_addr(ethread + self.offsets.kthread_teb)? + 0x2000
+            reader.virt_read_addr(ethread + self.offsets.0.kthread_teb)? + 0x2000
         };
         trace!("teb={:x}", teb);
 
@@ -282,23 +283,23 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
         // from here on out we are in the process context
         // we will be using the process type architecture now
         let teb_peb = if wow64.is_null() {
-            proc_reader.virt_read_addr(teb + self.offsets.teb_peb)?
+            proc_reader.virt_read_addr(teb + self.offsets.0.teb_peb)?
         } else {
-            proc_reader.virt_read_addr(teb + self.offsets.teb_peb_x86)?
+            proc_reader.virt_read_addr(teb + self.offsets.0.teb_peb_x86)?
         };
         trace!("teb_peb={:x}", teb_peb);
 
         let real_peb = if !teb_peb.is_null() {
             teb_peb
         } else {
-            proc_reader.virt_read_addr(eprocess + self.offsets.eproc_peb)?
+            proc_reader.virt_read_addr(eprocess + self.offsets.0.eproc_peb)?
         };
         trace!("real_peb={:x}", real_peb);
 
         // retrieve peb offsets
         let (peb_ldr_offs, ldr_list_offs) = match proc_arch.bits() {
-            64 => (self.offsets.peb_ldr_x64, self.offsets.ldr_list_x64),
-            32 => (self.offsets.peb_ldr_x86, self.offsets.ldr_list_x86),
+            64 => (self.offsets.0.peb_ldr_x64, self.offsets.0.ldr_list_x64),
+            32 => (self.offsets.0.peb_ldr_x86, self.offsets.0.ldr_list_x86),
             _ => return Err(Error::InvalidArchitecture),
         };
         trace!("peb_ldr_offs={:x}", peb_ldr_offs);
@@ -314,14 +315,14 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
         // determine the offsets to be used when working with this process
         let (ldr_data_base_offs, ldr_data_size_offs, ldr_data_name_offs) = match proc_arch.bits() {
             64 => (
-                self.offsets.ldr_data_base_x64,
-                self.offsets.ldr_data_size_x64,
-                self.offsets.ldr_data_name_x64,
+                self.offsets.0.ldr_data_base_x64,
+                self.offsets.0.ldr_data_size_x64,
+                self.offsets.0.ldr_data_name_x64,
             ),
             32 => (
-                self.offsets.ldr_data_base_x86,
-                self.offsets.ldr_data_size_x86,
-                self.offsets.ldr_data_name_x86,
+                self.offsets.0.ldr_data_base_x86,
+                self.offsets.0.ldr_data_size_x86,
+                self.offsets.0.ldr_data_name_x86,
             ),
             _ => return Err(Error::InvalidArchitecture),
         };

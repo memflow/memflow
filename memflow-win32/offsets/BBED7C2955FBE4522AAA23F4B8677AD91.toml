@@ -1,0 +1,29 @@
+pdb_file_name = 'ntkrnlmp.pdb'
+pdb_guid = 'BBED7C2955FBE4522AAA23F4B8677AD91'
+nt_major_version = 10
+nt_minor_version = 0
+nt_build_number = 19041
+
+[offsets]
+list_blink = 8
+eproc_link = 1096
+kproc_dtb = 40
+eproc_pid = 1088
+eproc_name = 1448
+eproc_peb = 1360
+eproc_thread_list = 1504
+eproc_wow64 = 1408
+kthread_teb = 240
+ethread_list_entry = 1256
+teb_peb = 96
+teb_peb_x86 = 48
+peb_ldr_x86 = 12
+peb_ldr_x64 = 24
+ldr_list_x86 = 12
+ldr_list_x64 = 16
+ldr_data_base_x86 = 24
+ldr_data_base_x64 = 48
+ldr_data_size_x86 = 32
+ldr_data_size_x64 = 64
+ldr_data_name_x86 = 44
+ldr_data_name_x64 = 88

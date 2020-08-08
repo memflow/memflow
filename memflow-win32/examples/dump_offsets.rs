@@ -1,5 +1,5 @@
 use clap::*;
-use log::Level;
+use log::{error, Level};
 use std::fs::File;
 use std::io::Write;
 
@@ -58,18 +58,41 @@ pub fn main() {
         .build()
         .unwrap();
 
-    // write offsets to file
-    let offsets = toml::to_string_pretty(&Win32OffsetsFile {
-        kernel_guid: kernel.kernel_info.kernel_guid,
-        kernel_winver: kernel.kernel_info.kernel_winver,
-        offsets: kernel.offsets,
-    })
-    .unwrap();
-    match matches.value_of("output") {
-        Some(output) => {
-            let mut file = File::create(output).unwrap();
-            file.write_all(offsets.as_bytes()).unwrap();
+    if let Some(winver) = kernel.kernel_info.kernel_winver {
+        let offsets = if let Some(guid) = &kernel.kernel_info.kernel_guid {
+            Win32OffsetsFile {
+                pdb_file_name: &guid.file_name,
+                pdb_guid: &guid.guid,
+
+                nt_major_version: winver.major_version(),
+                nt_minor_version: winver.minor_version(),
+                nt_build_number: winver.build_number(),
+
+                offsets: kernel.offsets,
+            }
+        } else {
+            Win32OffsetsFile {
+                pdb_file_name: "",
+                pdb_guid: "",
+
+                nt_major_version: winver.major_version(),
+                nt_minor_version: winver.minor_version(),
+                nt_build_number: winver.build_number(),
+
+                offsets: kernel.offsets,
+            }
+        };
+
+        // write offsets to file
+        let offsetstr = toml::to_string_pretty(&offsets).unwrap();
+        match matches.value_of("output") {
+            Some(output) => {
+                let mut file = File::create(output).unwrap();
+                file.write_all(offsetstr.as_bytes()).unwrap();
+            }
+            None => println!("{}", offsetstr),
         }
-        None => println!("{}", offsets),
+    } else {
+        error!("kernel guid has to be set in order to generate a offsets file");
     }
 }

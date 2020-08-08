@@ -1,3 +1,31 @@
+/*!
+Module for reading a target's keyboard state.
+
+The `gafAsyncKeyState` array contains the current Keyboard state on Windows targets.
+This array will internally be read by the [`GetAsyncKeyState()`](https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getasynckeystate) function of Windows.
+
+Although the gafAsyncKeyState array is exported by the win32kbase.sys kernel module it is only properly mapped into user mode processes.
+Therefor the Keyboard will by default find the winlogon.exe or wininit.exe process and use it as a proxy to read the data.
+
+# Examples:
+
+```
+use std::{thread, time};
+
+use memflow_core::{PhysicalMemory, VirtualTranslate};
+use memflow_win32::{Kernel, Keyboard};
+
+fn test<T: PhysicalMemory, V: VirtualTranslate>(kernel: &mut Kernel<T, V>) {
+    let kbd = Keyboard::try_with(kernel).unwrap();
+
+    loop {
+        let kbs = kbd.state_with_kernel(kernel).unwrap();
+        println!("space down: {:?}", kbs.is_down(win_key_codes::VK_SPACE));
+        thread::sleep(time::Duration::from_millis(1000));
+    }
+}
+```
+*/
 use super::{Kernel, Win32Process, Win32ProcessInfo};
 use crate::error::{Error, Result};
 
@@ -10,32 +38,7 @@ use memflow_core::types::Address;
 
 use pelite::{self, pe64::exports::Export, PeView};
 
-/// Reads the targets keyboard state.
-///
-/// The `gafAsyncKeyState` array contains the current Keyboard state on Windows targets.
-/// This array will internally be read by the [`GetAsyncKeyState()`](https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getasynckeystate) function of Windows.
-///
-/// Although the gafAsyncKeyState array is exported by the win32kbase.sys kernel module it is only properly mapped into user mode processes.
-/// Therefor the Keyboard will by default find the winlogon.exe or wininit.exe process and use it as a proxy to read the data.
-///
-/// # Examples:
-///
-/// ```
-/// use std::{thread, time};
-///
-/// use memflow_core::{PhysicalMemory, VirtualTranslate};
-/// use memflow_win32::{Kernel, Keyboard};
-///
-/// fn test<T: PhysicalMemory, V: VirtualTranslate>(kernel: &mut Kernel<T, V>) {
-///     let kbd = Keyboard::try_with(kernel).unwrap();
-///
-///     loop {
-///         let kbs = kbd.state_with_kernel(kernel).unwrap();
-///         println!("space down: {:?}", kbs.is_down(win_key_codes::VK_SPACE));
-///         thread::sleep(time::Duration::from_millis(1000));
-///     }
-/// }
-/// ```
+/// Interface for accessing the target's keyboard state.
 #[derive(Clone, Debug)]
 pub struct Keyboard {
     user_process_info: Win32ProcessInfo,

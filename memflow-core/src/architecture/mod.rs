@@ -48,46 +48,38 @@ pub enum Endianess {
     BigEndian,
 }
 
-/**
-Describes the architecture to of a target.
-The architecture will contain information about the pointer width,
-byte order, page size and also how to translate virtual to physical memory.
-*/
+/// Describes the architecture to of a target.
+/// The architecture will contain information about the pointer width,
+/// byte order, page size and also how to translate virtual to physical memory.
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize))]
 pub enum Architecture {
-    /**
-    An empty architecture with some sensible defaults and no virt_to_phys translation.
-    This is usually most useful when running automated tests.
-    */
+    /// An empty architecture with some sensible defaults and no virt_to_phys translation.
+    /// This is usually most useful when running automated tests.
     Null,
     /// x86_64 architecture.
     X64,
-    /**
-    x86 architecture with physical address extensions.
-    See [here](https://en.wikipedia.org/wiki/Physical_Address_Extension) for more information on the subject.
-    */
+    /// x86 architecture with physical address extensions.
+    /// See [here](https://en.wikipedia.org/wiki/Physical_Address_Extension) for more information on the subject.
     X86Pae,
     /// x86 architecture.
     X86,
 }
 
-/**
-Converts a `u8` value to an `Architecture`.
-This is usually helpful when serializing / deserializing data in a safe way.
-
-# Examples
-
-```
-use memflow_core::architecture::Architecture;
-use std::convert::TryFrom;
-
-pub fn test() {
-    let arch = Architecture::try_from(1).unwrap();
-    assert_eq!(arch, Architecture::X64);
-}
-```
-*/
+/// Converts a `u8` value to an `Architecture`.
+/// This is usually helpful when serializing / deserializing data in a safe way.
+///
+/// # Examples
+///
+/// ```
+/// use memflow_core::architecture::Architecture;
+/// use std::convert::TryFrom;
+///
+/// pub fn test() {
+///     let arch = Architecture::try_from(1).unwrap();
+///     assert_eq!(arch, Architecture::X64);
+/// }
+/// ```
 impl TryFrom<u8> for Architecture {
     type Error = Error;
 
@@ -104,19 +96,17 @@ impl TryFrom<u8> for Architecture {
 
 #[allow(dead_code)]
 impl Architecture {
-    /**
-    Converts a `Architecture` to a corresponding `u8` value.
-    This is usually helpful when serializing / deserializing data in a safe way.
-
-    # Examples
-
-    ```
-    use memflow_core::architecture::Architecture;
-
-    let arch = Architecture::X64;
-    assert_eq!(arch.as_u8(), 1);
-    ```
-    */
+    /// Converts a `Architecture` to a corresponding `u8` value.
+    /// This is usually helpful when serializing / deserializing data in a safe way.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use memflow_core::architecture::Architecture;
+    ///
+    /// let arch = Architecture::X64;
+    /// assert_eq!(arch.as_u8(), 1);
+    /// ```
     pub fn as_u8(self) -> u8 {
         match self {
             Architecture::Null => 0,
@@ -126,21 +116,19 @@ impl Architecture {
         }
     }
 
-    /**
-    Returns the number of bits of a pointers width on a `Architecture`.
-    Currently this will either return 64 or 32 depending on the pointer width of the target.
-    This function is handy in cases where you only want to know the pointer width of the target\
-    but you don't want to match against all architecture.
-
-    # Examples
-
-    ```
-    use memflow_core::architecture::Architecture;
-
-    let arch = Architecture::X86Pae;
-    assert_eq!(arch.bits(), 32);
-    ```
-    */
+    /// Returns the number of bits of a pointers width on a `Architecture`.
+    /// Currently this will either return 64 or 32 depending on the pointer width of the target.
+    /// This function is handy in cases where you only want to know the pointer width of the target\
+    /// but you don't want to match against all architecture.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use memflow_core::architecture::Architecture;
+    ///
+    /// let arch = Architecture::X86Pae;
+    /// assert_eq!(arch.bits(), 32);
+    /// ```
     pub fn bits(self) -> u8 {
         match self {
             Architecture::Null => x64::bits(),
@@ -150,10 +138,8 @@ impl Architecture {
         }
     }
 
-    /**
-    Returns a structure representing all paramters of the architecture's memory managment unit
-    This structure represents various value used in virtual to physical address translation.
-    */
+    /// Returns a structure representing all paramters of the architecture's memory managment unit
+    /// This structure represents various value used in virtual to physical address translation.
     pub fn get_mmu_spec(self) -> ArchMMUSpec {
         match self {
             Architecture::X64 => x64::get_mmu_spec(),
@@ -163,21 +149,19 @@ impl Architecture {
         }
     }
 
-    /**
-    Returns the byte order of an `Architecture`.
-    This will either be `Endianess::LittleEndian` or `Endianess::BigEndian`.
-
-    In most circumstances this will be `Endianess::LittleEndian` on all x86 and arm architectures.
-
-    # Examples
-
-    ```
-    use memflow_core::architecture::{Architecture, Endianess};
-
-    let arch = Architecture::X86;
-    assert_eq!(arch.endianess(), Endianess::LittleEndian);
-    ```
-    */
+    /// Returns the byte order of an `Architecture`.
+    /// This will either be `Endianess::LittleEndian` or `Endianess::BigEndian`.
+    ///
+    /// In most circumstances this will be `Endianess::LittleEndian` on all x86 and arm architectures.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use memflow_core::architecture::{Architecture, Endianess};
+    ///
+    /// let arch = Architecture::X86;
+    /// assert_eq!(arch.endianess(), Endianess::LittleEndian);
+    /// ```
     pub fn endianess(self) -> Endianess {
         match self {
             Architecture::Null => x64::endianess(),
@@ -187,40 +171,36 @@ impl Architecture {
         }
     }
 
-    /**
-    Returns the smallest page size of an `Architecture`.
-
-    In x86/64 and arm this will always return 4kb.
-
-    # Examples
-
-    ```
-    use memflow_core::architecture::Architecture;
-    use memflow_core::types::size;
-
-    let arch = Architecture::X64;
-    assert_eq!(arch.page_size(), size::kb(4));
-    ```
-    */
+    /// Returns the smallest page size of an `Architecture`.
+    ///
+    /// In x86/64 and arm this will always return 4kb.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use memflow_core::architecture::Architecture;
+    /// use memflow_core::types::size;
+    ///
+    /// let arch = Architecture::X64;
+    /// assert_eq!(arch.page_size(), size::kb(4));
+    /// ```
     pub fn page_size(self) -> usize {
         self.get_mmu_spec().page_size_level(1)
     }
 
-    /**
-    Returns the `usize` of a pointers width on a `Architecture`.
-
-    This function will return the pointer width as a `usize` value.
-    See `Architecture::bits()` for more information.
-
-    # Examples
-
-    ```
-    use memflow_core::architecture::Architecture;
-
-    let arch = Architecture::X86;
-    assert_eq!(arch.size_addr(), 4);
-    ```
-    */
+    /// Returns the `usize` of a pointers width on a `Architecture`.
+    ///
+    /// This function will return the pointer width as a `usize` value.
+    /// See `Architecture::bits()` for more information.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use memflow_core::architecture::Architecture;
+    ///
+    /// let arch = Architecture::X86;
+    /// assert_eq!(arch.size_addr(), 4);
+    /// ```
     pub fn size_addr(self) -> usize {
         self.get_mmu_spec().addr_size as usize
     }
@@ -285,9 +265,7 @@ impl Architecture {
             &mut fail,
             &arena,
         );
-        output
-            .map(Ok)
-            .unwrap_or_else(|| Err(output_err.unwrap()))
+        output.map(Ok).unwrap_or_else(|| Err(output_err.unwrap()))
     }
 
     /// This function will do a virtual to physical memory translation for the `Architecture` over multiple elements.

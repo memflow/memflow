@@ -214,20 +214,4 @@ unsafe impl<'a, T: VirtualMemory> PeObject<'a> for MemoryPeView<'a, T> {
     fn align(&self) -> Align {
         Align::Section
     }
-    #[cfg(feature = "serde")]
-    fn serde_name(&self) -> &'static str {
-        "MemoryPeView"
-    }
-}
-
-//----------------------------------------------------------------
-
-#[cfg(feature = "serde")]
-impl<'a> serde::Serialize for MemoryPeView<'a> {
-    fn serialize<S: serde::Serializer>(
-        &self,
-        serializer: S,
-    ) -> std::result::Result<S::Ok, S::Error> {
-        super::pe::serialize_pe(*self, serializer)
-    }
 }

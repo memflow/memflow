@@ -14,9 +14,18 @@ use std::path::Path;
 
 use crate::error::{Error, Result};
 use crate::kernel::{Win32GUID, Win32Version};
-use crate::kernel_info::KernelInfo;
+use crate::win32::{Kernel, KernelInfo};
 
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize))]
+pub struct Win32OffsetsFile {
+    pub kernel_guid: Option<Win32GUID>,
+    pub kernel_winver: Option<Win32Version>,
+    pub offsets: Win32Offsets,
+}
+
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize))]
 pub struct Win32Offsets {
     pub list_blink: usize,
     pub eproc_link: usize,

@@ -40,6 +40,7 @@ use vector_trees::{BVecTreeMap as BTreeMap, Vector};
 ///
 /// See the [wikipedia article](https://en.wikipedia.org/wiki/Endianness) for more information on the subject.
 #[derive(Debug, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize))]
 pub enum Endianess {
     /// Little Endianess
     LittleEndian,
@@ -53,6 +54,7 @@ The architecture will contain information about the pointer width,
 byte order, page size and also how to translate virtual to physical memory.
 */
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize))]
 pub enum Architecture {
     /**
     An empty architecture with some sensible defaults and no virt_to_phys translation.

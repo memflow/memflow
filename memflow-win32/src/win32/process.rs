@@ -14,6 +14,7 @@ use memflow_core::{OsProcessInfo, OsProcessModuleInfo};
 use log::trace;
 
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize))]
 pub struct Win32ProcessInfo {
     pub address: Address,
 

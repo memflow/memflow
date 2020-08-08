@@ -9,6 +9,7 @@ use memflow_core::mem::{PhysicalMemory, VirtualFromPhysical};
 use memflow_core::types::Address;
 
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize))]
 pub struct KernelInfo {
     pub start_block: StartBlock,
 

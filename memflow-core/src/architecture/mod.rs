@@ -24,13 +24,13 @@ pub use mmu_spec::ArchMMUSpec;
 use translate_data::{TranslateVec, TranslationChunk};
 
 use crate::error::{Error, Result};
-use crate::iter::{PageChunks, SplitAtIndex};
+use crate::iter::{FnExtend, PageChunks, SplitAtIndex};
 use std::convert::{TryFrom, TryInto};
 
 use crate::mem::{PhysicalMemory, PhysicalReadData};
 use crate::types::{Address, PageType, PhysicalAddress};
 
-use bumpalo::{collections::Vec as BumpVec, Bump};
+pub use bumpalo::{collections::Vec as BumpVec, Bump};
 use vector_trees::{BVecTreeMap as BTreeMap, Vector};
 
 /// Identifies the byte order of a architecture
@@ -113,10 +113,8 @@ impl Architecture {
     ```
     use memflow_core::architecture::Architecture;
 
-    pub fn test() {
-        let arch = Architecture::X64;
-        assert_eq!(arch.as_u8(), 1);
-    }
+    let arch = Architecture::X64;
+    assert_eq!(arch.as_u8(), 1);
     ```
     */
     pub fn as_u8(self) -> u8 {
@@ -139,10 +137,8 @@ impl Architecture {
     ```
     use memflow_core::architecture::Architecture;
 
-    pub fn test() {
-        let arch = Architecture::X86Pae;
-        assert_eq!(arch.bits(), 32);
-    }
+    let arch = Architecture::X86Pae;
+    assert_eq!(arch.bits(), 32);
     ```
     */
     pub fn bits(self) -> u8 {
@@ -178,10 +174,8 @@ impl Architecture {
     ```
     use memflow_core::architecture::{Architecture, Endianess};
 
-    pub fn test() {
-        let arch = Architecture::X86;
-        assert_eq!(arch.endianess(), Endianess::LittleEndian);
-    }
+    let arch = Architecture::X86;
+    assert_eq!(arch.endianess(), Endianess::LittleEndian);
     ```
     */
     pub fn endianess(self) -> Endianess {
@@ -204,10 +198,8 @@ impl Architecture {
     use memflow_core::architecture::Architecture;
     use memflow_core::types::size;
 
-    pub fn test() {
-        let arch = Architecture::X64;
-        assert_eq!(arch.page_size(), size::kb(4));
-    }
+    let arch = Architecture::X64;
+    assert_eq!(arch.page_size(), size::kb(4));
     ```
     */
     pub fn page_size(self) -> usize {
@@ -225,25 +217,51 @@ impl Architecture {
     ```
     use memflow_core::architecture::Architecture;
 
-    pub fn test() {
-        let arch = Architecture::X86;
-        assert_eq!(arch.size_addr(), 4);
-    }
+    let arch = Architecture::X86;
+    assert_eq!(arch.size_addr(), 4);
     ```
     */
     pub fn size_addr(self) -> usize {
         self.get_mmu_spec().addr_size as usize
     }
 
-    /**
-    This function will do a virtual to physical memory translation for the `Architecture`.
-
-    TODO: add more info how virt_to_phys works
-
-    # Examples
-
-    TODO: add example
-    */
+    /// This function will do a virtual to physical memory translation for the `Architecture`.
+    ///
+    /// This is a wrapper for `virt_to_phys_iter` which works only with a single element,
+    /// and does not account for.
+    ///
+    /// In most cases, you will want to use `TranslateArch`, which wraps virtual memory accesses
+    /// with these functions. But, if a `virt_to_phys` translation is needed for arbitrary arch,
+    /// these functions are public.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use memflow_core::types::size;
+    /// use memflow_core::architecture::Architecture;
+    /// # use memflow_core::Result;
+    /// # use memflow_core::types::{PhysicalAddress, Address};
+    /// # use memflow_core::dummy::DummyMemory;
+    /// #
+    /// # fn is_addr_correct(mem: &mut DummyMemory, dtb: Address, virt_addr: Address, paddr: Result<PhysicalAddress>)
+    /// #     -> bool {
+    /// #     paddr.ok().map(|paddr| paddr.address()) == mem.vtop(dtb, virt_addr)
+    /// # }
+    /// #
+    /// # let mut mem = DummyMemory::new(size::mb(16));
+    /// # let (dtb, virtual_base) = mem.alloc_dtb(size::mb(8), &[]);
+    ///
+    /// let arch = Architecture::X64;
+    ///
+    /// let mapped_addr = arch.virt_to_phys(&mut mem, dtb, virtual_base);
+    /// assert!(mapped_addr.is_ok());
+    /// assert!(is_addr_correct(&mut mem, dtb, virtual_base, mapped_addr));
+    ///
+    /// let unmapped_addr = arch.virt_to_phys(&mut mem, dtb, virtual_base - 8);
+    /// assert!(unmapped_addr.is_err());
+    /// assert!(is_addr_correct(&mut mem, dtb, virtual_base - 8, unmapped_addr));
+    /// # Ok::<(), memflow_core::Error>(())
+    /// ```
     pub fn virt_to_phys<T: PhysicalMemory>(
         self,
         mem: &mut T,
@@ -251,23 +269,80 @@ impl Architecture {
         addr: Address,
     ) -> Result<PhysicalAddress> {
         let arena = Bump::new();
-        let mut vec = BumpVec::new_in(&arena);
-        let mut vec_fail = BumpVec::new_in(&arena);
+        let mut output = None;
+        let mut success = FnExtend::new(|elem: (PhysicalAddress, _)| {
+            if output.is_none() {
+                output = Some(elem.0);
+            }
+        });
+        let mut output_err = None;
+        let mut fail = FnExtend::new(|elem: (Error, _, _)| output_err = Some(elem.0));
         self.virt_to_phys_iter(
             mem,
             dtb,
             Some((addr, 1)).into_iter(),
-            &mut vec,
-            &mut vec_fail,
+            &mut success,
+            &mut fail,
             &arena,
         );
-        if let Some(ret) = vec.pop() {
-            Ok(ret.0)
-        } else {
-            Err(vec_fail.pop().unwrap().0)
-        }
+        output
+            .map(Ok)
+            .unwrap_or_else(|| Err(output_err.unwrap()))
     }
 
+    /// This function will do a virtual to physical memory translation for the `Architecture` over multiple elements.
+    ///
+    /// In most cases, you will want to use `TranslateArch`, which wraps virtual memory accesses
+    /// with these functions. But, if a `virt_to_phys` translation is needed for arbitrary arch,
+    /// these functions are public.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use memflow_core::Result;
+    /// # use memflow_core::types::{PhysicalAddress, Address};
+    /// # use memflow_core::dummy::DummyMemory;
+    /// use memflow_core::types::size;
+    /// use memflow_core::architecture::{Architecture, Bump};
+    /// use memflow_core::iter::FnExtend;
+    ///
+    /// # const VIRT_MEM_SIZE: usize = size::mb(8);
+    /// # const CHUNK_SIZE: usize = 2;
+    /// #
+    /// # let mut mem = DummyMemory::new(size::mb(16));
+    /// # let (dtb, virtual_base) = mem.alloc_dtb(VIRT_MEM_SIZE, &[]);
+    /// let arch = Architecture::X64;
+    ///
+    /// let mut buffer = vec![0; VIRT_MEM_SIZE * CHUNK_SIZE / arch.page_size()];
+    /// let buffer_length = buffer.len();
+    ///
+    /// // In this example, 8 megabytes starting from `virtual_base` are mapped in.
+    /// // We translate 2 bytes chunks over the page boundaries. These bytes will be
+    /// // split off into 2 separate translated chunks.
+    /// let addresses = buffer
+    ///     .chunks_mut(CHUNK_SIZE)
+    ///     .enumerate()
+    ///     .map(|(i, buf)| (virtual_base + ((i + 1) * size::kb(4) - 1), buf));
+    ///
+    /// let mut translated_data = vec![];
+    /// let mut failed_translations = FnExtend::void();
+    ///
+    /// let allocator = Bump::new();
+    ///
+    /// arch.virt_to_phys_iter(
+    ///     &mut mem,
+    ///     dtb,
+    ///     addresses,
+    ///     &mut translated_data,
+    ///     &mut failed_translations,
+    ///     &allocator,
+    /// );
+    ///
+    /// // We tried to translate one byte out of the mapped memory, it had to fail
+    /// assert_eq!(translated_data.len(), buffer_length - 1);
+    ///
+    /// # Ok::<(), memflow_core::Error>(())
+    /// ```
     pub fn virt_to_phys_iter<
         T: PhysicalMemory + ?Sized,
         B: SplitAtIndex,

@@ -152,7 +152,7 @@ impl Win32Offsets {
 
 pub struct Win32OffsetBuilder {
     #[cfg(feature = "symstore")]
-    symbol_store: SymbolStore,
+    symbol_store: Option<SymbolStore>,
 
     guid: Option<Win32GUID>,
     winver: Option<Win32Version>,
@@ -162,7 +162,7 @@ impl Default for Win32OffsetBuilder {
     fn default() -> Self {
         Self {
             #[cfg(feature = "symstore")]
-            symbol_store: SymbolStore::default(),
+            symbol_store: Some(SymbolStore::default()),
 
             guid: None,
             winver: None,
@@ -193,21 +193,32 @@ impl Win32OffsetBuilder {
 
     #[cfg(feature = "symstore")]
     fn build_with_symbol_store(&self) -> Result<Win32Offsets> {
-        if self.guid.is_some() {
-            let pdb = self.symbol_store.load(self.guid.as_ref().unwrap())?;
-            Win32Offsets::from_pdb_slice(&pdb[..])
+        if let Some(store) = &self.symbol_store {
+            if self.guid.is_some() {
+                let pdb = store.load(self.guid.as_ref().unwrap())?;
+                Win32Offsets::from_pdb_slice(&pdb[..])
+            } else {
+                Err(Error::Other("symbol store can only be used with a guid"))
+            }
         } else {
-            Err(Error::Other("symbol store can only be used with a guid"))
+            Err(Error::Other("symbol store is disabled"))
         }
     }
 
     #[cfg(not(feature = "symstore"))]
     fn build_with_symbol_store(&self) -> Result<Win32Offsets> {
-        Err(Error::Other("symbol store deactivated"))
+        Err(Error::Other(
+            "symbol store is deactivated via a compilation feature",
+        ))
     }
 
     pub fn symbol_store(mut self, symbol_store: SymbolStore) -> Self {
-        self.symbol_store = symbol_store;
+        self.symbol_store = Some(symbol_store);
+        self
+    }
+
+    pub fn no_symbol_store(mut self) -> Self {
+        self.symbol_store = None;
         self
     }
 

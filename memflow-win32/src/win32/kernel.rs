@@ -529,7 +529,7 @@ where
             connector,
 
             #[cfg(feature = "symstore")]
-            symbol_store: None,
+            symbol_store: Some(SymbolStore::default()),
 
             build_page_cache: Box::new(|connector, _| connector),
             build_vat_cache: Box::new(|vat, _| vat),
@@ -572,6 +572,8 @@ where
         let mut builder = Win32Offsets::builder();
         if let Some(store) = &self.symbol_store {
             builder = builder.symbol_store(store.clone());
+        } else {
+            builder = builder.no_symbol_store();
         }
         builder.kernel_info(kernel_info).build()
     }
@@ -582,6 +584,7 @@ where
     }
 
     /// Configures the symbol store to be used when constructing the Kernel.
+    /// This will override the default symbol store that is being used if no other setting is configured.
     ///
     /// # Examples
     ///
@@ -599,6 +602,30 @@ where
     #[cfg(feature = "symstore")]
     pub fn symbol_store(mut self, symbol_store: SymbolStore) -> Self {
         self.symbol_store = Some(symbol_store);
+        self
+    }
+
+    /// Disables the symbol store when constructing the Kernel.
+    /// By default a default symbol store will be used when constructing a kernel.
+    /// This option allows the user to disable the symbol store alltogether
+    /// and fall back to the built-in offsets table.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use memflow_core::PhysicalMemory;
+    /// use memflow_win32::{Kernel, SymbolStore};
+    ///
+    /// fn test<T: PhysicalMemory>(connector: T) {
+    ///     let _kernel = Kernel::builder(connector)
+    ///         .no_symbol_store()
+    ///         .build()
+    ///         .unwrap();
+    /// }
+    /// ```
+    #[cfg(feature = "symstore")]
+    pub fn no_symbol_store(mut self) -> Self {
+        self.symbol_store = None;
         self
     }
 

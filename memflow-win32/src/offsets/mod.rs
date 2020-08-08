@@ -14,7 +14,7 @@ use std::path::Path;
 
 use crate::error::{Error, Result};
 use crate::kernel::{Win32GUID, Win32Version};
-use crate::win32::{Kernel, KernelInfo};
+use crate::win32::KernelInfo;
 
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize))]

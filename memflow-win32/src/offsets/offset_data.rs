@@ -89,16 +89,4 @@ pub struct Win32OffsetsData {
     pub ethread_list_entry: usize,
     pub teb_peb: usize,
     pub teb_peb_x86: usize,
-
-    pub peb_ldr_x86: usize,
-    pub peb_ldr_x64: usize,
-    pub ldr_list_x86: usize,
-    pub ldr_list_x64: usize,
-
-    pub ldr_data_base_x86: usize,
-    pub ldr_data_base_x64: usize,
-    pub ldr_data_size_x86: usize,
-    pub ldr_data_size_x64: usize,
-    pub ldr_data_name_x86: usize,
-    pub ldr_data_name_x64: usize,
 }

@@ -20,6 +20,22 @@ use crate::error::{Error, Result};
 use crate::kernel::{Win32GUID, Win32Version};
 use crate::win32::KernelInfo;
 
+pub mod x86 {
+    pub const PEB_LDR: usize = 0xC; // _PEB::Ldr
+    pub const LDR_LIST: usize = 0xC; // _PEB_LDR_DATA::InLoadOrderModuleList
+    pub const LDR_DATA_BASE: usize = 0x18; // _LDR_DATA_TABLE_ENTRY::DllBase
+    pub const LDR_DATA_SIZE: usize = 0x20; // _LDR_DATA_TABLE_ENTRY::SizeOfImage
+    pub const LDR_DATA_NAME: usize = 0x2C; // _LDR_DATA_TABLE_ENTRY::BaseDllName
+}
+
+pub mod x64 {
+    pub const PEB_LDR: usize = 0x18; // _PEB::Ldr
+    pub const LDR_LIST: usize = 0x10; // _PEB_LDR_DATA::InLoadOrderModuleList
+    pub const LDR_DATA_BASE: usize = 0x30; // _LDR_DATA_TABLE_ENTRY::DllBase
+    pub const LDR_DATA_SIZE: usize = 0x40; // _LDR_DATA_TABLE_ENTRY::SizeOfImage
+    pub const LDR_DATA_NAME: usize = 0x58; // _LDR_DATA_TABLE_ENTRY::BaseDllName
+}
+
 #[repr(transparent)]
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize))]
@@ -129,18 +145,6 @@ impl Win32Offsets {
                 ethread_list_entry,
                 teb_peb,
                 teb_peb_x86,
-
-                peb_ldr_x86: 0xC,   // _PEB::Ldr
-                peb_ldr_x64: 0x18,  // _PEB::Ldr
-                ldr_list_x86: 0xC,  // _PEB_LDR_DATA::InLoadOrderModuleList
-                ldr_list_x64: 0x10, // _PEB_LDR_DATA::InLoadOrderModuleList
-
-                ldr_data_base_x86: 0x18, // _LDR_DATA_TABLE_ENTRY::DllBase
-                ldr_data_base_x64: 0x30, // _LDR_DATA_TABLE_ENTRY::DllBase
-                ldr_data_size_x86: 0x20, // _LDR_DATA_TABLE_ENTRY::SizeOfImage
-                ldr_data_size_x64: 0x40, // _LDR_DATA_TABLE_ENTRY::SizeOfImage
-                ldr_data_name_x86: 0x2C, // _LDR_DATA_TABLE_ENTRY::BaseDllName
-                ldr_data_name_x64: 0x58, // _LDR_DATA_TABLE_ENTRY::BaseDllName
             },
         })
     }

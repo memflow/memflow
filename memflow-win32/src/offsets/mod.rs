@@ -273,7 +273,7 @@ mod tests {
             guid: "3844DBB920174967BE7AA4A2C20430FA2".to_string(),
         };
         let offsets = Win32Offsets::builder()
-            .symbol_store(SymbolStore::new().no_cache())
+            .symbol_store(SymbolStore::new())
             .guid(guid)
             .build()
             .unwrap();

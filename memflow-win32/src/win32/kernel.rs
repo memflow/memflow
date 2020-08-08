@@ -355,8 +355,8 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
     pub fn process_info_list(&mut self) -> Result<Vec<Win32ProcessInfo>> {
         let mut list = Vec::new();
         for &eprocess in self.eprocess_list()?.iter() {
-            if let Ok(proc) = self.process_info_from_eprocess(eprocess) {
-                list.push(proc);
+            if let Ok(prc) = self.process_info_from_eprocess(eprocess) {
+                list.push(prc);
             }
         }
         Ok(list)
@@ -580,12 +580,46 @@ where
         Win32Offsets::builder().kernel_info(&kernel_info).build()
     }
 
+    /// Configures the symbol store to be used when constructing the Kernel.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use memflow_core::PhysicalMemory;
+    /// use memflow_win32::{Kernel, SymbolStore};
+    ///
+    /// fn test<T: PhysicalMemory>(connector: T) {
+    ///     let _kernel = Kernel::builder(connector)
+    ///         .symbol_store(SymbolStore::new().no_cache())
+    ///         .build()
+    ///         .unwrap();
+    /// }
+    /// ```
     #[cfg(feature = "symstore")]
     pub fn symbol_store(mut self, symbol_store: SymbolStore) -> Self {
         self.symbol_store = Some(symbol_store);
         self
     }
 
+    /// Creates the Kernel structure with default caching enabled.
+    ///
+    /// If this option is specified, the Kernel structure is generated
+    /// with a (page level cache)[../index.html] with default settings.
+    /// On top of the page level cache a [vat cache](../index.html) will be setupped.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use memflow_core::PhysicalMemory;
+    /// use memflow_win32::Kernel;
+    ///
+    /// fn test<T: PhysicalMemory>(connector: T) {
+    ///     let _kernel = Kernel::builder(connector)
+    ///         .build_default_caches()
+    ///         .build()
+    ///         .unwrap();
+    /// }
+    /// ```
     pub fn build_default_caches(
         self,
     ) -> KernelBuilder<
@@ -613,6 +647,29 @@ where
         }
     }
 
+    /// Creates a Kernel structure by constructing the page cache from the given closure.
+    ///
+    /// This function accepts a `FnOnce` closure that is being evaluated
+    /// after the ntoskrnl has been found.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use memflow_core::{PhysicalMemory, CachedMemoryAccess};
+    /// use memflow_win32::Kernel;
+    ///
+    /// fn test<T: PhysicalMemory>(connector: T) {
+    ///     let _kernel = Kernel::builder(connector)
+    ///         .build_page_cache(|connector, arch| {
+    ///             CachedMemoryAccess::builder(connector)
+    ///                 .arch(arch)
+    ///                 .build()
+    ///                 .unwrap()
+    ///         })
+    ///         .build()
+    ///         .unwrap();
+    /// }
+    /// ```
     pub fn build_page_cache<TKN, F: FnOnce(T, Architecture) -> TKN + 'static>(
         self,
         func: F,
@@ -630,6 +687,29 @@ where
         }
     }
 
+    /// Creates a Kernel structure by constructing the vat cache from the given closure.
+    ///
+    /// This function accepts a `FnOnce` closure that is being evaluated
+    /// after the ntoskrnl has been found.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use memflow_core::{PhysicalMemory, CachedVirtualTranslate};
+    /// use memflow_win32::Kernel;
+    ///
+    /// fn test<T: PhysicalMemory>(connector: T) {
+    ///     let _kernel = Kernel::builder(connector)
+    ///         .build_vat_cache(|vat, arch| {
+    ///             CachedVirtualTranslate::builder(vat)
+    ///                 .arch(arch)
+    ///                 .build()
+    ///                 .unwrap()
+    ///         })
+    ///         .build()
+    ///         .unwrap();
+    /// }
+    /// ```
     pub fn build_vat_cache<VKN, F: FnOnce(TranslateArch, Architecture) -> VKN + 'static>(
         self,
         func: F,

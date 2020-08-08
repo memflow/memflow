@@ -18,6 +18,7 @@ Most architectures have support multiple page sizes (see [huge pages](todo.html)
 which will be represented by the containing `page` of the `PhysicalAddress` struct.
 */
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize))]
 pub struct PhysicalAddress {
     address: Address,
     page_type: PageType,

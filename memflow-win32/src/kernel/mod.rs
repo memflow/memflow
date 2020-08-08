@@ -7,6 +7,7 @@ pub use lowstub::StartBlock;
 use std::fmt;
 
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize))]
 pub struct Win32GUID {
     pub file_name: String,
     pub guid: String,
@@ -22,6 +23,7 @@ impl Win32GUID {
 }
 
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize))]
 pub struct Win32Version {
     nt_major_version: u32,
     nt_minor_version: u32,

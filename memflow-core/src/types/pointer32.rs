@@ -73,6 +73,7 @@ fn read_foo_bar<T: VirtualMemory>(virt_mem: &mut T) {
 ```
 */
 #[repr(transparent)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize))]
 pub struct Pointer32<T: ?Sized = ()> {
     pub address: u32,
     phantom_data: PhantomData<fn() -> T>,

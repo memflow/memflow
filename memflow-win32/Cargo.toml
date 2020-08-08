@@ -15,6 +15,7 @@ dataview = "0.1"
 pelite = { git = "https://github.com/ko1n/pelite", default-features = false }
 widestring = { version = "0.4.2", default-features = false, features = ["alloc"] }
 no-std-compat = { version = "0.4.0", features = ["alloc"] }
+serde = { version = "1.0", optional = true, features = ["derive"] }
 
 # symbolstore
 dirs = { version = "2.0.2", optional = true }
@@ -29,14 +30,20 @@ win_key_codes = "0.1.2"
 rand = "0.5"
 bencher = "0.1.5"
 clap = "2.33.0"
+toml = "0.5"
 
 [features]
-default = ["std", "symstore", "download_progress"]
+default = ["std", "serde_derive", "symstore", "download_progress"]
 std = ["no-std-compat/std"]
 collections = []
 alloc = []
+serde_derive = ["serde", "memflow-core/serde_derive"]
 symstore = ["dirs", "ureq", "pdb"]
 download_progress = ["pbr", "progress-streams"]
+
+[[example]]
+name = "dump_offsets"
+path = "examples/dump_offsets.rs"
 
 [[example]]
 name = "read_keys"

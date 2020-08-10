@@ -216,8 +216,7 @@ impl Win32OffsetBuilder {
     fn build_with_offset_list(&self) -> Result<Win32Offsets> {
         let bytes = &include_bytes!(concat!(env!("OUT_DIR"), "/win32_offsets.bin"))[..];
 
-        let aligned_size =
-            std::mem::size_of::<[Win32OffsetsFile; 2]>() - std::mem::size_of::<Win32OffsetsFile>();
+        let aligned_size = std::mem::size_of::<Win32OffsetsFile>();
 
         // Try matching exact guid
         if let Some(target_guid) = &self.guid {

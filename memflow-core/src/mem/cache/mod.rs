@@ -20,7 +20,7 @@ use crate::types::PageType;
 
 /// Validators are used when working with caches and determine for how long
 /// a specific cache entry stays valid.
-pub trait CacheValidator {
+pub trait CacheValidator: Send {
     fn allocate_slots(&mut self, slot_count: usize);
     fn update_validity(&mut self);
     fn is_slot_valid(&self, slot_id: usize) -> bool;

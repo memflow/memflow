@@ -2,6 +2,22 @@ use dataview::Pod;
 use std::convert::TryFrom;
 use std::str;
 
+/// Describes an offset file.
+/// At compile time this crate will create a binary blob of all
+/// TOML files contained in the memflow-win32/offsets/ folder
+/// and merge the byte buffer directly into the build.
+///
+/// This byte buffer is then transmuted back into a slice of
+/// Win32OffsetFile structs and parsed as a backup in case
+/// no symbol store is available.
+///
+/// To get loaded properly this struct guarantees a certain alignment and no padding.
+/// This is enforced due to a compile time assert as well as the Pod derive itself.
+/// Especially in the case of cross-compilation where the target architecture
+/// is different from the architecture memflow is built with this could give potential issues.
+///
+// # Safety
+// This struct guarantees that it does not contain any padding.
 #[repr(C, align(4))]
 #[derive(Clone, Pod)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
@@ -19,7 +35,8 @@ pub struct Win32OffsetFile {
 
     pub offsets: Win32OffsetTable,
 }
-const _: [(); std::mem::size_of::<[Win32OffsetFile; 16]>()] = [(); 16 * std::mem::size_of::<Win32OffsetFile>()];
+const _: [(); std::mem::size_of::<[Win32OffsetFile; 16]>()] =
+    [(); 16 * std::mem::size_of::<Win32OffsetFile>()];
 
 // TODO: use const-generics here once they are fully stabilized
 #[derive(Clone)]

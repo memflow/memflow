@@ -263,9 +263,9 @@ impl Win32OffsetBuilder {
     fn build_with_offset_list(&self) -> Result<Win32Offsets> {
         // # Safety
         // Struct padding and alignment is compile-time guaranteed by the struct (see mod offset_table).
-        let offsets: [Win32OffsetFile; WIN32_OFFSETS.0.len() / std::mem::size_of::<Win32OffsetFile>()] = unsafe {
-            std::mem::transmute(WIN32_OFFSETS.0)
-        };
+        let offsets: [Win32OffsetFile;
+            WIN32_OFFSETS.0.len() / std::mem::size_of::<Win32OffsetFile>()] =
+            unsafe { std::mem::transmute(WIN32_OFFSETS.0) };
 
         // Try matching exact guid
         if let Some(target_guid) = &self.guid {

@@ -12,7 +12,7 @@ use crate::error::{Error, Result};
 use crate::mem::PhysicalMemory;
 use crate::types::{Address, PhysicalAddress};
 
-pub trait VirtualTranslate {
+pub trait VirtualTranslate: Send {
     fn virt_to_phys_iter<T, B, VI, VO, FO>(
         &mut self,
         phys_mem: &mut T,
@@ -52,7 +52,9 @@ pub trait VirtualTranslate {
 }
 
 // forward impls
-impl<'a, T: VirtualTranslate + ?Sized, P: std::ops::DerefMut<Target = T>> VirtualTranslate for P {
+impl<'a, T: VirtualTranslate + ?Sized, P: Send + std::ops::DerefMut<Target = T>> VirtualTranslate
+    for P
+{
     fn virt_to_phys_iter<U, B, VI, VO, FO>(
         &mut self,
         phys_mem: &mut U,

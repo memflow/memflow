@@ -30,13 +30,13 @@ pub struct FileIOMemory<T> {
     mem_map: MemoryMap<(Address, usize)>,
 }
 
-impl<T: Seek + Read + Write> FileIOMemory<T> {
+impl<T: Seek + Read + Write + Send> FileIOMemory<T> {
     pub fn try_with_reader(reader: T, mem_map: MemoryMap<(Address, usize)>) -> Result<Self> {
         Ok(Self { reader, mem_map })
     }
 }
 
-impl<T: Seek + Read + Write> PhysicalMemory for FileIOMemory<T> {
+impl<T: Seek + Read + Write + Send> PhysicalMemory for FileIOMemory<T> {
     fn phys_read_raw_list(&mut self, data: &mut [PhysicalReadData]) -> Result<()> {
         let mut void = FnExtend::void();
         for ((file_off, _), buf) in self.mem_map.map_iter(

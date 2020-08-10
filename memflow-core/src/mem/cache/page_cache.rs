@@ -9,6 +9,10 @@ use crate::types::{Address, PhysicalAddress};
 use bumpalo::{collections::Vec as BumpVec, Bump};
 use std::alloc::{alloc_zeroed, dealloc, Layout};
 
+struct SendWrap<T>(T);
+
+unsafe impl<T> Send for SendWrap<T> {}
+
 pub enum PageValidity<'a> {
     Invalid,
     Validatable(&'a mut [u8]),
@@ -34,14 +38,14 @@ pub struct PageCache<'a, T> {
     page_size: usize,
     page_type_mask: PageType,
     pub validator: T,
-    cache_ptr: *mut u8,
+    cache_ptr: SendWrap<*mut u8>,
     cache_layout: Layout,
 }
 
 impl<'a, T> Drop for PageCache<'a, T> {
     fn drop(&mut self) {
         unsafe {
-            dealloc(self.cache_ptr, self.cache_layout);
+            dealloc(self.cache_ptr.0, self.cache_layout);
         }
     }
 }
@@ -61,12 +65,12 @@ impl<'a, T: CacheValidator> PageCache<'a, T> {
 
         let layout = Layout::from_size_align(cache_entries * page_size, page_size).unwrap();
 
-        let cache_ptr = unsafe { alloc_zeroed(layout) };
+        let cache_ptr = SendWrap(unsafe { alloc_zeroed(layout) });
 
         let page_refs = (0..cache_entries)
             .map(|i| unsafe {
                 std::mem::transmute(std::slice::from_raw_parts_mut(
-                    cache_ptr.add(i * page_size),
+                    cache_ptr.0.add(i * page_size),
                     page_size,
                 ))
             })

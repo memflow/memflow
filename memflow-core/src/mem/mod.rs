@@ -10,6 +10,7 @@ TODO: more documentation
 */
 
 pub mod cache;
+pub mod cloneable_slice;
 pub mod mem_map;
 pub mod phys_mem;
 pub mod phys_mem_batcher;
@@ -27,12 +28,14 @@ pub use mem_map::MemoryMap;
 #[doc(hidden)]
 pub use phys_mem::{
     PhysicalMemory, PhysicalReadData, PhysicalReadIterator, PhysicalWriteData,
-    PhysicalWriteIterator,
+    PhysicalWriteIterator, PoolablePhysicalMemory, PooledPhysicalMemory,
 };
 #[doc(hidden)]
 pub use phys_mem_batcher::PhysicalMemoryBatcher;
 #[doc(hidden)]
-pub use virt_mem::{VirtualFromPhysical, VirtualMemory};
+pub use virt_mem::{
+    PoolableVirtualMemory, PooledVirtualMemory, VirtualFromPhysical, VirtualMemory,
+};
 #[doc(hidden)]
 pub use virt_mem_batcher::VirtualMemoryBatcher;
 #[doc(hidden)]

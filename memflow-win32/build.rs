@@ -18,7 +18,6 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut all_the_files = File::create(&dest_path)?;
 
     // iterate offsets folder
-    let mut vec = Vec::new();
     for f in fs::read_dir("./offsets")? {
         let f = f?;
 
@@ -31,10 +30,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         file.read_to_string(&mut tomlstr)?;
 
         let offsets: Win32OffsetsFile = toml::from_str(&tomlstr)?;
-        vec.push(offsets);
+        all_the_files.write(offsets.as_bytes())?;
     }
-
-    all_the_files.write_all(vec.as_slice().as_bytes())?;
 
     Ok(())
 }

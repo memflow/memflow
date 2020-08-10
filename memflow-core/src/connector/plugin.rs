@@ -16,10 +16,12 @@ use log::{debug, info};
 use libloading::Library;
 
 /// Exported memflow plugin version
-pub const MEMFLOW_CONNECTOR_VERSION: i32 = 1;
+pub const MEMFLOW_CONNECTOR_VERSION: i32 = 2;
 
 /// Type of all initial plugin based connectors
-pub type PluginConnector = Box<dyn PhysicalMemory + Send>;
+pub type PluginConnector = Box<dyn PoolablePhysicalMemory + Send>;
+
+pub type PluginPoolConnector = Box<dyn PhysicalMemory + Send>;
 
 /// Describes a connector plugin
 pub struct ConnectorDescriptor {
@@ -307,7 +309,7 @@ pub struct ConnectorInstance {
 }
 
 impl std::ops::Deref for ConnectorInstance {
-    type Target = dyn PhysicalMemory;
+    type Target = dyn PoolablePhysicalMemory;
 
     fn deref(&self) -> &Self::Target {
         &*self.connector
@@ -318,6 +320,10 @@ impl std::ops::DerefMut for ConnectorInstance {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut *self.connector
     }
+}
+
+pub trait PoolablePhysicalMemory: PhysicalMemory {
+    fn into_pool(self, size_hint: usize) -> Vec<PluginPoolConnector>;
 }
 
 /*

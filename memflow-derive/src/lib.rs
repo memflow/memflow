@@ -1,7 +1,7 @@
 use darling::FromMeta;
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{parse_macro_input, AttributeArgs, Data, DeriveInput, Fields, GenericParam, ItemFn};
+use syn::{parse_macro_input, AttributeArgs, Data, DeriveInput, Fields, ItemFn};
 
 #[derive(Debug, FromMeta)]
 struct ConnectorFactoryArgs {
@@ -62,31 +62,27 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
     gen.into()
 }
 
+#[proc_macro_derive(PoolablePhysicalMemory)]
+pub fn poolable_phys_mem_derive(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as DeriveInput);
+    let name = &input.ident;
+    let (impl_generics, type_generics, where_generics) = input.generics.split_for_impl();
+    let gen = quote! {
+        impl<#impl_generics> memflow_core::plugin::PoolablePhysicalMemory for #name<#type_generics> where #where_generics {
+            fn into_pool(self, size_hint: usize) -> Vec<memflow_core::connector::plugin::PluginPoolConnector> {
+                (0..size_hint).map(|_| Box::new(self.clone()) as memflow_core::connector::plugin::PluginPoolConnector).collect()
+            }
+        }
+    };
+    gen.into()
+}
+
 #[proc_macro_derive(ByteSwap)]
 pub fn byteswap_derive(input: TokenStream) -> TokenStream {
     // TODO: parse struct fields
     let input = parse_macro_input!(input as DeriveInput);
     let name = &input.ident;
-    let generics = &input.generics.params;
-
-    let mut impl_generics = quote!();
-    let mut type_generics = quote!();
-    let mut where_generics = quote!();
-    for param in generics.iter() {
-        match param {
-            GenericParam::Type(ty) => {
-                let id = &ty.ident;
-                impl_generics.extend(quote!(#ty));
-                type_generics.extend(quote!(#id));
-                where_generics.extend(quote!(#id: ByteSwap));
-            }
-            GenericParam::Lifetime(lt) => {
-                impl_generics.extend(quote!(#lt));
-                type_generics.extend(quote!(#lt));
-            }
-            GenericParam::Const(_cnst) => {}
-        }
-    }
+    let (impl_generics, type_generics, where_generics) = input.generics.split_for_impl();
 
     let mut gen_inner = quote!();
     match input.data {

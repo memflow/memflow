@@ -6,13 +6,11 @@ use std::default::Default;
 use std::fmt;
 use std::ops;
 
-/**
-This type represents a address on the target system.
-It internally holds a `u64` value but can also be used
-when working in 32-bit environments.
-
-This type will not handle overflow for 32-bit or 64-bit addresses / lengths.
-*/
+/// This type represents a address on the target system.
+/// It internally holds a `u64` value but can also be used
+/// when working in 32-bit environments.
+///
+/// This type will not handle overflow for 32-bit or 64-bit addresses / lengths.
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize))]
 pub struct Address(u64);
@@ -46,226 +44,183 @@ impl From<usize> for Address {
 }
 
 impl Address {
-    /**
-    A address with the value of zero.
-
-    # Examples
-
-    ```
-    use memflow_core::types::Address;
-
-    fn test() {
-        println!("address: {}", Address::NULL);
-    }
-    ```
-    */
+    /// A address with the value of zero.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use memflow_core::types::Address;
+    ///
+    /// println!("address: {}", Address::NULL);
+    /// ```
     pub const NULL: Address = Address { 0: 0 };
 
-    /**
-    A address with an invalid value.
-
-    # Examples
-
-    ```
-    use memflow_core::types::Address;
-
-    fn test() {
-        println!("address: {}", Address::INVALID);
-    }
-    ```
-    */
+    /// A address with an invalid value.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use memflow_core::types::Address;
+    ///
+    /// println!("address: {}", Address::INVALID);
+    /// ```
     pub const INVALID: Address = Address { 0: !0 };
 
-    /**
-    Returns an address with a value of zero.
-
-    # Examples
-
-    ```
-    use memflow_core::types::Address;
-
-    fn test() {
-        println!("address: {}", Address::null());
-    }
-    ```
-    */
+    /// Returns an address with a value of zero.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use memflow_core::types::Address;
+    ///
+    /// println!("address: {}", Address::null());
+    /// ```
     pub const fn null() -> Self {
         Address::NULL
     }
 
-    /**
-    Checks wether the address is zero or not.
-
-    # Examples
-
-    ```
-    use memflow_core::types::Address;
-
-    fn test() {
-        assert_eq!(Address::null().is_null(), true);
-        assert_eq!(Address::from(0x1000u64).is_null(), false);
-    }
-    ```
-    */
+    /// Checks wether the address is zero or not.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use memflow_core::types::Address;
+    ///
+    /// assert_eq!(Address::null().is_null(), true);
+    /// assert_eq!(Address::from(0x1000u64).is_null(), false);
+    /// ```
     pub const fn is_null(self) -> bool {
         self.0 == 0
     }
 
-    /**
-    Returns an address with a invalid value.
-
-    # Examples
-
-    ```
-    use memflow_core::types::Address;
-
-    fn test() {
-        println!("address: {}", Address::invalid());
-    }
-    ```
-    */
+    /// Returns an address with a invalid value.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use memflow_core::types::Address;
+    ///
+    /// println!("address: {}", Address::invalid());
+    /// ```
     pub const fn invalid() -> Self {
         Address::INVALID
     }
 
-    /**
-    Checks wether the address is valid or not.
-
-    # Examples
-
-    ```
-    use memflow_core::types::Address;
-
-    fn test() {
-        assert_eq!(Address::invalid().is_valid(), false);
-        assert_eq!(Address::from(0x1000u64).is_valid(), true);
-    }
-    ```
-    */
+    /// Checks wether the address is valid or not.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use memflow_core::types::Address;
+    ///
+    /// assert_eq!(Address::invalid().is_valid(), false);
+    /// assert_eq!(Address::from(0x1000u64).is_valid(), true);
+    /// ```
     pub const fn is_valid(self) -> bool {
         self.0 != !0
     }
 
-    /**
-    Converts the address into a `u32` value.
-
-    # Examples
-
-    ```
-    use memflow_core::types::Address;
-
-    fn test() {
-        let addr = Address::from(0x1000u64);
-        let addr_u32: u32 = addr.as_u32();
-    }
-    ```
-    */
+    /// Converts the address into a `u32` value.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use memflow_core::types::Address;
+    ///
+    /// let addr = Address::from(0x1000u64);
+    /// let addr_u32: u32 = addr.as_u32();
+    /// assert_eq!(addr_u32, 0x1000);
+    /// ```
     pub const fn as_u32(self) -> u32 {
         self.0 as u32
     }
 
-    /**
-    Converts the address into a `u64` value.
-
-    # Examples
-
-    ```
-    use memflow_core::types::Address;
-
-    fn test() {
-        let addr = Address::from(0x1000u64);
-        let addr_u64: u64 = addr.as_u64();
-    }
-    ```
-    */
+    /// Converts the address into a `u64` value.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use memflow_core::types::Address;
+    ///
+    /// let addr = Address::from(0x1000u64);
+    /// let addr_u64: u64 = addr.as_u64();
+    /// assert_eq!(addr_u64, 0x1000);
+    /// ```
     pub const fn as_u64(self) -> u64 {
         self.0
     }
 
-    /**
-    Converts the address into a `usize` value.
-
-    # Examples
-
-    ```
-    use memflow_core::types::Address;
-
-    fn test() {
-        let addr = Address::from(0x1000u64);
-        let addr_usize: usize = addr.as_usize();
-    }
-    ```
-    */
+    /// Converts the address into a `usize` value.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use memflow_core::types::Address;
+    ///
+    /// let addr = Address::from(0x1000u64);
+    /// let addr_usize: usize = addr.as_usize();
+    /// assert_eq!(addr_usize, 0x1000);
+    /// ```
     pub const fn as_usize(self) -> usize {
         self.0 as usize
     }
 
-    /**
-    Aligns the containing address to the given page size.
-    It returns the base address of the containing page.
-
-    # Examples
-
-    ```
-    use memflow_core::types::{Address, size};
-
-    let addr = Address::from(0x1234);
-    let aligned = addr.as_page_aligned(size::kb(4));
-    assert_eq!(aligned, Address::from(0x1000));
-    ```
-    */
+    /// Aligns the containing address to the given page size.
+    /// It returns the base address of the containing page.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use memflow_core::types::{Address, size};
+    ///
+    /// let addr = Address::from(0x1234);
+    /// let aligned = addr.as_page_aligned(size::kb(4));
+    /// assert_eq!(aligned, Address::from(0x1000));
+    /// ```
     pub const fn as_page_aligned(self, page_size: usize) -> Address {
         Address {
             0: self.0 - self.0 % (page_size as u64),
         }
     }
 
-    /**
-    Returns true or false wether the bit at the specified index is either 0 or 1.
-    An index of 0 will check the least significant bit.
-
-    # Examples
-
-    ```
-    use memflow_core::types::Address;
-
-    let addr = Address::from(2);
-    let bit = addr.bit_at(1);
-    assert_eq!(bit, true);
-    ```
-    */
+    /// Returns true or false wether the bit at the specified index is either 0 or 1.
+    /// An index of 0 will check the least significant bit.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use memflow_core::types::Address;
+    ///
+    /// let addr = Address::from(2);
+    /// let bit = addr.bit_at(1);
+    /// assert_eq!(bit, true);
+    /// ```
     pub const fn bit_at(self, idx: u8) -> bool {
         (self.0 & ((1 as u64) << idx)) != 0
     }
 }
 
-/**
-Returns a address with a value of zero.
-
-# Examples
-
-```
-use memflow_core::types::Address;
-
-fn test() {
-    assert_eq!(Address::default().is_null(), true);
-}
-```
-*/
+/// Returns a address with a value of zero.
+///
+/// # Examples
+///
+/// ```
+/// use memflow_core::types::Address;
+///
+/// assert_eq!(Address::default().is_null(), true);
+/// ```
 impl Default for Address {
     fn default() -> Self {
         Self::null()
     }
 }
 
-/**
-Adds a `usize` to a `Address` which results in a `Address`.
-# Examples
-```
-use memflow_core::types::Address;
-assert_eq!(Address::from(10) + 5usize, Address::from(15));
-```
-*/
+/// Adds a `usize` to a `Address` which results in a `Address`.
+/// # Examples
+/// ```
+/// use memflow_core::types::Address;
+/// assert_eq!(Address::from(10) + 5usize, Address::from(15));
+/// ```
 impl ops::Add<usize> for Address {
     type Output = Self;
 
@@ -287,20 +242,17 @@ impl<'a, T: Into<u64> + Copy> ops::Add<&'a T> for Address {
     }
 }
 
-/**
-Adds a `usize` to a `Address`.
-
-# Examples
-
-```
-use memflow_core::types::Address;
-fn test() {
-    let mut addr = Address::from(10);
-    addr += 5;
-    assert_eq!(addr, Address::from(15));
-}
-```
-*/
+/// Adds a `usize` to a `Address`.
+///
+/// # Examples
+///
+/// ```
+/// use memflow_core::types::Address;
+///
+/// let mut addr = Address::from(10);
+/// addr += 5;
+/// assert_eq!(addr, Address::from(15));
+/// ```
 impl ops::AddAssign<usize> for Address {
     fn add_assign(&mut self, other: usize) {
         *self = Self {
@@ -309,20 +261,15 @@ impl ops::AddAssign<usize> for Address {
     }
 }
 
-// TODO: guarantee no underlfow
-/**
-Subtracts a `Address` from a `Address` resulting in a `usize`.
-
-# Examples
-
-```
-use memflow_core::types::Address;
-
-fn test() {
-    assert_eq!(Address::from(10) - 5, Address::from(5));
-}
-```
-*/
+/// Subtracts a `Address` from a `Address` resulting in a `usize`.
+///
+/// # Examples
+///
+/// ```
+/// use memflow_core::types::Address;
+///
+/// assert_eq!(Address::from(10) - 5, Address::from(5));
+/// ```
 impl ops::Sub for Address {
     type Output = usize;
 
@@ -331,7 +278,6 @@ impl ops::Sub for Address {
     }
 }
 
-// TODO: guarantee no underlfow
 /// Subtracts a `usize` from a `Address` resulting in a `Address`.
 impl ops::Sub<usize> for Address {
     type Output = Address;
@@ -354,22 +300,18 @@ impl<'a, T: Into<u64> + Copy> ops::Sub<&'a T> for Address {
     }
 }
 
-/**
-Subtracts a `usize` from a `Address`.
-
-# Examples
-
-```
-use memflow_core::types::Address;
-
-fn test() {
-    let mut addr = Address::from(10);
-    addr -= 5;
-    assert_eq!(addr, Address::from(5));
-}
-
-```
-*/
+/// Subtracts a `usize` from a `Address`.
+///
+/// # Examples
+///
+/// ```
+/// use memflow_core::types::Address;
+///
+/// let mut addr = Address::from(10);
+/// addr -= 5;
+/// assert_eq!(addr, Address::from(5));
+///
+/// ```
 impl ops::SubAssign<usize> for Address {
     fn sub_assign(&mut self, other: usize) {
         *self = Self {

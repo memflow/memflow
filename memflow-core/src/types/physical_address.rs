@@ -6,17 +6,15 @@ use super::{Address, Page, PageType};
 
 use std::fmt;
 
-/**
-This type represents a wrapper over a [address](address/index.html)
-with additional information about the containing page in the physical memory domain.
-
-This type will mostly be used by the [virtual to physical address translation](todo.html).
-When a physical address is translated from a virtual address the additional information
-about the allocated page the virtual address points to can be obtained from this structure.
-
-Most architectures have support multiple page sizes (see [huge pages](todo.html))
-which will be represented by the containing `page` of the `PhysicalAddress` struct.
-*/
+/// This type represents a wrapper over a [address](address/index.html)
+/// with additional information about the containing page in the physical memory domain.
+///
+/// This type will mostly be used by the [virtual to physical address translation](todo.html).
+/// When a physical address is translated from a virtual address the additional information
+/// about the allocated page the virtual address points to can be obtained from this structure.
+///
+/// Most architectures have support multiple page sizes (see [huge pages](todo.html))
+/// which will be represented by the containing `page` of the `PhysicalAddress` struct.
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize))]
 pub struct PhysicalAddress {
@@ -64,13 +62,11 @@ impl PhysicalAddress {
         PhysicalAddress::NULL
     }
 
-    /**
-    Constructs a new `PhysicalAddress` form an `Address` with
-    additional information about the page this address
-    is contained in.
-
-    Note: The page size must be a power of 2.
-    */
+    /// Constructs a new `PhysicalAddress` form an `Address` with
+    /// additional information about the page this address
+    /// is contained in.
+    ///
+    /// Note: The page size must be a power of 2.
     #[inline]
     pub fn with_page(address: Address, page_type: PageType, page_size: usize) -> Self {
         Self {

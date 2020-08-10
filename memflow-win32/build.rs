@@ -1,5 +1,4 @@
-use dataview;
-use dataview::DataView;
+use dataview::Pod;
 use std::{
     env,
     error::Error,
@@ -7,7 +6,6 @@ use std::{
     io::{Read, Write},
     path::Path,
 };
-use toml;
 
 #[path = "src/offsets/offset_data.rs"]
 mod offset_data;
@@ -16,7 +14,7 @@ use offset_data::Win32OffsetsFile;
 
 fn main() -> Result<(), Box<dyn Error>> {
     let out_dir = env::var("OUT_DIR")?;
-    let dest_path = Path::new(&out_dir).join("offsets.bin");
+    let dest_path = Path::new(&out_dir).join("win32_offsets.bin");
     let mut all_the_files = File::create(&dest_path)?;
 
     // iterate offsets folder
@@ -36,8 +34,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         vec.push(offsets);
     }
 
-    let slice = vec.as_slice();
-    //slice.as
+    all_the_files.write_all(vec.as_slice().as_bytes())?;
 
     Ok(())
 }

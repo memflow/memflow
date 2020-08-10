@@ -5,13 +5,16 @@ pub mod symstore;
 
 pub mod offset_data;
 #[doc(hidden)]
-pub use offset_data::Win32OffsetsData;
+pub use offset_data::{Win32OffsetsData, Win32OffsetsFile};
 
 #[cfg(feature = "symstore")]
 pub use {pdb_struct::PdbStruct, symstore::*};
 
+use dataview::Pod;
+
 use std::prelude::v1::*;
 
+use std::convert::TryFrom;
 use std::fs::File;
 use std::io::Read;
 use std::path::Path;
@@ -41,6 +44,18 @@ pub mod x64 {
 #[cfg_attr(feature = "serde", derive(::serde::Serialize))]
 pub struct Win32Offsets(pub Win32OffsetsData);
 
+impl From<Win32OffsetsData> for Win32Offsets {
+    fn from(other: Win32OffsetsData) -> Self {
+        Self { 0: other }
+    }
+}
+
+impl From<Win32Offsets> for Win32OffsetsData {
+    fn from(other: Win32Offsets) -> Self {
+        other.0
+    }
+}
+
 impl Win32Offsets {
     pub fn from_pdb<P: AsRef<Path>>(pdb_path: P) -> Result<Self> {
         let mut file = File::open(pdb_path)
@@ -67,40 +82,40 @@ impl Win32Offsets {
         let list_blink = list
             .find_field("Blink")
             .ok_or_else(|| Error::PDB("_LIST_ENTRY::Blink not found"))?
-            .offset;
+            .offset as _;
 
         let eproc_link = eproc
             .find_field("ActiveProcessLinks")
             .ok_or_else(|| Error::PDB("_EPROCESS::ActiveProcessLinks not found"))?
-            .offset;
+            .offset as _;
 
         let kproc_dtb = kproc
             .find_field("DirectoryTableBase")
             .ok_or_else(|| Error::PDB("_KPROCESS::DirectoryTableBase not found"))?
-            .offset;
+            .offset as _;
         let eproc_pid = eproc
             .find_field("UniqueProcessId")
             .ok_or_else(|| Error::PDB("_EPROCESS::UniqueProcessId not found"))?
-            .offset;
+            .offset as _;
         let eproc_name = eproc
             .find_field("ImageFileName")
             .ok_or_else(|| Error::PDB("_EPROCESS::ImageFileName not found"))?
-            .offset;
+            .offset as _;
         let eproc_peb = eproc
             .find_field("Peb")
             .ok_or_else(|| Error::PDB("_EPROCESS::Peb not found"))?
-            .offset;
+            .offset as _;
         let eproc_thread_list = eproc
             .find_field("ThreadListHead")
             .ok_or_else(|| Error::PDB("_EPROCESS::ThreadListHead not found"))?
-            .offset;
+            .offset as _;
 
         // windows 10 uses an uppercase W whereas older windows versions (windows 7) uses a lowercase w
         let eproc_wow64 = match eproc
             .find_field("WoW64Process")
             .or_else(|| eproc.find_field("Wow64Process"))
         {
-            Some(f) => f.offset,
+            Some(f) => f.offset as _,
             None => 0,
         };
 
@@ -108,22 +123,22 @@ impl Win32Offsets {
         let kthread_teb = kthread
             .find_field("Teb")
             .ok_or_else(|| Error::PDB("_KTHREAD::Teb not found"))?
-            .offset;
+            .offset as _;
         let ethread_list_entry = ethread
             .find_field("ThreadListEntry")
             .ok_or_else(|| Error::PDB("_ETHREAD::ThreadListEntry not found"))?
-            .offset;
+            .offset as _;
         let teb_peb = teb
             .find_field("ProcessEnvironmentBlock")
             .ok_or_else(|| Error::PDB("_TEB::ProcessEnvironmentBlock not found"))?
-            .offset;
+            .offset as _;
         let teb_peb_x86 = if let Ok(teb32) =
             PdbStruct::with(pdb_slice, "_TEB32").map_err(|_| Error::PDB("_TEB32 not found"))
         {
             teb32
                 .find_field("ProcessEnvironmentBlock")
                 .ok_or_else(|| Error::PDB("_TEB32::ProcessEnvironmentBlock not found"))?
-                .offset
+                .offset as _
         } else {
             0
         };
@@ -185,14 +200,63 @@ impl Win32OffsetBuilder {
                 "building win32 offsets requires either a guid or winver",
             ));
         }
-
         // try to build via symbol store
         if let Ok(offs) = self.build_with_symbol_store() {
             return Ok(offs);
         }
 
         // use static offset list
+        if let Ok(offs) = self.build_with_offset_list() {
+            return Ok(offs);
+        }
+
         Err(Error::Other("not found"))
+    }
+
+    fn build_with_offset_list(&self) -> Result<Win32Offsets> {
+        let bytes = &include_bytes!(concat!(env!("OUT_DIR"), "/win32_offsets.bin"))[..];
+
+        let aligned_size =
+            std::mem::size_of::<[Win32OffsetsFile; 2]>() - std::mem::size_of::<Win32OffsetsFile>();
+
+        // Try matching exact guid
+        if let Some(target_guid) = &self.guid {
+            for offsets in bytes.chunks_exact(aligned_size) {
+                let offsets = offsets.as_data_view().copy::<Win32OffsetsFile>(0);
+                if let (Ok(file), Ok(guid)) = (
+                    <&str>::try_from(&offsets.pdb_file_name),
+                    <&str>::try_from(&offsets.pdb_guid),
+                ) {
+                    if target_guid.file_name == file && target_guid.guid == guid {
+                        return Ok(Win32Offsets {
+                            0: offsets.offsets.clone(),
+                        });
+                    }
+                }
+            }
+        }
+
+        let mut closest_match = None;
+        let mut prev_build_number = 0;
+
+        // Try matching the newest build from that version that is not actually newer
+        if let Some(winver) = &self.winver {
+            for offsets in bytes.chunks_exact(aligned_size) {
+                let offsets = offsets.as_data_view().copy::<Win32OffsetsFile>(0);
+                if winver.major_version() == offsets.nt_major_version
+                    && winver.minor_version() == offsets.nt_minor_version
+                    && winver.build_number() >= offsets.nt_build_number
+                    && prev_build_number <= offsets.nt_build_number
+                {
+                    prev_build_number = offsets.nt_build_number;
+                    closest_match = Some(Win32Offsets {
+                        0: offsets.offsets.clone(),
+                    });
+                }
+            }
+        }
+
+        closest_match.ok_or(Error::Other("not found"))
     }
 
     #[cfg(feature = "symstore")]

@@ -1,11 +1,15 @@
 use dataview::Pod;
+use std::convert::TryFrom;
 use std::str;
 
 #[derive(Clone, Pod)]
+#[repr(C)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 pub struct Win32OffsetsFile {
     // Win32GUID
+    #[cfg_attr(feature = "serde", serde(default))]
     pub pdb_file_name: BinaryString,
+    #[cfg_attr(feature = "serde", serde(default))]
     pub pdb_guid: BinaryString,
 
     // Win32Version
@@ -18,9 +22,49 @@ pub struct Win32OffsetsFile {
 
 // TODO: use const-generics here once they are fully stabilized
 #[derive(Clone)]
-pub struct BinaryString([u8; 128]);
+pub struct BinaryString(pub [u8; 128]);
 
-// TODO: add from/to string/str methods
+impl Default for BinaryString {
+    fn default() -> Self {
+        (&[][..]).into()
+    }
+}
+
+impl<'a> From<&'a [u8]> for BinaryString {
+    fn from(other: &'a [u8]) -> Self {
+        let mut arr = [0; 128];
+
+        arr[..other.len()].copy_from_slice(other);
+
+        Self { 0: arr }
+    }
+}
+
+impl<'a> TryFrom<&'a BinaryString> for &'a str {
+    type Error = std::str::Utf8Error;
+    fn try_from(other: &'a BinaryString) -> Result<Self, Self::Error> {
+        Ok(str::from_utf8(&other.0)?
+            .split_terminator('\0')
+            .next()
+            .unwrap())
+    }
+}
+
+impl<'a> From<&'a str> for BinaryString {
+    fn from(other: &'a str) -> Self {
+        let mut arr = [0; 128];
+
+        arr[..other.len()].copy_from_slice(other.as_bytes());
+
+        Self { 0: arr }
+    }
+}
+
+impl From<String> for BinaryString {
+    fn from(other: String) -> Self {
+        Self::from(other.as_str())
+    }
+}
 
 unsafe impl Pod for BinaryString {}
 
@@ -30,9 +74,10 @@ impl ::serde::Serialize for BinaryString {
     where
         S: ::serde::Serializer,
     {
-        let len = self.0[0] as usize;
-        let string = str::from_utf8(&self.0[1..len]).unwrap();
-        serializer.serialize_str(string)
+        serializer.serialize_str(
+            <&str>::try_from(self)
+                .map_err(|_| ::serde::ser::Error::custom("invalid UTF-8 characters"))?,
+        )
     }
 }
 
@@ -59,8 +104,7 @@ impl<'de> ::serde::de::Deserialize<'de> for BinaryString {
                 // from errors deserializing the json string
                 let mut result = [0u8; 128];
 
-                result[0] = v.len() as u8;
-                result[1..v.len() + 1].copy_from_slice(v.as_bytes());
+                result[..v.len()].copy_from_slice(v.as_bytes());
 
                 Ok(result)
             }
@@ -73,20 +117,21 @@ impl<'de> ::serde::de::Deserialize<'de> for BinaryString {
 }
 
 #[derive(Debug, Clone, Pod)]
+#[repr(C)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 pub struct Win32OffsetsData {
-    pub list_blink: usize,
-    pub eproc_link: usize,
+    pub list_blink: u32,
+    pub eproc_link: u32,
 
-    pub kproc_dtb: usize,
-    pub eproc_pid: usize,
-    pub eproc_name: usize,
-    pub eproc_peb: usize,
-    pub eproc_thread_list: usize,
-    pub eproc_wow64: usize,
+    pub kproc_dtb: u32,
+    pub eproc_pid: u32,
+    pub eproc_name: u32,
+    pub eproc_peb: u32,
+    pub eproc_thread_list: u32,
+    pub eproc_wow64: u32,
 
-    pub kthread_teb: usize,
-    pub ethread_list_entry: usize,
-    pub teb_peb: usize,
-    pub teb_peb_x86: usize,
+    pub kthread_teb: u32,
+    pub ethread_list_entry: u32,
+    pub teb_peb: u32,
+    pub teb_peb_x86: u32,
 }

@@ -61,25 +61,25 @@ pub fn main() {
     if let Some(winver) = kernel.kernel_info.kernel_winver {
         let offsets = if let Some(guid) = &kernel.kernel_info.kernel_guid {
             Win32OffsetsFile {
-                pdb_file_name: &guid.file_name,
-                pdb_guid: &guid.guid,
+                pdb_file_name: guid.file_name.as_str().into(),
+                pdb_guid: guid.guid.as_str().into(),
 
                 nt_major_version: winver.major_version(),
                 nt_minor_version: winver.minor_version(),
                 nt_build_number: winver.build_number(),
 
-                offsets: kernel.offsets,
+                offsets: kernel.offsets.into(),
             }
         } else {
             Win32OffsetsFile {
-                pdb_file_name: "",
-                pdb_guid: "",
+                pdb_file_name: Default::default(),
+                pdb_guid: Default::default(),
 
                 nt_major_version: winver.major_version(),
                 nt_minor_version: winver.minor_version(),
                 nt_build_number: winver.build_number(),
 
-                offsets: kernel.offsets,
+                offsets: kernel.offsets.into(),
             }
         };
 

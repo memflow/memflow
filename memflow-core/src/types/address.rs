@@ -263,9 +263,7 @@ Adds a `usize` to a `Address` which results in a `Address`.
 # Examples
 ```
 use memflow_core::types::Address;
-fn test() {
-    assert_eq!(Address::from(10) + 5usize, Address::from(15));
-}
+assert_eq!(Address::from(10) + 5usize, Address::from(15));
 ```
 */
 impl ops::Add<usize> for Address {
@@ -274,6 +272,17 @@ impl ops::Add<usize> for Address {
     fn add(self, other: usize) -> Self {
         Self {
             0: self.0 + (other as u64),
+        }
+    }
+}
+
+/// Adds any compatible type reference to Address
+impl<'a, T: Into<u64> + Copy> ops::Add<&'a T> for Address {
+    type Output = Self;
+
+    fn add(self, other: &'a T) -> Self {
+        Self {
+            0: self.0 + (*other).into(),
         }
     }
 }
@@ -330,6 +339,17 @@ impl ops::Sub<usize> for Address {
     fn sub(self, other: usize) -> Address {
         Self {
             0: self.0 - (other as u64),
+        }
+    }
+}
+
+/// Subtracts any compatible type reference to Address
+impl<'a, T: Into<u64> + Copy> ops::Sub<&'a T> for Address {
+    type Output = Self;
+
+    fn sub(self, other: &'a T) -> Self {
+        Self {
+            0: self.0 - (*other).into(),
         }
     }
 }

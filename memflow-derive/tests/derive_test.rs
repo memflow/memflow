@@ -20,11 +20,6 @@ where
 }
 
 #[derive(ByteSwap)]
-struct ByteSwapDeriveImplicit<T> {
-    pub val: T,
-}
-
-#[derive(ByteSwap)]
 struct ByteSwapDeriveSlice {
     pub slice: [u8; 32],
 }

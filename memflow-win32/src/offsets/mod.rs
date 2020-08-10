@@ -254,6 +254,14 @@ impl Win32OffsetBuilder {
                     });
                 }
             }
+
+            if prev_build_number != winver.build_number() {
+                log::warn!(
+                    "no exact build number ({}) found! Closest match: {}",
+                    winver.build_number(),
+                    prev_build_number
+                );
+            }
         }
 
         closest_match.ok_or(Error::Other("not found"))

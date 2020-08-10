@@ -3,7 +3,7 @@ Connector Plugin interface.
 */
 
 use crate::error::{Error, Result};
-use crate::mem::PhysicalMemory;
+use crate::mem::phys_mem::PoolablePhysicalMemory;
 
 use super::ConnectorArgs;
 
@@ -19,9 +19,7 @@ use libloading::Library;
 pub const MEMFLOW_CONNECTOR_VERSION: i32 = 2;
 
 /// Type of all initial plugin based connectors
-pub type PluginConnector = Box<dyn PoolablePhysicalMemory + Send>;
-
-pub type PluginPoolConnector = Box<dyn PhysicalMemory + Send>;
+pub type PluginConnector = Box<dyn PoolablePhysicalMemory>;
 
 /// Describes a connector plugin
 pub struct ConnectorDescriptor {
@@ -318,35 +316,12 @@ impl std::ops::Deref for ConnectorInstance {
     type Target = dyn PoolablePhysicalMemory;
 
     fn deref(&self) -> &Self::Target {
-        &*self.connector
+        &self.connector
     }
 }
 
 impl std::ops::DerefMut for ConnectorInstance {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut *self.connector
+        &mut self.connector
     }
 }
-
-pub trait PoolablePhysicalMemory: PhysicalMemory {
-    fn into_pool(self, size_hint: usize) -> Vec<PluginPoolConnector>;
-}
-
-/*
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_inventory() {
-        let inventory = unsafe { ConnectorInventory::new("../target/release/") }.unwrap();
-        unsafe {
-            inventory.create_connector(
-                "coredump",
-                "/home/patrick/Documents/coredumps/coredump_win10_64bit.raw",
-            )
-        }
-        .unwrap();
-    }
-}
-*/

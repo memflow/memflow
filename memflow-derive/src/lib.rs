@@ -68,9 +68,9 @@ pub fn poolable_phys_mem_derive(input: TokenStream) -> TokenStream {
     let name = &input.ident;
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
     let gen = quote! {
-        impl #impl_generics ::memflow_core::plugin::PoolablePhysicalMemory for #name #ty_generics #where_clause {
-            fn into_pool(self, size_hint: usize) -> Vec<memflow_core::connector::plugin::PluginPoolConnector> {
-                (0..size_hint).map(|_| Box::new(self.clone()) as memflow_core::connector::plugin::PluginPoolConnector).collect()
+        impl #impl_generics ::memflow_core::mem::PoolablePhysicalMemory for #name #ty_generics #where_clause {
+            fn make_phys_pool<'a>(&'a self, size_hint: usize) -> Vec<memflow_core::mem::PooledPhysicalMemory<'a>> {
+                (0..size_hint).map(|_| Box::new(self.clone()) as memflow_core::mem::PooledPhysicalMemory<'a>).collect()
             }
         }
     };

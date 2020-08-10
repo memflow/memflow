@@ -19,8 +19,6 @@ pub struct CachedVirtualTranslate<V, Q> {
     pub misc: usize,
 }
 
-//unsafe impl<V: VirtualTranslate + Send, Q: CacheValidator + Send> Send for CachedVirtualTranslate<V, Q> {}
-
 impl<V: VirtualTranslate + Clone, Q: CacheValidator + Clone> Clone
     for CachedVirtualTranslate<V, Q>
 {

@@ -73,7 +73,7 @@ use dataview::Pod;
 /// # use memflow_core::types::size;
 /// # read(&mut DummyMemory::new(size::mb(4)));
 /// ```
-pub trait PhysicalMemory {
+pub trait PhysicalMemory: Send {
     fn phys_read_raw_list(&mut self, data: &mut [PhysicalReadData]) -> Result<()>;
     fn phys_write_raw_list(&mut self, data: &[PhysicalWriteData]) -> Result<()>;
 
@@ -130,7 +130,7 @@ pub trait PhysicalMemory {
 }
 
 // forward impls
-impl<T: PhysicalMemory + ?Sized, P: std::ops::DerefMut<Target = T>> PhysicalMemory for P {
+impl<T: PhysicalMemory + ?Sized, P: Send + std::ops::DerefMut<Target = T>> PhysicalMemory for P {
     fn phys_read_raw_list(&mut self, data: &mut [PhysicalReadData]) -> Result<()> {
         (**self).phys_read_raw_list(data)
     }
@@ -148,3 +148,22 @@ impl<'a, T: Iterator<Item = PhysicalReadData<'a>> + 'a> PhysicalReadIterator<'a>
 pub type PhysicalWriteData<'a> = (PhysicalAddress, &'a [u8]);
 pub trait PhysicalWriteIterator<'a>: Iterator<Item = PhysicalWriteData<'a>> + 'a {}
 impl<'a, T: Iterator<Item = PhysicalWriteData<'a>> + 'a> PhysicalWriteIterator<'a> for T {}
+
+pub type PooledPhysicalMemory<'a> = Box<dyn PhysicalMemory + 'a>;
+
+/// PhysicalMemory that can be turned into threadable pool
+///
+/// Once `make_phys_pool` is called, the input connector can not be used, until the pool is destroyed.
+///
+/// This is intentional to simplify connector pooling.
+pub trait PoolablePhysicalMemory: PhysicalMemory {
+    fn make_phys_pool<'a>(&'a self, size_hint: usize) -> Vec<PooledPhysicalMemory<'a>>;
+}
+
+impl<T: 'static + PoolablePhysicalMemory + ?Sized, P: Send + std::ops::DerefMut<Target = T>>
+    PoolablePhysicalMemory for P
+{
+    fn make_phys_pool<'a>(&'a self, size_hint: usize) -> Vec<PooledPhysicalMemory<'a>> {
+        self.deref().make_phys_pool(size_hint)
+    }
+}

@@ -5,7 +5,7 @@ use std::str;
 #[derive(Clone, Pod)]
 #[repr(C)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
-pub struct Win32OffsetsFile {
+pub struct Win32OffsetFile {
     // Win32GUID
     #[cfg_attr(feature = "serde", serde(default))]
     pub pdb_file_name: BinaryString,
@@ -17,7 +17,7 @@ pub struct Win32OffsetsFile {
     pub nt_minor_version: u32,
     pub nt_build_number: u32,
 
-    pub offsets: Win32OffsetsData,
+    pub offsets: Win32OffsetTable,
 }
 
 // TODO: use const-generics here once they are fully stabilized
@@ -119,7 +119,7 @@ impl<'de> ::serde::de::Deserialize<'de> for BinaryString {
 #[derive(Debug, Clone, Pod)]
 #[repr(C)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
-pub struct Win32OffsetsData {
+pub struct Win32OffsetTable {
     pub list_blink: u32,
     pub eproc_link: u32,
 

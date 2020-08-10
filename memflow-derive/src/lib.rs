@@ -66,9 +66,9 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
 pub fn poolable_phys_mem_derive(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let name = &input.ident;
-    let (impl_generics, type_generics, where_generics) = input.generics.split_for_impl();
+    let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
     let gen = quote! {
-        impl<#impl_generics> memflow_core::plugin::PoolablePhysicalMemory for #name<#type_generics> where #where_generics {
+        impl #impl_generics ::memflow_core::plugin::PoolablePhysicalMemory for #name #ty_generics #where_clause {
             fn into_pool(self, size_hint: usize) -> Vec<memflow_core::connector::plugin::PluginPoolConnector> {
                 (0..size_hint).map(|_| Box::new(self.clone()) as memflow_core::connector::plugin::PluginPoolConnector).collect()
             }
@@ -79,10 +79,9 @@ pub fn poolable_phys_mem_derive(input: TokenStream) -> TokenStream {
 
 #[proc_macro_derive(ByteSwap)]
 pub fn byteswap_derive(input: TokenStream) -> TokenStream {
-    // TODO: parse struct fields
     let input = parse_macro_input!(input as DeriveInput);
     let name = &input.ident;
-    let (impl_generics, type_generics, where_generics) = input.generics.split_for_impl();
+    let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
 
     let mut gen_inner = quote!();
     match input.data {
@@ -101,7 +100,7 @@ pub fn byteswap_derive(input: TokenStream) -> TokenStream {
     };
 
     let gen = quote!(
-        impl<#impl_generics> ByteSwap for #name<#type_generics> where #where_generics {
+        impl #impl_generics ::memflow_core::types::byte_swap::ByteSwap for #name #ty_generics #where_clause {
             fn byte_swap(&mut self) {
                 #gen_inner
             }

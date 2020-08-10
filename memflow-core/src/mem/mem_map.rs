@@ -1,6 +1,7 @@
 use crate::types::{Address, PhysicalAddress};
 
 use crate::iter::{SplitAtIndex, SplitAtIndexNoMutation};
+use crate::mem::cloneable_slice::CloneableSliceMut;
 
 use std::cmp::Ordering;
 use std::default::Default;
@@ -33,7 +34,10 @@ pub struct MemoryMap<M> {
     mappings: Vec<MemoryMapping<M>>,
 }
 
-impl<M: Copy> Clone for MemoryMap<M> {
+impl<M> Clone for MemoryMap<M>
+where
+    MemoryMapping<M>: Clone,
+{
     fn clone(&self) -> Self {
         Self {
             mappings: self.mappings.clone(),
@@ -52,11 +56,11 @@ pub struct MemoryMapping<M> {
     output: std::cell::RefCell<M>,
 }
 
-impl<M: Copy> Clone for MemoryMapping<M> {
+impl<M: Clone> Clone for MemoryMapping<M> {
     fn clone(&self) -> Self {
         Self {
             base: self.base,
-            output: self.output.clone(),
+            output: std::cell::RefCell::new(self.output.borrow().clone()),
         }
     }
 }
@@ -194,6 +198,89 @@ impl MemoryMap<(Address, usize)> {
         } else {
             self
         }
+    }
+
+    /// Transform address mapping into mutable buffer mapping
+    ///
+    /// It will take the output address-size pair, and create mutable slice references to them.
+    ///
+    /// # Safety
+    ///
+    /// The address mappings must be valid for the given lifetime `'a`, and should not
+    /// be aliased by any other memory references for fully defined behaviour.
+    pub unsafe fn into_bufmap_mut<'a>(self) -> MemoryMap<&'a mut [u8]> {
+        let mut ret_map = MemoryMap::new();
+
+        self.into_iter()
+            .map(|(base, (real_base, size))| {
+                (
+                    base,
+                    std::slice::from_raw_parts_mut(real_base.as_u64() as _, size),
+                )
+            })
+            .for_each(|(base, buf)| {
+                ret_map.push(base, buf);
+            });
+
+        ret_map
+    }
+
+    /// Transform address mapping into mutable, and cloneable buffer mapping
+    ///
+    /// It will take the output address-size pair, and create mutable, and cloneable
+    /// slice references to them.
+    ///
+    /// # Safety
+    ///
+    /// IMPORTANT!!!
+    ///
+    /// The address mappings must be valid for the given lifetime `'a`, and should not
+    /// be aliased by any other memory references for fully defined behaviour. Because
+    /// the latter point is specifically allowed, the behaviour from this function is
+    /// inherently undefined. Use only for target analyzed memory mappings.
+    pub unsafe fn into_cloneable_bufmap_mut<'a>(self) -> MemoryMap<CloneableSliceMut<'a, u8>> {
+        let mut ret_map = MemoryMap::new();
+
+        self.into_iter()
+            .map(|(base, (real_base, size))| {
+                (
+                    base,
+                    CloneableSliceMut::from_slice_mut(std::slice::from_raw_parts_mut(
+                        real_base.as_u64() as _,
+                        size,
+                    )),
+                )
+            })
+            .for_each(|(base, buf)| {
+                ret_map.push(base, buf);
+            });
+
+        ret_map
+    }
+
+    /// Transform address mapping buffer buffer mapping
+    ///
+    /// It will take the output address-size pair, and create slice references to them.
+    ///
+    /// # Safety
+    ///
+    /// The address mappings must be valid for the given lifetime `'a`, and should not
+    /// be aliased by any other memory references for fully defined behaviour.
+    pub unsafe fn into_bufmap<'a>(self) -> MemoryMap<&'a [u8]> {
+        let mut ret_map = MemoryMap::new();
+
+        self.into_iter()
+            .map(|(base, (real_base, size))| {
+                (
+                    base,
+                    std::slice::from_raw_parts(real_base.as_u64() as _, size),
+                )
+            })
+            .for_each(|(base, buf)| {
+                ret_map.push(base, buf);
+            });
+
+        ret_map
     }
 }
 

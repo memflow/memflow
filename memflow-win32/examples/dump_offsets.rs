@@ -5,7 +5,7 @@ use std::io::Write;
 
 use memflow_core::connector::*;
 
-use memflow_win32::{Kernel, Win32OffsetsFile};
+use memflow_win32::{Kernel, Win32OffsetFile};
 
 pub fn main() {
     let matches = App::new("read_keys example")
@@ -60,7 +60,7 @@ pub fn main() {
 
     if let Some(winver) = kernel.kernel_info.kernel_winver {
         let offsets = if let Some(guid) = &kernel.kernel_info.kernel_guid {
-            Win32OffsetsFile {
+            Win32OffsetFile {
                 pdb_file_name: guid.file_name.as_str().into(),
                 pdb_guid: guid.guid.as_str().into(),
 
@@ -71,7 +71,7 @@ pub fn main() {
                 offsets: kernel.offsets.into(),
             }
         } else {
-            Win32OffsetsFile {
+            Win32OffsetFile {
                 pdb_file_name: Default::default(),
                 pdb_guid: Default::default(),
 

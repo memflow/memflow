@@ -7,10 +7,10 @@ use std::{
     path::Path,
 };
 
-#[path = "src/offsets/offset_data.rs"]
-mod offset_data;
+#[path = "src/offsets/offset_table.rs"]
+mod offset_table;
 
-use offset_data::Win32OffsetsFile;
+use offset_table::Win32OffsetFile;
 
 fn main() -> Result<(), Box<dyn Error>> {
     let out_dir = env::var("OUT_DIR")?;
@@ -29,8 +29,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         let mut tomlstr = String::new();
         file.read_to_string(&mut tomlstr)?;
 
-        let offsets: Win32OffsetsFile = toml::from_str(&tomlstr)?;
-        all_the_files.write(offsets.as_bytes())?;
+        let offsets: Win32OffsetFile = toml::from_str(&tomlstr)?;
+        all_the_files.write_all(offsets.as_bytes())?;
     }
 
     Ok(())

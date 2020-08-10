@@ -3,9 +3,9 @@ pub mod pdb_struct;
 #[cfg(feature = "symstore")]
 pub mod symstore;
 
-pub mod offset_data;
+pub mod offset_table;
 #[doc(hidden)]
-pub use offset_data::{Win32OffsetsData, Win32OffsetsFile};
+pub use offset_table::{Win32OffsetFile, Win32OffsetTable};
 
 #[cfg(feature = "symstore")]
 pub use {pdb_struct::PdbStruct, symstore::*};
@@ -42,15 +42,15 @@ pub mod x64 {
 #[repr(transparent)]
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize))]
-pub struct Win32Offsets(pub Win32OffsetsData);
+pub struct Win32Offsets(Win32OffsetTable);
 
-impl From<Win32OffsetsData> for Win32Offsets {
-    fn from(other: Win32OffsetsData) -> Self {
+impl From<Win32OffsetTable> for Win32Offsets {
+    fn from(other: Win32OffsetTable) -> Self {
         Self { 0: other }
     }
 }
 
-impl From<Win32Offsets> for Win32OffsetsData {
+impl From<Win32Offsets> for Win32OffsetTable {
     fn from(other: Win32Offsets) -> Self {
         other.0
     }
@@ -144,7 +144,7 @@ impl Win32Offsets {
         };
 
         Ok(Self {
-            0: Win32OffsetsData {
+            0: Win32OffsetTable {
                 list_blink,
                 eproc_link,
 
@@ -162,6 +162,45 @@ impl Win32Offsets {
                 teb_peb_x86,
             },
         })
+    }
+
+    pub fn list_blink(&self) -> usize {
+        self.0.list_blink as usize
+    }
+    pub fn eproc_link(&self) -> usize {
+        self.0.eproc_link as usize
+    }
+
+    pub fn kproc_dtb(&self) -> usize {
+        self.0.kproc_dtb as usize
+    }
+    pub fn eproc_pid(&self) -> usize {
+        self.0.eproc_pid as usize
+    }
+    pub fn eproc_name(&self) -> usize {
+        self.0.eproc_name as usize
+    }
+    pub fn eproc_peb(&self) -> usize {
+        self.0.eproc_peb as usize
+    }
+    pub fn eproc_thread_list(&self) -> usize {
+        self.0.eproc_thread_list as usize
+    }
+    pub fn eproc_wow64(&self) -> usize {
+        self.0.eproc_wow64 as usize
+    }
+
+    pub fn kthread_teb(&self) -> usize {
+        self.0.kthread_teb as usize
+    }
+    pub fn ethread_list_entry(&self) -> usize {
+        self.0.ethread_list_entry as usize
+    }
+    pub fn teb_peb(&self) -> usize {
+        self.0.teb_peb as usize
+    }
+    pub fn teb_peb_x86(&self) -> usize {
+        self.0.teb_peb_x86 as usize
     }
 
     pub fn builder() -> Win32OffsetBuilder {
@@ -216,12 +255,12 @@ impl Win32OffsetBuilder {
     fn build_with_offset_list(&self) -> Result<Win32Offsets> {
         let bytes = &include_bytes!(concat!(env!("OUT_DIR"), "/win32_offsets.bin"))[..];
 
-        let aligned_size = std::mem::size_of::<Win32OffsetsFile>();
+        let aligned_size = std::mem::size_of::<Win32OffsetFile>();
 
         // Try matching exact guid
         if let Some(target_guid) = &self.guid {
             for offsets in bytes.chunks_exact(aligned_size) {
-                let offsets = offsets.as_data_view().copy::<Win32OffsetsFile>(0);
+                let offsets = offsets.as_data_view().copy::<Win32OffsetFile>(0);
                 if let (Ok(file), Ok(guid)) = (
                     <&str>::try_from(&offsets.pdb_file_name),
                     <&str>::try_from(&offsets.pdb_guid),
@@ -241,7 +280,7 @@ impl Win32OffsetBuilder {
         // Try matching the newest build from that version that is not actually newer
         if let Some(winver) = &self.winver {
             for offsets in bytes.chunks_exact(aligned_size) {
-                let offsets = offsets.as_data_view().copy::<Win32OffsetsFile>(0);
+                let offsets = offsets.as_data_view().copy::<Win32OffsetFile>(0);
                 if winver.major_version() == offsets.nt_major_version
                     && winver.minor_version() == offsets.nt_minor_version
                     && winver.build_number() >= offsets.nt_build_number

@@ -12,65 +12,67 @@ use dataview::Pod;
 // - check endianess here and return an error
 // - better would be to convert endianess with word alignment from addr
 
-/**
-The `PhysicalMemory` trait is implemented by memory backends
-and provides a generic way to read and write from/to physical memory.
-
-All addresses are of the type [`PhysicalAddress`](../types/physical_address/index.html)
-and can contain additional information about the page the address resides in.
-This information is usually only needed when implementing caches.
-
-There are only 2 methods which are required to be implemented by the provider of this trait.
-
-# Examples
-
-Implementing `PhysicalMemory` for a memory backend:
-```
-use std::vec::Vec;
-
-use memflow_core::mem::{PhysicalMemory, PhysicalReadData, PhysicalWriteData};
-use memflow_core::types::PhysicalAddress;
-use memflow_core::error::Result;
-
-pub struct MemoryBackend {
-    mem: Box<[u8]>,
-}
-
-impl PhysicalMemory for MemoryBackend {
-    fn phys_read_raw_list(
-        &mut self,
-        data: &mut [PhysicalReadData]
-    ) -> Result<()> {
-        data
-            .iter_mut()
-            .for_each(|(addr, out)| out.copy_from_slice(&self.mem[addr.as_usize()..(addr.as_usize() + out.len())]));
-        Ok(())
-    }
-
-    fn phys_write_raw_list(
-        &mut self,
-        data: &[PhysicalWriteData]
-    ) -> Result<()> {
-        data
-            .iter()
-            .for_each(|(addr, data)| self.mem[addr.as_usize()..(addr.as_usize() + data.len())].copy_from_slice(data));
-        Ok(())
-    }
-}
-```
-
-Reading from `PhysicalMemory`:
-```
-use memflow_core::types::Address;
-use memflow_core::mem::PhysicalMemory;
-
-fn read<T: PhysicalMemory>(mem: &mut T) {
-    let mut addr = 0u64;
-    mem.phys_read_into(Address::from(0x1000).into(), &mut addr).unwrap();
-    println!("addr: {:x}", addr);
-}
-```
-*/
+/// The `PhysicalMemory` trait is implemented by memory backends
+/// and provides a generic way to read and write from/to physical memory.
+///
+/// All addresses are of the type [`PhysicalAddress`](../types/physical_address/index.html)
+/// and can contain additional information about the page the address resides in.
+/// This information is usually only needed when implementing caches.
+///
+/// There are only 2 methods which are required to be implemented by the provider of this trait.
+///
+/// # Examples
+///
+/// Implementing `PhysicalMemory` for a memory backend:
+/// ```
+/// use std::vec::Vec;
+///
+/// use memflow_core::mem::{PhysicalMemory, PhysicalReadData, PhysicalWriteData};
+/// use memflow_core::types::PhysicalAddress;
+/// use memflow_core::error::Result;
+///
+/// pub struct MemoryBackend {
+///     mem: Box<[u8]>,
+/// }
+///
+/// impl PhysicalMemory for MemoryBackend {
+///     fn phys_read_raw_list(
+///         &mut self,
+///         data: &mut [PhysicalReadData]
+///     ) -> Result<()> {
+///         data
+///             .iter_mut()
+///             .for_each(|(addr, out)| out.copy_from_slice(&self.mem[addr.as_usize()..(addr.as_usize() + out.len())]));
+///         Ok(())
+///     }
+///
+///     fn phys_write_raw_list(
+///         &mut self,
+///         data: &[PhysicalWriteData]
+///     ) -> Result<()> {
+///         data
+///             .iter()
+///             .for_each(|(addr, data)| self.mem[addr.as_usize()..(addr.as_usize() + data.len())].copy_from_slice(data));
+///         Ok(())
+///     }
+/// }
+/// ```
+///
+/// Reading from `PhysicalMemory`:
+/// ```
+/// use memflow_core::types::Address;
+/// use memflow_core::mem::PhysicalMemory;
+///
+/// fn read<T: PhysicalMemory>(mem: &mut T) {
+///     let mut addr = 0u64;
+///     mem.phys_read_into(Address::from(0x1000).into(), &mut addr).unwrap();
+///     println!("addr: {:x}", addr);
+/// }
+///
+/// # use memflow_core::dummy::DummyMemory;
+/// # use memflow_core::types::size;
+/// # read(&mut DummyMemory::new(size::mb(4)));
+/// ```
 pub trait PhysicalMemory {
     fn phys_read_raw_list(&mut self, data: &mut [PhysicalReadData]) -> Result<()>;
     fn phys_write_raw_list(&mut self, data: &[PhysicalWriteData]) -> Result<()>;

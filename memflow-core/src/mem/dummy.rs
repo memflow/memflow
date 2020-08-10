@@ -1,6 +1,7 @@
 use crate::architecture::Architecture;
 use crate::error::{Error, Result};
-use crate::mem::{PhysicalMemory, PhysicalReadData, PhysicalWriteData};
+use crate::mem::virt_mem::virt_from_phys::VirtualFromPhysical;
+use crate::mem::{PhysicalMemory, PhysicalReadData, PhysicalWriteData, VirtualMemory};
 use crate::process::{OsProcessInfo, OsProcessModuleInfo};
 use crate::types::{size, Address};
 
@@ -191,6 +192,18 @@ where
 }
 
 impl DummyMemory {
+    pub fn new_and_dtb(size: usize, virt_size: usize, buffer: &[u8]) -> (Self, Address, Address) {
+        let mut ret = Self::new(size);
+        let (dtb, virt_base) = ret.alloc_dtb(virt_size, buffer);
+        (ret, dtb, virt_base)
+    }
+
+    pub fn new_virt(size: usize, virt_size: usize, buffer: &[u8]) -> (impl VirtualMemory, Address) {
+        let (ret, dtb, virt_base) = Self::new_and_dtb(size, virt_size, buffer);
+        let virt = VirtualFromPhysical::new(ret, Architecture::X64, Architecture::X64, dtb);
+        (virt, virt_base)
+    }
+
     pub fn new(size: usize) -> Self {
         Self::with_rng(size, SeedableRng::from_rng(thread_rng()).unwrap())
     }

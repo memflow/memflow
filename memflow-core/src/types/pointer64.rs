@@ -12,66 +12,72 @@ use std::{cmp, fmt, hash, ops};
 
 use dataview::Pod;
 
-/**
-This type can be used in structs that are being read from the target memory.
-It holds a phantom type that can be used to describe the proper type of the pointer
-and to read it in a more convenient way.
-
-This module is a direct adaption of [CasualX's great IntPtr crate](https://github.com/CasualX/intptr).
-
-Generally the generic Type should implement the Pod trait to be read into easily.
-See [here](https://docs.rs/dataview/0.1.1/dataview/) for more information on the Pod trait.
-
-# Examples
-
-```
-use memflow_core::types::Pointer64;
-use memflow_core::mem::VirtualMemory;
-use dataview::Pod;
-
-#[repr(C)]
-#[derive(Clone, Debug, Pod)]
-struct Foo {
-    pub some_value: i64,
-}
-
-#[repr(C)]
-#[derive(Clone, Debug, Pod)]
-struct Bar {
-    pub foo_ptr: Pointer64<Foo>,
-}
-
-fn read_foo_bar<T: VirtualMemory>(virt_mem: &mut T) {
-    let bar: Bar = virt_mem.virt_read(0x1234.into()).unwrap();
-    let foo = bar.foo_ptr.deref(virt_mem).unwrap();
-    println!("value: {}", foo.some_value);
-}
-```
-
-```
-use memflow_core::types::Pointer64;
-use memflow_core::mem::VirtualMemory;
-use dataview::Pod;
-
-#[repr(C)]
-#[derive(Clone, Debug, Pod)]
-struct Foo {
-    pub some_value: i64,
-}
-
-#[repr(C)]
-#[derive(Clone, Debug, Pod)]
-struct Bar {
-    pub foo_ptr: Pointer64<Foo>,
-}
-
-fn read_foo_bar<T: VirtualMemory>(virt_mem: &mut T) {
-    let bar: Bar = virt_mem.virt_read(0x1234.into()).unwrap();
-    let foo = virt_mem.virt_read_ptr64(bar.foo_ptr).unwrap();
-    println!("value: {}", foo.some_value);
-}
-```
-*/
+/// This type can be used in structs that are being read from the target memory.
+/// It holds a phantom type that can be used to describe the proper type of the pointer
+/// and to read it in a more convenient way.
+///
+/// This module is a direct adaption of [CasualX's great IntPtr crate](https://github.com/CasualX/intptr).
+///
+/// Generally the generic Type should implement the Pod trait to be read into easily.
+/// See [here](https://docs.rs/dataview/0.1.1/dataview/) for more information on the Pod trait.
+///
+/// # Examples
+///
+/// ```
+/// use memflow_core::types::Pointer64;
+/// use memflow_core::mem::VirtualMemory;
+/// use dataview::Pod;
+///
+/// #[repr(C)]
+/// #[derive(Clone, Debug, Pod)]
+/// struct Foo {
+///     pub some_value: i64,
+/// }
+///
+/// #[repr(C)]
+/// #[derive(Clone, Debug, Pod)]
+/// struct Bar {
+///     pub foo_ptr: Pointer64<Foo>,
+/// }
+///
+/// fn read_foo_bar<T: VirtualMemory>(virt_mem: &mut T) {
+///     let bar: Bar = virt_mem.virt_read(0x1234.into()).unwrap();
+///     let foo = bar.foo_ptr.deref(virt_mem).unwrap();
+///     println!("value: {}", foo.some_value);
+/// }
+///
+/// # use memflow_core::dummy::DummyMemory;
+/// # use memflow_core::types::size;
+/// # read_foo_bar(&mut DummyMemory::new_virt(size::mb(4), size::mb(2), &[]).0);
+/// ```
+///
+/// ```
+/// use memflow_core::types::Pointer64;
+/// use memflow_core::mem::VirtualMemory;
+/// use dataview::Pod;
+///
+/// #[repr(C)]
+/// #[derive(Clone, Debug, Pod)]
+/// struct Foo {
+///     pub some_value: i64,
+/// }
+///
+/// #[repr(C)]
+/// #[derive(Clone, Debug, Pod)]
+/// struct Bar {
+///     pub foo_ptr: Pointer64<Foo>,
+/// }
+///
+/// fn read_foo_bar<T: VirtualMemory>(virt_mem: &mut T) {
+///     let bar: Bar = virt_mem.virt_read(0x1234.into()).unwrap();
+///     let foo = virt_mem.virt_read_ptr64(bar.foo_ptr).unwrap();
+///     println!("value: {}", foo.some_value);
+/// }
+///
+/// # use memflow_core::dummy::DummyMemory;
+/// # use memflow_core::types::size;
+/// # read_foo_bar(&mut DummyMemory::new_virt(size::mb(4), size::mb(2), &[]).0);
+/// ```
 #[repr(transparent)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize))]
 pub struct Pointer64<T: ?Sized = ()> {

@@ -75,10 +75,8 @@ pub enum Architecture {
 /// use memflow_core::architecture::Architecture;
 /// use std::convert::TryFrom;
 ///
-/// pub fn test() {
-///     let arch = Architecture::try_from(1).unwrap();
-///     assert_eq!(arch, Architecture::X64);
-/// }
+/// let arch = Architecture::try_from(1).unwrap();
+/// assert_eq!(arch, Architecture::X64);
 /// ```
 impl TryFrom<u8> for Architecture {
     type Error = Error;

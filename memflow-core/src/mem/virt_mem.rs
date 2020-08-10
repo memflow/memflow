@@ -13,31 +13,34 @@ use std::mem::MaybeUninit;
 
 use dataview::Pod;
 
-/**
-The `VirtualMemory` trait implements access to virtual memory for a specific process
-and provides a generic way to read and write from/to that processes virtual memory.
-
-The CPU accesses virtual memory by setting the CR3 register to the appropiate Directory Table Base (DTB)
-for that process. The ntoskrnl.exe Kernel Process has it's own DTB.
-Using the DTB it is possible to resolve the physical memory location of a virtual address page.
-After the address has been resolved the physical memory page can then be read or written to.
-
-There are 3 methods which are required to be implemented by the provider of this trait.
-
-# Examples
-
-Reading from `VirtualMemory`:
-```
-use memflow_core::types::Address;
-use memflow_core::mem::VirtualMemory;
-
-fn read<T: VirtualMemory>(virt_mem: &mut T) {
-    let mut addr = 0u64;
-    virt_mem.virt_read_into(Address::from(0x1000), &mut addr).unwrap();
-    println!("addr: {:x}", addr);
-}
-```
-*/
+/// The `VirtualMemory` trait implements access to virtual memory for a specific process
+/// and provides a generic way to read and write from/to that processes virtual memory.
+///
+/// The CPU accesses virtual memory by setting the CR3 register to the appropiate Directory Table Base (DTB)
+/// for that process. The ntoskrnl.exe Kernel Process has it's own DTB.
+/// Using the DTB it is possible to resolve the physical memory location of a virtual address page.
+/// After the address has been resolved the physical memory page can then be read or written to.
+///
+/// There are 3 methods which are required to be implemented by the provider of this trait.
+///
+/// # Examples
+///
+/// Reading from `VirtualMemory`:
+/// ```
+/// use memflow_core::types::Address;
+/// use memflow_core::mem::VirtualMemory;
+///
+/// fn read<T: VirtualMemory>(virt_mem: &mut T, read_addr: Address) {
+///     let mut addr = 0u64;
+///     virt_mem.virt_read_into(read_addr, &mut addr).unwrap();
+///     println!("addr: {:x}", addr);
+///     # assert_eq!(addr, 0x00ff_00ff_00ff_00ff);
+/// }
+/// # use memflow_core::dummy::DummyMemory;
+/// # use memflow_core::types::size;
+/// # let (mut mem, virt_base) = DummyMemory::new_virt(size::mb(4), size::mb(2), &[255, 0, 255, 0, 255, 0, 255, 0]);
+/// # read(&mut mem, virt_base);
+/// ```
 pub trait VirtualMemory {
     fn virt_read_raw_list(&mut self, data: &mut [VirtualReadData]) -> PartialResult<()>;
 

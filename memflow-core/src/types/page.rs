@@ -56,11 +56,9 @@ impl Default for PageType {
     }
 }
 
-/**
-A `Page` holds information about a memory page.
-
-More information about paging can be found [here](https://en.wikipedia.org/wiki/Paging).
-*/
+/// A `Page` holds information about a memory page.
+///
+/// More information about paging can be found [here](https://en.wikipedia.org/wiki/Paging).
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub struct Page {
     /// Contains the page type (see above).
@@ -84,9 +82,7 @@ impl Page {
         Self::INVALID
     }
 
-    /**
-    Checks wether the page is valid or not.
-    */
+    /// Checks wether the page is valid or not.
     pub fn is_valid(&self) -> bool {
         self.page_base.is_valid() && self.page_size != 0
     }

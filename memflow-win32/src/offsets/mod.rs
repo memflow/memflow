@@ -10,8 +10,6 @@ pub use offset_table::{Win32OffsetFile, Win32OffsetTable};
 #[cfg(feature = "symstore")]
 pub use {pdb_struct::PdbStruct, symstore::*};
 
-use dataview::Pod;
-
 use std::prelude::v1::*;
 
 use std::convert::TryFrom;
@@ -38,6 +36,16 @@ pub mod x64 {
     pub const LDR_DATA_SIZE: usize = 0x40; // _LDR_DATA_TABLE_ENTRY::SizeOfImage
     pub const LDR_DATA_NAME: usize = 0x58; // _LDR_DATA_TABLE_ENTRY::BaseDllName
 }
+
+#[repr(align(16))]
+struct Align16<T>(pub T);
+
+const WIN32_OFFSETS: Align16<
+    [u8; include_bytes!(concat!(env!("OUT_DIR"), "/win32_offsets.bin")).len()],
+> = Align16(*include_bytes!(concat!(
+    env!("OUT_DIR"),
+    "/win32_offsets.bin"
+)));
 
 #[repr(transparent)]
 #[derive(Debug, Clone)]
@@ -253,21 +261,22 @@ impl Win32OffsetBuilder {
     }
 
     fn build_with_offset_list(&self) -> Result<Win32Offsets> {
-        let bytes = &include_bytes!(concat!(env!("OUT_DIR"), "/win32_offsets.bin"))[..];
-
-        let aligned_size = std::mem::size_of::<Win32OffsetFile>();
+        // # Safety
+        // Struct padding and alignment is compile-time guaranteed by the struct (see mod offset_table).
+        let offsets: [Win32OffsetFile; WIN32_OFFSETS.0.len() / std::mem::size_of::<Win32OffsetFile>()] = unsafe {
+            std::mem::transmute(WIN32_OFFSETS.0)
+        };
 
         // Try matching exact guid
         if let Some(target_guid) = &self.guid {
-            for offsets in bytes.chunks_exact(aligned_size) {
-                let offsets = offsets.as_data_view().copy::<Win32OffsetFile>(0);
+            for offset in offsets.iter() {
                 if let (Ok(file), Ok(guid)) = (
-                    <&str>::try_from(&offsets.pdb_file_name),
-                    <&str>::try_from(&offsets.pdb_guid),
+                    <&str>::try_from(&offset.pdb_file_name),
+                    <&str>::try_from(&offset.pdb_guid),
                 ) {
                     if target_guid.file_name == file && target_guid.guid == guid {
                         return Ok(Win32Offsets {
-                            0: offsets.offsets.clone(),
+                            0: offset.offsets.clone(),
                         });
                     }
                 }
@@ -279,16 +288,15 @@ impl Win32OffsetBuilder {
 
         // Try matching the newest build from that version that is not actually newer
         if let Some(winver) = &self.winver {
-            for offsets in bytes.chunks_exact(aligned_size) {
-                let offsets = offsets.as_data_view().copy::<Win32OffsetFile>(0);
-                if winver.major_version() == offsets.nt_major_version
-                    && winver.minor_version() == offsets.nt_minor_version
-                    && winver.build_number() >= offsets.nt_build_number
-                    && prev_build_number <= offsets.nt_build_number
+            for offset in offsets.iter() {
+                if winver.major_version() == offset.nt_major_version
+                    && winver.minor_version() == offset.nt_minor_version
+                    && winver.build_number() >= offset.nt_build_number
+                    && prev_build_number <= offset.nt_build_number
                 {
-                    prev_build_number = offsets.nt_build_number;
+                    prev_build_number = offset.nt_build_number;
                     closest_match = Some(Win32Offsets {
-                        0: offsets.offsets.clone(),
+                        0: offset.offsets.clone(),
                     });
                 }
             }

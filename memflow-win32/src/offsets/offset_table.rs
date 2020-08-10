@@ -2,8 +2,8 @@ use dataview::Pod;
 use std::convert::TryFrom;
 use std::str;
 
+#[repr(C, align(4))]
 #[derive(Clone, Pod)]
-#[repr(C)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 pub struct Win32OffsetFile {
     // Win32GUID
@@ -19,6 +19,7 @@ pub struct Win32OffsetFile {
 
     pub offsets: Win32OffsetTable,
 }
+const _: [(); std::mem::size_of::<[Win32OffsetFile; 16]>()] = [(); 16 * std::mem::size_of::<Win32OffsetFile>()];
 
 // TODO: use const-generics here once they are fully stabilized
 #[derive(Clone)]
@@ -116,8 +117,8 @@ impl<'de> ::serde::de::Deserialize<'de> for BinaryString {
     }
 }
 
+#[repr(C, align(4))]
 #[derive(Debug, Clone, Pod)]
-#[repr(C)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 pub struct Win32OffsetTable {
     pub list_blink: u32,

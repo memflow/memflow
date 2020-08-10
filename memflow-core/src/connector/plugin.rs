@@ -11,7 +11,7 @@ use std::fs::read_dir;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use log::{debug, info};
+use log::{debug, info, warn};
 
 use libloading::Library;
 
@@ -257,6 +257,12 @@ impl Connector {
             .read();
 
         if desc.connector_version != MEMFLOW_CONNECTOR_VERSION {
+            warn!(
+                "connector {:?} has a different version. version {} required, found {}.",
+                path.as_ref(),
+                MEMFLOW_CONNECTOR_VERSION,
+                desc.connector_version
+            );
             return Err(Error::Connector("connector version mismatch"));
         }
 

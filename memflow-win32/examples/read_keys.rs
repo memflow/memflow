@@ -7,10 +7,6 @@ use memflow_core::connector::*;
 
 use memflow_win32::win32::{Kernel, Keyboard};
 
-// TEST CODE
-use memflow_core::mem::phys_mem::CloneMultiple;
-// TEST CODE
-
 pub fn main() {
     let matches = App::new("read_keys example")
         .version(crate_version!())
@@ -50,10 +46,6 @@ pub fn main() {
         )
     }
     .unwrap();
-
-    // TEST CODE MT
-    let pool = connector.clone_multiple(10);
-    // TEST CODE --
 
     // creating the kernel object
     let mut kernel = Kernel::builder(connector)

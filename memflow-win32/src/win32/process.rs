@@ -105,17 +105,6 @@ impl<'a, T: PhysicalMemory, V: VirtualTranslate>
             proc_info,
         }
     }
-
-    // TODO: Clean this up, this shouldn't exist in this world
-    pub fn cloned_vat(self) -> Win32Process<VirtualFromPhysical<&'a mut T, V>>
-    where
-        V: Clone,
-    {
-        Win32Process {
-            virt_mem: self.virt_mem.cloned_vat(),
-            proc_info: self.proc_info.clone(),
-        }
-    }
 }
 
 impl<T: VirtualMemory> Win32Process<T> {

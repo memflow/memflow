@@ -6,8 +6,7 @@ use crate::error::{Error, PartialError, PartialResult, Result};
 use crate::iter::FnExtend;
 use crate::mem::{
     virt_translate::{TranslateArch, VirtualTranslate},
-    PhysicalMemory, PoolablePhysicalMemory, PoolableVirtualMemory, PooledVirtualMemory,
-    VirtualMemory,
+    PhysicalMemory, VirtualMemory,
 };
 use crate::process::OsProcessInfo;
 use crate::types::{Address, Page};
@@ -184,20 +183,6 @@ impl<T: PhysicalMemory, V: VirtualTranslate> VirtualFromPhysical<T, V> {
     }
 }
 
-impl<'a, T: PhysicalMemory, V: VirtualTranslate + Clone> VirtualFromPhysical<&'a mut T, &'a mut V> {
-    // TODO: Clean this up, this shouldn't exist in this world
-    pub fn cloned_vat(self) -> VirtualFromPhysical<&'a mut T, V> {
-        VirtualFromPhysical {
-            phys_mem: self.phys_mem,
-            sys_arch: self.sys_arch,
-            vat: self.vat.clone(),
-            proc_arch: self.proc_arch,
-            dtb: self.dtb,
-            arena: Bump::new(),
-        }
-    }
-}
-
 impl<T: PhysicalMemory, V: VirtualTranslate> VirtualMemory for VirtualFromPhysical<T, V> {
     fn virt_read_raw_list(&mut self, data: &mut [VirtualReadData]) -> PartialResult<()> {
         self.arena.reset();
@@ -281,26 +266,6 @@ impl<T: PhysicalMemory, V: VirtualTranslate> VirtualMemory for VirtualFromPhysic
                     Err((a, b))
                 }
             })
-            .collect()
-    }
-}
-
-impl<T: PoolablePhysicalMemory, V: VirtualTranslate + Clone> PoolableVirtualMemory
-    for VirtualFromPhysical<T, V>
-{
-    fn make_virt_pool<'a>(&'a self, size_hint: usize) -> Vec<PooledVirtualMemory<'a>> {
-        self.phys_mem
-            .make_phys_pool(size_hint)
-            .into_iter()
-            .map(|phys_mem| VirtualFromPhysical {
-                phys_mem,
-                sys_arch: self.sys_arch,
-                vat: self.vat.clone(),
-                proc_arch: self.proc_arch,
-                dtb: self.dtb,
-                arena: Bump::new(),
-            })
-            .map(|virt_mem| Box::new(virt_mem) as PooledVirtualMemory<'a>)
             .collect()
     }
 }

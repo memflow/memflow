@@ -3,7 +3,7 @@ Connector Plugin interface.
 */
 
 use crate::error::{Error, Result};
-use crate::mem::phys_mem::PoolablePhysicalMemory;
+use crate::mem::PhysicalMemory;
 
 use super::ConnectorArgs;
 
@@ -19,7 +19,7 @@ use libloading::Library;
 pub const MEMFLOW_CONNECTOR_VERSION: i32 = 2;
 
 /// Type of all initial plugin based connectors
-pub type PluginConnector = Box<dyn PoolablePhysicalMemory>;
+pub type PluginConnector = Box<dyn PhysicalMemory>;
 
 /// Describes a connector plugin
 pub struct ConnectorDescriptor {
@@ -313,7 +313,7 @@ pub struct ConnectorInstance {
 }
 
 impl std::ops::Deref for ConnectorInstance {
-    type Target = dyn PoolablePhysicalMemory;
+    type Target = dyn PhysicalMemory;
 
     fn deref(&self) -> &Self::Target {
         &self.connector

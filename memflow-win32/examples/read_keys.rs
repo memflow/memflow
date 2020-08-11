@@ -7,6 +7,10 @@ use memflow_core::connector::*;
 
 use memflow_win32::win32::{Kernel, Keyboard};
 
+// TEST CODE
+use memflow_core::mem::phys_mem::CloneMultiple;
+// TEST CODE
+
 pub fn main() {
     let matches = App::new("read_keys example")
         .version(crate_version!())
@@ -47,16 +51,11 @@ pub fn main() {
     }
     .unwrap();
 
-    // sym store test
-    /*
-    let store = SymbolStore::default()
-        .base_url("http://something")
-        .no_cache()
-        .cache_path("~/.memflow/");
+    // TEST CODE MT
+    let pool = connector.clone_multiple(10);
+    // TEST CODE --
 
-    let pdb = store.load(GUID);
-    */
-
+    // creating the kernel object
     let mut kernel = Kernel::builder(connector)
         .build_default_caches()
         .build()

@@ -18,7 +18,8 @@ pub mod plugin;
 #[doc(hidden)]
 #[cfg(feature = "plugins")]
 pub use plugin::{
-    Connector, ConnectorDescriptor, ConnectorInventory, PluginConnector, MEMFLOW_CONNECTOR_VERSION,
+    Connector, ConnectorDescriptor, ConnectorInstance, ConnectorInventory,
+    MEMFLOW_CONNECTOR_VERSION,
 };
 
 pub mod fileio;

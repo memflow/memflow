@@ -41,19 +41,19 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
         #[cfg(feature = "plugin")]
         #[doc(hidden)]
         #[no_mangle]
-        pub static MEMFLOW_CONNECTOR: memflow_core::connector::ConnectorDescriptor = memflow_core::connector::ConnectorDescriptor {
-            connector_version: memflow_core::connector::MEMFLOW_CONNECTOR_VERSION,
+        pub static MEMFLOW_CONNECTOR: ::memflow_core::connector::ConnectorDescriptor = ::memflow_core::connector::ConnectorDescriptor {
+            connector_version: ::memflow_core::connector::MEMFLOW_CONNECTOR_VERSION,
             name: CONNECTOR_NAME,
             factory: connector_factory,
         };
 
         #[cfg(feature = "plugin")]
-        pub extern "C" fn connector_factory(args: &memflow_core::connector::ConnectorArgs) -> memflow_core::error::Result<memflow_core::connector::PluginConnector> {
+        pub extern "C" fn connector_factory(args: &::memflow_core::connector::ConnectorArgs) -> ::memflow_core::error::Result<::memflow_core::connector::plugin::ConnectorType> {
             let connector = #func_name(args)?;
             Ok(Box::new(connector))
         }
 
-        pub fn static_connector_factory(args: &memflow_core::connector::ConnectorArgs) -> memflow_core::error::Result<impl memflow_core::mem::PhysicalMemory> {
+        pub fn static_connector_factory(args: &::memflow_core::connector::ConnectorArgs) -> ::memflow_core::error::Result<impl ::memflow_core::mem::PhysicalMemory> {
             #func_name(args)
         }
 

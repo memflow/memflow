@@ -41,7 +41,10 @@ use dataview::Pod;
 /// # let (mut mem, virt_base) = DummyMemory::new_virt(size::mb(4), size::mb(2), &[255, 0, 255, 0, 255, 0, 255, 0]);
 /// # read(&mut mem, virt_base);
 /// ```
-pub trait VirtualMemory: Send {
+pub trait VirtualMemory
+where
+    Self: Send,
+{
     fn virt_read_raw_list(&mut self, data: &mut [VirtualReadData]) -> PartialResult<()>;
 
     fn virt_write_raw_list(&mut self, data: &[VirtualWriteData]) -> PartialResult<()>;
@@ -176,7 +179,7 @@ pub trait VirtualMemory: Send {
 }
 
 // forward impls
-impl<T: VirtualMemory + ?Sized, P: Send + std::ops::DerefMut<Target = T>> VirtualMemory for P {
+impl<T: VirtualMemory + ?Sized, P: std::ops::DerefMut<Target = T> + Send> VirtualMemory for P {
     fn virt_read_raw_list(&mut self, data: &mut [VirtualReadData]) -> PartialResult<()> {
         (**self).virt_read_raw_list(data)
     }
@@ -207,22 +210,3 @@ impl<'a, T: Iterator<Item = VirtualReadData<'a>> + 'a> VirtualReadIterator<'a> f
 pub type VirtualWriteData<'a> = (Address, &'a [u8]);
 pub trait VirtualWriteIterator<'a>: Iterator<Item = VirtualWriteData<'a>> + 'a {}
 impl<'a, T: Iterator<Item = VirtualWriteData<'a>> + 'a> VirtualWriteIterator<'a> for T {}
-
-pub type PooledVirtualMemory<'a> = Box<dyn VirtualMemory + 'a>;
-
-/// PhysicalMemory that can be turned into threadable pool
-///
-/// Once `make_phys_pool` is called, the input connector can not be used, until the pool is destroyed.
-///
-/// This is intentional to simplify connector pooling.
-pub trait PoolableVirtualMemory: VirtualMemory {
-    fn make_virt_pool<'a>(&'a self, size_hint: usize) -> Vec<PooledVirtualMemory<'a>>;
-}
-
-impl<T: 'static + PoolableVirtualMemory + ?Sized, P: Send + std::ops::DerefMut<Target = T>>
-    PoolableVirtualMemory for P
-{
-    fn make_virt_pool<'a>(&'a self, size_hint: usize) -> Vec<PooledVirtualMemory<'a>> {
-        self.deref().make_virt_pool(size_hint)
-    }
-}

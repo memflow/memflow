@@ -1,7 +1,6 @@
 use crate::types::{Address, PhysicalAddress};
 
 use crate::iter::{SplitAtIndex, SplitAtIndexNoMutation};
-use crate::mem::cloneable_slice::CloneableSliceMut;
 
 use std::cmp::Ordering;
 use std::default::Default;
@@ -53,14 +52,14 @@ impl<M> std::convert::AsRef<MemoryMap<M>> for MemoryMap<M> {
 
 pub struct MemoryMapping<M> {
     base: Address,
-    output: std::cell::RefCell<M>,
+    output: std::cell::RefCell<M>, // TODO: why refcell?
 }
 
 impl<M: Clone> Clone for MemoryMapping<M> {
     fn clone(&self) -> Self {
         Self {
             base: self.base,
-            output: std::cell::RefCell::new(self.output.borrow().clone()),
+            output: self.output.clone(),
         }
     }
 }
@@ -200,6 +199,7 @@ impl MemoryMap<(Address, usize)> {
         }
     }
 
+    /*
     /// Transform address mapping into mutable buffer mapping
     ///
     /// It will take the output address-size pair, and create mutable slice references to them.
@@ -282,6 +282,7 @@ impl MemoryMap<(Address, usize)> {
 
         ret_map
     }
+    */
 }
 
 const MIN_BSEARCH_THRESH: usize = 32;

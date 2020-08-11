@@ -31,7 +31,3 @@ pub use pointer64::Pointer64;
 pub mod byte_swap;
 #[doc(hidden)]
 pub use byte_swap::ByteSwap;
-
-pub mod try_as_mut;
-#[doc(hidden)]
-pub use try_as_mut::TryAsMut;

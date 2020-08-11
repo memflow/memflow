@@ -62,21 +62,6 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
     gen.into()
 }
 
-#[proc_macro_derive(PoolablePhysicalMemory)]
-pub fn poolable_phys_mem_derive(input: TokenStream) -> TokenStream {
-    let input = parse_macro_input!(input as DeriveInput);
-    let name = &input.ident;
-    let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
-    let gen = quote! {
-        impl #impl_generics ::memflow_core::mem::PoolablePhysicalMemory for #name #ty_generics #where_clause {
-            fn make_phys_pool<'a>(&'a self, size_hint: usize) -> Vec<memflow_core::mem::PooledPhysicalMemory<'a>> {
-                (0..size_hint).map(|_| Box::new(self.clone()) as memflow_core::mem::PooledPhysicalMemory<'a>).collect()
-            }
-        }
-    };
-    gen.into()
-}
-
 #[proc_macro_derive(ByteSwap)]
 pub fn byteswap_derive(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);

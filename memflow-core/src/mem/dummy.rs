@@ -146,6 +146,7 @@ impl OsProcessInfo for DummyProcess {
     }
 }
 
+#[derive(Clone)]
 pub struct DummyMemory {
     mem: Box<[u8]>,
     page_list: VecDeque<PageInfo>,

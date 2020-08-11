@@ -5,7 +5,7 @@ use log::Level;
 
 use memflow_core::connector::*;
 
-use memflow_win32::win32::Kernel;
+use memflow_win32::win32::{Kernel, Win32Process};
 
 pub fn main() {
     let matches = App::new("read_keys example")
@@ -39,7 +39,7 @@ pub fn main() {
 
     // create inventory + connector
     let inventory = unsafe { ConnectorInventory::try_new() }.unwrap();
-    let connector = unsafe {
+    let mut connector = unsafe {
         inventory.create_connector(
             matches.value_of("connector").unwrap(),
             &ConnectorArgs::try_parse_str(matches.value_of("args").unwrap()).unwrap(),
@@ -47,15 +47,37 @@ pub fn main() {
     }
     .unwrap();
 
-    let pool = (0..8).map(|_| connector.clone()).collect::<Vec<_>>();
+    // parallel physical memory access
+    {
+        let pool = (0..8).map(|_| connector.clone()).collect::<Vec<_>>();
 
-    // parallel kernel instantiation
-    for c in pool.into_iter() {
-        thread::spawn(move || {
-            let mut kernel = Kernel::builder(c).build_default_caches().build().unwrap();
-        });
+        let threads = pool.into_iter().map(|c| {
+            thread::spawn(|| {
+                Kernel::builder(c).build_default_caches().build().unwrap();
+            })
+        }).collect::<Vec<_>>();
+
+        threads.into_iter().for_each(|t| t.join().unwrap());
     }
 
-    // TODO: merge
-    loop{}
+    // parallel virtual memory access
+    {
+        let mut kernel = Kernel::builder(&mut connector).build_default_caches().build().unwrap();
+
+        // ... clone kernel?
+        //let pool = (0..8).map(|_| connector.clone()).collect::<Vec<_>>();
+
+        let pi = kernel.process_info("wininit.exe").unwrap();
+
+        /*
+        let p = Win32Process::with_kernel(kernel, proc_info)
+
+        for c in pool.into_iter() {
+            thread::spawn(move || {
+                // ...
+            });
+        }
+        */
+    }
+
 }

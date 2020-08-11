@@ -11,13 +11,12 @@ use crate::{Error, Result};
 use {
     memmap::{Mmap, MmapMut, MmapOptions},
     std::fs::File,
-    std::sync::Arc,
 };
 
 pub struct MMAPInfo<'a> {
     mem_map: MemoryMap<&'a [u8]>,
     #[cfg(feature = "filemap")]
-    _buf: Arc<Mmap>,
+    _buf: Mmap,
 }
 
 #[cfg(feature = "filemap")]
@@ -168,7 +167,7 @@ impl<'a> ReadMappedFilePhysicalMemory<'a> {
 
         Ok(Self::with_info(MMAPInfo {
             mem_map: new_map,
-            _buf: Arc::new(buf),
+            _buf: buf,
         }))
     }
 }
@@ -206,8 +205,8 @@ impl<'a> WriteMappedFilePhysicalMemory<'a> {
     }
 }
 
-impl<'a, F: AsRef<MemoryMap<&'a mut [u8]>> + Send> PhysicalMemory
-    for MappedPhysicalMemory<&'a mut [u8], F>
+impl<'a, F: AsRef<MemoryMap<&'a [u8]>> + Send> PhysicalMemory
+    for MappedPhysicalMemory<&'a [u8], F>
 {
     fn phys_read_raw_list(&mut self, data: &mut [PhysicalReadData]) -> Result<()> {
         let mut void = FnExtend::void();
@@ -220,8 +219,8 @@ impl<'a, F: AsRef<MemoryMap<&'a mut [u8]>> + Send> PhysicalMemory
         Ok(())
     }
 
-    fn phys_write_raw_list(&mut self, data: &[PhysicalWriteData]) -> Result<()> {
-        let mut void = FnExtend::void();
+    fn phys_write_raw_list(&mut self, _data: &[PhysicalWriteData]) -> Result<()> {
+        //let mut void = FnExtend::void();
 
         /*
         for (mut mapped_buf, buf) in self.info.as_ref().map_iter(data.iter().copied(), &mut void) {
@@ -231,27 +230,13 @@ impl<'a, F: AsRef<MemoryMap<&'a mut [u8]>> + Send> PhysicalMemory
                 .copy_from_slice(buf);
         }
         */
+        /*
         for (mapped_buf, buf) in self.info.as_ref().map_iter(data.iter().copied(), &mut void) {
             mapped_buf.copy_from_slice(buf);
         }
 
         Ok(())
-    }
-}
-
-/*impl<'a, T: OnlyAsRef<[u8]>, F: AsRef<MemoryMap<&'a [u8]>>> PhysicalMemory for MappedPhysicalMemory<T, F> {
-    fn phys_read_raw_list(&mut self, data: &mut [PhysicalReadData]) -> Result<()> {
-        let mut void = FnExtend::void();
-        for (mapped_buf, buf) in self.info.as_ref().map_iter(
-            data.iter_mut().map(|(addr, buf)| (*addr, &mut **buf)),
-            &mut void,
-        ) {
-            buf.copy_from_slice(mapped_buf);
-        }
-        Ok(())
-    }
-
-    fn phys_write_raw_list(&mut self, _data: &[PhysicalWriteData]) -> Result<()> {
+        */
         Err(Error::Connector("Target mapping is not writeable"))
     }
-}*/
+}

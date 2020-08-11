@@ -28,6 +28,7 @@ use std::collections::HashMap;
 ///     .insert("arg1", "test1")
 ///     .insert("arg2", "test2");
 /// ```
+#[derive(Debug, Clone)]
 pub struct ConnectorArgs {
     map: HashMap<String, String>,
 }

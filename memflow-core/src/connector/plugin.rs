@@ -16,10 +16,10 @@ use log::{debug, info, warn};
 use libloading::Library;
 
 /// Exported memflow plugin version
-pub const MEMFLOW_CONNECTOR_VERSION: i32 = 2;
+pub const MEMFLOW_CONNECTOR_VERSION: i32 = 3;
 
-/// Type of all initial plugin based connectors
-pub type PluginConnector = Box<dyn PhysicalMemory>;
+/// Type of a single connector instance
+pub type ConnectorType = Box<dyn PhysicalMemory>;
 
 /// Describes a connector plugin
 pub struct ConnectorDescriptor {
@@ -35,7 +35,7 @@ pub struct ConnectorDescriptor {
 
     /// The factory function for the connector.
     /// Calling this function will produce new connector instances.
-    pub factory: extern "C" fn(args: &ConnectorArgs) -> Result<PluginConnector>,
+    pub factory: extern "C" fn(args: &ConnectorArgs) -> Result<ConnectorType>,
 }
 
 /// Holds an inventory of available connector plugins.
@@ -227,10 +227,11 @@ impl ConnectorInventory {
 ///     connector_lib.create(&ConnectorArgs::new())
 /// }.unwrap();
 /// ```
+#[derive(Clone)]
 pub struct Connector {
     library: Arc<Library>,
     name: String,
-    factory: extern "C" fn(args: &ConnectorArgs) -> Result<PluginConnector>,
+    factory: extern "C" fn(args: &ConnectorArgs) -> Result<ConnectorType>,
 }
 
 impl Connector {
@@ -293,12 +294,13 @@ impl Connector {
 
         // We do not want to return error with data from the shared library
         // that may get unloaded before it gets displayed
-        let connector =
-            connector_res.map_err(|_| Error::Connector("Failed to create a connector"))?;
+        let instance =
+            connector_res.map_err(|_| Error::Connector("Failed to create connector"))?;
 
         Ok(ConnectorInstance {
-            connector,
-            _library: self.library.clone(),
+            connector: self.clone(),
+            args: args.clone(),
+            instance,
         })
     }
 }
@@ -308,20 +310,28 @@ impl Connector {
 /// This structure is returned by `Connector`. It is needed to maintain reference
 /// counts to the loaded plugin library.
 pub struct ConnectorInstance {
-    connector: PluginConnector,
-    _library: Arc<Library>,
+    connector: Connector,
+    args: ConnectorArgs,
+    instance: ConnectorType,
+}
+
+impl Clone for ConnectorInstance {
+    fn clone(&self) -> Self {
+        // TODO: keep og args
+        unsafe { self.connector.create(&self.args) }.unwrap()
+    }
 }
 
 impl std::ops::Deref for ConnectorInstance {
     type Target = dyn PhysicalMemory;
 
     fn deref(&self) -> &Self::Target {
-        &self.connector
+        &*self.instance
     }
 }
 
 impl std::ops::DerefMut for ConnectorInstance {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.connector
+        &mut *self.instance
     }
 }

@@ -55,5 +55,9 @@ name = "read_keys"
 path = "examples/read_keys.rs"
 
 [[example]]
+name = "multithreading"
+path = "examples/multithreading.rs"
+
+[[example]]
 name = "read_bench"
 path = "examples/read_bench.rs"

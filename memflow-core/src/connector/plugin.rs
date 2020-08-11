@@ -294,8 +294,7 @@ impl Connector {
 
         // We do not want to return error with data from the shared library
         // that may get unloaded before it gets displayed
-        let instance =
-            connector_res.map_err(|_| Error::Connector("Failed to create connector"))?;
+        let instance = connector_res.map_err(|_| Error::Connector("Failed to create connector"))?;
 
         Ok(ConnectorInstance {
             connector: self.clone(),

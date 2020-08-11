@@ -1,11 +1,11 @@
-use std::{thread, time};
+use std::thread;
 
 use clap::*;
 use log::Level;
 
 use memflow_core::connector::*;
 
-use memflow_win32::win32::{Kernel, Win32Process};
+use memflow_win32::win32::Kernel;
 
 pub fn main() {
     let matches = App::new("read_keys example")
@@ -51,23 +51,33 @@ pub fn main() {
     {
         let pool = (0..8).map(|_| connector.clone()).collect::<Vec<_>>();
 
-        let threads = pool.into_iter().map(|c| {
-            thread::spawn(|| {
-                Kernel::builder(c).build_default_caches().build().unwrap();
+        let threads = pool
+            .into_iter()
+            .map(|c| {
+                thread::spawn(|| {
+                    Kernel::builder(c)
+                        .no_symbol_store()
+                        .build_default_caches()
+                        .build()
+                        .unwrap();
+                })
             })
-        }).collect::<Vec<_>>();
+            .collect::<Vec<_>>();
 
         threads.into_iter().for_each(|t| t.join().unwrap());
     }
 
     // parallel virtual memory access
     {
-        let mut kernel = Kernel::builder(&mut connector).build_default_caches().build().unwrap();
+        let mut kernel = Kernel::builder(&mut connector)
+            .build_default_caches()
+            .build()
+            .unwrap();
 
         // ... clone kernel?
         //let pool = (0..8).map(|_| connector.clone()).collect::<Vec<_>>();
 
-        let pi = kernel.process_info("wininit.exe").unwrap();
+        let _pi = kernel.process_info("wininit.exe").unwrap();
 
         /*
         let p = Win32Process::with_kernel(kernel, proc_info)
@@ -79,5 +89,4 @@ pub fn main() {
         }
         */
     }
-
 }

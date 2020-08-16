@@ -1,5 +1,5 @@
 /*!
-Connector Plugin interface.
+Connector inventory interface.
 */
 
 use crate::error::{Error, Result};
@@ -15,7 +15,7 @@ use log::{debug, info, warn};
 
 use libloading::Library;
 
-/// Exported memflow plugin version
+/// Exported memflow connector version
 pub const MEMFLOW_CONNECTOR_VERSION: i32 = 3;
 
 /// Wrapper trait around physical memory which implements a boxed clone
@@ -42,16 +42,16 @@ impl Clone for ConnectorType {
     }
 }
 
-/// Describes a connector plugin
+/// Describes a connector
 pub struct ConnectorDescriptor {
-    /// The connector plugin api version for when the connector was built.
+    /// The connector inventory api version for when the connector was built.
     /// This has to be set to `MEMFLOW_CONNECTOR_VERSION` of memflow_core.
     ///
-    /// If the versions mismatch the plugin will refuse to load.
+    /// If the versions mismatch the inventory will refuse to load.
     pub connector_version: i32,
 
-    /// The name of the connector plugin.
-    /// This name will be used when loading a plugin from a plugin inventory.
+    /// The name of the connector.
+    /// This name will be used when loading a connector from a connector inventory.
     pub name: &'static str,
 
     /// The factory function for the connector.
@@ -59,7 +59,7 @@ pub struct ConnectorDescriptor {
     pub factory: extern "C" fn(args: &ConnectorArgs) -> Result<ConnectorType>,
 }
 
-/// Holds an inventory of available connector plugins.
+/// Holds an inventory of available connectors.
 pub struct ConnectorInventory {
     connectors: Vec<Connector>,
 }
@@ -165,13 +165,13 @@ impl ConnectorInventory {
     /// matches the one specified here. This is especially true if
     /// the loaded library implements the necessary interface manually.
     ///
-    /// It is adviced to use a proc macro for defining a connector plugin.
+    /// It is adviced to use a proc macro for defining a connector.
     ///
     /// # Examples
     ///
     /// Creating a connector instance:
     /// ```no_run
-    /// use memflow_core::connector::{ConnectorInventory, ConnectorArgs};
+    /// use memflow_core::inventory::{ConnectorInventory, ConnectorArgs};
     ///
     /// let inventory = unsafe {
     ///     ConnectorInventory::with_path("./")
@@ -181,7 +181,7 @@ impl ConnectorInventory {
     /// }.unwrap();
     /// ```
     ///
-    /// Defining a dynamic plugin:
+    /// Defining a dynamically loaded connector:
     /// ```
     /// use memflow_core::error::Result;
     /// use memflow_core::types::size;
@@ -232,7 +232,7 @@ impl ConnectorInventory {
     }
 }
 
-/// Stores a connector plugin library instance.
+/// Stores a connector library instance.
 ///
 /// # Examples
 ///
@@ -258,9 +258,9 @@ pub struct Connector {
 impl Connector {
     /// Tries to initialize a connector from a `Path`.
     /// The path must point to a valid dynamic library that implements
-    /// the memflow plugin interface.
+    /// the memflow inventory interface.
     ///
-    /// If the plugin doesn ot contain the necessary exports or the version does
+    /// If the connector does not contain the necessary exports or the version does
     /// not match the current api version this function will return an `Error::Connector`.
     ///
     /// # Safety
@@ -305,7 +305,7 @@ impl Connector {
     /// matches the one specified here. This is especially true if
     /// the loaded library implements the necessary interface manually.
     ///
-    /// It is adviced to use a proc macro for defining a connector plugin.
+    /// It is adviced to use a proc macro for defining a connector.
     pub unsafe fn create(&self, args: &ConnectorArgs) -> Result<ConnectorInstance> {
         let connector_res = (self.factory)(args);
 
@@ -327,7 +327,7 @@ impl Connector {
 /// Describes initialized connector instance
 ///
 /// This structure is returned by `Connector`. It is needed to maintain reference
-/// counts to the loaded plugin library.
+/// counts to the loaded connector library.
 #[derive(Clone)]
 pub struct ConnectorInstance {
     _library: Arc<Library>,

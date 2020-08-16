@@ -1,1 +1,1 @@
-// TODO: impl plugins
+// TODO: impl inventory

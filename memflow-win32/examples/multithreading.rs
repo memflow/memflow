@@ -1,11 +1,69 @@
 use std::thread;
 
 use clap::*;
-use log::Level;
+use log::{info, Level};
 
 use memflow_core::connector::*;
+use memflow_core::mem::*;
 
 use memflow_win32::win32::Kernel;
+
+pub fn parallel_init<T: PhysicalMemory + Clone + 'static>(connector: T) {
+    let pool = (0..8).map(|_| connector.clone()).collect::<Vec<_>>();
+
+    let threads = pool
+        .into_iter()
+        .map(|c| {
+            thread::spawn(move || {
+                Kernel::builder(c)
+                    .no_symbol_store()
+                    .build_default_caches()
+                    .build()
+                    .unwrap();
+            })
+        })
+        .collect::<Vec<_>>();
+
+    threads.into_iter().for_each(|t| t.join().unwrap());
+}
+
+pub fn parallel_kernels<T: PhysicalMemory + Clone + 'static>(connector: T) {
+    let kernel = Kernel::builder(connector).build().unwrap();
+
+    let pool = (0..8).map(|_| kernel.clone()).collect::<Vec<_>>();
+
+    let threads = pool
+        .into_iter()
+        .map(|mut k| {
+            thread::spawn(move || {
+                let _eprocesses = k.eprocess_list().unwrap();
+            })
+        })
+        .collect::<Vec<_>>();
+
+    threads.into_iter().for_each(|t| t.join().unwrap());
+}
+
+pub fn parallel_kernels_cached<T: PhysicalMemory + Clone + 'static>(connector: T) {
+    let kernel = Kernel::builder(connector)
+        .build_default_caches()
+        .build()
+        .unwrap();
+
+    let pool = (0..8).map(|_| kernel.clone()).collect::<Vec<_>>();
+
+    let threads = pool
+        .into_iter()
+        .map(|mut k| {
+            thread::spawn(move || {
+                let eprocesses = k.eprocess_list().unwrap();
+                info!("eprocesses list fetched: {}", eprocesses.len());
+            })
+        })
+        .collect::<Vec<_>>();
+
+    threads.into_iter().for_each(|t| t.join().unwrap());
+}
 
 pub fn main() {
     let matches = App::new("read_keys example")
@@ -39,7 +97,7 @@ pub fn main() {
 
     // create inventory + connector
     let inventory = unsafe { ConnectorInventory::try_new() }.unwrap();
-    let mut connector = unsafe {
+    let connector = unsafe {
         inventory.create_connector(
             matches.value_of("connector").unwrap(),
             &ConnectorArgs::try_parse_str(matches.value_of("args").unwrap()).unwrap(),
@@ -48,45 +106,11 @@ pub fn main() {
     .unwrap();
 
     // parallel physical memory access
-    {
-        let pool = (0..8).map(|_| connector.clone()).collect::<Vec<_>>();
+    parallel_init(connector.clone());
 
-        let threads = pool
-            .into_iter()
-            .map(|c| {
-                thread::spawn(|| {
-                    Kernel::builder(c)
-                        .no_symbol_store()
-                        .build_default_caches()
-                        .build()
-                        .unwrap();
-                })
-            })
-            .collect::<Vec<_>>();
+    parallel_kernels(connector.clone());
 
-        threads.into_iter().for_each(|t| t.join().unwrap());
-    }
+    parallel_kernels_cached(connector.clone());
 
-    // parallel virtual memory access
-    {
-        let mut kernel = Kernel::builder(&mut connector)
-            .build_default_caches()
-            .build()
-            .unwrap();
-
-        // ... clone kernel?
-        //let pool = (0..8).map(|_| connector.clone()).collect::<Vec<_>>();
-
-        let _pi = kernel.process_info("wininit.exe").unwrap();
-
-        /*
-        let p = Win32Process::with_kernel(kernel, proc_info)
-
-        for c in pool.into_iter() {
-            thread::spawn(move || {
-                // ...
-            });
-        }
-        */
-    }
+    //parallel_processes(connector.clone());
 }

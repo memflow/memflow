@@ -25,6 +25,7 @@ use std::io::{Read, Seek, SeekFrom, Write};
 ///     let connector = FileIOMemory::try_with_reader(file, map);
 /// }
 /// ```
+#[derive(Clone)]
 pub struct FileIOMemory<T> {
     reader: T,
     mem_map: MemoryMap<(Address, usize)>,

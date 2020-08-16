@@ -386,7 +386,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
             // TODO: properly probe pe header here and check ImageBase
             // TODO: this wont work with tlb
             trace!("inspecting candidate process: {:?}", candidate);
-            let mut process = Win32Process::with_kernel(self, candidate.clone());
+            let mut process = Win32Process::with_kernel_ref(self, candidate.clone());
             if process
                 .module_info_list()?
                 .iter()

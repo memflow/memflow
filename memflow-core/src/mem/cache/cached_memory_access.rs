@@ -69,7 +69,7 @@ impl<'a, T: PhysicalMemory, Q: CacheValidator> CachedMemoryAccess<'a, T, Q> {
     ///
     /// For general usage it is advised to just use the [builder](struct.CachedMemoryAccessBuilder.html)
     /// to construct the cache.
-    pub fn with(mem: T, cache: PageCache<'a, Q>) -> Self {
+    pub fn new(mem: T, cache: PageCache<'a, Q>) -> Self {
         Self {
             mem,
             cache,
@@ -209,7 +209,7 @@ impl<T: PhysicalMemory> CachedMemoryAccessBuilder<T, TimedCacheValidator> {
 impl<T: PhysicalMemory, Q: CacheValidator> CachedMemoryAccessBuilder<T, Q> {
     /// Builds the `CachedMemoryAccess` object or returns an error if the page size is not set.
     pub fn build<'a>(self) -> Result<CachedMemoryAccess<'a, T, Q>> {
-        Ok(CachedMemoryAccess::with(
+        Ok(CachedMemoryAccess::new(
             self.mem,
             PageCache::with_page_size(
                 self.page_size.ok_or("page_size must be initialized")?,

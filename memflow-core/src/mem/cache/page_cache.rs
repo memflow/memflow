@@ -388,7 +388,7 @@ mod tests {
                 PageType::PAGE_TABLE | PageType::READ_ONLY,
                 TimedCacheValidator::new(Duration::from_secs(100)),
             );
-            let mut mem_cache = CachedMemoryAccess::with(&mut dummy_mem, cache);
+            let mut mem_cache = CachedMemoryAccess::new(&mut dummy_mem, cache);
             let mut buf_cache = vec![0_u8; buf_nocache.len()];
             {
                 let mut virt_mem = VirtualFromPhysical::new(&mut mem_cache, arch, arch, dtb);
@@ -428,7 +428,7 @@ mod tests {
             TimedCacheValidator::new(Duration::from_secs(100)),
         );
 
-        let mut mem_cache = CachedMemoryAccess::with(&mut dummy_mem, cache);
+        let mut mem_cache = CachedMemoryAccess::new(&mut dummy_mem, cache);
 
         //Modifying the memory from other channels should leave the cached page unchanged
         let mut cached_buf = vec![0_u8; 64];
@@ -481,7 +481,7 @@ mod tests {
             TimedCacheValidator::new(Duration::from_secs(100)),
         );
 
-        let mut mem_cache = CachedMemoryAccess::with(&mut dummy_mem, cache);
+        let mut mem_cache = CachedMemoryAccess::new(&mut dummy_mem, cache);
 
         //Modifying the memory from other channels should leave the cached page unchanged
         let mut cached_buf = vec![0_u8; 64];
@@ -545,7 +545,7 @@ mod tests {
             TimedCacheValidator::new(Duration::from_secs(100)),
         );
 
-        let mut mem_cache = CachedMemoryAccess::with(&mut dummy_mem, cache);
+        let mut mem_cache = CachedMemoryAccess::new(&mut dummy_mem, cache);
 
         let mut buf_1 = vec![0_u8; buf_size];
         mem_cache
@@ -602,7 +602,7 @@ mod tests {
             TimedCacheValidator::new(Duration::from_secs(100)),
         );
 
-        let mut mem_cache = CachedMemoryAccess::with(&mut dummy_mem, cache);
+        let mut mem_cache = CachedMemoryAccess::new(&mut dummy_mem, cache);
 
         let mut buf_1 = vec![0_u8; 64];
         mem_cache
@@ -637,7 +637,7 @@ mod tests {
             TimedCacheValidator::new(Duration::from_secs(100)),
         );
 
-        let mut mem_cache = CachedMemoryAccess::with(&mut dummy_mem, cache);
+        let mut mem_cache = CachedMemoryAccess::new(&mut dummy_mem, cache);
 
         let mut buf_1 = vec![0_u8; 64];
         mem_cache
@@ -679,7 +679,7 @@ mod tests {
             TimedCacheValidator::new(Duration::from_secs(100)),
         );
 
-        let mut mem_cache = CachedMemoryAccess::with(&mut dummy_mem, cache);
+        let mut mem_cache = CachedMemoryAccess::new(&mut dummy_mem, cache);
         let mut virt_mem = VirtualFromPhysical::new(&mut mem_cache, arch, arch, dtb);
 
         let mut buf_1 = vec![0_u8; 64];

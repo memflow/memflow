@@ -196,10 +196,10 @@ where
     fn clone(&self) -> Self {
         Self {
             phys_mem: self.phys_mem.clone(),
-            sys_arch: self.sys_arch.clone(),
+            sys_arch: self.sys_arch,
             vat: self.vat.clone(),
-            proc_arch: self.proc_arch.clone(),
-            dtb: self.dtb.clone(),
+            proc_arch: self.proc_arch,
+            dtb: self.dtb,
             arena: Bump::new(),
         }
     }

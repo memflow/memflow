@@ -53,7 +53,7 @@ fn initialize_virt_ctx() -> Result<(
         };
 
         let mod_list: Vec<Win32ModuleInfo> = {
-            let mut prc = Win32Process::with_kernel(&mut kernel, proc_list[idx].clone());
+            let mut prc = Win32Process::with_kernel_ref(&mut kernel, proc_list[idx].clone());
             prc.module_info_list()
                 .unwrap_or_default()
                 .into_iter()

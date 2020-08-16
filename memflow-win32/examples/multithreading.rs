@@ -138,5 +138,5 @@ pub fn main() {
 
     parallel_kernels_cached(connector.clone());
 
-    parallel_processes(connector.clone());
+    parallel_processes(connector);
 }

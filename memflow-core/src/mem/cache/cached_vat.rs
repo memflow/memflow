@@ -20,7 +20,7 @@ pub struct CachedVirtualTranslate<V, Q> {
 }
 
 impl<V: VirtualTranslate, Q: CacheValidator> CachedVirtualTranslate<V, Q> {
-    pub fn with(vat: V, tlb: TLBCache<Q>, arch: Architecture) -> Self {
+    pub fn new(vat: V, tlb: TLBCache<Q>, arch: Architecture) -> Self {
         Self {
             vat,
             tlb,
@@ -163,7 +163,7 @@ impl<V: VirtualTranslate> CachedVirtualTranslateBuilder<V, TimedCacheValidator> 
 
 impl<V: VirtualTranslate, Q: CacheValidator> CachedVirtualTranslateBuilder<V, Q> {
     pub fn build(self) -> Result<CachedVirtualTranslate<V, Q>> {
-        Ok(CachedVirtualTranslate::with(
+        Ok(CachedVirtualTranslate::new(
             self.vat,
             TLBCache::new(
                 self.entries.ok_or("entries must be initialized")?,

@@ -19,21 +19,6 @@ pub struct CachedVirtualTranslate<V, Q> {
     pub misc: usize,
 }
 
-impl<V: VirtualTranslate + Clone, Q: CacheValidator + Clone> Clone
-    for CachedVirtualTranslate<V, Q>
-{
-    fn clone(&self) -> Self {
-        Self {
-            vat: self.vat.clone(),
-            tlb: self.tlb.clone(),
-            arch: self.arch,
-            arena: Bump::new(),
-            hitc: self.hitc,
-            misc: self.misc,
-        }
-    }
-}
-
 impl<V: VirtualTranslate, Q: CacheValidator> CachedVirtualTranslate<V, Q> {
     pub fn with(vat: V, tlb: TLBCache<Q>, arch: Architecture) -> Self {
         Self {
@@ -50,6 +35,21 @@ impl<V: VirtualTranslate, Q: CacheValidator> CachedVirtualTranslate<V, Q> {
 impl<V: VirtualTranslate> CachedVirtualTranslate<V, TimedCacheValidator> {
     pub fn builder(vat: V) -> CachedVirtualTranslateBuilder<V, TimedCacheValidator> {
         CachedVirtualTranslateBuilder::new(vat)
+    }
+}
+
+impl<V: VirtualTranslate + Clone, Q: CacheValidator + Clone> Clone
+    for CachedVirtualTranslate<V, Q>
+{
+    fn clone(&self) -> Self {
+        Self {
+            vat: self.vat.clone(),
+            tlb: self.tlb.clone(),
+            arch: self.arch,
+            arena: Bump::new(),
+            hitc: self.hitc,
+            misc: self.misc,
+        }
     }
 }
 

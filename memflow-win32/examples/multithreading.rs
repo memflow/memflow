@@ -6,7 +6,7 @@ use log::{info, Level};
 use memflow_core::connector::*;
 use memflow_core::mem::*;
 
-use memflow_win32::win32::Kernel;
+use memflow_win32::win32::{Kernel, Win32Process};
 
 pub fn parallel_init<T: PhysicalMemory + Clone + 'static>(connector: T) {
     let pool = (0..8).map(|_| connector.clone()).collect::<Vec<_>>();
@@ -65,6 +65,31 @@ pub fn parallel_kernels_cached<T: PhysicalMemory + Clone + 'static>(connector: T
     threads.into_iter().for_each(|t| t.join().unwrap());
 }
 
+pub fn parallel_processes<T: PhysicalMemory + Clone + 'static>(connector: T) {
+    let mut kernel = Kernel::builder(connector)
+        .build_default_caches()
+        .build()
+        .unwrap();
+
+    let proc_info = kernel.process_info("wininit.exe").unwrap();
+
+    let pool = (0..8).map(|_| kernel.clone()).collect::<Vec<_>>();
+
+    let threads = pool
+        .into_iter()
+        .map(|mut k| {
+            let pi = proc_info.clone();
+            thread::spawn(move || {
+                let mut process = Win32Process::with_kernel(&mut k, pi);
+                let peb_list = process.peb_list().unwrap();
+                info!("wininit.exe peb_list: {}", peb_list.len());
+            })
+        })
+        .collect::<Vec<_>>();
+
+    threads.into_iter().for_each(|t| t.join().unwrap());
+}
+
 pub fn main() {
     let matches = App::new("read_keys example")
         .version(crate_version!())
@@ -105,12 +130,14 @@ pub fn main() {
     }
     .unwrap();
 
-    // parallel physical memory access
+    // parallel test functions
+    // see each function's implementation for further details
+
     parallel_init(connector.clone());
 
     parallel_kernels(connector.clone());
 
     parallel_kernels_cached(connector.clone());
 
-    //parallel_processes(connector.clone());
+    parallel_processes(connector.clone());
 }

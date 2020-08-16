@@ -72,16 +72,15 @@ pub fn parallel_processes<T: PhysicalMemory + Clone + 'static>(connector: T) {
         .unwrap();
 
     let proc_info = kernel.process_info("wininit.exe").unwrap();
+    let process = Win32Process::with_kernel(kernel, proc_info);
 
-    let pool = (0..8).map(|_| kernel.clone()).collect::<Vec<_>>();
+    let pool = (0..8).map(|_| process.clone()).collect::<Vec<_>>();
 
     let threads = pool
         .into_iter()
-        .map(|mut k| {
-            let pi = proc_info.clone();
+        .map(|mut p| {
             thread::spawn(move || {
-                let mut process = Win32Process::with_kernel(&mut k, pi);
-                let peb_list = process.peb_list().unwrap();
+                let peb_list = p.peb_list().unwrap();
                 info!("wininit.exe peb_list: {}", peb_list.len());
             })
         })

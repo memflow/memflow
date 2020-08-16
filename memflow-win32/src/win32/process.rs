@@ -82,15 +82,48 @@ impl OsProcessInfo for Win32ProcessInfo {
     }
 }
 
+#[derive(Clone)]
 pub struct Win32Process<T: VirtualMemory> {
     pub virt_mem: T,
     pub proc_info: Win32ProcessInfo,
 }
 
+impl<'a, T: PhysicalMemory, V: VirtualTranslate> Win32Process<VirtualFromPhysical<T, V>> {
+    pub fn with_kernel(kernel: Kernel<T, V>, proc_info: Win32ProcessInfo) -> Self {
+        // create virt_mem
+        let virt_mem = VirtualFromPhysical::with_vat(
+            kernel.phys_mem,
+            proc_info.sys_arch,
+            proc_info.proc_arch,
+            proc_info.dtb,
+            kernel.vat,
+        );
+
+        Self {
+            virt_mem,
+            proc_info,
+        }
+    }
+
+    /// Consume the self object and returns the containing memory connection
+    pub fn destroy(self) -> T {
+        self.virt_mem.destroy()
+    }
+}
+
 impl<'a, T: PhysicalMemory, V: VirtualTranslate>
     Win32Process<VirtualFromPhysical<&'a mut T, &'a mut V>>
 {
-    pub fn with_kernel(kernel: &'a mut Kernel<T, V>, proc_info: Win32ProcessInfo) -> Self {
+    /// Constructs a new process by borrowing a kernel object.
+    ///
+    /// Internally this will create a `VirtualFromPhysical` object that also
+    /// borrows the PhysicalMemory and Vat objects from the kernel.
+    ///
+    /// The resulting process object is NOT cloneable due to the mutable borrowing.
+    ///
+    /// When u need a cloneable Process u have to use the `::with_kernel` function
+    /// which will move the kernel object.
+    pub fn with_kernel_ref(kernel: &'a mut Kernel<T, V>, proc_info: Win32ProcessInfo) -> Self {
         // create virt_mem
         let virt_mem = VirtualFromPhysical::with_vat(
             &mut kernel.phys_mem,

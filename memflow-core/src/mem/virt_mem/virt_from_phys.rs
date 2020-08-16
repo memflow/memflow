@@ -18,7 +18,7 @@ use itertools::Itertools;
 /// from user provided `PhysicalMemory` and `VirtualTranslate` objects.
 ///
 /// This struct implements `VirtualMemory` and allows the user to access the virtual memory of a process.
-pub struct VirtualFromPhysical<T: PhysicalMemory, V: VirtualTranslate> {
+pub struct VirtualFromPhysical<T, V> {
     phys_mem: T,
     sys_arch: Architecture,
     vat: V,
@@ -179,6 +179,28 @@ impl<T: PhysicalMemory, V: VirtualTranslate> VirtualFromPhysical<T, V> {
             64 => self.virt_read_addr64(addr),
             32 => self.virt_read_addr32(addr),
             _ => Err(PartialError::Error(Error::InvalidArchitecture)),
+        }
+    }
+
+    /// Consume the self object and returns the containing memory connection
+    pub fn destroy(self) -> T {
+        self.phys_mem
+    }
+}
+
+impl<T, V> Clone for VirtualFromPhysical<T, V>
+where
+    T: Clone,
+    V: Clone,
+{
+    fn clone(&self) -> Self {
+        Self {
+            phys_mem: self.phys_mem.clone(),
+            sys_arch: self.sys_arch.clone(),
+            vat: self.vat.clone(),
+            proc_arch: self.proc_arch.clone(),
+            dtb: self.dtb.clone(),
+            arena: Bump::new(),
         }
     }
 }

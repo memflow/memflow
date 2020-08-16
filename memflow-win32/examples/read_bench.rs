@@ -99,7 +99,7 @@ fn read_bench<T: PhysicalMemory + ?Sized, V: VirtualTranslate>(
     let proc_list = kernel.process_info_list()?;
     let mut rng = CurRng::seed_from_u64(rand::thread_rng().gen_range(0, !0u64));
     loop {
-        let mut prc = Win32Process::with_kernel(
+        let mut prc = Win32Process::with_kernel_ref(
             &mut kernel,
             proc_list[rng.gen_range(0, proc_list.len())].clone(),
         );

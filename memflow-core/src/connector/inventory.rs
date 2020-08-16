@@ -171,7 +171,7 @@ impl ConnectorInventory {
     ///
     /// Creating a connector instance:
     /// ```no_run
-    /// use memflow_core::inventory::{ConnectorInventory, ConnectorArgs};
+    /// use memflow_core::connector::{ConnectorInventory, ConnectorArgs};
     ///
     /// let inventory = unsafe {
     ///     ConnectorInventory::with_path("./")

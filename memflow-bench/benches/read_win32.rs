@@ -16,7 +16,7 @@ use rand::{prng::XorShiftRng as CurRng, Rng, SeedableRng};
 
 fn create_connector(args: &ConnectorArgs) -> Result<impl PhysicalMemory> {
     unsafe {
-        memflow_core::inventory::ConnectorInventory::try_new()?
+        memflow_core::connector::ConnectorInventory::try_new()?
             .create_connector("qemu_procfs", args)
     }
 }

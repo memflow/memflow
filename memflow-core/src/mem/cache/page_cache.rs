@@ -38,16 +38,7 @@ pub struct PageCache<'a, T> {
     cache_layout: Layout,
 }
 
-// TODO: chheck if this really holds true?
 unsafe impl<'a, T> Send for PageCache<'a, T> {}
-
-impl<'a, T> Drop for PageCache<'a, T> {
-    fn drop(&mut self) {
-        unsafe {
-            dealloc(self.cache_ptr, self.cache_layout);
-        }
-    }
-}
 
 impl<'a, T: CacheValidator> PageCache<'a, T> {
     pub fn new(arch: Architecture, size: usize, page_type_mask: PageType, validator: T) -> Self {
@@ -283,6 +274,14 @@ impl<'a, T: CacheValidator> PageCache<'a, T> {
             }
 
             Ok(())
+        }
+    }
+}
+
+impl<'a, T> Drop for PageCache<'a, T> {
+    fn drop(&mut self) {
+        unsafe {
+            dealloc(self.cache_ptr, self.cache_layout);
         }
     }
 }

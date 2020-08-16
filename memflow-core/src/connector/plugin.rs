@@ -18,8 +18,26 @@ use libloading::Library;
 /// Exported memflow plugin version
 pub const MEMFLOW_CONNECTOR_VERSION: i32 = 3;
 
+/// Wrapper trait around physical memory which implements a boxed clone
+pub trait CloneablePhysicalMemory: PhysicalMemory {
+    fn clone_box(&self) -> Box<dyn CloneablePhysicalMemory>;
+}
+
+/// Forward implementation of CloneablePhysicalMemory for every Cloneable backend.
+impl<T> CloneablePhysicalMemory for T where T: PhysicalMemory + Clone + 'static {
+    fn clone_box(&self) -> Box<dyn CloneablePhysicalMemory> {
+        Box::new(self.clone())
+    }
+}
+
 /// Type of a single connector instance
-pub type ConnectorType = Box<dyn PhysicalMemory>;
+pub type ConnectorType = Box<dyn CloneablePhysicalMemory>;
+
+impl Clone for ConnectorType {
+    fn clone(&self) -> Self {
+        (**self).clone_box()
+    }
+}
 
 /// Describes a connector plugin
 pub struct ConnectorDescriptor {
@@ -229,7 +247,7 @@ impl ConnectorInventory {
 /// ```
 #[derive(Clone)]
 pub struct Connector {
-    library: Arc<Library>,
+    _library: Arc<Library>,
     name: String,
     factory: extern "C" fn(args: &ConnectorArgs) -> Result<ConnectorType>,
 }
@@ -268,7 +286,7 @@ impl Connector {
         }
 
         Ok(Self {
-            library: Arc::new(library),
+            _library: Arc::new(library),
             name: desc.name.to_string(),
             factory: desc.factory,
         })
@@ -297,8 +315,7 @@ impl Connector {
         let instance = connector_res.map_err(|_| Error::Connector("Failed to create connector"))?;
 
         Ok(ConnectorInstance {
-            connector: self.clone(),
-            args: args.clone(),
+            _library: self._library.clone(),
             instance,
         })
     }
@@ -308,21 +325,14 @@ impl Connector {
 ///
 /// This structure is returned by `Connector`. It is needed to maintain reference
 /// counts to the loaded plugin library.
+#[derive(Clone)]
 pub struct ConnectorInstance {
-    connector: Connector,
-    args: ConnectorArgs,
+    _library: Arc<Library>,
     instance: ConnectorType,
 }
 
-impl Clone for ConnectorInstance {
-    fn clone(&self) -> Self {
-        // TODO: keep og args
-        unsafe { self.connector.create(&self.args) }.unwrap()
-    }
-}
-
 impl std::ops::Deref for ConnectorInstance {
-    type Target = dyn PhysicalMemory;
+    type Target = dyn CloneablePhysicalMemory;
 
     fn deref(&self) -> &Self::Target {
         &*self.instance

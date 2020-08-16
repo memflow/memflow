@@ -11,12 +11,14 @@ use crate::{Error, Result};
 use {
     memmap::{Mmap, MmapMut, MmapOptions},
     std::fs::File,
+    std::sync::Arc,
 };
 
+#[derive(Clone)]
 pub struct MMAPInfo<'a> {
     mem_map: MemoryMap<&'a [u8]>,
     #[cfg(feature = "filemap")]
-    _buf: Mmap,
+    _buf: Arc<Mmap>,
 }
 
 #[cfg(feature = "filemap")]
@@ -39,18 +41,10 @@ impl<'a> AsRef<MemoryMap<&'a mut [u8]>> for MMAPInfoMut<'a> {
     }
 }
 
+#[derive(Clone)]
 pub struct MappedPhysicalMemory<T, F> {
     info: F,
     marker: std::marker::PhantomData<T>,
-}
-
-impl<T, F: Clone> Clone for MappedPhysicalMemory<T, F> {
-    fn clone(&self) -> Self {
-        Self {
-            info: self.info.clone(),
-            marker: Default::default(),
-        }
-    }
 }
 
 impl MappedPhysicalMemory<&'static mut [u8], MemoryMap<&'static mut [u8]>> {
@@ -167,7 +161,7 @@ impl<'a> ReadMappedFilePhysicalMemory<'a> {
 
         Ok(Self::with_info(MMAPInfo {
             mem_map: new_map,
-            _buf: buf,
+            _buf: Arc::new(buf),
         }))
     }
 }

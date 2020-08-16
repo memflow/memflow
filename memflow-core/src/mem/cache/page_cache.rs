@@ -32,6 +32,7 @@ pub struct PageCache<'a, T> {
     page_refs: Box<[Option<&'a mut [u8]>]>,
     address_once_validated: Box<[Address]>,
     page_size: usize,
+    total_size: usize,
     page_type_mask: PageType,
     pub validator: T,
     cache_ptr: *mut u8,
@@ -74,6 +75,7 @@ impl<'a, T: CacheValidator> PageCache<'a, T> {
             page_refs,
             address_once_validated: vec![Address::INVALID; cache_entries].into_boxed_slice(),
             page_size,
+            total_size: size,
             page_type_mask,
             validator,
             cache_ptr,
@@ -275,6 +277,21 @@ impl<'a, T: CacheValidator> PageCache<'a, T> {
 
             Ok(())
         }
+    }
+}
+
+// TODO: improve clone implementation and copy the underlying cache data
+impl<'a, T> Clone for PageCache<'a, T>
+where
+    T: CacheValidator + Clone,
+{
+    fn clone(&self) -> Self {
+        Self::with_page_size(
+            self.page_size,
+            self.total_size,
+            self.page_type_mask,
+            self.validator.clone(),
+        )
     }
 }
 

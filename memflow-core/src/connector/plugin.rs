@@ -24,7 +24,10 @@ pub trait CloneablePhysicalMemory: PhysicalMemory {
 }
 
 /// Forward implementation of CloneablePhysicalMemory for every Cloneable backend.
-impl<T> CloneablePhysicalMemory for T where T: PhysicalMemory + Clone + 'static {
+impl<T> CloneablePhysicalMemory for T
+where
+    T: PhysicalMemory + Clone + 'static,
+{
     fn clone_box(&self) -> Box<dyn CloneablePhysicalMemory> {
         Box::new(self.clone())
     }

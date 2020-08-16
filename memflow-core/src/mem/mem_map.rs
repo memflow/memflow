@@ -29,19 +29,9 @@ use std::prelude::v1::*;
 ///
 /// let hw_addr = map.map(0x10ff.into(), 8, &mut failed_void);
 /// ```
+#[derive(Clone)]
 pub struct MemoryMap<M> {
     mappings: Vec<MemoryMapping<M>>,
-}
-
-impl<M> Clone for MemoryMap<M>
-where
-    MemoryMapping<M>: Clone,
-{
-    fn clone(&self) -> Self {
-        Self {
-            mappings: self.mappings.clone(),
-        }
-    }
 }
 
 impl<M> std::convert::AsRef<MemoryMap<M>> for MemoryMap<M> {
@@ -50,18 +40,10 @@ impl<M> std::convert::AsRef<MemoryMap<M>> for MemoryMap<M> {
     }
 }
 
+#[derive(Clone)]
 pub struct MemoryMapping<M> {
     base: Address,
     output: std::cell::RefCell<M>, // TODO: why refcell?
-}
-
-impl<M: Clone> Clone for MemoryMapping<M> {
-    fn clone(&self) -> Self {
-        Self {
-            base: self.base,
-            output: self.output.clone(),
-        }
-    }
 }
 
 impl<M: SplitAtIndexNoMutation> Default for MemoryMap<M> {

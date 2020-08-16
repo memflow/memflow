@@ -48,6 +48,20 @@ pub struct CachedMemoryAccess<'a, T, Q> {
     arena: Bump,
 }
 
+impl<'a, T, Q> Clone for CachedMemoryAccess<'a, T, Q>
+where
+    T: Clone,
+    Q: CacheValidator + Clone,
+{
+    fn clone(&self) -> Self {
+        Self {
+            mem: self.mem.clone(),
+            cache: self.cache.clone(),
+            arena: Bump::new(),
+        }
+    }
+}
+
 impl<'a, T: PhysicalMemory, Q: CacheValidator> CachedMemoryAccess<'a, T, Q> {
     /// Constructs a new cache based on the given `PageCache`.
     ///

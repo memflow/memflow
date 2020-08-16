@@ -25,7 +25,7 @@ memflow - machine introspection framework
 
 ## Running Examples
 
-All examples support the memflow plugin inventory system.
+All examples support the memflow connector inventory system.
 
 Run memflow_win32/read_keys example with a procfs connector:
 

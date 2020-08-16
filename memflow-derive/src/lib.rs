@@ -34,11 +34,11 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
     let func_name = &func.sig.ident;
 
     let gen = quote! {
-        #[cfg(feature = "plugin")]
+        #[cfg(feature = "inventory")]
         #[doc(hidden)]
         pub static CONNECTOR_NAME: &str = #connector_name;
 
-        #[cfg(feature = "plugin")]
+        #[cfg(feature = "inventory")]
         #[doc(hidden)]
         #[no_mangle]
         pub static MEMFLOW_CONNECTOR: ::memflow_core::connector::ConnectorDescriptor = ::memflow_core::connector::ConnectorDescriptor {
@@ -47,8 +47,8 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
             factory: connector_factory,
         };
 
-        #[cfg(feature = "plugin")]
-        pub extern "C" fn connector_factory(args: &::memflow_core::connector::ConnectorArgs) -> ::memflow_core::error::Result<::memflow_core::connector::plugin::ConnectorType> {
+        #[cfg(feature = "inventory")]
+        pub extern "C" fn connector_factory(args: &::memflow_core::connector::ConnectorArgs) -> ::memflow_core::error::Result<::memflow_core::connector::inventory::ConnectorType> {
             let connector = #func_name(args)?;
             Ok(Box::new(connector))
         }

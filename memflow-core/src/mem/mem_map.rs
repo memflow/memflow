@@ -181,7 +181,6 @@ impl MemoryMap<(Address, usize)> {
         }
     }
 
-    /*
     /// Transform address mapping into mutable buffer mapping
     ///
     /// It will take the output address-size pair, and create mutable slice references to them.
@@ -190,6 +189,9 @@ impl MemoryMap<(Address, usize)> {
     ///
     /// The address mappings must be valid for the given lifetime `'a`, and should not
     /// be aliased by any other memory references for fully defined behaviour.
+    ///
+    /// However, aliasing *should* be fine for volatile memory cases such as analyzing running VM,
+    /// since there are no safety guarantees anyways.
     pub unsafe fn into_bufmap_mut<'a>(self) -> MemoryMap<&'a mut [u8]> {
         let mut ret_map = MemoryMap::new();
 
@@ -207,47 +209,13 @@ impl MemoryMap<(Address, usize)> {
         ret_map
     }
 
-    /// Transform address mapping into mutable, and cloneable buffer mapping
-    ///
-    /// It will take the output address-size pair, and create mutable, and cloneable
-    /// slice references to them.
-    ///
-    /// # Safety
-    ///
-    /// IMPORTANT!!!
-    ///
-    /// The address mappings must be valid for the given lifetime `'a`, and should not
-    /// be aliased by any other memory references for fully defined behaviour. Because
-    /// the latter point is specifically allowed, the behaviour from this function is
-    /// inherently undefined. Use only for target analyzed memory mappings.
-    pub unsafe fn into_cloneable_bufmap_mut<'a>(self) -> MemoryMap<CloneableSliceMut<'a, u8>> {
-        let mut ret_map = MemoryMap::new();
-
-        self.into_iter()
-            .map(|(base, (real_base, size))| {
-                (
-                    base,
-                    CloneableSliceMut::from_slice_mut(std::slice::from_raw_parts_mut(
-                        real_base.as_u64() as _,
-                        size,
-                    )),
-                )
-            })
-            .for_each(|(base, buf)| {
-                ret_map.push(base, buf);
-            });
-
-        ret_map
-    }
-
     /// Transform address mapping buffer buffer mapping
     ///
     /// It will take the output address-size pair, and create slice references to them.
     ///
     /// # Safety
     ///
-    /// The address mappings must be valid for the given lifetime `'a`, and should not
-    /// be aliased by any other memory references for fully defined behaviour.
+    /// The address mappings must be valid for the given lifetime `'a`.
     pub unsafe fn into_bufmap<'a>(self) -> MemoryMap<&'a [u8]> {
         let mut ret_map = MemoryMap::new();
 
@@ -264,7 +232,6 @@ impl MemoryMap<(Address, usize)> {
 
         ret_map
     }
-    */
 }
 
 const MIN_BSEARCH_THRESH: usize = 32;

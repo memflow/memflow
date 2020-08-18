@@ -131,7 +131,7 @@ impl SymbolStore {
     }
 
     fn download_file(&self, url: &str) -> Result<Vec<u8>> {
-        println!("downloading pdb from {}", url);
+        info!("downloading pdb from {}", url);
         let resp = ureq::get(url).call();
         if !resp.ok() {
             return Err(Error::SymbolStore("unable to download pdb"));

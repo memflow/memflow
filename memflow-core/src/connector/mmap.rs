@@ -41,10 +41,18 @@ impl<'a> AsRef<MemoryMap<&'a mut [u8]>> for MMAPInfoMut<'a> {
     }
 }
 
-#[derive(Clone)]
 pub struct MappedPhysicalMemory<T, F> {
     info: F,
     marker: std::marker::PhantomData<T>,
+}
+
+impl<T, F: Clone> Clone for MappedPhysicalMemory<T, F> {
+    fn clone(&self) -> Self {
+        Self {
+            info: self.info.clone(),
+            marker: Default::default(),
+        }
+    }
 }
 
 impl MappedPhysicalMemory<&'static mut [u8], MemoryMap<&'static mut [u8]>> {
@@ -199,6 +207,34 @@ impl<'a> WriteMappedFilePhysicalMemory<'a> {
     }
 }
 
+impl<'a, F: AsRef<MemoryMap<&'a mut [u8]>> + Send> PhysicalMemory
+    for MappedPhysicalMemory<&'a mut [u8], F>
+{
+    fn phys_read_raw_list(&mut self, data: &mut [PhysicalReadData]) -> Result<()> {
+        let mut void = FnExtend::void();
+        for (mapped_buf, buf) in self.info.as_ref().map_iter(
+            data.iter_mut().map(|(addr, buf)| (*addr, &mut **buf)),
+            &mut void,
+        ) {
+            buf.copy_from_slice(mapped_buf.as_ref());
+        }
+        Ok(())
+    }
+
+    fn phys_write_raw_list(&mut self, data: &[PhysicalWriteData]) -> Result<()> {
+        let mut void = FnExtend::void();
+
+        for (mapped_buf, buf) in self.info.as_ref().map_iter(data.iter().copied(), &mut void) {
+            mapped_buf.as_mut().copy_from_slice(buf);
+        }
+
+        for (mapped_buf, buf) in self.info.as_ref().map_iter(data.iter().copied(), &mut void) {
+            mapped_buf.copy_from_slice(buf);
+        }
+
+        Ok(())
+    }
+}
 impl<'a, F: AsRef<MemoryMap<&'a [u8]>> + Send> PhysicalMemory
     for MappedPhysicalMemory<&'a [u8], F>
 {
@@ -214,23 +250,6 @@ impl<'a, F: AsRef<MemoryMap<&'a [u8]>> + Send> PhysicalMemory
     }
 
     fn phys_write_raw_list(&mut self, _data: &[PhysicalWriteData]) -> Result<()> {
-        //let mut void = FnExtend::void();
-
-        /*
-        for (mut mapped_buf, buf) in self.info.as_ref().map_iter(data.iter().copied(), &mut void) {
-            mapped_buf
-                .try_as_mut()
-                .ok_or(Error::Connector("Target writing is not supported"))?
-                .copy_from_slice(buf);
-        }
-        */
-        /*
-        for (mapped_buf, buf) in self.info.as_ref().map_iter(data.iter().copied(), &mut void) {
-            mapped_buf.copy_from_slice(buf);
-        }
-
-        Ok(())
-        */
         Err(Error::Connector("Target mapping is not writeable"))
     }
 }

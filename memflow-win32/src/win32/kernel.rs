@@ -513,6 +513,8 @@ impl<T: PhysicalMemory, V: VirtualTranslate> fmt::Debug for Kernel<T, V> {
 pub struct KernelBuilder<T, TK, VK> {
     connector: T,
 
+    arch: Option<Architecture>,
+
     #[cfg(feature = "symstore")]
     symbol_store: Option<SymbolStore>,
 
@@ -527,6 +529,8 @@ where
     pub fn new(connector: T) -> KernelBuilder<T, T, TranslateArch> {
         KernelBuilder {
             connector,
+
+            arch: None,
 
             #[cfg(feature = "symstore")]
             symbol_store: Some(SymbolStore::default()),
@@ -545,7 +549,11 @@ where
 {
     pub fn build(mut self) -> Result<Kernel<TK, VK>> {
         // find kernel_info
-        let kernel_info = KernelInfo::scanner(&mut self.connector).scan()?;
+        let mut kernel_scanner = KernelInfo::scanner(&mut self.connector);
+        if let Some(arch) = self.arch {
+            kernel_scanner = kernel_scanner.arch(arch);
+        }
+        let kernel_info = kernel_scanner.scan()?;
 
         // acquire offsets from the symbol store
         let offsets = self.build_offsets(&kernel_info)?;
@@ -581,6 +589,11 @@ where
     #[cfg(not(feature = "symstore"))]
     fn build_offsets(&self, kernel_info: &KernelInfo) -> Result<Win32Offsets> {
         Win32Offsets::builder().kernel_info(&kernel_info).build()
+    }
+
+    pub fn arch(mut self, arch: Architecture) -> Self {
+        self.arch = Some(arch);
+        self
     }
 
     /// Configures the symbol store to be used when constructing the Kernel.
@@ -658,6 +671,8 @@ where
         KernelBuilder {
             connector: self.connector,
 
+            arch: self.arch,
+
             symbol_store: self.symbol_store,
 
             build_page_cache: Box::new(|connector, arch| {
@@ -708,6 +723,8 @@ where
         KernelBuilder {
             connector: self.connector,
 
+            arch: self.arch,
+
             symbol_store: self.symbol_store,
 
             build_page_cache: Box::new(func),
@@ -747,6 +764,8 @@ where
     {
         KernelBuilder {
             connector: self.connector,
+
+            arch: self.arch,
 
             symbol_store: self.symbol_store,
 

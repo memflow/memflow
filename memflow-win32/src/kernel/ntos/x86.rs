@@ -4,7 +4,7 @@ use super::pehelper;
 use crate::error::{Error, Result};
 use crate::kernel::StartBlock;
 
-use log::debug;
+use log::{debug, info};
 
 use memflow_core::mem::VirtualMemory;
 use memflow_core::types::{size, Address};
@@ -48,7 +48,7 @@ pub fn find<T: VirtualMemory>(
             let image_base = Address::from(base_addr + addr);
             if let Ok(name) = pehelper::try_get_pe_name(virt_mem, image_base) {
                 if name == "ntoskrnl.exe" {
-                    println!("ntoskrnl found");
+                    info!("ntoskrnl found");
                     // TODO: unify pe name + size
                     if let Ok(size_of_image) = pehelper::try_get_pe_size(virt_mem, image_base) {
                         return Ok((image_base, size_of_image));

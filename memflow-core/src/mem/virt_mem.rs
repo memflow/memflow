@@ -180,18 +180,22 @@ where
 
 // forward impls
 impl<T: VirtualMemory + ?Sized, P: std::ops::DerefMut<Target = T> + Send> VirtualMemory for P {
+    #[inline]
     fn virt_read_raw_list(&mut self, data: &mut [VirtualReadData]) -> PartialResult<()> {
         (**self).virt_read_raw_list(data)
     }
 
+    #[inline]
     fn virt_write_raw_list(&mut self, data: &[VirtualWriteData]) -> PartialResult<()> {
         (**self).virt_write_raw_list(data)
     }
 
+    #[inline]
     fn virt_page_info(&mut self, addr: Address) -> Result<Page> {
         (**self).virt_page_info(addr)
     }
 
+    #[inline]
     fn virt_page_map_range(
         &mut self,
         gap_size: usize,

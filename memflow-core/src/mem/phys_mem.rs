@@ -134,10 +134,12 @@ where
 
 // forward impls
 impl<T: PhysicalMemory + ?Sized, P: std::ops::DerefMut<Target = T> + Send> PhysicalMemory for P {
+    #[inline]
     fn phys_read_raw_list(&mut self, data: &mut [PhysicalReadData]) -> Result<()> {
         (**self).phys_read_raw_list(data)
     }
 
+    #[inline]
     fn phys_write_raw_list(&mut self, data: &[PhysicalWriteData]) -> Result<()> {
         (**self).phys_write_raw_list(data)
     }

@@ -1,3 +1,4 @@
+use crate::architecture::x86::x64;
 use crate::architecture::Architecture;
 use crate::error::{Error, Result};
 use crate::mem::virt_mem::virt_from_phys::VirtualFromPhysical;
@@ -137,12 +138,12 @@ impl OsProcessInfo for DummyProcess {
         self.dtb
     }
 
-    fn sys_arch(&self) -> Architecture {
-        Architecture::X64
+    fn sys_arch(&self) -> &dyn Architecture {
+        x64::ARCH
     }
 
-    fn proc_arch(&self) -> Architecture {
-        Architecture::X64
+    fn proc_arch(&self) -> &dyn Architecture {
+        x64::ARCH
     }
 }
 
@@ -201,7 +202,7 @@ impl DummyMemory {
 
     pub fn new_virt(size: usize, virt_size: usize, buffer: &[u8]) -> (impl VirtualMemory, Address) {
         let (ret, dtb, virt_base) = Self::new_and_dtb(size, virt_size, buffer);
-        let virt = VirtualFromPhysical::new(ret, Architecture::X64, Architecture::X64, dtb);
+        let virt = VirtualFromPhysical::new(ret, x64::ARCH, x64::new_translator(dtb));
         (virt, virt_base)
     }
 

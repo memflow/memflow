@@ -17,12 +17,12 @@ More examples can be found in the documentations for each of the structs in this
 
 Building a simple cache with default settings:
 ```
-use memflow_core::architecture::Architecture;
+use memflow_core::architecture::x86::x64;
 use memflow_core::mem::{PhysicalMemory, CachedMemoryAccess};
 
 fn build<T: PhysicalMemory>(mem: T) {
     let cache = CachedMemoryAccess::builder(mem)
-        .arch(Architecture::X64)
+        .arch(x64::ARCH)
         .build()
         .unwrap();
 }
@@ -85,12 +85,12 @@ impl<'a, T: PhysicalMemory, Q: CacheValidator> CachedMemoryAccess<'a, T, Q> {
     ///
     /// # Examples
     /// ```
-    /// use memflow_core::architecture::Architecture;
+    /// use memflow_core::architecture::x86::x64;
     /// use memflow_core::mem::{PhysicalMemory, CachedMemoryAccess};
     ///
     /// fn build<T: PhysicalMemory>(mem: T) -> T {
     ///     let cache = CachedMemoryAccess::builder(mem)
-    ///         .arch(Architecture::X64)
+    ///         .arch(x64::ARCH)
     ///         .build()
     ///         .unwrap();
     ///
@@ -170,12 +170,12 @@ impl<T: PhysicalMemory> CachedMemoryAccessBuilder<T, TimedCacheValidator> {
     /// # Examples
     /// Moves ownership of a mem object and retrieves it back:
     /// ```
-    /// use memflow_core::architecture::Architecture;
+    /// use memflow_core::architecture::x86::x64;
     /// use memflow_core::mem::{PhysicalMemory, CachedMemoryAccess};
     ///
     /// fn build<T: PhysicalMemory>(mem: T) {
     ///     let cache = CachedMemoryAccess::builder(mem)
-    ///         .arch(Architecture::X64)
+    ///         .arch(x64::ARCH)
     ///         .build()
     ///         .unwrap();
     ///
@@ -185,12 +185,12 @@ impl<T: PhysicalMemory> CachedMemoryAccessBuilder<T, TimedCacheValidator> {
     ///
     /// Borrowing a mem object:
     /// ```
-    /// use memflow_core::architecture::Architecture;
+    /// use memflow_core::architecture::x86::x64;
     /// use memflow_core::mem::{PhysicalMemory, CachedMemoryAccess};
     ///
     /// fn build<T: PhysicalMemory>(mem: &mut T) {
     ///     let cache = CachedMemoryAccess::builder(mem)
-    ///         .arch(Architecture::X64)
+    ///         .arch(x64::ARCH)
     ///         .build()
     ///         .unwrap();
     /// }
@@ -232,12 +232,12 @@ impl<T: PhysicalMemory, Q: CacheValidator> CachedMemoryAccessBuilder<T, Q> {
     /// ```
     /// use std::time::Duration;
     ///
-    /// use memflow_core::architecture::Architecture;
+    /// use memflow_core::architecture::x86::x64;
     /// use memflow_core::mem::{PhysicalMemory, CachedMemoryAccess, TimedCacheValidator};
     ///
     /// fn build<T: PhysicalMemory>(mem: T) {
     ///     let cache = CachedMemoryAccess::builder(mem)
-    ///         .arch(Architecture::X64)
+    ///         .arch(x64::ARCH)
     ///         .validator(TimedCacheValidator::new(Duration::from_millis(2000).into()))
     ///         .build()
     ///         .unwrap();
@@ -265,7 +265,6 @@ impl<T: PhysicalMemory, Q: CacheValidator> CachedMemoryAccessBuilder<T, Q> {
     ///
     /// ```
     /// use memflow_core::types::size;
-    /// use memflow_core::architecture::Architecture;
     /// use memflow_core::mem::{PhysicalMemory, CachedMemoryAccess};
     ///
     /// fn build<T: PhysicalMemory>(mem: T) {
@@ -291,17 +290,17 @@ impl<T: PhysicalMemory, Q: CacheValidator> CachedMemoryAccessBuilder<T, Q> {
     /// # Examples
     ///
     /// ```
-    /// use memflow_core::architecture::Architecture;
+    /// use memflow_core::architecture::x86::x64;
     /// use memflow_core::mem::{PhysicalMemory, CachedMemoryAccess};
     ///
     /// fn build<T: PhysicalMemory>(mem: T) {
     ///     let cache = CachedMemoryAccess::builder(mem)
-    ///         .arch(Architecture::X86)
+    ///         .arch(x64::ARCH)
     ///         .build()
     ///         .unwrap();
     /// }
     /// ```
-    pub fn arch(mut self, arch: Architecture) -> Self {
+    pub fn arch(mut self, arch: &dyn Architecture) -> Self {
         self.page_size = Some(arch.page_size());
         self
     }
@@ -319,12 +318,12 @@ impl<T: PhysicalMemory, Q: CacheValidator> CachedMemoryAccessBuilder<T, Q> {
     ///
     /// ```
     /// use memflow_core::types::size;
-    /// use memflow_core::architecture::Architecture;
+    /// use memflow_core::architecture::x86::x64;
     /// use memflow_core::mem::{PhysicalMemory, CachedMemoryAccess};
     ///
     /// fn build<T: PhysicalMemory>(mem: T) {
     ///     let cache = CachedMemoryAccess::builder(mem)
-    ///         .arch(Architecture::X86)
+    ///         .arch(x64::ARCH)
     ///         .cache_size(size::mb(2))
     ///         .build()
     ///         .unwrap();
@@ -349,12 +348,12 @@ impl<T: PhysicalMemory, Q: CacheValidator> CachedMemoryAccessBuilder<T, Q> {
     ///
     /// ```
     /// use memflow_core::types::PageType;
-    /// use memflow_core::architecture::Architecture;
+    /// use memflow_core::architecture::x86::x32;
     /// use memflow_core::mem::{PhysicalMemory, CachedMemoryAccess};
     ///
     /// fn build<T: PhysicalMemory>(mem: T) {
     ///     let cache = CachedMemoryAccess::builder(mem)
-    ///         .arch(Architecture::X86)
+    ///         .arch(x32::ARCH)
     ///         .page_type_mask(PageType::PAGE_TABLE | PageType::READ_ONLY)
     ///         .build()
     ///         .unwrap();

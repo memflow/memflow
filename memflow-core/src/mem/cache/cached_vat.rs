@@ -1,7 +1,7 @@
 use crate::error::{Error, Result};
 
 use super::tlb_cache::TLBCache;
-use crate::architecture::Architecture;
+use crate::architecture::{AddressTranslator, Architecture};
 use crate::iter::{PageChunks, SplitAtIndex};
 use crate::mem::cache::{CacheValidator, TimedCacheValidator};
 use crate::mem::virt_translate::VirtualTranslate;
@@ -13,14 +13,14 @@ use bumpalo::{collections::Vec as BumpVec, Bump};
 pub struct CachedVirtualTranslate<V, Q> {
     vat: V,
     tlb: TLBCache<Q>,
-    arch: Architecture,
+    arch: &'static dyn Architecture,
     arena: Bump,
     pub hitc: usize,
     pub misc: usize,
 }
 
 impl<V: VirtualTranslate, Q: CacheValidator> CachedVirtualTranslate<V, Q> {
-    pub fn new(vat: V, tlb: TLBCache<Q>, arch: Architecture) -> Self {
+    pub fn new(vat: V, tlb: TLBCache<Q>, arch: &'static dyn Architecture) -> Self {
         Self {
             vat,
             tlb,
@@ -54,16 +54,17 @@ impl<V: VirtualTranslate + Clone, Q: CacheValidator + Clone> Clone
 }
 
 impl<V: VirtualTranslate, Q: CacheValidator> VirtualTranslate for CachedVirtualTranslate<V, Q> {
-    fn virt_to_phys_iter<T, B, VI, VO, FO>(
+    fn virt_to_phys_iter<T, B, D, VI, VO, FO>(
         &mut self,
         phys_mem: &mut T,
-        dtb: Address,
+        translator: &D,
         addrs: VI,
         out: &mut VO,
         out_fail: &mut FO,
     ) where
         T: PhysicalMemory + ?Sized,
         B: SplitAtIndex,
+        D: AddressTranslator,
         VI: Iterator<Item = (Address, B)>,
         VO: Extend<(PhysicalAddress, B)>,
         FO: Extend<(Error, Address, B)>,
@@ -92,12 +93,13 @@ impl<V: VirtualTranslate, Q: CacheValidator> VirtualTranslate for CachedVirtualT
             })
             .flat_map(|(addr, buf)| {
                 buf.page_chunks_by(addr, arch.page_size(), |addr, split, _| {
-                    tlb.try_entry(dtb, addr + split.length(), arch).is_some()
-                        || tlb.try_entry(dtb, addr, arch).is_some()
+                    tlb.try_entry(translator, addr + split.length(), arch)
+                        .is_some()
+                        || tlb.try_entry(translator, addr, arch).is_some()
                 })
             })
             .filter_map(|(addr, buf)| {
-                if let Some(entry) = tlb.try_entry(dtb, addr, arch) {
+                if let Some(entry) = tlb.try_entry(translator, addr, arch) {
                     hitc += 1;
                     debug_assert!(buf.length() <= arch.page_size());
                     match entry {
@@ -115,7 +117,7 @@ impl<V: VirtualTranslate, Q: CacheValidator> VirtualTranslate for CachedVirtualT
         if addrs.peek().is_some() {
             vat.virt_to_phys_iter(
                 phys_mem,
-                dtb,
+                translator,
                 addrs,
                 &mut uncached_out,
                 &mut uncached_out_fail,
@@ -125,16 +127,16 @@ impl<V: VirtualTranslate, Q: CacheValidator> VirtualTranslate for CachedVirtualT
         let mut uncached_iter = uncached_in.into_iter().peekable();
 
         if uncached_iter.peek().is_some() {
-            vat.virt_to_phys_iter(phys_mem, dtb, uncached_iter, out, out_fail);
+            vat.virt_to_phys_iter(phys_mem, translator, uncached_iter, out, out_fail);
         }
 
         out.extend(uncached_out.into_iter().map(|(paddr, (addr, buf))| {
-            tlb.cache_entry(dtb, addr, paddr, arch);
+            tlb.cache_entry(translator, addr, paddr, arch);
             (paddr, buf)
         }));
 
         out_fail.extend(uncached_out_fail.into_iter().map(|(err, vaddr, (_, buf))| {
-            tlb.cache_invalid_if_uncached(dtb, vaddr, buf.length(), arch);
+            tlb.cache_invalid_if_uncached(translator, vaddr, buf.length(), arch);
             (err, vaddr, buf)
         }));
 
@@ -147,7 +149,7 @@ pub struct CachedVirtualTranslateBuilder<V, Q> {
     vat: V,
     validator: Q,
     entries: Option<usize>,
-    arch: Option<Architecture>,
+    arch: Option<&'static dyn Architecture>,
 }
 
 impl<V: VirtualTranslate> CachedVirtualTranslateBuilder<V, TimedCacheValidator> {
@@ -190,7 +192,7 @@ impl<V: VirtualTranslate, Q: CacheValidator> CachedVirtualTranslateBuilder<V, Q>
         self
     }
 
-    pub fn arch(mut self, arch: Architecture) -> Self {
+    pub fn arch(mut self, arch: &'static dyn Architecture) -> Self {
         self.arch = Some(arch);
         self
     }

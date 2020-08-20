@@ -1,56 +1,67 @@
-use crate::architecture::Endianess;
+pub mod x32;
+pub mod x32_pae;
+pub mod x64;
 
-use super::ArchMMUSpec;
+use super::{
+    mmu_spec::{ArchWithMMU, MMUTranslationBase},
+    AddressTranslator, Architecture,
+};
 
-pub const fn bits() -> u8 {
-    32
+use super::{Bump, BumpVec};
+use crate::error::{Error, Result};
+use crate::iter::SplitAtIndex;
+use crate::mem::PhysicalMemory;
+use crate::types::{Address, PhysicalAddress};
+
+#[derive(Clone, Copy)]
+pub struct X86AddressTranslator {
+    spec: &'static ArchWithMMU,
+    dtb: X86PageTableBase,
 }
 
-pub const fn endianess() -> Endianess {
-    Endianess::LittleEndian
-}
-
-pub fn get_mmu_spec() -> ArchMMUSpec {
-    ArchMMUSpec {
-        virtual_address_splits: &[10, 10, 12],
-        valid_final_page_steps: &[1, 2],
-        address_space_bits: 32,
-        addr_size: 4,
-        pte_size: 4,
-        present_bit: 0,
-        writeable_bit: 1,
-        nx_bit: 31, //Actually, NX is unsupported in x86 non-PAE, we have to do something about it
-        large_page_bit: 7,
+impl X86AddressTranslator {
+    pub fn new(spec: &'static ArchWithMMU, dtb: Address) -> Self {
+        Self {
+            spec,
+            dtb: X86PageTableBase(dtb),
+        }
     }
 }
 
-//x64 tests MMU rigorously, here we will only test a few special cases
-#[cfg(test)]
-mod tests {
-    use super::super::mmu_spec::masks::*;
-    use super::get_mmu_spec;
-    use crate::types::{size, Address};
-
-    #[test]
-    fn x86_pte_bitmasks() {
-        let mmu = get_mmu_spec();
-        let mask_addr = Address::invalid();
-        assert_eq!(mmu.pte_addr_mask(mask_addr, 0), make_bit_mask(12, 31));
-        assert_eq!(mmu.pte_addr_mask(mask_addr, 1), make_bit_mask(12, 31));
-        assert_eq!(mmu.pte_addr_mask(mask_addr, 2), make_bit_mask(12, 31));
+impl AddressTranslator for X86AddressTranslator {
+    fn virt_to_phys_iter<
+        T: PhysicalMemory + ?Sized,
+        B: SplitAtIndex,
+        VI: Iterator<Item = (Address, B)>,
+        VO: Extend<(PhysicalAddress, B)>,
+        FO: Extend<(Error, Address, B)>,
+    >(
+        &self,
+        mem: &mut T,
+        addrs: VI,
+        out: &mut VO,
+        out_fail: &mut FO,
+        arena: &Bump,
+    ) {
+        self.spec
+            .virt_to_phys_iter(mem, self.dtb, addrs, out, out_fail, arena)
     }
 
-    #[test]
-    fn x86_pte_leaf_size() {
-        let mmu = get_mmu_spec();
-        assert_eq!(mmu.pt_leaf_size(0), size::kb(4));
-        assert_eq!(mmu.pt_leaf_size(1), size::kb(4));
+    fn translation_table_id(&self, address: Address) -> usize {
+        self.dtb.0.as_u64().overflowing_shr(12).0 as usize
     }
 
-    #[test]
-    fn x86_page_size_level() {
-        let mmu = get_mmu_spec();
-        assert_eq!(mmu.page_size_level(1), size::kb(4));
-        assert_eq!(mmu.page_size_level(2), size::mb(4));
+    fn arch(&self) -> &dyn Architecture {
+        self.spec
+    }
+}
+
+#[repr(transparent)]
+#[derive(Clone, Copy)]
+pub struct X86PageTableBase(Address);
+
+impl MMUTranslationBase for X86PageTableBase {
+    fn get_initial_pt(&self, _: Address) -> Address {
+        self.0
     }
 }

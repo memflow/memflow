@@ -1,11 +1,11 @@
 use std::prelude::v1::*;
 
 use super::{VirtualReadData, VirtualWriteData};
-use crate::architecture::Architecture;
+use crate::architecture::{AddressTranslator, Architecture};
 use crate::error::{Error, PartialError, PartialResult, Result};
 use crate::iter::FnExtend;
 use crate::mem::{
-    virt_translate::{TranslateArch, VirtualTranslate},
+    virt_translate::{DirectTranslate, VirtualTranslate},
     PhysicalMemory, VirtualMemory,
 };
 use crate::process::OsProcessInfo;
@@ -18,18 +18,17 @@ use itertools::Itertools;
 /// from user provided `PhysicalMemory` and `VirtualTranslate` objects.
 ///
 /// This struct implements `VirtualMemory` and allows the user to access the virtual memory of a process.
-pub struct VirtualFromPhysical<T, V> {
+pub struct VirtualFromPhysical<T, V, D> {
     phys_mem: T,
-    sys_arch: Architecture,
     vat: V,
-    proc_arch: Architecture,
-    dtb: Address,
+    proc_arch: &'static dyn Architecture,
+    translator: D,
     arena: Bump,
 }
 
-impl<T: PhysicalMemory> VirtualFromPhysical<T, TranslateArch> {
+impl<T: PhysicalMemory, D: AddressTranslator> VirtualFromPhysical<T, DirectTranslate, D> {
     /// Constructs a `VirtualFromPhysical` object from user supplied architectures and DTB.
-    /// It creates a default `VirtualTranslate` object using the `TranslateArch` struct.
+    /// It creates a default `VirtualTranslate` object using the `DirectTranslate` struct.
     ///
     /// If you want to use a cache for translating virtual to physical memory
     /// consider using the `VirtualFromPhysical::with_vat()` function and supply your own `VirtualTranslate` object.
@@ -54,24 +53,23 @@ impl<T: PhysicalMemory> VirtualFromPhysical<T, TranslateArch> {
     /// }
     /// # use memflow_core::dummy::DummyMemory;
     /// # use memflow_core::types::size;
-    /// # use memflow_core::mem::TranslateArch;
+    /// # use memflow_core::mem::DirectTranslate;
     /// # let (mut mem, dtb, virt_base) = DummyMemory::new_and_dtb(size::mb(4), size::mb(2), &[255, 0, 255, 0, 255, 0, 255, 0]);
-    /// # let mut vat = TranslateArch::new(Architecture::X64);
+    /// # let mut vat = DirectTranslate::new();
     /// # read(&mut mem, &mut vat, dtb, virt_base);
     /// ```
-    pub fn new(phys_mem: T, sys_arch: Architecture, proc_arch: Architecture, dtb: Address) -> Self {
+    pub fn new(phys_mem: T, proc_arch: &'static dyn Architecture, translator: D) -> Self {
         Self {
             phys_mem,
-            sys_arch,
-            vat: TranslateArch::new(sys_arch),
+            vat: DirectTranslate::new(),
             proc_arch,
-            dtb,
+            translator,
             arena: Bump::new(),
         }
     }
 
-    /// This function constructs a `VirtualFromPhysical` instance for a given process.
-    /// It creates a default `VirtualTranslate` object using the `TranslateArch` struct.
+    /*/// This function constructs a `VirtualFromPhysical` instance for a given process.
+    /// It creates a default `VirtualTranslate` object using the `DirectTranslate` struct.
     ///
     /// If you want to use a cache for translating virtual to physical memory
     /// consider using the `VirtualFromPhysical::with_vat()` function and supply your own `VirtualTranslate` object.
@@ -94,25 +92,25 @@ impl<T: PhysicalMemory> VirtualFromPhysical<T, TranslateArch> {
     /// }
     /// # use memflow_core::dummy::DummyMemory;
     /// # use memflow_core::types::size;
-    /// # use memflow_core::mem::TranslateArch;
+    /// # use memflow_core::mem::DirectTranslate;
     /// # let mut mem = DummyMemory::new(size::mb(4));
     /// # let proc = mem.alloc_process(size::mb(2), &[255, 0, 255, 0, 255, 0, 255, 0]);
     /// # let addr = proc.address();
     /// # read(&mut mem, proc, addr);
     /// ```
+    /// TODO: Remove, or fix (Object Safety)
     pub fn from_process_info<U: OsProcessInfo>(phys_mem: T, process_info: U) -> Self {
         Self {
             phys_mem,
-            sys_arch: process_info.sys_arch(),
-            vat: TranslateArch::new(process_info.sys_arch()),
+            vat: DirectTranslate::new(),
             proc_arch: process_info.proc_arch(),
             dtb: process_info.dtb(),
             arena: Bump::new(),
         }
-    }
+    }*/
 }
 
-impl<T: PhysicalMemory, V: VirtualTranslate> VirtualFromPhysical<T, V> {
+impl<T: PhysicalMemory, V: VirtualTranslate, D: AddressTranslator> VirtualFromPhysical<T, V, D> {
     /// This function constructs a `VirtualFromPhysical` instance with a user supplied `VirtualTranslate` object.
     /// It can be used when working with cached virtual to physical translations such as a TLB.
     ///
@@ -136,41 +134,39 @@ impl<T: PhysicalMemory, V: VirtualTranslate> VirtualFromPhysical<T, V> {
     /// }
     /// # use memflow_core::dummy::DummyMemory;
     /// # use memflow_core::types::size;
-    /// # use memflow_core::mem::TranslateArch;
+    /// # use memflow_core::mem::DirectTranslate;
     /// # let (mut mem, dtb, virt_base) = DummyMemory::new_and_dtb(size::mb(4), size::mb(2), &[255, 0, 255, 0, 255, 0, 255, 0]);
-    /// # let mut vat = TranslateArch::new(Architecture::X64);
+    /// # let mut vat = DirectTranslate::new();
     /// # read(&mut mem, &mut vat, dtb, virt_base);
     /// ```
     pub fn with_vat(
         phys_mem: T,
-        sys_arch: Architecture,
-        proc_arch: Architecture,
-        dtb: Address,
+        proc_arch: &'static dyn Architecture,
+        translator: D,
         vat: V,
     ) -> Self {
         Self {
             phys_mem,
-            sys_arch,
             vat,
             proc_arch,
-            dtb,
+            translator,
             arena: Bump::new(),
         }
     }
 
     /// Returns the architecture of the system. The system architecture is used for virtual to physical translations.
-    pub fn sys_arch(&self) -> Architecture {
-        self.sys_arch
+    pub fn sys_arch(&self) -> &dyn Architecture {
+        self.translator.arch()
     }
 
     /// Returns the architecture of the process for this context. The process architecture is mainly used to determine pointer sizes.
-    pub fn proc_arch(&self) -> Architecture {
+    pub fn proc_arch(&self) -> &dyn Architecture {
         self.proc_arch
     }
 
     /// Returns the Directory Table Base of this process.
-    pub fn dtb(&self) -> Address {
-        self.dtb
+    pub fn translator(&self) -> &impl AddressTranslator {
+        &self.translator
     }
 
     /// A wrapper around `virt_read_addr64` and `virt_read_addr32` that will use the pointer size of this context's process.
@@ -188,24 +184,26 @@ impl<T: PhysicalMemory, V: VirtualTranslate> VirtualFromPhysical<T, V> {
     }
 }
 
-impl<T, V> Clone for VirtualFromPhysical<T, V>
+impl<T, V, D> Clone for VirtualFromPhysical<T, V, D>
 where
     T: Clone,
     V: Clone,
+    D: Clone,
 {
     fn clone(&self) -> Self {
         Self {
             phys_mem: self.phys_mem.clone(),
-            sys_arch: self.sys_arch,
             vat: self.vat.clone(),
             proc_arch: self.proc_arch,
-            dtb: self.dtb,
+            translator: self.translator.clone(),
             arena: Bump::new(),
         }
     }
 }
 
-impl<T: PhysicalMemory, V: VirtualTranslate> VirtualMemory for VirtualFromPhysical<T, V> {
+impl<T: PhysicalMemory, V: VirtualTranslate, D: AddressTranslator> VirtualMemory
+    for VirtualFromPhysical<T, V, D>
+{
     fn virt_read_raw_list(&mut self, data: &mut [VirtualReadData]) -> PartialResult<()> {
         self.arena.reset();
         let mut translation = BumpVec::with_capacity_in(data.len(), &self.arena);
@@ -213,7 +211,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> VirtualMemory for VirtualFromPhysic
         let mut partial_read = false;
         self.vat.virt_to_phys_iter(
             &mut self.phys_mem,
-            self.dtb,
+            &self.translator,
             data.iter_mut().map(|(a, b)| (*a, &mut b[..])),
             &mut translation,
             &mut FnExtend::new(|(_, _, out): (_, _, &mut [u8])| {
@@ -239,7 +237,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> VirtualMemory for VirtualFromPhysic
         let mut partial_read = false;
         self.vat.virt_to_phys_iter(
             &mut self.phys_mem,
-            self.dtb,
+            &self.translator,
             data.iter().copied(),
             &mut translation,
             &mut FnExtend::new(|(_, _, _): (_, _, _)| {
@@ -256,7 +254,9 @@ impl<T: PhysicalMemory, V: VirtualTranslate> VirtualMemory for VirtualFromPhysic
     }
 
     fn virt_page_info(&mut self, addr: Address) -> Result<Page> {
-        let paddr = self.vat.virt_to_phys(&mut self.phys_mem, self.dtb, addr)?;
+        let paddr = self
+            .vat
+            .virt_to_phys(&mut self.phys_mem, &self.translator, addr)?;
         Ok(paddr.containing_page())
     }
 
@@ -271,7 +271,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> VirtualMemory for VirtualFromPhysic
 
         self.vat.virt_to_phys_iter(
             &mut self.phys_mem,
-            self.dtb,
+            &self.translator,
             Some((start, (start, end - start))).into_iter(),
             &mut out,
             &mut FnExtend::void(),

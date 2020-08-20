@@ -38,7 +38,7 @@ pub trait OsProcessInfo {
     fn dtb(&self) -> Address;
 
     /// Returns the architecture of the target system.
-    fn sys_arch(&self) -> Architecture;
+    fn sys_arch(&self) -> &dyn Architecture;
 
     /// Returns the architecture of the process.
     ///
@@ -48,7 +48,7 @@ pub trait OsProcessInfo {
     /// to the `sys_arch` in case the process is an emulated 32-bit process.
     ///
     /// On windows this technique is called [`WOW64`](https://docs.microsoft.com/en-us/windows/win32/winprog64/wow64-implementation-details).
-    fn proc_arch(&self) -> Architecture;
+    fn proc_arch(&self) -> &dyn Architecture;
 }
 
 // TODO: Range impl for base to size?

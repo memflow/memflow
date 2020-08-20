@@ -1,29 +1,31 @@
-use super::ArchMMUSpec;
-use crate::architecture::Endianess;
+use super::{
+    super::{AddressTranslator, ArchWithMMU, Architecture, Endianess},
+    X86AddressTranslator,
+};
 
-pub const fn bits() -> u8 {
-    64
+use crate::types::Address;
+
+const ARCH_SPEC: ArchWithMMU = ArchWithMMU {
+    bits: 64,
+    endianess: Endianess::LittleEndian,
+    virtual_address_splits: &[9, 9, 9, 9, 12],
+    valid_final_page_steps: &[2, 3, 4],
+    address_space_bits: 52,
+    addr_size: 8,
+    pte_size: 8,
+    present_bit: 0,
+    writeable_bit: 1,
+    nx_bit: 63,
+    large_page_bit: 7,
+};
+
+pub const ARCH: &dyn Architecture = &ARCH_SPEC;
+
+pub fn new_translator(dtb: Address) -> impl AddressTranslator {
+    X86AddressTranslator::new(&ARCH_SPEC, dtb)
 }
 
-pub const fn endianess() -> Endianess {
-    Endianess::LittleEndian
-}
-
-pub fn get_mmu_spec() -> ArchMMUSpec {
-    ArchMMUSpec {
-        virtual_address_splits: &[9, 9, 9, 9, 12],
-        valid_final_page_steps: &[2, 3, 4],
-        address_space_bits: 52,
-        addr_size: 8,
-        pte_size: 8,
-        present_bit: 0,
-        writeable_bit: 1,
-        nx_bit: 63,
-        large_page_bit: 7,
-    }
-}
-
-#[cfg(test)]
+/*#[cfg(test)]
 mod tests {
     use super::super::mmu_spec::masks::*;
     use super::get_mmu_spec;
@@ -185,4 +187,4 @@ mod tests {
         assert_eq!(mmu.is_final_mapping(pte_address, 3), false);
         assert_eq!(mmu.is_final_mapping(pte_address, 4), true);
     }
-}
+}*/

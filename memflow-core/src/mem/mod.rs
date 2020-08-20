@@ -36,4 +36,4 @@ pub use virt_mem::{VirtualFromPhysical, VirtualMemory};
 #[doc(hidden)]
 pub use virt_mem_batcher::VirtualMemoryBatcher;
 #[doc(hidden)]
-pub use virt_translate::{TranslateArch, VirtualTranslate};
+pub use virt_translate::{DirectTranslate, VirtualTranslate};

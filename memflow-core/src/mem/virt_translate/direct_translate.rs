@@ -1,5 +1,5 @@
 use super::VirtualTranslate;
-use crate::architecture::Architecture;
+use crate::architecture::AddressTranslator;
 use crate::error::Error;
 use crate::iter::SplitAtIndex;
 use crate::mem::PhysicalMemory;
@@ -7,46 +7,44 @@ use crate::types::{Address, PhysicalAddress};
 use bumpalo::Bump;
 
 /*
-The `TranslateArch` struct provides a default implementation for `VirtualTranslate` for physical memory.
+The `DirectTranslate` struct provides a default implementation for `VirtualTranslate` for physical memory.
 */
 #[derive(Debug)]
-pub struct TranslateArch {
-    sys_arch: Architecture,
+pub struct DirectTranslate {
     arena: Bump,
 }
 
-impl TranslateArch {
-    pub fn new(sys_arch: Architecture) -> Self {
+impl DirectTranslate {
+    pub fn new() -> Self {
         Self {
-            sys_arch,
             arena: Bump::with_capacity(0x4000),
         }
     }
 }
 
-impl Clone for TranslateArch {
+impl Clone for DirectTranslate {
     fn clone(&self) -> Self {
-        Self::new(self.sys_arch)
+        Self::new()
     }
 }
 
-impl VirtualTranslate for TranslateArch {
-    fn virt_to_phys_iter<T, B, VI, VO, FO>(
+impl VirtualTranslate for DirectTranslate {
+    fn virt_to_phys_iter<T, B, D, VI, VO, FO>(
         &mut self,
         phys_mem: &mut T,
-        dtb: Address,
+        translator: &D,
         addrs: VI,
         out: &mut VO,
         out_fail: &mut FO,
     ) where
         T: PhysicalMemory + ?Sized,
         B: SplitAtIndex,
+        D: AddressTranslator,
         VI: Iterator<Item = (Address, B)>,
         VO: Extend<(PhysicalAddress, B)>,
         FO: Extend<(Error, Address, B)>,
     {
         self.arena.reset();
-        self.sys_arch
-            .virt_to_phys_iter(phys_mem, dtb, addrs, out, out_fail, &self.arena)
+        translator.virt_to_phys_iter(phys_mem, addrs, out, out_fail, &self.arena)
     }
 }

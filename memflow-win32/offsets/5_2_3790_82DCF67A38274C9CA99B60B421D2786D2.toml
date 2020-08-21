@@ -11,6 +11,7 @@ eproc_pid = 216
 eproc_name = 616
 eproc_peb = 704
 eproc_thread_list = 656
+eproc_section_base = 0x128
 eproc_wow64 = 680
 kthread_teb = 176
 ethread_list_entry = 976

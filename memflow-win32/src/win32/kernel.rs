@@ -190,7 +190,8 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
             pid: 0,
             name: "ntoskrnl.exe".to_string(),
             dtb: self.sysproc_dtb,
-            ethread: Address::NULL, // TODO: see below
+            section_base: Address::NULL, // TODO: see below
+            ethread: Address::NULL,      // TODO: see below
             wow64: Address::NULL,
 
             teb: Address::NULL, // TODO: see below
@@ -257,6 +258,9 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
         // read native_peb (either the process peb or the peb containing the wow64 helpers)
         let native_peb = reader.virt_read_addr(eprocess + self.offsets.eproc_peb())?;
         trace!("native_peb={:x}", native_peb);
+
+        let section_base = reader.virt_read_addr(eprocess + self.offsets.eproc_section_base())?;
+        trace!("section_base={:x}", section_base);
 
         // find first ethread
         let ethread = reader.virt_read_addr(eprocess + self.offsets.eproc_thread_list())?
@@ -336,6 +340,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
             pid,
             name,
             dtb,
+            section_base,
             ethread,
             wow64,
 

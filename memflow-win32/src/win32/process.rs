@@ -22,6 +22,7 @@ pub struct Win32ProcessInfo {
     pub pid: i32,
     pub name: String,
     pub dtb: Address,
+    pub section_base: Address,
     pub ethread: Address,
     pub wow64: Address,
 

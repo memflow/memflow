@@ -19,7 +19,7 @@ const ARCH_SPEC: ArchWithMMU = ArchWithMMU {
     large_page_bit: 7,
 };
 
-pub const ARCH: &dyn Architecture = &ARCH_SPEC;
+pub static ARCH: &dyn Architecture = &ARCH_SPEC;
 
 pub fn new_translator(dtb: Address) -> impl AddressTranslator {
     X86AddressTranslator::new(&ARCH_SPEC, dtb)

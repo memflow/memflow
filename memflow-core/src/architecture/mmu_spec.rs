@@ -32,6 +32,7 @@ use vector_trees::{BVecTreeMap as BTreeMap, Vector};
 /// Our virtual to physical memory ranslation code is the same for both architectures, in fact, it
 /// is also the same for the x86 (non-PAE) architecture that has different PTE and pointer sizes.
 /// All that differentiates the translation process is the data inside this structure.
+#[derive(Debug)]
 pub struct ArchWithMMU {
     /// Defines how many bits does the native word size have
     pub bits: u8,

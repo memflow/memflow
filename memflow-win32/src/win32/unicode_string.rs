@@ -13,7 +13,7 @@ use widestring::U16CString;
 pub trait VirtualReadUnicodeString {
     fn virt_read_unicode_string(
         &mut self,
-        proc_arch: Architecture,
+        proc_arch: &'static dyn Architecture,
         addr: Address,
     ) -> Result<String>;
 }
@@ -22,7 +22,7 @@ pub trait VirtualReadUnicodeString {
 impl<'a, T: VirtualMemory> VirtualReadUnicodeString for T {
     fn virt_read_unicode_string(
         &mut self,
-        proc_arch: Architecture,
+        proc_arch: &'static dyn Architecture,
         addr: Address,
     ) -> Result<String> {
         /*

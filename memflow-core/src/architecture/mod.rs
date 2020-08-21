@@ -87,7 +87,7 @@ pub trait AddressTranslator: Clone + Copy + Send {
     fn arch(&self) -> &dyn Architecture;
 }
 
-pub trait Architecture: Send + Sync {
+pub trait Architecture: Send + Sync + std::fmt::Debug {
     /// Returns the number of bits of a pointers width on a `Architecture`.
     /// Currently this will either return 64 or 32 depending on the pointer width of the target.
     /// This function is handy in cases where you only want to know the pointer width of the target\

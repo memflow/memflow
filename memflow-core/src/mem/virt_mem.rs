@@ -239,7 +239,7 @@ where
 
 impl Clone for Box<dyn CloneableVirtualMemory> {
     fn clone(&self) -> Self {
-        self.clone_box()
+        (**self).clone_box()
     }
 }
 

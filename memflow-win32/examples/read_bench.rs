@@ -15,8 +15,8 @@ use memflow_win32::win32::{Kernel, KernelInfo, Win32ModuleInfo, Win32Process};
 
 use rand::{prng::XorShiftRng as CurRng, Rng, SeedableRng};
 
-fn rwtest(
-    proc: &mut Win32Process<'_>,
+fn rwtest<T: VirtualMemory + ?Sized>(
+    proc: &mut Win32Process<T>,
     module: &dyn OsProcessModuleInfo,
     chunk_sizes: &[usize],
     chunk_counts: &[usize],

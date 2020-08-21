@@ -125,7 +125,7 @@ impl Keyboard {
     /// so any usermode process can be used to read this memory region.
     pub fn state_with_process<T: VirtualMemory>(
         &self,
-        process: &mut Win32Process,
+        process: &mut Win32Process<dyn VirtualMemory>,
     ) -> Result<KeyboardState> {
         self.state(&mut process.virt_mem)
     }

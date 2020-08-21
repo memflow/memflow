@@ -1,6 +1,6 @@
 use std::prelude::v1::*;
 
-use super::{make_virt_mem, Kernel, Win32ModuleInfo};
+use super::{make_virt_mem, make_virt_mem_clone, Kernel, Win32ModuleInfo};
 use crate::error::{Error, Result};
 use crate::win32::VirtualReadUnicodeString;
 
@@ -8,7 +8,9 @@ use std::fmt;
 
 use memflow_core::architecture::x86;
 use memflow_core::architecture::{AddressTranslator, Architecture};
-use memflow_core::mem::{PhysicalMemory, VirtualFromPhysical, VirtualMemory, VirtualTranslate};
+use memflow_core::mem::{
+    CloneableVirtualMemory, PhysicalMemory, VirtualFromPhysical, VirtualMemory, VirtualTranslate,
+};
 use memflow_core::types::Address;
 use memflow_core::{OsProcessInfo, OsProcessModuleInfo};
 use std::ptr;
@@ -84,19 +86,30 @@ impl OsProcessInfo for Win32ProcessInfo {
     }
 }
 
-//#[derive(Clone)]
-pub struct Win32Process<'a> {
-    pub virt_mem: Box<dyn VirtualMemory + 'a>,
+pub struct Win32Process<T: ?Sized> {
+    pub virt_mem: Box<T>,
     pub proc_info: Win32ProcessInfo,
 }
 
-impl<'a> Win32Process<'a> {
-    pub fn with_kernel<T: PhysicalMemory + 'a, V: VirtualTranslate + 'a>(
+impl Clone for Win32Process<dyn CloneableVirtualMemory> {
+    fn clone(&self) -> Self {
+        Self {
+            virt_mem: self.virt_mem.clone_box(),
+            proc_info: self.proc_info.clone(),
+        }
+    }
+}
+
+impl Win32Process<dyn CloneableVirtualMemory> {
+    pub fn with_kernel<
+        T: PhysicalMemory + Clone + 'static,
+        V: VirtualTranslate + Clone + 'static,
+    >(
         kernel: Kernel<T, V>,
         proc_info: Win32ProcessInfo,
     ) -> Self {
         Self {
-            virt_mem: make_virt_mem::<'a, _, _>(
+            virt_mem: make_virt_mem_clone(
                 kernel.phys_mem,
                 kernel.vat,
                 proc_info.proc_arch,
@@ -106,7 +119,9 @@ impl<'a> Win32Process<'a> {
             proc_info,
         }
     }
+}
 
+impl<'a> Win32Process<dyn VirtualMemory + 'a> {
     /// Constructs a new process by borrowing a kernel object.
     ///
     /// Internally this will create a `VirtualFromPhysical` object that also
@@ -131,7 +146,9 @@ impl<'a> Win32Process<'a> {
             proc_info,
         }
     }
+}
 
+impl<T: VirtualMemory + ?Sized> Win32Process<T> {
     pub fn peb_list(&mut self) -> Result<Vec<Address>> {
         let mut list = Vec::new();
 
@@ -212,7 +229,7 @@ impl<'a> Win32Process<'a> {
     }
 }
 
-impl<'a> fmt::Debug for Win32Process<'a> {
+impl<T: ?Sized> fmt::Debug for Win32Process<T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{:?}", self.proc_info)
     }

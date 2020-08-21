@@ -222,6 +222,27 @@ impl<T: VirtualMemory + ?Sized, P: std::ops::DerefMut<Target = T> + Send> Virtua
     }
 }
 
+/// Wrapper trait around virtual memory which implements a boxed clone
+pub trait CloneableVirtualMemory: VirtualMemory {
+    fn clone_box(&self) -> Box<dyn CloneableVirtualMemory>;
+}
+
+/// Forward implementation of CloneableVirtualMemory for every Cloneable vmem object.
+impl<T> CloneableVirtualMemory for T
+where
+    T: VirtualMemory + Clone + 'static,
+{
+    fn clone_box(&self) -> Box<dyn CloneableVirtualMemory> {
+        Box::new(self.clone())
+    }
+}
+
+impl Clone for Box<dyn CloneableVirtualMemory> {
+    fn clone(&self) -> Self {
+        self.clone_box()
+    }
+}
+
 // iterator helpers
 pub type VirtualReadData<'a> = (Address, &'a mut [u8]);
 pub trait VirtualReadIterator<'a>: Iterator<Item = VirtualReadData<'a>> + 'a {}

@@ -5,7 +5,7 @@ use super::{
 
 use crate::types::Address;
 
-const ARCH_SPEC: ArchWithMMU = ArchWithMMU {
+pub(super) const ARCH_SPEC: ArchWithMMU = ArchWithMMU {
     bits: 32,
     endianess: Endianess::LittleEndian,
     virtual_address_splits: &[10, 10, 12],

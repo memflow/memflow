@@ -1,6 +1,6 @@
 use std::prelude::v1::*;
 
-use super::{KernelInfo, Win32Process, Win32ProcessInfo};
+use super::{make_virt_mem, KernelInfo, Win32Process, Win32ProcessInfo};
 use crate::error::{Error, Result};
 use crate::offsets::{self, Win32Offsets};
 use crate::pe::{pe32, pe64, MemoryPeViewContext};
@@ -11,10 +11,10 @@ use crate::offsets::SymbolStore;
 use log::{info, trace};
 use std::fmt;
 
-use memflow_core::architecture::Architecture;
+use memflow_core::architecture::{x86, AddressTranslator, Architecture};
 use memflow_core::mem::{
-    CachedMemoryAccess, CachedVirtualTranslate, PhysicalMemory, TimedCacheValidator, TranslateArch,
-    VirtualFromPhysical, VirtualMemory, VirtualTranslate,
+    CachedMemoryAccess, CachedVirtualTranslate, DirectTranslate, PhysicalMemory,
+    TimedCacheValidator, VirtualFromPhysical, VirtualMemory, VirtualTranslate,
 };
 use memflow_core::process::{OperatingSystem, OsProcessInfo, OsProcessModuleInfo};
 use memflow_core::types::Address;
@@ -48,16 +48,18 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
         // be different to the one used in the actual kernel.
         // In case of a failure this will fall back to the winload dtb.
         let sysproc_dtb = {
-            let mut reader = VirtualFromPhysical::with_vat(
+            let mut reader = make_virt_mem(
                 &mut phys_mem,
+                &mut vat,
                 kernel_info.start_block.arch,
                 kernel_info.start_block.arch,
                 kernel_info.start_block.dtb,
-                &mut vat,
             );
 
-            if let Ok(dtb) = reader.virt_read_addr(kernel_info.eprocess_base + offsets.kproc_dtb())
-            {
+            if let Ok(dtb) = reader.virt_read_addr_arch(
+                kernel_info.start_block.arch,
+                kernel_info.eprocess_base + offsets.kproc_dtb(),
+            ) {
                 dtb
             } else {
                 kernel_info.start_block.dtb
@@ -82,12 +84,12 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
 
     pub fn eprocess_list(&mut self) -> Result<Vec<Address>> {
         // TODO: create a VirtualFromPhysical constructor for kernel_info
-        let mut reader = VirtualFromPhysical::with_vat(
+        let mut reader = make_virt_mem(
             &mut self.phys_mem,
+            &mut self.vat,
             self.kernel_info.start_block.arch,
             self.kernel_info.start_block.arch,
             self.sysproc_dtb,
-            &mut self.vat,
         );
 
         let mut eprocs = Vec::new();
@@ -100,9 +102,13 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
             trace!("eprocess={}", eprocess);
 
             // test flink + blink before adding the process
-            let flink_entry = reader.virt_read_addr(list_entry)?;
+            let flink_entry =
+                reader.virt_read_addr_arch(self.kernel_info.start_block.arch, list_entry)?;
             trace!("flink_entry={}", flink_entry);
-            let blink_entry = reader.virt_read_addr(list_entry + self.offsets.list_blink())?;
+            let blink_entry = reader.virt_read_addr_arch(
+                self.kernel_info.start_block.arch,
+                list_entry + self.offsets.list_blink(),
+            )?;
             trace!("blink_entry={}", blink_entry);
 
             if flink_entry.is_null() || blink_entry.is_null() || flink_entry == list_start {
@@ -122,12 +128,12 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
 
     pub fn ntoskrnl_process_info(&mut self) -> Result<Win32ProcessInfo> {
         // TODO: create a VirtualFromPhysical constructor for kernel_info
-        let mut reader = VirtualFromPhysical::with_vat(
+        let mut reader = make_virt_mem(
             &mut self.phys_mem,
+            &mut self.vat,
             self.kernel_info.start_block.arch,
             self.kernel_info.start_block.arch,
             self.sysproc_dtb,
-            &mut self.vat,
         );
 
         // TODO: cache pe globally
@@ -163,7 +169,8 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
             }
         };
 
-        let peb_module = reader.virt_read_addr(loaded_module_list)?;
+        let peb_module =
+            reader.virt_read_addr_arch(self.kernel_info.start_block.arch, loaded_module_list)?;
 
         // determine the offsets to be used when working with this process
         let (ldr_data_base_offs, ldr_data_size_offs, ldr_data_name_offs) =
@@ -209,12 +216,12 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
 
     pub fn process_info_from_eprocess(&mut self, eprocess: Address) -> Result<Win32ProcessInfo> {
         // TODO: create a VirtualFromPhysical constructor for kernel_info
-        let mut reader = VirtualFromPhysical::with_vat(
+        let mut reader = make_virt_mem(
             &mut self.phys_mem,
+            &mut self.vat,
             self.kernel_info.start_block.arch,
             self.kernel_info.start_block.arch,
             self.sysproc_dtb,
-            &mut self.vat,
         );
 
         let pid: i32 = reader.virt_read(eprocess + self.offsets.eproc_pid())?;
@@ -223,7 +230,10 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
         let name = reader.virt_read_cstr(eprocess + self.offsets.eproc_name(), 16)?;
         trace!("name={}", name);
 
-        let dtb = reader.virt_read_addr(eprocess + self.offsets.kproc_dtb())?;
+        let dtb = reader.virt_read_addr_arch(
+            self.kernel_info.start_block.arch,
+            eprocess + self.offsets.kproc_dtb(),
+        )?;
         trace!("dtb={:x}", dtb);
 
         let wow64 = if self.offsets.eproc_wow64() == 0 {
@@ -234,7 +244,10 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
                 "eproc_wow64={:x}; trying to read wow64 pointer",
                 self.offsets.eproc_wow64()
             );
-            reader.virt_read_addr(eprocess + self.offsets.eproc_wow64())?
+            reader.virt_read_addr_arch(
+                self.kernel_info.start_block.arch,
+                eprocess + self.offsets.eproc_wow64(),
+            )?
         };
         trace!("wow64={:x}", wow64);
 
@@ -244,37 +257,51 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
         let proc_arch = match sys_arch.bits() {
             64 => {
                 if wow64.is_null() {
-                    Architecture::X64
+                    x86::x64::ARCH
                 } else {
-                    Architecture::X86
+                    x86::x64::ARCH
                 }
             }
-            32 => Architecture::X86,
+            32 => x86::x64::ARCH,
             _ => return Err(Error::InvalidArchitecture),
         };
         trace!("proc_arch={:?}", proc_arch);
 
         // read native_peb (either the process peb or the peb containing the wow64 helpers)
-        let native_peb = reader.virt_read_addr(eprocess + self.offsets.eproc_peb())?;
+        let native_peb = reader.virt_read_addr_arch(
+            self.kernel_info.start_block.arch,
+            eprocess + self.offsets.eproc_peb(),
+        )?;
         trace!("native_peb={:x}", native_peb);
 
         // find first ethread
-        let ethread = reader.virt_read_addr(eprocess + self.offsets.eproc_thread_list())?
-            - self.offsets.ethread_list_entry();
+        let ethread = reader.virt_read_addr_arch(
+            self.kernel_info.start_block.arch,
+            eprocess + self.offsets.eproc_thread_list(),
+        )? - self.offsets.ethread_list_entry();
         trace!("ethread={:x}", ethread);
 
         // TODO: does this need to be read with the process ctx?
         let teb = if wow64.is_null() {
-            reader.virt_read_addr(ethread + self.offsets.kthread_teb())?
+            reader.virt_read_addr_arch(
+                self.kernel_info.start_block.arch,
+                ethread + self.offsets.kthread_teb(),
+            )?
         } else {
-            reader.virt_read_addr(ethread + self.offsets.kthread_teb())? + 0x2000
+            reader.virt_read_addr_arch(
+                self.kernel_info.start_block.arch,
+                ethread + self.offsets.kthread_teb(),
+            )? + 0x2000
         };
         trace!("teb={:x}", teb);
 
+        std::mem::drop(reader);
+
         // construct reader with process dtb
         // TODO: can tlb be used here already?
-        let mut proc_reader = VirtualFromPhysical::new(
+        let mut proc_reader = make_virt_mem(
             &mut self.phys_mem,
+            DirectTranslate::new(),
             self.kernel_info.start_block.arch,
             proc_arch,
             dtb,
@@ -283,16 +310,25 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
         // from here on out we are in the process context
         // we will be using the process type architecture now
         let teb_peb = if wow64.is_null() {
-            proc_reader.virt_read_addr(teb + self.offsets.teb_peb())?
+            proc_reader.virt_read_addr_arch(
+                self.kernel_info.start_block.arch,
+                teb + self.offsets.teb_peb(),
+            )?
         } else {
-            proc_reader.virt_read_addr(teb + self.offsets.teb_peb_x86())?
+            proc_reader.virt_read_addr_arch(
+                self.kernel_info.start_block.arch,
+                teb + self.offsets.teb_peb_x86(),
+            )?
         };
         trace!("teb_peb={:x}", teb_peb);
 
         let real_peb = if !teb_peb.is_null() {
             teb_peb
         } else {
-            proc_reader.virt_read_addr(eprocess + self.offsets.eproc_peb())?
+            proc_reader.virt_read_addr_arch(
+                self.kernel_info.start_block.arch,
+                eprocess + self.offsets.eproc_peb(),
+            )?
         };
         trace!("real_peb={:x}", real_peb);
 
@@ -305,11 +341,14 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
         trace!("peb_ldr_offs={:x}", peb_ldr_offs);
         trace!("ldr_list_offs={:x}", ldr_list_offs);
 
-        let peb_ldr =
-            proc_reader.virt_read_addr(real_peb /* TODO: can we have both? */ + peb_ldr_offs)?;
+        let peb_ldr = proc_reader.virt_read_addr_arch(
+            self.kernel_info.start_block.arch,
+            real_peb /* TODO: can we have both? */ + peb_ldr_offs,
+        )?;
         trace!("peb_ldr={:x}", peb_ldr);
 
-        let peb_module = proc_reader.virt_read_addr(peb_ldr + ldr_list_offs)?;
+        let peb_module = proc_reader
+            .virt_read_addr_arch(self.kernel_info.start_block.arch, peb_ldr + ldr_list_offs)?;
         trace!("peb_module={:x}", peb_module);
 
         // determine the offsets to be used when working with this process
@@ -403,9 +442,9 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
     }
 }
 
-impl<T: PhysicalMemory> Kernel<T, TranslateArch> {
-    pub fn builder(connector: T) -> KernelBuilder<T, T, TranslateArch> {
-        KernelBuilder::<T, T, TranslateArch>::new(connector)
+impl<T: PhysicalMemory> Kernel<T, DirectTranslate> {
+    pub fn builder(connector: T) -> KernelBuilder<T, T, DirectTranslate> {
+        KernelBuilder::<T, T, DirectTranslate>::new(connector)
     }
 }
 
@@ -482,7 +521,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> fmt::Debug for Kernel<T, V> {
 ///
 /// Manual initialization of the above examples would look like the following:
 /// ```
-/// use memflow_core::{TranslateArch, PhysicalMemory, CachedMemoryAccess, CachedVirtualTranslate};
+/// use memflow_core::{DirectTranslate, PhysicalMemory, CachedMemoryAccess, CachedVirtualTranslate};
 /// use memflow_win32::{KernelInfo, Win32Offsets, Kernel};
 ///
 /// fn test<T: PhysicalMemory>(mut connector: T) {
@@ -492,7 +531,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> fmt::Debug for Kernel<T, V> {
 ///     let offsets = Win32Offsets::builder().kernel_info(&kernel_info).build().unwrap();
 ///
 ///     // Create a struct for doing virtual to physical memory translations
-///     let vat = TranslateArch::new(kernel_info.start_block.arch);
+///     let vat = DirectTranslate::new(kernel_info.start_block.arch);
 ///
 ///     // Create a Page Cache layer with default values
 ///     let mut connector_cached = CachedMemoryAccess::builder(connector)
@@ -513,20 +552,20 @@ impl<T: PhysicalMemory, V: VirtualTranslate> fmt::Debug for Kernel<T, V> {
 pub struct KernelBuilder<T, TK, VK> {
     connector: T,
 
-    arch: Option<Architecture>,
+    arch: Option<&'static dyn Architecture>,
 
     #[cfg(feature = "symstore")]
     symbol_store: Option<SymbolStore>,
 
-    build_page_cache: Box<dyn FnOnce(T, Architecture) -> TK>,
-    build_vat_cache: Box<dyn FnOnce(TranslateArch, Architecture) -> VK>,
+    build_page_cache: Box<dyn FnOnce(T, &'static dyn Architecture) -> TK>,
+    build_vat_cache: Box<dyn FnOnce(DirectTranslate, &'static dyn Architecture) -> VK>,
 }
 
-impl<T> KernelBuilder<T, T, TranslateArch>
+impl<T> KernelBuilder<T, T, DirectTranslate>
 where
     T: PhysicalMemory,
 {
-    pub fn new(connector: T) -> KernelBuilder<T, T, TranslateArch> {
+    pub fn new(connector: T) -> KernelBuilder<T, T, DirectTranslate> {
         KernelBuilder {
             connector,
 
@@ -559,7 +598,7 @@ where
         let offsets = self.build_offsets(&kernel_info)?;
 
         // create a vat object
-        let vat = TranslateArch::new(kernel_info.start_block.arch);
+        let vat = DirectTranslate::new();
 
         // create caches
         let kernel_connector =
@@ -591,7 +630,7 @@ where
         Win32Offsets::builder().kernel_info(&kernel_info).build()
     }
 
-    pub fn arch(mut self, arch: Architecture) -> Self {
+    pub fn arch(mut self, arch: &'static dyn Architecture) -> Self {
         self.arch = Some(arch);
         self
     }
@@ -666,7 +705,7 @@ where
     ) -> KernelBuilder<
         T,
         CachedMemoryAccess<'a, T, TimedCacheValidator>,
-        CachedVirtualTranslate<TranslateArch, TimedCacheValidator>,
+        CachedVirtualTranslate<DirectTranslate, TimedCacheValidator>,
     > {
         KernelBuilder {
             connector: self.connector,
@@ -713,7 +752,7 @@ where
     ///         .unwrap();
     /// }
     /// ```
-    pub fn build_page_cache<TKN, F: FnOnce(T, Architecture) -> TKN + 'static>(
+    pub fn build_page_cache<TKN, F: FnOnce(T, &'static dyn Architecture) -> TKN + 'static>(
         self,
         func: F,
     ) -> KernelBuilder<T, TKN, VK>
@@ -755,7 +794,10 @@ where
     ///         .unwrap();
     /// }
     /// ```
-    pub fn build_vat_cache<VKN, F: FnOnce(TranslateArch, Architecture) -> VKN + 'static>(
+    pub fn build_vat_cache<
+        VKN,
+        F: FnOnce(DirectTranslate, &'static dyn Architecture) -> VKN + 'static,
+    >(
         self,
         func: F,
     ) -> KernelBuilder<T, TK, VKN>

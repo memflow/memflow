@@ -3,7 +3,7 @@ use crate::kernel::StartBlock;
 
 use std::convert::TryInto;
 
-use memflow_core::architecture::Architecture;
+use memflow_core::architecture::x86::x32_pae;
 use memflow_core::iter::PageChunks;
 use memflow_core::types::Address;
 
@@ -20,10 +20,10 @@ fn check_page(addr: Address, mem: &[u8]) -> bool {
 }
 
 pub fn find(mem: &[u8]) -> Result<StartBlock> {
-    mem.page_chunks(Address::from(0), Architecture::X86Pae.page_size())
+    mem.page_chunks(Address::from(0), x32_pae::ARCH.page_size())
         .find(|(a, c)| check_page(*a, c))
         .map(|(a, _)| StartBlock {
-            arch: Architecture::X86Pae,
+            arch: x32_pae::ARCH,
             kernel_hint: 0.into(),
             dtb: a,
         })

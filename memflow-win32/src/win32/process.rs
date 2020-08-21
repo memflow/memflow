@@ -1,20 +1,22 @@
 use std::prelude::v1::*;
 
-use super::{Kernel, Win32ModuleInfo};
+use super::{make_virt_mem, Kernel, Win32ModuleInfo};
 use crate::error::{Error, Result};
 use crate::win32::VirtualReadUnicodeString;
 
 use std::fmt;
 
-use memflow_core::architecture::Architecture;
+use memflow_core::architecture::x86;
+use memflow_core::architecture::{AddressTranslator, Architecture};
 use memflow_core::mem::{PhysicalMemory, VirtualFromPhysical, VirtualMemory, VirtualTranslate};
 use memflow_core::types::Address;
 use memflow_core::{OsProcessInfo, OsProcessModuleInfo};
+use std::ptr;
 
 use log::trace;
 
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(::serde::Serialize))]
+//#[cfg_attr(feature = "serde", derive(::serde::Serialize))]
 pub struct Win32ProcessInfo {
     pub address: Address,
 
@@ -33,8 +35,8 @@ pub struct Win32ProcessInfo {
     pub peb_module: Address,
 
     // architecture
-    pub sys_arch: Architecture,
-    pub proc_arch: Architecture,
+    pub sys_arch: &'static dyn Architecture,
+    pub proc_arch: &'static dyn Architecture,
 
     // offsets for this process (either x86 or x64 offsets)
     pub ldr_data_base_offs: usize,
@@ -73,47 +75,38 @@ impl OsProcessInfo for Win32ProcessInfo {
         self.dtb
     }
 
-    fn sys_arch(&self) -> Architecture {
+    fn sys_arch(&self) -> &dyn Architecture {
         self.sys_arch
     }
 
-    fn proc_arch(&self) -> Architecture {
+    fn proc_arch(&self) -> &dyn Architecture {
         self.proc_arch
     }
 }
 
-#[derive(Clone)]
-pub struct Win32Process<T: VirtualMemory> {
-    pub virt_mem: T,
+//#[derive(Clone)]
+pub struct Win32Process<'a> {
+    pub virt_mem: Box<dyn VirtualMemory + 'a>,
     pub proc_info: Win32ProcessInfo,
 }
 
-impl<'a, T: PhysicalMemory, V: VirtualTranslate> Win32Process<VirtualFromPhysical<T, V>> {
-    pub fn with_kernel(kernel: Kernel<T, V>, proc_info: Win32ProcessInfo) -> Self {
-        // create virt_mem
-        let virt_mem = VirtualFromPhysical::with_vat(
-            kernel.phys_mem,
-            proc_info.sys_arch,
-            proc_info.proc_arch,
-            proc_info.dtb,
-            kernel.vat,
-        );
-
+impl<'a> Win32Process<'a> {
+    pub fn with_kernel<T: PhysicalMemory + 'a, V: VirtualTranslate + 'a>(
+        kernel: Kernel<T, V>,
+        proc_info: Win32ProcessInfo,
+    ) -> Self {
         Self {
-            virt_mem,
+            virt_mem: make_virt_mem::<'a, _, _>(
+                kernel.phys_mem,
+                kernel.vat,
+                proc_info.proc_arch,
+                proc_info.sys_arch,
+                proc_info.dtb,
+            ),
             proc_info,
         }
     }
 
-    /// Consume the self object and returns the containing memory connection
-    pub fn destroy(self) -> T {
-        self.virt_mem.destroy()
-    }
-}
-
-impl<'a, T: PhysicalMemory, V: VirtualTranslate>
-    Win32Process<VirtualFromPhysical<&'a mut T, &'a mut V>>
-{
     /// Constructs a new process by borrowing a kernel object.
     ///
     /// Internally this will create a `VirtualFromPhysical` object that also
@@ -123,24 +116,22 @@ impl<'a, T: PhysicalMemory, V: VirtualTranslate>
     ///
     /// When u need a cloneable Process u have to use the `::with_kernel` function
     /// which will move the kernel object.
-    pub fn with_kernel_ref(kernel: &'a mut Kernel<T, V>, proc_info: Win32ProcessInfo) -> Self {
-        // create virt_mem
-        let virt_mem = VirtualFromPhysical::with_vat(
-            &mut kernel.phys_mem,
-            proc_info.sys_arch,
-            proc_info.proc_arch,
-            proc_info.dtb,
-            &mut kernel.vat,
-        );
-
+    pub fn with_kernel_ref<T: PhysicalMemory + 'a, V: VirtualTranslate + 'a>(
+        kernel: &'a mut Kernel<T, V>,
+        proc_info: Win32ProcessInfo,
+    ) -> Self {
         Self {
-            virt_mem,
+            virt_mem: make_virt_mem::<'a, _, _>(
+                &mut kernel.phys_mem,
+                &mut kernel.vat,
+                proc_info.proc_arch,
+                proc_info.sys_arch,
+                proc_info.dtb,
+            ),
             proc_info,
         }
     }
-}
 
-impl<T: VirtualMemory> Win32Process<T> {
     pub fn peb_list(&mut self) -> Result<Vec<Address>> {
         let mut list = Vec::new();
 
@@ -221,7 +212,7 @@ impl<T: VirtualMemory> Win32Process<T> {
     }
 }
 
-impl<'a, T: VirtualMemory> fmt::Debug for Win32Process<T> {
+impl<'a> fmt::Debug for Win32Process<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{:?}", self.proc_info)
     }

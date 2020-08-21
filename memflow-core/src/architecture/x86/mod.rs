@@ -12,6 +12,7 @@ use crate::error::{Error, Result};
 use crate::iter::SplitAtIndex;
 use crate::mem::PhysicalMemory;
 use crate::types::{Address, PhysicalAddress};
+use std::ptr;
 
 #[derive(Clone, Copy)]
 pub struct X86AddressTranslator {
@@ -64,4 +65,25 @@ impl MMUTranslationBase for X86PageTableBase {
     fn get_initial_pt(&self, _: Address) -> Address {
         self.0
     }
+}
+
+fn underlying_spec(arch: &dyn Architecture) -> Option<&'static ArchWithMMU> {
+    if ptr::eq(arch, x64::ARCH) {
+        Some(&x64::ARCH_SPEC)
+    } else if ptr::eq(arch, x32::ARCH) {
+        Some(&x32::ARCH_SPEC)
+    } else if ptr::eq(arch, x32_pae::ARCH) {
+        Some(&x32_pae::ARCH_SPEC)
+    } else {
+        None
+    }
+}
+
+pub fn new_translator(dtb: Address, arch: &dyn Architecture) -> Result<impl AddressTranslator> {
+    let spec = underlying_spec(arch).ok_or(Error::InvalidArchitecture)?;
+    Ok(X86AddressTranslator::new(spec, dtb))
+}
+
+pub fn is_x86_arch(arch: &dyn Architecture) -> bool {
+    underlying_spec(arch).is_some()
 }

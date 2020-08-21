@@ -15,8 +15,8 @@ use memflow_win32::win32::{Kernel, KernelInfo, Win32ModuleInfo, Win32Process};
 
 use rand::{prng::XorShiftRng as CurRng, Rng, SeedableRng};
 
-fn rwtest<T: VirtualMemory>(
-    proc: &mut Win32Process<T>,
+fn rwtest(
+    proc: &mut Win32Process<'_>,
     module: &dyn OsProcessModuleInfo,
     chunk_sizes: &[usize],
     chunk_counts: &[usize],
@@ -186,7 +186,7 @@ fn main() -> Result<()> {
     // scan for win32 kernel
     let kernel_info = KernelInfo::scanner(&mut connector).scan()?;
 
-    let mut vat = TranslateArch::new(kernel_info.start_block.arch);
+    let mut vat = DirectTranslate::new();
 
     println!("Benchmarking uncached reads:");
     read_bench(&mut connector, &mut vat, kernel_info.clone()).unwrap();

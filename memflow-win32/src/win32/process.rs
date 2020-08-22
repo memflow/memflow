@@ -9,7 +9,8 @@ use std::fmt;
 use memflow_core::architecture::x86;
 use memflow_core::architecture::{AddressTranslator, Architecture};
 use memflow_core::mem::{
-    CloneableVirtualMemory, PhysicalMemory, VirtualFromPhysical, VirtualMemory, VirtualTranslate,
+    CloneableVirtualMemory, PhysicalMemory, VirtualFromPhysical, VirtualMemory, VirtualMemoryBox,
+    VirtualTranslate,
 };
 use memflow_core::types::Address;
 use memflow_core::{OsProcessInfo, OsProcessModuleInfo};
@@ -86,12 +87,13 @@ impl OsProcessInfo for Win32ProcessInfo {
     }
 }
 
-pub struct Win32Process<T: ?Sized> {
-    pub virt_mem: Box<T>,
+pub struct Win32Process<T> {
+    pub virt_mem: T,
     pub proc_info: Win32ProcessInfo,
 }
 
-impl Clone for Win32Process<dyn CloneableVirtualMemory> {
+// TODO: can be removed i think
+impl Clone for Win32Process<VirtualMemoryBox> {
     fn clone(&self) -> Self {
         Self {
             virt_mem: self.virt_mem.clone_box(),
@@ -100,7 +102,8 @@ impl Clone for Win32Process<dyn CloneableVirtualMemory> {
     }
 }
 
-impl Win32Process<dyn CloneableVirtualMemory> {
+// TODO: add non cloneable thing
+impl Win32Process<VirtualMemoryBox> {
     pub fn with_kernel<
         T: PhysicalMemory + Clone + 'static,
         V: VirtualTranslate + Clone + 'static,
@@ -121,7 +124,7 @@ impl Win32Process<dyn CloneableVirtualMemory> {
     }
 }
 
-impl<'a> Win32Process<dyn VirtualMemory + 'a> {
+impl<'a> Win32Process<Box<dyn VirtualMemory + 'a>> {
     /// Constructs a new process by borrowing a kernel object.
     ///
     /// Internally this will create a `VirtualFromPhysical` object that also
@@ -134,8 +137,8 @@ impl<'a> Win32Process<dyn VirtualMemory + 'a> {
     pub fn with_kernel_ref<T: PhysicalMemory + 'a, V: VirtualTranslate + 'a>(
         kernel: &'a mut Kernel<T, V>,
         proc_info: Win32ProcessInfo,
-    ) -> Self {
-        Self {
+    ) -> Win32Process<Box<dyn VirtualMemory + 'a>> {
+        Win32Process {
             virt_mem: make_virt_mem::<'a, _, _>(
                 &mut kernel.phys_mem,
                 &mut kernel.vat,
@@ -148,7 +151,7 @@ impl<'a> Win32Process<dyn VirtualMemory + 'a> {
     }
 }
 
-impl<T: VirtualMemory + ?Sized> Win32Process<T> {
+impl<T: VirtualMemory> Win32Process<T> {
     pub fn peb_list(&mut self) -> Result<Vec<Address>> {
         let mut list = Vec::new();
 
@@ -229,7 +232,7 @@ impl<T: VirtualMemory + ?Sized> Win32Process<T> {
     }
 }
 
-impl<T: ?Sized> fmt::Debug for Win32Process<T> {
+impl<T> fmt::Debug for Win32Process<T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{:?}", self.proc_info)
     }

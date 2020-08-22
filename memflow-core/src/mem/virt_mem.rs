@@ -227,17 +227,21 @@ pub trait CloneableVirtualMemory: VirtualMemory {
     fn clone_box(&self) -> Box<dyn CloneableVirtualMemory>;
 }
 
+/// A sized Box containing a CloneableVirtualMemory
+pub type VirtualMemoryBox = Box<dyn CloneableVirtualMemory>;
+
 /// Forward implementation of CloneableVirtualMemory for every Cloneable vmem object.
 impl<T> CloneableVirtualMemory for T
 where
     T: VirtualMemory + Clone + 'static,
 {
-    fn clone_box(&self) -> Box<dyn CloneableVirtualMemory> {
+    fn clone_box(&self) -> VirtualMemoryBox {
         Box::new(self.clone())
     }
 }
 
-impl Clone for Box<dyn CloneableVirtualMemory> {
+/// Clone forward implementation for a VirtualMemory Box
+impl Clone for VirtualMemoryBox {
     fn clone(&self) -> Self {
         (**self).clone_box()
     }

@@ -23,6 +23,7 @@ pub fn make_virt_mem_clone<
         vat,
     ))
 }
+
 pub fn make_virt_mem<'a, T: PhysicalMemory + 'a, V: VirtualTranslate + 'a>(
     mem: T,
     vat: V,

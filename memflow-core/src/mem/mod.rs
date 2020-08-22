@@ -26,13 +26,13 @@ pub use cache::*; // TODO: specify pub declarations
 pub use mem_map::MemoryMap;
 #[doc(hidden)]
 pub use phys_mem::{
-    PhysicalMemory, PhysicalReadData, PhysicalReadIterator, PhysicalWriteData,
-    PhysicalWriteIterator,
+    CloneablePhysicalMemory, PhysicalMemory, PhysicalMemoryBox, PhysicalReadData,
+    PhysicalReadIterator, PhysicalWriteData, PhysicalWriteIterator,
 };
 #[doc(hidden)]
 pub use phys_mem_batcher::PhysicalMemoryBatcher;
 #[doc(hidden)]
-pub use virt_mem::{CloneableVirtualMemory, VirtualFromPhysical, VirtualMemory};
+pub use virt_mem::{CloneableVirtualMemory, VirtualFromPhysical, VirtualMemory, VirtualMemoryBox};
 #[doc(hidden)]
 pub use virt_mem_batcher::VirtualMemoryBatcher;
 #[doc(hidden)]

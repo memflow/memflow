@@ -2,7 +2,7 @@ use criterion::*;
 
 use memflow_core::mem::{CachedMemoryAccess, PhysicalMemory};
 
-use memflow_core::{size, Address, Architecture, PageType, PhysicalAddress};
+use memflow_core::{size, Address, architecture, PageType, PhysicalAddress};
 
 use rand::prelude::*;
 use rand::{prng::XorShiftRng as CurRng, Rng, SeedableRng};
@@ -87,7 +87,7 @@ fn read_test_with_ctx<T: PhysicalMemory>(
 
     if cache_size > 0 {
         let mut mem = CachedMemoryAccess::builder(&mut mem)
-            .arch(Architecture::X64)
+            .arch(architecture::x86::x64::ARCH)
             .cache_size(size::mb(cache_size as usize))
             .page_type_mask(PageType::PAGE_TABLE | PageType::READ_ONLY | PageType::WRITEABLE)
             .build()

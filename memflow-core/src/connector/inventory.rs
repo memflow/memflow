@@ -330,8 +330,16 @@ impl Connector {
 /// counts to the loaded connector library.
 #[derive(Clone)]
 pub struct ConnectorInstance {
-    _library: Arc<Library>,
     instance: ConnectorType,
+
+    /// Internal library arc.
+    /// 
+    /// This will keep the library loaded in memory as long as the connector instance is alive.
+    /// This has to be the last member of the struct so the library will be unloaded _after_
+    /// the instance is destroyed.
+    /// 
+    /// If the library is unloaded prior to the instance this will lead to a SIGSEGV.
+    _library: Arc<Library>,
 }
 
 impl std::ops::Deref for ConnectorInstance {

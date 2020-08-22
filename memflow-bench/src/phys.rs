@@ -2,7 +2,7 @@ use criterion::*;
 
 use memflow_core::mem::{CachedMemoryAccess, PhysicalMemory};
 
-use memflow_core::{size, Address, architecture, PageType, PhysicalAddress};
+use memflow_core::{architecture, size, Address, PageType, PhysicalAddress};
 
 use rand::prelude::*;
 use rand::{prng::XorShiftRng as CurRng, Rng, SeedableRng};

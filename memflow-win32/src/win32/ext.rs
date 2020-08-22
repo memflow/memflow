@@ -1,7 +1,8 @@
 use memflow_core::architecture::x86;
 use memflow_core::architecture::{AddressTranslator, Architecture};
 use memflow_core::mem::{
-    CloneableVirtualMemory, PhysicalMemory, VirtualFromPhysical, VirtualMemory, VirtualTranslate,
+    CloneableVirtualMemory, PhysicalMemory, VirtualFromPhysical, VirtualMemory, VirtualMemoryBox,
+    VirtualTranslate,
 };
 use memflow_core::types::Address;
 use std::ptr;
@@ -15,7 +16,7 @@ pub fn make_virt_mem_clone<
     proc_arch: &'static dyn Architecture,
     sys_arch: &'static dyn Architecture,
     dtb: Address,
-) -> Box<dyn CloneableVirtualMemory> {
+) -> VirtualMemoryBox {
     Box::new(VirtualFromPhysical::with_vat(
         mem,
         proc_arch,

@@ -3,7 +3,7 @@ Connector inventory interface.
 */
 
 use crate::error::{Error, Result};
-use crate::mem::PhysicalMemory;
+use crate::mem::{CloneablePhysicalMemory, PhysicalMemoryBox};
 
 use super::ConnectorArgs;
 
@@ -18,29 +18,8 @@ use libloading::Library;
 /// Exported memflow connector version
 pub const MEMFLOW_CONNECTOR_VERSION: i32 = 3;
 
-/// Wrapper trait around physical memory which implements a boxed clone
-pub trait CloneablePhysicalMemory: PhysicalMemory {
-    fn clone_box(&self) -> Box<dyn CloneablePhysicalMemory>;
-}
-
-/// Forward implementation of CloneablePhysicalMemory for every Cloneable backend.
-impl<T> CloneablePhysicalMemory for T
-where
-    T: PhysicalMemory + Clone + 'static,
-{
-    fn clone_box(&self) -> Box<dyn CloneablePhysicalMemory> {
-        Box::new(self.clone())
-    }
-}
-
 /// Type of a single connector instance
-pub type ConnectorType = Box<dyn CloneablePhysicalMemory>;
-
-impl Clone for ConnectorType {
-    fn clone(&self) -> Self {
-        (**self).clone_box()
-    }
-}
+pub type ConnectorType = PhysicalMemoryBox;
 
 /// Describes a connector
 pub struct ConnectorDescriptor {

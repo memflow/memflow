@@ -145,6 +145,31 @@ impl<T: PhysicalMemory + ?Sized, P: std::ops::DerefMut<Target = T> + Send> Physi
     }
 }
 
+/// Wrapper trait around physical memory which implements a boxed clone
+pub trait CloneablePhysicalMemory: PhysicalMemory {
+    fn clone_box(&self) -> Box<dyn CloneablePhysicalMemory>;
+}
+
+/// A sized Box containing a CloneablePhysicalMemory
+pub type PhysicalMemoryBox = Box<dyn CloneablePhysicalMemory>;
+
+/// Forward implementation of CloneablePhysicalMemory for every Cloneable backend.
+impl<T> CloneablePhysicalMemory for T
+where
+    T: PhysicalMemory + Clone + 'static,
+{
+    fn clone_box(&self) -> PhysicalMemoryBox {
+        Box::new(self.clone())
+    }
+}
+
+/// Clone forward implementation for a PhysicalMemory Box
+impl Clone for PhysicalMemoryBox {
+    fn clone(&self) -> Self {
+        (**self).clone_box()
+    }
+}
+
 // iterator helpers
 pub type PhysicalReadData<'a> = (PhysicalAddress, &'a mut [u8]);
 pub trait PhysicalReadIterator<'a>: Iterator<Item = PhysicalReadData<'a>> + 'a {}

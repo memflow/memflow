@@ -117,6 +117,10 @@ impl Win32Offsets {
             .find_field("ThreadListHead")
             .ok_or_else(|| Error::PDB("_EPROCESS::ThreadListHead not found"))?
             .offset as _;
+        let eproc_section_base = eproc
+            .find_field("SectionBaseAddress")
+            .ok_or_else(|| Error::PDB("_EPROCESS::SectionBaseAddress not found"))?
+            .offset as _;
 
         // windows 10 uses an uppercase W whereas older windows versions (windows 7) uses a lowercase w
         let eproc_wow64 = match eproc
@@ -161,6 +165,7 @@ impl Win32Offsets {
                 eproc_pid,
                 eproc_name,
                 eproc_peb,
+                eproc_section_base,
                 eproc_thread_list,
                 eproc_wow64,
 
@@ -190,6 +195,9 @@ impl Win32Offsets {
     }
     pub fn eproc_peb(&self) -> usize {
         self.0.eproc_peb as usize
+    }
+    pub fn eproc_section_base(&self) -> usize {
+        self.0.eproc_section_base as usize
     }
     pub fn eproc_thread_list(&self) -> usize {
         self.0.eproc_thread_list as usize

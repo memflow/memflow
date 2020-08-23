@@ -1,6 +1,3 @@
-#[macro_use]
-pub mod masks;
-use masks::*;
 pub(crate) mod translate_data;
 
 use crate::architecture::{AddressTranslator, Architecture, Endianess};
@@ -106,9 +103,9 @@ impl ArchWithMMU {
             } else {
                 self.pte_size.to_le().trailing_zeros() as u8
             };
-        let mask = make_bit_mask(min, max);
+        let mask = Address::bit_mask(min..max);
         vtop_trace!("pte_addr_mask={:b}", mask);
-        pte_addr.as_u64() & mask
+        pte_addr.as_u64() & mask.as_u64()
     }
 
     /// Filter out the input virtual address range to be in bounds
@@ -137,7 +134,7 @@ impl ArchWithMMU {
         let mut tr_data = TranslateData { addr, buf };
 
         let (mut left, reject) =
-            tr_data.split_inclusive_at(make_bit_mask(0, self.addr_size * 8 - 1) as usize);
+            tr_data.split_inclusive_at(Address::bit_mask(0..(self.addr_size * 8 - 1)).as_usize());
 
         if let Some(data) = reject {
             fail_out.extend(Some((Error::VirtualTranslate, data.addr, data.buf)));
@@ -175,14 +172,14 @@ impl ArchWithMMU {
         vtop_trace!("virt_addr_bit_range for step {} = ({}, {})", step, min, max);
 
         let shifted = virt_addr.as_u64() >> min;
-        let mask = make_bit_mask(0, max - min - 1);
+        let mask = Address::bit_mask(0..(max - min - 1));
 
-        (shifted & mask) * self.pte_size as u64
+        (shifted & mask.as_u64()) * self.pte_size as u64
     }
 
     fn virt_addr_to_page_offset(&self, virt_addr: Address, step: usize) -> u64 {
         let max = self.virt_addr_bit_range(step).1;
-        virt_addr.as_u64() & make_bit_mask(0, max - 1)
+        virt_addr.as_u64() & Address::bit_mask(0..(max - 1)).as_u64()
     }
 
     /// Return the number of splits of virtual addresses

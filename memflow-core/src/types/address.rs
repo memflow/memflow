@@ -2,6 +2,7 @@
 Abstraction over a address on the target system.
 */
 
+use core::convert::TryInto;
 use std::default::Default;
 use std::fmt;
 use std::ops;
@@ -75,8 +76,25 @@ impl Address {
     ///
     /// println!("address: {}", Address::null());
     /// ```
+    #[inline]
     pub const fn null() -> Self {
         Address::NULL
+    }
+
+    /// Creates a a bit mask.
+    /// The range end bit is excluded from the mask.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use memflow_core::types::Address;
+    ///
+    /// println!("mask: {}", Address::bit_mask(0..11));
+    /// ```
+    pub fn bit_mask<T: TryInto<u64>>(bits: ops::Range<T>) -> Address {
+        ((0xffff_ffff_ffff_ffff >> (63 - bits.end.try_into().ok().unwrap()))
+            & !(((1 as u64) << bits.start.try_into().ok().unwrap()) - 1))
+            .into()
     }
 
     /// Checks wether the address is zero or not.
@@ -89,6 +107,7 @@ impl Address {
     /// assert_eq!(Address::null().is_null(), true);
     /// assert_eq!(Address::from(0x1000u64).is_null(), false);
     /// ```
+    #[inline]
     pub const fn is_null(self) -> bool {
         self.0 == 0
     }
@@ -102,6 +121,7 @@ impl Address {
     ///
     /// println!("address: {}", Address::invalid());
     /// ```
+    #[inline]
     pub const fn invalid() -> Self {
         Address::INVALID
     }
@@ -116,6 +136,7 @@ impl Address {
     /// assert_eq!(Address::invalid().is_valid(), false);
     /// assert_eq!(Address::from(0x1000u64).is_valid(), true);
     /// ```
+    #[inline]
     pub const fn is_valid(self) -> bool {
         self.0 != !0
     }
@@ -131,6 +152,7 @@ impl Address {
     /// let addr_u32: u32 = addr.as_u32();
     /// assert_eq!(addr_u32, 0x1000);
     /// ```
+    #[inline]
     pub const fn as_u32(self) -> u32 {
         self.0 as u32
     }
@@ -146,6 +168,7 @@ impl Address {
     /// let addr_u64: u64 = addr.as_u64();
     /// assert_eq!(addr_u64, 0x1000);
     /// ```
+    #[inline]
     pub const fn as_u64(self) -> u64 {
         self.0
     }
@@ -161,6 +184,7 @@ impl Address {
     /// let addr_usize: usize = addr.as_usize();
     /// assert_eq!(addr_usize, 0x1000);
     /// ```
+    #[inline]
     pub const fn as_usize(self) -> usize {
         self.0 as usize
     }
@@ -197,6 +221,21 @@ impl Address {
     /// ```
     pub const fn bit_at(self, idx: u8) -> bool {
         (self.0 & ((1 as u64) << idx)) != 0
+    }
+
+    /// Extracts the given range of bits by applying a corresponding bitmask.
+    /// The range end bit is excluded from the mask.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use memflow_core::types::Address;
+    ///
+    /// let addr = Address::from(123456789);
+    /// println!("bits[0..2] = {}", addr.extract_bits(0..2));
+    /// ```
+    pub fn extract_bits<T: TryInto<u64>>(self, bits: ops::Range<T>) -> Address {
+        (self.0 & Address::bit_mask(bits).as_u64()).into()
     }
 }
 
@@ -388,6 +427,16 @@ mod tests {
         assert_eq!(Address::from(13).bit_at(1), false);
         assert_eq!(Address::from(13).bit_at(2), true);
         assert_eq!(Address::from(13).bit_at(3), true);
+    }
+
+    #[test]
+    fn test_bit_mask() {
+        assert_eq!(Address::bit_mask(0..11).as_u64(), 0xfff);
+        assert_eq!(Address::bit_mask(12..20).as_u64(), 0x001f_f000);
+        assert_eq!(Address::bit_mask(21..29).as_u64(), 0x3fe0_0000);
+        assert_eq!(Address::bit_mask(30..38).as_u64(), 0x007f_c000_0000);
+        assert_eq!(Address::bit_mask(39..47).as_u64(), 0xff80_0000_0000);
+        assert_eq!(Address::bit_mask(12..51).as_u64(), 0x000f_ffff_ffff_f000);
     }
 
     #[test]

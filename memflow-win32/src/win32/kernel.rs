@@ -275,7 +275,10 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
         )?;
         trace!("native_peb={:x}", native_peb);
 
-        let section_base = reader.virt_read_addr(eprocess + self.offsets.eproc_section_base())?;
+        let section_base = reader.virt_read_addr_arch(
+            self.kernel_info.start_block.arch,
+            eprocess + self.offsets.eproc_section_base(),
+        )?;
         trace!("section_base={:x}", section_base);
 
         // find first ethread

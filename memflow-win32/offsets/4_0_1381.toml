@@ -11,6 +11,7 @@ eproc_pid = 0x94
 eproc_name = 0x1dc
 eproc_peb = 0x18c
 eproc_thread_list = 0 #5.1+
+eproc_section_base = 0x190
 eproc_wow64 = 0 #5.0+
 
 kthread_teb = 0 #6.2+

@@ -145,6 +145,7 @@ pub struct Win32OffsetTable {
     pub eproc_pid: u32,
     pub eproc_name: u32,
     pub eproc_peb: u32,
+    pub eproc_section_base: u32,
     pub eproc_thread_list: u32,
     pub eproc_wow64: u32,
 

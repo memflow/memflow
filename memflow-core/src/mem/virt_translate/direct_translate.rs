@@ -1,5 +1,5 @@
 use super::VirtualTranslate;
-use crate::architecture::AddressTranslator;
+use crate::architecture::ScopedVirtualTranslate;
 use crate::error::Error;
 use crate::iter::SplitAtIndex;
 use crate::mem::PhysicalMemory;
@@ -39,7 +39,7 @@ impl VirtualTranslate for DirectTranslate {
     ) where
         T: PhysicalMemory + ?Sized,
         B: SplitAtIndex,
-        D: AddressTranslator,
+        D: ScopedVirtualTranslate,
         VI: Iterator<Item = (Address, B)>,
         VO: Extend<(PhysicalAddress, B)>,
         FO: Extend<(Error, Address, B)>,

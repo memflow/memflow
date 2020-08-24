@@ -11,7 +11,7 @@ use crate::offsets::SymbolStore;
 use log::{info, trace};
 use std::fmt;
 
-use memflow_core::architecture::{x86, AddressTranslator, Architecture};
+use memflow_core::architecture::{x86, Architecture, ScopedVirtualTranslate};
 use memflow_core::mem::{
     CachedMemoryAccess, CachedVirtualTranslate, DirectTranslate, PhysicalMemory,
     TimedCacheValidator, VirtualFromPhysical, VirtualMemory, VirtualTranslate,

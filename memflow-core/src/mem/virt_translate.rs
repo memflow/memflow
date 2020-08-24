@@ -12,7 +12,7 @@ use crate::error::{Error, Result};
 use crate::mem::PhysicalMemory;
 use crate::types::{Address, PhysicalAddress};
 
-use crate::architecture::AddressTranslator;
+use crate::architecture::ScopedVirtualTranslate;
 
 pub trait VirtualTranslate
 where
@@ -28,13 +28,13 @@ where
     ) where
         T: PhysicalMemory + ?Sized,
         B: SplitAtIndex,
-        D: AddressTranslator,
+        D: ScopedVirtualTranslate,
         VI: Iterator<Item = (Address, B)>,
         VO: Extend<(PhysicalAddress, B)>,
         FO: Extend<(Error, Address, B)>;
 
     // helpers
-    fn virt_to_phys<T: PhysicalMemory + ?Sized, D: AddressTranslator>(
+    fn virt_to_phys<T: PhysicalMemory + ?Sized, D: ScopedVirtualTranslate>(
         &mut self,
         phys_mem: &mut T,
         translator: &D,
@@ -74,7 +74,7 @@ where
     ) where
         U: PhysicalMemory + ?Sized,
         B: SplitAtIndex,
-        D: AddressTranslator,
+        D: ScopedVirtualTranslate,
         VI: Iterator<Item = (Address, B)>,
         VO: Extend<(PhysicalAddress, B)>,
         FO: Extend<(Error, Address, B)>,

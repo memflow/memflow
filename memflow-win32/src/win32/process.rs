@@ -7,7 +7,7 @@ use crate::win32::VirtualReadUnicodeString;
 use std::fmt;
 
 use memflow_core::architecture::x86;
-use memflow_core::architecture::{AddressTranslator, Architecture};
+use memflow_core::architecture::{Architecture, ScopedVirtualTranslate};
 use memflow_core::mem::{
     CloneableVirtualMemory, PhysicalMemory, VirtualFromPhysical, VirtualMemory, VirtualMemoryBox,
     VirtualTranslate,

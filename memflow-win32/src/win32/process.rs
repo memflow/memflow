@@ -1,6 +1,6 @@
 use std::prelude::v1::*;
 
-use super::{make_virt_mem, make_virt_mem_clone, Kernel, Win32ModuleInfo};
+use super::{Kernel, Win32ModuleInfo};
 use crate::error::{Error, Result};
 use crate::win32::VirtualReadUnicodeString;
 
@@ -8,7 +8,8 @@ use std::fmt;
 
 use memflow_core::architecture::{Architecture, ScopedVirtualTranslate};
 use memflow_core::mem::{
-    CloneableVirtualMemory, PhysicalMemory, VirtualMemory, VirtualMemoryBox, VirtualTranslate,
+    CloneableVirtualMemory, PhysicalMemory, VirtualDMA, VirtualMemory, VirtualMemoryBox,
+    VirtualTranslate,
 };
 use memflow_core::types::{Address, PhysicalAddress};
 use memflow_core::{OsProcessInfo, OsProcessModuleInfo};
@@ -96,38 +97,42 @@ pub struct Win32Process<T> {
 }
 
 // TODO: can be removed i think
-impl Clone for Win32Process<VirtualMemoryBox> {
+impl<T: Clone> Clone for Win32Process<T> {
     fn clone(&self) -> Self {
         Self {
-            virt_mem: self.virt_mem.clone_box(),
+            virt_mem: self.virt_mem.clone(),
             proc_info: self.proc_info.clone(),
         }
     }
 }
 
 // TODO: add non cloneable thing
-impl Win32Process<VirtualMemoryBox> {
-    pub fn with_kernel<
-        T: PhysicalMemory + Clone + 'static,
-        V: VirtualTranslate + Clone + 'static,
-    >(
-        kernel: Kernel<T, V>,
-        proc_info: Win32ProcessInfo,
-    ) -> Self {
+impl<'a, T: PhysicalMemory, V: VirtualTranslate>
+    Win32Process<VirtualDMA<T, V, Win32VirtualTranslate>>
+{
+    pub fn with_kernel(kernel: Kernel<T, V>, proc_info: Win32ProcessInfo) -> Self {
+        let virt_mem = VirtualDMA::with_vat(
+            kernel.phys_mem,
+            proc_info.proc_arch,
+            proc_info.translator(),
+            kernel.vat,
+        );
+
         Self {
-            virt_mem: make_virt_mem_clone(
-                kernel.phys_mem,
-                kernel.vat,
-                proc_info.proc_arch,
-                proc_info.sys_arch,
-                proc_info.dtb,
-            ),
+            virt_mem,
             proc_info,
         }
     }
+
+    /// Consume the self object and returns the containing memory connection
+    pub fn destroy(self) -> T {
+        self.virt_mem.destroy()
+    }
 }
 
-impl<'a> Win32Process<Box<dyn VirtualMemory + 'a>> {
+impl<'a, T: PhysicalMemory, V: VirtualTranslate>
+    Win32Process<VirtualDMA<&'a mut T, &'a mut V, Win32VirtualTranslate>>
+{
     /// Constructs a new process by borrowing a kernel object.
     ///
     /// Internally this will create a `VirtualDMA` object that also
@@ -137,18 +142,16 @@ impl<'a> Win32Process<Box<dyn VirtualMemory + 'a>> {
     ///
     /// When u need a cloneable Process u have to use the `::with_kernel` function
     /// which will move the kernel object.
-    pub fn with_kernel_ref<T: PhysicalMemory + 'a, V: VirtualTranslate + 'a>(
-        kernel: &'a mut Kernel<T, V>,
-        proc_info: Win32ProcessInfo,
-    ) -> Win32Process<Box<dyn VirtualMemory + 'a>> {
-        Win32Process {
-            virt_mem: make_virt_mem::<'a, _, _>(
-                &mut kernel.phys_mem,
-                &mut kernel.vat,
-                proc_info.proc_arch,
-                proc_info.sys_arch,
-                proc_info.dtb,
-            ),
+    pub fn with_kernel_ref(kernel: &'a mut Kernel<T, V>, proc_info: Win32ProcessInfo) -> Self {
+        let virt_mem = VirtualDMA::with_vat(
+            &mut kernel.phys_mem,
+            proc_info.proc_arch,
+            proc_info.translator(),
+            &mut kernel.vat,
+        );
+
+        Self {
+            virt_mem,
             proc_info,
         }
     }

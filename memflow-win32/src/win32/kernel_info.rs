@@ -4,10 +4,11 @@ use crate::kernel::{Win32GUID, Win32Version};
 
 use log::info;
 
-use super::make_virt_mem;
 use memflow_core::architecture::Architecture;
-use memflow_core::mem::{DirectTranslate, PhysicalMemory};
+use memflow_core::mem::{DirectTranslate, PhysicalMemory, VirtualDMA};
 use memflow_core::types::Address;
+
+use super::Win32VirtualTranslate;
 
 #[derive(Debug, Clone)]
 //#[cfg_attr(feature = "serde", derive(::serde::Serialize))]
@@ -71,12 +72,11 @@ impl<T: PhysicalMemory> KernelInfoScanner<T> {
         );
 
         // construct virtual memory object for start_block
-        let mut virt_mem = make_virt_mem(
+        let mut virt_mem = VirtualDMA::with_vat(
             &mut self.mem,
+            start_block.arch,
+            Win32VirtualTranslate::new(start_block.arch, start_block.dtb),
             DirectTranslate::new(),
-            start_block.arch,
-            start_block.arch,
-            start_block.dtb,
         );
 
         // find ntoskrnl.exe base

@@ -173,14 +173,14 @@ impl<T: VirtualMemory> Win32Process<T> {
         Ok(list)
     }
 
-    pub fn module_info_from_peb(&mut self, peb_module: Address) -> Result<Win32ModuleInfo> {
+    pub fn module_info_from_peb(&mut self, peb_entry: Address) -> Result<Win32ModuleInfo> {
         let base = match self.proc_info.proc_arch.bits() {
             64 => self
                 .virt_mem
-                .virt_read_addr64(peb_module + self.proc_info.ldr_data_base_offs)?,
+                .virt_read_addr64(peb_entry + self.proc_info.ldr_data_base_offs)?,
             32 => self
                 .virt_mem
-                .virt_read_addr32(peb_module + self.proc_info.ldr_data_base_offs)?,
+                .virt_read_addr32(peb_entry + self.proc_info.ldr_data_base_offs)?,
             _ => return Err(Error::InvalidArchitecture),
         };
         trace!("base={:x}", base);
@@ -188,11 +188,11 @@ impl<T: VirtualMemory> Win32Process<T> {
         let size = match self.proc_info.proc_arch.bits() {
             64 => self
                 .virt_mem
-                .virt_read_addr64(peb_module + self.proc_info.ldr_data_size_offs)?
+                .virt_read_addr64(peb_entry + self.proc_info.ldr_data_size_offs)?
                 .as_usize(),
             32 => self
                 .virt_mem
-                .virt_read_addr32(peb_module + self.proc_info.ldr_data_size_offs)?
+                .virt_read_addr32(peb_entry + self.proc_info.ldr_data_size_offs)?
                 .as_usize(),
             _ => return Err(Error::InvalidArchitecture),
         };
@@ -200,12 +200,12 @@ impl<T: VirtualMemory> Win32Process<T> {
 
         let name = self.virt_mem.virt_read_unicode_string(
             self.proc_info.proc_arch,
-            peb_module + self.proc_info.ldr_data_name_offs,
+            peb_entry + self.proc_info.ldr_data_name_offs,
         )?;
         trace!("name={}", name);
 
         Ok(Win32ModuleInfo {
-            peb_module,
+            peb_entry,
             parent_eprocess: self.proc_info.address,
             base,
             size,

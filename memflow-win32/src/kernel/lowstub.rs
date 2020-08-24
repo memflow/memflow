@@ -24,6 +24,7 @@ pub struct StartBlock {
 }
 
 // bcdedit /set firstmegabytepolicyuseall
+#[allow(clippy::vtable_address_comparisons)]
 pub fn find<T: PhysicalMemory>(
     mem: &mut T,
     arch: Option<&'static dyn Architecture>,

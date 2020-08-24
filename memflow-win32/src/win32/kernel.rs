@@ -261,7 +261,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
                 if wow64.is_null() {
                     x86::x64::ARCH
                 } else {
-                    x86::x64::ARCH
+                    x86::x32::ARCH
                 }
             }
             32 => x86::x64::ARCH,

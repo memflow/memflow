@@ -9,7 +9,7 @@ use bumpalo::Bump;
 /*
 The `DirectTranslate` struct provides a default implementation for `VirtualTranslate` for physical memory.
 */
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct DirectTranslate {
     arena: Bump,
 }

@@ -19,9 +19,9 @@ use mmu_spec::ArchMMUSpec;
 use crate::error::{Error, Result};
 use crate::iter::{FnExtend, SplitAtIndex};
 use crate::mem::PhysicalMemory;
-use std::convert::TryInto;
 
-use crate::types::{Address, PageType, PhysicalAddress};
+
+use crate::types::{Address, PhysicalAddress};
 pub use bumpalo::{collections::Vec as BumpVec, Bump};
 
 /// Identifies the byte order of a architecture

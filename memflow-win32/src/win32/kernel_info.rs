@@ -6,7 +6,7 @@ use log::info;
 
 use super::make_virt_mem;
 use memflow_core::architecture::Architecture;
-use memflow_core::mem::{DirectTranslate, PhysicalMemory, VirtualFromPhysical};
+use memflow_core::mem::{DirectTranslate, PhysicalMemory};
 use memflow_core::types::Address;
 
 #[derive(Debug, Clone)]

@@ -1,11 +1,11 @@
 use memflow_core::architecture::x86;
-use memflow_core::architecture::{Architecture, ScopedVirtualTranslate};
+use memflow_core::architecture::{Architecture};
 use memflow_core::mem::{
-    CloneableVirtualMemory, PhysicalMemory, VirtualFromPhysical, VirtualMemory, VirtualMemoryBox,
+    PhysicalMemory, VirtualFromPhysical, VirtualMemory, VirtualMemoryBox,
     VirtualTranslate,
 };
 use memflow_core::types::Address;
-use std::ptr;
+
 
 pub fn make_virt_mem_clone<
     T: PhysicalMemory + Clone + 'static,

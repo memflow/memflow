@@ -24,7 +24,7 @@ fn vat_test_with_mem<
     vat: &mut V,
     chunk_count: usize,
     translations: usize,
-    proc: P,
+    _proc: P,
     translator: S,
     module: M,
 ) -> usize {

@@ -1,5 +1,5 @@
 use crate::architecture::x86::x64;
-use crate::architecture::Architecture;
+
 use crate::dummy::DummyMemory;
 use crate::mem::{DirectTranslate, VirtualDMA, VirtualMemory, VirtualTranslate};
 use crate::types::size;
@@ -10,7 +10,7 @@ fn test_vtop() {
     let virt_size = size::mb(8);
     let (dtb, virt_base) = dummy_mem.alloc_dtb(virt_size, &[]);
     let translator = x64::new_translator(dtb);
-    let arch = x64::ARCH;
+    let _arch = x64::ARCH;
     let mut vat = DirectTranslate::new();
 
     for i in (0..virt_size).step_by(128) {

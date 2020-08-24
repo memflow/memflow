@@ -1,7 +1,7 @@
 use crate::architecture::x86::x64;
 use crate::architecture::Architecture;
 use crate::error::{Error, Result};
-use crate::mem::virt_mem::virt_from_phys::VirtualFromPhysical;
+use crate::mem::virt_mem::virt_from_phys::VirtualDMA;
 use crate::mem::{PhysicalMemory, PhysicalReadData, PhysicalWriteData, VirtualMemory};
 use crate::process::{OsProcessInfo, OsProcessModuleInfo};
 use crate::types::{size, Address};
@@ -202,7 +202,7 @@ impl DummyMemory {
 
     pub fn new_virt(size: usize, virt_size: usize, buffer: &[u8]) -> (impl VirtualMemory, Address) {
         let (ret, dtb, virt_base) = Self::new_and_dtb(size, virt_size, buffer);
-        let virt = VirtualFromPhysical::new(ret, x64::ARCH, x64::new_translator(dtb));
+        let virt = VirtualDMA::new(ret, x64::ARCH, x64::new_translator(dtb));
         (virt, virt_base)
     }
 

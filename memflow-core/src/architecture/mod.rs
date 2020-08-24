@@ -20,7 +20,6 @@ use crate::error::{Error, Result};
 use crate::iter::{FnExtend, SplitAtIndex};
 use crate::mem::PhysicalMemory;
 
-
 use crate::types::{Address, PhysicalAddress};
 pub use bumpalo::{collections::Vec as BumpVec, Bump};
 

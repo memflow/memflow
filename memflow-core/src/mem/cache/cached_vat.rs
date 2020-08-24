@@ -1,7 +1,7 @@
 use crate::error::{Error, Result};
 
 use super::tlb_cache::TLBCache;
-use crate::architecture::{AddressTranslator, Architecture};
+use crate::architecture::{Architecture, ScopedVirtualTranslate};
 use crate::iter::{PageChunks, SplitAtIndex};
 use crate::mem::cache::{CacheValidator, TimedCacheValidator};
 use crate::mem::virt_translate::VirtualTranslate;
@@ -64,7 +64,7 @@ impl<V: VirtualTranslate, Q: CacheValidator> VirtualTranslate for CachedVirtualT
     ) where
         T: PhysicalMemory + ?Sized,
         B: SplitAtIndex,
-        D: AddressTranslator,
+        D: ScopedVirtualTranslate,
         VI: Iterator<Item = (Address, B)>,
         VO: Extend<(PhysicalAddress, B)>,
         FO: Extend<(Error, Address, B)>,

@@ -1,7 +1,7 @@
 use std::prelude::v1::*;
 
 use super::{VirtualReadData, VirtualWriteData};
-use crate::architecture::{AddressTranslator, Architecture};
+use crate::architecture::{Architecture, ScopedVirtualTranslate};
 use crate::error::{Error, PartialError, PartialResult, Result};
 use crate::iter::FnExtend;
 use crate::mem::{
@@ -26,7 +26,7 @@ pub struct VirtualFromPhysical<T, V, D> {
     arena: Bump,
 }
 
-impl<T: PhysicalMemory, D: AddressTranslator> VirtualFromPhysical<T, DirectTranslate, D> {
+impl<T: PhysicalMemory, D: ScopedVirtualTranslate> VirtualFromPhysical<T, DirectTranslate, D> {
     /// Constructs a `VirtualFromPhysical` object from user supplied architectures and DTB.
     /// It creates a default `VirtualTranslate` object using the `DirectTranslate` struct.
     ///
@@ -110,7 +110,9 @@ impl<T: PhysicalMemory, D: AddressTranslator> VirtualFromPhysical<T, DirectTrans
     }*/
 }
 
-impl<T: PhysicalMemory, V: VirtualTranslate, D: AddressTranslator> VirtualFromPhysical<T, V, D> {
+impl<T: PhysicalMemory, V: VirtualTranslate, D: ScopedVirtualTranslate>
+    VirtualFromPhysical<T, V, D>
+{
     /// This function constructs a `VirtualFromPhysical` instance with a user supplied `VirtualTranslate` object.
     /// It can be used when working with cached virtual to physical translations such as a TLB.
     ///
@@ -165,7 +167,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate, D: AddressTranslator> VirtualFromPh
     }
 
     /// Returns the Directory Table Base of this process.
-    pub fn translator(&self) -> &impl AddressTranslator {
+    pub fn translator(&self) -> &impl ScopedVirtualTranslate {
         &self.translator
     }
 
@@ -201,7 +203,7 @@ where
     }
 }
 
-impl<T: PhysicalMemory, V: VirtualTranslate, D: AddressTranslator> VirtualMemory
+impl<T: PhysicalMemory, V: VirtualTranslate, D: ScopedVirtualTranslate> VirtualMemory
     for VirtualFromPhysical<T, V, D>
 {
     fn virt_read_raw_list(&mut self, data: &mut [VirtualReadData]) -> PartialResult<()> {

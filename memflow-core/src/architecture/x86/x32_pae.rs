@@ -1,28 +1,30 @@
 use super::{
-    super::{AddressTranslator, ArchWithMMU, Architecture, Endianess},
-    X86AddressTranslator,
+    super::{ArchMMUSpec, Architecture, Endianess, ScopedVirtualTranslate},
+    X86Architecture, X86ScopedVirtualTranslate,
 };
 
 use crate::types::Address;
 
-pub(super) const ARCH_SPEC: ArchWithMMU = ArchWithMMU {
+pub(super) const ARCH_SPEC: X86Architecture = X86Architecture {
     bits: 32,
     endianess: Endianess::LittleEndian,
-    virtual_address_splits: &[2, 9, 9, 12],
-    valid_final_page_steps: &[2, 3],
-    address_space_bits: 36,
-    addr_size: 4,
-    pte_size: 8,
-    present_bit: 0,
-    writeable_bit: 1,
-    nx_bit: 63,
-    large_page_bit: 7,
+    mmu: ArchMMUSpec {
+        virtual_address_splits: &[2, 9, 9, 12],
+        valid_final_page_steps: &[2, 3],
+        address_space_bits: 36,
+        addr_size: 4,
+        pte_size: 8,
+        present_bit: 0,
+        writeable_bit: 1,
+        nx_bit: 63,
+        large_page_bit: 7,
+    },
 };
 
 pub static ARCH: &dyn Architecture = &ARCH_SPEC;
 
-pub fn new_translator(dtb: Address) -> impl AddressTranslator {
-    X86AddressTranslator::new(&ARCH_SPEC, dtb)
+pub fn new_translator(dtb: Address) -> impl ScopedVirtualTranslate {
+    X86ScopedVirtualTranslate::new(&ARCH_SPEC, dtb)
 }
 
 //x64 tests MMU rigorously, here we will only test a few special cases

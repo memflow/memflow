@@ -14,15 +14,12 @@ pub mod x86;
 
 mod mmu_spec;
 
-#[macro_use]
-pub(crate) mod vtop_macros;
-
-use mmu_spec::ArchWithMMU;
+use mmu_spec::ArchMMUSpec;
 
 use crate::error::{Error, Result};
-use crate::iter::{FnExtend, PageChunks, SplitAtIndex};
+use crate::iter::{FnExtend, SplitAtIndex};
 use crate::mem::PhysicalMemory;
-use std::convert::{TryFrom, TryInto};
+use std::convert::TryInto;
 
 use crate::types::{Address, PageType, PhysicalAddress};
 pub use bumpalo::{collections::Vec as BumpVec, Bump};
@@ -42,7 +39,12 @@ pub enum Endianess {
     BigEndian,
 }
 
-pub trait AddressTranslator: Clone + Copy + Send {
+/// Translates virtual memory to physical using internal translation base (usually a process' dtb)
+///
+/// This trait abstracts virtual address translation for a single virtual memory scope.
+/// On x86 architectures, it is a single `Address` - a CR3 register. But other architectures may
+/// use multiple translation bases, or use a completely different translation mechanism (MIPS).
+pub trait ScopedVirtualTranslate: Clone + Copy + Send {
     fn virt_to_phys<T: PhysicalMemory>(
         &self,
         mem: &mut T,
@@ -87,7 +89,7 @@ pub trait AddressTranslator: Clone + Copy + Send {
     fn arch(&self) -> &dyn Architecture;
 }
 
-pub trait Architecture: Send + Sync + std::fmt::Debug {
+pub trait Architecture: Send + Sync {
     /// Returns the number of bits of a pointers width on a `Architecture`.
     /// Currently this will either return 64 or 32 depending on the pointer width of the target.
     /// This function is handy in cases where you only want to know the pointer width of the target\
@@ -147,4 +149,15 @@ pub trait Architecture: Send + Sync + std::fmt::Debug {
     /// assert_eq!(arch.size_addr(), 4);
     /// ```
     fn size_addr(&self) -> usize;
+}
+
+impl<'a> std::fmt::Debug for &'a dyn Architecture {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("&dyn Architecture")
+            .field("bits", &self.bits())
+            .field("endianess", &self.endianess())
+            .field("page_size", &self.page_size())
+            .field("size_addr", &self.size_addr())
+            .finish()
+    }
 }

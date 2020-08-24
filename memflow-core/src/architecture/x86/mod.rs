@@ -3,33 +3,60 @@ pub mod x32_pae;
 pub mod x64;
 
 use super::{
-    mmu_spec::{ArchWithMMU, MMUTranslationBase},
-    AddressTranslator, Architecture,
+    mmu_spec::{ArchMMUSpec, MMUTranslationBase},
+    Architecture, Endianess, ScopedVirtualTranslate,
 };
 
-use super::{Bump, BumpVec};
+use super::Bump;
 use crate::error::{Error, Result};
 use crate::iter::SplitAtIndex;
 use crate::mem::PhysicalMemory;
 use crate::types::{Address, PhysicalAddress};
 use std::ptr;
 
+pub struct X86Architecture {
+    /// Defines how many bits does the native word size have
+    bits: u8,
+    /// Defines the byte order of the architecture
+    endianess: Endianess,
+    /// Defines the underlying MMU used for address translation
+    mmu: ArchMMUSpec,
+}
+
+impl Architecture for X86Architecture {
+    fn bits(&self) -> u8 {
+        self.bits
+    }
+
+    fn endianess(&self) -> Endianess {
+        self.endianess
+    }
+
+    fn page_size(&self) -> usize {
+        self.mmu.page_size_level(1)
+    }
+
+    fn size_addr(&self) -> usize {
+        self.mmu.addr_size.into()
+    }
+}
+
 #[derive(Clone, Copy)]
-pub struct X86AddressTranslator {
-    spec: &'static ArchWithMMU,
+pub struct X86ScopedVirtualTranslate {
+    arch: &'static X86Architecture,
     dtb: X86PageTableBase,
 }
 
-impl X86AddressTranslator {
-    pub fn new(spec: &'static ArchWithMMU, dtb: Address) -> Self {
+impl X86ScopedVirtualTranslate {
+    pub fn new(arch: &'static X86Architecture, dtb: Address) -> Self {
         Self {
-            spec,
+            arch,
             dtb: X86PageTableBase(dtb),
         }
     }
 }
 
-impl AddressTranslator for X86AddressTranslator {
+impl ScopedVirtualTranslate for X86ScopedVirtualTranslate {
     fn virt_to_phys_iter<
         T: PhysicalMemory + ?Sized,
         B: SplitAtIndex,
@@ -44,7 +71,8 @@ impl AddressTranslator for X86AddressTranslator {
         out_fail: &mut FO,
         arena: &Bump,
     ) {
-        self.spec
+        self.arch
+            .mmu
             .virt_to_phys_iter(mem, self.dtb, addrs, out, out_fail, arena)
     }
 
@@ -53,7 +81,7 @@ impl AddressTranslator for X86AddressTranslator {
     }
 
     fn arch(&self) -> &dyn Architecture {
-        self.spec
+        self.arch
     }
 }
 
@@ -67,7 +95,7 @@ impl MMUTranslationBase for X86PageTableBase {
     }
 }
 
-fn underlying_spec(arch: &dyn Architecture) -> Option<&'static ArchWithMMU> {
+fn underlying_arch(arch: &dyn Architecture) -> Option<&'static X86Architecture> {
     if ptr::eq(arch, x64::ARCH) {
         Some(&x64::ARCH_SPEC)
     } else if ptr::eq(arch, x32::ARCH) {
@@ -79,11 +107,14 @@ fn underlying_spec(arch: &dyn Architecture) -> Option<&'static ArchWithMMU> {
     }
 }
 
-pub fn new_translator(dtb: Address, arch: &dyn Architecture) -> Result<impl AddressTranslator> {
-    let spec = underlying_spec(arch).ok_or(Error::InvalidArchitecture)?;
-    Ok(X86AddressTranslator::new(spec, dtb))
+pub fn new_translator(
+    dtb: Address,
+    arch: &dyn Architecture,
+) -> Result<impl ScopedVirtualTranslate> {
+    let arch = underlying_arch(arch).ok_or(Error::InvalidArchitecture)?;
+    Ok(X86ScopedVirtualTranslate::new(arch, dtb))
 }
 
 pub fn is_x86_arch(arch: &dyn Architecture) -> bool {
-    underlying_spec(arch).is_some()
+    underlying_arch(arch).is_some()
 }

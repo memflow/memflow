@@ -1,18 +1,28 @@
 pub(crate) mod translate_data;
 
-use crate::architecture::{AddressTranslator, Architecture, Endianess};
 use crate::error::{Error, Result};
 use crate::iter::{PageChunks, SplitAtIndex};
 use crate::mem::{PhysicalMemory, PhysicalReadData};
 use crate::types::{Address, PageType, PhysicalAddress};
-use crate::vtop_trace;
-use std::convert::{TryFrom, TryInto};
+use std::convert::TryInto;
 use translate_data::{TranslateData, TranslateVec, TranslationChunk};
 
 use bumpalo::{collections::Vec as BumpVec, Bump};
 use vector_trees::{BVecTreeMap as BTreeMap, Vector};
 
-/// The `ArchWithMMU` structure defines how a real memory management unit should behave when
+#[cfg(feature = "trace_mmu")]
+macro_rules! vtop_trace {
+    ( $( $x:expr ),* ) => {
+        log::trace!( $($x, )* );
+    }
+}
+
+#[cfg(not(feature = "trace_mmu"))]
+macro_rules! vtop_trace {
+    ( $( $x:expr ),* ) => {};
+}
+
+/// The `ArchMMUSpec` structure defines how a real memory management unit should behave when
 /// translating virtual memory addresses to physical ones.
 ///
 /// The core logic of virtual to physical memory translation is practically the same, but different
@@ -30,11 +40,7 @@ use vector_trees::{BVecTreeMap as BTreeMap, Vector};
 /// is also the same for the x86 (non-PAE) architecture that has different PTE and pointer sizes.
 /// All that differentiates the translation process is the data inside this structure.
 #[derive(Debug)]
-pub struct ArchWithMMU {
-    /// Defines how many bits does the native word size have
-    pub bits: u8,
-    /// Defines the byte order of the architecture
-    pub endianess: Endianess,
+pub struct ArchMMUSpec {
     /// defines the way virtual addresses gets split (the last element
     /// being the final physical page offset, and thus treated a bit differently)
     pub virtual_address_splits: &'static [u8],
@@ -61,25 +67,7 @@ pub trait MMUTranslationBase {
     fn get_initial_pt(&self, address: Address) -> Address;
 }
 
-impl Architecture for ArchWithMMU {
-    fn bits(&self) -> u8 {
-        self.bits
-    }
-
-    fn endianess(&self) -> Endianess {
-        self.endianess
-    }
-
-    fn page_size(&self) -> usize {
-        self.page_size_level(1)
-    }
-
-    fn size_addr(&self) -> usize {
-        self.addr_size.into()
-    }
-}
-
-impl ArchWithMMU {
+impl ArchMMUSpec {
     /// Mask a page table entry address to retrieve the next page table entry
     ///
     /// This function uses virtual_address_splits to mask the first bits out in `pte_addr`, but

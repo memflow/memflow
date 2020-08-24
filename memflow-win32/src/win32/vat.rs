@@ -21,8 +21,6 @@ impl Win32VirtualTranslate {
         mem: T,
         vat: V,
         proc_arch: &'static dyn Architecture,
-        sys_arch: &'static dyn Architecture,
-        dtb: Address,
     ) -> impl VirtualMemory {
         VirtualDMA::with_vat(mem, proc_arch, self, vat)
     }
@@ -47,7 +45,7 @@ impl ScopedVirtualTranslate for Win32VirtualTranslate {
         translator.virt_to_phys_iter(mem, addrs, out, out_fail, arena)
     }
 
-    fn translation_table_id(&self, address: Address) -> usize {
+    fn translation_table_id(&self, _address: Address) -> usize {
         self.dtb.as_u64().overflowing_shr(12).0 as usize
     }
 

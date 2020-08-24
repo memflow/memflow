@@ -3,7 +3,7 @@ use memflow_bench::*;
 
 use criterion::*;
 
-use memflow_core::architecture::{Architecture, ScopedVirtualTranslate};
+use memflow_core::architecture::ScopedVirtualTranslate;
 use memflow_core::mem::dummy::{DummyMemory as Memory, DummyModule, DummyProcess};
 use memflow_core::mem::DirectTranslate;
 use memflow_core::types::size;

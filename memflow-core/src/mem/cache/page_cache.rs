@@ -311,7 +311,7 @@ impl<'a, T> Drop for PageCache<'a, T> {
 #[cfg(test)]
 mod tests {
     use crate::architecture::x86;
-    use crate::architecture::Architecture;
+
     use crate::dummy::DummyMemory;
     use crate::mem::cache::page_cache::PageCache;
     use crate::mem::cache::timed_validator::TimedCacheValidator;

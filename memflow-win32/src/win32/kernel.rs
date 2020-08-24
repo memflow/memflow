@@ -1,6 +1,6 @@
 use std::prelude::v1::*;
 
-use super::{make_virt_mem, KernelInfo, Win32Process, Win32ProcessInfo};
+use super::{KernelInfo, Win32Process, Win32ProcessInfo};
 use crate::error::{Error, Result};
 use crate::offsets::{self, Win32Offsets};
 use crate::pe::{pe32, pe64, MemoryPeViewContext};
@@ -14,10 +14,12 @@ use std::fmt;
 use memflow_core::architecture::{x86, Architecture};
 use memflow_core::mem::{
     CachedMemoryAccess, CachedVirtualTranslate, DirectTranslate, PhysicalMemory,
-    TimedCacheValidator, VirtualMemory, VirtualTranslate,
+    TimedCacheValidator, VirtualDMA, VirtualMemory, VirtualTranslate,
 };
 use memflow_core::process::{OperatingSystem, OsProcessInfo, OsProcessModuleInfo};
 use memflow_core::types::Address;
+
+use super::Win32VirtualTranslate;
 
 use pelite::{
     self,
@@ -48,12 +50,14 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
         // be different to the one used in the actual kernel.
         // In case of a failure this will fall back to the winload dtb.
         let sysproc_dtb = {
-            let mut reader = make_virt_mem(
+            let mut reader = VirtualDMA::with_vat(
                 &mut phys_mem,
+                kernel_info.start_block.arch,
+                Win32VirtualTranslate::new(
+                    kernel_info.start_block.arch,
+                    kernel_info.start_block.dtb,
+                ),
                 &mut vat,
-                kernel_info.start_block.arch,
-                kernel_info.start_block.arch,
-                kernel_info.start_block.dtb,
             );
 
             if let Ok(dtb) = reader.virt_read_addr_arch(
@@ -84,12 +88,11 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
 
     pub fn eprocess_list(&mut self) -> Result<Vec<Address>> {
         // TODO: create a VirtualDMA constructor for kernel_info
-        let mut reader = make_virt_mem(
+        let mut reader = VirtualDMA::with_vat(
             &mut self.phys_mem,
+            self.kernel_info.start_block.arch,
+            Win32VirtualTranslate::new(self.kernel_info.start_block.arch, self.sysproc_dtb),
             &mut self.vat,
-            self.kernel_info.start_block.arch,
-            self.kernel_info.start_block.arch,
-            self.sysproc_dtb,
         );
 
         let mut eprocs = Vec::new();
@@ -128,12 +131,11 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
 
     pub fn ntoskrnl_process_info(&mut self) -> Result<Win32ProcessInfo> {
         // TODO: create a VirtualDMA constructor for kernel_info
-        let mut reader = make_virt_mem(
+        let mut reader = VirtualDMA::with_vat(
             &mut self.phys_mem,
+            self.kernel_info.start_block.arch,
+            Win32VirtualTranslate::new(self.kernel_info.start_block.arch, self.sysproc_dtb),
             &mut self.vat,
-            self.kernel_info.start_block.arch,
-            self.kernel_info.start_block.arch,
-            self.sysproc_dtb,
         );
 
         // TODO: cache pe globally
@@ -217,12 +219,11 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
 
     pub fn process_info_from_eprocess(&mut self, eprocess: Address) -> Result<Win32ProcessInfo> {
         // TODO: create a VirtualDMA constructor for kernel_info
-        let mut reader = make_virt_mem(
+        let mut reader = VirtualDMA::with_vat(
             &mut self.phys_mem,
+            self.kernel_info.start_block.arch,
+            Win32VirtualTranslate::new(self.kernel_info.start_block.arch, self.sysproc_dtb),
             &mut self.vat,
-            self.kernel_info.start_block.arch,
-            self.kernel_info.start_block.arch,
-            self.sysproc_dtb,
         );
 
         let pid: i32 = reader.virt_read(eprocess + self.offsets.eproc_pid())?;
@@ -306,12 +307,11 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
 
         // construct reader with process dtb
         // TODO: can tlb be used here already?
-        let mut proc_reader = make_virt_mem(
+        let mut proc_reader = VirtualDMA::with_vat(
             &mut self.phys_mem,
-            DirectTranslate::new(),
-            self.kernel_info.start_block.arch,
             proc_arch,
-            dtb,
+            Win32VirtualTranslate::new(self.kernel_info.start_block.arch, dtb),
+            DirectTranslate::new(),
         );
 
         // from here on out we are in the process context

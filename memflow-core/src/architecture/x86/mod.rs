@@ -95,6 +95,9 @@ impl MMUTranslationBase for X86PageTableBase {
     }
 }
 
+// This lint doesn't make any sense in our usecase, since we nevel leak ARCH_SPECs, and ARCH is
+// a static trait object with a consistent address.
+#[allow(clippy::vtable_address_comparisons)]
 fn underlying_arch(arch: &dyn Architecture) -> Option<&'static X86Architecture> {
     if ptr::eq(arch, x64::ARCH) {
         Some(&x64::ARCH_SPEC)

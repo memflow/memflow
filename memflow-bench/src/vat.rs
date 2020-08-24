@@ -15,7 +15,6 @@ use rand::{prng::XorShiftRng as CurRng, Rng, SeedableRng};
 fn vat_test_with_mem<
     T: PhysicalMemory,
     V: VirtualTranslate,
-    P: OsProcessInfo,
     S: ScopedVirtualTranslate,
     M: OsProcessModuleInfo,
 >(
@@ -24,7 +23,6 @@ fn vat_test_with_mem<
     vat: &mut V,
     chunk_count: usize,
     translations: usize,
-    _proc: P,
     translator: S,
     module: M,
 ) -> usize {
@@ -95,7 +93,6 @@ fn vat_test_with_ctx<
                 &mut vat,
                 chunks,
                 translations,
-                prc,
                 translator,
                 tmod,
             );
@@ -107,7 +104,6 @@ fn vat_test_with_ctx<
                 &mut vat,
                 chunks,
                 translations,
-                prc,
                 translator,
                 tmod,
             );
@@ -123,7 +119,6 @@ fn vat_test_with_ctx<
             &mut vat,
             chunks,
             translations,
-            prc,
             translator,
             tmod,
         );
@@ -134,7 +129,6 @@ fn vat_test_with_ctx<
             &mut vat,
             chunks,
             translations,
-            prc,
             translator,
             tmod,
         );

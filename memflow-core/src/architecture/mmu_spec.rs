@@ -92,7 +92,7 @@ impl ArchMMUSpec {
                 self.pte_size.to_le().trailing_zeros() as u8
             };
         let mask = Address::bit_mask(min..max);
-        vtop_trace!("pte_addr_mask={:b}", mask);
+        vtop_trace!("pte_addr_mask={:b}", mask.as_u64());
         pte_addr.as_u64() & mask.as_u64()
     }
 

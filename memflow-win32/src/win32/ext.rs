@@ -5,6 +5,8 @@ use memflow_core::mem::{
 };
 use memflow_core::types::Address;
 
+use super::vat::Win32VirtualTranslate;
+
 pub fn make_virt_mem_clone<
     T: PhysicalMemory + Clone + 'static,
     V: VirtualTranslate + Clone + 'static,
@@ -18,7 +20,7 @@ pub fn make_virt_mem_clone<
     Box::new(VirtualDMA::with_vat(
         mem,
         proc_arch,
-        x86::new_translator(dtb, sys_arch).unwrap(),
+        Win32VirtualTranslate { dtb, sys_arch },
         vat,
     ))
 }
@@ -33,7 +35,7 @@ pub fn make_virt_mem<'a, T: PhysicalMemory + 'a, V: VirtualTranslate + 'a>(
     Box::new(VirtualDMA::with_vat(
         mem,
         proc_arch,
-        x86::new_translator(dtb, sys_arch).unwrap(),
+        Win32VirtualTranslate { dtb, sys_arch },
         vat,
     ))
 }

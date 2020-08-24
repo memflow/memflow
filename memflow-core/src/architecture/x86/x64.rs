@@ -27,20 +27,35 @@ pub fn new_translator(dtb: Address) -> impl ScopedVirtualTranslate {
     X86ScopedVirtualTranslate::new(&ARCH_SPEC, dtb)
 }
 
-/*#[cfg(test)]
+#[cfg(test)]
 mod tests {
-    use super::super::mmu_spec::masks::*;
-    use super::get_mmu_spec;
+    use crate::architecture::mmu_spec::ArchMMUSpec;
     use crate::types::{size, Address, PageType};
+
+    fn get_mmu_spec() -> ArchMMUSpec {
+        super::ARCH_SPEC.mmu
+    }
 
     #[test]
     fn x64_pte_bitmasks() {
         let mmu = get_mmu_spec();
         let mask_addr = Address::invalid();
-        assert_eq!(mmu.pte_addr_mask(mask_addr, 0), make_bit_mask(12, 51));
-        assert_eq!(mmu.pte_addr_mask(mask_addr, 1), make_bit_mask(12, 51));
-        assert_eq!(mmu.pte_addr_mask(mask_addr, 2), make_bit_mask(12, 51));
-        assert_eq!(mmu.pte_addr_mask(mask_addr, 3), make_bit_mask(12, 51));
+        assert_eq!(
+            mmu.pte_addr_mask(mask_addr, 0),
+            Address::bit_mask(12..51).as_u64()
+        );
+        assert_eq!(
+            mmu.pte_addr_mask(mask_addr, 1),
+            Address::bit_mask(12..51).as_u64()
+        );
+        assert_eq!(
+            mmu.pte_addr_mask(mask_addr, 2),
+            Address::bit_mask(12..51).as_u64()
+        );
+        assert_eq!(
+            mmu.pte_addr_mask(mask_addr, 3),
+            Address::bit_mask(12..51).as_u64()
+        );
     }
 
     #[test]
@@ -189,4 +204,4 @@ mod tests {
         assert_eq!(mmu.is_final_mapping(pte_address, 3), false);
         assert_eq!(mmu.is_final_mapping(pte_address, 4), true);
     }
-}*/
+}

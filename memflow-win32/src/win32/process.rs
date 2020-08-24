@@ -6,12 +6,17 @@ use crate::win32::VirtualReadUnicodeString;
 
 use std::fmt;
 
-use memflow_core::architecture::Architecture;
+use memflow_core::architecture::{Architecture, ScopedVirtualTranslate};
 use memflow_core::mem::{
     CloneableVirtualMemory, PhysicalMemory, VirtualMemory, VirtualMemoryBox, VirtualTranslate,
 };
-use memflow_core::types::Address;
+use memflow_core::types::{Address, PhysicalAddress};
 use memflow_core::{OsProcessInfo, OsProcessModuleInfo};
+
+use memflow_core::architecture::x86;
+use memflow_core::iter::SplitAtIndex;
+
+use super::Win32VirtualTranslate;
 
 use log::trace;
 
@@ -57,6 +62,10 @@ impl Win32ProcessInfo {
     pub fn peb_module(&self) -> Address {
         self.peb_module
     }
+
+    pub fn translator(&self) -> Win32VirtualTranslate {
+        Win32VirtualTranslate::new(self.sys_arch, self.dtb)
+    }
 }
 
 impl OsProcessInfo for Win32ProcessInfo {
@@ -72,15 +81,11 @@ impl OsProcessInfo for Win32ProcessInfo {
         self.name.clone()
     }
 
-    fn dtb(&self) -> Address {
-        self.dtb
-    }
-
-    fn sys_arch(&self) -> &dyn Architecture {
+    fn sys_arch(&self) -> &'static dyn Architecture {
         self.sys_arch
     }
 
-    fn proc_arch(&self) -> &dyn Architecture {
+    fn proc_arch(&self) -> &'static dyn Architecture {
         self.proc_arch
     }
 }

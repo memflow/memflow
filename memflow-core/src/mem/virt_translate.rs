@@ -18,6 +18,61 @@ pub trait VirtualTranslate
 where
     Self: Send,
 {
+    /// This function will do a virtual to physical memory translation for the
+    /// `ScopedVirtualTranslate` over multiple elements.
+    ///
+    /// In most cases, you will want to use the `VirtualDMA`, but this trait is provided if needed
+    /// to implement some more advanced filtering.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use memflow_core::Result;
+    /// # use memflow_core::types::{PhysicalAddress, Address};
+    /// # use memflow_core::dummy::DummyMemory;
+    /// use memflow_core::types::size;
+    /// use memflow_core::architecture::x86::x64;
+    /// use memflow_core::iter::FnExtend;
+    /// use memflow_core::mem::{VirtualTranslate, DirectTranslate};
+    ///
+    /// # const VIRT_MEM_SIZE: usize = size::mb(8);
+    /// # const CHUNK_SIZE: usize = 2;
+    /// #
+    /// # let mut mem = DummyMemory::new(size::mb(16));
+    /// # let (dtb, virtual_base) = mem.alloc_dtb(VIRT_MEM_SIZE, &[]);
+    /// # let translator = x64::new_translator(dtb);
+    /// let arch = x64::ARCH;
+    ///
+    /// let mut buffer = vec![0; VIRT_MEM_SIZE * CHUNK_SIZE / arch.page_size()];
+    /// let buffer_length = buffer.len();
+    ///
+    /// // In this example, 8 megabytes starting from `virtual_base` are mapped in.
+    /// // We translate 2 bytes chunks over the page boundaries. These bytes will be
+    /// // split off into 2 separate translated chunks.
+    /// let addresses = buffer
+    ///     .chunks_mut(CHUNK_SIZE)
+    ///     .enumerate()
+    ///     .map(|(i, buf)| (virtual_base + ((i + 1) * size::kb(4) - 1), buf));
+    ///
+    /// let mut translated_data = vec![];
+    /// let mut failed_translations = FnExtend::void();
+    ///
+    /// let mut direct_translate = DirectTranslate::new();
+    ///
+    /// direct_translate.virt_to_phys_iter(
+    ///     &mut mem,
+    ///     &translator,
+    ///     addresses,
+    ///     &mut translated_data,
+    ///     &mut failed_translations,
+    /// );
+    ///
+    ///
+    /// // We tried to translate one byte out of the mapped memory, it had to fail
+    /// assert_eq!(translated_data.len(), buffer_length - 1);
+    ///
+    /// # Ok::<(), memflow_core::Error>(())
+    /// ```
     fn virt_to_phys_iter<T, B, D, VI, VO, FO>(
         &mut self,
         phys_mem: &mut T,

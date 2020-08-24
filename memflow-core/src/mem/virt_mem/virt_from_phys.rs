@@ -8,7 +8,6 @@ use crate::mem::{
     virt_translate::{DirectTranslate, VirtualTranslate},
     PhysicalMemory, VirtualMemory,
 };
-use crate::process::OsProcessInfo;
 use crate::types::{Address, Page};
 
 use bumpalo::{collections::Vec as BumpVec, Bump};

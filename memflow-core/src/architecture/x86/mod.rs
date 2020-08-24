@@ -76,7 +76,7 @@ impl ScopedVirtualTranslate for X86ScopedVirtualTranslate {
             .virt_to_phys_iter(mem, self.dtb, addrs, out, out_fail, arena)
     }
 
-    fn translation_table_id(&self, address: Address) -> usize {
+    fn translation_table_id(&self, _address: Address) -> usize {
         self.dtb.0.as_u64().overflowing_shr(12).0 as usize
     }
 

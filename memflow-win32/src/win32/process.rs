@@ -6,15 +6,15 @@ use crate::win32::VirtualReadUnicodeString;
 
 use std::fmt;
 
-use memflow_core::architecture::x86;
-use memflow_core::architecture::{Architecture, ScopedVirtualTranslate};
+
+use memflow_core::architecture::{Architecture};
 use memflow_core::mem::{
-    CloneableVirtualMemory, PhysicalMemory, VirtualFromPhysical, VirtualMemory, VirtualMemoryBox,
+    CloneableVirtualMemory, PhysicalMemory, VirtualMemory, VirtualMemoryBox,
     VirtualTranslate,
 };
 use memflow_core::types::Address;
 use memflow_core::{OsProcessInfo, OsProcessModuleInfo};
-use std::ptr;
+
 
 use log::trace;
 

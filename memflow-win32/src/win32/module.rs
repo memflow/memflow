@@ -12,7 +12,7 @@ use pelite::{self, PeView};
 
 #[derive(Debug, Clone)]
 pub struct Win32ModuleInfo {
-    pub peb_module: Address,
+    pub peb_entry: Address,
     pub parent_eprocess: Address, // parent "reference"
 
     pub base: Address,
@@ -57,7 +57,7 @@ impl Win32ModuleInfo {
 
 impl OsProcessModuleInfo for Win32ModuleInfo {
     fn address(&self) -> Address {
-        self.peb_module
+        self.peb_entry
     }
 
     fn parent_process(&self) -> Address {

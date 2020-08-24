@@ -6,7 +6,7 @@ use log::{info, Level};
 use memflow_core::connector::*;
 use memflow_core::mem::*;
 
-use memflow_win32::win32::{Kernel, Win32Process};
+use memflow_win32::win32::Kernel;
 
 pub fn parallel_init<T: PhysicalMemory + Clone + 'static>(connector: T) {
     let pool = (0..8).map(|_| connector.clone()).collect::<Vec<_>>();
@@ -66,13 +66,12 @@ pub fn parallel_kernels_cached<T: PhysicalMemory + Clone + 'static>(connector: T
 }
 
 pub fn parallel_processes<T: PhysicalMemory + Clone + 'static>(connector: T) {
-    let mut kernel = Kernel::builder(connector)
+    let kernel = Kernel::builder(connector)
         .build_default_caches()
         .build()
         .unwrap();
 
-    let proc_info = kernel.process_info("wininit.exe").unwrap();
-    let process = Win32Process::with_kernel(kernel, proc_info);
+    let process = kernel.into_process("wininit.exe").unwrap();
 
     let pool = (0..8).map(|_| process.clone()).collect::<Vec<_>>();
 

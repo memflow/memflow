@@ -100,6 +100,7 @@ impl<T: Clone> Clone for Win32Process<T> {
     }
 }
 
+// TODO: replace the following impls with a dedicated builder
 // TODO: add non cloneable thing
 impl<'a, T: PhysicalMemory, V: VirtualTranslate>
     Win32Process<VirtualDMA<T, V, Win32VirtualTranslate>>

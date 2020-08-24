@@ -315,7 +315,7 @@ mod tests {
     use crate::dummy::DummyMemory;
     use crate::mem::cache::page_cache::PageCache;
     use crate::mem::cache::timed_validator::TimedCacheValidator;
-    use crate::mem::{VirtualFromPhysical, VirtualMemory};
+    use crate::mem::{VirtualDMA, VirtualMemory};
     use crate::types::{size, Address, PhysicalAddress};
     use crate::*;
     use coarsetime::Duration;
@@ -374,7 +374,7 @@ mod tests {
 
             let mut buf_nocache = vec![0_u8; test_buf.len()];
             {
-                let mut virt_mem = VirtualFromPhysical::new(&mut dummy_mem, arch, arch, translator);
+                let mut virt_mem = VirtualDMA::new(&mut dummy_mem, arch, arch, translator);
                 virt_mem
                     .virt_read_raw_into(virt_base, buf_nocache.as_mut_slice())
                     .unwrap();
@@ -398,7 +398,7 @@ mod tests {
             let mut mem_cache = CachedMemoryAccess::new(&mut dummy_mem, cache);
             let mut buf_cache = vec![0_u8; buf_nocache.len()];
             {
-                let mut virt_mem = VirtualFromPhysical::new(&mut mem_cache, arch, arch, translator);
+                let mut virt_mem = VirtualDMA::new(&mut mem_cache, arch, arch, translator);
                 virt_mem
                     .virt_read_raw_into(virt_base, buf_cache.as_mut_slice())
                     .unwrap();
@@ -441,7 +441,7 @@ mod tests {
         //Modifying the memory from other channels should leave the cached page unchanged
         let mut cached_buf = vec![0_u8; 64];
         {
-            let mut virt_mem = VirtualFromPhysical::new(&mut mem_cache, arch, arch, translator);
+            let mut virt_mem = VirtualDMA::new(&mut mem_cache, arch, arch, translator);
             virt_mem
                 .virt_read_raw_into(virt_base, cached_buf.as_mut_slice())
                 .unwrap();
@@ -450,12 +450,8 @@ mod tests {
         let mut write_buf = cached_buf.clone();
         write_buf[16..20].copy_from_slice(&[255, 255, 255, 255]);
         {
-            let mut virt_mem = VirtualFromPhysical::new(
-                unsafe { mem_ptr.as_mut().unwrap() },
-                arch,
-                arch,
-                translator,
-            );
+            let mut virt_mem =
+                VirtualDMA::new(unsafe { mem_ptr.as_mut().unwrap() }, arch, arch, translator);
             virt_mem
                 .virt_write_raw(virt_base, write_buf.as_slice())
                 .unwrap();
@@ -463,7 +459,7 @@ mod tests {
 
         let mut check_buf = vec![0_u8; 64];
         {
-            let mut virt_mem = VirtualFromPhysical::new(&mut mem_cache, arch, arch, translator);
+            let mut virt_mem = VirtualDMA::new(&mut mem_cache, arch, arch, translator);
             virt_mem
                 .virt_read_raw_into(virt_base, check_buf.as_mut_slice())
                 .unwrap();
@@ -499,7 +495,7 @@ mod tests {
         //Modifying the memory from other channels should leave the cached page unchanged
         let mut cached_buf = vec![0_u8; 64];
         {
-            let mut virt_mem = VirtualFromPhysical::new(&mut mem_cache, arch, arch, translator);
+            let mut virt_mem = VirtualDMA::new(&mut mem_cache, arch, arch, translator);
             virt_mem
                 .virt_read_raw_into(virt_base, cached_buf.as_mut_slice())
                 .unwrap();
@@ -508,12 +504,8 @@ mod tests {
         let mut write_buf = cached_buf.clone();
         write_buf[16..20].copy_from_slice(&[255, 255, 255, 255]);
         {
-            let mut virt_mem = VirtualFromPhysical::new(
-                unsafe { mem_ptr.as_mut().unwrap() },
-                arch,
-                arch,
-                translator,
-            );
+            let mut virt_mem =
+                VirtualDMA::new(unsafe { mem_ptr.as_mut().unwrap() }, arch, arch, translator);
             virt_mem
                 .virt_write_raw(virt_base, write_buf.as_slice())
                 .unwrap();
@@ -521,7 +513,7 @@ mod tests {
 
         let mut check_buf = vec![0_u8; 64];
         {
-            let mut virt_mem = VirtualFromPhysical::new(mem_cache, arch, arch, translator);
+            let mut virt_mem = VirtualDMA::new(mem_cache, arch, arch, translator);
             virt_mem
                 .virt_read_raw_into(virt_base, check_buf.as_mut_slice())
                 .unwrap();
@@ -698,7 +690,7 @@ mod tests {
         );
 
         let mut mem_cache = CachedMemoryAccess::new(&mut dummy_mem, cache);
-        let mut virt_mem = VirtualFromPhysical::new(&mut mem_cache, arch, arch, translator);
+        let mut virt_mem = VirtualDMA::new(&mut mem_cache, arch, arch, translator);
 
         let mut buf_1 = vec![0_u8; 64];
         virt_mem

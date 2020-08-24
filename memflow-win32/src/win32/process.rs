@@ -6,15 +6,12 @@ use crate::win32::VirtualReadUnicodeString;
 
 use std::fmt;
 
-
-use memflow_core::architecture::{Architecture};
+use memflow_core::architecture::Architecture;
 use memflow_core::mem::{
-    CloneableVirtualMemory, PhysicalMemory, VirtualMemory, VirtualMemoryBox,
-    VirtualTranslate,
+    CloneableVirtualMemory, PhysicalMemory, VirtualMemory, VirtualMemoryBox, VirtualTranslate,
 };
 use memflow_core::types::Address;
 use memflow_core::{OsProcessInfo, OsProcessModuleInfo};
-
 
 use log::trace;
 
@@ -128,7 +125,7 @@ impl Win32Process<VirtualMemoryBox> {
 impl<'a> Win32Process<Box<dyn VirtualMemory + 'a>> {
     /// Constructs a new process by borrowing a kernel object.
     ///
-    /// Internally this will create a `VirtualFromPhysical` object that also
+    /// Internally this will create a `VirtualDMA` object that also
     /// borrows the PhysicalMemory and Vat objects from the kernel.
     ///
     /// The resulting process object is NOT cloneable due to the mutable borrowing.

@@ -83,7 +83,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
     }
 
     pub fn eprocess_list(&mut self) -> Result<Vec<Address>> {
-        // TODO: create a VirtualFromPhysical constructor for kernel_info
+        // TODO: create a VirtualDMA constructor for kernel_info
         let mut reader = make_virt_mem(
             &mut self.phys_mem,
             &mut self.vat,
@@ -127,7 +127,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
     }
 
     pub fn ntoskrnl_process_info(&mut self) -> Result<Win32ProcessInfo> {
-        // TODO: create a VirtualFromPhysical constructor for kernel_info
+        // TODO: create a VirtualDMA constructor for kernel_info
         let mut reader = make_virt_mem(
             &mut self.phys_mem,
             &mut self.vat,
@@ -216,7 +216,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
     }
 
     pub fn process_info_from_eprocess(&mut self, eprocess: Address) -> Result<Win32ProcessInfo> {
-        // TODO: create a VirtualFromPhysical constructor for kernel_info
+        // TODO: create a VirtualDMA constructor for kernel_info
         let mut reader = make_virt_mem(
             &mut self.phys_mem,
             &mut self.vat,

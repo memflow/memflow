@@ -1,5 +1,5 @@
 use crate::architecture::x86::x64;
-use crate::architecture::Architecture;
+use crate::architecture::{Architecture, ScopedVirtualTranslate};
 use crate::error::{Error, Result};
 use crate::mem::virt_mem::virt_from_phys::VirtualDMA;
 use crate::mem::{PhysicalMemory, PhysicalReadData, PhysicalWriteData, VirtualMemory};
@@ -119,6 +119,10 @@ impl DummyProcess {
             size: (thread_rng().gen_range(min_size, self.map_size) / 2),
         }
     }
+
+    pub fn translator(&self) -> impl ScopedVirtualTranslate {
+        x64::new_translator(self.dtb)
+    }
 }
 
 impl OsProcessInfo for DummyProcess {
@@ -134,15 +138,11 @@ impl OsProcessInfo for DummyProcess {
         String::from("Dummy")
     }
 
-    fn dtb(&self) -> Address {
-        self.dtb
-    }
-
-    fn sys_arch(&self) -> &dyn Architecture {
+    fn sys_arch(&self) -> &'static dyn Architecture {
         x64::ARCH
     }
 
-    fn proc_arch(&self) -> &dyn Architecture {
+    fn proc_arch(&self) -> &'static dyn Architecture {
         x64::ARCH
     }
 }

@@ -5,6 +5,8 @@ use memflow_core::mem::{
     VirtualTranslate,
 };
 
+use memflow_core::architecture::ScopedVirtualTranslate;
+
 use memflow_core::{size, OsProcessInfo, OsProcessModuleInfo, PageType};
 
 use rand::prelude::*;
@@ -80,6 +82,7 @@ fn read_test_with_ctx<
     T: PhysicalMemory,
     V: VirtualTranslate,
     P: OsProcessInfo,
+    S: ScopedVirtualTranslate,
     M: OsProcessModuleInfo,
 >(
     bench: &mut Bencher,
@@ -87,40 +90,36 @@ fn read_test_with_ctx<
     chunk_size: usize,
     chunks: usize,
     use_tlb: bool,
-    (mut mem, vat, prc, tmod): (T, V, P, M),
+    (mut mem, vat, proc, translator, tmod): (T, V, P, S, M),
 ) {
     if cache_size > 0 {
         let cache = CachedMemoryAccess::builder(&mut mem)
-            .arch(prc.sys_arch())
+            .arch(proc.sys_arch())
             .cache_size(size::mb(cache_size as usize))
             .page_type_mask(PageType::PAGE_TABLE | PageType::READ_ONLY | PageType::WRITEABLE);
 
         if use_tlb {
             let mem = cache.build().unwrap();
             let vat = CachedVirtualTranslate::builder(vat)
-                .arch(prc.sys_arch())
+                .arch(proc.sys_arch())
                 .build()
                 .unwrap();
-            let mut virt_mem =
-                VirtualDMA::with_vat(mem, prc.sys_arch(), prc.proc_arch(), prc.dtb(), vat);
+            let mut virt_mem = VirtualDMA::with_vat(mem, proc.proc_arch(), translator, vat);
             read_test_with_mem(bench, &mut virt_mem, chunk_size, chunks, tmod);
         } else {
             let mem = cache.build().unwrap();
-            let mut virt_mem =
-                VirtualDMA::with_vat(mem, prc.sys_arch(), prc.proc_arch(), prc.dtb(), vat);
+            let mut virt_mem = VirtualDMA::with_vat(mem, proc.proc_arch(), translator, vat);
             read_test_with_mem(bench, &mut virt_mem, chunk_size, chunks, tmod);
         }
     } else if use_tlb {
         let vat = CachedVirtualTranslate::builder(vat)
-            .arch(prc.sys_arch())
+            .arch(proc.sys_arch())
             .build()
             .unwrap();
-        let mut virt_mem =
-            VirtualDMA::with_vat(mem, prc.sys_arch(), prc.proc_arch(), prc.dtb(), vat);
+        let mut virt_mem = VirtualDMA::with_vat(mem, proc.proc_arch(), translator, vat);
         read_test_with_mem(bench, &mut virt_mem, chunk_size, chunks, tmod);
     } else {
-        let mut virt_mem =
-            VirtualDMA::with_vat(mem, prc.sys_arch(), prc.proc_arch(), prc.dtb(), vat);
+        let mut virt_mem = VirtualDMA::with_vat(mem, proc.proc_arch(), translator, vat);
         read_test_with_mem(bench, &mut virt_mem, chunk_size, chunks, tmod);
     }
 }
@@ -129,13 +128,14 @@ fn seq_read_params<
     T: PhysicalMemory,
     V: VirtualTranslate,
     P: OsProcessInfo,
+    S: ScopedVirtualTranslate,
     M: OsProcessModuleInfo,
 >(
     group: &mut BenchmarkGroup<'_, measurement::WallTime>,
     func_name: String,
     cache_size: u64,
     use_tlb: bool,
-    initialize_ctx: &dyn Fn() -> memflow_core::Result<(T, V, P, M)>,
+    initialize_ctx: &dyn Fn() -> memflow_core::Result<(T, V, P, S, M)>,
 ) {
     for &size in [0x8, 0x10, 0x100, 0x1000, 0x10000].iter() {
         group.throughput(Throughput::Bytes(size));
@@ -160,13 +160,14 @@ fn chunk_read_params<
     T: PhysicalMemory,
     V: VirtualTranslate,
     P: OsProcessInfo,
+    S: ScopedVirtualTranslate,
     M: OsProcessModuleInfo,
 >(
     group: &mut BenchmarkGroup<'_, measurement::WallTime>,
     func_name: String,
     cache_size: u64,
     use_tlb: bool,
-    initialize_ctx: &dyn Fn() -> memflow_core::Result<(T, V, P, M)>,
+    initialize_ctx: &dyn Fn() -> memflow_core::Result<(T, V, P, S, M)>,
 ) {
     for &size in [0x8, 0x10, 0x100, 0x1000].iter() {
         for &chunk_size in [1, 4, 16, 64].iter() {
@@ -193,11 +194,12 @@ pub fn seq_read<
     T: PhysicalMemory,
     V: VirtualTranslate,
     P: OsProcessInfo,
+    S: ScopedVirtualTranslate,
     M: OsProcessModuleInfo,
 >(
     c: &mut Criterion,
     backend_name: &str,
-    initialize_ctx: &dyn Fn() -> memflow_core::Result<(T, V, P, M)>,
+    initialize_ctx: &dyn Fn() -> memflow_core::Result<(T, V, P, S, M)>,
 ) {
     let plot_config = PlotConfiguration::default().summary_scale(AxisScale::Logarithmic);
 
@@ -240,11 +242,12 @@ pub fn chunk_read<
     T: PhysicalMemory,
     V: VirtualTranslate,
     P: OsProcessInfo,
+    S: ScopedVirtualTranslate,
     M: OsProcessModuleInfo,
 >(
     c: &mut Criterion,
     backend_name: &str,
-    initialize_ctx: &dyn Fn() -> memflow_core::Result<(T, V, P, M)>,
+    initialize_ctx: &dyn Fn() -> memflow_core::Result<(T, V, P, S, M)>,
 ) {
     let plot_config = PlotConfiguration::default().summary_scale(AxisScale::Logarithmic);
 

@@ -29,16 +29,8 @@ pub trait OsProcessInfo {
     /// On Windows this will be clamped to 16 characters.
     fn name(&self) -> String;
 
-    /// Returns the dtb (directory table base) of this process.
-    ///
-    /// # Remarks
-    ///
-    /// The DTB is written into the `CR3` register
-    /// when context-switching to the process.
-    fn dtb(&self) -> Address;
-
     /// Returns the architecture of the target system.
-    fn sys_arch(&self) -> &dyn Architecture;
+    fn sys_arch(&self) -> &'static dyn Architecture;
 
     /// Returns the architecture of the process.
     ///
@@ -48,7 +40,7 @@ pub trait OsProcessInfo {
     /// to the `sys_arch` in case the process is an emulated 32-bit process.
     ///
     /// On windows this technique is called [`WOW64`](https://docs.microsoft.com/en-us/windows/win32/winprog64/wow64-implementation-details).
-    fn proc_arch(&self) -> &dyn Architecture;
+    fn proc_arch(&self) -> &'static dyn Architecture;
 }
 
 // TODO: Range impl for base to size?

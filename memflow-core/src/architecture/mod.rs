@@ -14,7 +14,7 @@ pub mod x86;
 
 mod mmu_spec;
 
-use mmu_spec::ArchMMUSpec;
+pub use mmu_spec::ArchMMUSpec;
 
 use crate::error::{Error, Result};
 use crate::iter::{FnExtend, SplitAtIndex};
@@ -97,9 +97,9 @@ pub trait Architecture: Send + Sync {
     /// # Examples
     ///
     /// ```
-    /// use memflow_core::architecture::Architecture;
+    /// use memflow_core::architecture::x86::x32_pae;
     ///
-    /// let arch = Architecture::X86Pae;
+    /// let arch = x32_pae::ARCH;
     /// assert_eq!(arch.bits(), 32);
     /// ```
     fn bits(&self) -> u8;
@@ -112,9 +112,9 @@ pub trait Architecture: Send + Sync {
     /// # Examples
     ///
     /// ```
-    /// use memflow_core::architecture::{Architecture, Endianess};
+    /// use memflow_core::architecture::{x86::x32, Endianess};
     ///
-    /// let arch = Architecture::X86;
+    /// let arch = x32::ARCH;
     /// assert_eq!(arch.endianess(), Endianess::LittleEndian);
     /// ```
     fn endianess(&self) -> Endianess;
@@ -126,10 +126,10 @@ pub trait Architecture: Send + Sync {
     /// # Examples
     ///
     /// ```
-    /// use memflow_core::architecture::Architecture;
+    /// use memflow_core::architecture::x86::x64;
     /// use memflow_core::types::size;
     ///
-    /// let arch = Architecture::X64;
+    /// let arch = x64::ARCH;
     /// assert_eq!(arch.page_size(), size::kb(4));
     /// ```
     fn page_size(&self) -> usize;
@@ -142,9 +142,9 @@ pub trait Architecture: Send + Sync {
     /// # Examples
     ///
     /// ```
-    /// use memflow_core::architecture::Architecture;
+    /// use memflow_core::architecture::x86::x32;
     ///
-    /// let arch = Architecture::X86;
+    /// let arch = x32::ARCH;
     /// assert_eq!(arch.size_addr(), 4);
     /// ```
     fn size_addr(&self) -> usize;

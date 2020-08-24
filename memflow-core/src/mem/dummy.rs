@@ -1,7 +1,7 @@
 use crate::architecture::x86::x64;
 use crate::architecture::{Architecture, ScopedVirtualTranslate};
 use crate::error::{Error, Result};
-use crate::mem::virt_mem::virt_from_phys::VirtualDMA;
+use crate::mem::virt_mem::VirtualDMA;
 use crate::mem::{PhysicalMemory, PhysicalReadData, PhysicalWriteData, VirtualMemory};
 use crate::process::{OsProcessInfo, OsProcessModuleInfo};
 use crate::types::{size, Address};

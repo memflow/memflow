@@ -539,7 +539,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> fmt::Debug for Kernel<T, V> {
 ///     let offsets = Win32Offsets::builder().kernel_info(&kernel_info).build().unwrap();
 ///
 ///     // Create a struct for doing virtual to physical memory translations
-///     let vat = DirectTranslate::new(kernel_info.start_block.arch);
+///     let vat = DirectTranslate::new();
 ///
 ///     // Create a Page Cache layer with default values
 ///     let mut connector_cached = CachedMemoryAccess::builder(connector)

@@ -297,60 +297,8 @@ impl ArchMMUSpec {
                 && self.valid_final_page_steps.binary_search(&step).is_ok())
     }
 
-    /// This function will do a virtual to physical memory translation for the `Architecture` over multiple elements.
-    /// TODO: Rework these docs
-    ///
-    /// In most cases, you will want to use the public apis, which wraps virtual memory accesses
-    /// with these functions. But, if a `virt_to_phys` translation is needed for arbitrary arch,
-    /// these functions are public.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # use memflow_core::Result;
-    /// # use memflow_core::types::{PhysicalAddress, Address};
-    /// # use memflow_core::dummy::DummyMemory;
-    /// use memflow_core::types::size;
-    /// use memflow_core::architecture::{Architecture, Bump};
-    /// use memflow_core::iter::FnExtend;
-    ///
-    /// # const VIRT_MEM_SIZE: usize = size::mb(8);
-    /// # const CHUNK_SIZE: usize = 2;
-    /// #
-    /// # let mut mem = DummyMemory::new(size::mb(16));
-    /// # let (dtb, virtual_base) = mem.alloc_dtb(VIRT_MEM_SIZE, &[]);
-    /// let arch = Architecture::X64;
-    ///
-    /// let mut buffer = vec![0; VIRT_MEM_SIZE * CHUNK_SIZE / arch.page_size()];
-    /// let buffer_length = buffer.len();
-    ///
-    /// // In this example, 8 megabytes starting from `virtual_base` are mapped in.
-    /// // We translate 2 bytes chunks over the page boundaries. These bytes will be
-    /// // split off into 2 separate translated chunks.
-    /// let addresses = buffer
-    ///     .chunks_mut(CHUNK_SIZE)
-    ///     .enumerate()
-    ///     .map(|(i, buf)| (virtual_base + ((i + 1) * size::kb(4) - 1), buf));
-    ///
-    /// let mut translated_data = vec![];
-    /// let mut failed_translations = FnExtend::void();
-    ///
-    /// let allocator = Bump::new();
-    ///
-    /// arch.virt_to_phys_iter(
-    ///     &mut mem,
-    ///     dtb,
-    ///     addresses,
-    ///     &mut translated_data,
-    ///     &mut failed_translations,
-    ///     &allocator,
-    /// );
-    ///
-    /// // We tried to translate one byte out of the mapped memory, it had to fail
-    /// assert_eq!(translated_data.len(), buffer_length - 1);
-    ///
-    /// # Ok::<(), memflow_core::Error>(())
-    /// ```
+    /// This function will do a virtual to physical memory translation for the `ArchMMUSpec` in
+    /// `MMUTranslationBase` scope, over multiple elements.
     pub(crate) fn virt_to_phys_iter<T, B, D, VI, VO, FO>(
         &self,
         mem: &mut T,

@@ -37,13 +37,14 @@ impl<T: PhysicalMemory, D: ScopedVirtualTranslate> VirtualDMA<T, DirectTranslate
     /// Constructing a `VirtualDMA` object with a given dtb and using it to read:
     /// ```
     /// use memflow_core::types::Address;
-    /// use memflow_core::architecture::Architecture;
+    /// use memflow_core::architecture::x86::x64;
     /// use memflow_core::mem::{PhysicalMemory, VirtualTranslate, VirtualMemory, VirtualDMA};
     ///
     /// fn read<T: PhysicalMemory, V: VirtualTranslate>(phys_mem: &mut T, vat: &mut V, dtb: Address, read_addr: Address) {
-    ///     let arch = Architecture::X64;
+    ///     let arch = x64::ARCH;
+    ///     let translator = x64::new_translator(dtb);
     ///
-    ///     let mut virt_mem = VirtualDMA::new(phys_mem, arch, arch, dtb);
+    ///     let mut virt_mem = VirtualDMA::new(phys_mem, arch, translator);
     ///
     ///     let mut addr = 0u64;
     ///     virt_mem.virt_read_into(read_addr, &mut addr).unwrap();
@@ -66,47 +67,6 @@ impl<T: PhysicalMemory, D: ScopedVirtualTranslate> VirtualDMA<T, DirectTranslate
             arena: Bump::new(),
         }
     }
-
-    /*/// This function constructs a `VirtualDMA` instance for a given process.
-    /// It creates a default `VirtualTranslate` object using the `DirectTranslate` struct.
-    ///
-    /// If you want to use a cache for translating virtual to physical memory
-    /// consider using the `VirtualDMA::with_vat()` function and supply your own `VirtualTranslate` object.
-    ///
-    /// # Examples
-    ///
-    /// Constructing a `VirtualDMA` object from a `OsProcessInfo` and using it to read:
-    /// ```
-    /// use memflow_core::types::Address;
-    /// use memflow_core::mem::{PhysicalMemory, VirtualTranslate, VirtualMemory, VirtualDMA};
-    /// use memflow_core::process::OsProcessInfo;
-    ///
-    /// fn read<T: PhysicalMemory, P: OsProcessInfo>(phys_mem: &mut T, process_info: P, read_addr: Address) {
-    ///     let mut virt_mem = VirtualDMA::from_process_info(phys_mem, process_info);
-    ///
-    ///     let mut addr = 0u64;
-    ///     virt_mem.virt_read_into(read_addr, &mut addr).unwrap();
-    ///     println!("addr: {:x}", addr);
-    ///     # assert_eq!(addr, 0x00ff_00ff_00ff_00ff);
-    /// }
-    /// # use memflow_core::dummy::DummyMemory;
-    /// # use memflow_core::types::size;
-    /// # use memflow_core::mem::DirectTranslate;
-    /// # let mut mem = DummyMemory::new(size::mb(4));
-    /// # let proc = mem.alloc_process(size::mb(2), &[255, 0, 255, 0, 255, 0, 255, 0]);
-    /// # let addr = proc.address();
-    /// # read(&mut mem, proc, addr);
-    /// ```
-    /// TODO: Remove, or fix (Object Safety)
-    pub fn from_process_info<U: OsProcessInfo>(phys_mem: T, process_info: U) -> Self {
-        Self {
-            phys_mem,
-            vat: DirectTranslate::new(),
-            proc_arch: process_info.proc_arch(),
-            dtb: process_info.dtb(),
-            arena: Bump::new(),
-        }
-    }*/
 }
 
 impl<T: PhysicalMemory, V: VirtualTranslate, D: ScopedVirtualTranslate> VirtualDMA<T, V, D> {
@@ -118,13 +78,14 @@ impl<T: PhysicalMemory, V: VirtualTranslate, D: ScopedVirtualTranslate> VirtualD
     /// Constructing a `VirtualDMA` object with VAT and using it to read:
     /// ```
     /// use memflow_core::types::Address;
-    /// use memflow_core::architecture::Architecture;
+    /// use memflow_core::architecture::x86::x64;
     /// use memflow_core::mem::{PhysicalMemory, VirtualTranslate, VirtualMemory, VirtualDMA};
     ///
     /// fn read<T: PhysicalMemory, V: VirtualTranslate>(phys_mem: &mut T, vat: V, dtb: Address, read_addr: Address) {
-    ///     let arch = Architecture::X64;
+    ///     let arch = x64::ARCH;
+    ///     let translator = x64::new_translator(dtb);
     ///
-    ///     let mut virt_mem = VirtualDMA::with_vat(phys_mem, arch, arch, dtb, vat);
+    ///     let mut virt_mem = VirtualDMA::with_vat(phys_mem, arch, translator, vat);
     ///
     ///     let mut addr = 0u64;
     ///     virt_mem.virt_read_into(read_addr, &mut addr).unwrap();

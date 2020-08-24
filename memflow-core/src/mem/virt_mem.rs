@@ -1,7 +1,7 @@
 use std::prelude::v1::*;
 
-pub mod virt_from_phys;
-pub use virt_from_phys::VirtualDMA;
+pub mod virtual_dma;
+pub use virtual_dma::VirtualDMA;
 
 use super::VirtualMemoryBatcher;
 use crate::architecture::Architecture;

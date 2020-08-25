@@ -26,6 +26,8 @@ use pelite::{
     pe64::exports::{Export, GetProcAddress},
 };
 
+const MAX_ITER_COUNT: usize = 65536;
+
 #[derive(Clone)]
 pub struct Kernel<T, V> {
     pub phys_mem: T,
@@ -99,7 +101,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
         let list_start = self.kernel_info.eprocess_base + self.offsets.eproc_link();
         let mut list_entry = list_start;
 
-        loop {
+        for _ in 0..MAX_ITER_COUNT {
             let eprocess = list_entry - self.offsets.eproc_link();
             trace!("eprocess={}", eprocess);
 
@@ -113,7 +115,11 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
             )?;
             trace!("blink_entry={}", blink_entry);
 
-            if flink_entry.is_null() || blink_entry.is_null() || flink_entry == list_start {
+            if flink_entry.is_null()
+                || blink_entry.is_null()
+                || flink_entry == list_start
+                || flink_entry == list_entry
+            {
                 break;
             }
 

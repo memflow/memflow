@@ -48,24 +48,31 @@ impl<T: PhysicalMemory> KernelInfoScanner<T> {
     }
 
     pub fn scan(mut self) -> Result<KernelInfo> {
-        let start_block = if self.arch.is_some() && self.dtb.is_some() && self.kernel_hint.is_some()
+        let start_block = if let (Some(arch), Some(dtb), Some(kernel_hint)) =
+            (self.arch, self.dtb, self.kernel_hint)
         {
             // construct start block from user supplied hints
             StartBlock {
-                arch: self.arch.unwrap(),
-                kernel_hint: self.kernel_hint.unwrap(),
-                dtb: self.dtb.unwrap(),
+                arch,
+                kernel_hint,
+                dtb,
             }
         } else {
-            // find start_block in lowstub base
-            let mut sb = kernel::lowstub::find(&mut self.mem, self.arch)?;
+            let mut sb = kernel::start_block::find(&mut self.mem, self.arch)?;
             if self.kernel_hint.is_some() && sb.kernel_hint.is_null() {
                 sb.kernel_hint = self.kernel_hint.unwrap()
             }
-            // dtb is always set in lowstub::find()
+            // dtb is always set in start_block::find()
             sb
         };
 
+        self.scan_block(start_block).or_else(|_| {
+            let start_block = kernel::start_block::find_fallback(&mut self.mem, start_block.arch)?;
+            self.scan_block(start_block)
+        })
+    }
+
+    fn scan_block(&mut self, start_block: StartBlock) -> Result<KernelInfo> {
         info!(
             "arch={:?} kernel_hint={:x} dtb={:x}",
             start_block.arch, start_block.kernel_hint, start_block.dtb

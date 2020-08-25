@@ -10,6 +10,9 @@ use crate::types::Address;
 /// Trait describing a operating system
 pub trait OperatingSystem {}
 
+/// Type alias for a PID.
+pub type PID = u32;
+
 /// Trait describing OS independent process information.
 pub trait OsProcessInfo {
     /// Returns the base address of this process.
@@ -20,7 +23,7 @@ pub trait OsProcessInfo {
     fn address(&self) -> Address;
 
     /// Returns the pid of this process.
-    fn pid(&self) -> i32;
+    fn pid(&self) -> PID;
 
     /// Returns the name of the process.
     ///

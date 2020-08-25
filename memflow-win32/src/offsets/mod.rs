@@ -50,7 +50,7 @@ const WIN32_OFFSETS: Align16<
 #[repr(transparent)]
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize))]
-pub struct Win32Offsets(Win32OffsetTable);
+pub struct Win32Offsets(pub Win32OffsetTable);
 
 impl From<Win32OffsetTable> for Win32Offsets {
     fn from(other: Win32OffsetTable) -> Self {

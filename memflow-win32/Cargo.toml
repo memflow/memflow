@@ -51,6 +51,10 @@ name = "dump_offsets"
 path = "examples/dump_offsets.rs"
 
 [[example]]
+name = "generate_offsets"
+path = "examples/generate_offsets.rs"
+
+[[example]]
 name = "read_keys"
 path = "examples/read_keys.rs"
 

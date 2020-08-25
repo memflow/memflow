@@ -8,7 +8,7 @@ use memflow_core::connector::*;
 use memflow_win32::{Kernel, Win32OffsetFile};
 
 pub fn main() {
-    let matches = App::new("read_keys example")
+    let matches = App::new("dump offsets example")
         .version(crate_version!())
         .author(crate_authors!())
         .arg(Arg::with_name("verbose").short("v").multiple(true))

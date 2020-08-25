@@ -23,6 +23,24 @@ pub struct StartBlock {
     pub dtb: Address,
 }
 
+#[allow(clippy::vtable_address_comparisons)]
+pub fn find_fallback<T: PhysicalMemory>(
+    mem: &mut T,
+    arch: &'static dyn Architecture,
+) -> Result<StartBlock> {
+    if ptr::eq(arch, architecture::x86::x64::ARCH) {
+        // read low 16mb stub
+        let mut low16m = vec![0; size::mb(16)];
+        mem.phys_read_raw_into(PhysicalAddress::NULL, &mut low16m)?;
+
+        x64::find(&low16m)
+    } else {
+        Err(Error::Initialization(
+            "start_block: fallback not implemented for given arch",
+        ))
+    }
+}
+
 // bcdedit /set firstmegabytepolicyuseall
 #[allow(clippy::vtable_address_comparisons)]
 pub fn find<T: PhysicalMemory>(
@@ -37,15 +55,15 @@ pub fn find<T: PhysicalMemory>(
 
             // find x64 dtb in low stub < 1M
             match x64::find_lowstub(&low1m) {
-                Ok(d) => return Ok(d),
+                Ok(d) => {
+                    if d.dtb.as_u64() != 0 {
+                        return Ok(d);
+                    }
+                }
                 Err(e) => warn!("x64::find_lowstub() error: {}", e),
             }
 
-            // read low 16mb stub
-            let mut low16m = vec![0; size::mb(16)];
-            mem.phys_read_raw_into(PhysicalAddress::NULL, &mut low16m)?;
-
-            x64::find(&low16m)
+            find_fallback(mem, arch)
         } else if ptr::eq(arch, architecture::x86::x32_pae::ARCH) {
             let mut low16m = vec![0; size::mb(16)];
             mem.phys_read_raw_into(PhysicalAddress::NULL, &mut low16m)?;

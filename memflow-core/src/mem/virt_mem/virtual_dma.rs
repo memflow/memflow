@@ -8,7 +8,7 @@ use crate::mem::{
     virt_translate::{DirectTranslate, VirtualTranslate},
     PhysicalMemory, VirtualMemory,
 };
-use crate::types::{Address, Page};
+use crate::types::{Address, Page, PhysicalAddress};
 
 use bumpalo::{collections::Vec as BumpVec, Bump};
 use itertools::Itertools;
@@ -218,6 +218,36 @@ impl<T: PhysicalMemory, V: VirtualTranslate, D: ScopedVirtualTranslate> VirtualM
             .vat
             .virt_to_phys(&mut self.phys_mem, &self.translator, addr)?;
         Ok(paddr.containing_page())
+    }
+
+    fn virt_translation_map_range(
+        &mut self,
+        start: Address,
+        end: Address,
+    ) -> Vec<(Address, usize, PhysicalAddress)> {
+        self.arena.reset();
+        let mut out = BumpVec::new_in(&self.arena);
+
+        self.vat.virt_to_phys_iter(
+            &mut self.phys_mem,
+            &self.translator,
+            Some((start, (start, end - start))).into_iter(),
+            &mut out,
+            &mut FnExtend::void(),
+        );
+
+        out.sort_by(|(_, (a, _)), (_, (b, _))| a.cmp(b));
+
+        out.into_iter()
+            .coalesce(|(ap, av), (bp, bv)| {
+                if bv.0 == (av.0 + av.1) && bp.address() == (ap.address() + av.1) {
+                    Ok((ap, (av.0, bv.0 + bv.1 - av.0)))
+                } else {
+                    Err(((ap, av), (bp, bv)))
+                }
+            })
+            .map(|(p, (v, s))| (v, s, p))
+            .collect()
     }
 
     fn virt_page_map_range(

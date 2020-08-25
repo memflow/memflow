@@ -6,7 +6,7 @@ pub use virtual_dma::VirtualDMA;
 use super::VirtualMemoryBatcher;
 use crate::architecture::Architecture;
 use crate::error::{Error, PartialError, PartialResult, PartialResultExt, Result};
-use crate::types::{Address, Page, Pointer32, Pointer64};
+use crate::types::{Address, Page, PhysicalAddress, Pointer32, Pointer64};
 
 #[cfg(feature = "std")]
 use std::ffi::CString;
@@ -51,6 +51,12 @@ where
     fn virt_write_raw_list(&mut self, data: &[VirtualWriteData]) -> PartialResult<()>;
 
     fn virt_page_info(&mut self, addr: Address) -> Result<Page>;
+
+    fn virt_translation_map_range(
+        &mut self,
+        start: Address,
+        end: Address,
+    ) -> Vec<(Address, usize, PhysicalAddress)>;
 
     fn virt_page_map_range(
         &mut self,
@@ -102,6 +108,10 @@ where
     }
 
     // page map helpers
+    fn virt_translation_map(&mut self) -> Vec<(Address, usize, PhysicalAddress)> {
+        self.virt_translation_map_range(Address::null(), Address::invalid())
+    }
+
     fn virt_page_map(&mut self, gap_size: usize) -> Vec<(Address, usize)> {
         self.virt_page_map_range(gap_size, Address::null(), Address::invalid())
     }
@@ -209,6 +219,15 @@ impl<T: VirtualMemory + ?Sized, P: std::ops::DerefMut<Target = T> + Send> Virtua
     #[inline]
     fn virt_page_info(&mut self, addr: Address) -> Result<Page> {
         (**self).virt_page_info(addr)
+    }
+
+    #[inline]
+    fn virt_translation_map_range(
+        &mut self,
+        start: Address,
+        end: Address,
+    ) -> Vec<(Address, usize, PhysicalAddress)> {
+        (**self).virt_translation_map_range(start, end)
     }
 
     #[inline]

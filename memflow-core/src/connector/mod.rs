@@ -26,6 +26,13 @@ pub mod fileio;
 #[doc(hidden)]
 pub use fileio::FileIOMemory;
 
+#[cfg(feature = "filemap")]
+pub mod filemap;
+#[cfg(feature = "filemap")]
+pub use filemap::{
+    MMAPInfo, MMAPInfoMut, ReadMappedFilePhysicalMemory, WriteMappedFilePhysicalMemory,
+};
+
 pub mod mmap;
 #[doc(hidden)]
-pub use mmap::{MappedPhysicalMemory, ReadMappedFilePhysicalMemory, WriteMappedFilePhysicalMemory};
+pub use mmap::MappedPhysicalMemory;

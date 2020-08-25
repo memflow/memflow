@@ -1,8 +1,9 @@
 use crate::architecture::x86::x64;
 use crate::architecture::{Architecture, ScopedVirtualTranslate};
-use crate::error::{Error, Result};
+use crate::connector::MappedPhysicalMemory;
+use crate::error::Result;
 use crate::mem::virt_mem::VirtualDMA;
-use crate::mem::{PhysicalMemory, PhysicalReadData, PhysicalWriteData, VirtualMemory};
+use crate::mem::{MemoryMap, PhysicalMemory, PhysicalReadData, PhysicalWriteData, VirtualMemory};
 use crate::process::{OsProcessInfo, OsProcessModuleInfo, PID};
 use crate::types::{size, Address};
 
@@ -10,6 +11,8 @@ use rand::seq::SliceRandom;
 use rand::{thread_rng, Rng, SeedableRng};
 use rand_xorshift::XorShiftRng;
 use std::collections::VecDeque;
+
+use std::sync::Arc;
 
 use x86_64::{
     structures::paging,
@@ -147,36 +150,44 @@ impl OsProcessInfo for DummyProcess {
     }
 }
 
-#[derive(Clone)]
 pub struct DummyMemory {
-    mem: Box<[u8]>,
+    buf: Arc<Box<[u8]>>,
+    mem: MappedPhysicalMemory<&'static mut [u8], MemoryMap<&'static mut [u8]>>,
     page_list: VecDeque<PageInfo>,
     pt_pages: Vec<PageInfo>,
     last_pid: PID,
     rng: XorShiftRng,
 }
 
+impl Clone for DummyMemory {
+    fn clone(&self) -> Self {
+        let mut map = MemoryMap::new();
+        map.push_range(
+            0.into(),
+            self.buf.len().into(),
+            (self.buf.as_ptr() as u64).into(),
+        );
+
+        let mem = unsafe { MappedPhysicalMemory::from_addrmap_mut(map) };
+
+        Self {
+            buf: self.buf.clone(),
+            mem,
+            page_list: VecDeque::new(),
+            pt_pages: vec![],
+            last_pid: self.last_pid,
+            rng: self.rng.clone(),
+        }
+    }
+}
+
 impl PhysicalMemory for DummyMemory {
     fn phys_read_raw_list(&mut self, data: &mut [PhysicalReadData]) -> Result<()> {
-        data.iter_mut().try_for_each(move |(addr, out)| {
-            if addr.address().as_usize() + out.len() <= self.mem.len() {
-                out.copy_from_slice(&self.mem[addr.as_usize()..(addr.as_usize() + out.len())]);
-                Ok(())
-            } else {
-                Err(Error::PhysicalMemory("read out of bounds"))
-            }
-        })
+        self.mem.phys_read_raw_list(data)
     }
 
     fn phys_write_raw_list(&mut self, data: &[PhysicalWriteData]) -> Result<()> {
-        data.iter().try_for_each(move |(addr, data)| {
-            if addr.address().as_usize() + data.len() <= self.mem.len() {
-                self.mem[addr.as_usize()..(addr.as_usize() + data.len())].copy_from_slice(data);
-                Ok(())
-            } else {
-                Err(Error::PhysicalMemory("write out of bounds"))
-            }
-        })
+        self.mem.phys_write_raw_list(data)
     }
 }
 
@@ -215,7 +226,7 @@ impl DummyMemory {
     }
 
     pub fn with_rng(size: usize, mut rng: XorShiftRng) -> Self {
-        let mem = vec![0_u8; size].into_boxed_slice();
+        let buf = Arc::new(vec![0_u8; size].into_boxed_slice());
 
         let mut page_prelist = vec![];
 
@@ -276,7 +287,13 @@ impl DummyMemory {
             page_prelist = page_list.clone();
         }
 
+        let mut map = MemoryMap::new();
+        map.push_range(0.into(), buf.len().into(), (buf.as_ptr() as u64).into());
+
+        let mem = unsafe { MappedPhysicalMemory::from_addrmap_mut(map) };
+
         Self {
+            buf,
             mem,
             page_list: page_list.into(),
             pt_pages: vec![],
@@ -319,14 +336,14 @@ impl DummyMemory {
     pub fn vtop(&mut self, dtb_base: Address, virt_addr: Address) -> Option<Address> {
         let mut pml4 = unsafe {
             &mut *(self
-                .mem
-                .as_mut_ptr()
+                .buf
+                .as_ptr()
                 .add(dtb_base.as_usize())
-                .cast::<PageTable>())
+                .cast::<PageTable>() as *mut _)
         };
 
         let pt_mapper =
-            unsafe { OffsetPageTable::new(&mut pml4, VirtAddr::from_ptr(self.mem.as_ptr())) };
+            unsafe { OffsetPageTable::new(&mut pml4, VirtAddr::from_ptr(self.buf.as_ptr())) };
 
         match pt_mapper.translate_addr(VirtAddr::new(virt_addr.as_u64())) {
             None => None,
@@ -359,28 +376,31 @@ impl DummyMemory {
 
         let mut pml4 = unsafe {
             &mut *(self
-                .mem
-                .as_mut_ptr()
+                .buf
+                .as_ptr()
                 .add(dtb.addr.as_usize())
-                .cast::<PageTable>())
+                .cast::<PageTable>() as *mut _)
         };
         *pml4 = PageTable::new();
 
         let mut pt_mapper =
-            unsafe { OffsetPageTable::new(&mut pml4, VirtAddr::from_ptr(self.mem.as_ptr())) };
+            unsafe { OffsetPageTable::new(&mut pml4, VirtAddr::from_ptr(self.buf.as_ptr())) };
 
         while cur_len < map_size {
             let page_info = self.next_page_for_address(cur_len.into());
             let flags = PageTableFlags::PRESENT | PageTableFlags::WRITABLE;
 
             if test_buf.len() >= (cur_len + page_info.size.to_size()) {
-                self.mem[page_info.addr.as_usize()
-                    ..(page_info.addr + page_info.size.to_size()).as_usize()]
-                    .copy_from_slice(&test_buf[cur_len..(cur_len + page_info.size.to_size())]);
+                self.mem
+                    .phys_write_raw(
+                        page_info.addr.into(),
+                        &test_buf[cur_len..(cur_len + page_info.size.to_size())],
+                    )
+                    .unwrap();
             } else if test_buf.len() > cur_len {
-                self.mem[page_info.addr.as_usize()
-                    ..(page_info.addr.as_usize() + test_buf.len() - cur_len)]
-                    .copy_from_slice(&test_buf[cur_len..]);
+                self.mem
+                    .phys_write_raw(page_info.addr.into(), &test_buf[cur_len..])
+                    .unwrap();
             }
 
             unsafe {

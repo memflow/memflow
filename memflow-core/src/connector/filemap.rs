@@ -58,7 +58,7 @@ impl<'a> MMAPInfo<'a> {
         })
     }
 
-    pub fn to_connector(self) -> ReadMappedFilePhysicalMemory<'a> {
+    pub fn into_connector(self) -> ReadMappedFilePhysicalMemory<'a> {
         MappedPhysicalMemory::with_info(self)
     }
 }
@@ -114,7 +114,7 @@ impl<'a> MMAPInfoMut<'a> {
         })
     }
 
-    pub fn to_connector(self) -> WriteMappedFilePhysicalMemory<'a> {
+    pub fn into_connector(self) -> WriteMappedFilePhysicalMemory<'a> {
         MappedPhysicalMemory::with_info(self)
     }
 }

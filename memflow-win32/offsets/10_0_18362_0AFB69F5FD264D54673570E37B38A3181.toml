@@ -12,6 +12,7 @@ eproc_pid = 744
 eproc_name = 1104
 eproc_peb = 1016
 eproc_thread_list = 1160
+eproc_exit_status = 0x0624
 eproc_section_base = 0x130
 eproc_wow64 = 1064
 kthread_teb = 240

@@ -141,16 +141,29 @@ pub struct Win32OffsetTable {
     pub list_blink: u32,
     pub eproc_link: u32,
 
+    /// Since version 3.10
     pub kproc_dtb: u32,
+    /// Since version 3.10
     pub eproc_pid: u32,
+    /// Since version 3.10
     pub eproc_name: u32,
+    /// Since version 5.10
     pub eproc_peb: u32,
+    /// Since version 3.10
     pub eproc_section_base: u32,
+    /// Since version 3.10
+    pub eproc_exit_status: u32,
+    /// Since version 5.10
     pub eproc_thread_list: u32,
+    /// Since version 5.0
     pub eproc_wow64: u32,
 
+    /// Since version 6.2
     pub kthread_teb: u32,
+    /// Since version 6.2
     pub ethread_list_entry: u32,
+    /// Since version x.x
     pub teb_peb: u32,
+    /// Since version x.x
     pub teb_peb_x86: u32,
 }

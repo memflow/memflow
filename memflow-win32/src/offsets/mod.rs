@@ -113,13 +113,17 @@ impl Win32Offsets {
             .find_field("Peb")
             .ok_or_else(|| Error::PDB("_EPROCESS::Peb not found"))?
             .offset as _;
-        let eproc_thread_list = eproc
-            .find_field("ThreadListHead")
-            .ok_or_else(|| Error::PDB("_EPROCESS::ThreadListHead not found"))?
-            .offset as _;
         let eproc_section_base = eproc
             .find_field("SectionBaseAddress")
             .ok_or_else(|| Error::PDB("_EPROCESS::SectionBaseAddress not found"))?
+            .offset as _;
+        let eproc_exit_status = eproc
+            .find_field("ExitStatus")
+            .ok_or_else(|| Error::PDB("_EPROCESS::ExitStatus not found"))?
+            .offset as _;
+        let eproc_thread_list = eproc
+            .find_field("ThreadListHead")
+            .ok_or_else(|| Error::PDB("_EPROCESS::ThreadListHead not found"))?
             .offset as _;
 
         // windows 10 uses an uppercase W whereas older windows versions (windows 7) uses a lowercase w
@@ -166,6 +170,7 @@ impl Win32Offsets {
                 eproc_name,
                 eproc_peb,
                 eproc_section_base,
+                eproc_exit_status,
                 eproc_thread_list,
                 eproc_wow64,
 
@@ -177,44 +182,73 @@ impl Win32Offsets {
         })
     }
 
+    /// _LIST_ENTRY::Blink offset
     pub fn list_blink(&self) -> usize {
         self.0.list_blink as usize
     }
+    /// _LIST_ENTRY::Flink offset
     pub fn eproc_link(&self) -> usize {
         self.0.eproc_link as usize
     }
 
+    /// _KPROCESS::DirectoryTableBase offset
+    /// Exists since version 3.10
     pub fn kproc_dtb(&self) -> usize {
         self.0.kproc_dtb as usize
     }
+    /// _EPROCESS::UniqueProcessId offset
+    /// Exists since version 3.10
     pub fn eproc_pid(&self) -> usize {
         self.0.eproc_pid as usize
     }
+    /// _EPROCESS::ImageFileName offset
+    /// Exists since version 3.10
     pub fn eproc_name(&self) -> usize {
         self.0.eproc_name as usize
     }
+    /// _EPROCESS::Peb offset
+    /// Exists since version 5.10
     pub fn eproc_peb(&self) -> usize {
         self.0.eproc_peb as usize
     }
+    /// _EPROCESS::SectionBaseAddress offset
+    /// Exists since version 3.10
     pub fn eproc_section_base(&self) -> usize {
         self.0.eproc_section_base as usize
     }
+    /// _EPROCESS::ExitStatus offset
+    /// Exists since version 3.10
+    pub fn eproc_exit_status(&self) -> usize {
+        self.0.eproc_exit_status as usize
+    }
+    /// _EPROCESS::ThreadListHead offset
+    /// Exists since version 5.10
     pub fn eproc_thread_list(&self) -> usize {
         self.0.eproc_thread_list as usize
     }
+    /// _EPROCESS::WoW64Process offset
+    /// Exists since version 5.0
     pub fn eproc_wow64(&self) -> usize {
         self.0.eproc_wow64 as usize
     }
 
+    /// _KTHREAD::Teb offset
+    /// Exists since version 6.2
     pub fn kthread_teb(&self) -> usize {
         self.0.kthread_teb as usize
     }
+    /// _ETHREAD::ThreadListEntry offset
+    /// Exists since version 6.2
     pub fn ethread_list_entry(&self) -> usize {
         self.0.ethread_list_entry as usize
     }
+    /// _TEB::ProcessEnvironmentBlock offset
+    /// Exists since version x.x
     pub fn teb_peb(&self) -> usize {
         self.0.teb_peb as usize
     }
+    /// _TEB32::ProcessEnvironmentBlock offset
+    /// Exists since version x.x
     pub fn teb_peb_x86(&self) -> usize {
         self.0.teb_peb_x86 as usize
     }

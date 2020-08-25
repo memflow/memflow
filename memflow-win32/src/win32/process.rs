@@ -4,6 +4,7 @@ use super::{Kernel, Win32ModuleInfo};
 use crate::error::{Error, Result};
 use crate::win32::VirtualReadUnicodeString;
 
+use log::trace;
 use std::fmt;
 
 use memflow_core::architecture::Architecture;
@@ -13,7 +14,11 @@ use memflow_core::types::Address;
 
 use super::Win32VirtualTranslate;
 
-use log::trace;
+/// Exit status of a win32 process
+pub type Win32ExitStatus = i32;
+
+/// Process has not exited yet
+pub const EXIT_STATUS_STILL_ACTIVE: i32 = 259;
 
 #[derive(Debug, Clone)]
 //#[cfg_attr(feature = "serde", derive(::serde::Serialize))]
@@ -25,6 +30,7 @@ pub struct Win32ProcessInfo {
     pub name: String,
     pub dtb: Address,
     pub section_base: Address,
+    pub exit_status: Win32ExitStatus,
     pub ethread: Address,
     pub wow64: Address,
 

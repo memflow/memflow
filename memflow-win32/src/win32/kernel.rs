@@ -1,6 +1,9 @@
 use std::prelude::v1::*;
 
-use super::{KernelBuilder, KernelInfo, Win32Process, Win32ProcessInfo};
+use super::{
+    KernelBuilder, KernelInfo, Win32ExitStatus, Win32Process, Win32ProcessInfo,
+    EXIT_STATUS_STILL_ACTIVE,
+};
 use crate::error::{Error, Result};
 use crate::offsets::{self, Win32Offsets};
 use crate::pe::{pe32, pe64, MemoryPeViewContext};
@@ -196,7 +199,8 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
             name: "ntoskrnl.exe".to_string(),
             dtb: self.sysproc_dtb,
             section_base: Address::NULL, // TODO: see below
-            ethread: Address::NULL,      // TODO: see below
+            exit_status: EXIT_STATUS_STILL_ACTIVE,
+            ethread: Address::NULL, // TODO: see below
             wow64: Address::NULL,
 
             teb: Address::NULL, // TODO: see below
@@ -277,6 +281,10 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
             eprocess + self.offsets.eproc_section_base(),
         )?;
         trace!("section_base={:x}", section_base);
+
+        let exit_status: Win32ExitStatus =
+            reader.virt_read(eprocess + self.offsets.eproc_exit_status())?;
+        trace!("exit_status={}", exit_status);
 
         // find first ethread
         let ethread = reader.virt_read_addr_arch(
@@ -379,6 +387,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
             name,
             dtb,
             section_base,
+            exit_status,
             ethread,
             wow64,
 

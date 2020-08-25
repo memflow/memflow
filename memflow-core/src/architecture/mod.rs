@@ -148,6 +148,19 @@ pub trait Architecture: Send + Sync {
     /// assert_eq!(arch.size_addr(), 4);
     /// ```
     fn size_addr(&self) -> usize;
+
+    /// Returns the address space range in bits for the `Architecture`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use memflow_core::architecture::x86::x32_pae;
+    ///
+    /// let arch = x32_pae::ARCH;
+    /// assert_eq!(arch.address_space_bits(), 36);
+    ///
+    /// ```
+    fn address_space_bits(&self) -> u8;
 }
 
 impl<'a> std::fmt::Debug for &'a dyn Architecture {
@@ -157,6 +170,7 @@ impl<'a> std::fmt::Debug for &'a dyn Architecture {
             .field("endianess", &self.endianess())
             .field("page_size", &self.page_size())
             .field("size_addr", &self.size_addr())
+            .field("address_space_bits", &self.address_space_bits())
             .finish()
     }
 }

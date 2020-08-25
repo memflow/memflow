@@ -140,7 +140,8 @@ impl ArchMMUSpec {
             fail_out.extend(Some((Error::VirtualTranslate, data.addr, data.buf)));
         }
 
-        let virt_range = 1usize << (self.virt_addr_bit_range(0).1 - 1);
+        let virt_bit_range = self.virt_addr_bit_range(0).1;
+        let virt_range = 1usize << (virt_bit_range - 1);
 
         let (lower, higher) = left.split_at(virt_range);
 
@@ -150,6 +151,15 @@ impl ArchMMUSpec {
 
         if let Some(mut data) = higher {
             let (reject, higher) = data.split_at_rev(virt_range);
+
+            // The upper half has to be all negative (all bits set), so compare the masks to see if
+            // it is the case.
+            let lhs = Address::bit_mask(virt_bit_range..(self.addr_size * 8 - 1)).as_u64();
+            let rhs = higher.addr.as_u64() & lhs;
+
+            if (lhs ^ rhs) != 0 {
+                return;
+            }
 
             if higher.length() > 0 {
                 valid_out.extend(Some(higher).into_iter());

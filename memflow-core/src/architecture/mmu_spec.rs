@@ -65,6 +65,18 @@ pub struct ArchMMUSpec {
 
 pub trait MMUTranslationBase {
     fn get_initial_pt(&self, address: Address) -> Address;
+
+    fn get_pt_by_index(&self, _: usize) -> Address;
+
+    fn pt_count(&self) -> usize;
+
+    fn virt_addr_filter<B: SplitAtIndex, O: Extend<(Error, Address, B)>>(
+        &self,
+        spec: &ArchMMUSpec,
+        addr: (Address, B),
+        data_to_translate: &mut TranslateVec<B>,
+        out_fail: &mut O,
+    );
 }
 
 impl ArchMMUSpec {
@@ -327,12 +339,16 @@ impl ArchMMUSpec {
         //TODO: Improve filtering speed (vec reserve)
         //TODO: Optimize BTreeMap
 
-        //TODO: Fix dtb
-        data_to_translate.push(TranslationChunk::new(dtb.get_initial_pt(0.into()), {
-            let mut vec = BumpVec::with_capacity_in(addrs.size_hint().0, arena);
-            addrs.for_each(|data| self.virt_addr_filter(data, &mut vec, out_fail));
-            vec
-        }));
+        data_to_translate
+            .extend((0..dtb.pt_count()).map(|idx| {
+                TranslationChunk::new(dtb.get_pt_by_index(idx), BumpVec::new_in(arena))
+            }));
+
+        addrs.for_each(|data| dtb.virt_addr_filter(self, data, &mut data_to_translate, out_fail));
+
+        data_to_translate
+            .iter_mut()
+            .for_each(|trd| trd.recalc_minmax());
 
         for pt_step in 0..self.split_count() {
             vtop_trace!(
@@ -355,11 +371,7 @@ impl ArchMMUSpec {
                     tr_chunk.vec.len()
                 );
 
-                if !self.check_entry(tr_chunk.pt_addr, pt_step)
-                    || (pt_step > 0
-                        // TODO: Fix this too
-                        && dtb.get_initial_pt(0.into()).as_u64() == self.pte_addr_mask(tr_chunk.pt_addr, pt_step))
-                {
+                if !self.check_entry(tr_chunk.pt_addr, pt_step) {
                     //There has been an error in translation, push it to output with the associated buf
                     vtop_trace!("check_entry failed");
                     out_fail.extend(

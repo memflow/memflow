@@ -30,7 +30,7 @@ pub trait SplitAtIndex {
     where
         Self: Sized,
     {
-        let (left, right) = self.split_at(self.length() - idx);
+        let (left, right) = self.split_inclusive_at(self.length() - idx);
         (
             if left.length() == 0 { None } else { Some(left) },
             right.unwrap(),

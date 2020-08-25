@@ -39,6 +39,10 @@ impl Architecture for X86Architecture {
     fn size_addr(&self) -> usize {
         self.mmu.addr_size.into()
     }
+
+    fn address_space_bits(&self) -> u8 {
+        self.mmu.address_space_bits
+    }
 }
 
 #[derive(Clone, Copy)]

@@ -178,6 +178,44 @@ mod tests {
     const ADDEND: usize = 17;
 
     #[test]
+    fn pc_check_overflowing() {
+        let arr = [0_u8; 0x1000];
+
+        let addr = (!0u64 - 0x500).into();
+
+        let mut total_len = 0;
+
+        let mut chunks = arr.page_chunks(addr, PAGE_SIZE);
+        total_len += chunks.next().unwrap().1.len();
+
+        for (addr, chunk) in chunks {
+            total_len += chunk.len();
+            assert_eq!(addr.as_page_aligned(PAGE_SIZE), addr);
+        }
+
+        assert_eq!(total_len, 0x1000);
+    }
+
+    #[test]
+    fn pc_check_edge() {
+        let arr = [0_u8; 0x1000];
+
+        let addr = (!0u64).into();
+
+        let mut total_len = 0;
+
+        let mut chunks = arr.page_chunks(addr, PAGE_SIZE);
+        total_len += chunks.next().unwrap().1.len();
+
+        for (addr, chunk) in chunks {
+            total_len += chunk.len();
+            assert_eq!(addr.as_page_aligned(PAGE_SIZE), addr);
+        }
+
+        assert_eq!(total_len, 0x1000);
+    }
+
+    #[test]
     fn pc_check_all_aligned_zero() {
         let arr = [0_u8; 0x1000];
 

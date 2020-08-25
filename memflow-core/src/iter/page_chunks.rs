@@ -203,7 +203,8 @@ impl<T: SplitAtIndex, FS: FnMut(Address, &T, Option<&T>) -> bool> Iterator
                 )
                 .as_page_aligned(self.page_size)
                 .as_usize()
-                .wrapping_sub(self.cur_address.as_usize() + 1)
+                .wrapping_sub(self.cur_address.as_usize())
+                .wrapping_sub(1)
                 .wrapping_add(self.cur_off);
 
                 let (head, tail) = buf.split_inclusive_at(end_len);

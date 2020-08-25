@@ -32,7 +32,7 @@ pub use phys_mem::{
 #[doc(hidden)]
 pub use phys_mem_batcher::PhysicalMemoryBatcher;
 #[doc(hidden)]
-pub use virt_mem::{CloneableVirtualMemory, VirtualDMA, VirtualMemory, VirtualMemoryBox};
+pub use virt_mem::{VirtualDMA, VirtualMemory};
 #[doc(hidden)]
 pub use virt_mem_batcher::VirtualMemoryBatcher;
 #[doc(hidden)]

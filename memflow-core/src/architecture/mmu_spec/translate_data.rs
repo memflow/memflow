@@ -119,6 +119,18 @@ impl<'a, T: SplitAtIndex> TranslationChunk<'a, T> {
         }
     }
 
+    pub fn recalc_minmax(&mut self) {
+        let (min, max) = self.vec.iter().fold((!0u64, 0u64), |(cmin, cmax), elem| {
+            (
+                std::cmp::min(cmin, elem.addr.as_u64()),
+                std::cmp::max(cmax, elem.addr.as_u64() + elem.length() as u64),
+            )
+        });
+
+        self.min_addr = min.into();
+        self.max_addr = max.into();
+    }
+
     pub fn consume_mut(&mut self, arena: &'a Bump) -> Self {
         let pt_addr = std::mem::replace(&mut self.pt_addr, Address::null());
         let vec = std::mem::replace(&mut self.vec, BumpVec::new_in(arena));

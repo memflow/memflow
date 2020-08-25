@@ -3,7 +3,7 @@ pub mod x32_pae;
 pub mod x64;
 
 use super::{
-    mmu_spec::{ArchMMUSpec, MMUTranslationBase},
+    mmu_spec::{translate_data::TranslateVec, ArchMMUSpec, MMUTranslationBase},
     Architecture, Endianess, ScopedVirtualTranslate,
 };
 
@@ -92,6 +92,27 @@ pub struct X86PageTableBase(Address);
 impl MMUTranslationBase for X86PageTableBase {
     fn get_initial_pt(&self, _: Address) -> Address {
         self.0
+    }
+
+    fn get_pt_by_index(&self, _: usize) -> Address {
+        self.0
+    }
+
+    fn pt_count(&self) -> usize {
+        1
+    }
+
+    fn virt_addr_filter<B, O>(
+        &self,
+        spec: &ArchMMUSpec,
+        addr: (Address, B),
+        data_to_translate: &mut TranslateVec<B>,
+        out_fail: &mut O,
+    ) where
+        B: SplitAtIndex,
+        O: Extend<(Error, Address, B)>,
+    {
+        spec.virt_addr_filter(addr, &mut data_to_translate[0].vec, out_fail);
     }
 }
 

@@ -42,7 +42,12 @@ pub struct PageCache<'a, T> {
 unsafe impl<'a, T> Send for PageCache<'a, T> {}
 
 impl<'a, T: CacheValidator> PageCache<'a, T> {
-    pub fn new(arch: Architecture, size: usize, page_type_mask: PageType, validator: T) -> Self {
+    pub fn new(
+        arch: &dyn Architecture,
+        size: usize,
+        page_type_mask: PageType,
+        validator: T,
+    ) -> Self {
         Self::with_page_size(arch.page_size(), size, page_type_mask, validator)
     }
 
@@ -305,11 +310,12 @@ impl<'a, T> Drop for PageCache<'a, T> {
 
 #[cfg(test)]
 mod tests {
-    use crate::architecture::Architecture;
+    use crate::architecture::x86;
+
     use crate::dummy::DummyMemory;
     use crate::mem::cache::page_cache::PageCache;
     use crate::mem::cache::timed_validator::TimedCacheValidator;
-    use crate::mem::{VirtualFromPhysical, VirtualMemory};
+    use crate::mem::{VirtualDMA, VirtualMemory};
     use crate::types::{size, Address, PhysicalAddress};
     use crate::*;
     use coarsetime::Duration;
@@ -362,12 +368,13 @@ mod tests {
                 unsafe { std::slice::from_raw_parts(test_buf.as_ptr() as *const u8, virt_size) };
 
             let (dtb, virt_base) = dummy_mem.alloc_dtb(virt_size, &test_buf);
-            let arch = Architecture::X64;
+            let arch = x86::x64::ARCH;
             println!("dtb={:x} virt_base={:x} seed={:x}", dtb, virt_base, seed);
+            let translator = x86::x64::new_translator(dtb);
 
             let mut buf_nocache = vec![0_u8; test_buf.len()];
             {
-                let mut virt_mem = VirtualFromPhysical::new(&mut dummy_mem, arch, arch, dtb);
+                let mut virt_mem = VirtualDMA::new(&mut dummy_mem, arch, translator);
                 virt_mem
                     .virt_read_raw_into(virt_base, buf_nocache.as_mut_slice())
                     .unwrap();
@@ -391,7 +398,7 @@ mod tests {
             let mut mem_cache = CachedMemoryAccess::new(&mut dummy_mem, cache);
             let mut buf_cache = vec![0_u8; buf_nocache.len()];
             {
-                let mut virt_mem = VirtualFromPhysical::new(&mut mem_cache, arch, arch, dtb);
+                let mut virt_mem = VirtualDMA::new(&mut mem_cache, arch, translator);
                 virt_mem
                     .virt_read_raw_into(virt_base, buf_cache.as_mut_slice())
                     .unwrap();
@@ -419,7 +426,8 @@ mod tests {
             *item = (i % 256) as u8;
         }
         let (dtb, virt_base) = dummy_mem.alloc_dtb(virt_size, &buf_start);
-        let arch = Architecture::X64;
+        let arch = x86::x64::ARCH;
+        let translator = x86::x64::new_translator(dtb);
 
         let cache = PageCache::new(
             arch,
@@ -433,7 +441,7 @@ mod tests {
         //Modifying the memory from other channels should leave the cached page unchanged
         let mut cached_buf = vec![0_u8; 64];
         {
-            let mut virt_mem = VirtualFromPhysical::new(&mut mem_cache, arch, arch, dtb);
+            let mut virt_mem = VirtualDMA::new(&mut mem_cache, arch, translator);
             virt_mem
                 .virt_read_raw_into(virt_base, cached_buf.as_mut_slice())
                 .unwrap();
@@ -443,7 +451,7 @@ mod tests {
         write_buf[16..20].copy_from_slice(&[255, 255, 255, 255]);
         {
             let mut virt_mem =
-                VirtualFromPhysical::new(unsafe { mem_ptr.as_mut().unwrap() }, arch, arch, dtb);
+                VirtualDMA::new(unsafe { mem_ptr.as_mut().unwrap() }, arch, translator);
             virt_mem
                 .virt_write_raw(virt_base, write_buf.as_slice())
                 .unwrap();
@@ -451,7 +459,7 @@ mod tests {
 
         let mut check_buf = vec![0_u8; 64];
         {
-            let mut virt_mem = VirtualFromPhysical::new(&mut mem_cache, arch, arch, dtb);
+            let mut virt_mem = VirtualDMA::new(&mut mem_cache, arch, translator);
             virt_mem
                 .virt_read_raw_into(virt_base, check_buf.as_mut_slice())
                 .unwrap();
@@ -471,7 +479,8 @@ mod tests {
             *item = (i % 256) as u8;
         }
         let (dtb, virt_base) = dummy_mem.alloc_dtb(virt_size, &buf_start);
-        let arch = Architecture::X64;
+        let arch = x86::x64::ARCH;
+        let translator = x86::x64::new_translator(dtb);
 
         //alloc_dtb creates a page table with all writeable pages, we disable cache for them
         let cache = PageCache::new(
@@ -486,7 +495,7 @@ mod tests {
         //Modifying the memory from other channels should leave the cached page unchanged
         let mut cached_buf = vec![0_u8; 64];
         {
-            let mut virt_mem = VirtualFromPhysical::new(&mut mem_cache, arch, arch, dtb);
+            let mut virt_mem = VirtualDMA::new(&mut mem_cache, arch, translator);
             virt_mem
                 .virt_read_raw_into(virt_base, cached_buf.as_mut_slice())
                 .unwrap();
@@ -496,7 +505,7 @@ mod tests {
         write_buf[16..20].copy_from_slice(&[255, 255, 255, 255]);
         {
             let mut virt_mem =
-                VirtualFromPhysical::new(unsafe { mem_ptr.as_mut().unwrap() }, arch, arch, dtb);
+                VirtualDMA::new(unsafe { mem_ptr.as_mut().unwrap() }, arch, translator);
             virt_mem
                 .virt_write_raw(virt_base, write_buf.as_slice())
                 .unwrap();
@@ -504,7 +513,7 @@ mod tests {
 
         let mut check_buf = vec![0_u8; 64];
         {
-            let mut virt_mem = VirtualFromPhysical::new(mem_cache, arch, arch, dtb);
+            let mut virt_mem = VirtualDMA::new(mem_cache, arch, translator);
             virt_mem
                 .virt_read_raw_into(virt_base, check_buf.as_mut_slice())
                 .unwrap();
@@ -536,7 +545,7 @@ mod tests {
             .phys_write_raw(addr, buf_start.as_slice())
             .unwrap();
 
-        let arch = Architecture::X64;
+        let arch = x86::x64::ARCH;
 
         let cache = PageCache::new(
             arch,
@@ -593,7 +602,7 @@ mod tests {
             .phys_write_raw(addr, buf_start.as_slice())
             .unwrap();
 
-        let arch = Architecture::X64;
+        let arch = x86::x64::ARCH;
 
         let cache = PageCache::new(
             arch,
@@ -670,7 +679,8 @@ mod tests {
             *item = (i % 256) as u8;
         }
         let (dtb, virt_base) = dummy_mem.alloc_dtb(virt_size, &buf_start);
-        let arch = Architecture::X64;
+        let arch = x86::x64::ARCH;
+        let translator = x86::x64::new_translator(dtb);
 
         let cache = PageCache::new(
             arch,
@@ -680,7 +690,7 @@ mod tests {
         );
 
         let mut mem_cache = CachedMemoryAccess::new(&mut dummy_mem, cache);
-        let mut virt_mem = VirtualFromPhysical::new(&mut mem_cache, arch, arch, dtb);
+        let mut virt_mem = VirtualDMA::new(&mut mem_cache, arch, translator);
 
         let mut buf_1 = vec![0_u8; 64];
         virt_mem

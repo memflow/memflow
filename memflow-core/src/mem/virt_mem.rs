@@ -1,10 +1,11 @@
 use std::prelude::v1::*;
 
-pub mod virt_from_phys;
-pub use virt_from_phys::VirtualFromPhysical;
+pub mod virtual_dma;
+pub use virtual_dma::VirtualDMA;
 
 use super::VirtualMemoryBatcher;
-use crate::error::{Error, PartialResult, PartialResultExt, Result};
+use crate::architecture::Architecture;
+use crate::error::{Error, PartialError, PartialResult, PartialResultExt, Result};
 use crate::types::{Address, Page, Pointer32, Pointer64};
 
 #[cfg(feature = "std")]
@@ -118,6 +119,21 @@ where
         Self: Sized,
     {
         self.virt_read::<u64>(addr).map_data(|d| d.into())
+    }
+
+    fn virt_read_addr_arch(
+        &mut self,
+        arch: &dyn Architecture,
+        addr: Address,
+    ) -> PartialResult<Address>
+    where
+        Self: Sized,
+    {
+        match arch.bits() {
+            64 => self.virt_read_addr64(addr),
+            32 => self.virt_read_addr32(addr),
+            _ => Err(PartialError::Error(Error::InvalidArchitecture)),
+        }
     }
 
     // read pointer wrappers

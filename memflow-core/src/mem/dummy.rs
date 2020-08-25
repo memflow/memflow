@@ -1,6 +1,7 @@
-use crate::architecture::Architecture;
+use crate::architecture::x86::x64;
+use crate::architecture::{Architecture, ScopedVirtualTranslate};
 use crate::error::{Error, Result};
-use crate::mem::virt_mem::virt_from_phys::VirtualFromPhysical;
+use crate::mem::virt_mem::VirtualDMA;
 use crate::mem::{PhysicalMemory, PhysicalReadData, PhysicalWriteData, VirtualMemory};
 use crate::process::{OsProcessInfo, OsProcessModuleInfo};
 use crate::types::{size, Address};
@@ -118,6 +119,10 @@ impl DummyProcess {
             size: (thread_rng().gen_range(min_size, self.map_size) / 2),
         }
     }
+
+    pub fn translator(&self) -> impl ScopedVirtualTranslate {
+        x64::new_translator(self.dtb)
+    }
 }
 
 impl OsProcessInfo for DummyProcess {
@@ -133,16 +138,12 @@ impl OsProcessInfo for DummyProcess {
         String::from("Dummy")
     }
 
-    fn dtb(&self) -> Address {
-        self.dtb
+    fn sys_arch(&self) -> &'static dyn Architecture {
+        x64::ARCH
     }
 
-    fn sys_arch(&self) -> Architecture {
-        Architecture::X64
-    }
-
-    fn proc_arch(&self) -> Architecture {
-        Architecture::X64
+    fn proc_arch(&self) -> &'static dyn Architecture {
+        x64::ARCH
     }
 }
 
@@ -201,7 +202,7 @@ impl DummyMemory {
 
     pub fn new_virt(size: usize, virt_size: usize, buffer: &[u8]) -> (impl VirtualMemory, Address) {
         let (ret, dtb, virt_base) = Self::new_and_dtb(size, virt_size, buffer);
-        let virt = VirtualFromPhysical::new(ret, Architecture::X64, Architecture::X64, dtb);
+        let virt = VirtualDMA::new(ret, x64::ARCH, x64::new_translator(dtb));
         (virt, virt_base)
     }
 

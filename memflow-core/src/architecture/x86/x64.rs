@@ -1,16 +1,14 @@
-use super::ArchMMUSpec;
-use crate::architecture::Endianess;
+use super::{
+    super::{ArchMMUSpec, Architecture, Endianess, ScopedVirtualTranslate},
+    X86Architecture, X86ScopedVirtualTranslate,
+};
 
-pub const fn bits() -> u8 {
-    64
-}
+use crate::types::Address;
 
-pub const fn endianess() -> Endianess {
-    Endianess::LittleEndian
-}
-
-pub fn get_mmu_spec() -> ArchMMUSpec {
-    ArchMMUSpec {
+pub(super) const ARCH_SPEC: X86Architecture = X86Architecture {
+    bits: 64,
+    endianess: Endianess::LittleEndian,
+    mmu: ArchMMUSpec {
         virtual_address_splits: &[9, 9, 9, 9, 12],
         valid_final_page_steps: &[2, 3, 4],
         address_space_bits: 52,
@@ -20,23 +18,44 @@ pub fn get_mmu_spec() -> ArchMMUSpec {
         writeable_bit: 1,
         nx_bit: 63,
         large_page_bit: 7,
-    }
+    },
+};
+
+pub static ARCH: &dyn Architecture = &ARCH_SPEC;
+
+pub fn new_translator(dtb: Address) -> impl ScopedVirtualTranslate {
+    X86ScopedVirtualTranslate::new(&ARCH_SPEC, dtb)
 }
 
 #[cfg(test)]
 mod tests {
-    use super::super::mmu_spec::masks::*;
-    use super::get_mmu_spec;
+    use crate::architecture::mmu_spec::ArchMMUSpec;
     use crate::types::{size, Address, PageType};
+
+    fn get_mmu_spec() -> ArchMMUSpec {
+        super::ARCH_SPEC.mmu
+    }
 
     #[test]
     fn x64_pte_bitmasks() {
         let mmu = get_mmu_spec();
         let mask_addr = Address::invalid();
-        assert_eq!(mmu.pte_addr_mask(mask_addr, 0), make_bit_mask(12, 51));
-        assert_eq!(mmu.pte_addr_mask(mask_addr, 1), make_bit_mask(12, 51));
-        assert_eq!(mmu.pte_addr_mask(mask_addr, 2), make_bit_mask(12, 51));
-        assert_eq!(mmu.pte_addr_mask(mask_addr, 3), make_bit_mask(12, 51));
+        assert_eq!(
+            mmu.pte_addr_mask(mask_addr, 0),
+            Address::bit_mask(12..51).as_u64()
+        );
+        assert_eq!(
+            mmu.pte_addr_mask(mask_addr, 1),
+            Address::bit_mask(12..51).as_u64()
+        );
+        assert_eq!(
+            mmu.pte_addr_mask(mask_addr, 2),
+            Address::bit_mask(12..51).as_u64()
+        );
+        assert_eq!(
+            mmu.pte_addr_mask(mask_addr, 3),
+            Address::bit_mask(12..51).as_u64()
+        );
     }
 
     #[test]

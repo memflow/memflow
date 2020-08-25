@@ -7,14 +7,16 @@ use crate::win32::VirtualReadUnicodeString;
 use std::fmt;
 
 use memflow_core::architecture::Architecture;
-use memflow_core::mem::{PhysicalMemory, VirtualFromPhysical, VirtualMemory, VirtualTranslate};
+use memflow_core::mem::{PhysicalMemory, VirtualDMA, VirtualMemory, VirtualTranslate};
 use memflow_core::types::Address;
 use memflow_core::{OsProcessInfo, OsProcessModuleInfo};
+
+use super::Win32VirtualTranslate;
 
 use log::trace;
 
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(::serde::Serialize))]
+//#[cfg_attr(feature = "serde", derive(::serde::Serialize))]
 pub struct Win32ProcessInfo {
     pub address: Address,
 
@@ -34,8 +36,8 @@ pub struct Win32ProcessInfo {
     pub peb_module: Address,
 
     // architecture
-    pub sys_arch: Architecture,
-    pub proc_arch: Architecture,
+    pub sys_arch: &'static dyn Architecture,
+    pub proc_arch: &'static dyn Architecture,
 
     // offsets for this process (either x86 or x64 offsets)
     pub ldr_data_base_offs: usize,
@@ -55,6 +57,10 @@ impl Win32ProcessInfo {
     pub fn peb_module(&self) -> Address {
         self.peb_module
     }
+
+    pub fn translator(&self) -> Win32VirtualTranslate {
+        Win32VirtualTranslate::new(self.sys_arch, self.dtb)
+    }
 }
 
 impl OsProcessInfo for Win32ProcessInfo {
@@ -70,33 +76,40 @@ impl OsProcessInfo for Win32ProcessInfo {
         self.name.clone()
     }
 
-    fn dtb(&self) -> Address {
-        self.dtb
-    }
-
-    fn sys_arch(&self) -> Architecture {
+    fn sys_arch(&self) -> &'static dyn Architecture {
         self.sys_arch
     }
 
-    fn proc_arch(&self) -> Architecture {
+    fn proc_arch(&self) -> &'static dyn Architecture {
         self.proc_arch
     }
 }
 
-#[derive(Clone)]
-pub struct Win32Process<T: VirtualMemory> {
+pub struct Win32Process<T> {
     pub virt_mem: T,
     pub proc_info: Win32ProcessInfo,
 }
 
-impl<'a, T: PhysicalMemory, V: VirtualTranslate> Win32Process<VirtualFromPhysical<T, V>> {
+// TODO: can be removed i think
+impl<T: Clone> Clone for Win32Process<T> {
+    fn clone(&self) -> Self {
+        Self {
+            virt_mem: self.virt_mem.clone(),
+            proc_info: self.proc_info.clone(),
+        }
+    }
+}
+
+// TODO: replace the following impls with a dedicated builder
+// TODO: add non cloneable thing
+impl<'a, T: PhysicalMemory, V: VirtualTranslate>
+    Win32Process<VirtualDMA<T, V, Win32VirtualTranslate>>
+{
     pub fn with_kernel(kernel: Kernel<T, V>, proc_info: Win32ProcessInfo) -> Self {
-        // create virt_mem
-        let virt_mem = VirtualFromPhysical::with_vat(
+        let virt_mem = VirtualDMA::with_vat(
             kernel.phys_mem,
-            proc_info.sys_arch,
             proc_info.proc_arch,
-            proc_info.dtb,
+            proc_info.translator(),
             kernel.vat,
         );
 
@@ -113,11 +126,11 @@ impl<'a, T: PhysicalMemory, V: VirtualTranslate> Win32Process<VirtualFromPhysica
 }
 
 impl<'a, T: PhysicalMemory, V: VirtualTranslate>
-    Win32Process<VirtualFromPhysical<&'a mut T, &'a mut V>>
+    Win32Process<VirtualDMA<&'a mut T, &'a mut V, Win32VirtualTranslate>>
 {
     /// Constructs a new process by borrowing a kernel object.
     ///
-    /// Internally this will create a `VirtualFromPhysical` object that also
+    /// Internally this will create a `VirtualDMA` object that also
     /// borrows the PhysicalMemory and Vat objects from the kernel.
     ///
     /// The resulting process object is NOT cloneable due to the mutable borrowing.
@@ -125,12 +138,10 @@ impl<'a, T: PhysicalMemory, V: VirtualTranslate>
     /// When u need a cloneable Process u have to use the `::with_kernel` function
     /// which will move the kernel object.
     pub fn with_kernel_ref(kernel: &'a mut Kernel<T, V>, proc_info: Win32ProcessInfo) -> Self {
-        // create virt_mem
-        let virt_mem = VirtualFromPhysical::with_vat(
+        let virt_mem = VirtualDMA::with_vat(
             &mut kernel.phys_mem,
-            proc_info.sys_arch,
             proc_info.proc_arch,
-            proc_info.dtb,
+            proc_info.translator(),
             &mut kernel.vat,
         );
 
@@ -162,14 +173,14 @@ impl<T: VirtualMemory> Win32Process<T> {
         Ok(list)
     }
 
-    pub fn module_info_from_peb(&mut self, peb_module: Address) -> Result<Win32ModuleInfo> {
+    pub fn module_info_from_peb(&mut self, peb_entry: Address) -> Result<Win32ModuleInfo> {
         let base = match self.proc_info.proc_arch.bits() {
             64 => self
                 .virt_mem
-                .virt_read_addr64(peb_module + self.proc_info.ldr_data_base_offs)?,
+                .virt_read_addr64(peb_entry + self.proc_info.ldr_data_base_offs)?,
             32 => self
                 .virt_mem
-                .virt_read_addr32(peb_module + self.proc_info.ldr_data_base_offs)?,
+                .virt_read_addr32(peb_entry + self.proc_info.ldr_data_base_offs)?,
             _ => return Err(Error::InvalidArchitecture),
         };
         trace!("base={:x}", base);
@@ -177,11 +188,11 @@ impl<T: VirtualMemory> Win32Process<T> {
         let size = match self.proc_info.proc_arch.bits() {
             64 => self
                 .virt_mem
-                .virt_read_addr64(peb_module + self.proc_info.ldr_data_size_offs)?
+                .virt_read_addr64(peb_entry + self.proc_info.ldr_data_size_offs)?
                 .as_usize(),
             32 => self
                 .virt_mem
-                .virt_read_addr32(peb_module + self.proc_info.ldr_data_size_offs)?
+                .virt_read_addr32(peb_entry + self.proc_info.ldr_data_size_offs)?
                 .as_usize(),
             _ => return Err(Error::InvalidArchitecture),
         };
@@ -189,12 +200,12 @@ impl<T: VirtualMemory> Win32Process<T> {
 
         let name = self.virt_mem.virt_read_unicode_string(
             self.proc_info.proc_arch,
-            peb_module + self.proc_info.ldr_data_name_offs,
+            peb_entry + self.proc_info.ldr_data_name_offs,
         )?;
         trace!("name={}", name);
 
         Ok(Win32ModuleInfo {
-            peb_module,
+            peb_entry,
             parent_eprocess: self.proc_info.address,
             base,
             size,
@@ -222,7 +233,7 @@ impl<T: VirtualMemory> Win32Process<T> {
     }
 }
 
-impl<'a, T: VirtualMemory> fmt::Debug for Win32Process<T> {
+impl<T> fmt::Debug for Win32Process<T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{:?}", self.proc_info)
     }

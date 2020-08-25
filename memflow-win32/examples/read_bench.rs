@@ -186,7 +186,7 @@ fn main() -> Result<()> {
     // scan for win32 kernel
     let kernel_info = KernelInfo::scanner(&mut connector).scan()?;
 
-    let mut vat = TranslateArch::new(kernel_info.start_block.arch);
+    let mut vat = DirectTranslate::new();
 
     println!("Benchmarking uncached reads:");
     read_bench(&mut connector, &mut vat, kernel_info.clone()).unwrap();

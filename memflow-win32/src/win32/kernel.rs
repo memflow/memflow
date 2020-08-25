@@ -1,23 +1,21 @@
 use std::prelude::v1::*;
 
-use super::{KernelInfo, Win32Process, Win32ProcessInfo};
+use super::{KernelBuilder, KernelInfo, Win32Process, Win32ProcessInfo};
 use crate::error::{Error, Result};
 use crate::offsets::{self, Win32Offsets};
 use crate::pe::{pe32, pe64, MemoryPeViewContext};
 
-#[cfg(feature = "symstore")]
-use crate::offsets::SymbolStore;
-
 use log::{info, trace};
 use std::fmt;
 
-use memflow_core::architecture::Architecture;
+use memflow_core::architecture::x86;
 use memflow_core::mem::{
-    CachedMemoryAccess, CachedVirtualTranslate, PhysicalMemory, TimedCacheValidator, TranslateArch,
-    VirtualFromPhysical, VirtualMemory, VirtualTranslate,
+    DirectTranslate, PhysicalMemory, VirtualDMA, VirtualMemory, VirtualTranslate,
 };
 use memflow_core::process::{OperatingSystem, OsProcessInfo, OsProcessModuleInfo};
 use memflow_core::types::Address;
+
+use super::Win32VirtualTranslate;
 
 use pelite::{
     self,
@@ -48,16 +46,20 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
         // be different to the one used in the actual kernel.
         // In case of a failure this will fall back to the winload dtb.
         let sysproc_dtb = {
-            let mut reader = VirtualFromPhysical::with_vat(
+            let mut reader = VirtualDMA::with_vat(
                 &mut phys_mem,
                 kernel_info.start_block.arch,
-                kernel_info.start_block.arch,
-                kernel_info.start_block.dtb,
+                Win32VirtualTranslate::new(
+                    kernel_info.start_block.arch,
+                    kernel_info.start_block.dtb,
+                ),
                 &mut vat,
             );
 
-            if let Ok(dtb) = reader.virt_read_addr(kernel_info.eprocess_base + offsets.kproc_dtb())
-            {
+            if let Ok(dtb) = reader.virt_read_addr_arch(
+                kernel_info.start_block.arch,
+                kernel_info.eprocess_base + offsets.kproc_dtb(),
+            ) {
                 dtb
             } else {
                 kernel_info.start_block.dtb
@@ -81,12 +83,11 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
     }
 
     pub fn eprocess_list(&mut self) -> Result<Vec<Address>> {
-        // TODO: create a VirtualFromPhysical constructor for kernel_info
-        let mut reader = VirtualFromPhysical::with_vat(
+        // TODO: create a VirtualDMA constructor for kernel_info
+        let mut reader = VirtualDMA::with_vat(
             &mut self.phys_mem,
             self.kernel_info.start_block.arch,
-            self.kernel_info.start_block.arch,
-            self.sysproc_dtb,
+            Win32VirtualTranslate::new(self.kernel_info.start_block.arch, self.sysproc_dtb),
             &mut self.vat,
         );
 
@@ -100,9 +101,13 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
             trace!("eprocess={}", eprocess);
 
             // test flink + blink before adding the process
-            let flink_entry = reader.virt_read_addr(list_entry)?;
+            let flink_entry =
+                reader.virt_read_addr_arch(self.kernel_info.start_block.arch, list_entry)?;
             trace!("flink_entry={}", flink_entry);
-            let blink_entry = reader.virt_read_addr(list_entry + self.offsets.list_blink())?;
+            let blink_entry = reader.virt_read_addr_arch(
+                self.kernel_info.start_block.arch,
+                list_entry + self.offsets.list_blink(),
+            )?;
             trace!("blink_entry={}", blink_entry);
 
             if flink_entry.is_null() || blink_entry.is_null() || flink_entry == list_start {
@@ -121,12 +126,11 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
     }
 
     pub fn ntoskrnl_process_info(&mut self) -> Result<Win32ProcessInfo> {
-        // TODO: create a VirtualFromPhysical constructor for kernel_info
-        let mut reader = VirtualFromPhysical::with_vat(
+        // TODO: create a VirtualDMA constructor for kernel_info
+        let mut reader = VirtualDMA::with_vat(
             &mut self.phys_mem,
             self.kernel_info.start_block.arch,
-            self.kernel_info.start_block.arch,
-            self.sysproc_dtb,
+            Win32VirtualTranslate::new(self.kernel_info.start_block.arch, self.sysproc_dtb),
             &mut self.vat,
         );
 
@@ -163,7 +167,8 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
             }
         };
 
-        let peb_module = reader.virt_read_addr(loaded_module_list)?;
+        let peb_module =
+            reader.virt_read_addr_arch(self.kernel_info.start_block.arch, loaded_module_list)?;
 
         // determine the offsets to be used when working with this process
         let (ldr_data_base_offs, ldr_data_size_offs, ldr_data_name_offs) =
@@ -209,12 +214,11 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
     }
 
     pub fn process_info_from_eprocess(&mut self, eprocess: Address) -> Result<Win32ProcessInfo> {
-        // TODO: create a VirtualFromPhysical constructor for kernel_info
-        let mut reader = VirtualFromPhysical::with_vat(
+        // TODO: create a VirtualDMA constructor for kernel_info
+        let mut reader = VirtualDMA::with_vat(
             &mut self.phys_mem,
             self.kernel_info.start_block.arch,
-            self.kernel_info.start_block.arch,
-            self.sysproc_dtb,
+            Win32VirtualTranslate::new(self.kernel_info.start_block.arch, self.sysproc_dtb),
             &mut self.vat,
         );
 
@@ -224,7 +228,10 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
         let name = reader.virt_read_cstr(eprocess + self.offsets.eproc_name(), 16)?;
         trace!("name={}", name);
 
-        let dtb = reader.virt_read_addr(eprocess + self.offsets.kproc_dtb())?;
+        let dtb = reader.virt_read_addr_arch(
+            self.kernel_info.start_block.arch,
+            eprocess + self.offsets.kproc_dtb(),
+        )?;
         trace!("dtb={:x}", dtb);
 
         let wow64 = if self.offsets.eproc_wow64() == 0 {
@@ -235,7 +242,10 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
                 "eproc_wow64={:x}; trying to read wow64 pointer",
                 self.offsets.eproc_wow64()
             );
-            reader.virt_read_addr(eprocess + self.offsets.eproc_wow64())?
+            reader.virt_read_addr_arch(
+                self.kernel_info.start_block.arch,
+                eprocess + self.offsets.eproc_wow64(),
+            )?
         };
         trace!("wow64={:x}", wow64);
 
@@ -245,58 +255,83 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
         let proc_arch = match sys_arch.bits() {
             64 => {
                 if wow64.is_null() {
-                    Architecture::X64
+                    x86::x64::ARCH
                 } else {
-                    Architecture::X86
+                    x86::x32::ARCH
                 }
             }
-            32 => Architecture::X86,
+            32 => x86::x64::ARCH,
             _ => return Err(Error::InvalidArchitecture),
         };
         trace!("proc_arch={:?}", proc_arch);
 
         // read native_peb (either the process peb or the peb containing the wow64 helpers)
-        let native_peb = reader.virt_read_addr(eprocess + self.offsets.eproc_peb())?;
+        let native_peb = reader.virt_read_addr_arch(
+            self.kernel_info.start_block.arch,
+            eprocess + self.offsets.eproc_peb(),
+        )?;
         trace!("native_peb={:x}", native_peb);
 
-        let section_base = reader.virt_read_addr(eprocess + self.offsets.eproc_section_base())?;
+        let section_base = reader.virt_read_addr_arch(
+            self.kernel_info.start_block.arch,
+            eprocess + self.offsets.eproc_section_base(),
+        )?;
         trace!("section_base={:x}", section_base);
 
         // find first ethread
-        let ethread = reader.virt_read_addr(eprocess + self.offsets.eproc_thread_list())?
-            - self.offsets.ethread_list_entry();
+        let ethread = reader.virt_read_addr_arch(
+            self.kernel_info.start_block.arch,
+            eprocess + self.offsets.eproc_thread_list(),
+        )? - self.offsets.ethread_list_entry();
         trace!("ethread={:x}", ethread);
 
         // TODO: does this need to be read with the process ctx?
         let teb = if wow64.is_null() {
-            reader.virt_read_addr(ethread + self.offsets.kthread_teb())?
+            reader.virt_read_addr_arch(
+                self.kernel_info.start_block.arch,
+                ethread + self.offsets.kthread_teb(),
+            )?
         } else {
-            reader.virt_read_addr(ethread + self.offsets.kthread_teb())? + 0x2000
+            reader.virt_read_addr_arch(
+                self.kernel_info.start_block.arch,
+                ethread + self.offsets.kthread_teb(),
+            )? + 0x2000
         };
         trace!("teb={:x}", teb);
 
+        std::mem::drop(reader);
+
         // construct reader with process dtb
         // TODO: can tlb be used here already?
-        let mut proc_reader = VirtualFromPhysical::new(
+        let mut proc_reader = VirtualDMA::with_vat(
             &mut self.phys_mem,
-            self.kernel_info.start_block.arch,
             proc_arch,
-            dtb,
+            Win32VirtualTranslate::new(self.kernel_info.start_block.arch, dtb),
+            DirectTranslate::new(),
         );
 
         // from here on out we are in the process context
         // we will be using the process type architecture now
         let teb_peb = if wow64.is_null() {
-            proc_reader.virt_read_addr(teb + self.offsets.teb_peb())?
+            proc_reader.virt_read_addr_arch(
+                self.kernel_info.start_block.arch,
+                teb + self.offsets.teb_peb(),
+            )?
         } else {
-            proc_reader.virt_read_addr(teb + self.offsets.teb_peb_x86())?
+            proc_reader.virt_read_addr_arch(
+                self.kernel_info.start_block.arch,
+                teb + self.offsets.teb_peb_x86(),
+            )?
         };
         trace!("teb_peb={:x}", teb_peb);
 
         let real_peb = if !teb_peb.is_null() {
             teb_peb
         } else {
-            proc_reader.virt_read_addr(eprocess + self.offsets.eproc_peb())?
+            proc_reader.virt_read_addr_arch(
+                self.kernel_info.start_block.arch,
+                eprocess + self.offsets.eproc_peb(),
+            )?
         };
         trace!("real_peb={:x}", real_peb);
 
@@ -309,11 +344,14 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
         trace!("peb_ldr_offs={:x}", peb_ldr_offs);
         trace!("ldr_list_offs={:x}", ldr_list_offs);
 
-        let peb_ldr =
-            proc_reader.virt_read_addr(real_peb /* TODO: can we have both? */ + peb_ldr_offs)?;
+        let peb_ldr = proc_reader.virt_read_addr_arch(
+            self.kernel_info.start_block.arch,
+            real_peb /* TODO: can we have both? */ + peb_ldr_offs,
+        )?;
         trace!("peb_ldr={:x}", peb_ldr);
 
-        let peb_module = proc_reader.virt_read_addr(peb_ldr + ldr_list_offs)?;
+        let peb_module = proc_reader
+            .virt_read_addr_arch(self.kernel_info.start_block.arch, peb_ldr + ldr_list_offs)?;
         trace!("peb_module={:x}", peb_module);
 
         // determine the offsets to be used when working with this process
@@ -358,6 +396,8 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
         })
     }
 
+    /// Retrieves a list of `Win32ProcessInfo` structs for all processes
+    /// that can be found on the target system.
     pub fn process_info_list(&mut self) -> Result<Vec<Win32ProcessInfo>> {
         let mut list = Vec::new();
         for &eprocess in self.eprocess_list()?.iter() {
@@ -368,15 +408,8 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
         Ok(list)
     }
 
-    pub fn process_info_pid(&mut self, pid: i32) -> Result<Win32ProcessInfo> {
-        let process_info_list = self.process_info_list()?;
-        process_info_list
-            .into_iter()
-            .inspect(|process| trace!("{} {}", process.pid(), process.name()))
-            .find(|process| process.pid == pid)
-            .ok_or_else(|| Error::Other("pid not found"))
-    }
-
+    /// Finds a process by it's name and returns the `Win32ProcessInfo` struct.
+    /// If no process with the specified name can be found this function will return an Error.
     pub fn process_info(&mut self, name: &str) -> Result<Win32ProcessInfo> {
         let process_info_list = self.process_info_list()?;
         let candidates = process_info_list
@@ -406,11 +439,80 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
 
         Err(Error::ProcessInfo)
     }
+
+    /// Finds a process by it's process id and returns the `Win32ProcessInfo` struct.
+    /// If no process with the specified name can be found this function will return an Error.
+    pub fn process_info_pid(&mut self, pid: i32) -> Result<Win32ProcessInfo> {
+        let process_info_list = self.process_info_list()?;
+        process_info_list
+            .into_iter()
+            .inspect(|process| trace!("{} {}", process.pid(), process.name()))
+            .find(|process| process.pid == pid)
+            .ok_or_else(|| Error::Other("pid not found"))
+    }
+
+    /// Finds a process by its name and constructs a `Win32Process` struct
+    /// by borrowing this kernel instance.
+    /// If no process with the specified name can be found this function will return an Error.
+    ///
+    /// This function can be useful for quickly accessing a process.
+    pub fn process(
+        &mut self,
+        name: &str,
+    ) -> Result<Win32Process<VirtualDMA<&mut T, &mut V, Win32VirtualTranslate>>> {
+        let proc_info = self.process_info(name)?;
+        Ok(Win32Process::with_kernel_ref(self, proc_info))
+    }
+
+    /// Finds a process by its process id and constructs a `Win32Process` struct
+    /// by borrowing this kernel instance.
+    /// If no process with the specified name can be found this function will return an Error.
+    ///
+    /// This function can be useful for quickly accessing a process.
+    pub fn process_pid(
+        &mut self,
+        pid: i32,
+    ) -> Result<Win32Process<VirtualDMA<&mut T, &mut V, Win32VirtualTranslate>>> {
+        let proc_info = self.process_info_pid(pid)?;
+        Ok(Win32Process::with_kernel_ref(self, proc_info))
+    }
+
+    /// Finds a process by its name and constructs a `Win32Process` struct
+    /// by consuming the kernel struct and moving it into the process.
+    ///
+    /// If necessary the kernel can be retrieved back by calling `destroy()` on the process again.
+    ///
+    /// If no process with the specified name can be found this function will return an Error.
+    ///
+    /// This function can be useful for quickly accessing a process.
+    pub fn into_process(
+        mut self,
+        name: &str,
+    ) -> Result<Win32Process<VirtualDMA<T, V, Win32VirtualTranslate>>> {
+        let proc_info = self.process_info(name)?;
+        Ok(Win32Process::with_kernel(self, proc_info))
+    }
+
+    /// Finds a process by its process id and constructs a `Win32Process` struct
+    /// by consuming the kernel struct and moving it into the process.
+    ///
+    /// If necessary the kernel can be retrieved back by calling `destroy()` on the process again.
+    ///
+    /// If no process with the specified name can be found this function will return an Error.
+    ///
+    /// This function can be useful for quickly accessing a process.
+    pub fn into_process_pid(
+        mut self,
+        pid: i32,
+    ) -> Result<Win32Process<VirtualDMA<T, V, Win32VirtualTranslate>>> {
+        let proc_info = self.process_info_pid(pid)?;
+        Ok(Win32Process::with_kernel(self, proc_info))
+    }
 }
 
-impl<T: PhysicalMemory> Kernel<T, TranslateArch> {
-    pub fn builder(connector: T) -> KernelBuilder<T, T, TranslateArch> {
-        KernelBuilder::<T, T, TranslateArch>::new(connector)
+impl<T: PhysicalMemory> Kernel<T, DirectTranslate> {
+    pub fn builder(connector: T) -> KernelBuilder<T, T, DirectTranslate> {
+        KernelBuilder::<T, T, DirectTranslate>::new(connector)
     }
 }
 
@@ -418,368 +520,4 @@ impl<T: PhysicalMemory, V: VirtualTranslate> fmt::Debug for Kernel<T, V> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{:?}", self.kernel_info)
     }
-}
-
-/// Builder for a Windows Kernel structure.
-///
-/// This function encapsulates the entire setup process for a Windows target
-/// and will make sure the user gets a properly initialized object at the end.
-///
-/// This function is a high level abstraction over the individual parts of initialization a Windows target:
-/// - Scanning for the ntoskrnl and retrieving the `KernelInfo` struct.
-/// - Retrieving the Offsets for the target Windows version.
-/// - Creating a struct which implements `VirtualTranslate` for virtual to physical address translations.
-/// - Optionally wrapping the Connector or the `VirtualTranslate` object into a cached object.
-/// - Initialization of the Kernel structure itself.
-///
-/// # Examples
-///
-/// Using the builder with default values:
-/// ```
-/// use memflow_core::PhysicalMemory;
-/// use memflow_win32::Kernel;
-///
-/// fn test<T: PhysicalMemory>(connector: T) {
-///     let _kernel = Kernel::builder(connector)
-///         .build()
-///         .unwrap();
-/// }
-/// ```
-///
-/// Using the builder with default cache configurations:
-/// ```
-/// use memflow_core::PhysicalMemory;
-/// use memflow_win32::Kernel;
-///
-/// fn test<T: PhysicalMemory>(connector: T) {
-///     let _kernel = Kernel::builder(connector)
-///         .build_default_caches()
-///         .build()
-///         .unwrap();
-/// }
-/// ```
-///
-/// Customizing the caches:
-/// ```
-/// use memflow_core::{PhysicalMemory, CachedMemoryAccess, CachedVirtualTranslate};
-/// use memflow_win32::Kernel;
-///
-/// fn test<T: PhysicalMemory>(connector: T) {
-///     let _kernel = Kernel::builder(connector)
-///     .build_page_cache(|connector, arch| {
-///         CachedMemoryAccess::builder(connector)
-///             .arch(arch)
-///             .build()
-///             .unwrap()
-///     })
-///     .build_vat_cache(|vat, arch| {
-///         CachedVirtualTranslate::builder(vat)
-///             .arch(arch)
-///             .build()
-///             .unwrap()
-///     })
-///     .build()
-///     .unwrap();
-/// }
-/// ```
-///
-/// # Remarks
-///
-/// Manual initialization of the above examples would look like the following:
-/// ```
-/// use memflow_core::{TranslateArch, PhysicalMemory, CachedMemoryAccess, CachedVirtualTranslate};
-/// use memflow_win32::{KernelInfo, Win32Offsets, Kernel};
-///
-/// fn test<T: PhysicalMemory>(mut connector: T) {
-///     // Use the ntoskrnl scanner to find the relevant KernelInfo (start_block, arch, dtb, ntoskrnl, etc)
-///     let kernel_info = KernelInfo::scanner(&mut connector).scan().unwrap();
-///     // Download the corresponding pdb from the default symbol store
-///     let offsets = Win32Offsets::builder().kernel_info(&kernel_info).build().unwrap();
-///
-///     // Create a struct for doing virtual to physical memory translations
-///     let vat = TranslateArch::new(kernel_info.start_block.arch);
-///
-///     // Create a Page Cache layer with default values
-///     let mut connector_cached = CachedMemoryAccess::builder(connector)
-///         .arch(kernel_info.start_block.arch)
-///         .build()
-///         .unwrap();
-///
-///     // Create a TLB Cache layer with default values
-///     let vat_cached = CachedVirtualTranslate::builder(vat)
-///         .arch(kernel_info.start_block.arch)
-///         .build()
-///         .unwrap();
-///
-///     // Initialize the final Kernel object
-///     let _kernel = Kernel::new(&mut connector_cached, vat_cached, offsets, kernel_info);
-/// }
-/// ```
-pub struct KernelBuilder<T, TK, VK> {
-    connector: T,
-
-    arch: Option<Architecture>,
-
-    #[cfg(feature = "symstore")]
-    symbol_store: Option<SymbolStore>,
-
-    build_page_cache: Box<dyn FnOnce(T, Architecture) -> TK>,
-    build_vat_cache: Box<dyn FnOnce(TranslateArch, Architecture) -> VK>,
-}
-
-impl<T> KernelBuilder<T, T, TranslateArch>
-where
-    T: PhysicalMemory,
-{
-    pub fn new(connector: T) -> KernelBuilder<T, T, TranslateArch> {
-        KernelBuilder {
-            connector,
-
-            arch: None,
-
-            #[cfg(feature = "symstore")]
-            symbol_store: Some(SymbolStore::default()),
-
-            build_page_cache: Box::new(|connector, _| connector),
-            build_vat_cache: Box::new(|vat, _| vat),
-        }
-    }
-}
-
-impl<'a, T, TK, VK> KernelBuilder<T, TK, VK>
-where
-    T: PhysicalMemory,
-    TK: PhysicalMemory,
-    VK: VirtualTranslate,
-{
-    pub fn build(mut self) -> Result<Kernel<TK, VK>> {
-        // find kernel_info
-        let mut kernel_scanner = KernelInfo::scanner(&mut self.connector);
-        if let Some(arch) = self.arch {
-            kernel_scanner = kernel_scanner.arch(arch);
-        }
-        let kernel_info = kernel_scanner.scan()?;
-
-        // acquire offsets from the symbol store
-        let offsets = self.build_offsets(&kernel_info)?;
-
-        // create a vat object
-        let vat = TranslateArch::new(kernel_info.start_block.arch);
-
-        // create caches
-        let kernel_connector =
-            (self.build_page_cache)(self.connector, kernel_info.start_block.arch);
-        let kernel_vat = (self.build_vat_cache)(vat, kernel_info.start_block.arch);
-
-        // create the final kernel object
-        Ok(Kernel::new(
-            kernel_connector,
-            kernel_vat,
-            offsets,
-            kernel_info,
-        ))
-    }
-
-    #[cfg(feature = "symstore")]
-    fn build_offsets(&self, kernel_info: &KernelInfo) -> Result<Win32Offsets> {
-        let mut builder = Win32Offsets::builder();
-        if let Some(store) = &self.symbol_store {
-            builder = builder.symbol_store(store.clone());
-        } else {
-            builder = builder.no_symbol_store();
-        }
-        builder.kernel_info(kernel_info).build()
-    }
-
-    #[cfg(not(feature = "symstore"))]
-    fn build_offsets(&self, kernel_info: &KernelInfo) -> Result<Win32Offsets> {
-        Win32Offsets::builder().kernel_info(&kernel_info).build()
-    }
-
-    pub fn arch(mut self, arch: Architecture) -> Self {
-        self.arch = Some(arch);
-        self
-    }
-
-    /// Configures the symbol store to be used when constructing the Kernel.
-    /// This will override the default symbol store that is being used if no other setting is configured.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use memflow_core::PhysicalMemory;
-    /// use memflow_win32::{Kernel, SymbolStore};
-    ///
-    /// fn test<T: PhysicalMemory>(connector: T) {
-    ///     let _kernel = Kernel::builder(connector)
-    ///         .symbol_store(SymbolStore::new().no_cache())
-    ///         .build()
-    ///         .unwrap();
-    /// }
-    /// ```
-    #[cfg(feature = "symstore")]
-    pub fn symbol_store(mut self, symbol_store: SymbolStore) -> Self {
-        self.symbol_store = Some(symbol_store);
-        self
-    }
-
-    /// Disables the symbol store when constructing the Kernel.
-    /// By default a default symbol store will be used when constructing a kernel.
-    /// This option allows the user to disable the symbol store alltogether
-    /// and fall back to the built-in offsets table.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use memflow_core::PhysicalMemory;
-    /// use memflow_win32::{Kernel, SymbolStore};
-    ///
-    /// fn test<T: PhysicalMemory>(connector: T) {
-    ///     let _kernel = Kernel::builder(connector)
-    ///         .no_symbol_store()
-    ///         .build()
-    ///         .unwrap();
-    /// }
-    /// ```
-    #[cfg(feature = "symstore")]
-    pub fn no_symbol_store(mut self) -> Self {
-        self.symbol_store = None;
-        self
-    }
-
-    /// Creates the Kernel structure with default caching enabled.
-    ///
-    /// If this option is specified, the Kernel structure is generated
-    /// with a (page level cache)[../index.html] with default settings.
-    /// On top of the page level cache a [vat cache](../index.html) will be setupped.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use memflow_core::PhysicalMemory;
-    /// use memflow_win32::Kernel;
-    ///
-    /// fn test<T: PhysicalMemory>(connector: T) {
-    ///     let _kernel = Kernel::builder(connector)
-    ///         .build_default_caches()
-    ///         .build()
-    ///         .unwrap();
-    /// }
-    /// ```
-    pub fn build_default_caches(
-        self,
-    ) -> KernelBuilder<
-        T,
-        CachedMemoryAccess<'a, T, TimedCacheValidator>,
-        CachedVirtualTranslate<TranslateArch, TimedCacheValidator>,
-    > {
-        KernelBuilder {
-            connector: self.connector,
-
-            arch: self.arch,
-
-            symbol_store: self.symbol_store,
-
-            build_page_cache: Box::new(|connector, arch| {
-                CachedMemoryAccess::builder(connector)
-                    .arch(arch)
-                    .build()
-                    .unwrap()
-            }),
-            build_vat_cache: Box::new(|vat, arch| {
-                CachedVirtualTranslate::builder(vat)
-                    .arch(arch)
-                    .build()
-                    .unwrap()
-            }),
-        }
-    }
-
-    /// Creates a Kernel structure by constructing the page cache from the given closure.
-    ///
-    /// This function accepts a `FnOnce` closure that is being evaluated
-    /// after the ntoskrnl has been found.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use memflow_core::{PhysicalMemory, CachedMemoryAccess};
-    /// use memflow_win32::Kernel;
-    ///
-    /// fn test<T: PhysicalMemory>(connector: T) {
-    ///     let _kernel = Kernel::builder(connector)
-    ///         .build_page_cache(|connector, arch| {
-    ///             CachedMemoryAccess::builder(connector)
-    ///                 .arch(arch)
-    ///                 .build()
-    ///                 .unwrap()
-    ///         })
-    ///         .build()
-    ///         .unwrap();
-    /// }
-    /// ```
-    pub fn build_page_cache<TKN, F: FnOnce(T, Architecture) -> TKN + 'static>(
-        self,
-        func: F,
-    ) -> KernelBuilder<T, TKN, VK>
-    where
-        TKN: PhysicalMemory,
-    {
-        KernelBuilder {
-            connector: self.connector,
-
-            arch: self.arch,
-
-            symbol_store: self.symbol_store,
-
-            build_page_cache: Box::new(func),
-            build_vat_cache: self.build_vat_cache,
-        }
-    }
-
-    /// Creates a Kernel structure by constructing the vat cache from the given closure.
-    ///
-    /// This function accepts a `FnOnce` closure that is being evaluated
-    /// after the ntoskrnl has been found.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use memflow_core::{PhysicalMemory, CachedVirtualTranslate};
-    /// use memflow_win32::Kernel;
-    ///
-    /// fn test<T: PhysicalMemory>(connector: T) {
-    ///     let _kernel = Kernel::builder(connector)
-    ///         .build_vat_cache(|vat, arch| {
-    ///             CachedVirtualTranslate::builder(vat)
-    ///                 .arch(arch)
-    ///                 .build()
-    ///                 .unwrap()
-    ///         })
-    ///         .build()
-    ///         .unwrap();
-    /// }
-    /// ```
-    pub fn build_vat_cache<VKN, F: FnOnce(TranslateArch, Architecture) -> VKN + 'static>(
-        self,
-        func: F,
-    ) -> KernelBuilder<T, TK, VKN>
-    where
-        VKN: VirtualTranslate,
-    {
-        KernelBuilder {
-            connector: self.connector,
-
-            arch: self.arch,
-
-            symbol_store: self.symbol_store,
-
-            build_page_cache: self.build_page_cache,
-            build_vat_cache: Box::new(func),
-        }
-    }
-
-    // builder configurations:
-    // kernel_info_builder()
-    // offset_builder()
 }

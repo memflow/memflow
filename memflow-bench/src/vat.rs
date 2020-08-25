@@ -4,6 +4,8 @@ use memflow_core::mem::{
     CachedMemoryAccess, CachedVirtualTranslate, PhysicalMemory, VirtualTranslate,
 };
 
+use memflow_core::architecture::ScopedVirtualTranslate;
+
 use memflow_core::iter::FnExtend;
 use memflow_core::{size, Address, OsProcessInfo, OsProcessModuleInfo, PageType};
 
@@ -13,7 +15,7 @@ use rand::{prng::XorShiftRng as CurRng, Rng, SeedableRng};
 fn vat_test_with_mem<
     T: PhysicalMemory,
     V: VirtualTranslate,
-    P: OsProcessInfo,
+    S: ScopedVirtualTranslate,
     M: OsProcessModuleInfo,
 >(
     bench: &mut Bencher,
@@ -21,7 +23,7 @@ fn vat_test_with_mem<
     vat: &mut V,
     chunk_count: usize,
     translations: usize,
-    proc: P,
+    translator: S,
     module: M,
 ) -> usize {
     let mut rng = CurRng::from_rng(thread_rng()).unwrap();
@@ -45,7 +47,7 @@ fn vat_test_with_mem<
             out.clear();
             vat.virt_to_phys_iter(
                 phys_mem,
-                proc.dtb(),
+                &translator,
                 bufs.iter_mut().map(|x| (*x, 1)),
                 &mut out,
                 &mut FnExtend::new(|_| {}),
@@ -63,6 +65,7 @@ fn vat_test_with_ctx<
     T: PhysicalMemory,
     V: VirtualTranslate,
     P: OsProcessInfo,
+    S: ScopedVirtualTranslate,
     M: OsProcessModuleInfo,
 >(
     bench: &mut Bencher,
@@ -70,7 +73,7 @@ fn vat_test_with_ctx<
     chunks: usize,
     translations: usize,
     use_tlb: bool,
-    (mut mem, mut vat, prc, tmod): (T, V, P, M),
+    (mut mem, mut vat, prc, translator, tmod): (T, V, P, S, M),
 ) {
     if cache_size > 0 {
         let cache = CachedMemoryAccess::builder(&mut mem)
@@ -84,19 +87,51 @@ fn vat_test_with_ctx<
                 .arch(prc.sys_arch())
                 .build()
                 .unwrap();
-            vat_test_with_mem(bench, &mut mem, &mut vat, chunks, translations, prc, tmod);
+            vat_test_with_mem(
+                bench,
+                &mut mem,
+                &mut vat,
+                chunks,
+                translations,
+                translator,
+                tmod,
+            );
         } else {
             let mut mem = cache.build().unwrap();
-            vat_test_with_mem(bench, &mut mem, &mut vat, chunks, translations, prc, tmod);
+            vat_test_with_mem(
+                bench,
+                &mut mem,
+                &mut vat,
+                chunks,
+                translations,
+                translator,
+                tmod,
+            );
         }
     } else if use_tlb {
         let mut vat = CachedVirtualTranslate::builder(vat)
             .arch(prc.sys_arch())
             .build()
             .unwrap();
-        vat_test_with_mem(bench, &mut mem, &mut vat, chunks, translations, prc, tmod);
+        vat_test_with_mem(
+            bench,
+            &mut mem,
+            &mut vat,
+            chunks,
+            translations,
+            translator,
+            tmod,
+        );
     } else {
-        vat_test_with_mem(bench, &mut mem, &mut vat, chunks, translations, prc, tmod);
+        vat_test_with_mem(
+            bench,
+            &mut mem,
+            &mut vat,
+            chunks,
+            translations,
+            translator,
+            tmod,
+        );
     }
 }
 
@@ -104,13 +139,14 @@ fn chunk_vat_params<
     T: PhysicalMemory,
     V: VirtualTranslate,
     P: OsProcessInfo,
+    S: ScopedVirtualTranslate,
     M: OsProcessModuleInfo,
 >(
     group: &mut BenchmarkGroup<'_, measurement::WallTime>,
     func_name: String,
     cache_size: u64,
     use_tlb: bool,
-    initialize_ctx: &dyn Fn() -> memflow_core::Result<(T, V, P, M)>,
+    initialize_ctx: &dyn Fn() -> memflow_core::Result<(T, V, P, S, M)>,
 ) {
     let size = 0x10;
     for &chunk_size in [1, 4, 16, 64].iter() {
@@ -136,11 +172,12 @@ pub fn chunk_vat<
     T: PhysicalMemory,
     V: VirtualTranslate,
     P: OsProcessInfo,
+    S: ScopedVirtualTranslate,
     M: OsProcessModuleInfo,
 >(
     c: &mut Criterion,
     backend_name: &str,
-    initialize_ctx: &dyn Fn() -> memflow_core::Result<(T, V, P, M)>,
+    initialize_ctx: &dyn Fn() -> memflow_core::Result<(T, V, P, S, M)>,
 ) {
     let plot_config = PlotConfiguration::default().summary_scale(AxisScale::Logarithmic);
 

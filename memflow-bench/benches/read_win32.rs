@@ -3,9 +3,10 @@ use memflow_bench::{phys, vat, virt};
 
 use criterion::*;
 
+use memflow_core::architecture::ScopedVirtualTranslate;
 use memflow_core::connector::ConnectorArgs;
 use memflow_core::error::{Error, Result};
-use memflow_core::mem::{PhysicalMemory, TranslateArch};
+use memflow_core::mem::{DirectTranslate, PhysicalMemory};
 
 use memflow_win32::{
     Kernel, KernelInfo, Win32ModuleInfo, Win32Offsets, Win32Process, Win32ProcessInfo,
@@ -23,8 +24,9 @@ fn create_connector(args: &ConnectorArgs) -> Result<impl PhysicalMemory> {
 
 fn initialize_virt_ctx() -> Result<(
     impl PhysicalMemory,
-    TranslateArch,
+    DirectTranslate,
     Win32ProcessInfo,
+    impl ScopedVirtualTranslate,
     Win32ModuleInfo,
 )> {
     let mut phys_mem = create_connector(&ConnectorArgs::new())?;
@@ -32,7 +34,7 @@ fn initialize_virt_ctx() -> Result<(
     let kernel_info = KernelInfo::scanner(&mut phys_mem)
         .scan()
         .map_err(|_| Error::Other("unable to find kernel"))?;
-    let mut vat = TranslateArch::new(kernel_info.start_block.arch);
+    let mut vat = DirectTranslate::new();
     let offsets = Win32Offsets::builder()
         .kernel_info(&kernel_info)
         .build()
@@ -63,7 +65,9 @@ fn initialize_virt_ctx() -> Result<(
 
         if !mod_list.is_empty() {
             let tmod = &mod_list[rng.gen_range(0, mod_list.len())];
-            return Ok((phys_mem, vat, proc_list[idx].clone(), tmod.clone())); // TODO: remove clone of mem + vat
+            let proc = proc_list[idx].clone();
+            let translator = proc.translator();
+            return Ok((phys_mem, vat, proc, translator, tmod.clone())); // TODO: remove clone of mem + vat
         }
     }
 

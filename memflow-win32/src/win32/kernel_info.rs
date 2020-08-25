@@ -5,11 +5,13 @@ use crate::kernel::{Win32GUID, Win32Version};
 use log::info;
 
 use memflow_core::architecture::Architecture;
-use memflow_core::mem::{PhysicalMemory, VirtualFromPhysical};
+use memflow_core::mem::{DirectTranslate, PhysicalMemory, VirtualDMA};
 use memflow_core::types::Address;
 
+use super::Win32VirtualTranslate;
+
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(::serde::Serialize))]
+//#[cfg_attr(feature = "serde", derive(::serde::Serialize))]
 pub struct KernelInfo {
     pub start_block: StartBlock,
 
@@ -30,7 +32,7 @@ impl KernelInfo {
 
 pub struct KernelInfoScanner<T> {
     mem: T,
-    arch: Option<Architecture>,
+    arch: Option<&'static dyn Architecture>,
     kernel_hint: Option<Address>,
     dtb: Option<Address>,
 }
@@ -70,11 +72,11 @@ impl<T: PhysicalMemory> KernelInfoScanner<T> {
         );
 
         // construct virtual memory object for start_block
-        let mut virt_mem = VirtualFromPhysical::new(
+        let mut virt_mem = VirtualDMA::with_vat(
             &mut self.mem,
             start_block.arch,
-            start_block.arch,
-            start_block.dtb,
+            Win32VirtualTranslate::new(start_block.arch, start_block.dtb),
+            DirectTranslate::new(),
         );
 
         // find ntoskrnl.exe base
@@ -110,7 +112,7 @@ impl<T: PhysicalMemory> KernelInfoScanner<T> {
         })
     }
 
-    pub fn arch(mut self, arch: Architecture) -> Self {
+    pub fn arch(mut self, arch: &'static dyn Architecture) -> Self {
         self.arch = Some(arch);
         self
     }

@@ -8,8 +8,8 @@ use std::fmt;
 
 use memflow_core::architecture::Architecture;
 use memflow_core::mem::{PhysicalMemory, VirtualDMA, VirtualMemory, VirtualTranslate};
+use memflow_core::process::{OsProcessInfo, OsProcessModuleInfo, PID};
 use memflow_core::types::Address;
-use memflow_core::{OsProcessInfo, OsProcessModuleInfo};
 
 use super::Win32VirtualTranslate;
 
@@ -21,7 +21,7 @@ pub struct Win32ProcessInfo {
     pub address: Address,
 
     // general information from eprocess
-    pub pid: i32,
+    pub pid: PID,
     pub name: String,
     pub dtb: Address,
     pub section_base: Address,
@@ -68,7 +68,7 @@ impl OsProcessInfo for Win32ProcessInfo {
         self.address
     }
 
-    fn pid(&self) -> i32 {
+    fn pid(&self) -> PID {
         self.pid
     }
 

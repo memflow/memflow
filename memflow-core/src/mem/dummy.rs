@@ -4,7 +4,7 @@ use crate::connector::MappedPhysicalMemory;
 use crate::error::Result;
 use crate::mem::virt_mem::VirtualDMA;
 use crate::mem::{MemoryMap, PhysicalMemory, PhysicalReadData, PhysicalWriteData, VirtualMemory};
-use crate::process::{OsProcessInfo, OsProcessModuleInfo};
+use crate::process::{OsProcessInfo, OsProcessModuleInfo, PID};
 use crate::types::{size, Address};
 
 use rand::seq::SliceRandom;
@@ -111,7 +111,7 @@ impl OsProcessModuleInfo for DummyModule {
 pub struct DummyProcess {
     address: Address,
     map_size: usize,
-    pid: i32,
+    pid: PID,
     dtb: Address,
 }
 
@@ -133,7 +133,7 @@ impl OsProcessInfo for DummyProcess {
         self.address
     }
 
-    fn pid(&self) -> i32 {
+    fn pid(&self) -> PID {
         self.pid
     }
 
@@ -155,7 +155,7 @@ pub struct DummyMemory {
     mem: MappedPhysicalMemory<&'static mut [u8], MemoryMap<&'static mut [u8]>>,
     page_list: VecDeque<PageInfo>,
     pt_pages: Vec<PageInfo>,
-    last_pid: i32,
+    last_pid: PID,
     rng: XorShiftRng,
 }
 

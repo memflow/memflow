@@ -5,7 +5,3 @@
 Cargo.lock
 flow-bench/target
 nostd-test/target
-
-# TODO: temp
-connectors/.cargo
-connectors/runner.sh

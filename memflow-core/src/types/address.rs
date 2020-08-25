@@ -82,7 +82,7 @@ impl Address {
     }
 
     /// Creates a a bit mask.
-    /// The range end bit is excluded from the mask.
+    /// This function accepts an (half-open) range excluding the end bit from the mask.
     ///
     /// # Examples
     ///
@@ -224,7 +224,7 @@ impl Address {
     }
 
     /// Extracts the given range of bits by applying a corresponding bitmask.
-    /// The range end bit is excluded from the mask.
+    /// This function accepts an (half-open) range excluding the end bit from the mask.
     ///
     /// # Examples
     ///

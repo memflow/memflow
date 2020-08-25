@@ -12,7 +12,7 @@ use memflow_core::architecture::x86;
 use memflow_core::mem::{
     DirectTranslate, PhysicalMemory, VirtualDMA, VirtualMemory, VirtualTranslate,
 };
-use memflow_core::process::{OperatingSystem, OsProcessInfo, OsProcessModuleInfo};
+use memflow_core::process::{OperatingSystem, OsProcessInfo, OsProcessModuleInfo, PID};
 use memflow_core::types::Address;
 
 use super::Win32VirtualTranslate;
@@ -222,7 +222,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
             &mut self.vat,
         );
 
-        let pid: i32 = reader.virt_read(eprocess + self.offsets.eproc_pid())?;
+        let pid: PID = reader.virt_read(eprocess + self.offsets.eproc_pid())?;
         trace!("pid={}", pid);
 
         let name = reader.virt_read_cstr(eprocess + self.offsets.eproc_name(), 16)?;
@@ -442,7 +442,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
 
     /// Finds a process by it's process id and returns the `Win32ProcessInfo` struct.
     /// If no process with the specified name can be found this function will return an Error.
-    pub fn process_info_pid(&mut self, pid: i32) -> Result<Win32ProcessInfo> {
+    pub fn process_info_pid(&mut self, pid: PID) -> Result<Win32ProcessInfo> {
         let process_info_list = self.process_info_list()?;
         process_info_list
             .into_iter()
@@ -471,7 +471,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
     /// This function can be useful for quickly accessing a process.
     pub fn process_pid(
         &mut self,
-        pid: i32,
+        pid: PID,
     ) -> Result<Win32Process<VirtualDMA<&mut T, &mut V, Win32VirtualTranslate>>> {
         let proc_info = self.process_info_pid(pid)?;
         Ok(Win32Process::with_kernel_ref(self, proc_info))
@@ -503,7 +503,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
     /// This function can be useful for quickly accessing a process.
     pub fn into_process_pid(
         mut self,
-        pid: i32,
+        pid: PID,
     ) -> Result<Win32Process<VirtualDMA<T, V, Win32VirtualTranslate>>> {
         let proc_info = self.process_info_pid(pid)?;
         Ok(Win32Process::with_kernel(self, proc_info))

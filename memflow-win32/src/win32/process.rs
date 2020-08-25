@@ -20,6 +20,8 @@ pub type Win32ExitStatus = i32;
 /// Process has not exited yet
 pub const EXIT_STATUS_STILL_ACTIVE: i32 = 259;
 
+const MAX_ITER_COUNT: usize = 65536;
+
 #[derive(Debug, Clone)]
 //#[cfg_attr(feature = "serde", derive(::serde::Serialize))]
 pub struct Win32ProcessInfo {
@@ -164,7 +166,7 @@ impl<T: VirtualMemory> Win32Process<T> {
 
         let list_start = self.proc_info.peb_module;
         let mut list_entry = list_start;
-        loop {
+        for _ in 0..MAX_ITER_COUNT {
             list.push(list_entry);
             list_entry = match self.proc_info.proc_arch.bits() {
                 64 => self.virt_mem.virt_read_addr64(list_entry)?,

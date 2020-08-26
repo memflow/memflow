@@ -265,7 +265,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
                     x86::x32::ARCH
                 }
             }
-            32 => x86::x64::ARCH,
+            32 => x86::x32::ARCH,
             _ => return Err(Error::InvalidArchitecture),
         };
         trace!("proc_arch={:?}", proc_arch);

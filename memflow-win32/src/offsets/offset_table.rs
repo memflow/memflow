@@ -33,10 +33,25 @@ pub struct Win32OffsetFile {
     pub nt_minor_version: u32,
     pub nt_build_number: u32,
 
+    // Architecture
+    pub arch: Win32OffsetsArchitecture,
+
     pub offsets: Win32OffsetTable,
 }
+
 const _: [(); std::mem::size_of::<[Win32OffsetFile; 16]>()] =
     [(); 16 * std::mem::size_of::<Win32OffsetFile>()];
+
+#[repr(u32)]
+#[derive(Clone, Copy)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+pub enum Win32OffsetsArchitecture {
+    X86 = 0,
+    X64 = 1,
+    AArch64 = 2,
+}
+
+unsafe impl Pod for Win32OffsetsArchitecture {}
 
 // TODO: use const-generics here once they are fully stabilized
 #[derive(Clone)]

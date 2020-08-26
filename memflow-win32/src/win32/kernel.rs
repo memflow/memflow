@@ -5,7 +5,7 @@ use super::{
     EXIT_STATUS_STILL_ACTIVE,
 };
 use crate::error::{Error, Result};
-use crate::offsets::{self, Win32Offsets};
+use crate::offsets::{Win32ArchOffsets, Win32Offsets};
 use crate::pe::{pe32, pe64, MemoryPeViewContext};
 
 use log::{info, trace};
@@ -180,20 +180,15 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
             reader.virt_read_addr_arch(self.kernel_info.start_block.arch, loaded_module_list)?;
 
         // determine the offsets to be used when working with this process
-        let (ldr_data_base_offs, ldr_data_size_offs, ldr_data_name_offs) =
-            match self.kernel_info.start_block.arch.bits() {
-                64 => (
-                    offsets::x64::LDR_DATA_BASE,
-                    offsets::x64::LDR_DATA_SIZE,
-                    offsets::x64::LDR_DATA_NAME,
-                ),
-                32 => (
-                    offsets::x86::LDR_DATA_BASE,
-                    offsets::x86::LDR_DATA_SIZE,
-                    offsets::x86::LDR_DATA_NAME,
-                ),
-                _ => return Err(Error::InvalidArchitecture),
-            };
+        let (ldr_data_base_offs, ldr_data_size_offs, ldr_data_name_offs) = {
+            let offsets = Win32ArchOffsets::from(self.kernel_info.start_block.arch);
+            (
+                offsets.ldr_data_base,
+                offsets.ldr_data_size,
+                offsets.ldr_data_name,
+            )
+        };
+
         trace!("ldr_data_base_offs={:x}", ldr_data_base_offs);
         trace!("ldr_data_size_offs={:x}", ldr_data_size_offs);
         trace!("ldr_data_name_offs={:x}", ldr_data_name_offs);
@@ -349,39 +344,29 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
         };
         trace!("real_peb={:x}", real_peb);
 
-        // retrieve peb offsets
-        let (peb_ldr_offs, ldr_list_offs) = match proc_arch.bits() {
-            64 => (offsets::x64::PEB_LDR, offsets::x64::LDR_LIST),
-            32 => (offsets::x86::PEB_LDR, offsets::x86::LDR_LIST),
-            _ => return Err(Error::InvalidArchitecture),
-        };
-        trace!("peb_ldr_offs={:x}", peb_ldr_offs);
-        trace!("ldr_list_offs={:x}", ldr_list_offs);
+        let proc_offs = Win32ArchOffsets::from(proc_arch);
+
+        trace!("peb_ldr_offs={:x}", proc_offs.peb_ldr);
+        trace!("ldr_list_offs={:x}", proc_offs.ldr_list);
 
         let peb_ldr = proc_reader.virt_read_addr_arch(
             self.kernel_info.start_block.arch,
-            real_peb /* TODO: can we have both? */ + peb_ldr_offs,
+            real_peb /* TODO: can we have both? */ + proc_offs.peb_ldr,
         )?;
         trace!("peb_ldr={:x}", peb_ldr);
 
-        let peb_module = proc_reader
-            .virt_read_addr_arch(self.kernel_info.start_block.arch, peb_ldr + ldr_list_offs)?;
+        let peb_module = proc_reader.virt_read_addr_arch(
+            self.kernel_info.start_block.arch,
+            peb_ldr + proc_offs.ldr_list,
+        )?;
         trace!("peb_module={:x}", peb_module);
 
-        // determine the offsets to be used when working with this process
-        let (ldr_data_base_offs, ldr_data_size_offs, ldr_data_name_offs) = match proc_arch.bits() {
-            64 => (
-                offsets::x64::LDR_DATA_BASE,
-                offsets::x64::LDR_DATA_SIZE,
-                offsets::x64::LDR_DATA_NAME,
-            ),
-            32 => (
-                offsets::x86::LDR_DATA_BASE,
-                offsets::x86::LDR_DATA_SIZE,
-                offsets::x86::LDR_DATA_NAME,
-            ),
-            _ => return Err(Error::InvalidArchitecture),
-        };
+        let (ldr_data_base_offs, ldr_data_size_offs, ldr_data_name_offs) = (
+            proc_offs.ldr_data_base,
+            proc_offs.ldr_data_size,
+            proc_offs.ldr_data_name,
+        );
+
         trace!("ldr_data_base_offs={:x}", ldr_data_base_offs);
         trace!("ldr_data_size_offs={:x}", ldr_data_size_offs);
         trace!("ldr_data_name_offs={:x}", ldr_data_name_offs);

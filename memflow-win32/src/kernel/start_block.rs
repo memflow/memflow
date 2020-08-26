@@ -71,6 +71,7 @@ pub fn find<T: PhysicalMemory>(
         } else if ptr::eq(arch, architecture::x86::x32::ARCH) {
             let mut low16m = vec![0; size::mb(16)];
             mem.phys_read_raw_into(PhysicalAddress::NULL, &mut low16m)?;
+            warn!("Yee");
             x86::find(&low16m)
         } else {
             Err(Error::InvalidArchitecture)

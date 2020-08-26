@@ -7,7 +7,7 @@ use crate::iter::PageChunks;
 use crate::mem::phys_mem::{PhysicalMemory, PhysicalReadData, PhysicalReadIterator};
 use crate::types::{Address, PhysicalAddress};
 use bumpalo::{collections::Vec as BumpVec, Bump};
-use std::alloc::{alloc_zeroed, dealloc, Layout};
+use std::alloc::{alloc, alloc_zeroed, dealloc, Layout};
 
 pub enum PageValidity<'a> {
     Invalid,
@@ -32,7 +32,6 @@ pub struct PageCache<'a, T> {
     page_refs: Box<[Option<&'a mut [u8]>]>,
     address_once_validated: Box<[Address]>,
     page_size: usize,
-    total_size: usize,
     page_type_mask: PageType,
     pub validator: T,
     cache_ptr: *mut u8,
@@ -80,7 +79,6 @@ impl<'a, T: CacheValidator> PageCache<'a, T> {
             page_refs,
             address_once_validated: vec![Address::INVALID; cache_entries].into_boxed_slice(),
             page_size,
-            total_size: size,
             page_type_mask,
             validator,
             cache_ptr,
@@ -285,18 +283,45 @@ impl<'a, T: CacheValidator> PageCache<'a, T> {
     }
 }
 
-// TODO: improve clone implementation and copy the underlying cache data
 impl<'a, T> Clone for PageCache<'a, T>
 where
     T: CacheValidator + Clone,
 {
     fn clone(&self) -> Self {
-        Self::with_page_size(
-            self.page_size,
-            self.total_size,
-            self.page_type_mask,
-            self.validator.clone(),
-        )
+        let page_size = self.page_size;
+        let page_type_mask = self.page_type_mask;
+        let validator = self.validator.clone();
+
+        let cache_entries = self.address.len();
+
+        let layout = Layout::from_size_align(cache_entries * page_size, page_size).unwrap();
+
+        let cache_ptr = unsafe { alloc(layout) };
+
+        unsafe {
+            std::ptr::copy_nonoverlapping(self.cache_ptr, cache_ptr, cache_entries * page_size);
+        };
+
+        let page_refs = (0..cache_entries)
+            .map(|i| unsafe {
+                std::mem::transmute(std::slice::from_raw_parts_mut(
+                    cache_ptr.add(i * page_size),
+                    page_size,
+                ))
+            })
+            .collect::<Vec<_>>()
+            .into_boxed_slice();
+
+        Self {
+            address: vec![Address::INVALID; cache_entries].into_boxed_slice(),
+            page_refs,
+            address_once_validated: vec![Address::INVALID; cache_entries].into_boxed_slice(),
+            page_size,
+            page_type_mask,
+            validator,
+            cache_ptr,
+            cache_layout: layout,
+        }
     }
 }
 
@@ -347,6 +372,36 @@ mod tests {
         }
 
         diffs
+    }
+
+    #[test]
+    fn cloned_validity() {
+        let mut mem = DummyMemory::with_seed(size::mb(32), 0);
+
+        let cmp_buf = [143u8; 16];
+        let write_addr = 0.into();
+
+        mem.phys_write_raw(write_addr, &cmp_buf).unwrap();
+        let arch = x86::x64::ARCH;
+
+        let mut mem = CachedMemoryAccess::builder(mem)
+            .validator(TimedCacheValidator::new(Duration::from_secs(100)))
+            .page_type_mask(PageType::UNKNOWN)
+            .arch(arch)
+            .build()
+            .unwrap();
+
+        let mut read_buf = [0u8; 16];
+        mem.phys_read_raw_into(write_addr, &mut read_buf).unwrap();
+        assert_eq!(read_buf, cmp_buf);
+
+        let mut cloned_mem = mem.clone();
+
+        let mut cloned_read_buf = [0u8; 16];
+        cloned_mem
+            .phys_read_raw_into(write_addr, &mut cloned_read_buf)
+            .unwrap();
+        assert_eq!(cloned_read_buf, cmp_buf);
     }
 
     /// Test cached memory read both with a random seed and a predetermined one.

@@ -43,12 +43,18 @@ const _: [(); std::mem::size_of::<[Win32OffsetFile; 16]>()] =
     [(); 16 * std::mem::size_of::<Win32OffsetFile>()];
 
 #[repr(u32)]
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 pub enum Win32OffsetsArchitecture {
     X86 = 0,
     X64 = 1,
     AArch64 = 2,
+}
+
+impl std::fmt::Display for Win32OffsetsArchitecture {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
 }
 
 unsafe impl Pod for Win32OffsetsArchitecture {}

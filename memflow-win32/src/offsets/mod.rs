@@ -91,15 +91,12 @@ impl From<Win32Offsets> for Win32OffsetTable {
 }
 
 use memflow_core::architecture::{self, Architecture};
-use std::ptr;
 
 impl From<&'static dyn Architecture> for Win32OffsetsArchitecture {
     fn from(arch: &'static dyn Architecture) -> Win32OffsetsArchitecture {
-        if ptr::eq(arch, architecture::x86::x32::ARCH)
-            || ptr::eq(arch, architecture::x86::x32_pae::ARCH)
-        {
+        if arch == architecture::x86::x32::ARCH || arch == architecture::x86::x32_pae::ARCH {
             Self::X86
-        } else if ptr::eq(arch, architecture::x86::x64::ARCH) {
+        } else if arch == architecture::x86::x64::ARCH {
             Self::X64
         } else {
             // We do not have AArch64, but that is in the plans...

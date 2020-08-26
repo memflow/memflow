@@ -3,7 +3,10 @@ use crate::architecture::{Architecture, ScopedVirtualTranslate};
 use crate::connector::MappedPhysicalMemory;
 use crate::error::Result;
 use crate::mem::virt_mem::VirtualDMA;
-use crate::mem::{MemoryMap, PhysicalMemory, PhysicalReadData, PhysicalWriteData, VirtualMemory};
+use crate::mem::{
+    MemoryMap, PhysicalMemory, PhysicalMemoryMetadata, PhysicalReadData, PhysicalWriteData,
+    VirtualMemory,
+};
 use crate::process::{OsProcessInfo, OsProcessModuleInfo, PID};
 use crate::types::{size, Address};
 
@@ -188,6 +191,10 @@ impl PhysicalMemory for DummyMemory {
 
     fn phys_write_raw_list(&mut self, data: &[PhysicalWriteData]) -> Result<()> {
         self.mem.phys_write_raw_list(data)
+    }
+
+    fn metadata(&mut self) -> PhysicalMemoryMetadata {
+        self.mem.metadata()
     }
 }
 

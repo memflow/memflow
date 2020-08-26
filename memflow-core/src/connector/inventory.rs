@@ -16,7 +16,7 @@ use log::{debug, info, warn};
 use libloading::Library;
 
 /// Exported memflow connector version
-pub const MEMFLOW_CONNECTOR_VERSION: i32 = 3;
+pub const MEMFLOW_CONNECTOR_VERSION: i32 = 4;
 
 /// Type of a single connector instance
 pub type ConnectorType = PhysicalMemoryBox;

@@ -46,6 +46,16 @@ pub struct MemoryMapping<M> {
     output: std::cell::RefCell<M>, // TODO: why refcell?
 }
 
+impl<M> MemoryMapping<M> {
+    pub fn base(&self) -> Address {
+        self.base
+    }
+
+    pub fn output(&self) -> std::cell::Ref<M> {
+        self.output.borrow()
+    }
+}
+
 impl<M: SplitAtIndexNoMutation> Default for MemoryMap<M> {
     fn default() -> Self {
         Self {

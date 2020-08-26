@@ -3,7 +3,9 @@ Basic connector which works on mapped memory.
 */
 
 use crate::iter::FnExtend;
-use crate::mem::{MemoryMap, PhysicalMemory, PhysicalReadData, PhysicalWriteData};
+use crate::mem::{
+    MemoryMap, PhysicalMemory, PhysicalMemoryMetadata, PhysicalReadData, PhysicalWriteData,
+};
 use crate::types::Address;
 use crate::{Error, Result};
 
@@ -108,6 +110,19 @@ impl<'a, F: AsRef<MemoryMap<&'a mut [u8]>> + Send> PhysicalMemory
 
         Ok(())
     }
+
+    fn metadata(&mut self) -> PhysicalMemoryMetadata {
+        PhysicalMemoryMetadata {
+            size: self
+                .info
+                .as_ref()
+                .iter()
+                .last()
+                .map(|map| map.base().as_usize() + map.output().len())
+                .unwrap(),
+            readonly: false,
+        }
+    }
 }
 
 impl<'a, F: AsRef<MemoryMap<&'a [u8]>> + Send> PhysicalMemory
@@ -126,5 +141,18 @@ impl<'a, F: AsRef<MemoryMap<&'a [u8]>> + Send> PhysicalMemory
 
     fn phys_write_raw_list(&mut self, _data: &[PhysicalWriteData]) -> Result<()> {
         Err(Error::Connector("Target mapping is not writeable"))
+    }
+
+    fn metadata(&mut self) -> PhysicalMemoryMetadata {
+        PhysicalMemoryMetadata {
+            size: self
+                .info
+                .as_ref()
+                .iter()
+                .last()
+                .map(|map| map.base().as_usize() + map.output().len())
+                .unwrap(),
+            readonly: true,
+        }
     }
 }

@@ -33,7 +33,9 @@ use super::{page_cache::PageCache, page_cache::PageValidity, CacheValidator, Tim
 use crate::architecture::Architecture;
 use crate::error::Result;
 use crate::iter::PageChunks;
-use crate::mem::phys_mem::{PhysicalMemory, PhysicalReadData, PhysicalWriteData};
+use crate::mem::phys_mem::{
+    PhysicalMemory, PhysicalMemoryMetadata, PhysicalReadData, PhysicalWriteData,
+};
 use crate::types::{size, PageType};
 
 use bumpalo::Bump;
@@ -142,6 +144,10 @@ impl<'a, T: PhysicalMemory, Q: CacheValidator> PhysicalMemory for CachedMemoryAc
         });
 
         mem.phys_write_raw_list(data)
+    }
+
+    fn metadata(&mut self) -> PhysicalMemoryMetadata {
+        self.mem.metadata()
     }
 }
 

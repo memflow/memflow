@@ -42,12 +42,24 @@ pub fn main() {
             Win32GUID::new("ntkrpamp.pdb", "684DA42A30CC450F81C535B4D18944B12"),
         ),
         (
+            Win32Version::new(6, 1, 7601),
+            Win32GUID::new("ntkrnlmp.pdb", "ECE191A20CFF4465AE46DF96C22638451"),
+        ),
+        (
             Win32Version::new(10, 0, 18362),
             Win32GUID::new("ntkrnlmp.pdb", "0AFB69F5FD264D54673570E37B38A3181"),
         ),
         (
             Win32Version::new(10, 0, 19041),
             Win32GUID::new("ntkrnlmp.pdb", "BBED7C2955FBE4522AAA23F4B8677AD91"),
+        ),
+        (
+            Win32Version::new(10, 0, 19041),
+            Win32GUID::new("ntkrnlmp.pdb", "1C9875F76C8F0FBF3EB9A9D7C1C274061"),
+        ),
+        (
+            Win32Version::new(10, 0, 19041),
+            Win32GUID::new("ntkrpamp.pdb", "1B1D6AA205E1C87DC63A314ACAA50B491"),
         ),
     ];
 

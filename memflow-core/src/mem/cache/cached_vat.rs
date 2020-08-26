@@ -300,7 +300,7 @@ mod tests {
 
         let vat = CachedVirtualTranslate::builder(DirectTranslate::new())
             .arch(x86::x64::ARCH)
-            .validator(TimedCacheValidator::new(Duration::from_secs(1000)))
+            .validator(TimedCacheValidator::new(Duration::from_secs(100)))
             .entries(2048)
             .build()
             .unwrap();
@@ -319,7 +319,7 @@ mod tests {
     #[test]
     fn valid_after_pt_destruction() {
         // The following test is against volatility of the page tables
-        // Given that the cache is valid for 10k seconds, this test should
+        // Given that the cache is valid for 100 seconds, this test should
         // pass without a single entry becoming invalid.
         let buffer = standard_buffer(size::mb(2));
         let (mut mem, mut vmem, virt_base, dtb) = build_mem(&buffer);

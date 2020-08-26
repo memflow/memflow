@@ -34,6 +34,34 @@ impl From<Address> for PhysicalAddress {
     }
 }
 
+/// Constructs an `PhysicalAddress` from a `i32` value.
+impl From<i32> for PhysicalAddress {
+    fn from(item: i32) -> Self {
+        Self::from(Address::from(item))
+    }
+}
+
+/// Constructs an `PhysicalAddress` from a `u32` value.
+impl From<u32> for PhysicalAddress {
+    fn from(item: u32) -> Self {
+        Self::from(Address::from(item))
+    }
+}
+
+/// Constructs an `PhysicalAddress` from a `u64` value.
+impl From<u64> for PhysicalAddress {
+    fn from(item: u64) -> Self {
+        Self::from(Address::from(item))
+    }
+}
+
+/// Constructs an `PhysicalAddress` from a `usize` value.
+impl From<usize> for PhysicalAddress {
+    fn from(item: usize) -> Self {
+        Self::from(Address::from(item))
+    }
+}
+
 /// Converts a `PhysicalAddress` into a `Address`.
 impl From<PhysicalAddress> for Address {
     fn from(address: PhysicalAddress) -> Self {

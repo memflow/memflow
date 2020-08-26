@@ -87,20 +87,28 @@ impl<'a, T: PhysicalMemory, Q: CacheValidator> CachedMemoryAccess<'a, T, Q> {
     ///
     /// # Examples
     /// ```
+    /// # const MAGIC_VALUE: u64 = 0x23bd_318f_f3a3_5821;
     /// use memflow_core::architecture::x86::x64;
     /// use memflow_core::mem::{PhysicalMemory, CachedMemoryAccess};
     ///
     /// fn build<T: PhysicalMemory>(mem: T) -> T {
-    ///     let cache = CachedMemoryAccess::builder(mem)
+    ///     let mut cache = CachedMemoryAccess::builder(mem)
     ///         .arch(x64::ARCH)
     ///         .build()
     ///         .unwrap();
     ///
     ///     // use the cache...
+    ///     let value: u64 = cache.phys_read(0.into()).unwrap();
+    ///     assert_eq!(value, MAGIC_VALUE);
     ///
     ///     // retrieve ownership of mem and return it back
     ///     cache.destroy()
     /// }
+    /// # use memflow_core::dummy::DummyMemory;
+    /// # use memflow_core::types::size;
+    /// # let mut mem = DummyMemory::new(size::mb(4));
+    /// # mem.phys_write(0.into(), &MAGIC_VALUE).unwrap();
+    /// # build(mem);
     /// ```
     pub fn destroy(self) -> T {
         self.mem
@@ -176,30 +184,60 @@ impl<T: PhysicalMemory> CachedMemoryAccessBuilder<T, TimedCacheValidator> {
     /// # Examples
     /// Moves ownership of a mem object and retrieves it back:
     /// ```
+    /// # const MAGIC_VALUE: u64 = 0x23bd_318f_f3a3_5821;
     /// use memflow_core::architecture::x86::x64;
     /// use memflow_core::mem::{PhysicalMemory, CachedMemoryAccess};
     ///
     /// fn build<T: PhysicalMemory>(mem: T) {
-    ///     let cache = CachedMemoryAccess::builder(mem)
+    ///     let mut cache = CachedMemoryAccess::builder(mem)
     ///         .arch(x64::ARCH)
     ///         .build()
     ///         .unwrap();
     ///
-    ///     let mem = cache.destroy();
+    ///     cache.phys_write(0.into(), &MAGIC_VALUE);
+    ///
+    ///     let mut mem = cache.destroy();
+    ///
+    ///     let value: u64 = mem.phys_read(0.into()).unwrap();
+    ///     assert_eq!(value, MAGIC_VALUE);
     /// }
+    /// # use memflow_core::dummy::DummyMemory;
+    /// # use memflow_core::types::size;
+    /// # let mut mem = DummyMemory::new(size::mb(4));
+    /// # mem.phys_write(0.into(), &0xffaaffaau64).unwrap();
+    /// # build(mem);
     /// ```
     ///
     /// Borrowing a mem object:
     /// ```
+    /// # const MAGIC_VALUE: u64 = 0x23bd_318f_f3a3_5821;
     /// use memflow_core::architecture::x86::x64;
     /// use memflow_core::mem::{PhysicalMemory, CachedMemoryAccess};
     ///
-    /// fn build<T: PhysicalMemory>(mem: &mut T) {
-    ///     let cache = CachedMemoryAccess::builder(mem)
+    /// fn build<T: PhysicalMemory>(mem: &mut T)
+    ///     -> impl PhysicalMemory + '_ {
+    ///     CachedMemoryAccess::builder(mem)
     ///         .arch(x64::ARCH)
     ///         .build()
-    ///         .unwrap();
+    ///         .unwrap()
     /// }
+    ///
+    /// # use memflow_core::dummy::DummyMemory;
+    /// # use memflow_core::types::size;
+    /// # let mut mem = DummyMemory::new(size::mb(4));
+    /// # mem.phys_write(0.into(), &MAGIC_VALUE).unwrap();
+    /// let mut cache = build(&mut mem);
+    ///
+    /// let value: u64 = cache.phys_read(0.into()).unwrap();
+    /// assert_eq!(value, MAGIC_VALUE);
+    ///
+    /// cache.phys_write(0.into(), &0u64).unwrap();
+    ///
+    /// // We drop the cache and are able to use mem again
+    /// std::mem::drop(cache);
+    ///
+    /// let value: u64 = mem.phys_read(0.into()).unwrap();
+    /// assert_ne!(value, MAGIC_VALUE);
     /// ```
     pub fn new(mem: T) -> Self {
         Self {
@@ -248,6 +286,10 @@ impl<T: PhysicalMemory, Q: CacheValidator> CachedMemoryAccessBuilder<T, Q> {
     ///         .build()
     ///         .unwrap();
     /// }
+    /// # use memflow_core::dummy::DummyMemory;
+    /// # use memflow_core::types::size;
+    /// # let mut mem = DummyMemory::new(size::mb(4));
+    /// # build(mem);
     /// ```
     pub fn validator<QN: CacheValidator>(self, validator: QN) -> CachedMemoryAccessBuilder<T, QN> {
         CachedMemoryAccessBuilder {
@@ -279,6 +321,9 @@ impl<T: PhysicalMemory, Q: CacheValidator> CachedMemoryAccessBuilder<T, Q> {
     ///         .build()
     ///         .unwrap();
     /// }
+    /// # use memflow_core::dummy::DummyMemory;
+    /// # let mut mem = DummyMemory::new(size::mb(4));
+    /// # build(mem);
     /// ```
     pub fn page_size(mut self, page_size: usize) -> Self {
         self.page_size = Some(page_size);
@@ -305,6 +350,10 @@ impl<T: PhysicalMemory, Q: CacheValidator> CachedMemoryAccessBuilder<T, Q> {
     ///         .build()
     ///         .unwrap();
     /// }
+    /// # use memflow_core::dummy::DummyMemory;
+    /// # use memflow_core::types::size;
+    /// # let mut mem = DummyMemory::new(size::mb(4));
+    /// # build(mem);
     /// ```
     pub fn arch(mut self, arch: &dyn Architecture) -> Self {
         self.page_size = Some(arch.page_size());
@@ -334,6 +383,9 @@ impl<T: PhysicalMemory, Q: CacheValidator> CachedMemoryAccessBuilder<T, Q> {
     ///         .build()
     ///         .unwrap();
     /// }
+    /// # use memflow_core::dummy::DummyMemory;
+    /// # let mut mem = DummyMemory::new(size::mb(4));
+    /// # build(mem);
     /// ```
     pub fn cache_size(mut self, cache_size: usize) -> Self {
         self.cache_size = cache_size;
@@ -364,6 +416,10 @@ impl<T: PhysicalMemory, Q: CacheValidator> CachedMemoryAccessBuilder<T, Q> {
     ///         .build()
     ///         .unwrap();
     /// }
+    /// # use memflow_core::dummy::DummyMemory;
+    /// # use memflow_core::types::size;
+    /// # let mut mem = DummyMemory::new(size::mb(4));
+    /// # build(mem);
     /// ```
     pub fn page_type_mask(mut self, page_type_mask: PageType) -> Self {
         self.page_type_mask = page_type_mask;

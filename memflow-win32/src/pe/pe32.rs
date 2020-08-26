@@ -214,4 +214,8 @@ unsafe impl<'a, T: VirtualMemory> PeObject<'a> for MemoryPeView<'a, T> {
     fn align(&self) -> Align {
         Align::Section
     }
+    #[cfg(feature = "serde")]
+    fn serde_name(&self) -> &'static str {
+        "MemoryPeView"
+    }
 }

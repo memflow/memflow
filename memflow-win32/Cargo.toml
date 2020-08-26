@@ -42,7 +42,7 @@ default = ["std", "serde_derive", "symstore", "download_progress"]
 std = ["no-std-compat/std", "memflow-core/std"]
 collections = []
 alloc = []
-serde_derive = ["serde", "memflow-core/serde_derive"]
+serde_derive = ["serde", "memflow-core/serde_derive", "pelite/serde"]
 symstore = ["dirs", "ureq", "pdb"]
 download_progress = ["pbr", "progress-streams"]
 

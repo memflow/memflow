@@ -22,7 +22,7 @@ use log::error;
 use memflow_core::{ConnectorArgs, ConnectorInstance, ConnectorInventory};
 
 #[no_mangle]
-pub unsafe extern "C" fn connector_inventory_try_new() -> *mut c_void {
+pub unsafe extern "C" fn inventory_try_new() -> *mut c_void {
     match ConnectorInventory::try_new() {
         Ok(inv) => Box::into_raw(Box::new(inv)) as *mut c_void,
         Err(err) => {
@@ -33,7 +33,7 @@ pub unsafe extern "C" fn connector_inventory_try_new() -> *mut c_void {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn connector_inventory_with_path(path: *const c_char) -> *mut c_void {
+pub unsafe extern "C" fn inventory_with_path(path: *const c_char) -> *mut c_void {
     let rpath = CStr::from_ptr(path).to_string_lossy();
     match ConnectorInventory::with_path(rpath.to_string()) {
         Ok(inv) => Box::into_raw(Box::new(inv)) as *mut c_void,
@@ -45,10 +45,7 @@ pub unsafe extern "C" fn connector_inventory_with_path(path: *const c_char) -> *
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn connector_inventory_add_dir(
-    thisptr: *mut c_void,
-    dir: *const c_char,
-) -> i32 {
+pub unsafe extern "C" fn inventory_add_dir(thisptr: *mut c_void, dir: *const c_char) -> i32 {
     let mut inv = Box::from_raw(thisptr as *mut ConnectorInventory);
     let rdir = CStr::from_ptr(dir).to_string_lossy();
 
@@ -66,7 +63,7 @@ pub unsafe extern "C" fn connector_inventory_add_dir(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn connector_inventory_create_connector(
+pub unsafe extern "C" fn inventory_create_connector(
     thisptr: *mut c_void,
     name: *const c_char,
     args: *const c_char,
@@ -116,7 +113,7 @@ pub unsafe extern "C" fn connector_free(thisptr: *mut c_void) {
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn connector_inventory_free(thisptr: *mut c_void) {
+pub unsafe extern "C" fn inventory_free(thisptr: *mut c_void) {
     let _inv = Box::from_raw(thisptr as *mut ConnectorInventory);
     // drop _inv
 }

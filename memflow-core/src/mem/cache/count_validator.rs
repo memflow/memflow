@@ -42,6 +42,7 @@ impl CountCacheValidator {
     /// # Examples:
     /// ```
     /// use memflow_core::mem::CountCacheValidator;
+    /// use memflow_core::CacheValidator;
     ///
     /// let mut validator = CountCacheValidator::new(100);
     ///
@@ -82,7 +83,7 @@ impl CacheValidator for CountCacheValidator {
 
     #[inline]
     fn is_slot_valid(&self, slot_id: usize) -> bool {
-        self.last_count.wrapping_sub(self.count[slot_id]) <= self.valid_count
+        self.last_count.wrapping_sub(self.count[slot_id]) < self.valid_count
     }
 
     #[inline]

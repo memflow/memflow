@@ -187,7 +187,7 @@ where
         let mut buf = vec![0; len];
         self.virt_read_raw_into(addr, &mut buf).data_part()?;
         if let Some((n, _)) = buf.iter().enumerate().find(|(_, c)| **c == 0_u8) {
-            buf.truncate(n - 1);
+            buf.truncate(n);
         }
         Ok(String::from_utf8_lossy(&buf).to_string())
     }

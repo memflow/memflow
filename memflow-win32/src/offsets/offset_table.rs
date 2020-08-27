@@ -45,7 +45,7 @@ const _: [(); std::mem::size_of::<[Win32OffsetFile; 16]>()] =
     [(); 16 * std::mem::size_of::<Win32OffsetFile>()];
 
 #[repr(u32)]
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 pub enum Win32OffsetsArchitecture {
     X86 = 0,

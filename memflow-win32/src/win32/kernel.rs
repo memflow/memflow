@@ -1,8 +1,8 @@
 use std::prelude::v1::*;
 
 use super::{
-    KernelBuilder, KernelInfo, Win32ExitStatus, Win32Process, Win32ProcessInfo,
-    EXIT_STATUS_STILL_ACTIVE,
+    KernelBuilder, KernelInfo, Win32ExitStatus, Win32ModuleListInfo, Win32Process,
+    Win32ProcessInfo, EXIT_STATUS_STILL_ACTIVE,
 };
 use crate::error::{Error, Result};
 use crate::offsets::{Win32ArchOffsets, Win32Offsets};
@@ -176,7 +176,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
             }
         };
 
-        let peb_module =
+        let kernel_modules =
             reader.virt_read_addr_arch(self.kernel_info.start_block.arch, loaded_module_list)?;
 
         // determine the offsets to be used when working with this process
@@ -204,17 +204,20 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
             ethread: Address::NULL, // TODO: see below
             wow64: Address::NULL,
 
-            teb: Address::NULL, // TODO: see below
+            teb: None,
+            teb_wow64: None,
 
-            peb: Address::NULL,
-            peb_module,
+            peb_native: Address::NULL,
+            peb_wow64: None,
+
+            module_info_native: Win32ModuleListInfo::with_base(
+                kernel_modules,
+                self.kernel_info.start_block.arch,
+            )?,
+            module_info_wow64: None,
 
             sys_arch: self.kernel_info.start_block.arch,
             proc_arch: self.kernel_info.start_block.arch,
-
-            ldr_data_base_offs,
-            ldr_data_size_offs,
-            ldr_data_name_offs,
         })
     }
 
@@ -294,19 +297,40 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
         )? - self.offsets.ethread_list_entry();
         trace!("ethread={:x}", ethread);
 
-        // TODO: does this need to be read with the process ctx?
-        let teb = if wow64.is_null() {
-            reader.virt_read_addr_arch(
+        let peb_native = reader
+            .virt_read_addr_arch(
                 self.kernel_info.start_block.arch,
-                ethread + self.offsets.kthread_teb(),
+                eprocess + self.offsets.eproc_peb(),
             )?
-        } else {
-            reader.virt_read_addr_arch(
+            .non_null()
+            .ok_or(Error::Other("Could not retrieve peb_native"))?;
+
+        let mut peb_wow64 = None;
+
+        // TODO: does this need to be read with the process ctx?
+        let (teb, teb_wow64) = if self.kernel_info.kernel_winver >= (6, 2).into() {
+            let teb = reader.virt_read_addr_arch(
                 self.kernel_info.start_block.arch,
                 ethread + self.offsets.kthread_teb(),
-            )? + 0x2000
+            )?;
+
+            trace!("teb={:x}", teb);
+
+            if !teb.is_null() {
+                (
+                    Some(teb),
+                    if wow64.is_null() {
+                        None
+                    } else {
+                        Some(teb + 0x2000)
+                    },
+                )
+            } else {
+                (None, None)
+            }
+        } else {
+            (None, None)
         };
-        trace!("teb={:x}", teb);
 
         std::mem::drop(reader);
 
@@ -319,57 +343,27 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
             DirectTranslate::new(),
         );
 
-        // from here on out we are in the process context
-        // we will be using the process type architecture now
-        let teb_peb = if wow64.is_null() {
-            proc_reader.virt_read_addr_arch(
-                self.kernel_info.start_block.arch,
-                teb + self.offsets.teb_peb(),
-            )?
-        } else {
-            proc_reader.virt_read_addr_arch(
-                self.kernel_info.start_block.arch,
-                teb + self.offsets.teb_peb_x86(),
-            )?
-        };
-        trace!("teb_peb={:x}", teb_peb);
+        if let Some(teb) = teb_wow64 {
+            // from here on out we are in the process context
+            // we will be using the process type architecture now
+            peb_wow64 = proc_reader
+                .virt_read_addr_arch(
+                    self.kernel_info.start_block.arch,
+                    teb + self.offsets.teb_peb_x86(),
+                )?
+                .non_null();
 
-        let real_peb = if !teb_peb.is_null() {
-            teb_peb
-        } else {
-            proc_reader.virt_read_addr_arch(
-                self.kernel_info.start_block.arch,
-                eprocess + self.offsets.eproc_peb(),
-            )?
-        };
-        trace!("real_peb={:x}", real_peb);
+            trace!("peb_wow64={:?}", peb_wow64);
+        }
 
-        let proc_offs = Win32ArchOffsets::from(proc_arch);
+        trace!("peb_native={:?}", peb_native);
 
-        trace!("peb_ldr_offs={:x}", proc_offs.peb_ldr);
-        trace!("ldr_list_offs={:x}", proc_offs.ldr_list);
+        let module_info_native =
+            Win32ModuleListInfo::with_peb(&mut proc_reader, peb_native, sys_arch)?;
 
-        let peb_ldr = proc_reader.virt_read_addr_arch(
-            self.kernel_info.start_block.arch,
-            real_peb /* TODO: can we have both? */ + proc_offs.peb_ldr,
-        )?;
-        trace!("peb_ldr={:x}", peb_ldr);
-
-        let peb_module = proc_reader.virt_read_addr_arch(
-            self.kernel_info.start_block.arch,
-            peb_ldr + proc_offs.ldr_list,
-        )?;
-        trace!("peb_module={:x}", peb_module);
-
-        let (ldr_data_base_offs, ldr_data_size_offs, ldr_data_name_offs) = (
-            proc_offs.ldr_data_base,
-            proc_offs.ldr_data_size,
-            proc_offs.ldr_data_name,
-        );
-
-        trace!("ldr_data_base_offs={:x}", ldr_data_base_offs);
-        trace!("ldr_data_size_offs={:x}", ldr_data_size_offs);
-        trace!("ldr_data_name_offs={:x}", ldr_data_name_offs);
+        let module_info_wow64 = peb_wow64
+            .map(|peb| Win32ModuleListInfo::with_peb(&mut proc_reader, peb, proc_arch))
+            .transpose()?;
 
         Ok(Win32ProcessInfo {
             address: eprocess,
@@ -383,16 +377,16 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
             wow64,
 
             teb,
+            teb_wow64,
 
-            peb: real_peb, // TODO: store native + real peb - the wow64 Peb could be made an Option<>
-            peb_module,
+            peb_native,
+            peb_wow64,
+
+            module_info_native,
+            module_info_wow64,
 
             sys_arch,
             proc_arch,
-
-            ldr_data_base_offs,
-            ldr_data_size_offs,
-            ldr_data_name_offs,
         })
     }
 

@@ -463,7 +463,7 @@ impl Win32OffsetBuilder {
             self.guid = kernel_info.kernel_guid.clone();
         }
         if self.winver.is_none() {
-            self.winver = kernel_info.kernel_winver.clone();
+            self.winver = Some(kernel_info.kernel_winver);
         }
         if self.arch.is_none() {
             self.arch = Some(kernel_info.start_block.arch.into());

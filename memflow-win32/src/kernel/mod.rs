@@ -6,6 +6,7 @@ use std::prelude::v1::*;
 
 pub use start_block::StartBlock;
 
+use std::cmp::{Ord, Ordering, PartialEq};
 use std::fmt;
 
 #[derive(Debug, Clone)]
@@ -24,7 +25,7 @@ impl Win32GUID {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy, Default)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize))]
 pub struct Win32Version {
     nt_major_version: u32,
@@ -55,6 +56,63 @@ impl Win32Version {
 
     pub fn is_checked_build(&self) -> bool {
         (self.nt_build_number & 0xF0000000) == 0xC0000000
+    }
+}
+
+impl PartialOrd for Win32Version {
+    fn partial_cmp(&self, other: &Win32Version) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for Win32Version {
+    fn cmp(&self, other: &Win32Version) -> Ordering {
+        if self.nt_build_number != 0 && other.nt_build_number != 0 {
+            return self.nt_build_number.cmp(&other.nt_build_number);
+        }
+
+        if self.nt_major_version != other.nt_major_version {
+            self.nt_major_version.cmp(&other.nt_major_version)
+        } else if self.nt_minor_version != other.nt_minor_version {
+            self.nt_minor_version.cmp(&other.nt_minor_version)
+        } else {
+            Ordering::Equal
+        }
+    }
+}
+
+impl PartialEq for Win32Version {
+    fn eq(&self, other: &Win32Version) -> bool {
+        if self.nt_build_number != 0 && other.nt_build_number != 0 {
+            self.nt_build_number.eq(&other.nt_build_number)
+        } else {
+            self.nt_major_version == other.nt_major_version
+                && self.nt_minor_version == other.nt_minor_version
+        }
+    }
+}
+
+impl Eq for Win32Version {}
+
+impl From<(u32, u32)> for Win32Version {
+    fn from((nt_major_version, nt_minor_version): (u32, u32)) -> Win32Version {
+        Win32Version {
+            nt_major_version,
+            nt_minor_version,
+            nt_build_number: 0,
+        }
+    }
+}
+
+impl From<(u32, u32, u32)> for Win32Version {
+    fn from(
+        (nt_major_version, nt_minor_version, nt_build_number): (u32, u32, u32),
+    ) -> Win32Version {
+        Win32Version {
+            nt_major_version,
+            nt_minor_version,
+            nt_build_number,
+        }
     }
 }
 

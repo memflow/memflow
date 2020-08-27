@@ -79,8 +79,8 @@ pub fn parallel_processes<T: PhysicalMemory + Clone + 'static>(connector: T) {
         .into_iter()
         .map(|mut p| {
             thread::spawn(move || {
-                let peb_list = p.peb_list().unwrap();
-                info!("wininit.exe peb_list: {}", peb_list.len());
+                let module_list = p.module_list().unwrap();
+                info!("wininit.exe module_list: {}", module_list.len());
             })
         })
         .collect::<Vec<_>>();

@@ -2,6 +2,7 @@ use std::prelude::v1::*;
 
 use super::{Kernel, Win32ModuleInfo};
 use crate::error::{Error, Result};
+use crate::offsets::Win32ArchOffsets;
 use crate::win32::VirtualReadUnicodeString;
 
 use log::trace;
@@ -22,6 +23,114 @@ pub const EXIT_STATUS_STILL_ACTIVE: i32 = 259;
 
 const MAX_ITER_COUNT: usize = 65536;
 
+#[derive(Debug, Clone, Copy)]
+pub struct Win32ModuleListInfo {
+    module_base: Address,
+
+    ldr_data_base_offs: usize,
+    ldr_data_size_offs: usize,
+    ldr_data_name_offs: usize,
+}
+
+impl Win32ModuleListInfo {
+    pub fn with_peb<V: VirtualMemory>(
+        mem: &mut V,
+        peb: Address,
+        arch: &'static dyn Architecture,
+    ) -> Result<Win32ModuleListInfo> {
+        let offsets = Win32ArchOffsets::from(arch);
+
+        trace!("peb_ldr_offs={:x}", offsets.peb_ldr);
+        trace!("ldr_list_offs={:x}", offsets.ldr_list);
+
+        let peb_ldr = mem.virt_read_addr_arch(arch, peb + offsets.peb_ldr)?;
+        trace!("peb_ldr={:x}", peb_ldr);
+
+        let module_base = mem.virt_read_addr_arch(arch, peb_ldr + offsets.ldr_list)?;
+
+        Self::with_base(module_base, arch)
+    }
+
+    pub fn with_base(
+        module_base: Address,
+        arch: &'static dyn Architecture,
+    ) -> Result<Win32ModuleListInfo> {
+        let offsets = Win32ArchOffsets::from(arch);
+
+        trace!("module_base={:x}", module_base);
+
+        let (ldr_data_base_offs, ldr_data_size_offs, ldr_data_name_offs) = (
+            offsets.ldr_data_base,
+            offsets.ldr_data_size,
+            offsets.ldr_data_name,
+        );
+
+        trace!("ldr_data_base_offs={:x}", ldr_data_base_offs);
+        trace!("ldr_data_size_offs={:x}", ldr_data_size_offs);
+        trace!("ldr_data_name_offs={:x}", ldr_data_name_offs);
+
+        Ok(Win32ModuleListInfo {
+            module_base,
+            ldr_data_base_offs,
+            ldr_data_size_offs,
+            ldr_data_name_offs,
+        })
+    }
+
+    pub fn module_base(&self) -> Address {
+        self.module_base
+    }
+
+    pub fn module_list<V: VirtualMemory>(
+        &self,
+        mem: &mut V,
+        arch: &'static dyn Architecture,
+    ) -> Result<Vec<Address>> {
+        let mut list = Vec::new();
+
+        let list_start = self.module_base;
+        let mut list_entry = list_start;
+        for _ in 0..MAX_ITER_COUNT {
+            list.push(list_entry);
+            list_entry = mem.virt_read_addr_arch(arch, list_entry)?;
+            if list_entry.is_null() || list_entry == self.module_base {
+                break;
+            }
+        }
+
+        Ok(list)
+    }
+
+    pub fn module_info_from_entry<V: VirtualMemory>(
+        &self,
+        entry: Address,
+        parent_eprocess: Address,
+        mem: &mut V,
+        arch: &'static dyn Architecture,
+    ) -> Result<Win32ModuleInfo> {
+        let base = mem.virt_read_addr_arch(arch, entry + self.ldr_data_base_offs)?;
+
+        trace!("base={:x}", base);
+
+        let size = mem
+            .virt_read_addr_arch(arch, entry + self.ldr_data_size_offs)?
+            .as_usize();
+
+        trace!("size={:x}", size);
+
+        let name = mem.virt_read_unicode_string(arch, entry + self.ldr_data_name_offs)?;
+        trace!("name={}", name);
+
+        Ok(Win32ModuleInfo {
+            peb_entry: entry,
+            parent_eprocess,
+            base,
+            size,
+            name,
+        })
+    }
+}
+
 #[derive(Debug, Clone)]
 //#[cfg_attr(feature = "serde", derive(::serde::Serialize))]
 pub struct Win32ProcessInfo {
@@ -37,20 +146,20 @@ pub struct Win32ProcessInfo {
     pub wow64: Address,
 
     // teb
-    pub teb: Address,
+    pub teb: Option<Address>,
+    pub teb_wow64: Option<Address>,
 
     // peb
-    pub peb: Address,
-    pub peb_module: Address,
+    pub peb_native: Address,
+    pub peb_wow64: Option<Address>,
+
+    // modules
+    pub module_info_native: Win32ModuleListInfo,
+    pub module_info_wow64: Option<Win32ModuleListInfo>,
 
     // architecture
     pub sys_arch: &'static dyn Architecture,
     pub proc_arch: &'static dyn Architecture,
-
-    // offsets for this process (either x86 or x64 offsets)
-    pub ldr_data_base_offs: usize,
-    pub ldr_data_size_offs: usize,
-    pub ldr_data_name_offs: usize,
 }
 
 impl Win32ProcessInfo {
@@ -59,11 +168,39 @@ impl Win32ProcessInfo {
     }
 
     pub fn peb(&self) -> Address {
-        self.peb
+        if let Some(peb) = self.peb_wow64 {
+            peb
+        } else {
+            self.peb_native
+        }
     }
 
-    pub fn peb_module(&self) -> Address {
-        self.peb_module
+    pub fn peb_native(&self) -> Address {
+        self.peb_native
+    }
+
+    pub fn peb_wow64(&self) -> Option<Address> {
+        self.peb_wow64
+    }
+
+    /// Return the module list information of process native architecture
+    ///
+    /// If the process is a wow64 process, module_info_wow64 is returned, otherwise, module_info_native is
+    /// returned.
+    pub fn module_info(&self) -> Win32ModuleListInfo {
+        if !self.wow64.is_null() {
+            self.module_info_wow64.unwrap()
+        } else {
+            self.module_info_native
+        }
+    }
+
+    pub fn module_info_native(&self) -> Win32ModuleListInfo {
+        self.module_info_native
+    }
+
+    pub fn module_info_wow64(&self) -> Option<Win32ModuleListInfo> {
+        self.module_info_wow64
     }
 
     pub fn translator(&self) -> Win32VirtualTranslate {
@@ -161,74 +298,68 @@ impl<'a, T: PhysicalMemory, V: VirtualTranslate>
 }
 
 impl<T: VirtualMemory> Win32Process<T> {
-    pub fn peb_list(&mut self) -> Result<Vec<Address>> {
+    fn module_info_list_with_infos<
+        I: Iterator<Item = (Win32ModuleListInfo, &'static dyn Architecture)>,
+    >(
+        &mut self,
+        module_infos: I,
+    ) -> Result<Vec<Win32ModuleInfo>> {
         let mut list = Vec::new();
-
-        let list_start = self.proc_info.peb_module;
-        let mut list_entry = list_start;
-        for _ in 0..MAX_ITER_COUNT {
-            list.push(list_entry);
-            list_entry = match self.proc_info.proc_arch.bits() {
-                64 => self.virt_mem.virt_read_addr64(list_entry)?,
-                32 => self.virt_mem.virt_read_addr32(list_entry)?,
-                _ => return Err(Error::InvalidArchitecture),
-            };
-            if list_entry.is_null() || list_entry == self.proc_info.peb_module {
-                break;
+        for (info, arch) in module_infos {
+            for &peb in info.module_list(&mut self.virt_mem, arch)?.iter() {
+                if let Ok(module) = info.module_info_from_entry(
+                    peb,
+                    self.proc_info.address,
+                    &mut self.virt_mem,
+                    arch,
+                ) {
+                    list.push(module);
+                }
             }
         }
-
         Ok(list)
     }
 
-    pub fn module_info_from_peb(&mut self, peb_entry: Address) -> Result<Win32ModuleInfo> {
-        let base = match self.proc_info.proc_arch.bits() {
-            64 => self
-                .virt_mem
-                .virt_read_addr64(peb_entry + self.proc_info.ldr_data_base_offs)?,
-            32 => self
-                .virt_mem
-                .virt_read_addr32(peb_entry + self.proc_info.ldr_data_base_offs)?,
-            _ => return Err(Error::InvalidArchitecture),
+    pub fn module_list(&mut self) -> Result<Vec<Address>> {
+        let (info, arch) = if let Some(info_wow64) = self.proc_info.module_info_wow64 {
+            (info_wow64, self.proc_info.proc_arch)
+        } else {
+            (self.proc_info.module_info_native, self.proc_info.sys_arch)
         };
-        trace!("base={:x}", base);
 
-        let size = match self.proc_info.proc_arch.bits() {
-            64 => self
-                .virt_mem
-                .virt_read_addr64(peb_entry + self.proc_info.ldr_data_size_offs)?
-                .as_usize(),
-            32 => self
-                .virt_mem
-                .virt_read_addr32(peb_entry + self.proc_info.ldr_data_size_offs)?
-                .as_usize(),
-            _ => return Err(Error::InvalidArchitecture),
-        };
-        trace!("size={:x}", size);
+        info.module_list(&mut self.virt_mem, arch)
+    }
 
-        let name = self.virt_mem.virt_read_unicode_string(
+    pub fn module_list_native(&mut self) -> Result<Vec<Address>> {
+        let (info, arch) = (self.proc_info.module_info_native, self.proc_info.sys_arch);
+        info.module_list(&mut self.virt_mem, arch)
+    }
+
+    pub fn module_list_wow64(&mut self) -> Result<Vec<Address>> {
+        let (info, arch) = (
+            self.proc_info
+                .module_info_wow64
+                .ok_or(Error::Other("WoW64 module list does not exist"))?,
             self.proc_info.proc_arch,
-            peb_entry + self.proc_info.ldr_data_name_offs,
-        )?;
-        trace!("name={}", name);
-
-        Ok(Win32ModuleInfo {
-            peb_entry,
-            parent_eprocess: self.proc_info.address,
-            base,
-            size,
-            name,
-        })
+        );
+        info.module_list(&mut self.virt_mem, arch)
     }
 
     pub fn module_info_list(&mut self) -> Result<Vec<Win32ModuleInfo>> {
-        let mut list = Vec::new();
-        for &peb in self.peb_list()?.iter() {
-            if let Ok(modu) = self.module_info_from_peb(peb) {
-                list.push(modu);
-            }
-        }
-        Ok(list)
+        let infos = [
+            (
+                Some(self.proc_info.module_info_native),
+                self.proc_info.sys_arch,
+            ),
+            (self.proc_info.module_info_wow64, self.proc_info.proc_arch),
+        ];
+
+        let iter = infos
+            .iter()
+            .cloned()
+            .filter_map(|(info, arch)| info.map(|info| (info, arch)));
+
+        self.module_info_list_with_infos(iter)
     }
 
     pub fn module_info(&mut self, name: &str) -> Result<Win32ModuleInfo> {

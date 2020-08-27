@@ -3,6 +3,7 @@ pdb_guid = 'ECE191A20CFF4465AE46DF96C22638451'
 nt_major_version = 6
 nt_minor_version = 1
 nt_build_number = 7601
+arch = 'X64'
 
 [offsets]
 list_blink = 8

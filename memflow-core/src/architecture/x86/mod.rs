@@ -12,7 +12,6 @@ use crate::error::{Error, Result};
 use crate::iter::SplitAtIndex;
 use crate::mem::PhysicalMemory;
 use crate::types::{Address, PhysicalAddress};
-use std::ptr;
 
 pub struct X86Architecture {
     /// Defines how many bits does the native word size have
@@ -122,13 +121,12 @@ impl MMUTranslationBase for X86PageTableBase {
 
 // This lint doesn't make any sense in our usecase, since we nevel leak ARCH_SPECs, and ARCH is
 // a static trait object with a consistent address.
-#[allow(clippy::vtable_address_comparisons)]
 fn underlying_arch(arch: &dyn Architecture) -> Option<&'static X86Architecture> {
-    if ptr::eq(arch, x64::ARCH) {
+    if arch == x64::ARCH {
         Some(&x64::ARCH_SPEC)
-    } else if ptr::eq(arch, x32::ARCH) {
+    } else if arch == x32::ARCH {
         Some(&x32::ARCH_SPEC)
-    } else if ptr::eq(arch, x32_pae::ARCH) {
+    } else if arch == x32_pae::ARCH {
         Some(&x32_pae::ARCH_SPEC)
     } else {
         None

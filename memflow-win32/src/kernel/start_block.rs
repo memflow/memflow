@@ -12,7 +12,6 @@ use memflow_core::architecture;
 use memflow_core::architecture::Architecture;
 use memflow_core::mem::PhysicalMemory;
 use memflow_core::types::{size, Address, PhysicalAddress};
-use std::ptr;
 
 // PROCESSOR_START_BLOCK
 #[derive(Debug, Copy, Clone)]
@@ -23,12 +22,11 @@ pub struct StartBlock {
     pub dtb: Address,
 }
 
-#[allow(clippy::vtable_address_comparisons)]
 pub fn find_fallback<T: PhysicalMemory>(
     mem: &mut T,
     arch: &'static dyn Architecture,
 ) -> Result<StartBlock> {
-    if ptr::eq(arch, architecture::x86::x64::ARCH) {
+    if arch == architecture::x86::x64::ARCH {
         // read low 16mb stub
         let mut low16m = vec![0; size::mb(16)];
         mem.phys_read_raw_into(PhysicalAddress::NULL, &mut low16m)?;
@@ -42,13 +40,12 @@ pub fn find_fallback<T: PhysicalMemory>(
 }
 
 // bcdedit /set firstmegabytepolicyuseall
-#[allow(clippy::vtable_address_comparisons)]
 pub fn find<T: PhysicalMemory>(
     mem: &mut T,
     arch: Option<&'static dyn Architecture>,
 ) -> Result<StartBlock> {
     if let Some(arch) = arch {
-        if ptr::eq(arch, architecture::x86::x64::ARCH) {
+        if arch == architecture::x86::x64::ARCH {
             // read low 1mb stub
             let mut low1m = vec![0; size::mb(1)];
             mem.phys_read_raw_into(PhysicalAddress::NULL, &mut low1m)?;
@@ -64,11 +61,11 @@ pub fn find<T: PhysicalMemory>(
             }
 
             find_fallback(mem, arch)
-        } else if ptr::eq(arch, architecture::x86::x32_pae::ARCH) {
+        } else if arch == architecture::x86::x32_pae::ARCH {
             let mut low16m = vec![0; size::mb(16)];
             mem.phys_read_raw_into(PhysicalAddress::NULL, &mut low16m)?;
             x86pae::find(&low16m)
-        } else if ptr::eq(arch, architecture::x86::x32::ARCH) {
+        } else if arch == architecture::x86::x32::ARCH {
             let mut low16m = vec![0; size::mb(16)];
             mem.phys_read_raw_into(PhysicalAddress::NULL, &mut low16m)?;
             x86::find(&low16m)

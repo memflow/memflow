@@ -4,6 +4,8 @@ pub mod cached_vat;
 #[cfg(feature = "std")]
 pub mod timed_validator;
 
+pub mod count_validator;
+
 mod page_cache;
 mod tlb_cache;
 
@@ -15,6 +17,14 @@ pub use cached_vat::*;
 #[cfg(feature = "std")]
 #[doc(hidden)]
 pub use timed_validator::*;
+
+#[doc(hidden)]
+pub use count_validator::*;
+
+#[cfg(feature = "std")]
+pub type DefaultCacheValidator = TimedCacheValidator;
+#[cfg(not(feature = "std"))]
+pub type DefaultCacheValidator = CountCacheValidator;
 
 use crate::types::PageType;
 

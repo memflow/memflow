@@ -8,8 +8,6 @@ use crate::architecture::Architecture;
 use crate::error::{Error, PartialError, PartialResult, PartialResultExt, Result};
 use crate::types::{Address, Page, PhysicalAddress, Pointer32, Pointer64};
 
-#[cfg(feature = "std")]
-use std::ffi::CString;
 use std::mem::MaybeUninit;
 
 use dataview::Pod;
@@ -185,15 +183,13 @@ where
 
     // TODO: read into slice?
     // TODO: if len is shorter than string -> dynamically double length up to an upper bound
-    #[cfg(feature = "std")]
     fn virt_read_cstr(&mut self, addr: Address, len: usize) -> PartialResult<String> {
         let mut buf = vec![0; len];
         self.virt_read_raw_into(addr, &mut buf).data_part()?;
         if let Some((n, _)) = buf.iter().enumerate().find(|(_, c)| **c == 0_u8) {
-            buf.truncate(n);
+            buf.truncate(n - 1);
         }
-        let v = CString::new(buf).map_err(|_| Error::Encoding)?;
-        Ok(String::from(v.to_string_lossy()))
+        Ok(String::from_utf8_lossy(&buf).to_string())
     }
 
     fn virt_batcher(&mut self) -> VirtualMemoryBatcher<Self>

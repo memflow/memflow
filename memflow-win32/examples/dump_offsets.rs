@@ -65,6 +65,8 @@ pub fn main() {
                 pdb_file_name: guid.file_name.as_str().into(),
                 pdb_guid: guid.guid.as_str().into(),
 
+                arch: kernel.kernel_info.start_block.arch.into(),
+
                 nt_major_version: winver.major_version(),
                 nt_minor_version: winver.minor_version(),
                 nt_build_number: winver.build_number(),
@@ -75,6 +77,8 @@ pub fn main() {
             Win32OffsetFile {
                 pdb_file_name: Default::default(),
                 pdb_guid: Default::default(),
+
+                arch: kernel.kernel_info.start_block.arch.into(),
 
                 nt_major_version: winver.major_version(),
                 nt_minor_version: winver.minor_version(),

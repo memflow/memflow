@@ -5,7 +5,7 @@ pub mod symstore;
 
 pub mod offset_table;
 #[doc(hidden)]
-pub use offset_table::{Win32OffsetFile, Win32OffsetTable};
+pub use offset_table::{Win32OffsetFile, Win32OffsetTable, Win32OffsetsArchitecture};
 
 #[cfg(feature = "symstore")]
 pub use {pdb_struct::PdbStruct, symstore::*};
@@ -13,33 +13,59 @@ pub use {pdb_struct::PdbStruct, symstore::*};
 use std::prelude::v1::*;
 
 use std::convert::TryFrom;
-use std::fs::File;
-use std::io::Read;
-use std::path::Path;
+#[cfg(feature = "std")]
+use std::{fs::File, io::Read, path::Path};
 
 use crate::error::{Error, Result};
 use crate::kernel::{Win32GUID, Win32Version};
 use crate::win32::KernelInfo;
 
-pub mod x86 {
-    pub const PEB_LDR: usize = 0xC; // _PEB::Ldr
-    pub const LDR_LIST: usize = 0xC; // _PEB_LDR_DATA::InLoadOrderModuleList
-    pub const LDR_DATA_BASE: usize = 0x18; // _LDR_DATA_TABLE_ENTRY::DllBase
-    pub const LDR_DATA_SIZE: usize = 0x20; // _LDR_DATA_TABLE_ENTRY::SizeOfImage
-    pub const LDR_DATA_NAME: usize = 0x2C; // _LDR_DATA_TABLE_ENTRY::BaseDllName
+#[derive(Copy, Clone)]
+pub struct Win32ArchOffsets {
+    pub peb_ldr: usize,       // _PEB::Ldr
+    pub ldr_list: usize,      // _PEB_LDR_DATA::InLoadOrderModuleList
+    pub ldr_data_base: usize, // _LDR_DATA_TABLE_ENTRY::DllBase
+    pub ldr_data_size: usize, // _LDR_DATA_TABLE_ENTRY::SizeOfImage
+    pub ldr_data_name: usize, // _LDR_DATA_TABLE_ENTRY::BaseDllName
 }
 
-pub mod x64 {
-    pub const PEB_LDR: usize = 0x18; // _PEB::Ldr
-    pub const LDR_LIST: usize = 0x10; // _PEB_LDR_DATA::InLoadOrderModuleList
-    pub const LDR_DATA_BASE: usize = 0x30; // _LDR_DATA_TABLE_ENTRY::DllBase
-    pub const LDR_DATA_SIZE: usize = 0x40; // _LDR_DATA_TABLE_ENTRY::SizeOfImage
-    pub const LDR_DATA_NAME: usize = 0x58; // _LDR_DATA_TABLE_ENTRY::BaseDllName
+pub const X86: Win32ArchOffsets = Win32ArchOffsets {
+    peb_ldr: 0xc,
+    ldr_list: 0xc,
+    ldr_data_base: 0x18,
+    ldr_data_size: 0x20,
+    ldr_data_name: 0x2c,
+};
+
+pub const X64: Win32ArchOffsets = Win32ArchOffsets {
+    peb_ldr: 0x18,
+    ldr_list: 0x10,
+    ldr_data_base: 0x30,
+    ldr_data_size: 0x40,
+    ldr_data_name: 0x58,
+};
+
+impl Win32OffsetsArchitecture {
+    #[inline]
+    fn offsets(&self) -> &'static Win32ArchOffsets {
+        match self {
+            Win32OffsetsArchitecture::X64 => &X64,
+            Win32OffsetsArchitecture::X86 => &X86,
+            Win32OffsetsArchitecture::AArch64 => panic!("Not implemented"),
+        }
+    }
+}
+
+impl From<&'static dyn Architecture> for Win32ArchOffsets {
+    fn from(arch: &'static dyn Architecture) -> Win32ArchOffsets {
+        *Win32OffsetsArchitecture::from(arch).offsets()
+    }
 }
 
 #[repr(align(16))]
 struct Align16<T>(pub T);
 
+#[cfg(feature = "embed_offsets")]
 const WIN32_OFFSETS: Align16<
     [u8; include_bytes!(concat!(env!("OUT_DIR"), "/win32_offsets.bin")).len()],
 > = Align16(*include_bytes!(concat!(
@@ -64,7 +90,23 @@ impl From<Win32Offsets> for Win32OffsetTable {
     }
 }
 
+use memflow_core::architecture::{self, Architecture};
+
+impl From<&'static dyn Architecture> for Win32OffsetsArchitecture {
+    fn from(arch: &'static dyn Architecture) -> Win32OffsetsArchitecture {
+        if arch == architecture::x86::x32::ARCH || arch == architecture::x86::x32_pae::ARCH {
+            Self::X86
+        } else if arch == architecture::x86::x64::ARCH {
+            Self::X64
+        } else {
+            // We do not have AArch64, but that is in the plans...
+            panic!("Invalid architecture specified")
+        }
+    }
+}
+
 impl Win32Offsets {
+    #[cfg(feature = "symstore")]
     pub fn from_pdb<P: AsRef<Path>>(pdb_path: P) -> Result<Self> {
         let mut file = File::open(pdb_path)
             .map_err(|_| Error::PDB("unable to open user-supplied pdb file"))?;
@@ -74,6 +116,7 @@ impl Win32Offsets {
         Self::from_pdb_slice(&buffer[..])
     }
 
+    #[cfg(feature = "symstore")]
     pub fn from_pdb_slice(pdb_slice: &[u8]) -> Result<Self> {
         let list = PdbStruct::with(pdb_slice, "_LIST_ENTRY")
             .map_err(|_| Error::PDB("_LIST_ENTRY not found"))?;
@@ -302,6 +345,7 @@ impl Win32OffsetBuilder {
         Err(Error::Other("not found"))
     }
 
+    #[cfg(feature = "embed_offsets")]
     fn build_with_offset_list(&self) -> Result<Win32Offsets> {
         // # Safety
         // Struct padding and alignment is compile-time guaranteed by the struct (see mod offset_table).
@@ -355,6 +399,13 @@ impl Win32OffsetBuilder {
         closest_match.ok_or(Error::Other("not found"))
     }
 
+    #[cfg(not(feature = "embed_offsets"))]
+    fn build_with_offset_list(&self) -> Result<Win32Offsets> {
+        Err(Error::Other(
+            "embed offsets feature is deactivated on compilation",
+        ))
+    }
+
     #[cfg(feature = "symstore")]
     fn build_with_symbol_store(&self) -> Result<Win32Offsets> {
         if let Some(store) = &self.symbol_store {
@@ -376,11 +427,13 @@ impl Win32OffsetBuilder {
         ))
     }
 
+    #[cfg(feature = "symstore")]
     pub fn symbol_store(mut self, symbol_store: SymbolStore) -> Self {
         self.symbol_store = Some(symbol_store);
         self
     }
 
+    #[cfg(feature = "symstore")]
     pub fn no_symbol_store(mut self) -> Self {
         self.symbol_store = None;
         self

@@ -22,8 +22,10 @@ pub use inventory::{
     MEMFLOW_CONNECTOR_VERSION,
 };
 
+#[cfg(feature = "std")]
 pub mod fileio;
 #[doc(hidden)]
+#[cfg(feature = "std")]
 pub use fileio::FileIOMemory;
 
 #[cfg(feature = "filemap")]

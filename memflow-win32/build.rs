@@ -8,11 +8,14 @@ use std::{
 };
 
 #[path = "src/offsets/offset_table.rs"]
+#[cfg(feature = "embed_offsets")]
 mod offset_table;
 
+#[cfg(feature = "embed_offsets")]
 use offset_table::Win32OffsetFile;
 
-fn main() -> Result<(), Box<dyn Error>> {
+#[cfg(feature = "embed_offsets")]
+fn embed_offsets() -> Result<(), Box<dyn Error>> {
     let out_dir = env::var("OUT_DIR")?;
     let dest_path = Path::new(&out_dir).join("win32_offsets.bin");
     let mut all_the_files = File::create(&dest_path)?;
@@ -33,5 +36,15 @@ fn main() -> Result<(), Box<dyn Error>> {
         all_the_files.write_all(offsets.as_bytes())?;
     }
 
+    Ok(())
+}
+
+#[cfg(not(feature = "embed_offsets"))]
+fn embed_offsets() -> Result<(), Box<dyn Error>> {
+    Ok(())
+}
+
+fn main() -> Result<(), Box<dyn Error>> {
+    embed_offsets()?;
     Ok(())
 }

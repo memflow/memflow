@@ -6,11 +6,10 @@ use crate::types::size;
 
 #[test]
 fn test_vtop() {
-    let mut dummy_mem = DummyMemory::new(size::mb(512));
+    let mut dummy_mem = DummyMemory::new(size::mb(32));
     let virt_size = size::mb(8);
     let (dtb, virt_base) = dummy_mem.alloc_dtb(virt_size, &[]);
     let translator = x64::new_translator(dtb);
-    let _arch = x64::ARCH;
     let mut vat = DirectTranslate::new();
 
     for i in (0..virt_size).step_by(128) {

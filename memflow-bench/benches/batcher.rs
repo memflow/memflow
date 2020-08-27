@@ -1,6 +1,8 @@
 use criterion::*;
 
-use memflow_core::mem::{PhysicalMemory, PhysicalReadData, PhysicalWriteData};
+use memflow_core::mem::{
+    PhysicalMemory, PhysicalMemoryMetadata, PhysicalReadData, PhysicalWriteData,
+};
 use memflow_core::types::{size, Address, PhysicalAddress};
 use memflow_core::Result;
 
@@ -23,6 +25,13 @@ impl PhysicalMemory for NullMem {
     fn phys_write_raw_list(&mut self, data: &[PhysicalWriteData]) -> Result<()> {
         black_box(data.iter().count());
         Ok(())
+    }
+
+    fn metadata(&mut self) -> PhysicalMemoryMetadata {
+        PhysicalMemoryMetadata {
+            size: 0,
+            readonly: true,
+        }
     }
 }
 

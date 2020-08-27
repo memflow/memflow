@@ -38,6 +38,21 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           args: --all-targets --all-features
 
+  build-nostd:
+    runs-on: ubuntu-latest
+    steps:
+      - run: sudo apt-get install libncurses-dev libncursesw5-dev
+      - uses: actions/checkout@v2
+      - name: Set up Rust nightly
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly
+          override: true
+      - run: rustup +nightly component add rust-src
+      - name: Build no_std crate
+        run: cd nostd-test; cargo build --all-features --verbose
+
   build-coverage:
     runs-on: ubuntu-latest
     steps:

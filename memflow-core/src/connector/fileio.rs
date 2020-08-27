@@ -4,7 +4,9 @@ Basic connector which works on file i/o operations (`Seek`, `Read`, `Write`).
 
 use crate::error::{Error, Result};
 use crate::iter::FnExtend;
-use crate::mem::{MemoryMap, PhysicalMemory, PhysicalReadData, PhysicalWriteData};
+use crate::mem::{
+    MemoryMap, PhysicalMemory, PhysicalMemoryMetadata, PhysicalReadData, PhysicalWriteData,
+};
 use crate::types::Address;
 
 use std::io::{Read, Seek, SeekFrom, Write};
@@ -65,5 +67,18 @@ impl<T: Seek + Read + Write + Send> PhysicalMemory for FileIOMemory<T> {
                 .map_err(|_| Error::Connector("Write failed"))?;
         }
         Ok(())
+    }
+
+    fn metadata(&mut self) -> PhysicalMemoryMetadata {
+        PhysicalMemoryMetadata {
+            size: self
+                .mem_map
+                .as_ref()
+                .iter()
+                .last()
+                .map(|map| map.base().as_usize() + map.output().1)
+                .unwrap(),
+            readonly: false,
+        }
     }
 }

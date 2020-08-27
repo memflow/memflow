@@ -2,10 +2,12 @@
 Connector argument handler.
 */
 
+use std::prelude::v1::*;
+
 use crate::error::{Error, Result};
 
 use core::convert::TryFrom;
-use std::collections::HashMap;
+use hashbrown::HashMap;
 
 /// Argument wrapper for connectors
 ///

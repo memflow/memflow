@@ -88,7 +88,7 @@ pub trait ScopedVirtualTranslate: Clone + Copy + Send {
     fn arch(&self) -> &dyn Architecture;
 }
 
-pub trait Architecture: Send + Sync {
+pub trait Architecture: Send + Sync + 'static {
     /// Returns the number of bits of a pointers width on a `Architecture`.
     /// Currently this will either return 64 or 32 depending on the pointer width of the target.
     /// This function is handy in cases where you only want to know the pointer width of the target\
@@ -172,5 +172,14 @@ impl<'a> std::fmt::Debug for &'a dyn Architecture {
             .field("size_addr", &self.size_addr())
             .field("address_space_bits", &self.address_space_bits())
             .finish()
+    }
+}
+
+impl std::cmp::PartialEq<dyn Architecture> for dyn Architecture {
+    // This lint doesn't make any sense in our usecase, since we nevel leak underlying Architecture
+    // definitions, and each ARCH is a static trait object with a consistent address.
+    #[allow(clippy::vtable_address_comparisons)]
+    fn eq(&self, other: &dyn Architecture) -> bool {
+        std::ptr::eq(self, other)
     }
 }

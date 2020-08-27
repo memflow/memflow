@@ -27,7 +27,13 @@ use dataview::Pod;
 /// ```
 /// use std::vec::Vec;
 ///
-/// use memflow_core::mem::{PhysicalMemory, PhysicalReadData, PhysicalWriteData};
+/// use memflow_core::mem::{
+///     PhysicalMemory,
+///     PhysicalReadData,
+///     PhysicalWriteData,
+///     PhysicalMemoryMetadata
+/// };
+///
 /// use memflow_core::types::PhysicalAddress;
 /// use memflow_core::error::Result;
 ///
@@ -55,6 +61,13 @@ use dataview::Pod;
 ///             .for_each(|(addr, data)| self.mem[addr.as_usize()..(addr.as_usize() + data.len())].copy_from_slice(data));
 ///         Ok(())
 ///     }
+///
+///     fn metadata(&mut self) -> PhysicalMemoryMetadata {
+///         PhysicalMemoryMetadata {
+///             size: self.mem.len(),
+///             readonly: false
+///         }
+///     }
 /// }
 /// ```
 ///
@@ -79,6 +92,25 @@ where
 {
     fn phys_read_raw_list(&mut self, data: &mut [PhysicalReadData]) -> Result<()>;
     fn phys_write_raw_list(&mut self, data: &[PhysicalWriteData]) -> Result<()>;
+
+    /// Retrieve metadata about the physical memory
+    ///
+    /// This function will return metadata about the underlying physical memory object, currently
+    /// including address space size and read-only status.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use memflow_core::types::size;
+    /// use memflow_core::mem::PhysicalMemory;
+    /// # let mut mem = memflow_core::mem::dummy::DummyMemory::new(size::mb(16));
+    ///
+    /// let metadata = mem.metadata();
+    ///
+    /// assert_eq!(metadata.size, size::mb(16));
+    /// assert_eq!(metadata.readonly, false);
+    /// ```
+    fn metadata(&mut self) -> PhysicalMemoryMetadata;
 
     // read helpers
     fn phys_read_raw_into(&mut self, addr: PhysicalAddress, out: &mut [u8]) -> Result<()> {
@@ -143,6 +175,11 @@ impl<T: PhysicalMemory + ?Sized, P: std::ops::DerefMut<Target = T> + Send> Physi
     fn phys_write_raw_list(&mut self, data: &[PhysicalWriteData]) -> Result<()> {
         (**self).phys_write_raw_list(data)
     }
+
+    #[inline]
+    fn metadata(&mut self) -> PhysicalMemoryMetadata {
+        (**self).metadata()
+    }
 }
 
 /// Wrapper trait around physical memory which implements a boxed clone
@@ -168,6 +205,12 @@ impl Clone for PhysicalMemoryBox {
     fn clone(&self) -> Self {
         (**self).clone_box()
     }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct PhysicalMemoryMetadata {
+    pub size: usize,
+    pub readonly: bool,
 }
 
 // iterator helpers

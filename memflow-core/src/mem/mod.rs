@@ -26,8 +26,8 @@ pub use cache::*; // TODO: specify pub declarations
 pub use mem_map::MemoryMap;
 #[doc(hidden)]
 pub use phys_mem::{
-    CloneablePhysicalMemory, PhysicalMemory, PhysicalMemoryBox, PhysicalReadData,
-    PhysicalReadIterator, PhysicalWriteData, PhysicalWriteIterator,
+    CloneablePhysicalMemory, PhysicalMemory, PhysicalMemoryBox, PhysicalMemoryMetadata,
+    PhysicalReadData, PhysicalReadIterator, PhysicalWriteData, PhysicalWriteIterator,
 };
 #[doc(hidden)]
 pub use phys_mem_batcher::PhysicalMemoryBatcher;

@@ -2,6 +2,8 @@ pub mod ntos;
 pub mod start_block;
 pub mod sysproc;
 
+use std::prelude::v1::*;
+
 pub use start_block::StartBlock;
 
 use std::fmt;

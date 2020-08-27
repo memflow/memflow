@@ -25,7 +25,8 @@ itertools = { version = "0.9.0", default-features = false }
 vector-trees = { git = "https://github.com/h33p/vector-trees", features = ["bumpalo"] }
 libloading = { version = "0.6", optional = true }
 memmap = { version = "0.7", optional = true }
-serde = { version = "1.0", optional = true, features = ["derive"] }
+serde = { version = "1.0", optional = true, default-features = false, features = ["derive"] }
+hashbrown = "0.8"
 
 [dev-dependencies]
 x86_64 = { version = "0.11.0", default-features = false, features = ["stable"] }

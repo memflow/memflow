@@ -13,9 +13,8 @@ pub use {pdb_struct::PdbStruct, symstore::*};
 use std::prelude::v1::*;
 
 use std::convert::TryFrom;
-use std::fs::File;
-use std::io::Read;
-use std::path::Path;
+#[cfg(feature = "std")]
+use std::{fs::File, io::Read, path::Path};
 
 use crate::error::{Error, Result};
 use crate::kernel::{Win32GUID, Win32Version};
@@ -66,6 +65,7 @@ impl From<&'static dyn Architecture> for Win32ArchOffsets {
 #[repr(align(16))]
 struct Align16<T>(pub T);
 
+#[cfg(feature = "embed_offsets")]
 const WIN32_OFFSETS: Align16<
     [u8; include_bytes!(concat!(env!("OUT_DIR"), "/win32_offsets.bin")).len()],
 > = Align16(*include_bytes!(concat!(
@@ -106,6 +106,7 @@ impl From<&'static dyn Architecture> for Win32OffsetsArchitecture {
 }
 
 impl Win32Offsets {
+    #[cfg(feature = "symstore")]
     pub fn from_pdb<P: AsRef<Path>>(pdb_path: P) -> Result<Self> {
         let mut file = File::open(pdb_path)
             .map_err(|_| Error::PDB("unable to open user-supplied pdb file"))?;
@@ -115,6 +116,7 @@ impl Win32Offsets {
         Self::from_pdb_slice(&buffer[..])
     }
 
+    #[cfg(feature = "symstore")]
     pub fn from_pdb_slice(pdb_slice: &[u8]) -> Result<Self> {
         let list = PdbStruct::with(pdb_slice, "_LIST_ENTRY")
             .map_err(|_| Error::PDB("_LIST_ENTRY not found"))?;
@@ -343,6 +345,7 @@ impl Win32OffsetBuilder {
         Err(Error::Other("not found"))
     }
 
+    #[cfg(feature = "embed_offsets")]
     fn build_with_offset_list(&self) -> Result<Win32Offsets> {
         // # Safety
         // Struct padding and alignment is compile-time guaranteed by the struct (see mod offset_table).
@@ -396,6 +399,13 @@ impl Win32OffsetBuilder {
         closest_match.ok_or(Error::Other("not found"))
     }
 
+    #[cfg(not(feature = "embed_offsets"))]
+    fn build_with_offset_list(&self) -> Result<Win32Offsets> {
+        Err(Error::Other(
+            "embed offsets feature is deactivated on compilation",
+        ))
+    }
+
     #[cfg(feature = "symstore")]
     fn build_with_symbol_store(&self) -> Result<Win32Offsets> {
         if let Some(store) = &self.symbol_store {
@@ -417,11 +427,13 @@ impl Win32OffsetBuilder {
         ))
     }
 
+    #[cfg(feature = "symstore")]
     pub fn symbol_store(mut self, symbol_store: SymbolStore) -> Self {
         self.symbol_store = Some(symbol_store);
         self
     }
 
+    #[cfg(feature = "symstore")]
     pub fn no_symbol_store(mut self) -> Self {
         self.symbol_store = None;
         self

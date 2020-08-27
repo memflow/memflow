@@ -29,7 +29,9 @@ fn build<T: PhysicalMemory>(mem: T) {
 ```
 */
 
-use super::{page_cache::PageCache, page_cache::PageValidity, CacheValidator, TimedCacheValidator};
+use super::{
+    page_cache::PageCache, page_cache::PageValidity, CacheValidator, DefaultCacheValidator,
+};
 use crate::architecture::Architecture;
 use crate::error::Result;
 use crate::iter::PageChunks;
@@ -115,9 +117,9 @@ impl<'a, T: PhysicalMemory, Q: CacheValidator> CachedMemoryAccess<'a, T, Q> {
     }
 }
 
-impl<'a, T: PhysicalMemory> CachedMemoryAccess<'a, T, TimedCacheValidator> {
+impl<'a, T: PhysicalMemory> CachedMemoryAccess<'a, T, DefaultCacheValidator> {
     /// Returns a new builder for this cache with default settings.
-    pub fn builder(mem: T) -> CachedMemoryAccessBuilder<T, TimedCacheValidator> {
+    pub fn builder(mem: T) -> CachedMemoryAccessBuilder<T, DefaultCacheValidator> {
         CachedMemoryAccessBuilder::new(mem)
     }
 }
@@ -168,7 +170,7 @@ pub struct CachedMemoryAccessBuilder<T, Q> {
     page_type_mask: PageType,
 }
 
-impl<T: PhysicalMemory> CachedMemoryAccessBuilder<T, TimedCacheValidator> {
+impl<T: PhysicalMemory> CachedMemoryAccessBuilder<T, DefaultCacheValidator> {
     /// Creates a new `CachedMemoryAccess` builder.
     /// The memory object is mandatory as the CachedMemoryAccess struct wraps around it.
     ///
@@ -242,7 +244,7 @@ impl<T: PhysicalMemory> CachedMemoryAccessBuilder<T, TimedCacheValidator> {
     pub fn new(mem: T) -> Self {
         Self {
             mem,
-            validator: TimedCacheValidator::default(),
+            validator: DefaultCacheValidator::default(),
             page_size: None,
             cache_size: size::mb(2),
             page_type_mask: PageType::PAGE_TABLE | PageType::READ_ONLY,
@@ -266,10 +268,10 @@ impl<T: PhysicalMemory, Q: CacheValidator> CachedMemoryAccessBuilder<T, Q> {
 
     /// Sets a custom validator for the cache.
     ///
-    /// If this function is not called it will default to a [`TimedCacheValidator`](../timed_validator/index.html)
+    /// If this function is not called it will default to a [`DefaultCacheValidator`](../timed_validator/index.html)
     /// for std builds and a /* TODO */ validator for no_std builds.
     ///
-    /// The default setting is `TimedCacheValidator::default()`.
+    /// The default setting is `DefaultCacheValidator::default()`.
     ///
     /// # Examples:
     ///
@@ -277,12 +279,12 @@ impl<T: PhysicalMemory, Q: CacheValidator> CachedMemoryAccessBuilder<T, Q> {
     /// use std::time::Duration;
     ///
     /// use memflow_core::architecture::x86::x64;
-    /// use memflow_core::mem::{PhysicalMemory, CachedMemoryAccess, TimedCacheValidator};
+    /// use memflow_core::mem::{PhysicalMemory, CachedMemoryAccess, DefaultCacheValidator};
     ///
     /// fn build<T: PhysicalMemory>(mem: T) {
     ///     let cache = CachedMemoryAccess::builder(mem)
     ///         .arch(x64::ARCH)
-    ///         .validator(TimedCacheValidator::new(Duration::from_millis(2000).into()))
+    ///         .validator(DefaultCacheValidator::new(Duration::from_millis(2000).into()))
     ///         .build()
     ///         .unwrap();
     /// }

@@ -9,8 +9,8 @@ use crate::offsets::SymbolStore;
 
 use memflow_core::architecture::Architecture;
 use memflow_core::mem::{
-    CachedMemoryAccess, CachedVirtualTranslate, DirectTranslate, PhysicalMemory,
-    TimedCacheValidator, VirtualTranslate,
+    CachedMemoryAccess, CachedVirtualTranslate, DefaultCacheValidator, DirectTranslate,
+    PhysicalMemory, VirtualTranslate,
 };
 
 /// Builder for a Windows Kernel structure.
@@ -263,14 +263,15 @@ where
         self,
     ) -> KernelBuilder<
         T,
-        CachedMemoryAccess<'a, T, TimedCacheValidator>,
-        CachedVirtualTranslate<DirectTranslate, TimedCacheValidator>,
+        CachedMemoryAccess<'a, T, DefaultCacheValidator>,
+        CachedVirtualTranslate<DirectTranslate, DefaultCacheValidator>,
     > {
         KernelBuilder {
             connector: self.connector,
 
             arch: self.arch,
 
+            #[cfg(feature = "symstore")]
             symbol_store: self.symbol_store,
 
             build_page_cache: Box::new(|connector, arch| {
@@ -323,6 +324,7 @@ where
 
             arch: self.arch,
 
+            #[cfg(feature = "symstore")]
             symbol_store: self.symbol_store,
 
             build_page_cache: Box::new(func),
@@ -368,6 +370,7 @@ where
 
             arch: self.arch,
 
+            #[cfg(feature = "symstore")]
             symbol_store: self.symbol_store,
 
             build_page_cache: self.build_page_cache,

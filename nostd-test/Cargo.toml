@@ -11,5 +11,10 @@ panic = "abort"
 panic = "abort"
 
 [dependencies]
-#memflow-core = { path = "../memflow-core/", default-features = false }
+rlibc = "1.0.0"
+uefi = "0.5.0"
+uefi-services = "0.2.5"
+log = "0.4"
+memflow-core = { path = "../memflow-core/", default-features = false }
 memflow-win32 = { path = "../memflow-win32/", default-features = false }
+serde = { version = "1.0", default-features = false }

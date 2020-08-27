@@ -3,7 +3,7 @@ use crate::error::{Error, Result};
 use super::tlb_cache::TLBCache;
 use crate::architecture::{Architecture, ScopedVirtualTranslate};
 use crate::iter::{PageChunks, SplitAtIndex};
-use crate::mem::cache::{CacheValidator, TimedCacheValidator};
+use crate::mem::cache::{CacheValidator, DefaultCacheValidator};
 use crate::mem::virt_translate::VirtualTranslate;
 use crate::mem::PhysicalMemory;
 use crate::types::{Address, PhysicalAddress};
@@ -108,8 +108,8 @@ impl<V: VirtualTranslate, Q: CacheValidator> CachedVirtualTranslate<V, Q> {
     }
 }
 
-impl<V: VirtualTranslate> CachedVirtualTranslate<V, TimedCacheValidator> {
-    pub fn builder(vat: V) -> CachedVirtualTranslateBuilder<V, TimedCacheValidator> {
+impl<V: VirtualTranslate> CachedVirtualTranslate<V, DefaultCacheValidator> {
+    pub fn builder(vat: V) -> CachedVirtualTranslateBuilder<V, DefaultCacheValidator> {
         CachedVirtualTranslateBuilder::new(vat)
     }
 }
@@ -228,11 +228,11 @@ pub struct CachedVirtualTranslateBuilder<V, Q> {
     arch: Option<&'static dyn Architecture>,
 }
 
-impl<V: VirtualTranslate> CachedVirtualTranslateBuilder<V, TimedCacheValidator> {
+impl<V: VirtualTranslate> CachedVirtualTranslateBuilder<V, DefaultCacheValidator> {
     fn new(vat: V) -> Self {
         Self {
             vat,
-            validator: TimedCacheValidator::default(),
+            validator: DefaultCacheValidator::default(),
             entries: Some(2048),
             arch: None,
         }

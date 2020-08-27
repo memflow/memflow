@@ -59,7 +59,9 @@ pub fn main() {
         .build()
         .unwrap();
 
-    if let Some(winver) = kernel.kernel_info.kernel_winver {
+    let winver = kernel.kernel_info.kernel_winver;
+
+    if winver != (0, 0).into() {
         let offsets = if let Some(guid) = &kernel.kernel_info.kernel_guid {
             Win32OffsetFile {
                 pdb_file_name: guid.file_name.as_str().into(),
@@ -98,6 +100,6 @@ pub fn main() {
             None => println!("{}", offsetstr),
         }
     } else {
-        error!("kernel guid has to be set in order to generate a offsets file");
+        error!("kernel version has to be valid in order to generate a offsets file");
     }
 }

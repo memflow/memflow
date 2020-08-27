@@ -307,6 +307,7 @@ pub struct Win32OffsetBuilder {
 
     guid: Option<Win32GUID>,
     winver: Option<Win32Version>,
+    arch: Option<Win32OffsetsArchitecture>,
 }
 
 impl Default for Win32OffsetBuilder {
@@ -317,6 +318,7 @@ impl Default for Win32OffsetBuilder {
 
             guid: None,
             winver: None,
+            arch: None,
         }
     }
 }
@@ -332,6 +334,7 @@ impl Win32OffsetBuilder {
                 "building win32 offsets requires either a guid or winver",
             ));
         }
+
         // try to build via symbol store
         if let Ok(offs) = self.build_with_symbol_store() {
             return Ok(offs);
@@ -373,12 +376,13 @@ impl Win32OffsetBuilder {
         let mut prev_build_number = 0;
 
         // Try matching the newest build from that version that is not actually newer
-        if let Some(winver) = &self.winver {
+        if let (Some(winver), Some(arch)) = (&self.winver, self.arch) {
             for offset in offsets.iter() {
                 if winver.major_version() == offset.nt_major_version
                     && winver.minor_version() == offset.nt_minor_version
                     && winver.build_number() >= offset.nt_build_number
                     && prev_build_number <= offset.nt_build_number
+                    && arch == offset.arch
                 {
                     prev_build_number = offset.nt_build_number;
                     closest_match = Some(Win32Offsets {
@@ -449,12 +453,20 @@ impl Win32OffsetBuilder {
         self
     }
 
+    pub fn arch(mut self, arch: Win32OffsetsArchitecture) -> Self {
+        self.arch = Some(arch);
+        self
+    }
+
     pub fn kernel_info(mut self, kernel_info: &KernelInfo) -> Self {
         if self.guid.is_none() {
             self.guid = kernel_info.kernel_guid.clone();
         }
         if self.winver.is_none() {
-            self.winver = kernel_info.kernel_winver.clone();
+            self.winver = Some(kernel_info.kernel_winver);
+        }
+        if self.arch.is_none() {
+            self.arch = Some(kernel_info.start_block.arch.into());
         }
         self
     }

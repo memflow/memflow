@@ -112,6 +112,25 @@ impl Address {
         self.0 == 0
     }
 
+    /// Converts the address to an Option that is None when it is null
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use memflow_core::types::Address;
+    ///
+    /// assert_eq!(Address::null().non_null(), None);
+    /// assert_eq!(Address::from(0x1000u64).non_null(), Some(Address::from(0x1000)));
+    /// ```
+    #[inline]
+    pub fn non_null(self) -> Option<Address> {
+        if self.is_null() {
+            None
+        } else {
+            Some(self)
+        }
+    }
+
     /// Returns an address with a invalid value.
     ///
     /// # Examples

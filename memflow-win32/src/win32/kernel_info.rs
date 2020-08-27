@@ -2,7 +2,7 @@ use crate::error::Result;
 use crate::kernel::{self, StartBlock};
 use crate::kernel::{Win32GUID, Win32Version};
 
-use log::info;
+use log::{info, warn};
 
 use memflow_core::architecture::Architecture;
 use memflow_core::mem::{DirectTranslate, PhysicalMemory, VirtualDMA};
@@ -19,7 +19,7 @@ pub struct KernelInfo {
     pub kernel_size: usize,
 
     pub kernel_guid: Option<Win32GUID>,
-    pub kernel_winver: Option<Win32Version>,
+    pub kernel_winver: Win32Version,
 
     pub eprocess_base: Address,
 }
@@ -95,6 +95,13 @@ impl<T: PhysicalMemory> KernelInfoScanner<T> {
         info!("kernel_guid={:?}", kernel_guid);
 
         let kernel_winver = kernel::ntos::find_winver(&mut virt_mem, kernel_base).ok();
+
+        if kernel_winver.is_none() {
+            warn!("Failed to retrieve kernel version! Some features may be disabled.");
+        }
+
+        let kernel_winver = kernel_winver.unwrap_or_default();
+
         info!("kernel_winver={:?}", kernel_winver);
 
         // find eprocess base

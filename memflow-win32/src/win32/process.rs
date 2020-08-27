@@ -81,7 +81,7 @@ impl Win32ModuleListInfo {
         self.module_base
     }
 
-    pub fn module_list<V: VirtualMemory>(
+    pub fn module_entry_list<V: VirtualMemory>(
         &self,
         mem: &mut V,
         arch: &'static dyn Architecture,
@@ -298,7 +298,7 @@ impl<'a, T: PhysicalMemory, V: VirtualTranslate>
 }
 
 impl<T: VirtualMemory> Win32Process<T> {
-    fn module_info_list_with_infos<
+    fn module_list_with_infos<
         I: Iterator<Item = (Win32ModuleListInfo, &'static dyn Architecture)>,
     >(
         &mut self,
@@ -306,7 +306,7 @@ impl<T: VirtualMemory> Win32Process<T> {
     ) -> Result<Vec<Win32ModuleInfo>> {
         let mut list = Vec::new();
         for (info, arch) in module_infos {
-            for &peb in info.module_list(&mut self.virt_mem, arch)?.iter() {
+            for &peb in info.module_entry_list(&mut self.virt_mem, arch)?.iter() {
                 if let Ok(module) = info.module_info_from_entry(
                     peb,
                     self.proc_info.address,
@@ -320,32 +320,32 @@ impl<T: VirtualMemory> Win32Process<T> {
         Ok(list)
     }
 
-    pub fn module_list(&mut self) -> Result<Vec<Address>> {
+    pub fn module_entry_list(&mut self) -> Result<Vec<Address>> {
         let (info, arch) = if let Some(info_wow64) = self.proc_info.module_info_wow64 {
             (info_wow64, self.proc_info.proc_arch)
         } else {
             (self.proc_info.module_info_native, self.proc_info.sys_arch)
         };
 
-        info.module_list(&mut self.virt_mem, arch)
+        info.module_entry_list(&mut self.virt_mem, arch)
     }
 
-    pub fn module_list_native(&mut self) -> Result<Vec<Address>> {
+    pub fn module_entry_list_native(&mut self) -> Result<Vec<Address>> {
         let (info, arch) = (self.proc_info.module_info_native, self.proc_info.sys_arch);
-        info.module_list(&mut self.virt_mem, arch)
+        info.module_entry_list(&mut self.virt_mem, arch)
     }
 
-    pub fn module_list_wow64(&mut self) -> Result<Vec<Address>> {
+    pub fn module_entry_list_wow64(&mut self) -> Result<Vec<Address>> {
         let (info, arch) = (
             self.proc_info
                 .module_info_wow64
                 .ok_or(Error::Other("WoW64 module list does not exist"))?,
             self.proc_info.proc_arch,
         );
-        info.module_list(&mut self.virt_mem, arch)
+        info.module_entry_list(&mut self.virt_mem, arch)
     }
 
-    pub fn module_info_list(&mut self) -> Result<Vec<Win32ModuleInfo>> {
+    pub fn module_list(&mut self) -> Result<Vec<Win32ModuleInfo>> {
         let infos = [
             (
                 Some(self.proc_info.module_info_native),
@@ -359,12 +359,12 @@ impl<T: VirtualMemory> Win32Process<T> {
             .cloned()
             .filter_map(|(info, arch)| info.map(|info| (info, arch)));
 
-        self.module_info_list_with_infos(iter)
+        self.module_list_with_infos(iter)
     }
 
     pub fn module_info(&mut self, name: &str) -> Result<Win32ModuleInfo> {
-        let module_info_list = self.module_info_list()?;
-        module_info_list
+        let module_list = self.module_list()?;
+        module_list
             .into_iter()
             .inspect(|module| trace!("{:x} {}", module.base(), module.name()))
             .find(|module| module.name() == name)

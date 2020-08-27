@@ -105,7 +105,7 @@ fn read_bench<T: PhysicalMemory + ?Sized, V: VirtualTranslate>(
         );
 
         let mod_list: Vec<Win32ModuleInfo> = prc
-            .module_info_list()?
+            .module_list()?
             .into_iter()
             .filter(|module| module.size() > 0x1000)
             .collect();

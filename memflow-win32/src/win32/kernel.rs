@@ -420,7 +420,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
             trace!("inspecting candidate process: {:?}", candidate);
             let mut process = Win32Process::with_kernel_ref(self, candidate.clone());
             if process
-                .module_info_list()?
+                .module_list()?
                 .iter()
                 .inspect(|&module| trace!("{:x} {}", module.base(), module.name()))
                 .find(|&module| module.name().to_lowercase() == name.to_lowercase())

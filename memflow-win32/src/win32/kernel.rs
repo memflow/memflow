@@ -134,7 +134,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
         Ok(eprocs)
     }
 
-    pub fn ntoskrnl_process_info(&mut self) -> Result<Win32ProcessInfo> {
+    pub fn kernel_process_info(&mut self) -> Result<Win32ProcessInfo> {
         // TODO: create a VirtualDMA constructor for kernel_info
         let mut reader = VirtualDMA::with_vat(
             &mut self.phys_mem,
@@ -435,14 +435,22 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
     }
 
     /// Finds a process by it's process id and returns the `Win32ProcessInfo` struct.
-    /// If no process with the specified name can be found this function will return an Error.
+    /// If no process with the specified PID can be found this function will return an Error.
+    ///
+    /// If the specified PID is 0 the kernel process is returned.
     pub fn process_info_pid(&mut self, pid: PID) -> Result<Win32ProcessInfo> {
-        let process_info_list = self.process_info_list()?;
-        process_info_list
-            .into_iter()
-            .inspect(|process| trace!("{} {}", process.pid(), process.name()))
-            .find(|process| process.pid == pid)
-            .ok_or_else(|| Error::Other("pid not found"))
+        if pid > 0 {
+            // regular pid
+            let process_info_list = self.process_info_list()?;
+            process_info_list
+                .into_iter()
+                .inspect(|process| trace!("{} {}", process.pid(), process.name()))
+                .find(|process| process.pid == pid)
+                .ok_or_else(|| Error::Other("pid not found"))
+        } else {
+            // kernel pid
+            self.kernel_process_info()
+        }
     }
 
     /// Finds a process by its name and constructs a `Win32Process` struct

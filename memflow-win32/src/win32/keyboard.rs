@@ -57,11 +57,11 @@ impl Keyboard {
     pub fn try_with<T: PhysicalMemory, V: VirtualTranslate>(
         kernel: &mut Kernel<T, V>,
     ) -> Result<Self> {
-        let ntoskrnl_process_info = kernel.ntoskrnl_process_info()?;
-        debug!("found ntoskrnl.exe: {:?}", ntoskrnl_process_info);
+        let kernel_process_info = kernel.kernel_process_info()?;
+        debug!("found ntoskrnl.exe: {:?}", kernel_process_info);
 
         let win32kbase_module_info = {
-            let mut ntoskrnl_process = Win32Process::with_kernel_ref(kernel, ntoskrnl_process_info);
+            let mut ntoskrnl_process = Win32Process::with_kernel_ref(kernel, kernel_process_info);
             ntoskrnl_process.module_info("win32kbase.sys")?
         };
         debug!("found win32kbase.sys: {:?}", win32kbase_module_info);

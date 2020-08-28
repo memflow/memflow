@@ -94,7 +94,10 @@ impl Win32ModuleListInfo {
             list.push(list_entry);
             list_entry = mem.virt_read_addr_arch(arch, list_entry)?;
             // Break on misaligned entry. On NT 4.0 list end is misaligned, maybe it's a flag?
-            if list_entry.is_null() || (list_entry.as_u64() & 0b111) != 0 || list_entry == self.module_base {
+            if list_entry.is_null()
+                || (list_entry.as_u64() & 0b111) != 0
+                || list_entry == self.module_base
+            {
                 break;
             }
         }
@@ -109,7 +112,6 @@ impl Win32ModuleListInfo {
         mem: &mut V,
         arch: &'static dyn Architecture,
     ) -> Result<Win32ModuleInfo> {
-
         let base = mem.virt_read_addr_arch(arch, entry + self.ldr_data_base_offs)?;
 
         trace!("base={:x}", base);

@@ -1,7 +1,6 @@
 use memflow_core::connector::*;
 use memflow_core::mem::*;
 
-
 use memflow_win32::win32::{Kernel, Win32ModuleInfo, Win32Process};
 use memflow_win32::{Error, Result};
 

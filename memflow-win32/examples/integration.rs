@@ -1,8 +1,8 @@
 use memflow_core::connector::*;
 use memflow_core::mem::*;
 
-use memflow_win32::offsets::Win32Offsets;
-use memflow_win32::win32::{Kernel, KernelInfo, Win32ModuleInfo, Win32Process};
+
+use memflow_win32::win32::{Kernel, Win32ModuleInfo, Win32Process};
 use memflow_win32::{Error, Result};
 
 use clap::*;
@@ -57,7 +57,7 @@ fn main() -> Result<()> {
             info.eprocess_base,
             some_str(&info.eprocess_base.non_null())
         );
-        println!("");
+        println!();
     }
 
     {
@@ -88,7 +88,7 @@ fn main() -> Result<()> {
             .iter()
             .find(|p| p.name.to_lowercase() == "lsass.exe");
         println!("lsass.exe ... {}", some_str(&lsass));
-        println!("");
+        println!();
 
         if let Some(proc) = lsass {
             println!("{} info:", proc.name);
@@ -162,7 +162,7 @@ fn build_kernel<T: PhysicalMemory>(
 ) -> Result<Kernel<impl PhysicalMemory, impl VirtualTranslate>> {
     let kernel = Kernel::builder(mem).build_default_caches().build();
     println!("Kernel::build ... {}", ok_str(&kernel));
-    println!("");
+    println!();
     kernel
 }
 

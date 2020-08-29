@@ -32,7 +32,7 @@ fn build<T: PhysicalMemory>(mem: T) {
 use super::{
     page_cache::PageCache, page_cache::PageValidity, CacheValidator, DefaultCacheValidator,
 };
-use crate::architecture::Architecture;
+use crate::architecture::ArchitectureObj;
 use crate::error::Result;
 use crate::iter::PageChunks;
 use crate::mem::phys_mem::{
@@ -357,7 +357,7 @@ impl<T: PhysicalMemory, Q: CacheValidator> CachedMemoryAccessBuilder<T, Q> {
     /// # let mut mem = DummyMemory::new(size::mb(4));
     /// # build(mem);
     /// ```
-    pub fn arch(mut self, arch: &dyn Architecture) -> Self {
+    pub fn arch(mut self, arch: ArchitectureObj) -> Self {
         self.page_size = Some(arch.page_size());
         self
     }

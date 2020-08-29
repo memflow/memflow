@@ -4,7 +4,7 @@ pub mod virtual_dma;
 pub use virtual_dma::VirtualDMA;
 
 use super::VirtualMemoryBatcher;
-use crate::architecture::Architecture;
+use crate::architecture::ArchitectureObj;
 use crate::error::{Error, PartialError, PartialResult, PartialResultExt, Result};
 use crate::types::{Address, Page, PhysicalAddress, Pointer32, Pointer64};
 
@@ -131,7 +131,7 @@ where
 
     fn virt_read_addr_arch(
         &mut self,
-        arch: &dyn Architecture,
+        arch: ArchitectureObj,
         addr: Address,
     ) -> PartialResult<Address>
     where

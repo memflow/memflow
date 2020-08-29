@@ -1,5 +1,5 @@
 use crate::architecture::x86::x64;
-use crate::architecture::{Architecture, ScopedVirtualTranslate};
+use crate::architecture::{ArchitectureObj, ScopedVirtualTranslate};
 use crate::connector::MappedPhysicalMemory;
 use crate::error::Result;
 use crate::mem::virt_mem::VirtualDMA;
@@ -144,11 +144,11 @@ impl OsProcessInfo for DummyProcess {
         String::from("Dummy")
     }
 
-    fn sys_arch(&self) -> &'static dyn Architecture {
+    fn sys_arch(&self) -> ArchitectureObj {
         x64::ARCH
     }
 
-    fn proc_arch(&self) -> &'static dyn Architecture {
+    fn proc_arch(&self) -> ArchitectureObj {
         x64::ARCH
     }
 }

@@ -9,7 +9,7 @@ use crate::error::{Error, Result};
 use log::warn;
 
 use memflow_core::architecture;
-use memflow_core::architecture::Architecture;
+use memflow_core::architecture::ArchitectureObj;
 use memflow_core::mem::PhysicalMemory;
 use memflow_core::types::{size, Address, PhysicalAddress};
 
@@ -17,15 +17,12 @@ use memflow_core::types::{size, Address, PhysicalAddress};
 #[derive(Debug, Copy, Clone)]
 //#[cfg_attr(feature = "serde", derive(::serde::Serialize))]
 pub struct StartBlock {
-    pub arch: &'static dyn Architecture,
+    pub arch: ArchitectureObj,
     pub kernel_hint: Address,
     pub dtb: Address,
 }
 
-pub fn find_fallback<T: PhysicalMemory>(
-    mem: &mut T,
-    arch: &'static dyn Architecture,
-) -> Result<StartBlock> {
+pub fn find_fallback<T: PhysicalMemory>(mem: &mut T, arch: ArchitectureObj) -> Result<StartBlock> {
     if arch == architecture::x86::x64::ARCH {
         // read low 16mb stub
         let mut low16m = vec![0; size::mb(16)];
@@ -40,10 +37,7 @@ pub fn find_fallback<T: PhysicalMemory>(
 }
 
 // bcdedit /set firstmegabytepolicyuseall
-pub fn find<T: PhysicalMemory>(
-    mem: &mut T,
-    arch: Option<&'static dyn Architecture>,
-) -> Result<StartBlock> {
+pub fn find<T: PhysicalMemory>(mem: &mut T, arch: Option<ArchitectureObj>) -> Result<StartBlock> {
     if let Some(arch) = arch {
         if arch == architecture::x86::x64::ARCH {
             // read low 1mb stub

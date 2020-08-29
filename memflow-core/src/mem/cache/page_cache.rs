@@ -1,7 +1,7 @@
 use std::prelude::v1::*;
 
 use super::{CacheValidator, PageType};
-use crate::architecture::Architecture;
+use crate::architecture::ArchitectureObj;
 use crate::error::Result;
 use crate::iter::PageChunks;
 use crate::mem::phys_mem::{PhysicalMemory, PhysicalReadData, PhysicalReadIterator};
@@ -41,12 +41,7 @@ pub struct PageCache<'a, T> {
 unsafe impl<'a, T> Send for PageCache<'a, T> {}
 
 impl<'a, T: CacheValidator> PageCache<'a, T> {
-    pub fn new(
-        arch: &dyn Architecture,
-        size: usize,
-        page_type_mask: PageType,
-        validator: T,
-    ) -> Self {
+    pub fn new(arch: ArchitectureObj, size: usize, page_type_mask: PageType, validator: T) -> Self {
         Self::with_page_size(arch.page_size(), size, page_type_mask, validator)
     }
 

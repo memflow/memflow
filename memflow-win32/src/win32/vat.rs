@@ -1,5 +1,5 @@
 use memflow_core::{
-    architecture::{x86, Architecture, ScopedVirtualTranslate},
+    architecture::{x86, ArchitectureObj, ScopedVirtualTranslate},
     iter::SplitAtIndex,
     mem::{PhysicalMemory, VirtualDMA, VirtualMemory, VirtualTranslate},
     types::{Address, PhysicalAddress},
@@ -7,12 +7,12 @@ use memflow_core::{
 
 #[derive(Debug, Clone, Copy)]
 pub struct Win32VirtualTranslate {
-    pub sys_arch: &'static dyn Architecture,
+    pub sys_arch: ArchitectureObj,
     pub dtb: Address,
 }
 
 impl Win32VirtualTranslate {
-    pub fn new(sys_arch: &'static dyn Architecture, dtb: Address) -> Self {
+    pub fn new(sys_arch: ArchitectureObj, dtb: Address) -> Self {
         Self { sys_arch, dtb }
     }
 
@@ -20,7 +20,7 @@ impl Win32VirtualTranslate {
         self,
         mem: T,
         vat: V,
-        proc_arch: &'static dyn Architecture,
+        proc_arch: ArchitectureObj,
     ) -> impl VirtualMemory {
         VirtualDMA::with_vat(mem, proc_arch, self, vat)
     }
@@ -49,7 +49,7 @@ impl ScopedVirtualTranslate for Win32VirtualTranslate {
         self.dtb.as_u64().overflowing_shr(12).0 as usize
     }
 
-    fn arch(&self) -> &dyn Architecture {
+    fn arch(&self) -> ArchitectureObj {
         self.sys_arch
     }
 }

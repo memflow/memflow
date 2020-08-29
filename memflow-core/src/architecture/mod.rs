@@ -85,7 +85,7 @@ pub trait ScopedVirtualTranslate: Clone + Copy + Send {
 
     fn translation_table_id(&self, address: Address) -> usize;
 
-    fn arch(&self) -> &dyn Architecture;
+    fn arch(&self) -> ArchitectureObj;
 }
 
 pub trait Architecture: Send + Sync + 'static {
@@ -163,9 +163,9 @@ pub trait Architecture: Send + Sync + 'static {
     fn address_space_bits(&self) -> u8;
 }
 
-impl<'a> std::fmt::Debug for &'a dyn Architecture {
+impl std::fmt::Debug for ArchitectureObj {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("&dyn Architecture")
+        f.debug_struct("ArchitectureObj")
             .field("bits", &self.bits())
             .field("endianess", &self.endianess())
             .field("page_size", &self.page_size())
@@ -175,11 +175,12 @@ impl<'a> std::fmt::Debug for &'a dyn Architecture {
     }
 }
 
-impl std::cmp::PartialEq<dyn Architecture> for dyn Architecture {
+pub type ArchitectureObj = &'static dyn Architecture;
+
+impl std::cmp::PartialEq<ArchitectureObj> for ArchitectureObj {
     // This lint doesn't make any sense in our usecase, since we nevel leak underlying Architecture
     // definitions, and each ARCH is a static trait object with a consistent address.
-    #[allow(clippy::vtable_address_comparisons)]
-    fn eq(&self, other: &dyn Architecture) -> bool {
+    fn eq(&self, other: &ArchitectureObj) -> bool {
         std::ptr::eq(self, other)
     }
 }

@@ -1,7 +1,7 @@
 use std::prelude::v1::*;
 
 use super::CacheValidator;
-use crate::architecture::{Architecture, ScopedVirtualTranslate};
+use crate::architecture::{ArchitectureObj, ScopedVirtualTranslate};
 use crate::types::{Address, PhysicalAddress};
 use crate::{Error, Result};
 
@@ -59,7 +59,7 @@ impl<T: CacheValidator> TLBCache<T> {
     }
 
     #[inline]
-    pub fn is_read_too_long(&self, arch: &dyn Architecture, size: usize) -> bool {
+    pub fn is_read_too_long(&self, arch: ArchitectureObj, size: usize) -> bool {
         size / arch.page_size() > self.entries.len()
     }
 
@@ -68,7 +68,7 @@ impl<T: CacheValidator> TLBCache<T> {
         &self,
         translator: &D,
         addr: Address,
-        arch: &dyn Architecture,
+        arch: ArchitectureObj,
     ) -> Option<Result<TLBEntry>> {
         let pt_index = translator.translation_table_id(addr);
         let page_size = arch.page_size();
@@ -105,7 +105,7 @@ impl<T: CacheValidator> TLBCache<T> {
         translator: &D,
         in_addr: Address,
         out_page: PhysicalAddress,
-        arch: &dyn Architecture,
+        arch: ArchitectureObj,
     ) {
         let pt_index = translator.translation_table_id(in_addr);
         let page_size = arch.page_size();
@@ -124,7 +124,7 @@ impl<T: CacheValidator> TLBCache<T> {
         translator: &D,
         in_addr: Address,
         invalid_len: usize,
-        arch: &dyn Architecture,
+        arch: ArchitectureObj,
     ) {
         let pt_index = translator.translation_table_id(in_addr);
         let page_size = arch.page_size();

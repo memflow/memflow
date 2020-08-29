@@ -4,7 +4,7 @@ pub mod x64;
 
 use super::{
     mmu_spec::{translate_data::TranslateVec, ArchMMUSpec, MMUTranslationBase},
-    Architecture, Endianess, ScopedVirtualTranslate,
+    Architecture, ArchitectureObj, Endianess, ScopedVirtualTranslate,
 };
 
 use super::Bump;
@@ -83,7 +83,7 @@ impl ScopedVirtualTranslate for X86ScopedVirtualTranslate {
         self.dtb.0.as_u64().overflowing_shr(12).0 as usize
     }
 
-    fn arch(&self) -> &dyn Architecture {
+    fn arch(&self) -> ArchitectureObj {
         self.arch
     }
 }
@@ -121,7 +121,7 @@ impl MMUTranslationBase for X86PageTableBase {
 
 // This lint doesn't make any sense in our usecase, since we nevel leak ARCH_SPECs, and ARCH is
 // a static trait object with a consistent address.
-fn underlying_arch(arch: &dyn Architecture) -> Option<&'static X86Architecture> {
+fn underlying_arch(arch: ArchitectureObj) -> Option<&'static X86Architecture> {
     if arch == x64::ARCH {
         Some(&x64::ARCH_SPEC)
     } else if arch == x32::ARCH {
@@ -133,14 +133,11 @@ fn underlying_arch(arch: &dyn Architecture) -> Option<&'static X86Architecture> 
     }
 }
 
-pub fn new_translator(
-    dtb: Address,
-    arch: &dyn Architecture,
-) -> Result<impl ScopedVirtualTranslate> {
+pub fn new_translator(dtb: Address, arch: ArchitectureObj) -> Result<impl ScopedVirtualTranslate> {
     let arch = underlying_arch(arch).ok_or(Error::InvalidArchitecture)?;
     Ok(X86ScopedVirtualTranslate::new(arch, dtb))
 }
 
-pub fn is_x86_arch(arch: &dyn Architecture) -> bool {
+pub fn is_x86_arch(arch: ArchitectureObj) -> bool {
     underlying_arch(arch).is_some()
 }

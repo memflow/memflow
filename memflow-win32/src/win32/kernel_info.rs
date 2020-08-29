@@ -4,7 +4,7 @@ use crate::kernel::{Win32GUID, Win32Version};
 
 use log::{info, warn};
 
-use memflow_core::architecture::Architecture;
+use memflow_core::architecture::ArchitectureObj;
 use memflow_core::mem::{DirectTranslate, PhysicalMemory, VirtualDMA};
 use memflow_core::types::Address;
 
@@ -32,7 +32,7 @@ impl KernelInfo {
 
 pub struct KernelInfoScanner<T> {
     mem: T,
-    arch: Option<&'static dyn Architecture>,
+    arch: Option<ArchitectureObj>,
     kernel_hint: Option<Address>,
     dtb: Option<Address>,
 }
@@ -126,7 +126,7 @@ impl<T: PhysicalMemory> KernelInfoScanner<T> {
         })
     }
 
-    pub fn arch(mut self, arch: &'static dyn Architecture) -> Self {
+    pub fn arch(mut self, arch: ArchitectureObj) -> Self {
         self.arch = Some(arch);
         self
     }

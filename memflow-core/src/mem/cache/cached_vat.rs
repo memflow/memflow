@@ -1,7 +1,7 @@
 use crate::error::{Error, Result};
 
 use super::tlb_cache::TLBCache;
-use crate::architecture::{Architecture, ScopedVirtualTranslate};
+use crate::architecture::{ArchitectureObj, ScopedVirtualTranslate};
 use crate::iter::{PageChunks, SplitAtIndex};
 use crate::mem::cache::{CacheValidator, DefaultCacheValidator};
 use crate::mem::virt_translate::VirtualTranslate;
@@ -89,14 +89,14 @@ use bumpalo::{collections::Vec as BumpVec, Bump};
 pub struct CachedVirtualTranslate<V, Q> {
     vat: V,
     tlb: TLBCache<Q>,
-    arch: &'static dyn Architecture,
+    arch: ArchitectureObj,
     arena: Bump,
     pub hitc: usize,
     pub misc: usize,
 }
 
 impl<V: VirtualTranslate, Q: CacheValidator> CachedVirtualTranslate<V, Q> {
-    pub fn new(vat: V, tlb: TLBCache<Q>, arch: &'static dyn Architecture) -> Self {
+    pub fn new(vat: V, tlb: TLBCache<Q>, arch: ArchitectureObj) -> Self {
         Self {
             vat,
             tlb,
@@ -225,7 +225,7 @@ pub struct CachedVirtualTranslateBuilder<V, Q> {
     vat: V,
     validator: Q,
     entries: Option<usize>,
-    arch: Option<&'static dyn Architecture>,
+    arch: Option<ArchitectureObj>,
 }
 
 impl<V: VirtualTranslate> CachedVirtualTranslateBuilder<V, DefaultCacheValidator> {
@@ -268,7 +268,7 @@ impl<V: VirtualTranslate, Q: CacheValidator> CachedVirtualTranslateBuilder<V, Q>
         self
     }
 
-    pub fn arch(mut self, arch: &'static dyn Architecture) -> Self {
+    pub fn arch(mut self, arch: ArchitectureObj) -> Self {
         self.arch = Some(arch);
         self
     }

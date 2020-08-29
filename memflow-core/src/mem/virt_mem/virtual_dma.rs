@@ -1,7 +1,7 @@
 use std::prelude::v1::*;
 
 use super::{VirtualReadData, VirtualWriteData};
-use crate::architecture::{Architecture, ScopedVirtualTranslate};
+use crate::architecture::{ArchitectureObj, ScopedVirtualTranslate};
 use crate::error::{Error, PartialError, PartialResult, Result};
 use crate::iter::FnExtend;
 use crate::mem::{
@@ -20,7 +20,7 @@ use itertools::Itertools;
 pub struct VirtualDMA<T, V, D> {
     phys_mem: T,
     vat: V,
-    proc_arch: &'static dyn Architecture,
+    proc_arch: ArchitectureObj,
     translator: D,
     arena: Bump,
 }
@@ -58,7 +58,7 @@ impl<T: PhysicalMemory, D: ScopedVirtualTranslate> VirtualDMA<T, DirectTranslate
     /// # let mut vat = DirectTranslate::new();
     /// # read(&mut mem, &mut vat, dtb, virt_base);
     /// ```
-    pub fn new(phys_mem: T, proc_arch: &'static dyn Architecture, translator: D) -> Self {
+    pub fn new(phys_mem: T, proc_arch: ArchitectureObj, translator: D) -> Self {
         Self {
             phys_mem,
             vat: DirectTranslate::new(),
@@ -99,12 +99,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate, D: ScopedVirtualTranslate> VirtualD
     /// # let mut vat = DirectTranslate::new();
     /// # read(&mut mem, &mut vat, dtb, virt_base);
     /// ```
-    pub fn with_vat(
-        phys_mem: T,
-        proc_arch: &'static dyn Architecture,
-        translator: D,
-        vat: V,
-    ) -> Self {
+    pub fn with_vat(phys_mem: T, proc_arch: ArchitectureObj, translator: D, vat: V) -> Self {
         Self {
             phys_mem,
             vat,
@@ -115,12 +110,12 @@ impl<T: PhysicalMemory, V: VirtualTranslate, D: ScopedVirtualTranslate> VirtualD
     }
 
     /// Returns the architecture of the system. The system architecture is used for virtual to physical translations.
-    pub fn sys_arch(&self) -> &dyn Architecture {
+    pub fn sys_arch(&self) -> ArchitectureObj {
         self.translator.arch()
     }
 
     /// Returns the architecture of the process for this context. The process architecture is mainly used to determine pointer sizes.
-    pub fn proc_arch(&self) -> &dyn Architecture {
+    pub fn proc_arch(&self) -> ArchitectureObj {
         self.proc_arch
     }
 

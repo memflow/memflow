@@ -180,7 +180,8 @@ pub type ArchitectureObj = &'static dyn Architecture;
 impl std::cmp::PartialEq<ArchitectureObj> for ArchitectureObj {
     // This lint doesn't make any sense in our usecase, since we nevel leak underlying Architecture
     // definitions, and each ARCH is a static trait object with a consistent address.
+    #[allow(clippy::vtable_address_comparisons)]
     fn eq(&self, other: &ArchitectureObj) -> bool {
-        std::ptr::eq(self, other)
+        std::ptr::eq(*self, *other)
     }
 }

@@ -10,6 +10,8 @@ use crate::util::*;
 
 use crate::mem::phys_mem::CloneablePhysicalMemoryObj;
 
+use log::trace;
+
 #[no_mangle]
 pub unsafe extern "C" fn inventory_try_new() -> Option<&'static mut ConnectorInventory> {
     ConnectorInventory::try_new()
@@ -74,11 +76,13 @@ pub unsafe extern "C" fn connector_into_mem(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn connector_free(inv: &'static mut ConnectorInstance) {
-    let _ = Box::from_raw(inv);
+pub unsafe extern "C" fn connector_free(conn: &'static mut ConnectorInstance) {
+    trace!("connector_free: {:?}", conn as *mut _);
+    let _ = Box::from_raw(conn);
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn inventory_free(inv: &'static mut ConnectorInventory) {
+    trace!("inventory_free: {:?}", inv as *mut _);
     let _ = Box::from_raw(inv);
 }

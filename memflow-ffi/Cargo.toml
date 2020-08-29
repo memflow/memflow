@@ -11,7 +11,7 @@ readme = "README.md"
 
 [lib]
 name = "memflow_ffi"
-crate-type = ["cdylib"]
+crate-type = ["cdylib", "staticlib"]
 
 [dependencies]
 memflow-core = { path = "../memflow-core" }

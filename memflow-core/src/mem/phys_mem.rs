@@ -189,6 +189,7 @@ impl<T: PhysicalMemory + ?Sized, P: std::ops::DerefMut<Target = T> + Send> Physi
 /// Wrapper trait around physical memory which implements a boxed clone
 pub trait CloneablePhysicalMemory: PhysicalMemory {
     fn clone_box(&self) -> Box<dyn CloneablePhysicalMemory>;
+    fn downcast(&mut self) -> &mut dyn PhysicalMemory;
 }
 
 /// A sized Box containing a CloneablePhysicalMemory
@@ -201,6 +202,10 @@ where
 {
     fn clone_box(&self) -> PhysicalMemoryBox {
         Box::new(self.clone())
+    }
+
+    fn downcast(&mut self) -> &mut dyn PhysicalMemory {
+        self
     }
 }
 

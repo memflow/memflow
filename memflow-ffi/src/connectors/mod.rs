@@ -1,28 +1,14 @@
 // TODO: impl inventory
 
-/*
-
-    pub unsafe fn create_connector(
-        &self,
-        name: &str,
-        args: &ConnectorArgs,
-    ) -> Result<ConnectorInstance> {
-
-    pub unsafe fn create_connector_default(&self, name: &str) -> Result<ConnectorInstance> {
-
-*/
-
 use std::ffi::CStr;
 use std::os::raw::c_char;
 use std::path::PathBuf;
 
 use memflow_core::{ConnectorArgs, ConnectorInstance, ConnectorInventory};
 
-use memflow_core::mem::CloneablePhysicalMemory;
-
 use crate::util::*;
 
-use log::error;
+use crate::mem::phys_mem::CloneablePhysicalMemoryObj;
 
 #[no_mangle]
 pub unsafe extern "C" fn inventory_try_new() -> Option<&'static mut ConnectorInventory> {
@@ -50,13 +36,8 @@ pub unsafe extern "C" fn inventory_add_dir(
 ) -> i32 {
     let rdir = CStr::from_ptr(dir).to_string_lossy();
 
-    match inv.add_dir(PathBuf::from(rdir.to_string())) {
-        Ok(_) => 0,
-        Err(err) => {
-            error!("{}", err);
-            -1
-        }
-    }
+    inv.add_dir(PathBuf::from(rdir.to_string()))
+        .int_result_logged()
 }
 
 #[no_mangle]
@@ -88,7 +69,7 @@ pub unsafe extern "C" fn inventory_create_connector(
 #[no_mangle]
 pub unsafe extern "C" fn connector_into_mem(
     inv: &'static mut ConnectorInstance,
-) -> &'static mut &dyn CloneablePhysicalMemory {
+) -> &'static mut CloneablePhysicalMemoryObj {
     Box::leak(Box::new(inv))
 }
 

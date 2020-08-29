@@ -48,7 +48,9 @@ use dataview::Pod;
 ///     ) -> Result<()> {
 ///         data
 ///             .iter_mut()
-///             .for_each(|(addr, out)| out.copy_from_slice(&self.mem[addr.as_usize()..(addr.as_usize() + out.len())]));
+///             .for_each(|PhysicalReadData(addr, out)| out
+///                 .copy_from_slice(&self.mem[addr.as_usize()..(addr.as_usize() + out.len())])
+///             );
 ///         Ok(())
 ///     }
 ///
@@ -58,7 +60,9 @@ use dataview::Pod;
 ///     ) -> Result<()> {
 ///         data
 ///             .iter()
-///             .for_each(|(addr, data)| self.mem[addr.as_usize()..(addr.as_usize() + data.len())].copy_from_slice(data));
+///             .for_each(|PhysicalWriteData(addr, data)| self
+///                 .mem[addr.as_usize()..(addr.as_usize() + data.len())].copy_from_slice(data)
+///             );
 ///         Ok(())
 ///     }
 ///
@@ -114,7 +118,7 @@ where
 
     // read helpers
     fn phys_read_raw_into(&mut self, addr: PhysicalAddress, out: &mut [u8]) -> Result<()> {
-        self.phys_read_raw_list(&mut [(addr, out)])
+        self.phys_read_raw_list(&mut [PhysicalReadData(addr, out)])
     }
 
     fn phys_read_into<T: Pod + ?Sized>(&mut self, addr: PhysicalAddress, out: &mut T) -> Result<()>
@@ -146,7 +150,7 @@ where
 
     // write helpers
     fn phys_write_raw(&mut self, addr: PhysicalAddress, data: &[u8]) -> Result<()> {
-        self.phys_write_raw_list(&[(addr, data)])
+        self.phys_write_raw_list(&[PhysicalWriteData(addr, data)])
     }
 
     fn phys_write<T: Pod + ?Sized>(&mut self, addr: PhysicalAddress, data: &T) -> Result<()>
@@ -208,16 +212,32 @@ impl Clone for PhysicalMemoryBox {
 }
 
 #[derive(Debug, Clone, Copy)]
+#[repr(C)]
 pub struct PhysicalMemoryMetadata {
     pub size: usize,
     pub readonly: bool,
 }
 
 // iterator helpers
-pub type PhysicalReadData<'a> = (PhysicalAddress, &'a mut [u8]);
+#[repr(C)]
+pub struct PhysicalReadData<'a>(pub PhysicalAddress, pub &'a mut [u8]);
 pub trait PhysicalReadIterator<'a>: Iterator<Item = PhysicalReadData<'a>> + 'a {}
 impl<'a, T: Iterator<Item = PhysicalReadData<'a>> + 'a> PhysicalReadIterator<'a> for T {}
 
-pub type PhysicalWriteData<'a> = (PhysicalAddress, &'a [u8]);
+impl<'a> From<PhysicalReadData<'a>> for (PhysicalAddress, &'a mut [u8]) {
+    fn from(PhysicalReadData(a, b): PhysicalReadData<'a>) -> Self {
+        (a, b)
+    }
+}
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct PhysicalWriteData<'a>(pub PhysicalAddress, pub &'a [u8]);
 pub trait PhysicalWriteIterator<'a>: Iterator<Item = PhysicalWriteData<'a>> + 'a {}
 impl<'a, T: Iterator<Item = PhysicalWriteData<'a>> + 'a> PhysicalWriteIterator<'a> for T {}
+
+impl<'a> From<PhysicalWriteData<'a>> for (PhysicalAddress, &'a [u8]) {
+    fn from(PhysicalWriteData(a, b): PhysicalWriteData<'a>) -> Self {
+        (a, b)
+    }
+}

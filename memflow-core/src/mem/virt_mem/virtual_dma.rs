@@ -6,7 +6,7 @@ use crate::error::{Error, PartialError, PartialResult, Result};
 use crate::iter::FnExtend;
 use crate::mem::{
     virt_translate::{DirectTranslate, VirtualTranslate},
-    PhysicalMemory, VirtualMemory,
+    PhysicalMemory, PhysicalReadData, PhysicalWriteData, VirtualMemory,
 };
 use crate::types::{Address, Page, PhysicalAddress};
 
@@ -167,8 +167,9 @@ impl<T: PhysicalMemory, V: VirtualTranslate, D: ScopedVirtualTranslate> VirtualM
         self.vat.virt_to_phys_iter(
             &mut self.phys_mem,
             &self.translator,
-            data.iter_mut().map(|(a, b)| (*a, &mut b[..])),
-            &mut translation,
+            data.iter_mut()
+                .map(|VirtualReadData(a, b)| (*a, &mut b[..])),
+            &mut FnExtend::new(|(a, b)| translation.push(PhysicalReadData(a, b))),
             &mut FnExtend::new(|(_, _, out): (_, _, &mut [u8])| {
                 for v in out.iter_mut() {
                     *v = 0;
@@ -193,8 +194,8 @@ impl<T: PhysicalMemory, V: VirtualTranslate, D: ScopedVirtualTranslate> VirtualM
         self.vat.virt_to_phys_iter(
             &mut self.phys_mem,
             &self.translator,
-            data.iter().copied(),
-            &mut translation,
+            data.iter().copied().map(<_>::into),
+            &mut FnExtend::new(|(a, b)| translation.push(PhysicalWriteData(a, b))),
             &mut FnExtend::new(|(_, _, _): (_, _, _)| {
                 partial_read = true;
             }),

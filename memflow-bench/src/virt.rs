@@ -2,7 +2,7 @@ use criterion::*;
 
 use memflow_core::mem::{
     CachedMemoryAccess, CachedVirtualTranslate, PhysicalMemory, VirtualDMA, VirtualMemory,
-    VirtualTranslate,
+    VirtualReadData, VirtualTranslate,
 };
 
 use memflow_core::architecture::ScopedVirtualTranslate;
@@ -37,12 +37,12 @@ fn rwtest<T: VirtualMemory, M: OsProcessModuleInfo>(
 
                 let mut bufs = Vec::with_capacity(*o);
 
-                for (addr, _) in bufs.iter_mut() {
+                for VirtualReadData(addr, _) in bufs.iter_mut() {
                     *addr = (base_addr + rng.gen_range(0, 0x2000)).into();
                 }
 
                 bufs.extend(vbufs.iter_mut().map(|vec| {
-                    (
+                    VirtualReadData(
                         (base_addr + rng.gen_range(0, 0x2000)).into(),
                         vec.as_mut_slice(),
                     )

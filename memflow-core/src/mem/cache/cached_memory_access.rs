@@ -138,7 +138,7 @@ impl<'a, T: PhysicalMemory, Q: CacheValidator> PhysicalMemory for CachedMemoryAc
         let cache = &mut self.cache;
         let mem = &mut self.mem;
 
-        data.iter().for_each(move |(addr, data)| {
+        data.iter().for_each(move |PhysicalWriteData(addr, data)| {
             if cache.is_cached_page_type(addr.page_type()) {
                 for (paddr, data_chunk) in data.page_chunks(addr.address(), cache.page_size()) {
                     let mut cached_page = cache.cached_page_mut(paddr, false);

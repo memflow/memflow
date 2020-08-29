@@ -14,6 +14,7 @@ use std::ops;
 /// This type will not handle overflow for 32-bit or 64-bit addresses / lengths.
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize))]
+#[repr(transparent)]
 pub struct Address(u64);
 
 /// Constructs an `Address` from a `i32` value.

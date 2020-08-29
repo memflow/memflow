@@ -1,0 +1,17 @@
+language = "C"
+
+include_guard = "MEMFLOW_CORE_H"
+namespace = "memflow_core"
+tab_width = 4
+documentation_style = "doxy"
+style = "both"
+no_includes = true
+cpp_compat = true
+
+[parse]
+parse_deps = true
+
+include = ["memflow-core"]
+
+[fn]
+sort_by = "None"

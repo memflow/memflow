@@ -58,7 +58,7 @@ impl<'a, T: PhysicalMemory> PhysicalMemoryBatcher<'a, T> {
     // read helpers
     #[inline]
     pub fn read_raw_into<'b: 'a>(&mut self, addr: PhysicalAddress, out: &'b mut [u8]) -> &mut Self {
-        self.read_raw_iter(Some((addr, out)).into_iter())
+        self.read_raw_iter(Some(PhysicalReadData(addr, out)).into_iter())
     }
 
     #[inline]
@@ -73,7 +73,7 @@ impl<'a, T: PhysicalMemory> PhysicalMemoryBatcher<'a, T> {
     // write helpers
     #[inline]
     pub fn write_raw_into<'b: 'a>(&mut self, addr: PhysicalAddress, out: &'b [u8]) -> &mut Self {
-        self.write_raw_iter(Some((addr, out)).into_iter())
+        self.write_raw_iter(Some(PhysicalWriteData(addr, out)).into_iter())
     }
 
     #[inline]

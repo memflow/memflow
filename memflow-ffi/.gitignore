@@ -2,3 +2,5 @@
 **/*.rs.bk
 **/c/example
 **/node_modules
+bindings.h
+memflow_core.h

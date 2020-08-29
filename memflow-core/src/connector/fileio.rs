@@ -43,7 +43,8 @@ impl<T: Seek + Read + Write + Send> PhysicalMemory for FileIOMemory<T> {
     fn phys_read_raw_list(&mut self, data: &mut [PhysicalReadData]) -> Result<()> {
         let mut void = FnExtend::void();
         for ((file_off, _), buf) in self.mem_map.map_iter(
-            data.iter_mut().map(|(addr, buf)| (*addr, &mut **buf)),
+            data.iter_mut()
+                .map(|PhysicalReadData(addr, buf)| (*addr, &mut **buf)),
             &mut void,
         ) {
             self.reader
@@ -58,7 +59,10 @@ impl<T: Seek + Read + Write + Send> PhysicalMemory for FileIOMemory<T> {
 
     fn phys_write_raw_list(&mut self, data: &[PhysicalWriteData]) -> Result<()> {
         let mut void = FnExtend::void();
-        for ((file_off, _), buf) in self.mem_map.map_iter(data.iter().copied(), &mut void) {
+        for ((file_off, _), buf) in self
+            .mem_map
+            .map_iter(data.iter().copied().map(<_>::from), &mut void)
+        {
             self.reader
                 .seek(SeekFrom::Start(file_off.as_u64()))
                 .map_err(|_| Error::Connector("Seek failed"))?;

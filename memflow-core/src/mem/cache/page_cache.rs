@@ -166,12 +166,12 @@ impl<'a, T: CacheValidator> PageCache<'a, T> {
     }
 
     pub fn split_to_chunks(
-        (addr, out): PhysicalReadData<'_>,
+        PhysicalReadData(addr, out): PhysicalReadData<'_>,
         page_size: usize,
     ) -> impl PhysicalReadIterator<'_> {
         out.page_chunks(addr.address(), page_size)
             .map(move |(paddr, chunk)| {
-                (
+                PhysicalReadData(
                     PhysicalAddress::with_page(paddr, addr.page_type(), addr.page_size()),
                     chunk,
                 )
@@ -194,11 +194,11 @@ impl<'a, T: CacheValidator> PageCache<'a, T> {
             let mut wlist = BumpVec::new_in(arena);
             let mut wlistcache = BumpVec::new_in(arena);
 
-            while let Some((addr, out)) = next {
+            while let Some(PhysicalReadData(addr, out)) = next {
                 if self.is_cached_page_type(addr.page_type()) {
                     out.page_chunks(addr.address(), page_size)
                         .for_each(|(paddr, chunk)| {
-                            let (addr, out) = (
+                            let prd = PhysicalReadData(
                                 PhysicalAddress::with_page(
                                     paddr,
                                     addr.page_type(),
@@ -207,33 +207,35 @@ impl<'a, T: CacheValidator> PageCache<'a, T> {
                                 chunk,
                             );
 
-                            let cached_page = self.cached_page_mut(addr.address(), false);
+                            let cached_page = self.cached_page_mut(prd.0.address(), false);
 
                             match cached_page.validity {
                                 PageValidity::Valid(buf) => {
                                     let aligned_addr = paddr.as_page_aligned(self.page_size);
                                     let start = paddr - aligned_addr;
                                     let cached_buf =
-                                        buf.split_at_mut(start).1.split_at_mut(out.len()).0;
-                                    out.copy_from_slice(cached_buf);
+                                        buf.split_at_mut(start).1.split_at_mut(prd.1.len()).0;
+                                    prd.1.copy_from_slice(cached_buf);
                                     self.put_page(cached_page.address, buf);
                                 }
                                 PageValidity::Validatable(buf) => {
-                                    clist.push((addr, out));
-                                    wlistcache
-                                        .push((PhysicalAddress::from(cached_page.address), buf));
+                                    clist.push(prd);
+                                    wlistcache.push(PhysicalReadData(
+                                        PhysicalAddress::from(cached_page.address),
+                                        buf,
+                                    ));
                                     self.mark_page_for_validation(cached_page.address);
                                 }
                                 PageValidity::ToBeValidated => {
-                                    clist.push((addr, out));
+                                    clist.push(prd);
                                 }
                                 PageValidity::Invalid => {
-                                    wlist.push((addr, out));
+                                    wlist.push(prd);
                                 }
                             }
                         });
                 } else {
-                    wlist.push((*addr, out));
+                    wlist.push(PhysicalReadData(*addr, out));
                 }
 
                 next = iter.next();
@@ -253,12 +255,14 @@ impl<'a, T: CacheValidator> PageCache<'a, T> {
 
                         wlistcache
                             .into_iter()
-                            .for_each(|(addr, buf)| self.validate_page(addr.address(), buf));
+                            .for_each(|PhysicalReadData(addr, buf)| {
+                                self.validate_page(addr.address(), buf)
+                            });
 
                         wlistcache = BumpVec::new_in(arena);
                     }
 
-                    while let Some((addr, out)) = clist.pop() {
+                    while let Some(PhysicalReadData(addr, out)) = clist.pop() {
                         let cached_page = self.cached_page_mut(addr.address(), false);
                         let aligned_addr = cached_page.address.as_page_aligned(self.page_size);
 

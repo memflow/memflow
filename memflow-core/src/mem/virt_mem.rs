@@ -65,7 +65,7 @@ where
 
     // read helpers
     fn virt_read_raw_into(&mut self, addr: Address, out: &mut [u8]) -> PartialResult<()> {
-        self.virt_read_raw_list(&mut [(addr, out)])
+        self.virt_read_raw_list(&mut [VirtualReadData(addr, out)])
     }
 
     fn virt_read_into<T: Pod + ?Sized>(&mut self, addr: Address, out: &mut T) -> PartialResult<()>
@@ -95,7 +95,7 @@ where
 
     // write helpers
     fn virt_write_raw(&mut self, addr: Address, data: &[u8]) -> PartialResult<()> {
-        self.virt_write_raw_list(&[(addr, data)])
+        self.virt_write_raw_list(&[VirtualWriteData(addr, data)])
     }
 
     fn virt_write<T: Pod + ?Sized>(&mut self, addr: Address, data: &T) -> PartialResult<()>
@@ -238,10 +238,25 @@ impl<T: VirtualMemory + ?Sized, P: std::ops::DerefMut<Target = T> + Send> Virtua
 }
 
 // iterator helpers
-pub type VirtualReadData<'a> = (Address, &'a mut [u8]);
+#[repr(C)]
+pub struct VirtualReadData<'a>(pub Address, pub &'a mut [u8]);
 pub trait VirtualReadIterator<'a>: Iterator<Item = VirtualReadData<'a>> + 'a {}
 impl<'a, T: Iterator<Item = VirtualReadData<'a>> + 'a> VirtualReadIterator<'a> for T {}
 
-pub type VirtualWriteData<'a> = (Address, &'a [u8]);
+impl<'a> From<VirtualReadData<'a>> for (Address, &'a mut [u8]) {
+    fn from(VirtualReadData(a, b): VirtualReadData<'a>) -> Self {
+        (a, b)
+    }
+}
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct VirtualWriteData<'a>(pub Address, pub &'a [u8]);
 pub trait VirtualWriteIterator<'a>: Iterator<Item = VirtualWriteData<'a>> + 'a {}
 impl<'a, T: Iterator<Item = VirtualWriteData<'a>> + 'a> VirtualWriteIterator<'a> for T {}
+
+impl<'a> From<VirtualWriteData<'a>> for (Address, &'a [u8]) {
+    fn from(VirtualWriteData(a, b): VirtualWriteData<'a>) -> Self {
+        (a, b)
+    }
+}

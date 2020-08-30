@@ -1,5 +1,5 @@
 use memflow_core::mem::phys_mem::*;
-use memflow_core::types::{Address, PhysicalAddress};
+use memflow_core::types::PhysicalAddress;
 
 use crate::util::*;
 

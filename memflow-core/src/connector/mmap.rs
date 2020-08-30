@@ -111,7 +111,7 @@ impl<'a, F: AsRef<MemoryMap<&'a mut [u8]>> + Send> PhysicalMemory
         Ok(())
     }
 
-    fn metadata(&mut self) -> PhysicalMemoryMetadata {
+    fn metadata(&self) -> PhysicalMemoryMetadata {
         PhysicalMemoryMetadata {
             size: self
                 .info
@@ -143,7 +143,7 @@ impl<'a, F: AsRef<MemoryMap<&'a [u8]>> + Send> PhysicalMemory
         Err(Error::Connector("Target mapping is not writeable"))
     }
 
-    fn metadata(&mut self) -> PhysicalMemoryMetadata {
+    fn metadata(&self) -> PhysicalMemoryMetadata {
         PhysicalMemoryMetadata {
             size: self
                 .info

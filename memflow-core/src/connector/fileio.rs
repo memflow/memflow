@@ -69,7 +69,7 @@ impl<T: Seek + Read + Write + Send> PhysicalMemory for FileIOMemory<T> {
         Ok(())
     }
 
-    fn metadata(&mut self) -> PhysicalMemoryMetadata {
+    fn metadata(&self) -> PhysicalMemoryMetadata {
         PhysicalMemoryMetadata {
             size: self
                 .mem_map

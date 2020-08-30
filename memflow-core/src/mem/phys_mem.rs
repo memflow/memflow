@@ -62,7 +62,7 @@ use dataview::Pod;
 ///         Ok(())
 ///     }
 ///
-///     fn metadata(&mut self) -> PhysicalMemoryMetadata {
+///     fn metadata(&self) -> PhysicalMemoryMetadata {
 ///         PhysicalMemoryMetadata {
 ///             size: self.mem.len(),
 ///             readonly: false
@@ -103,14 +103,14 @@ where
     /// ```
     /// use memflow_core::types::size;
     /// use memflow_core::mem::PhysicalMemory;
-    /// # let mut mem = memflow_core::mem::dummy::DummyMemory::new(size::mb(16));
+    /// # let mem = memflow_core::mem::dummy::DummyMemory::new(size::mb(16));
     ///
     /// let metadata = mem.metadata();
     ///
     /// assert_eq!(metadata.size, size::mb(16));
     /// assert_eq!(metadata.readonly, false);
     /// ```
-    fn metadata(&mut self) -> PhysicalMemoryMetadata;
+    fn metadata(&self) -> PhysicalMemoryMetadata;
 
     // read helpers
     fn phys_read_raw_into(&mut self, addr: PhysicalAddress, out: &mut [u8]) -> Result<()> {
@@ -177,7 +177,7 @@ impl<T: PhysicalMemory + ?Sized, P: std::ops::DerefMut<Target = T> + Send> Physi
     }
 
     #[inline]
-    fn metadata(&mut self) -> PhysicalMemoryMetadata {
+    fn metadata(&self) -> PhysicalMemoryMetadata {
         (**self).metadata()
     }
 }

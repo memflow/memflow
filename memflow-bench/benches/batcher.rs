@@ -27,7 +27,7 @@ impl PhysicalMemory for NullMem {
         Ok(())
     }
 
-    fn metadata(&mut self) -> PhysicalMemoryMetadata {
+    fn metadata(&self) -> PhysicalMemoryMetadata {
         PhysicalMemoryMetadata {
             size: 0,
             readonly: true,

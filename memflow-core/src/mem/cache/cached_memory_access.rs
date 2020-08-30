@@ -156,7 +156,7 @@ impl<'a, T: PhysicalMemory, Q: CacheValidator> PhysicalMemory for CachedMemoryAc
         mem.phys_write_raw_list(data)
     }
 
-    fn metadata(&mut self) -> PhysicalMemoryMetadata {
+    fn metadata(&self) -> PhysicalMemoryMetadata {
         self.mem.metadata()
     }
 }

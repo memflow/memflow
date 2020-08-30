@@ -453,6 +453,16 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
         }
     }
 
+    /// Constructs a `Win32Process` struct for the targets kernel by borrowing this kernel instance.
+    ///
+    /// This function can be useful for quickly accessing the kernel process.
+    pub fn kernel_process(
+        &mut self,
+    ) -> Result<Win32Process<VirtualDMA<&mut T, &mut V, Win32VirtualTranslate>>> {
+        let proc_info = self.kernel_process_info()?;
+        Ok(Win32Process::with_kernel_ref(self, proc_info))
+    }
+
     /// Finds a process by its name and constructs a `Win32Process` struct
     /// by borrowing this kernel instance.
     /// If no process with the specified name can be found this function will return an Error.
@@ -479,10 +489,23 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
         Ok(Win32Process::with_kernel_ref(self, proc_info))
     }
 
+    /// Constructs a `Win32Process` struct by consuming this kernel struct
+    /// and moving it into the resulting process.
+    ///
+    /// If necessary the kernel can be retrieved back by calling `destroy()` on the process after use.
+    ///
+    /// This function can be useful for quickly accessing a process.
+    pub fn into_kernel_process(
+        mut self,
+    ) -> Result<Win32Process<VirtualDMA<T, V, Win32VirtualTranslate>>> {
+        let proc_info = self.kernel_process_info()?;
+        Ok(Win32Process::with_kernel(self, proc_info))
+    }
+
     /// Finds a process by its name and constructs a `Win32Process` struct
     /// by consuming the kernel struct and moving it into the process.
     ///
-    /// If necessary the kernel can be retrieved back by calling `destroy()` on the process again.
+    /// If necessary the kernel can be retrieved back by calling `destroy()` on the process after use.
     ///
     /// If no process with the specified name can be found this function will return an Error.
     ///

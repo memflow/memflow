@@ -19,6 +19,7 @@ use std::{fs::File, io::Read, path::Path};
 use crate::error::{Error, Result};
 use crate::kernel::{Win32GUID, Win32Version};
 use crate::win32::KernelInfo;
+use memflow_core::architecture::{self, ArchitectureObj};
 
 #[derive(Copy, Clone)]
 pub struct Win32ArchOffsets {
@@ -56,8 +57,8 @@ impl Win32OffsetsArchitecture {
     }
 }
 
-impl From<&'static dyn Architecture> for Win32ArchOffsets {
-    fn from(arch: &'static dyn Architecture) -> Win32ArchOffsets {
+impl From<ArchitectureObj> for Win32ArchOffsets {
+    fn from(arch: ArchitectureObj) -> Win32ArchOffsets {
         *Win32OffsetsArchitecture::from(arch).offsets()
     }
 }
@@ -90,10 +91,8 @@ impl From<Win32Offsets> for Win32OffsetTable {
     }
 }
 
-use memflow_core::architecture::{self, Architecture};
-
-impl From<&'static dyn Architecture> for Win32OffsetsArchitecture {
-    fn from(arch: &'static dyn Architecture) -> Win32OffsetsArchitecture {
+impl From<ArchitectureObj> for Win32OffsetsArchitecture {
+    fn from(arch: ArchitectureObj) -> Win32OffsetsArchitecture {
         if arch == architecture::x86::x32::ARCH || arch == architecture::x86::x32_pae::ARCH {
             Self::X86
         } else if arch == architecture::x86::x64::ARCH {

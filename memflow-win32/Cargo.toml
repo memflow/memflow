@@ -31,6 +31,7 @@ rand = "0.5"
 bencher = "0.1.5"
 clap = "2.33.0"
 toml = "0.5"
+colored = "2.0"
 
 [build_dependencies]
 toml = "0.5"

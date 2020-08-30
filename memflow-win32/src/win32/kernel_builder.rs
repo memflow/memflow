@@ -7,7 +7,7 @@ use crate::offsets::Win32Offsets;
 #[cfg(feature = "symstore")]
 use crate::offsets::SymbolStore;
 
-use memflow_core::architecture::Architecture;
+use memflow_core::architecture::ArchitectureObj;
 use memflow_core::mem::{
     CachedMemoryAccess, CachedVirtualTranslate, DefaultCacheValidator, DirectTranslate,
     PhysicalMemory, VirtualTranslate,
@@ -111,13 +111,13 @@ use memflow_core::mem::{
 pub struct KernelBuilder<T, TK, VK> {
     connector: T,
 
-    arch: Option<&'static dyn Architecture>,
+    arch: Option<ArchitectureObj>,
 
     #[cfg(feature = "symstore")]
     symbol_store: Option<SymbolStore>,
 
-    build_page_cache: Box<dyn FnOnce(T, &'static dyn Architecture) -> TK>,
-    build_vat_cache: Box<dyn FnOnce(DirectTranslate, &'static dyn Architecture) -> VK>,
+    build_page_cache: Box<dyn FnOnce(T, ArchitectureObj) -> TK>,
+    build_vat_cache: Box<dyn FnOnce(DirectTranslate, ArchitectureObj) -> VK>,
 }
 
 impl<T> KernelBuilder<T, T, DirectTranslate>
@@ -189,7 +189,7 @@ where
         Win32Offsets::builder().kernel_info(&kernel_info).build()
     }
 
-    pub fn arch(mut self, arch: &'static dyn Architecture) -> Self {
+    pub fn arch(mut self, arch: ArchitectureObj) -> Self {
         self.arch = Some(arch);
         self
     }
@@ -312,7 +312,7 @@ where
     ///         .unwrap();
     /// }
     /// ```
-    pub fn build_page_cache<TKN, F: FnOnce(T, &'static dyn Architecture) -> TKN + 'static>(
+    pub fn build_page_cache<TKN, F: FnOnce(T, ArchitectureObj) -> TKN + 'static>(
         self,
         func: F,
     ) -> KernelBuilder<T, TKN, VK>
@@ -355,10 +355,7 @@ where
     ///         .unwrap();
     /// }
     /// ```
-    pub fn build_vat_cache<
-        VKN,
-        F: FnOnce(DirectTranslate, &'static dyn Architecture) -> VKN + 'static,
-    >(
+    pub fn build_vat_cache<VKN, F: FnOnce(DirectTranslate, ArchitectureObj) -> VKN + 'static>(
         self,
         func: F,
     ) -> KernelBuilder<T, TK, VKN>

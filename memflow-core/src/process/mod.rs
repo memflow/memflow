@@ -4,7 +4,7 @@ Traits for OS independent process abstractions.
 
 use std::prelude::v1::*;
 
-use crate::architecture::Architecture;
+use crate::architecture::ArchitectureObj;
 use crate::types::Address;
 
 /// Trait describing a operating system
@@ -33,7 +33,7 @@ pub trait OsProcessInfo {
     fn name(&self) -> String;
 
     /// Returns the architecture of the target system.
-    fn sys_arch(&self) -> &'static dyn Architecture;
+    fn sys_arch(&self) -> ArchitectureObj;
 
     /// Returns the architecture of the process.
     ///
@@ -43,7 +43,7 @@ pub trait OsProcessInfo {
     /// to the `sys_arch` in case the process is an emulated 32-bit process.
     ///
     /// On windows this technique is called [`WOW64`](https://docs.microsoft.com/en-us/windows/win32/winprog64/wow64-implementation-details).
-    fn proc_arch(&self) -> &'static dyn Architecture;
+    fn proc_arch(&self) -> ArchitectureObj;
 }
 
 // TODO: Range impl for base to size?

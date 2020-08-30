@@ -32,7 +32,7 @@ fn build<T: PhysicalMemory>(mem: T) {
 use super::{
     page_cache::PageCache, page_cache::PageValidity, CacheValidator, DefaultCacheValidator,
 };
-use crate::architecture::Architecture;
+use crate::architecture::ArchitectureObj;
 use crate::error::Result;
 use crate::iter::PageChunks;
 use crate::mem::phys_mem::{
@@ -138,7 +138,7 @@ impl<'a, T: PhysicalMemory, Q: CacheValidator> PhysicalMemory for CachedMemoryAc
         let cache = &mut self.cache;
         let mem = &mut self.mem;
 
-        data.iter().for_each(move |(addr, data)| {
+        data.iter().for_each(move |PhysicalWriteData(addr, data)| {
             if cache.is_cached_page_type(addr.page_type()) {
                 for (paddr, data_chunk) in data.page_chunks(addr.address(), cache.page_size()) {
                     let mut cached_page = cache.cached_page_mut(paddr, false);
@@ -357,7 +357,7 @@ impl<T: PhysicalMemory, Q: CacheValidator> CachedMemoryAccessBuilder<T, Q> {
     /// # let mut mem = DummyMemory::new(size::mb(4));
     /// # build(mem);
     /// ```
-    pub fn arch(mut self, arch: &dyn Architecture) -> Self {
+    pub fn arch(mut self, arch: ArchitectureObj) -> Self {
         self.page_size = Some(arch.page_size());
         self
     }

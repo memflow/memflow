@@ -8,7 +8,7 @@ use crate::win32::VirtualReadUnicodeString;
 use log::trace;
 use std::fmt;
 
-use memflow_core::architecture::Architecture;
+use memflow_core::architecture::ArchitectureObj;
 use memflow_core::mem::{PhysicalMemory, VirtualDMA, VirtualMemory, VirtualTranslate};
 use memflow_core::process::{OsProcessInfo, OsProcessModuleInfo, PID};
 use memflow_core::types::Address;
@@ -36,7 +36,7 @@ impl Win32ModuleListInfo {
     pub fn with_peb<V: VirtualMemory>(
         mem: &mut V,
         peb: Address,
-        arch: &'static dyn Architecture,
+        arch: ArchitectureObj,
     ) -> Result<Win32ModuleListInfo> {
         let offsets = Win32ArchOffsets::from(arch);
 
@@ -51,10 +51,7 @@ impl Win32ModuleListInfo {
         Self::with_base(module_base, arch)
     }
 
-    pub fn with_base(
-        module_base: Address,
-        arch: &'static dyn Architecture,
-    ) -> Result<Win32ModuleListInfo> {
+    pub fn with_base(module_base: Address, arch: ArchitectureObj) -> Result<Win32ModuleListInfo> {
         let offsets = Win32ArchOffsets::from(arch);
 
         trace!("module_base={:x}", module_base);
@@ -84,7 +81,7 @@ impl Win32ModuleListInfo {
     pub fn module_entry_list<V: VirtualMemory>(
         &self,
         mem: &mut V,
-        arch: &'static dyn Architecture,
+        arch: ArchitectureObj,
     ) -> Result<Vec<Address>> {
         let mut list = Vec::new();
 
@@ -110,7 +107,7 @@ impl Win32ModuleListInfo {
         entry: Address,
         parent_eprocess: Address,
         mem: &mut V,
-        arch: &'static dyn Architecture,
+        arch: ArchitectureObj,
     ) -> Result<Win32ModuleInfo> {
         let base = mem.virt_read_addr_arch(arch, entry + self.ldr_data_base_offs)?;
 
@@ -162,8 +159,8 @@ pub struct Win32ProcessInfo {
     pub module_info_wow64: Option<Win32ModuleListInfo>,
 
     // architecture
-    pub sys_arch: &'static dyn Architecture,
-    pub proc_arch: &'static dyn Architecture,
+    pub sys_arch: ArchitectureObj,
+    pub proc_arch: ArchitectureObj,
 }
 
 impl Win32ProcessInfo {
@@ -225,11 +222,11 @@ impl OsProcessInfo for Win32ProcessInfo {
         self.name.clone()
     }
 
-    fn sys_arch(&self) -> &'static dyn Architecture {
+    fn sys_arch(&self) -> ArchitectureObj {
         self.sys_arch
     }
 
-    fn proc_arch(&self) -> &'static dyn Architecture {
+    fn proc_arch(&self) -> ArchitectureObj {
         self.proc_arch
     }
 }
@@ -302,9 +299,7 @@ impl<'a, T: PhysicalMemory, V: VirtualTranslate>
 }
 
 impl<T: VirtualMemory> Win32Process<T> {
-    fn module_list_with_infos<
-        I: Iterator<Item = (Win32ModuleListInfo, &'static dyn Architecture)>,
-    >(
+    fn module_list_with_infos<I: Iterator<Item = (Win32ModuleListInfo, ArchitectureObj)>>(
         &mut self,
         module_infos: I,
     ) -> Result<Vec<Win32ModuleInfo>> {

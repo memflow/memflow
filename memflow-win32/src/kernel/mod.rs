@@ -57,6 +57,14 @@ impl Win32Version {
     pub fn is_checked_build(&self) -> bool {
         (self.nt_build_number & 0xF0000000) == 0xC0000000
     }
+
+    pub fn as_tuple(&self) -> (u32, u32, u32) {
+        (
+            self.major_version(),
+            self.minor_version(),
+            self.build_number(),
+        )
+    }
 }
 
 impl PartialOrd for Win32Version {

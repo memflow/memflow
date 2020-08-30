@@ -4,7 +4,7 @@ use crate::error::{Error, Result};
 
 use std::convert::TryInto;
 
-use memflow_core::architecture::{Architecture, Endianess};
+use memflow_core::architecture::{ArchitectureObj, Endianess};
 use memflow_core::mem::VirtualMemory;
 use memflow_core::types::Address;
 
@@ -13,7 +13,7 @@ use widestring::U16CString;
 pub trait VirtualReadUnicodeString {
     fn virt_read_unicode_string(
         &mut self,
-        proc_arch: &'static dyn Architecture,
+        proc_arch: ArchitectureObj,
         addr: Address,
     ) -> Result<String>;
 }
@@ -22,7 +22,7 @@ pub trait VirtualReadUnicodeString {
 impl<'a, T: VirtualMemory> VirtualReadUnicodeString for T {
     fn virt_read_unicode_string(
         &mut self,
-        proc_arch: &'static dyn Architecture,
+        proc_arch: ArchitectureObj,
         addr: Address,
     ) -> Result<String> {
         /*

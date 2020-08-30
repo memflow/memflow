@@ -2,7 +2,7 @@ use criterion::*;
 
 use memflow_core::mem::{CachedMemoryAccess, PhysicalMemory};
 
-use memflow_core::{architecture, size, Address, PageType, PhysicalAddress};
+use memflow_core::{architecture, size, Address, PageType, PhysicalAddress, PhysicalReadData};
 
 use rand::prelude::*;
 use rand::{prng::XorShiftRng as CurRng, Rng, SeedableRng};
@@ -32,7 +32,7 @@ fn rwtest<T: PhysicalMemory>(
                 bufs.extend(vbufs.iter_mut().map(|vec| {
                     let addr = (base_addr + rng.gen_range(0, 0x2000)).into();
 
-                    (
+                    PhysicalReadData(
                         PhysicalAddress::with_page(
                             addr,
                             PageType::default().write(true),

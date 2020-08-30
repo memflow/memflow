@@ -47,11 +47,11 @@ fn read_test_nobatcher<T: PhysicalMemory>(
     mem: &mut T,
     mut rng: CurRng,
     size: usize,
-    tbuf: &mut [(PhysicalAddress, &mut [u8])],
+    tbuf: &mut [PhysicalReadData],
 ) {
     let base_addr = Address::from(rng.gen_range(0, size));
 
-    for (addr, _) in tbuf.iter_mut().take(chunk_size) {
+    for PhysicalReadData(addr, _) in tbuf.iter_mut().take(chunk_size) {
         *addr = (base_addr + rng.gen_range(0, 0x2000)).into();
     }
 
@@ -92,7 +92,7 @@ fn read_test_with_ctx<T: PhysicalMemory>(
         unsafe { TSLICE }
             .iter_mut()
             .map(|arr| {
-                (PhysicalAddress::INVALID, unsafe {
+                PhysicalReadData(PhysicalAddress::INVALID, unsafe {
                     std::mem::transmute(&mut arr[..])
                 })
             })

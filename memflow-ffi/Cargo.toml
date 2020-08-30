@@ -11,7 +11,7 @@ readme = "README.md"
 
 [lib]
 name = "memflow_ffi"
-crate-type = ["cdylib"]
+crate-type = ["cdylib", "staticlib"]
 
 [dependencies]
 memflow-core = { path = "../memflow-core" }
@@ -21,3 +21,6 @@ simple_logger = "1.0.1"
 
 [features]
 default = []
+
+[build-dependencies]
+cbindgen = "0.14.4"

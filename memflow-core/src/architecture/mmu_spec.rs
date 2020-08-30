@@ -472,7 +472,7 @@ impl ArchMMUSpec {
         let pt_read: &mut BumpVec<PhysicalReadData> = unsafe { std::mem::transmute(pt_read) };
 
         for (chunk, tr_chunk) in pt_buf.chunks_exact_mut(pte_size).zip(addrs.iter()) {
-            pt_read.push((
+            pt_read.push(PhysicalReadData(
                 PhysicalAddress::with_page(tr_chunk.pt_addr, PageType::PAGE_TABLE, page_size),
                 chunk,
             ));
@@ -493,7 +493,7 @@ impl ArchMMUSpec {
 
         for i in (0..addrs.len()).rev() {
             let mut chunk = addrs.swap_remove(i);
-            let (_, buf) = pt_read.swap_remove(i);
+            let PhysicalReadData(_, buf) = pt_read.swap_remove(i);
             let pt_addr = Address::from(u64::from_le_bytes(buf[0..8].try_into().unwrap()));
 
             if self.pte_addr_mask(chunk.pt_addr, step) != self.pte_addr_mask(pt_addr, step)

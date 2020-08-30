@@ -89,7 +89,8 @@ impl<'a, F: AsRef<MemoryMap<&'a mut [u8]>> + Send> PhysicalMemory
     fn phys_read_raw_list(&mut self, data: &mut [PhysicalReadData]) -> Result<()> {
         let mut void = FnExtend::void();
         for (mapped_buf, buf) in self.info.as_ref().map_iter(
-            data.iter_mut().map(|(addr, buf)| (*addr, &mut **buf)),
+            data.iter_mut()
+                .map(|PhysicalReadData(addr, buf)| (*addr, &mut **buf)),
             &mut void,
         ) {
             buf.copy_from_slice(mapped_buf.as_ref());
@@ -100,12 +101,12 @@ impl<'a, F: AsRef<MemoryMap<&'a mut [u8]>> + Send> PhysicalMemory
     fn phys_write_raw_list(&mut self, data: &[PhysicalWriteData]) -> Result<()> {
         let mut void = FnExtend::void();
 
-        for (mapped_buf, buf) in self.info.as_ref().map_iter(data.iter().copied(), &mut void) {
+        for (mapped_buf, buf) in self
+            .info
+            .as_ref()
+            .map_iter(data.iter().copied().map(<_>::from), &mut void)
+        {
             mapped_buf.as_mut().copy_from_slice(buf);
-        }
-
-        for (mapped_buf, buf) in self.info.as_ref().map_iter(data.iter().copied(), &mut void) {
-            mapped_buf.copy_from_slice(buf);
         }
 
         Ok(())
@@ -131,7 +132,8 @@ impl<'a, F: AsRef<MemoryMap<&'a [u8]>> + Send> PhysicalMemory
     fn phys_read_raw_list(&mut self, data: &mut [PhysicalReadData]) -> Result<()> {
         let mut void = FnExtend::void();
         for (mapped_buf, buf) in self.info.as_ref().map_iter(
-            data.iter_mut().map(|(addr, buf)| (*addr, &mut **buf)),
+            data.iter_mut()
+                .map(|PhysicalReadData(addr, buf)| (*addr, &mut **buf)),
             &mut void,
         ) {
             buf.copy_from_slice(mapped_buf.as_ref());

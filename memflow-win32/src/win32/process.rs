@@ -24,6 +24,7 @@ pub const EXIT_STATUS_STILL_ACTIVE: i32 = 259;
 const MAX_ITER_COUNT: usize = 65536;
 
 #[derive(Debug, Clone, Copy)]
+#[repr(C)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize))]
 pub struct Win32ModuleListInfo {
     module_base: Address,

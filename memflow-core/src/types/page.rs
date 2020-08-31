@@ -9,6 +9,8 @@ bitflags! {
     #[cfg_attr(feature = "serde", derive(::serde::Serialize))]
     #[repr(transparent)]
     pub struct PageType: u8 {
+        /// The page explicitly has no flags.
+        const NONE = 0b0000_0000;
         /// The page type is not known.
         const UNKNOWN = 0b0000_0001;
         /// The page contains page table entries.

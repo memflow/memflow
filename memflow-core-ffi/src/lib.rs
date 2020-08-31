@@ -8,4 +8,6 @@ pub mod mem;
 
 pub mod architecture;
 
-pub(crate) mod util;
+pub mod process;
+
+pub mod util;

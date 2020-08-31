@@ -3,4 +3,4 @@
 bindings
 **/node_modules
 **/*.out
-memflow_core.h
+memflow_win32.h

@@ -26,3 +26,13 @@ pub extern "C" fn arch_size_addr(arch: &ArchitectureObj) -> usize {
 pub extern "C" fn arch_address_space_bits(arch: &ArchitectureObj) -> u8 {
     arch.address_space_bits()
 }
+
+/// Free an architecture reference
+///
+/// # Safety
+///
+/// `arch` must be a valid heap allocated reference created by one of the API's functions.
+#[no_mangle]
+pub unsafe extern "C" fn free_arch(arch: &'static mut ArchitectureObj) {
+    let _ = Box::from_raw(arch);
+}

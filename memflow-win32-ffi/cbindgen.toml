@@ -1,0 +1,23 @@
+language = "C"
+
+include_guard = "MEMFLOW_WIN32_H"
+namespace = "memflow_win32"
+tab_width = 4
+documentation_style = "doxy"
+style = "both"
+cpp_compat = true
+includes = ["memflow_core.h"]
+
+[parse]
+parse_deps = true
+
+include = ["memflow-win32"]
+
+[macro_expansion]
+bitflags = true
+
+[fn]
+sort_by = "None"
+
+[export]
+exclude = ["PageType", "Address"]

@@ -7,12 +7,14 @@ members = [
     "memflow-core",
     "memflow-win32",
     "memflow-core-ffi",
+    "memflow-win32-ffi",
     "memflow-bench",
 ]
 default-members = [
     "memflow-core",
     "memflow-win32",
     "memflow-core-ffi",
+    "memflow-win32-ffi",
     "memflow-bench",
 ]
 

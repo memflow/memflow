@@ -88,6 +88,13 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
     }
 
     pub fn eprocess_list(&mut self) -> Result<Vec<Address>> {
+        let mut eprocs = Vec::new();
+        self.eprocess_list_extend(&mut eprocs)?;
+        trace!("found {} eprocesses", eprocs.len());
+        Ok(eprocs)
+    }
+
+    pub fn eprocess_list_extend<E: Extend<Address>>(&mut self, eprocs: &mut E) -> Result<()> {
         // TODO: create a VirtualDMA constructor for kernel_info
         let mut reader = VirtualDMA::with_vat(
             &mut self.phys_mem,
@@ -95,8 +102,6 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
             Win32VirtualTranslate::new(self.kernel_info.start_block.arch, self.sysproc_dtb),
             &mut self.vat,
         );
-
-        let mut eprocs = Vec::new();
 
         let list_start = self.kernel_info.eprocess_base + self.offsets.eproc_link();
         let mut list_entry = list_start;
@@ -124,14 +129,13 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
             }
 
             trace!("found eprocess {:x}", eprocess);
-            eprocs.push(eprocess);
+            eprocs.extend(Some(eprocess).into_iter());
 
             // continue
             list_entry = flink_entry;
         }
 
-        trace!("found {} eprocesses", eprocs.len());
-        Ok(eprocs)
+        Ok(())
     }
 
     pub fn kernel_process_info(&mut self) -> Result<Win32ProcessInfo> {
@@ -390,15 +394,25 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
         })
     }
 
+    pub fn process_info_list_extend<E: Extend<Win32ProcessInfo>>(
+        &mut self,
+        list: &mut E,
+    ) -> Result<()> {
+        let mut vec = Vec::new();
+        self.eprocess_list_extend(&mut vec)?;
+        for eprocess in vec.into_iter() {
+            if let Ok(prc) = self.process_info_from_eprocess(eprocess) {
+                list.extend(Some(prc).into_iter());
+            }
+        }
+        Ok(())
+    }
+
     /// Retrieves a list of `Win32ProcessInfo` structs for all processes
     /// that can be found on the target system.
     pub fn process_info_list(&mut self) -> Result<Vec<Win32ProcessInfo>> {
         let mut list = Vec::new();
-        for &eprocess in self.eprocess_list()?.iter() {
-            if let Ok(prc) = self.process_info_from_eprocess(eprocess) {
-                list.push(prc);
-            }
-        }
+        self.process_info_list_extend(&mut list)?;
         Ok(list)
     }
 

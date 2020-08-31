@@ -7,7 +7,7 @@ use std::path::PathBuf;
 fn main() {
     let crate_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
     let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
-    const HEADER_NAME: &str = "memflow_core.h";
+    const HEADER_NAME: &str = "memflow_win32.h";
 
     let config = cbindgen::Config::from_root_or_default(&crate_dir);
 

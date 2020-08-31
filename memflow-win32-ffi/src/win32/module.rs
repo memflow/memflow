@@ -3,7 +3,7 @@ use memflow_core_ffi::util::to_heap;
 use memflow_win32::win32::Win32ModuleInfo;
 
 #[no_mangle]
-pub extern "C" fn module_info_get_os_obj(
+pub extern "C" fn module_info_trait(
     info: &'static mut Win32ModuleInfo,
 ) -> &'static mut OsProcessModuleInfoObj {
     to_heap(info)

@@ -42,6 +42,17 @@ pub extern "C" fn process_clone(process: &Win32Process) -> &'static mut Win32Pro
     to_heap((*process).clone())
 }
 
+/// Frees the `process`
+///
+/// # Safety
+///
+/// `process` must be a valid heap allocated reference to a `Win32Process` object. After the
+/// function returns, the reference becomes invalid.
+#[no_mangle]
+pub unsafe extern "C" fn process_free(process: &'static mut Win32Process) {
+    let _ = Box::from_raw(process);
+}
+
 /// Retrieve a process module list
 ///
 /// This will fill up to `max_len` elements into `out` with references to `Win32ModuleInfo` objects.
@@ -52,7 +63,7 @@ pub extern "C" fn process_clone(process: &Win32Process) -> &'static mut Win32Pro
 ///
 /// `out` must be a valid buffer able to contain `max_len` references to `Win32ModuleInfo`.
 #[no_mangle]
-pub unsafe extern "C" fn module_list(
+pub unsafe extern "C" fn process_module_list(
     process: &mut Win32Process,
     out: *mut &'static mut Win32ModuleInfo,
     max_len: usize,
@@ -87,11 +98,15 @@ pub unsafe extern "C" fn module_list(
 ///
 /// `name` must be a valid null terminated string.
 #[no_mangle]
-pub unsafe extern "C" fn module_info(
+pub unsafe extern "C" fn process_module_info(
     process: &mut Win32Process,
     name: *const c_char,
 ) -> Option<&'static mut Win32ModuleInfo> {
     let name = CStr::from_ptr(name).to_string_lossy();
 
-    process.module_info(&name).map(to_heap).ok()
+    process
+        .module_info(&name)
+        .map(to_heap)
+        .map_err(inspect_err)
+        .ok()
 }

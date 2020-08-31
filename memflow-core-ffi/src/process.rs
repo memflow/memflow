@@ -1,5 +1,6 @@
 use crate::util::*;
 use memflow_core::process::*;
+use std::os::raw::c_char;
 use std::slice::from_raw_parts_mut;
 
 use memflow_core::architecture::ArchitectureObj;
@@ -28,12 +29,12 @@ pub extern "C" fn os_process_info_pid(obj: &OsProcessInfoObj) -> PID {
 #[no_mangle]
 pub unsafe extern "C" fn os_process_info_name(
     obj: &OsProcessInfoObj,
-    out: *mut u8,
+    out: *mut c_char,
     max_len: usize,
 ) -> usize {
     let name = obj.name();
     let name_bytes = name.as_bytes();
-    let out_bytes = from_raw_parts_mut(out, std::cmp::min(max_len, name.len()));
+    let out_bytes = from_raw_parts_mut(out as *mut u8, std::cmp::min(max_len, name.len() + 1));
     let len = out_bytes.len();
     out_bytes[..(len - 1)].copy_from_slice(&name_bytes[..(len - 1)]);
     *out_bytes.iter_mut().last().unwrap() = 0;
@@ -94,12 +95,12 @@ pub extern "C" fn os_process_module_size(obj: &OsProcessModuleInfoObj) -> usize 
 #[no_mangle]
 pub unsafe extern "C" fn os_process_module_name(
     obj: &OsProcessModuleInfoObj,
-    out: *mut u8,
+    out: *mut c_char,
     max_len: usize,
 ) -> usize {
     let name = obj.name();
     let name_bytes = name.as_bytes();
-    let out_bytes = from_raw_parts_mut(out, std::cmp::min(max_len, name.len()));
+    let out_bytes = from_raw_parts_mut(out as *mut u8, std::cmp::min(max_len, name.len() + 1));
     let len = out_bytes.len();
     out_bytes[..(len - 1)].copy_from_slice(&name_bytes[..(len - 1)]);
     *out_bytes.iter_mut().last().unwrap() = 0;

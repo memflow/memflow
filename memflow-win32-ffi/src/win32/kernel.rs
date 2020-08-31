@@ -1,5 +1,6 @@
 use memflow_core_ffi::mem::phys_mem::CloneablePhysicalMemoryObj;
 use memflow_core_ffi::util::*;
+use memflow_win32::kernel::Win32Version;
 use memflow_win32::win32::{kernel, Win32ProcessInfo, Win32VirtualTranslate};
 
 use memflow_core::mem::{
@@ -12,6 +13,7 @@ use memflow_core::types::{size, Address, PageType};
 use memflow_core::PID;
 
 use super::process::Win32Process;
+use crate::kernel::start_block::StartBlock;
 
 use std::ffi::CStr;
 use std::os::raw::c_char;
@@ -35,7 +37,7 @@ pub type Kernel = kernel::Kernel<FFIMemory, FFIVirtualTranslate>;
 /// `mem` must be a heap allocated memory reference, created by one of the API's functions.
 /// Reference to it becomes invalid.
 #[no_mangle]
-pub unsafe extern "C" fn kernel_build_cloneable(
+pub unsafe extern "C" fn kernel_build(
     mem: &'static mut CloneablePhysicalMemoryObj,
 ) -> Option<&'static mut Kernel> {
     let mem: Box<dyn CloneablePhysicalMemory> = Box::from_raw(*Box::from_raw(mem));
@@ -58,7 +60,7 @@ pub unsafe extern "C" fn kernel_build_cloneable(
 /// `mem` must be a heap allocated memory reference, created by one of the API's functions.
 /// Reference to it becomes invalid.
 #[no_mangle]
-pub unsafe extern "C" fn kernel_build_cloneable_custom(
+pub unsafe extern "C" fn kernel_build_custom(
     mem: &'static mut CloneablePhysicalMemoryObj,
     page_cache_time_ms: u64,
     page_cache_flags: PageType,
@@ -126,6 +128,21 @@ pub unsafe extern "C" fn kernel_destroy(
 ) -> &'static mut CloneablePhysicalMemoryObj {
     let kernel = Box::from_raw(kernel);
     Box::leak(Box::new(Box::leak(kernel.destroy().destroy())))
+}
+
+#[no_mangle]
+pub extern "C" fn kernel_start_block(kernel: &Kernel) -> StartBlock {
+    kernel.kernel_info.start_block.into()
+}
+
+#[no_mangle]
+pub extern "C" fn kernel_winver(kernel: &Kernel) -> Win32Version {
+    kernel.kernel_info.kernel_winver.mask_build_number()
+}
+
+#[no_mangle]
+pub extern "C" fn kernel_winver_unmasked(kernel: &Kernel) -> Win32Version {
+    kernel.kernel_info.kernel_winver
 }
 
 /// Retrieve a list of peorcess addresses

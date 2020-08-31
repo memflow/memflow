@@ -4,7 +4,6 @@ use memflow_core::process::OsProcessModuleInfo;
 use memflow_core::types::Address;
 
 #[derive(Debug, Clone)]
-#[repr(C)]
 pub struct Win32ModuleInfo {
     pub peb_entry: Address,
     pub parent_eprocess: Address, // parent "reference"

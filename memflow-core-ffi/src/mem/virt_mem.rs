@@ -1,3 +1,4 @@
+use memflow_core::error::PartialResultExt;
 use memflow_core::mem::virt_mem::*;
 use memflow_core::types::Address;
 
@@ -35,7 +36,7 @@ pub unsafe extern "C" fn virt_read_raw_list(
     len: usize,
 ) -> i32 {
     let data = from_raw_parts_mut(data, len);
-    mem.virt_read_raw_list(data).int_result()
+    mem.virt_read_raw_list(data).data_part().int_result()
 }
 
 /// Write a list of values
@@ -54,7 +55,7 @@ pub unsafe extern "C" fn virt_write_raw_list(
     len: usize,
 ) -> i32 {
     let data = from_raw_parts(data, len);
-    mem.virt_write_raw_list(data).int_result()
+    mem.virt_write_raw_list(data).data_part().int_result()
 }
 
 /// Read a single value into `out` from a provided `Address`
@@ -63,13 +64,14 @@ pub unsafe extern "C" fn virt_write_raw_list(
 ///
 /// `out` must be a valid pointer to a data buffer of at least `len` size.
 #[no_mangle]
-pub unsafe extern "C" fn virt_read_raw(
+pub unsafe extern "C" fn virt_read_raw_into(
     mem: &mut VirtualMemoryObj,
     addr: Address,
     out: *mut u8,
     len: usize,
 ) -> i32 {
     mem.virt_read_raw_into(addr, from_raw_parts_mut(out, len))
+        .data_part()
         .int_result()
 }
 
@@ -98,17 +100,18 @@ pub unsafe extern "C" fn virt_write_raw(
     len: usize,
 ) -> i32 {
     mem.virt_write_raw(addr, from_raw_parts(input, len))
+        .data_part()
         .int_result()
 }
 
 /// Write a single 32-bit value into a provided `Address`
 #[no_mangle]
 pub extern "C" fn virt_write_u32(mem: &mut VirtualMemoryObj, addr: Address, val: u32) -> i32 {
-    mem.virt_write(addr, &val).int_result()
+    mem.virt_write(addr, &val).data_part().int_result()
 }
 
 /// Write a single 64-bit value into a provided `Address`
 #[no_mangle]
 pub extern "C" fn virt_write_u64(mem: &mut VirtualMemoryObj, addr: Address, val: u64) -> i32 {
-    mem.virt_write(addr, &val).int_result()
+    mem.virt_write(addr, &val).data_part().int_result()
 }

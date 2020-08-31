@@ -27,6 +27,7 @@ impl Win32GUID {
 
 #[derive(Debug, Clone, Copy, Default)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize))]
+#[repr(C)]
 pub struct Win32Version {
     nt_major_version: u32,
     nt_minor_version: u32,
@@ -40,6 +41,11 @@ impl Win32Version {
             nt_minor_version,
             nt_build_number,
         }
+    }
+
+    pub fn mask_build_number(mut self) -> Self {
+        self.nt_build_number &= 0xFFFF;
+        self
     }
 
     pub fn major_version(&self) -> u32 {

@@ -61,22 +61,25 @@ fn main() -> Result<()> {
 
     {
         println!("Kernel Process:");
-        let proc_info = kernel.kernel_process_info()?;
-        let mut kernel_proc = Win32Process::with_kernel_ref(&mut kernel, proc_info);
-        let modules = modules(&mut kernel_proc)?;
-        println!("checking module list:");
-        println!(
-            "ntoskrnl.exe ... {}",
-            some_str(
-                &modules
-                    .iter()
-                    .find(|e| e.name.to_lowercase() == "ntoskrnl.exe")
-            )
-        );
-        println!(
-            "hal.dll ... {}",
-            some_str(&modules.iter().find(|e| e.name.to_lowercase() == "hal.dll"))
-        );
+        if let Ok(proc_info) = kernel.kernel_process_info() {
+            let mut kernel_proc = Win32Process::with_kernel_ref(&mut kernel, proc_info);
+            let modules = modules(&mut kernel_proc)?;
+            println!("checking module list:");
+            println!(
+                "ntoskrnl.exe ... {}",
+                some_str(
+                    &modules
+                        .iter()
+                        .find(|e| e.name.to_lowercase() == "ntoskrnl.exe")
+                )
+            );
+            println!(
+                "hal.dll ... {}",
+                some_str(&modules.iter().find(|e| e.name.to_lowercase() == "hal.dll"))
+            );
+        } else {
+            println!("{}", bool_str(false));
+        }
         println!();
     }
 

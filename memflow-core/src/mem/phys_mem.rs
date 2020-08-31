@@ -217,6 +217,7 @@ impl Clone for PhysicalMemoryBox {
 }
 
 #[derive(Debug, Clone, Copy)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 #[repr(C)]
 pub struct PhysicalMemoryMetadata {
     pub size: usize,

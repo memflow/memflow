@@ -16,7 +16,7 @@ use std::fmt;
 /// Most architectures have support multiple page sizes (see [huge pages](todo.html))
 /// which will be represented by the containing `page` of the `PhysicalAddress` struct.
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
-#[cfg_attr(feature = "serde", derive(::serde::Serialize))]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 #[repr(C)]
 pub struct PhysicalAddress {
     address: Address,

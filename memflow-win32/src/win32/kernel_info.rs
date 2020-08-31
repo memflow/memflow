@@ -11,7 +11,7 @@ use memflow_core::types::Address;
 use super::Win32VirtualTranslate;
 
 #[derive(Debug, Clone)]
-//#[cfg_attr(feature = "serde", derive(::serde::Serialize))]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize))]
 pub struct KernelInfo {
     pub start_block: StartBlock,
 

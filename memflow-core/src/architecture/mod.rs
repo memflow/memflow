@@ -178,10 +178,28 @@ impl std::fmt::Debug for ArchitectureObj {
 pub type ArchitectureObj = &'static dyn Architecture;
 
 impl std::cmp::PartialEq<ArchitectureObj> for ArchitectureObj {
-    // This lint doesn't make any sense in our usecase, since we nevel leak underlying Architecture
+    // This lint doesn't make any sense in our usecase, since we never leak underlying Architecture
     // definitions, and each ARCH is a static trait object with a consistent address.
     #[allow(clippy::vtable_address_comparisons)]
     fn eq(&self, other: &ArchitectureObj) -> bool {
         std::ptr::eq(*self, *other)
+    }
+}
+
+#[cfg(feature = "serde")]
+impl serde::Serialize for ArchitectureObj {
+    fn serialize<S>(&self, serializer: S) -> core::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+
+        let mut state = serializer.serialize_struct("ArchitectureObj", 5)?;
+        state.serialize_field("bits", &self.bits())?;
+        state.serialize_field("endianess", &self.endianess())?;
+        state.serialize_field("page_size", &self.page_size())?;
+        state.serialize_field("size_addr", &self.size_addr())?;
+        state.serialize_field("address_space_bits", &self.address_space_bits())?;
+        state.end()
     }
 }

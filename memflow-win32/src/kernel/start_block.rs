@@ -15,7 +15,7 @@ use memflow_core::types::{size, Address, PhysicalAddress};
 
 // PROCESSOR_START_BLOCK
 #[derive(Debug, Copy, Clone)]
-//#[cfg_attr(feature = "serde", derive(::serde::Serialize))]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize))]
 pub struct StartBlock {
     pub arch: ArchitectureObj,
     pub kernel_hint: Address,

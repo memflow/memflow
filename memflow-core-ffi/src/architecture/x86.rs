@@ -1,5 +1,4 @@
-
-use memflow_core::architecture::{ArchitectureObj, x86};
+use memflow_core::architecture::{x86, ArchitectureObj};
 
 #[no_mangle]
 pub static X86_32: &ArchitectureObj = &x86::x32::ARCH;

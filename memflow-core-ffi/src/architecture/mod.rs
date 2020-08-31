@@ -1,4 +1,3 @@
-
 use memflow_core::architecture::{ArchitectureObj, Endianess};
 
 pub mod x86;

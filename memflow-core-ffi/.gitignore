@@ -1,6 +1,5 @@
 /target
 **/*.rs.bk
-**/c/example
+bindings
 **/node_modules
-bindings.h
-memflow_core.h
+**/*.out

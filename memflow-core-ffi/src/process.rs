@@ -57,6 +57,62 @@ pub extern "C" fn os_process_info_proc_arch(obj: &OsProcessInfoObj) -> &Architec
 /// `obj` must point to a valid `OsProcessInfoObj`, and was created using one of the API's
 /// functions.
 #[no_mangle]
-pub unsafe extern "C" fn free_os_process_info(obj: &'static mut OsProcessInfoObj) {
+pub unsafe extern "C" fn os_process_info_free(obj: &'static mut OsProcessInfoObj) {
+    let _ = Box::from_raw(obj);
+}
+
+pub type OsProcessModuleInfoObj = &'static dyn OsProcessModuleInfo;
+
+#[no_mangle]
+pub extern "C" fn os_process_module_address(obj: &OsProcessModuleInfoObj) -> Address {
+    obj.address()
+}
+
+#[no_mangle]
+pub extern "C" fn os_process_module_parent_process(obj: &OsProcessModuleInfoObj) -> Address {
+    obj.parent_process()
+}
+
+#[no_mangle]
+pub extern "C" fn os_process_module_base(obj: &OsProcessModuleInfoObj) -> Address {
+    obj.base()
+}
+
+#[no_mangle]
+pub extern "C" fn os_process_module_size(obj: &OsProcessModuleInfoObj) -> usize {
+    obj.size()
+}
+
+/// Retreive name of the module
+///
+/// This will copy at most `max_len` characters (including the null terminator) into `out` of the
+/// name.
+///
+/// # Safety
+///
+/// `out` must be a buffer with at least `max_len` size
+#[no_mangle]
+pub unsafe extern "C" fn os_process_module_name(
+    obj: &OsProcessModuleInfoObj,
+    out: *mut u8,
+    max_len: usize,
+) -> usize {
+    let name = obj.name();
+    let name_bytes = name.as_bytes();
+    let out_bytes = from_raw_parts_mut(out, std::cmp::min(max_len, name.len()));
+    let len = out_bytes.len();
+    out_bytes[..(len - 1)].copy_from_slice(&name_bytes[..(len - 1)]);
+    *out_bytes.iter_mut().last().unwrap() = 0;
+    len
+}
+
+/// Free a OsProcessModuleInfoObj reference
+///
+/// # Safety
+///
+/// `obj` must point to a valid `OsProcessModuleInfoObj`, and was created using one of the API's
+/// functions.
+#[no_mangle]
+pub unsafe extern "C" fn os_process_module_free(obj: &'static mut OsProcessModuleInfoObj) {
     let _ = Box::from_raw(obj);
 }

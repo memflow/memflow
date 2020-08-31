@@ -7,6 +7,18 @@ use std::slice::{from_raw_parts, from_raw_parts_mut};
 
 pub type VirtualMemoryObj = &'static mut dyn VirtualMemory;
 
+/// Free a virtual memory object reference
+///
+/// This function frees the reference to a virtual memory object.
+///
+/// # Safety
+///
+/// `mem` must be a valid reference to a virtual memory object.
+#[no_mangle]
+pub unsafe extern "C" fn virt_free(mem: &'static mut VirtualMemoryObj) {
+    let _ = Box::from_raw(mem);
+}
+
 /// Read a list of values
 ///
 /// This will perform `len` virtual memory reads on the provided `data`. Using lists is preferable

@@ -1,12 +1,13 @@
 use memflow_core::types::Address;
 use memflow_core_ffi::process::OsProcessInfoObj;
+use memflow_core_ffi::util::to_heap;
 use memflow_win32::win32::{Win32ModuleListInfo, Win32ProcessInfo};
 
 #[no_mangle]
 pub extern "C" fn process_info_trait(
     info: &'static mut Win32ProcessInfo,
 ) -> &'static mut OsProcessInfoObj {
-    Box::leak(Box::new(info))
+    to_heap(info)
 }
 
 #[no_mangle]

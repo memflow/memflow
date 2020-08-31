@@ -21,8 +21,8 @@ pub(crate) type FFIMemory =
     CachedMemoryAccess<'static, Box<dyn CloneablePhysicalMemory>, TimedCacheValidator>;
 pub(crate) type FFIVirtualTranslate = CachedVirtualTranslate<DirectTranslate, TimedCacheValidator>;
 
-pub(crate) type FFIVirtualMemoryRef =
-    VirtualDMA<&'static mut FFIMemory, &'static mut FFIVirtualTranslate, Win32VirtualTranslate>;
+pub(crate) type FFIVirtualMemory =
+    VirtualDMA<FFIMemory, FFIVirtualTranslate, Win32VirtualTranslate>;
 
 pub type Kernel = kernel::Kernel<FFIMemory, FFIVirtualTranslate>;
 
@@ -93,6 +93,11 @@ pub unsafe extern "C" fn kernel_build_cloneable_custom(
         .map_err(inspect_err)
         .ok()
         .map(to_heap)
+}
+
+#[no_mangle]
+pub extern "C" fn kernel_clone(kernel: &Kernel) -> &'static mut Kernel {
+    Box::leak(Box::new((*kernel).clone()))
 }
 
 /// Free a kernel object
@@ -245,36 +250,64 @@ pub extern "C" fn kernel_process_info_pid(
 
 /// Create a process by looking up its name
 ///
+/// This will consume `kernel` and free it later on.
+///
 /// # Safety
 ///
 /// `name` must be a valid null terminated string
+///
+/// `kernel` must be a valid reference to `Kernel`. After the function the reference to it becomes
+/// invalid.
 #[no_mangle]
-pub unsafe extern "C" fn kernel_process(
+pub unsafe extern "C" fn kernel_into_process(
     kernel: &'static mut Kernel,
     name: *const c_char,
 ) -> Option<&'static mut Win32Process> {
+    let kernel = Box::from_raw(kernel);
     let name = CStr::from_ptr(name).to_string_lossy();
-    kernel.process(&name).map_err(inspect_err).ok().map(to_heap)
-}
-
-#[no_mangle]
-pub extern "C" fn kernel_process_pid(
-    kernel: &'static mut Kernel,
-    pid: PID,
-) -> Option<&'static mut Win32Process> {
     kernel
-        .process_pid(pid)
+        .into_process(&name)
         .map_err(inspect_err)
         .ok()
         .map(to_heap)
 }
 
+/// Create a process by looking up its PID
+///
+/// This will consume `kernel` and free it later on.
+///
+/// # Safety
+///
+/// `kernel` must be a valid reference to `Kernel`. After the function the reference to it becomes
+/// invalid.
 #[no_mangle]
-pub extern "C" fn kernel_kernel_process(
+pub unsafe extern "C" fn kernel_into_process_pid(
+    kernel: &'static mut Kernel,
+    pid: PID,
+) -> Option<&'static mut Win32Process> {
+    let kernel = Box::from_raw(kernel);
+    kernel
+        .into_process_pid(pid)
+        .map_err(inspect_err)
+        .ok()
+        .map(to_heap)
+}
+
+/// Create a kernel process insatance
+///
+/// This will consume `kernel` and free it later on.
+///
+/// # Safety
+///
+/// `kernel` must be a valid reference to `Kernel`. After the function the reference to it becomes
+/// invalid.
+#[no_mangle]
+pub unsafe extern "C" fn kernel_into_kernel_process(
     kernel: &'static mut Kernel,
 ) -> Option<&'static mut Win32Process> {
+    let kernel = Box::from_raw(kernel);
     kernel
-        .kernel_process()
+        .into_kernel_process()
         .map_err(inspect_err)
         .ok()
         .map(to_heap)

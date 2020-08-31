@@ -11,7 +11,7 @@ includes = ["memflow_core.h"]
 [parse]
 parse_deps = true
 
-include = ["memflow-win32"]
+include = ["memflow-win32", "memflow-core"]
 
 [macro_expansion]
 bitflags = true

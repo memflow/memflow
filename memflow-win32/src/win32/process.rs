@@ -301,24 +301,30 @@ impl<'a, T: PhysicalMemory, V: VirtualTranslate>
 }
 
 impl<T: VirtualMemory> Win32Process<T> {
-    fn module_list_with_infos<I: Iterator<Item = (Win32ModuleListInfo, ArchitectureObj)>>(
+    fn module_list_with_infos_extend<
+        E: Extend<Win32ModuleInfo>,
+        I: Iterator<Item = (Win32ModuleListInfo, ArchitectureObj)>,
+    >(
         &mut self,
         module_infos: I,
-    ) -> Result<Vec<Win32ModuleInfo>> {
-        let mut list = Vec::new();
+        out: &mut E,
+    ) -> Result<()> {
         for (info, arch) in module_infos {
-            for &peb in info.module_entry_list(&mut self.virt_mem, arch)?.iter() {
-                if let Ok(module) = info.module_info_from_entry(
-                    peb,
-                    self.proc_info.address,
-                    &mut self.virt_mem,
-                    arch,
-                ) {
-                    list.push(module);
-                }
-            }
+            out.extend(
+                info.module_entry_list(&mut self.virt_mem, arch)?
+                    .iter()
+                    .filter_map(|&peb| {
+                        info.module_info_from_entry(
+                            peb,
+                            self.proc_info.address,
+                            &mut self.virt_mem,
+                            arch,
+                        )
+                        .ok()
+                    }),
+            );
         }
-        Ok(list)
+        Ok(())
     }
 
     pub fn module_entry_list(&mut self) -> Result<Vec<Address>> {
@@ -347,6 +353,12 @@ impl<T: VirtualMemory> Win32Process<T> {
     }
 
     pub fn module_list(&mut self) -> Result<Vec<Win32ModuleInfo>> {
+        let mut vec = Vec::new();
+        self.module_list_extend(&mut vec)?;
+        Ok(vec)
+    }
+
+    pub fn module_list_extend<E: Extend<Win32ModuleInfo>>(&mut self, out: &mut E) -> Result<()> {
         let infos = [
             (
                 Some(self.proc_info.module_info_native),
@@ -360,7 +372,7 @@ impl<T: VirtualMemory> Win32Process<T> {
             .cloned()
             .filter_map(|(info, arch)| info.map(|info| (info, arch)));
 
-        self.module_list_with_infos(iter)
+        self.module_list_with_infos_extend(iter, out)
     }
 
     pub fn module_info(&mut self, name: &str) -> Result<Win32ModuleInfo> {

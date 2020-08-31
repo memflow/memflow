@@ -6,14 +6,13 @@ debug = true
 members = [
     "memflow-core",
     "memflow-win32",
-    "memflow-ffi",
+    "memflow-core-ffi",
     "memflow-bench",
-    #"nostd-test"
 ]
 default-members = [
     "memflow-core",
     "memflow-win32",
-    "memflow-ffi",
+    "memflow-core-ffi",
     "memflow-bench",
 ]
 

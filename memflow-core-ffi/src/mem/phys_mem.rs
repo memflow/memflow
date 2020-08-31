@@ -44,7 +44,7 @@ pub unsafe extern "C" fn phys_write_raw_list(
 }
 
 #[no_mangle]
-pub extern "C" fn phys_metadata(mem: &mut PhysicalMemoryObj) -> PhysicalMemoryMetadata {
+pub extern "C" fn phys_metadata(mem: &PhysicalMemoryObj) -> PhysicalMemoryMetadata {
     mem.metadata()
 }
 

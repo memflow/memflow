@@ -1,5 +1,5 @@
 [package]
-name = "memflow-ffi"
+name = "memflow-core-ffi"
 version = "0.1.0"
 authors = ["ko1N <ko1N1337@gmail.com>"]
 edition = "2018"
@@ -10,7 +10,7 @@ repository = "https://github.com/memflow/memflow"
 readme = "README.md"
 
 [lib]
-name = "memflow_ffi"
+name = "memflow_core_ffi"
 crate-type = ["cdylib", "staticlib"]
 
 [dependencies]

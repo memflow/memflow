@@ -1,9 +1,12 @@
 /*!
 Module for handling different architectures in memflow.
 
-Each architecture is wrapped in the `Architecture` enum
+Each architecture implements the `Architecture` trait
 and all function calls are dispatched into their own
 architecture specific sub-modules.
+
+Virtual address translations are done using `ScopedVirtualTranslate`
+trait, which is linked to a particular architecture.
 
 Each architecture also has a `ByteOrder` assigned to it.
 When reading/writing data from/to the target it is necessary
@@ -31,6 +34,7 @@ pub use bumpalo::{collections::Vec as BumpVec, Bump};
 /// See the [wikipedia article](https://en.wikipedia.org/wiki/Endianness) for more information on the subject.
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize))]
+#[repr(u8)]
 pub enum Endianess {
     /// Little Endianess
     LittleEndian,

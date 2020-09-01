@@ -82,12 +82,12 @@ Run memflow\_win32/read\_bench example with a coredump connector:
 `cargo run --example read_bench --release -- -vv -i target/release -c coredump -a coredump_win10_64bit.raw`
 
 ## Compilation support
-| target        | build | tests | benches | compiles on stable |
-|---------------|-------|-------|---------|--------------------|
-| linux x86_64  | [x]   | [x]   | [x]     | [x]                |
-| mac x86_64    | [x]   | [x]   | [x]     | [x]                |
-| win x86_64    | [x]   | [x]   | [x]     | [ ]                |
-| linux aarch64 | [x]   | [ ]   | [ ]     | [x]                |
+| target        | build              | tests              | benches            | compiles on stable |
+|---------------|--------------------|--------------------|--------------------|--------------------|
+| linux x86_64  | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
+| mac x86_64    | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
+| win x86_64    | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :x:                |
+| linux aarch64 | :heavy_check_mark: | :x:                | :x:                | :heavy_check_mark: |
 
 Compilation on linux and mac osx works straight of the box right now.
 For compiling on Windows we currently require the `nightly` rust compiler

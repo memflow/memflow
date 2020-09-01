@@ -39,6 +39,21 @@ jobs:
         run: cargo +nightly build --workspace --all-features --examples --verbose
         if: runner.os == 'Windows'
 
+  build-arm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: aarch64-unknown-linux-gnu
+          override: true
+      - uses: actions-rs/cargo@v1
+        with:
+          use-cross: true
+          command: build
+          args: --target aarch64-unknown-linux-gnu --workspace --verbose
+          
   test:
     runs-on: ${{ matrix.os }}
     strategy:

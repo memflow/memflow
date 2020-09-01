@@ -17,7 +17,7 @@ pub mod virt_mem;
 pub mod virt_mem_batcher;
 pub mod virt_translate;
 
-#[cfg(any(feature = "dummy_mem", test))]
+#[cfg(all(any(feature = "dummy_mem", test), target_arch = "x86_64"))]
 pub mod dummy;
 
 #[doc(hidden)]

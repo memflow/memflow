@@ -3,4 +3,4 @@
 bindings
 **/node_modules
 **/*.out
-memflow.h
+**/*.o

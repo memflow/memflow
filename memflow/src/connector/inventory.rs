@@ -11,7 +11,7 @@ use std::fs::read_dir;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use log::{debug, info, warn};
+use log::{debug, error, info, warn};
 
 use libloading::Library;
 
@@ -214,7 +214,18 @@ impl ConnectorInventory {
             .connectors
             .iter()
             .find(|c| c.name == name)
-            .ok_or_else(|| Error::Connector("connector not found"))?;
+            .ok_or_else(|| {
+                error!(
+                    "unable to find connector with name '{}'. available connectors are: {}",
+                    name,
+                    self.connectors
+                        .iter()
+                        .map(|c| c.name.clone())
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                );
+                Error::Connector("connector not found")
+            })?;
         connector.create(args)
     }
 

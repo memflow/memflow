@@ -4,8 +4,10 @@ version = "0.1.0"
 authors = ["Aurimas Blažulionis <0x60@pm.me>"]
 edition = "2018"
 build = "build.rs"
-description = "C bindings to memflow-win32"
 license = "MIT"
+description = "C bindings to memflow-win32"
+homepage = "https://memflow.github.io"
+repository = "https://github.com/memflow/memflow"
 keywords = [ "memflow", "introspection", "memory", "dma" ]
 categories = [ "api-bindings", "memory-management", "os" ]
 

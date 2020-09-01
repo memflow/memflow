@@ -13,7 +13,8 @@ use memflow_win32::error::Result;
 use memflow_win32::offsets::Win32Offsets;
 use memflow_win32::win32::{Kernel, KernelInfo, Win32ModuleInfo, Win32Process};
 
-use rand::{prng::XorShiftRng as CurRng, Rng, SeedableRng};
+use rand::{Rng, SeedableRng};
+use rand_xorshift::XorShiftRng as CurRng;
 
 fn rwtest<T: VirtualMemory>(
     proc: &mut Win32Process<T>,

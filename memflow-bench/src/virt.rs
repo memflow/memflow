@@ -10,7 +10,8 @@ use memflow_core::architecture::ScopedVirtualTranslate;
 use memflow_core::{size, OsProcessInfo, OsProcessModuleInfo, PageType};
 
 use rand::prelude::*;
-use rand::{prng::XorShiftRng as CurRng, Rng, SeedableRng};
+use rand::{Rng, SeedableRng};
+use rand_xorshift::XorShiftRng as CurRng;
 
 fn rwtest<T: VirtualMemory, M: OsProcessModuleInfo>(
     bench: &mut Bencher,

@@ -5,7 +5,8 @@ use memflow_core::mem::{CachedMemoryAccess, PhysicalMemory};
 use memflow_core::{architecture, size, Address, PageType, PhysicalAddress, PhysicalReadData};
 
 use rand::prelude::*;
-use rand::{prng::XorShiftRng as CurRng, Rng, SeedableRng};
+use rand::{Rng, SeedableRng};
+use rand_xorshift::XorShiftRng as CurRng;
 
 fn rwtest<T: PhysicalMemory>(
     bench: &mut Bencher,

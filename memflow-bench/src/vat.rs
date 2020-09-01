@@ -10,7 +10,8 @@ use memflow_core::iter::FnExtend;
 use memflow_core::{size, Address, OsProcessInfo, OsProcessModuleInfo, PageType};
 
 use rand::prelude::*;
-use rand::{prng::XorShiftRng as CurRng, Rng, SeedableRng};
+use rand::{Rng, SeedableRng};
+use rand_xorshift::XorShiftRng as CurRng;
 
 fn vat_test_with_mem<
     T: PhysicalMemory,

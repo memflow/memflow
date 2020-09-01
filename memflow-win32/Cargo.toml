@@ -27,7 +27,8 @@ progress-streams = { version = "1.1", optional = true }
 [dev_dependencies]
 simple_logger = "1.0.1"
 win_key_codes = "0.1.2"
-rand = "0.5"
+rand = "0.7"
+rand_xorshift = "0.2"
 bencher = "0.1.5"
 clap = "2.33.0"
 toml = "0.5"

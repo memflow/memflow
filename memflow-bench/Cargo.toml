@@ -10,7 +10,8 @@ readme = "README.md"
 
 [dependencies]
 memflow-core = { path = "../memflow-core", features = ["dummy_mem"] }
-rand = "0.5"
+rand = "0.7"
+rand_xorshift = "0.2"
 # This branch provides throughput plots
 criterion = { git = "https://github.com/h33p/criterion.rs.git", branch = "tput" }
 memflow-win32 = { path = "../memflow-win32" }
@@ -18,7 +19,6 @@ memflow-win32 = { path = "../memflow-win32" }
 [dev-dependencies]
 memflow-core = { path = "../memflow-core", features = ["dummy_mem"] }
 memflow-win32 = { path = "../memflow-win32" }
-rand = "0.5"
 
 [features]
 default = []

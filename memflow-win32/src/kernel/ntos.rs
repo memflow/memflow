@@ -1,4 +1,5 @@
-mod pehelper;
+pub(crate) mod pehelper;
+
 mod x64;
 mod x86;
 
@@ -6,7 +7,6 @@ use std::prelude::v1::*;
 
 use super::{StartBlock, Win32GUID, Win32Version};
 use crate::error::{Error, PartialResultExt, Result};
-use crate::pe::{self, MemoryPeView, MemoryPeViewContext};
 
 use log::{info, warn};
 use std::convert::TryInto;
@@ -14,7 +14,7 @@ use std::convert::TryInto;
 use memflow_core::mem::VirtualMemory;
 use memflow_core::types::Address;
 
-use pelite::{self, pe64::debug::CodeView, pe64::exports::Export};
+use pelite::{self, pe64::debug::CodeView, pe64::exports::Export, PeView};
 
 pub fn find<T: VirtualMemory>(
     virt_mem: &mut T,
@@ -44,8 +44,8 @@ pub fn find<T: VirtualMemory>(
 
 // TODO: move to pe::...
 pub fn find_guid<T: VirtualMemory>(virt_mem: &mut T, kernel_base: Address) -> Result<Win32GUID> {
-    let ctx = MemoryPeViewContext::new(virt_mem, kernel_base).map_err(Error::PE)?;
-    let pe = pe::wrap_memory_pe_view(&ctx).map_err(Error::PE)?;
+    let image = pehelper::try_get_pe_image(virt_mem, kernel_base)?;
+    let pe = PeView::from_bytes(&image).map_err(Error::PE)?;
 
     let debug = match pe.debug() {
         Ok(d) => d,
@@ -79,7 +79,7 @@ pub fn find_guid<T: VirtualMemory>(virt_mem: &mut T, kernel_base: Address) -> Re
     Ok(Win32GUID::new(file_name, &guid))
 }
 
-fn get_export<T: VirtualMemory>(pe: &MemoryPeView<T>, name: &str) -> Result<usize> {
+fn get_export(pe: &PeView, name: &str) -> Result<usize> {
     info!("trying to find {} export", name);
     let export = match pe.get_export_by_name(name).map_err(Error::PE)? {
         Export::Symbol(s) => *s as usize,
@@ -95,8 +95,8 @@ pub fn find_winver<T: VirtualMemory>(
     virt_mem: &mut T,
     kernel_base: Address,
 ) -> Result<Win32Version> {
-    let ctx = MemoryPeViewContext::new(virt_mem, kernel_base).map_err(Error::PE)?;
-    let pe = pe::wrap_memory_pe_view(&ctx).map_err(Error::PE)?;
+    let image = pehelper::try_get_pe_image(virt_mem, kernel_base)?;
+    let pe = PeView::from_bytes(&image).map_err(Error::PE)?;
 
     // NtBuildNumber
     let nt_build_number_ref = get_export(&pe, "NtBuildNumber")?;

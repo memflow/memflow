@@ -31,9 +31,17 @@ In the repository you can find various examples available (which use memflow-win
 - run `cargo clippy --all-targets --all-features -- -D warnings` to run clippy linting on everything
 
 ## Documentation
-- run `cargo doc --workspace --no-deps --all-features --open` to compile and open the documentation
+Extensive code documentation can be found on [docs.rs](https://docs.rs/memflow/0.1/).
 
-## Usage
+An additional getting started guide as well as higher level
+explanations of the inner workings of memflow can be found at [memflow.github.io](https://memflow.github.io).
+
+If u decide to build the latest documentation you can do it by issueing:
+
+`cargo doc --workspace --no-deps --all-features --open`
+
+## Basic usage
+
 - run one of the examples with `cargo run --release --example` (pass nothing to get a list of them).
 - if ran with `qemu_procfs` connector, the runner will request root permissions to set `'CAP_SYS_PTRACE=ep'` on the executables
 - or run the benchmarks `cargo bench` (can pass regex filters). Win32 benchmarks currently work only on Linux.
@@ -41,6 +49,29 @@ In the repository you can find various examples available (which use memflow-win
 ## Running Examples
 
 All examples support the memflow connector inventory system.
+You will have to install at least one `connector` to use the examples.
+
+To install a connector just head over to the corresponding repository
+and install them via the `install.sh` script.
+
+You will find a folder called `memflow` in any of the following locations:
+```
+"/opt",
+"/lib",
+"/usr/lib/",
+"/usr/local/lib",
+"/lib32",
+"/lib64",
+"/usr/lib32",
+"/usr/lib64",
+"/usr/local/lib32",
+"/usr/local/lib64",
+```
+
+On Windows you can put the connector dll in a folder named `memflow`
+that is either in your current PATH or put it in `C:\Users\{Username}\.local\lib\memflow`.
+
+Now you can just run the examples by providing the appropiate connector name:
 
 Run memflow\_win32/read\_keys example with a procfs connector:
 
@@ -50,9 +81,27 @@ Run memflow\_win32/read\_bench example with a coredump connector:
 
 `cargo run --example read_bench --release -- -vv -i target/release -c coredump -a coredump_win10_64bit.raw`
 
-## Documentation on Windows
+## Compilation support
+| target        | build | tests | benches | compiles on stable |
+|---------------|-------|-------|---------|--------------------|
+| linux x86_64  | [x]   | [x]   | [x]     | [x]                |
+| mac x86_64    | [x]   | [x]   | [x]     | [x]                |
+| win x86_64    | [x]   | [x]   | [x]     | [ ]                |
+| linux aarch64 | [x]   | [ ]   | [ ]     | [x]                |
 
-`dummy` connector is used throughout the documentation, which uses the `x86_64` crate, and it does not compile on windows without nightly feature set.
+Compilation on linux and mac osx works straight of the box right now.
+For compiling on Windows we currently require the `nightly` rust compiler
+due to a constraint in the `dummy` connector that pulls in the `x86_64` crate.
+
+The same crate prevents tests and benches to be able to run aarch64 and other targets.
+
+## Target support
+memflow-win32 is tested on the latest Windows 10 versions all the way down to Windows NT 4.0. If you found a version that does not work please submit an issue with the major/minor version as well as the build number.
+
+## Roadmap
+
+- blabla
+- blabl
 
 ## Contributing
 

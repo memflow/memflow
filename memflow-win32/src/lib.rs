@@ -10,19 +10,9 @@ pub mod error;
 #[doc(hidden)]
 pub use error::*;
 
-// TODO: private these
 pub mod kernel;
 #[doc(hidden)]
 pub use kernel::*;
-
-// TODO: feature gate pelite + maybe add goblin
-pub mod pe;
-#[doc(hidden)]
-pub use pe::*; // TODO: restrict forwarding
-
-// TODO: enable again
-//pub mod keyboard;
-//pub use keyboard::*;
 
 pub mod offsets;
 #[doc(hidden)]

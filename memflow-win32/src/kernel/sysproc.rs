@@ -1,8 +1,8 @@
 use std::prelude::v1::*;
 
+use super::ntos::pehelper;
 use super::StartBlock;
 use crate::error::{Error, Result};
-use crate::pe::{self, MemoryPeViewContext};
 
 use std::convert::TryInto;
 
@@ -11,7 +11,7 @@ use log::{debug, info, warn};
 use memflow_core::mem::VirtualMemory;
 use memflow_core::types::{size, Address};
 
-use pelite::{self, pe64::exports::Export};
+use pelite::{self, pe64::exports::Export, PeView};
 
 pub fn find<T: VirtualMemory>(
     virt_mem: &mut T,
@@ -40,8 +40,9 @@ pub fn find_exported<T: VirtualMemory>(
     kernel_base: Address,
 ) -> Result<Address> {
     // PsInitialSystemProcess -> PsActiveProcessHead
-    let ctx = MemoryPeViewContext::new(virt_mem, kernel_base).map_err(Error::PE)?;
-    let pe = pe::wrap_memory_pe_view(&ctx).map_err(Error::PE)?;
+    let image = pehelper::try_get_pe_image(virt_mem, kernel_base)?;
+    let pe = PeView::from_bytes(&image).map_err(Error::PE)?;
+
     let sys_proc = match pe
         .get_export_by_name("PsInitialSystemProcess")
         .map_err(Error::PE)?

@@ -23,4 +23,5 @@ simple_logger = "1.0.1"
 default = []
 
 [build-dependencies]
+proc-macro2 = "1"
 cbindgen = "0.14.4"

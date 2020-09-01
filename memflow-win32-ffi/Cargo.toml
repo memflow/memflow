@@ -15,4 +15,5 @@ memflow-core = { path = "../memflow-core" }
 memflow-core-ffi = { path = "../memflow-core-ffi" }
 
 [build-dependencies]
+proc-macro2 = "1"
 cbindgen = "0.14.4"

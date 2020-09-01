@@ -11,6 +11,9 @@ fn main() {
 
     let config = cbindgen::Config::from_root_or_default(&crate_dir);
 
+    // https://github.com/alexcrichton/proc-macro2/issues/218
+    proc_macro2::fallback::force();
+
     cbindgen::Builder::new()
         .with_crate(&crate_dir)
         .with_config(config)

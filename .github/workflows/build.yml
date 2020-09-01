@@ -16,11 +16,11 @@ jobs:
       - uses: actions/checkout@v2
 
       - name: Build
-        run: cargo build --workspace --all-features --verbose
+        run: cargo build --workspace --verbose
         if: runner.os != 'Windows'
 
       - name: Build examples
-        run: cargo build --workspace --all-features --examples --verbose
+        run: cargo build --workspace --examples --verbose
         if: runner.os != 'Windows'
 
       - name: Set up Rust nightly
@@ -48,7 +48,7 @@ jobs:
       - uses: actions/checkout@v2
 
       - name: Run all tests
-        run: cargo test --workspace --all-features --verbose
+        run: cargo test --workspace --verbose
         if: runner.os != 'Windows'
 
       - name: Set up Rust nightly
@@ -73,7 +73,7 @@ jobs:
       - uses: actions-rs/clippy-check@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          args: --all-targets --all-features
+          args: --all-targets
 
   build-nostd:
     runs-on: ${{ matrix.os }}
@@ -90,7 +90,7 @@ jobs:
           override: true
       - run: rustup +nightly component add rust-src
       - name: Build no_std crate
-        run: cd nostd-test; cargo build --all-features --verbose
+        run: cd nostd-test; cargo build --verbose
 
   build-coverage:
     runs-on: ubuntu-latest
@@ -108,7 +108,7 @@ jobs:
           export CARGO_INCREMENTAL=0
           export RUSTFLAGS="-Zprofile -Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off -Zpanic_abort_tests -Cpanic=abort"
           export RUSTDOCFLAGS="-Cpanic=abort"
-          cargo build --workspace --exclude memflow-derive --all-features
-          cargo test --workspace --exclude memflow-derive --all-features
+          cargo build --workspace --exclude memflow-derive
+          cargo test --workspace --exclude memflow-derive
           grcov ./target/debug/ -s . -t lcov --llvm --branch --ignore-not-existing -o ./target/debug/coverage
           bash <(curl -s https://codecov.io/bash) -f ./target/debug/coverage -t ${{ secrets.CODECOV_TOKEN }};

@@ -86,11 +86,11 @@ Now you can just run the examples by providing the appropiate connector name:
 
 Run memflow\_win32/read\_keys example with a procfs connector:
 
-`cargo run --example read_keys -- -vv -i target/release -c qemu_procfs -a [vmname]`
+`cargo run --example read_keys -- -vv -c qemu_procfs -a [vmname]`
 
 Run memflow\_win32/read\_bench example with a coredump connector:
 
-`cargo run --example read_bench --release -- -vv -i target/release -c coredump -a coredump_win10_64bit.raw`
+`cargo run --example read_bench --release -- -vv -c coredump -a coredump_win10_64bit.raw`
 
 ## Compilation support
 

@@ -1,7 +1,7 @@
 extern crate cbindgen;
 
 use std::env;
-use std::fs;
+//use std::fs;
 use std::path::PathBuf;
 
 fn main() {
@@ -21,9 +21,9 @@ fn main() {
         .expect("Unable to generate bindings")
         .write_to_file(out_path.join(HEADER_NAME));
 
-    fs::copy(
-        out_path.join(HEADER_NAME),
-        PathBuf::from(crate_dir).join(HEADER_NAME),
-    )
-    .unwrap();
+    //fs::copy(
+    //    out_path.join(HEADER_NAME),
+    //    PathBuf::from(crate_dir).join(HEADER_NAME),
+    //)
+    //.unwrap();
 }

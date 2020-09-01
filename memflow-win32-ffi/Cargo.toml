@@ -3,7 +3,6 @@ name = "memflow-win32-ffi"
 version = "0.1.0"
 authors = ["Aurimas Blažulionis <0x60@pm.me>"]
 edition = "2018"
-build = "build.rs"
 license = "MIT"
 description = "C bindings to memflow-win32"
 homepage = "https://memflow.github.io"
@@ -20,7 +19,3 @@ crate-type = ["lib", "cdylib", "staticlib"]
 memflow-win32 = { version = "0.1", path = "../memflow-win32" }
 memflow = { version = "0.1", path = "../memflow" }
 memflow-ffi = { version = "0.1", path = "../memflow-ffi" }
-
-[build-dependencies]
-proc-macro2 = "1"
-cbindgen = "0.14.4"

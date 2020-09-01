@@ -73,7 +73,11 @@ impl ConnectorInventory {
         Ok(ret)
     }
 
-    /// Creates a new inventory of connectors by searching PATH.
+    /// Creates a new inventory of connectors by searching various paths.
+    ///
+    /// It will query PATH, and an additional set of of directories (standard unix ones, if unix,
+    /// and "HOME/.local/lib" on all OSes) for "memflow" directory, and if there is one, then
+    /// search for libraries in there.
     ///
     /// # Safety
     ///
@@ -93,19 +97,47 @@ impl ConnectorInventory {
     /// }.unwrap();
     /// ```
     pub unsafe fn try_new() -> Result<Self> {
-        match std::env::var_os("PATH") {
-            Some(paths) => {
-                let mut ret = Self { connectors: vec![] };
+        #[cfg(unix)]
+        let extra_paths: Vec<&str> = vec![
+            "/opt",
+            "/lib",
+            "/usr/lib/",
+            "/usr/local/lib",
+            "/lib32",
+            "/lib64",
+            "/usr/lib32",
+            "/usr/lib64",
+            "/usr/local/lib32",
+            "/usr/local/lib64",
+        ];
+        #[cfg(not(unix))]
+        let extra_paths: Vec<&str> = vec![];
 
-                for mut path in std::env::split_paths(&paths) {
-                    path.push("memflow");
-                    ret.add_dir(path).ok();
-                }
+        let path_iter = extra_paths.into_iter().map(PathBuf::from);
 
-                Ok(ret)
-            }
-            None => Err(Error::Other("PATH is not set")),
+        let path_var = std::env::var_os("PATH");
+        let path_iter = path_iter.chain(
+            path_var
+                .as_ref()
+                .map(|p| std::env::split_paths(p))
+                .into_iter()
+                .flatten(),
+        );
+
+        let path_iter = path_iter.chain(
+            dirs::home_dir()
+                .map(|dir| dir.join(".local").join("lib"))
+                .into_iter(),
+        );
+
+        let mut ret = Self { connectors: vec![] };
+
+        for mut path in path_iter {
+            path.push("memflow");
+            ret.add_dir(path).ok();
         }
+
+        Ok(ret)
     }
 
     /// Adds a library directory to the inventory

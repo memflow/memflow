@@ -26,6 +26,7 @@ vector-trees = { git = "https://github.com/h33p/vector-trees", features = ["bump
 libloading = { version = "0.6", optional = true }
 memmap = { version = "0.7", optional = true }
 serde = { version = "1.0", optional = true, default-features = false, features = ["derive"] }
+dirs = { version = "3.0", optional = true }
 hashbrown = "0.8"
 
 [dev-dependencies]
@@ -42,5 +43,5 @@ std = ["coarsetime", "no-std-compat/std"]
 collections = []
 alloc = []
 serde_derive = ["serde"]
-inventory = ["libloading"]
+inventory = ["libloading", "dirs"]
 filemap = ["memmap"]

@@ -8,6 +8,4 @@ if [[ "$@" =~ "qemu_procfs" ]]; then
 	cd $CWD
 fi
 
-echo $(env)
-
 exec $@

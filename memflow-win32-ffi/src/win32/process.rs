@@ -20,9 +20,9 @@ pub type Win32Process = win32::Win32Process<FFIVirtualMemory>;
 pub unsafe extern "C" fn process_with_kernel(
     kernel: &'static mut Kernel,
     proc_info: &Win32ProcessInfo,
-) -> Win32Process {
+) -> &'static mut Win32Process {
     let kernel = Box::from_raw(kernel);
-    Win32Process::with_kernel(*kernel, proc_info.clone())
+    to_heap(Win32Process::with_kernel(*kernel, proc_info.clone()))
 }
 
 /// Retrieve refernce to the underlying virtual memory object

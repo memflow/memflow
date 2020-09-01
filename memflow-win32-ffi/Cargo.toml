@@ -4,15 +4,19 @@ version = "0.1.0"
 authors = ["Aurimas Blažulionis <0x60@pm.me>"]
 edition = "2018"
 build = "build.rs"
+description = "C bindings to memflow-win32"
+license = "MIT"
+keywords = [ "memflow", "introspection", "memory", "dma" ]
+categories = [ "api-bindings", "memory-management", "os" ]
 
 [lib]
 name = "memflow_win32_ffi"
 crate-type = ["lib", "cdylib", "staticlib"]
 
 [dependencies]
-memflow-win32 = { path = "../memflow-win32" }
-memflow-core = { path = "../memflow-core" }
-memflow-core-ffi = { path = "../memflow-core-ffi" }
+memflow-win32 = { version = "0.1", path = "../memflow-win32" }
+memflow-core = { version = "0.1", path = "../memflow-core" }
+memflow-core-ffi = { version = "0.1", path = "../memflow-core-ffi" }
 
 [build-dependencies]
 proc-macro2 = "1"

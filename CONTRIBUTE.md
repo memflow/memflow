@@ -23,6 +23,6 @@ Once the code is ready, the last step is merging. There are only 2 important thi
 
 By default, we will go by the assumption that those 2 points are true, but it would still be nice that you confirmed those. And sometimes, we may ask you to do so, just to be sure.
 
-Ultimately, unless you state otherwise, the code merged code will be licensed under the current license of the project.
+Ultimately, unless you state otherwise, the merged code will be licensed under the current license of the project.
 
 Anyways, thanks for giving this a read, and happy hacking!

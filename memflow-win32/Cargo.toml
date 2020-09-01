@@ -9,28 +9,28 @@ repository = "https://github.com/memflow/memflow"
 readme = "README.md"
 
 [dependencies]
-memflow-core = { path = "../memflow-core", default-features = false }
-log = { version = "0.4.8", default-features = false }
+memflow-core = { version = "0.1", path = "../memflow-core", default-features = false }
+log = { version = "0.4", default-features = false }
 dataview = "0.1"
-pelite = { git = "https://github.com/h33p/pelite", branch = "wrap", default-features = false }
-widestring = { version = "0.4.2", default-features = false, features = ["alloc"] }
-no-std-compat = { version = "0.4.0", features = ["alloc"] }
+pelite = { version = "0.8", git = "https://github.com/h33p/pelite", branch = "wrap", default-features = false }
+widestring = { version = "0.4", default-features = false, features = ["alloc"] }
+no-std-compat = { version = "0.4", features = ["alloc"] }
 serde = { version = "1.0", default-features = false, optional = true, features = ["derive"] }
 
 # symbolstore
-dirs = { version = "2.0.2", optional = true }
-ureq = { version = "1.2.0", optional = true }
-pdb = { version = "0.6.0", optional = true }
+dirs = { version = "2.0", optional = true }
+ureq = { version = "1.2", optional = true }
+pdb = { version = "0.6", optional = true }
 pbr = { version = "1.0", optional = true }
 progress-streams = { version = "1.1", optional = true }
 
 [dev_dependencies]
-simple_logger = "1.0.1"
-win_key_codes = "0.1.2"
+simple_logger = "1.0"
+win_key_codes = "0.1"
 rand = "0.7"
 rand_xorshift = "0.2"
-bencher = "0.1.5"
-clap = "2.33.0"
+bencher = "0.1"
+clap = "2.33"
 toml = "0.5"
 colored = "2.0"
 

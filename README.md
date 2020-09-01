@@ -104,6 +104,10 @@ memflow-win32 is tested on the latest Windows 10 versions all the way down to Wi
 - Provide an UEFI Demo
 - Linux target support
 
+## Acknowledgements
+- [https://github.com/casualx/](CasualX) for his wonderful PELite crate
+- [https://github.com/ufrisk/](ufrisk) for his prior work on the subject and many inspirations
+
 ## Contributing
 
 Please check [CONTRIBUTE.md](CONTRIBUTE.md)

@@ -108,7 +108,7 @@ memflow-win32 is tested on the latest Windows 10 versions all the way down to Wi
 - Linux target support
 
 ## Acknowledgements
-- [CasualX](https://github.com/casualx/) for his wonderful PELite crate
+- [CasualX](https://github.com/casualx/) for his wonderful pelite crate
 - [ufrisk](https://github.com/ufrisk/) for his prior work on the subject and many inspirations
 
 ## Contributing

@@ -22,13 +22,23 @@ For non-rust libraries, it is possible to use the [FFI](https://github.com/memfl
 
 In the repository you can find various examples available (which use memflow-win32 layer)
 
-## Building
+## Building from source
 
-- run `cargo build --release --workspace --all-features` to build everything
-- run `cargo build --release --workspace --all-features --examples` to build all examples
-- run `cargo test --workspace --all-features` to run all tests
-- run `cargo bench` to run all benchmarks
-- run `cargo clippy --all-targets --all-features -- -D warnings` to run clippy linting on everything
+To build all projects in the memflow workspace:
+
+`cargo build --release --workspace`
+
+To build all examples:
+
+`cargo build --release --workspace --examples`
+
+Run all tests:
+
+`cargo test --workspace`
+
+Execute the benchmarks:
+
+`cargo bench`
 
 ## Documentation
 
@@ -39,7 +49,7 @@ explanations of the inner workings of memflow can be found at [memflow.github.io
 
 If u decide to build the latest documentation you can do it by issueing:
 
-`cargo doc --workspace --no-deps --all-features --open`
+`cargo doc --workspace --no-deps --open`
 
 ## Basic usage
 

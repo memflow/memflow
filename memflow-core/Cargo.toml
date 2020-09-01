@@ -5,15 +5,17 @@ authors = ["ko1N <ko1N1337@gmail.com>", "Aurimas Blažulionis <0x60@pm.me>"]
 edition = "2018"
 license = "MIT"
 description = "core components of the memflow physical memory introspection framework"
-homepage = "https://github.com/memflow/memflow"
+homepage = "https://memflow.github.io"
 repository = "https://github.com/memflow/memflow"
-readme = "README.md"
+readme = "../README.md"
+keywords = [ "memflow", "introspection", "memory", "dma" ]
+categories = [ "memory-management", "os" ]
 
 [dependencies]
 dataview = { version = "0.1", features = ["derive_pod"] }
-log = "0.4.8"
+log = "0.4"
 bitflags = "1.2"
-coarsetime = { version = "0.1.13", optional = true }
+coarsetime = { version = "0.1", optional = true }
 smallvec = { version = "1.4", default-features = false }
 arrayvec = { version = "0.5", default-features = false }
 rand = { version = "0.7", optional = true }
@@ -21,7 +23,7 @@ rand_xorshift = { version = "0.2", optional = true }
 bumpalo = { version = "3.4", features = ["collections"] }
 no-std-compat = { version = "0.4", features = ["alloc"] }
 itertools = { version = "0.9", default-features = false }
-vector-trees = { git = "https://github.com/h33p/vector-trees", features = ["bumpalo"] }
+vector-trees = { version = "0.1", git = "https://github.com/h33p/vector-trees", features = ["bumpalo"] }
 libloading = { version = "0.6", optional = true }
 memmap = { version = "0.7", optional = true }
 serde = { version = "1.0", optional = true, default-features = false, features = ["derive"] }

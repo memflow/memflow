@@ -13,7 +13,8 @@ use memflow_win32::{
 };
 
 use rand::prelude::*;
-use rand::{prng::XorShiftRng as CurRng, Rng, SeedableRng};
+use rand::{Rng, SeedableRng};
+use rand_xorshift::XorShiftRng as CurRng;
 
 fn create_connector(args: &ConnectorArgs) -> Result<impl PhysicalMemory> {
     unsafe {

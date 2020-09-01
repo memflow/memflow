@@ -38,7 +38,8 @@ impl PhysicalMemory for NullMem {
 use NullMem as Memory;
 
 use rand::prelude::*;
-use rand::{prng::XorShiftRng as CurRng, Rng, SeedableRng};
+use rand::{Rng, SeedableRng};
+use rand_xorshift::XorShiftRng as CurRng;
 
 static mut TSLICE: [[u8; 16]; 0x10000] = [[0; 16]; 0x10000];
 

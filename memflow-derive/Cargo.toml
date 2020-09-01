@@ -7,7 +7,9 @@ license = "MIT"
 description = "derive macros for the memflow physical memory introspection framework"
 homepage = "https://memflow.github.io"
 repository = "https://github.com/memflow/memflow"
-readme = "README.md"
+readme = "../README.md"
+keywords = [ "memflow", "introspection", "memory", "dma" ]
+categories = [ "memory-management", "os" ]
 
 [lib]
 proc-macro = true

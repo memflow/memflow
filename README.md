@@ -98,10 +98,11 @@ The same crate prevents tests and benches to be able to run aarch64 and other ta
 ## Target support
 memflow-win32 is tested on the latest Windows 10 versions all the way down to Windows NT 4.0. If you found a version that does not work please submit an issue with the major/minor version as well as the build number.
 
-## Roadmap
+## Roadmap / Future Development
 
-- blabla
-- blabl
+- Provide a rust native connector for PCILeech based hardware
+- Provide an UEFI Demo
+- Linux target support
 
 ## Contributing
 

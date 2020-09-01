@@ -57,16 +57,16 @@ and install them via the `install.sh` script.
 
 You will find a folder called `memflow` in any of the following locations:
 ```
-"/opt",
-"/lib",
-"/usr/lib/",
-"/usr/local/lib",
-"/lib32",
-"/lib64",
-"/usr/lib32",
-"/usr/lib64",
-"/usr/local/lib32",
-"/usr/local/lib64",
+/opt
+/lib
+/usr/lib/
+/usr/local/lib
+/lib32
+/lib64
+/usr/lib32
+/usr/lib64
+/usr/local/lib32
+/usr/local/lib64
 ```
 
 On Windows you can put the connector dll in a folder named `memflow`

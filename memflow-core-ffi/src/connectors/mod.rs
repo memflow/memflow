@@ -1,5 +1,3 @@
-// TODO: impl inventory
-
 use std::ffi::CStr;
 use std::os::raw::c_char;
 use std::path::PathBuf;
@@ -98,9 +96,7 @@ pub unsafe extern "C" fn inventory_create_connector(
             .map(to_heap)
     } else {
         let rargs = CStr::from_ptr(args).to_string_lossy();
-        let conn_args = ConnectorArgs::try_parse_str(&rargs)
-            .map_err(inspect_err)
-            .ok()?;
+        let conn_args = ConnectorArgs::parse(&rargs).map_err(inspect_err).ok()?;
 
         inv.create_connector(&rname, &conn_args)
             .map_err(inspect_err)

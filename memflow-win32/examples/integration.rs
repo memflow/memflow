@@ -14,7 +14,7 @@ static mut HAD_ERROR: bool = false;
 fn main() -> Result<()> {
     let (connector, args_str) = parse_args();
 
-    let args = ConnectorArgs::try_parse_str(&args_str)?;
+    let args = ConnectorArgs::parse(&args_str)?;
 
     // create inventory + connector
     let inventory = unsafe { ConnectorInventory::try_new()? };

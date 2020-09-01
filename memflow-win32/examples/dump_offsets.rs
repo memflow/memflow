@@ -1,7 +1,8 @@
-use clap::*;
-use log::{error, Level};
 use std::fs::File;
 use std::io::Write;
+
+use clap::*;
+use log::{error, Level};
 
 use memflow_core::connector::*;
 
@@ -49,7 +50,7 @@ pub fn main() {
     let connector = unsafe {
         inventory.create_connector(
             matches.value_of("connector").unwrap(),
-            &ConnectorArgs::try_parse_str(matches.value_of("args").unwrap()).unwrap(),
+            &ConnectorArgs::parse(matches.value_of("args").unwrap()).unwrap(),
         )
     }
     .unwrap();

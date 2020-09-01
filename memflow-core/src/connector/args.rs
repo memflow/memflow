@@ -19,7 +19,7 @@ use hashbrown::HashMap;
 /// use std::convert::TryFrom;
 ///
 /// let argstr = "opt1=test1,opt2=test2,opt3=test3";
-/// let args = ConnectorArgs::try_from(argstr).unwrap();
+/// let args = ConnectorArgs::parse(argstr).unwrap();
 /// ```
 ///
 /// Construct as builder:
@@ -60,7 +60,7 @@ impl ConnectorArgs {
     /// `default_value,opt1=val1,opt2=val2`
     ///
     /// This function can be used to initialize a connector from user input.
-    pub fn try_parse_str(args: &str) -> Result<Self> {
+    pub fn parse(args: &str) -> Result<Self> {
         let mut map = HashMap::new();
 
         // if args != "" {
@@ -122,7 +122,15 @@ impl TryFrom<&str> for ConnectorArgs {
     type Error = Error;
 
     fn try_from(args: &str) -> Result<Self> {
-        ConnectorArgs::try_parse_str(args)
+        ConnectorArgs::parse(args)
+    }
+}
+
+impl TryFrom<String> for ConnectorArgs {
+    type Error = Error;
+
+    fn try_from(args: String) -> Result<Self> {
+        ConnectorArgs::parse(&args)
     }
 }
 
@@ -133,7 +141,7 @@ mod tests {
     #[test]
     pub fn from_str() {
         let argstr = "opt1=test1,opt2=test2,opt3=test3";
-        let args = ConnectorArgs::try_from(argstr).unwrap();
+        let args = ConnectorArgs::parse(argstr).unwrap();
         assert_eq!(args.get("opt1").unwrap(), "test1");
         assert_eq!(args.get("opt2").unwrap(), "test2");
         assert_eq!(args.get("opt3").unwrap(), "test3");
@@ -142,7 +150,7 @@ mod tests {
     #[test]
     pub fn from_str_default() {
         let argstr = "test0,opt1=test1,opt2=test2,opt3=test3";
-        let args = ConnectorArgs::try_from(argstr).unwrap();
+        let args = ConnectorArgs::parse(argstr).unwrap();
         assert_eq!(args.get_default().unwrap(), "test0");
         assert_eq!(args.get("opt1").unwrap(), "test1");
         assert_eq!(args.get("opt2").unwrap(), "test2");
@@ -152,7 +160,7 @@ mod tests {
     #[test]
     pub fn from_str_default2() {
         let argstr = "opt1=test1,test0";
-        let args = ConnectorArgs::try_from(argstr).unwrap();
+        let args = ConnectorArgs::parse(argstr).unwrap();
         assert_eq!(args.get_default(), None);
         assert_eq!(args.get("opt1").unwrap(), "test1");
     }
@@ -169,7 +177,7 @@ mod tests {
     #[test]
     pub fn parse_empty() {
         let argstr = "opt1=test1,test0";
-        let args = ConnectorArgs::try_from(argstr).unwrap();
+        let args = ConnectorArgs::parse(argstr).unwrap();
         assert_eq!(args.get_default(), None);
     }
 }

@@ -178,7 +178,7 @@ fn main() -> Result<()> {
     let mut connector = unsafe {
         inventory.create_connector(
             matches.value_of("connector").unwrap(),
-            &ConnectorArgs::try_parse_str(matches.value_of("args").unwrap()).unwrap(),
+            &ConnectorArgs::parse(matches.value_of("args").unwrap()).unwrap(),
         )
     }
     .unwrap();

@@ -31,6 +31,7 @@ In the repository you can find various examples available (which use memflow-win
 - run `cargo clippy --all-targets --all-features -- -D warnings` to run clippy linting on everything
 
 ## Documentation
+
 Extensive code documentation can be found on [docs.rs](https://docs.rs/memflow/0.1/).
 
 An additional getting started guide as well as higher level
@@ -82,6 +83,7 @@ Run memflow\_win32/read\_bench example with a coredump connector:
 `cargo run --example read_bench --release -- -vv -i target/release -c coredump -a coredump_win10_64bit.raw`
 
 ## Compilation support
+
 | target        | build              | tests              | benches            | compiles on stable |
 |---------------|--------------------|--------------------|--------------------|--------------------|
 | linux x86_64  | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
@@ -96,6 +98,7 @@ due to a constraint in the `dummy` connector that pulls in the `x86_64` crate.
 The same crate prevents tests and benches to be able to run aarch64 and other targets.
 
 ## Target support
+
 memflow-win32 is tested on the latest Windows 10 versions all the way down to Windows NT 4.0. If you found a version that does not work please submit an issue with the major/minor version as well as the build number.
 
 ## Roadmap / Future Development
@@ -105,8 +108,8 @@ memflow-win32 is tested on the latest Windows 10 versions all the way down to Wi
 - Linux target support
 
 ## Acknowledgements
-- [https://github.com/casualx/](CasualX) for his wonderful PELite crate
-- [https://github.com/ufrisk/](ufrisk) for his prior work on the subject and many inspirations
+- [CasualX](https://github.com/casualx/) for his wonderful PELite crate
+- [ufrisk](https://github.com/ufrisk/) for his prior work on the subject and many inspirations
 
 ## Contributing
 

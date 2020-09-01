@@ -14,7 +14,7 @@ The very core of the library is a [PhysicalMemory](https://docs.rs/memflow-core/
 
 Through the use of OS abstraction layers, like [memflow-win32](https://github.com/memflow/memflow/tree/master/memflow-win32), user can gain access to virtual memory of individual processes, by creating objects that implement [VirtualMemory](https://docs.rs/memflow-core/latest/memflow_core/mem/virt_mem/trait.VirtualMemory.html).
 
-Bridging the two is done by a highly throughput optimized virtual address translation function, which allows for crazy fast memory transfers on scale.
+Bridging the two is done by a highly throughput optimized virtual address translation function, which allows for crazy fast memory transfers at scale.
 
 The core is architecture independent (as long as addresses fit in 64-bits), and currently both 32, and 64-bit versions of the x86 family are available to be used.
 

@@ -6,7 +6,7 @@ use super::Address;
 
 bitflags! {
     /// Describes the type of a page using a bitflag.
-    #[cfg_attr(feature = "serde", derive(::serde::Serialize))]
+    #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
     #[repr(transparent)]
     pub struct PageType: u8 {
         /// The page explicitly has no flags.

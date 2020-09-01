@@ -13,7 +13,6 @@ jobs:
       matrix:
         os: [macos-latest, ubuntu-latest, windows-latest]
     steps:
-      - run: sudo apt-get install libncurses-dev libncursesw5-dev
       - uses: actions/checkout@v2
       - name: Build
         run: cargo build --workspace --all-features --verbose
@@ -26,7 +25,6 @@ jobs:
       matrix:
         os: [macos-latest, ubuntu-latest, windows-latest]
     steps:
-      - run: sudo apt-get install libncurses-dev libncursesw5-dev
       - uses: actions/checkout@v2
       - name: Run all tests
         run: cargo test --workspace --all-features --verbose
@@ -34,7 +32,6 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - run: sudo apt-get install libncurses-dev libncursesw5-dev
       - uses: actions/checkout@v2
       - run: rustup component add clippy
       - name: Check formatting
@@ -50,7 +47,6 @@ jobs:
       matrix:
         os: [macos-latest, ubuntu-latest, windows-latest]
     steps:
-      - run: sudo apt-get install libncurses-dev libncursesw5-dev
       - uses: actions/checkout@v2
       - name: Set up Rust nightly
         uses: actions-rs/toolchain@v1
@@ -65,7 +61,6 @@ jobs:
   build-coverage:
     runs-on: ubuntu-latest
     steps:
-      - run: sudo apt-get install libncurses-dev libncursesw5-dev
       - uses: actions/checkout@v2
       - name: Set up Rust nightly
         uses: actions-rs/toolchain@v1

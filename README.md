@@ -22,7 +22,7 @@ For non-rust libraries, it is possible to use the [FFI](https://github.com/memfl
 
 In the repository you can find various examples available (which use memflow-win32 layer)
 
-## building
+## Building
 
 - run `cargo build --release --workspace --all-features` to build everything
 - run `cargo build --release --workspace --all-features --examples` to build all examples
@@ -30,10 +30,10 @@ In the repository you can find various examples available (which use memflow-win
 - run `cargo bench` to run all benchmarks
 - run `cargo clippy --all-targets --all-features -- -D warnings` to run clippy linting on everything
 
-## documentation
+## Documentation
 - run `cargo doc --workspace --no-deps --all-features --open` to compile and open the documentation
 
-## usage
+## Usage
 - run one of the examples with `cargo run --release --example` (pass nothing to get a list of them).
 - if ran with `qemu_procfs` connector, the runner will request root permissions to set `'CAP_SYS_PTRACE=ep'` on the executables
 - or run the benchmarks `cargo bench` (can pass regex filters). Win32 benchmarks currently work only on Linux.
@@ -53,3 +53,7 @@ Run memflow\_win32/read\_bench example with a coredump connector:
 ## Documentation on Windows
 
 `dummy` connector is used throughout the documentation, which uses the `x86_64` crate, and it does not compile on windows without nightly feature set.
+
+## Contributing
+
+Please check [CONTRIBUTE.md](CONTRIBUTE.md)

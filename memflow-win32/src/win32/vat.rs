@@ -1,4 +1,4 @@
-use memflow_core::{
+use memflow::{
     architecture::{x86, ArchitectureObj, ScopedVirtualTranslate},
     iter::SplitAtIndex,
     mem::{PhysicalMemory, VirtualDMA, VirtualMemory, VirtualTranslate},
@@ -32,14 +32,14 @@ impl ScopedVirtualTranslate for Win32VirtualTranslate {
         B: SplitAtIndex,
         VI: Iterator<Item = (Address, B)>,
         VO: Extend<(PhysicalAddress, B)>,
-        FO: Extend<(memflow_core::Error, Address, B)>,
+        FO: Extend<(memflow::Error, Address, B)>,
     >(
         &self,
         mem: &mut T,
         addrs: VI,
         out: &mut VO,
         out_fail: &mut FO,
-        arena: &memflow_core::architecture::Bump,
+        arena: &memflow::architecture::Bump,
     ) {
         let translator = x86::new_translator(self.dtb, self.sys_arch).unwrap();
         translator.virt_to_phys_iter(mem, addrs, out, out_fail, arena)

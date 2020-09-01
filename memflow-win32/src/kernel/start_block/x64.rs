@@ -3,8 +3,8 @@ use crate::kernel::StartBlock;
 
 use std::convert::TryInto;
 
-use memflow_core::architecture::x86::x64;
-use memflow_core::types::{size, Address};
+use memflow::architecture::x86::x64;
+use memflow::types::{size, Address};
 
 // https://github.com/ufrisk/MemProcFS/blob/f2d15cf4fe4f19cfeea3dad52971fae2e491064b/vmm/vmmwininit.c#L560
 pub fn find_lowstub(stub: &[u8]) -> Result<StartBlock> {

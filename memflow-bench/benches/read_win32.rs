@@ -3,10 +3,10 @@ use memflow_bench::{phys, vat, virt};
 
 use criterion::*;
 
-use memflow_core::architecture::ScopedVirtualTranslate;
-use memflow_core::connector::ConnectorArgs;
-use memflow_core::error::{Error, Result};
-use memflow_core::mem::{DirectTranslate, PhysicalMemory};
+use memflow::architecture::ScopedVirtualTranslate;
+use memflow::connector::ConnectorArgs;
+use memflow::error::{Error, Result};
+use memflow::mem::{DirectTranslate, PhysicalMemory};
 
 use memflow_win32::{
     Kernel, KernelInfo, Win32ModuleInfo, Win32Offsets, Win32Process, Win32ProcessInfo,
@@ -18,8 +18,7 @@ use rand_xorshift::XorShiftRng as CurRng;
 
 fn create_connector(args: &ConnectorArgs) -> Result<impl PhysicalMemory> {
     unsafe {
-        memflow_core::connector::ConnectorInventory::try_new()?
-            .create_connector("qemu_procfs", args)
+        memflow::connector::ConnectorInventory::try_new()?.create_connector("qemu_procfs", args)
     }
 }
 

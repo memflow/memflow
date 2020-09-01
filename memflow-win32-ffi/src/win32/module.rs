@@ -1,5 +1,5 @@
-use memflow_core_ffi::process::OsProcessModuleInfoObj;
-use memflow_core_ffi::util::to_heap;
+use memflow_ffi::process::OsProcessModuleInfoObj;
+use memflow_ffi::util::to_heap;
 use memflow_win32::win32::Win32ModuleInfo;
 
 #[no_mangle]

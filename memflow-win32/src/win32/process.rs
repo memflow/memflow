@@ -8,10 +8,10 @@ use crate::win32::VirtualReadUnicodeString;
 use log::trace;
 use std::fmt;
 
-use memflow_core::architecture::ArchitectureObj;
-use memflow_core::mem::{PhysicalMemory, VirtualDMA, VirtualMemory, VirtualTranslate};
-use memflow_core::process::{OsProcessInfo, OsProcessModuleInfo, PID};
-use memflow_core::types::Address;
+use memflow::architecture::ArchitectureObj;
+use memflow::mem::{PhysicalMemory, VirtualDMA, VirtualMemory, VirtualTranslate};
+use memflow::process::{OsProcessInfo, OsProcessModuleInfo, PID};
+use memflow::types::Address;
 
 use super::Win32VirtualTranslate;
 

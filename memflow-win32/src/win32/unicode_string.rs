@@ -4,9 +4,9 @@ use crate::error::{Error, Result};
 
 use std::convert::TryInto;
 
-use memflow_core::architecture::{ArchitectureObj, Endianess};
-use memflow_core::mem::VirtualMemory;
-use memflow_core::types::Address;
+use memflow::architecture::{ArchitectureObj, Endianess};
+use memflow::mem::VirtualMemory;
+use memflow::types::Address;
 
 use widestring::U16CString;
 

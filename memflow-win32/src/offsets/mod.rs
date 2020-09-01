@@ -19,7 +19,7 @@ use std::{fs::File, io::Read, path::Path};
 use crate::error::{Error, Result};
 use crate::kernel::{Win32GUID, Win32Version};
 use crate::win32::KernelInfo;
-use memflow_core::architecture::{self, ArchitectureObj};
+use memflow::architecture::{self, ArchitectureObj};
 
 #[derive(Copy, Clone)]
 pub struct Win32ArchOffsets {

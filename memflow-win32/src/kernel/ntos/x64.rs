@@ -6,11 +6,11 @@ use crate::kernel::StartBlock;
 
 use log::{debug, trace};
 
-use memflow_core::architecture::x86::x64;
-use memflow_core::error::PartialResultExt;
-use memflow_core::iter::PageChunks;
-use memflow_core::mem::VirtualMemory;
-use memflow_core::types::{size, Address};
+use memflow::architecture::x86::x64;
+use memflow::error::PartialResultExt;
+use memflow::iter::PageChunks;
+use memflow::mem::VirtualMemory;
+use memflow::types::{size, Address};
 
 use dataview::Pod;
 use pelite::image::IMAGE_DOS_HEADER;

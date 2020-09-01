@@ -4,9 +4,9 @@ use crate::error::{Error, Result};
 
 use log::{debug, info};
 
-use memflow_core::error::PartialResultExt;
-use memflow_core::mem::VirtualMemory;
-use memflow_core::types::{size, Address};
+use memflow::error::PartialResultExt;
+use memflow::mem::VirtualMemory;
+use memflow::types::{size, Address};
 
 use pelite::{self, PeView};
 

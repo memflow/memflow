@@ -11,8 +11,8 @@ use crate::error::{Error, PartialResultExt, Result};
 use log::{info, warn};
 use std::convert::TryInto;
 
-use memflow_core::mem::VirtualMemory;
-use memflow_core::types::Address;
+use memflow::mem::VirtualMemory;
+use memflow::types::Address;
 
 use pelite::{self, pe64::debug::CodeView, pe64::exports::Export, PeView};
 

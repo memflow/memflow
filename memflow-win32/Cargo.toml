@@ -9,7 +9,7 @@ repository = "https://github.com/memflow/memflow"
 readme = "README.md"
 
 [dependencies]
-memflow-core = { version = "0.1", path = "../memflow-core", default-features = false }
+memflow = { version = "0.1", path = "../memflow", default-features = false }
 log = { version = "0.4", default-features = false }
 dataview = "0.1"
 pelite = { version = "0.8", git = "https://github.com/h33p/pelite", branch = "wrap", default-features = false }
@@ -41,11 +41,11 @@ serde = { version = "1.0", default-features = false, features = ["derive"] }
 
 [features]
 default = ["std", "serde_derive", "embed_offsets", "symstore", "download_progress"]
-std = ["no-std-compat/std", "memflow-core/std"]
+std = ["no-std-compat/std", "memflow/std"]
 embed_offsets = ["serde_derive"]
 collections = []
 alloc = []
-serde_derive = ["serde", "memflow-core/serde_derive", "pelite/serde"]
+serde_derive = ["serde", "memflow/serde_derive", "pelite/serde"]
 symstore = ["dirs", "ureq", "pdb"]
 download_progress = ["pbr", "progress-streams"]
 

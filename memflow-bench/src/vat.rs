@@ -1,13 +1,11 @@
 use criterion::*;
 
-use memflow_core::mem::{
-    CachedMemoryAccess, CachedVirtualTranslate, PhysicalMemory, VirtualTranslate,
-};
+use memflow::mem::{CachedMemoryAccess, CachedVirtualTranslate, PhysicalMemory, VirtualTranslate};
 
-use memflow_core::architecture::ScopedVirtualTranslate;
+use memflow::architecture::ScopedVirtualTranslate;
 
-use memflow_core::iter::FnExtend;
-use memflow_core::{size, Address, OsProcessInfo, OsProcessModuleInfo, PageType};
+use memflow::iter::FnExtend;
+use memflow::{size, Address, OsProcessInfo, OsProcessModuleInfo, PageType};
 
 use rand::prelude::*;
 use rand::{Rng, SeedableRng};
@@ -147,7 +145,7 @@ fn chunk_vat_params<
     func_name: String,
     cache_size: u64,
     use_tlb: bool,
-    initialize_ctx: &dyn Fn() -> memflow_core::Result<(T, V, P, S, M)>,
+    initialize_ctx: &dyn Fn() -> memflow::Result<(T, V, P, S, M)>,
 ) {
     let size = 0x10;
     for &chunk_size in [1, 4, 16, 64].iter() {
@@ -178,7 +176,7 @@ pub fn chunk_vat<
 >(
     c: &mut Criterion,
     backend_name: &str,
-    initialize_ctx: &dyn Fn() -> memflow_core::Result<(T, V, P, S, M)>,
+    initialize_ctx: &dyn Fn() -> memflow::Result<(T, V, P, S, M)>,
 ) {
     let plot_config = PlotConfiguration::default().summary_scale(AxisScale::Logarithmic);
 

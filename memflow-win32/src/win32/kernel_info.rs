@@ -4,9 +4,9 @@ use crate::kernel::{Win32GUID, Win32Version};
 
 use log::{info, warn};
 
-use memflow_core::architecture::ArchitectureObj;
-use memflow_core::mem::{DirectTranslate, PhysicalMemory, VirtualDMA};
-use memflow_core::types::Address;
+use memflow::architecture::ArchitectureObj;
+use memflow::mem::{DirectTranslate, PhysicalMemory, VirtualDMA};
+use memflow::types::Address;
 
 use super::Win32VirtualTranslate;
 

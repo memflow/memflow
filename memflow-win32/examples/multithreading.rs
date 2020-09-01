@@ -3,8 +3,8 @@ use std::thread;
 use clap::*;
 use log::{info, Level};
 
-use memflow_core::connector::*;
-use memflow_core::mem::*;
+use memflow::connector::*;
+use memflow::mem::*;
 
 use memflow_win32::win32::Kernel;
 

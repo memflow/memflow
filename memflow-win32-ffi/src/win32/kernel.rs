@@ -1,16 +1,16 @@
-use memflow_core_ffi::mem::phys_mem::CloneablePhysicalMemoryObj;
-use memflow_core_ffi::util::*;
+use memflow_ffi::mem::phys_mem::CloneablePhysicalMemoryObj;
+use memflow_ffi::util::*;
 use memflow_win32::kernel::Win32Version;
 use memflow_win32::win32::{kernel, Win32ProcessInfo, Win32VirtualTranslate};
 
-use memflow_core::mem::{
+use memflow::mem::{
     cache::{CachedMemoryAccess, CachedVirtualTranslate, TimedCacheValidator},
     CloneablePhysicalMemory, DirectTranslate, VirtualDMA,
 };
 
-use memflow_core::iter::FnExtend;
-use memflow_core::types::{size, Address, PageType};
-use memflow_core::PID;
+use memflow::iter::FnExtend;
+use memflow::types::{size, Address, PageType};
+use memflow::PID;
 
 use super::process::Win32Process;
 use crate::kernel::start_block::StartBlock;

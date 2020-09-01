@@ -4,7 +4,7 @@ use std::io::Write;
 use clap::*;
 use log::{error, Level};
 
-use memflow_core::connector::*;
+use memflow::connector::*;
 
 use memflow_win32::{Kernel, Win32OffsetFile};
 

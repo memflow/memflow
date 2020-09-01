@@ -8,10 +8,10 @@ use crate::error::{Error, Result};
 
 use log::warn;
 
-use memflow_core::architecture;
-use memflow_core::architecture::ArchitectureObj;
-use memflow_core::mem::PhysicalMemory;
-use memflow_core::types::{size, Address, PhysicalAddress};
+use memflow::architecture;
+use memflow::architecture::ArchitectureObj;
+use memflow::mem::PhysicalMemory;
+use memflow::types::{size, Address, PhysicalAddress};
 
 // PROCESSOR_START_BLOCK
 #[derive(Debug, Copy, Clone)]

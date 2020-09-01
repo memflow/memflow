@@ -4,10 +4,10 @@ use std::time::{Duration, Instant};
 use clap::*;
 use log::Level;
 
-use memflow_core::connector::*;
-use memflow_core::mem::*;
-use memflow_core::process::*;
-use memflow_core::types::*;
+use memflow::connector::*;
+use memflow::mem::*;
+use memflow::process::*;
+use memflow::types::*;
 
 use memflow_win32::error::Result;
 use memflow_win32::offsets::Win32Offsets;

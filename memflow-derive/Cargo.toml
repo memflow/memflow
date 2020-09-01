@@ -19,4 +19,4 @@ quote = "1.0"
 darling = "0.10"
 
 [dev-dependencies]
-memflow-core = { version = "0.1", path = "../memflow-core" }
+memflow = { version = "0.1", path = "../memflow" }

@@ -1,8 +1,8 @@
 use super::kernel::{FFIVirtualMemory, Kernel};
 
-use memflow_core::iter::FnExtend;
-use memflow_core_ffi::mem::virt_mem::VirtualMemoryObj;
-use memflow_core_ffi::util::*;
+use memflow::iter::FnExtend;
+use memflow_ffi::mem::virt_mem::VirtualMemoryObj;
+use memflow_ffi::util::*;
 use memflow_win32::win32::{self, Win32ModuleInfo, Win32ProcessInfo};
 
 use std::ffi::CStr;

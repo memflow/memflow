@@ -1,12 +1,10 @@
 use criterion::*;
 
-use memflow_core::mem::{
-    PhysicalMemory, PhysicalMemoryMetadata, PhysicalReadData, PhysicalWriteData,
-};
-use memflow_core::types::{size, Address, PhysicalAddress};
-use memflow_core::Result;
+use memflow::mem::{PhysicalMemory, PhysicalMemoryMetadata, PhysicalReadData, PhysicalWriteData};
+use memflow::types::{size, Address, PhysicalAddress};
+use memflow::Result;
 
-//use memflow_core::mem::dummy::DummyMemory as Memory;
+//use memflow::mem::dummy::DummyMemory as Memory;
 
 struct NullMem {}
 

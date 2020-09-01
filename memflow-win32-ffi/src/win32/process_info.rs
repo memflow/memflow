@@ -1,6 +1,6 @@
-use memflow_core::types::Address;
-use memflow_core_ffi::process::OsProcessInfoObj;
-use memflow_core_ffi::util::to_heap;
+use memflow::types::Address;
+use memflow_ffi::process::OsProcessInfoObj;
+use memflow_ffi::util::to_heap;
 use memflow_win32::win32::{Win32ModuleListInfo, Win32ProcessInfo};
 
 #[no_mangle]

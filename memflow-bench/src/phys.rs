@@ -1,8 +1,8 @@
 use criterion::*;
 
-use memflow_core::mem::{CachedMemoryAccess, PhysicalMemory};
+use memflow::mem::{CachedMemoryAccess, PhysicalMemory};
 
-use memflow_core::{architecture, size, Address, PageType, PhysicalAddress, PhysicalReadData};
+use memflow::{architecture, size, Address, PageType, PhysicalAddress, PhysicalReadData};
 
 use rand::prelude::*;
 use rand::{Rng, SeedableRng};
@@ -104,7 +104,7 @@ fn seq_read_params<T: PhysicalMemory>(
     group: &mut BenchmarkGroup<'_, measurement::WallTime>,
     func_name: String,
     cache_size: u64,
-    initialize_ctx: &dyn Fn() -> memflow_core::Result<T>,
+    initialize_ctx: &dyn Fn() -> memflow::Result<T>,
 ) {
     for &size in [0x8, 0x10, 0x100, 0x1000, 0x10000].iter() {
         group.throughput(Throughput::Bytes(size));
@@ -128,7 +128,7 @@ fn chunk_read_params<T: PhysicalMemory>(
     group: &mut BenchmarkGroup<'_, measurement::WallTime>,
     func_name: String,
     cache_size: u64,
-    initialize_ctx: &dyn Fn() -> memflow_core::Result<T>,
+    initialize_ctx: &dyn Fn() -> memflow::Result<T>,
 ) {
     for &size in [0x8, 0x10, 0x100, 0x1000].iter() {
         for &chunk_size in [1, 4, 16, 64].iter() {
@@ -153,7 +153,7 @@ fn chunk_read_params<T: PhysicalMemory>(
 pub fn seq_read<T: PhysicalMemory>(
     c: &mut Criterion,
     backend_name: &str,
-    initialize_ctx: &dyn Fn() -> memflow_core::Result<T>,
+    initialize_ctx: &dyn Fn() -> memflow::Result<T>,
 ) {
     let plot_config = PlotConfiguration::default().summary_scale(AxisScale::Logarithmic);
 
@@ -179,7 +179,7 @@ pub fn seq_read<T: PhysicalMemory>(
 pub fn chunk_read<T: PhysicalMemory>(
     c: &mut Criterion,
     backend_name: &str,
-    initialize_ctx: &dyn Fn() -> memflow_core::Result<T>,
+    initialize_ctx: &dyn Fn() -> memflow::Result<T>,
 ) {
     let plot_config = PlotConfiguration::default().summary_scale(AxisScale::Logarithmic);
 

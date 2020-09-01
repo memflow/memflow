@@ -11,12 +11,10 @@ use crate::offsets::{Win32ArchOffsets, Win32Offsets};
 use log::{info, trace};
 use std::fmt;
 
-use memflow_core::architecture::x86;
-use memflow_core::mem::{
-    DirectTranslate, PhysicalMemory, VirtualDMA, VirtualMemory, VirtualTranslate,
-};
-use memflow_core::process::{OperatingSystem, OsProcessInfo, OsProcessModuleInfo, PID};
-use memflow_core::types::Address;
+use memflow::architecture::x86;
+use memflow::mem::{DirectTranslate, PhysicalMemory, VirtualDMA, VirtualMemory, VirtualTranslate};
+use memflow::process::{OperatingSystem, OsProcessInfo, OsProcessModuleInfo, PID};
+use memflow::types::Address;
 
 use pelite::{self, pe64::exports::Export, PeView};
 

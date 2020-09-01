@@ -1,7 +1,7 @@
 use std::prelude::v1::*;
 
-use memflow_core::process::OsProcessModuleInfo;
-use memflow_core::types::Address;
+use memflow::process::OsProcessModuleInfo;
+use memflow::types::Address;
 
 #[derive(Debug, Clone)]
 pub struct Win32ModuleInfo {

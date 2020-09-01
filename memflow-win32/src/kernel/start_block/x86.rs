@@ -3,9 +3,9 @@ use crate::kernel::StartBlock;
 
 use std::convert::TryInto;
 
-use memflow_core::architecture::x86::x32;
-use memflow_core::iter::PageChunks;
-use memflow_core::types::Address;
+use memflow::architecture::x86::x32;
+use memflow::iter::PageChunks;
+use memflow::types::Address;
 
 fn check_page(base: Address, mem: &[u8]) -> bool {
     if mem[0] != 0x67 {

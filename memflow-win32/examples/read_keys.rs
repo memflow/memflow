@@ -3,7 +3,7 @@ use std::{thread, time};
 use clap::*;
 use log::Level;
 
-use memflow_core::connector::*;
+use memflow::connector::*;
 
 use memflow_win32::win32::{Kernel, Keyboard};
 

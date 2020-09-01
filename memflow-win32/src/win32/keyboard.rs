@@ -12,7 +12,7 @@ Therefor the Keyboard will by default find the winlogon.exe or wininit.exe proce
 ```
 use std::{thread, time};
 
-use memflow_core::{PhysicalMemory, VirtualTranslate};
+use memflow::{PhysicalMemory, VirtualTranslate};
 use memflow_win32::{Kernel, Keyboard};
 
 fn test<T: PhysicalMemory, V: VirtualTranslate>(kernel: &mut Kernel<T, V>) {
@@ -31,10 +31,10 @@ use crate::error::{Error, Result};
 
 use log::debug;
 
-use memflow_core::error::PartialResultExt;
-use memflow_core::mem::{PhysicalMemory, VirtualMemory, VirtualTranslate};
-use memflow_core::process::OsProcessModuleInfo;
-use memflow_core::types::Address;
+use memflow::error::PartialResultExt;
+use memflow::mem::{PhysicalMemory, VirtualMemory, VirtualTranslate};
+use memflow::process::OsProcessModuleInfo;
+use memflow::types::Address;
 
 use pelite::{self, pe64::exports::Export, PeView};
 

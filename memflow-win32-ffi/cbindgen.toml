@@ -6,12 +6,12 @@ tab_width = 4
 documentation_style = "doxy"
 style = "both"
 cpp_compat = true
-includes = ["memflow_core.h"]
+includes = ["memflow.h"]
 
 [parse]
 parse_deps = true
 
-include = ["memflow-win32", "memflow-core"]
+include = ["memflow-win32", "memflow"]
 
 [macro_expansion]
 bitflags = true

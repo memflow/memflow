@@ -8,8 +8,8 @@ use std::convert::TryInto;
 
 use log::{debug, info, warn};
 
-use memflow_core::mem::VirtualMemory;
-use memflow_core::types::{size, Address};
+use memflow::mem::VirtualMemory;
+use memflow::types::{size, Address};
 
 use pelite::{self, pe64::exports::Export, PeView};
 

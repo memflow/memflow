@@ -1,4 +1,4 @@
-use memflow_core::types::Address;
+use memflow::types::Address;
 use memflow_win32::kernel;
 
 #[repr(C)]

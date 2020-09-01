@@ -3,9 +3,9 @@ use crate::kernel::StartBlock;
 
 use std::convert::TryInto;
 
-use memflow_core::architecture::x86::x32_pae;
-use memflow_core::iter::PageChunks;
-use memflow_core::types::Address;
+use memflow::architecture::x86::x32_pae;
+use memflow::iter::PageChunks;
+use memflow::types::Address;
 
 fn check_page(addr: Address, mem: &[u8]) -> bool {
     for (i, chunk) in mem.to_vec().chunks_exact(8).enumerate() {

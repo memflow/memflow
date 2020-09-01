@@ -1,0 +1,20 @@
+language = "C"
+
+include_guard = "MEMFLOW_H"
+namespace = "memflow"
+tab_width = 4
+documentation_style = "doxy"
+style = "both"
+#no_includes = true
+cpp_compat = true
+
+[parse]
+parse_deps = true
+
+include = ["memflow"]
+
+[macro_expansion]
+bitflags = true
+
+[fn]
+sort_by = "None"

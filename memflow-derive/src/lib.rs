@@ -41,19 +41,19 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
         #[cfg(feature = "inventory")]
         #[doc(hidden)]
         #[no_mangle]
-        pub static MEMFLOW_CONNECTOR: ::memflow_core::connector::ConnectorDescriptor = ::memflow_core::connector::ConnectorDescriptor {
-            connector_version: ::memflow_core::connector::MEMFLOW_CONNECTOR_VERSION,
+        pub static MEMFLOW_CONNECTOR: ::memflow::connector::ConnectorDescriptor = ::memflow::connector::ConnectorDescriptor {
+            connector_version: ::memflow::connector::MEMFLOW_CONNECTOR_VERSION,
             name: CONNECTOR_NAME,
             factory: connector_factory,
         };
 
         #[cfg(feature = "inventory")]
-        pub extern "C" fn connector_factory(args: &::memflow_core::connector::ConnectorArgs) -> ::memflow_core::error::Result<::memflow_core::connector::ConnectorType> {
+        pub extern "C" fn connector_factory(args: &::memflow::connector::ConnectorArgs) -> ::memflow::error::Result<::memflow::connector::ConnectorType> {
             let connector = #func_name(args)?;
             Ok(Box::new(connector))
         }
 
-        pub fn static_connector_factory(args: &::memflow_core::connector::ConnectorArgs) -> ::memflow_core::error::Result<impl ::memflow_core::mem::PhysicalMemory> {
+        pub fn static_connector_factory(args: &::memflow::connector::ConnectorArgs) -> ::memflow::error::Result<impl ::memflow::mem::PhysicalMemory> {
             #func_name(args)
         }
 
@@ -85,7 +85,7 @@ pub fn byteswap_derive(input: TokenStream) -> TokenStream {
     };
 
     let gen = quote!(
-        impl #impl_generics ::memflow_core::types::byte_swap::ByteSwap for #name #ty_generics #where_clause {
+        impl #impl_generics ::memflow::types::byte_swap::ByteSwap for #name #ty_generics #where_clause {
             fn byte_swap(&mut self) {
                 #gen_inner
             }

@@ -3,12 +3,12 @@ use memflow_bench::*;
 
 use criterion::*;
 
-use memflow_core::architecture::ScopedVirtualTranslate;
-use memflow_core::mem::dummy::{DummyMemory as Memory, DummyModule, DummyProcess};
-use memflow_core::mem::DirectTranslate;
-use memflow_core::types::size;
+use memflow::architecture::ScopedVirtualTranslate;
+use memflow::mem::dummy::{DummyMemory as Memory, DummyModule, DummyProcess};
+use memflow::mem::DirectTranslate;
+use memflow::types::size;
 
-fn initialize_virt_ctx() -> memflow_core::Result<(
+fn initialize_virt_ctx() -> memflow::Result<(
     Memory,
     DirectTranslate,
     DummyProcess,

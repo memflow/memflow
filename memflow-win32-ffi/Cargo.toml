@@ -15,8 +15,8 @@ crate-type = ["lib", "cdylib", "staticlib"]
 
 [dependencies]
 memflow-win32 = { version = "0.1", path = "../memflow-win32" }
-memflow-core = { version = "0.1", path = "../memflow-core" }
-memflow-core-ffi = { version = "0.1", path = "../memflow-core-ffi" }
+memflow = { version = "0.1", path = "../memflow" }
+memflow-ffi = { version = "0.1", path = "../memflow-ffi" }
 
 [build-dependencies]
 proc-macro2 = "1"

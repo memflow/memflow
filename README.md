@@ -98,14 +98,8 @@ Run memflow\_win32/read\_bench example with a coredump connector:
 |---------------|--------------------|--------------------|--------------------|--------------------|
 | linux x86_64  | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
 | mac x86_64    | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
-| win x86_64    | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :x:                |
-| linux aarch64 | :heavy_check_mark: | :x:                | :x:                | :heavy_check_mark: |
-
-Compilation on linux and mac osx works straight of the box right now.
-For compiling on Windows we currently require the `nightly` rust compiler
-due to a constraint in the `dummy` connector that pulls in the `x86_64` crate.
-
-The same crate prevents tests and benches to be able to run aarch64 and other targets.
+| win x86_64    | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
+| linux aarch64 | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
 
 ## Target support
 

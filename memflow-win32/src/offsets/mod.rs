@@ -477,14 +477,12 @@ mod tests {
 
     #[test]
     fn download_pdb() {
-        // TODO: symbol store with no local cache
-
         let guid = Win32GUID {
             file_name: "ntkrnlmp.pdb".to_string(),
             guid: "3844DBB920174967BE7AA4A2C20430FA2".to_string(),
         };
         let offsets = Win32Offsets::builder()
-            .symbol_store(SymbolStore::new())
+            .symbol_store(SymbolStore::new().no_cache())
             .guid(guid)
             .build()
             .unwrap();

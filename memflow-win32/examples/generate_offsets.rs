@@ -23,14 +23,18 @@ pub fn main() {
         .get_matches();
 
     // set log level
-    match matches.occurrences_of("verbose") {
-        0 => simple_logger::init_with_level(Level::Error).unwrap(),
-        1 => simple_logger::init_with_level(Level::Warn).unwrap(),
-        2 => simple_logger::init_with_level(Level::Info).unwrap(),
-        3 => simple_logger::init_with_level(Level::Debug).unwrap(),
-        4 => simple_logger::init_with_level(Level::Trace).unwrap(),
-        _ => simple_logger::init_with_level(Level::Trace).unwrap(),
-    }
+    let level = match matches.occurrences_of("verbose") {
+        0 => Level::Error,
+        1 => Level::Warn,
+        2 => Level::Info,
+        3 => Level::Debug,
+        4 => Level::Trace,
+        _ => Level::Trace,
+    };
+    simple_logger::SimpleLogger::new()
+        .with_level(level.to_level_filter())
+        .init()
+        .unwrap();
 
     let win_ids = vec![
         /*

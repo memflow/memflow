@@ -16,30 +16,12 @@ jobs:
       - uses: actions/checkout@v2
 
       - name: Build
-        run: cargo build --workspace --verbose
-        if: runner.os != 'Windows'
+        run: cargo build --workspace --all-features --verbose
 
       - name: Build examples
-        run: cargo build --workspace --examples --verbose
-        if: runner.os != 'Windows'
+        run: cargo build --workspace --all-features --examples --verbose
 
-      - name: Set up Rust nightly
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: nightly
-          override: true
-        if: runner.os == 'Windows'
-
-      - name: Build (nightly)
-        run: cargo +nightly build --workspace --all-features --verbose
-        if: runner.os == 'Windows'
-
-      - name: Build examples (nightly)
-        run: cargo +nightly build --workspace --all-features --examples --verbose
-        if: runner.os == 'Windows'
-
-  build-arm:
+  build-cross-aarch64:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -52,8 +34,13 @@ jobs:
         with:
           use-cross: true
           command: build
-          args: --target aarch64-unknown-linux-gnu --workspace --verbose
-          
+          args: --target aarch64-unknown-linux-gnu --workspace --all-features --verbose
+      - uses: actions-rs/cargo@v1
+        with:
+          use-cross: true
+          command: test
+          args: --target aarch64-unknown-linux-gnu --workspace --all-features --verbose
+            
   test:
     runs-on: ${{ matrix.os }}
     strategy:
@@ -63,24 +50,12 @@ jobs:
       - uses: actions/checkout@v2
 
       - name: Run all tests
-        run: cargo test --workspace --verbose
+        run: cargo test --workspace --all-features --verbose
         if: runner.os == 'Linux'
 
       - name: Run all tests
-        run: cargo test --workspace --exclude memflow-derive --verbose
-        if: runner.os == 'macOS'
-
-      - name: Set up Rust nightly
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: nightly
-          override: true
-        if: runner.os == 'Windows'
-
-      - name: Run all tests (nightly)
-        run: cargo +nightly test --workspace --exclude memflow-derive --all-features --verbose
-        if: runner.os == 'Windows'
+        run: cargo test --workspace --exclude memflow-derive --all-features --verbose
+        if: runner.os != 'Linux'
 
   lint:
     runs-on: ubuntu-latest
@@ -92,7 +67,7 @@ jobs:
       - uses: actions-rs/clippy-check@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          args: --all-targets
+          args: --all-targets --all-features
 
   build-nostd:
     runs-on: ${{ matrix.os }}
@@ -109,7 +84,7 @@ jobs:
           override: true
       - run: rustup +nightly component add rust-src
       - name: Build no_std crate
-        run: cd nostd-test; cargo build --verbose
+        run: cd nostd-test; cargo build --all-features --verbose
 
   build-coverage:
     runs-on: ubuntu-latest
@@ -127,7 +102,7 @@ jobs:
           export CARGO_INCREMENTAL=0
           export RUSTFLAGS="-Zprofile -Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off -Zpanic_abort_tests -Cpanic=abort"
           export RUSTDOCFLAGS="-Cpanic=abort"
-          cargo build --workspace --exclude memflow-derive
-          cargo test --workspace --exclude memflow-derive
+          cargo build --workspace --exclude memflow-derive --all-features
+          cargo test --workspace --exclude memflow-derive --all-features
           grcov ./target/debug/ -s . -t lcov --llvm --branch --ignore-not-existing -o ./target/debug/coverage
           bash <(curl -s https://codecov.io/bash) -f ./target/debug/coverage -t ${{ secrets.CODECOV_TOKEN }};

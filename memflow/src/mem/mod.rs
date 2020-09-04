@@ -10,13 +10,15 @@ TODO: more documentation
 */
 
 pub mod cache;
-pub mod dummy;
 pub mod mem_map;
 pub mod phys_mem;
 pub mod phys_mem_batcher;
 pub mod virt_mem;
 pub mod virt_mem_batcher;
 pub mod virt_translate;
+
+#[cfg(any(feature = "dummy_mem", test))]
+pub mod dummy;
 
 #[doc(hidden)]
 pub use cache::*; // TODO: specify pub declarations

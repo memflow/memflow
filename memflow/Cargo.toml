@@ -1,6 +1,6 @@
 [package]
 name = "memflow"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["ko1N <ko1N1337@gmail.com>", "Aurimas Blažulionis <0x60@pm.me>"]
 edition = "2018"
 license = "MIT"
@@ -27,7 +27,7 @@ itertools = { version = "0.9", default-features = false }
 vector-trees = { version = "0.1", git = "https://github.com/h33p/vector-trees", features = ["bumpalo"] }
 libloading = { version = "0.6", optional = true }
 memmap = { version = "0.7", optional = true }
-serde = { version = "1.0", optional = true, default-features = false, features = ["derive"] }
+serde = { version = "1.0", optional = true, default-features = false, features = ["derive", "alloc"] }
 dirs = { version = "3.0", optional = true }
 hashbrown = "0.8"
 

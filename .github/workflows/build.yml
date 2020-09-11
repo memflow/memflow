@@ -100,20 +100,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+        with:
+          path: 'memflow-repo'
       - name: Set up Rust nightly
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
           toolchain: nightly
           override: true
-      - name: grcov workaround
-        run: |
-          cd ..
-          mv memflow memflow-repo
-          cd memflow-repo
+      - run: echo $GITHUB_WORKSPACE
       - run: cargo install grcov
       - name: Run tests with coverage
         run: |
+          echo $(PWD)
+          cd memflow-repo
           export CARGO_INCREMENTAL=0
           export RUSTFLAGS="-Zprofile -Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off -Zpanic_abort_tests -Cpanic=abort"
           export RUSTDOCFLAGS="-Cpanic=abort"

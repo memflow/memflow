@@ -61,8 +61,8 @@ If you decide to build the latest documentation you can do it by issuing:
 All examples support the memflow connector inventory system.
 You will have to install at least one `connector` to use the examples.
 
-To install a connector just head over to the corresponding repository
-and install them via the `install.sh` script.
+To install a connector just use the [memflowup](https://github.com/memflow/memflowup) utility,
+or, head over to the corresponding repository and install them via the `install.sh` script.
 
 You will find a folder called `memflow` in any of the following locations:
 ```

@@ -21,6 +21,9 @@ pub type Win32ExitStatus = i32;
 /// Process has not exited yet
 pub const EXIT_STATUS_STILL_ACTIVE: i32 = 259;
 
+/// EPROCESS ImageFileName byte length
+pub const IMAGE_FILE_NAME_LENGTH: usize = 15;
+
 const MAX_ITER_COUNT: usize = 65536;
 
 #[derive(Debug, Clone, Copy)]

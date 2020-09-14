@@ -46,7 +46,7 @@ Extensive code documentation can be found on [docs.rs](https://docs.rs/memflow/0
 An additional getting started guide as well as higher level
 explanations of the inner workings of memflow can be found at [memflow.github.io](https://memflow.github.io).
 
-If u decide to build the latest documentation you can do it by issueing:
+If you decide to build the latest documentation you can do it by issuing:
 
 `cargo doc --workspace --no-deps --open`
 
@@ -61,8 +61,8 @@ If u decide to build the latest documentation you can do it by issueing:
 All examples support the memflow connector inventory system.
 You will have to install at least one `connector` to use the examples.
 
-To install a connector just head over to the corresponding repository
-and install them via the `install.sh` script.
+To install a connector just use the [memflowup](https://github.com/memflow/memflowup) utility,
+or, head over to the corresponding repository and install them via the `install.sh` script.
 
 You will find a folder called `memflow` in any of the following locations:
 ```
@@ -105,7 +105,7 @@ Run memflow\_win32/read\_bench example with a coredump connector:
 
 memflow-win32 is tested on the latest Windows 10 versions all the way down to Windows NT 4.0. If you found a version that does not work please submit an issue with the major/minor version as well as the build number.
 
-## Roadmap / Future Development
+## Road map / Future Development
 
 - Provide a rust native connector for PCILeech based hardware
 - Provide an UEFI Demo

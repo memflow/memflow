@@ -100,6 +100,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+        with:
+          path: 'memflow-repo'
       - name: Set up Rust nightly
         uses: actions-rs/toolchain@v1
         with:
@@ -109,6 +111,7 @@ jobs:
       - run: cargo install grcov
       - name: Run tests with coverage
         run: |
+          cd memflow-repo
           export CARGO_INCREMENTAL=0
           export RUSTFLAGS="-Zprofile -Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off -Zpanic_abort_tests -Cpanic=abort"
           export RUSTDOCFLAGS="-Cpanic=abort"

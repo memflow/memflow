@@ -24,40 +24,35 @@ fn vat_test_with_mem<
     translations: usize,
     translator: S,
     module: M,
-) -> usize {
+) {
     let mut rng = CurRng::from_rng(thread_rng()).unwrap();
 
-    let mut bufs = vec![Address::null(); chunk_count];
-    let mut done_size = 0;
+    let mut bufs = vec![Address::null(); translations];
+
+    let base_addr = rng.gen_range(
+        module.base().as_u64(),
+        module.base().as_u64() + module.size() as u64,
+    );
+
+    for addr in bufs.iter_mut() {
+        *addr = (base_addr + rng.gen_range(0, 0x2000)).into();
+    }
 
     let mut out = Vec::new();
 
-    while done_size < translations {
-        let base_addr = rng.gen_range(
-            module.base().as_u64(),
-            module.base().as_u64() + module.size() as u64,
-        );
-
-        for addr in bufs.iter_mut() {
-            *addr = (base_addr + rng.gen_range(0, 0x2000)).into();
-        }
-
-        bench.iter(|| {
+    bench.iter(|| {
+        for chunk in bufs.chunks_mut(chunk_count) {
             out.clear();
             vat.virt_to_phys_iter(
                 phys_mem,
                 &translator,
-                bufs.iter_mut().map(|x| (*x, 1)),
+                chunk.iter_mut().map(|x| (*x, 1)),
                 &mut out,
                 &mut FnExtend::new(|_| {}),
             );
             black_box(&out);
-        });
-
-        done_size += chunk_count;
-    }
-
-    done_size
+        }
+    });
 }
 
 fn vat_test_with_ctx<

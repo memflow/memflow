@@ -8,7 +8,6 @@ documentation = "https://docs.rs/memflow-win32"
 readme = "README.md"
 homepage = "https://memflow.github.io"
 repository = "https://github.com/memflow/memflow"
-license = "MIT"
 license-file = "../LICENSE"
 keywords = [ "memflow", "introspection", "memory", "dma" ]
 categories = [ "api-bindings", "memory-management", "os" ]
@@ -42,6 +41,9 @@ bencher = "0.1"
 clap = "2.33"
 toml = "0.5"
 colored = "2.0"
+
+[target.'cfg(not(windows))'.dev_dependencies]
+sudo = "0.5"
 
 [build_dependencies]
 toml = "0.5"

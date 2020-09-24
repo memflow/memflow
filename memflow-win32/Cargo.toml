@@ -3,13 +3,19 @@ name = "memflow-win32"
 version = "0.1.1"
 authors = ["ko1N <ko1N1337@gmail.com>", "Aurimas Blažulionis <0x60@pm.me>"]
 edition = "2018"
-license = "MIT"
 description = "win32 integration of the memflow physical memory introspection framework"
+documentation = "https://docs.rs/memflow-win32"
+readme = "README.md"
 homepage = "https://memflow.github.io"
 repository = "https://github.com/memflow/memflow"
-readme = "README.md"
+license = "MIT"
+license-file = "../LICENSE"
 keywords = [ "memflow", "introspection", "memory", "dma" ]
 categories = [ "api-bindings", "memory-management", "os" ]
+
+[badges]
+maintenance = { status = "actively-developed" }
+codecov = { repository = "github", branch = "master", service = "github" }
 
 [dependencies]
 memflow = { version = "0.1", path = "../memflow", default-features = false }

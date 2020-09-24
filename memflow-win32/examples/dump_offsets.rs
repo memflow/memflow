@@ -15,7 +15,7 @@ fn elevate_privileges() {
 
 #[cfg(windows)]
 fn elevate_privileges() {
-    error!("elevate privileges is not available on windows");
+    log::error!("elevate privileges is not available on windows");
 }
 
 pub fn main() {

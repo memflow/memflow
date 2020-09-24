@@ -52,9 +52,9 @@ If you decide to build the latest documentation you can do it by issuing:
 
 ## Basic usage
 
-- run one of the examples with `cargo run --release --example` (pass nothing to get a list of them).
-- if ran with `qemu_procfs` connector, the runner will request root permissions to set `'CAP_SYS_PTRACE=ep'` on the executables
-- or run the benchmarks `cargo bench` (can pass regex filters). Win32 benchmarks currently work only on Linux.
+- Run one of the examples with `cargo run --release --example` (pass nothing to get a list of them).
+- Some connectors (e.g. `qemu_procfs`) will require elevated privileges. Pass the `-E` flag to the example to invoke sudo.
+- Alternatively you can run the benchmarks via `cargo bench` (can pass regex filters). Win32 benchmarks currently work only on Linux.
 
 ## Running Examples
 
@@ -85,11 +85,13 @@ Now you can just run the examples by providing the appropiate connector name:
 
 Run memflow\_win32/read\_keys example with a procfs connector:
 
-`cargo run --example read_keys -- -vv -c qemu_procfs -a [vmname]`
+`cargo run --example read_keys -- -vv -E -c qemu_procfs -a [vmname]`
 
 Run memflow\_win32/read\_bench example with a coredump connector:
 
 `cargo run --example read_bench --release -- -vv -c coredump -a coredump_win10_64bit.raw`
+
+Note: The `qemu_procfs` connector will require `'CAP_SYS_PTRACE=ep'` permissions. Due to this the example is invoked with the `-E` flag to elevate privileges via sudo.
 
 ## Compilation support
 

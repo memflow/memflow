@@ -52,9 +52,17 @@ If you decide to build the latest documentation you can do it by issuing:
 
 ## Basic usage
 
-- Run one of the examples with `cargo run --release --example` (pass nothing to get a list of them).
-- Some connectors (e.g. `qemu_procfs`) will require elevated privileges. Pass the `-E` flag to the example to invoke sudo.
-- Alternatively you can run the benchmarks via `cargo bench` (can pass regex filters). Win32 benchmarks currently work only on Linux.
+You can either run one of the examples with `cargo run --release --example`. Pass nothing to get a list of examples.
+
+Some connectors like `qemu_procfs` will require elevated privileges. See the Connectors section of this Readme for more information.
+
+To simplify running examples, tests and benchmarks through different connectors we added a simple cargo runner script for Linux to this repository.
+Simply set any of the following environment variables when running the `cargo` command to elevate privileges:
+
+- `RUST_SUDO` will start the resulting binary via sudo.
+- `RUST_SETPTRACE` will enable PTRACE permissions on the resulting binary before executing it.
+
+Alternatively you can run the benchmarks via `cargo bench` (can pass regex filters). Win32 benchmarks currently work only on Linux.
 
 ## Running Examples
 
@@ -85,13 +93,13 @@ Now you can just run the examples by providing the appropiate connector name:
 
 Run memflow\_win32/read\_keys example with a procfs connector:
 
-`cargo run --example read_keys -- -vv -E -c qemu_procfs -a [vmname]`
+`RUST_SETPTRACE=1 cargo run --example read_keys -- -vv -c qemu_procfs -a [vmname]`
 
 Run memflow\_win32/read\_bench example with a coredump connector:
 
 `cargo run --example read_bench --release -- -vv -c coredump -a coredump_win10_64bit.raw`
 
-Note: The `qemu_procfs` connector will require `'CAP_SYS_PTRACE=ep'` permissions. Due to this the example is invoked with the `-E` flag to elevate privileges via sudo.
+Note: In the examples above the `qemu_procfs` connector requires `'CAP_SYS_PTRACE=ep'` permissions. The runner script in this repository will set the appropiate flags when the `RUST_SETPTRACE` environment variable is passed to it.
 
 ## Compilation support
 

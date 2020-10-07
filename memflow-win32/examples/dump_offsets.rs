@@ -8,16 +8,6 @@ use memflow::connector::*;
 
 use memflow_win32::{Kernel, Win32OffsetFile};
 
-#[cfg(not(windows))]
-fn elevate_privileges() {
-    sudo::escalate_if_needed().expect("failed to elevate privileges");
-}
-
-#[cfg(windows)]
-fn elevate_privileges() {
-    log::error!("elevate privileges is not available on windows");
-}
-
 pub fn main() {
     let matches = App::new("dump offsets example")
         .version(crate_version!())
@@ -36,14 +26,6 @@ pub fn main() {
                 .short("a")
                 .takes_value(true)
                 .default_value(""),
-        )
-        .arg(
-            Arg::with_name("elevate")
-                .short("E")
-                .long("elevate")
-                .help("elevate privileges upon start")
-                .takes_value(false)
-                .required(false),
         )
         .arg(
             Arg::with_name("output")
@@ -66,10 +48,6 @@ pub fn main() {
         .with_level(level.to_level_filter())
         .init()
         .unwrap();
-
-    if matches.is_present("elevate") {
-        elevate_privileges();
-    }
 
     // create inventory + connector
     let inventory = unsafe { ConnectorInventory::try_new() }.unwrap();

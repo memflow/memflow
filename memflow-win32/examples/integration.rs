@@ -168,16 +168,6 @@ fn build_kernel<T: PhysicalMemory>(
     kernel
 }
 
-#[cfg(not(windows))]
-fn elevate_privileges() {
-    sudo::escalate_if_needed().expect("failed to elevate privileges");
-}
-
-#[cfg(windows)]
-fn elevate_privileges() {
-    log::error!("elevate privileges is not available on windows");
-}
-
 fn parse_args() -> (String, String) {
     let matches = App::new("read_keys example")
         .version(crate_version!())
@@ -197,14 +187,6 @@ fn parse_args() -> (String, String) {
                 .takes_value(true)
                 .default_value(""),
         )
-        .arg(
-            Arg::with_name("elevate")
-                .short("E")
-                .long("elevate")
-                .help("elevate privileges upon start")
-                .takes_value(false)
-                .required(false),
-        )
         .get_matches();
 
     // set log level
@@ -220,10 +202,6 @@ fn parse_args() -> (String, String) {
         .with_level(level.to_level_filter())
         .init()
         .unwrap();
-
-    if matches.is_present("elevate") {
-        elevate_privileges();
-    }
 
     (
         matches.value_of("connector").unwrap().into(),

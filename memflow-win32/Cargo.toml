@@ -42,9 +42,6 @@ clap = "2.33"
 toml = "0.5"
 colored = "2.0"
 
-[target.'cfg(not(windows))'.dev_dependencies]
-sudo = "0.5"
-
 [build_dependencies]
 toml = "0.5"
 dataview = "0.1"

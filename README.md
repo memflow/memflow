@@ -107,6 +107,20 @@ Note: The `qemu_procfs` connector will require `'CAP_SYS_PTRACE=ep'` permissions
 
 memflow-win32 is tested on the latest Windows 10 versions all the way down to Windows NT 4.0. If you found a version that does not work please submit an issue with the major/minor version as well as the build number.
 
+## Connectors
+
+All examples provided in this repository are using the inventory to
+dynamically load a connector at runtime. When using the library programatically it is possible to just statically link a connector into the code.
+
+Some connectors also require different permissions. Please refer to the individual connector repositories for more information.
+
+These are the currently officially existing connetors:
+- [qemu_procfs](https://github.com/memflow/memflow-qemu-procfs)
+- [kvm](https://github.com/memflow/memflow-kvm)
+- [coredump](https://github.com/memflow/memflow-coredump)
+
+In case you write your own connector please hit us up with a merge request so we can maintain a list of third-party connectors as well.
+
 ## Road map / Future Development
 
 - Provide a rust native connector for PCILeech based hardware

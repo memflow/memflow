@@ -3,13 +3,18 @@ name = "memflow"
 version = "0.1.1"
 authors = ["ko1N <ko1N1337@gmail.com>", "Aurimas Blažulionis <0x60@pm.me>"]
 edition = "2018"
-license = "MIT"
 description = "core components of the memflow physical memory introspection framework"
+documentation = "https://docs.rs/memflow"
+readme = "../README.md"
 homepage = "https://memflow.github.io"
 repository = "https://github.com/memflow/memflow"
-readme = "../README.md"
+license-file = "../LICENSE"
 keywords = [ "memflow", "introspection", "memory", "dma" ]
 categories = [ "memory-management", "os" ]
+
+[badges]
+maintenance = { status = "actively-developed" }
+codecov = { repository = "github", branch = "master", service = "github" }
 
 [dependencies]
 dataview = { version = "0.1", features = ["derive_pod"] }
@@ -18,7 +23,7 @@ bitflags = "1.2"
 coarsetime = { version = "0.1", optional = true }
 smallvec = { version = "1.4", default-features = false }
 arrayvec = { version = "0.5", default-features = false }
-x86_64_structs = { version = "0.11", git = "https://github.com/memflow/x86_64_structs" }
+x86_64 = { version = "0.12", default-features = false }
 rand = { version = "0.7", optional = true }
 rand_xorshift = { version = "0.2", optional = true }
 bumpalo = { version = "3.4", features = ["collections"] }
@@ -32,7 +37,7 @@ dirs = { version = "3.0", optional = true }
 hashbrown = "0.8"
 
 [dev-dependencies]
-x86_64_structs = { version = "0.11", git = "https://github.com/memflow/x86_64_structs" }
+x86_64 = { version = "0.12", default-features = false }
 rand = { version = "0.7" }
 rand_xorshift = "0.2"
 memflow-derive = { path = "../memflow-derive" }

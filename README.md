@@ -52,9 +52,17 @@ If you decide to build the latest documentation you can do it by issuing:
 
 ## Basic usage
 
-- run one of the examples with `cargo run --release --example` (pass nothing to get a list of them).
-- if ran with `qemu_procfs` connector, the runner will request root permissions to set `'CAP_SYS_PTRACE=ep'` on the executables
-- or run the benchmarks `cargo bench` (can pass regex filters). Win32 benchmarks currently work only on Linux.
+You can either run one of the examples with `cargo run --release --example`. Pass nothing to get a list of examples.
+
+Some connectors like `qemu_procfs` will require elevated privileges. See the Connectors section of this Readme for more information.
+
+To simplify running examples, tests and benchmarks through different connectors we added a simple cargo runner script for Linux to this repository.
+Simply set any of the following environment variables when running the `cargo` command to elevate privileges:
+
+- `RUST_SUDO` will start the resulting binary via sudo.
+- `RUST_SETPTRACE` will enable PTRACE permissions on the resulting binary before executing it.
+
+Alternatively you can run the benchmarks via `cargo bench` (can pass regex filters). Win32 benchmarks currently work only on Linux.
 
 ## Running Examples
 
@@ -85,11 +93,13 @@ Now you can just run the examples by providing the appropiate connector name:
 
 Run memflow\_win32/read\_keys example with a procfs connector:
 
-`cargo run --example read_keys -- -vv -c qemu_procfs -a [vmname]`
+`RUST_SETPTRACE=1 cargo run --example read_keys -- -vv -c qemu_procfs -a [vmname]`
 
 Run memflow\_win32/read\_bench example with a coredump connector:
 
 `cargo run --example read_bench --release -- -vv -c coredump -a coredump_win10_64bit.raw`
+
+Note: In the examples above the `qemu_procfs` connector requires `'CAP_SYS_PTRACE=ep'` permissions. The runner script in this repository will set the appropiate flags when the `RUST_SETPTRACE` environment variable is passed to it.
 
 ## Compilation support
 
@@ -104,6 +114,20 @@ Run memflow\_win32/read\_bench example with a coredump connector:
 ## Target support
 
 memflow-win32 is tested on the latest Windows 10 versions all the way down to Windows NT 4.0. If you found a version that does not work please submit an issue with the major/minor version as well as the build number.
+
+## Connectors
+
+All examples provided in this repository are using the inventory to
+dynamically load a connector at runtime. When using the library programatically it is possible to just statically link a connector into the code.
+
+Some connectors also require different permissions. Please refer to the individual connector repositories for more information.
+
+These are the currently officially existing connetors:
+- [qemu_procfs](https://github.com/memflow/memflow-qemu-procfs)
+- [kvm](https://github.com/memflow/memflow-kvm)
+- [coredump](https://github.com/memflow/memflow-coredump)
+
+In case you write your own connector please hit us up with a merge request so we can maintain a list of third-party connectors as well.
 
 ## Road map / Future Development
 

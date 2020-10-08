@@ -1,8 +1,8 @@
 use std::prelude::v1::*;
 
 use super::{
-    KernelBuilder, KernelInfo, Win32ExitStatus, Win32ModuleListInfo, Win32Process,
-    Win32ProcessInfo, Win32VirtualTranslate, EXIT_STATUS_STILL_ACTIVE,
+    process::EXIT_STATUS_STILL_ACTIVE, process::IMAGE_FILE_NAME_LENGTH, KernelBuilder, KernelInfo,
+    Win32ExitStatus, Win32ModuleListInfo, Win32Process, Win32ProcessInfo, Win32VirtualTranslate,
 };
 
 use crate::error::{Error, Result};
@@ -215,7 +215,8 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
         let pid: PID = reader.virt_read(eprocess + self.offsets.eproc_pid())?;
         trace!("pid={}", pid);
 
-        let name = reader.virt_read_cstr(eprocess + self.offsets.eproc_name(), 16)?;
+        let name =
+            reader.virt_read_cstr(eprocess + self.offsets.eproc_name(), IMAGE_FILE_NAME_LENGTH)?;
         trace!("name={}", name);
 
         let dtb = reader.virt_read_addr_arch(
@@ -402,7 +403,9 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
             .iter()
             .inspect(|process| trace!("{} {}", process.pid(), process.name()))
             .filter(|process| {
-                process.name().to_lowercase() == name[..name.len().min(14)].to_lowercase()
+                // strip process name to IMAGE_FILE_NAME_LENGTH without trailing \0
+                process.name().to_lowercase()
+                    == name[..name.len().min(IMAGE_FILE_NAME_LENGTH - 1)].to_lowercase()
             })
             .collect::<Vec<_>>();
 

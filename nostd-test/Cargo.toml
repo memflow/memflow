@@ -3,9 +3,9 @@ name = "nostd-test"
 version = "0.1.1"
 authors = ["Aurimas Blažulionis <0x60@pm.me>"]
 edition = "2018"
-license = "MIT"
 homepage = "https://memflow.github.io"
 repository = "https://github.com/memflow/memflow"
+license-file = "../LICENSE"
 publish = false
 
 [profile.release]

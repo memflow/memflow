@@ -17,7 +17,7 @@ use std::collections::VecDeque;
 
 use std::sync::Arc;
 
-use x86_64_structs::{
+use x86_64::{
     structures::paging,
     structures::paging::{
         mapper::{Mapper, MapperAllSizes, OffsetPageTable},

@@ -22,7 +22,6 @@ log = "0.4"
 bitflags = "1.2"
 coarsetime = { version = "0.1", optional = true }
 smallvec = { version = "1.4", default-features = false }
-arrayvec = { version = "0.5", default-features = false }
 x86_64 = { version = "0.12", default-features = false }
 rand = { version = "0.7", optional = true }
 rand_xorshift = { version = "0.2", optional = true }

@@ -7,10 +7,6 @@
 #include <stdlib.h>
 #include "memflow.h"
 
-#ifdef __cplusplus
-namespace memflow_win32 {
-#endif // __cplusplus
-
 typedef struct Kernel_FFIMemory__FFIVirtualTranslate Kernel_FFIMemory__FFIVirtualTranslate;
 
 typedef struct Win32ModuleInfo Win32ModuleInfo;
@@ -292,10 +288,6 @@ void process_info_free(Win32ProcessInfo *info);
 
 #ifdef __cplusplus
 } // extern "C"
-#endif // __cplusplus
-
-#ifdef __cplusplus
-} // namespace memflow_win32
 #endif // __cplusplus
 
 #endif /* MEMFLOW_WIN32_H */

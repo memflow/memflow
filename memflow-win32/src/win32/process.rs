@@ -378,6 +378,19 @@ impl<T: VirtualMemory> Win32Process<T> {
         self.module_list_with_infos_extend(iter, out)
     }
 
+    pub fn main_module_info(&mut self) -> Result<Win32ModuleInfo> {
+        // TODO: compare base addr instead of module names
+        let module_list = self.module_list()?;
+        module_list
+            .into_iter()
+            .inspect(|module| trace!("{:x} {}", module.base(), module.name()))
+            .find(|module| {
+                module.name()[..module.name().len().min(IMAGE_FILE_NAME_LENGTH - 1)].to_lowercase()
+                    == self.proc_info.name.to_lowercase()
+            })
+            .ok_or_else(|| Error::ModuleInfo)
+    }
+
     pub fn module_info(&mut self, name: &str) -> Result<Win32ModuleInfo> {
         let module_list = self.module_list()?;
         module_list

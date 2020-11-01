@@ -398,14 +398,15 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
     /// Finds a process by it's name and returns the `Win32ProcessInfo` struct.
     /// If no process with the specified name can be found this function will return an Error.
     pub fn process_info(&mut self, name: &str) -> Result<Win32ProcessInfo> {
+        let name16 = name[..name.len().min(IMAGE_FILE_NAME_LENGTH - 1)].to_lowercase();
+
         let process_info_list = self.process_info_list()?;
         let candidates = process_info_list
             .iter()
             .inspect(|process| trace!("{} {}", process.pid(), process.name()))
             .filter(|process| {
                 // strip process name to IMAGE_FILE_NAME_LENGTH without trailing \0
-                process.name().to_lowercase()
-                    == name[..name.len().min(IMAGE_FILE_NAME_LENGTH - 1)].to_lowercase()
+                process.name().to_lowercase() == name16
             })
             .collect::<Vec<_>>();
 

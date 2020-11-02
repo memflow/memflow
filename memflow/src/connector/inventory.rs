@@ -3,11 +3,13 @@ Connector inventory interface.
 */
 
 use crate::error::{Error, Result};
-use crate::mem::{CloneablePhysicalMemory, PhysicalMemoryBox};
+use crate::mem::{CloneablePhysicalMemory, PhysicalMemoryBox, PhysicalMemory, PhysicalReadData, PhysicalWriteData, PhysicalMemoryMetadata};
 
 use super::ConnectorArgs;
 
+use std::ffi::CString;
 use std::fs::read_dir;
+use std::os::raw::c_char;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -16,12 +18,13 @@ use log::{debug, error, info, warn};
 use libloading::Library;
 
 /// Exported memflow connector version
-pub const MEMFLOW_CONNECTOR_VERSION: i32 = 5;
+pub const MEMFLOW_CONNECTOR_VERSION: i32 = 6;
 
 /// Type of a single connector instance
 pub type ConnectorType = PhysicalMemoryBox;
 
 /// Describes a connector
+#[repr(C)]
 pub struct ConnectorDescriptor {
     /// The connector inventory api version for when the connector was built.
     /// This has to be set to `MEMFLOW_CONNECTOR_VERSION` of memflow.
@@ -35,7 +38,24 @@ pub struct ConnectorDescriptor {
 
     /// The factory function for the connector.
     /// Calling this function will produce new connector instances.
-    pub factory: extern "C" fn(args: &ConnectorArgs) -> Result<ConnectorType>,
+    //pub factory: extern "C" fn(args: &ConnectorArgs) -> Result<ConnectorType>,
+    pub vtable: ConnectorFunctionTable,
+}
+
+#[repr(C)]
+#[derive(Clone)]
+pub struct ConnectorFunctionTable {
+    // TODO: clone function
+
+    pub create: extern "C" fn(args: *const c_char) -> Option<&'static mut Box<dyn PhysicalMemory>>,
+
+    pub phys_read_raw_list: extern "C" fn(phys_mem: Option<&mut Box<dyn PhysicalMemory>>) -> i32,
+    pub phys_write_raw_list: extern "C" fn(phys_mem: Option<&mut Box<dyn PhysicalMemory>>) -> i32,
+    pub metadata: extern "C" fn(phys_mem: Option<&Box<dyn PhysicalMemory>>) -> i32,
+
+    pub clone: extern "C" fn(phys_mem: Option<&Box<dyn PhysicalMemory>>) -> Option<&'static mut Box<dyn PhysicalMemory>>,
+
+    pub drop: extern "C" fn(phys_mem: Option<&mut Box<dyn PhysicalMemory>>),
 }
 
 /// Holds an inventory of available connectors.
@@ -270,11 +290,12 @@ impl ConnectorInventory {
 ///     connector_lib.create(&ConnectorArgs::new())
 /// }.unwrap();
 /// ```
+#[repr(C)]
 #[derive(Clone)]
 pub struct Connector {
     _library: Arc<Library>,
     name: String,
-    factory: extern "C" fn(args: &ConnectorArgs) -> Result<ConnectorType>,
+    vtable: ConnectorFunctionTable,
 }
 
 impl Connector {
@@ -313,7 +334,7 @@ impl Connector {
         Ok(Self {
             _library: Arc::new(library),
             name: desc.name.to_string(),
-            factory: desc.factory,
+            vtable: desc.vtable.clone(),
         })
     }
 
@@ -329,19 +350,19 @@ impl Connector {
     ///
     /// It is adviced to use a proc macro for defining a connector.
     pub unsafe fn create(&self, args: &ConnectorArgs) -> Result<ConnectorInstance> {
-        let connector_res = (self.factory)(args);
-
-        if let Err(err) = connector_res {
-            debug!("{}", err)
-        }
+        let cstr = CString::new(args.to_string())
+            .map_err(|_| Error::Connector("args could not be parsed"))?;
 
         // We do not want to return error with data from the shared library
         // that may get unloaded before it gets displayed
-        let instance = connector_res.map_err(|_| Error::Connector("Failed to create connector"))?;
+        let instance = (self.vtable.create)(cstr.as_ptr())
+            .ok_or_else(|| Error::Connector("conn_create failed"))?;
 
         Ok(ConnectorInstance {
-            _library: self._library.clone(),
             instance,
+            vtable: self.vtable.clone(),
+
+            _library: self._library.clone(),
         })
     }
 }
@@ -350,9 +371,9 @@ impl Connector {
 ///
 /// This structure is returned by `Connector`. It is needed to maintain reference
 /// counts to the loaded connector library.
-#[derive(Clone)]
 pub struct ConnectorInstance {
-    instance: ConnectorType,
+    instance: &'static mut Box<dyn PhysicalMemory>,
+    vtable: ConnectorFunctionTable,
 
     /// Internal library arc.
     ///
@@ -364,6 +385,14 @@ pub struct ConnectorInstance {
     _library: Arc<Library>,
 }
 
+// TODO: implement PhysicalMemory on ConnectorInstance instead of down/upcasting
+// down/upcasting can result in issues when not going through the FFI
+
+// TODO: safety
+unsafe impl Sync for ConnectorInstance {}
+unsafe impl Send for ConnectorInstance {}
+
+/*
 impl std::ops::Deref for ConnectorInstance {
     type Target = dyn CloneablePhysicalMemory;
 
@@ -375,5 +404,44 @@ impl std::ops::Deref for ConnectorInstance {
 impl std::ops::DerefMut for ConnectorInstance {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut *self.instance
+    }
+}
+*/
+
+impl PhysicalMemory for ConnectorInstance {
+    fn phys_read_raw_list(&mut self, data: &mut [PhysicalReadData]) -> Result<()> {
+        (self.vtable.phys_read_raw_list)(Some(self.instance));
+        Ok(())
+    }
+
+    fn phys_write_raw_list(&mut self, data: &[PhysicalWriteData]) -> Result<()> {
+        (self.vtable.phys_write_raw_list)(Some(self.instance));
+        Ok(())
+    }
+
+    fn metadata(&self) -> PhysicalMemoryMetadata {
+        (self.vtable.metadata)(Some(self.instance));
+        PhysicalMemoryMetadata {
+            size: 0,
+            readonly: false,
+        }
+    }
+}
+
+impl Clone for ConnectorInstance {
+    fn clone(&self) -> Self {
+        let instance = (self.vtable.clone)(Some(self.instance)).expect("Unable to clone Connector");
+        Self {
+            instance,
+            vtable: self.vtable.clone(),
+
+            _library: self._library.clone(),
+        }
+    }
+}
+
+impl Drop for ConnectorInstance {
+    fn drop(&mut self) {
+        (self.vtable.drop)(Some(self.instance));
     }
 }

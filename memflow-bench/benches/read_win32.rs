@@ -17,9 +17,7 @@ use rand::{Rng, SeedableRng};
 use rand_xorshift::XorShiftRng as CurRng;
 
 fn create_connector(args: &ConnectorArgs) -> Result<impl PhysicalMemory> {
-    unsafe {
-        memflow::connector::ConnectorInventory::try_new()?.create_connector("qemu_procfs", args)
-    }
+    unsafe { memflow::connector::ConnectorInventory::scan().create_connector("qemu_procfs", args) }
 }
 
 fn initialize_virt_ctx() -> Result<(

@@ -6,7 +6,7 @@ use super::{
 };
 
 use crate::error::{Error, Result};
-use crate::offsets::{Win32ArchOffsets, Win32Offsets};
+use crate::offsets::Win32Offsets;
 
 use log::{info, trace};
 use std::fmt;
@@ -160,20 +160,6 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
 
         let kernel_modules =
             reader.virt_read_addr_arch(self.kernel_info.start_block.arch, loaded_module_list)?;
-
-        // determine the offsets to be used when working with this process
-        let (ldr_data_base_offs, ldr_data_size_offs, ldr_data_name_offs) = {
-            let offsets = Win32ArchOffsets::from(self.kernel_info.start_block.arch);
-            (
-                offsets.ldr_data_base,
-                offsets.ldr_data_size,
-                offsets.ldr_data_name,
-            )
-        };
-
-        trace!("ldr_data_base_offs={:x}", ldr_data_base_offs);
-        trace!("ldr_data_size_offs={:x}", ldr_data_size_offs);
-        trace!("ldr_data_name_offs={:x}", ldr_data_name_offs);
 
         Ok(Win32ProcessInfo {
             address: self.kernel_info.kernel_base,

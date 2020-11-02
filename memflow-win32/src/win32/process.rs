@@ -31,10 +31,7 @@ const MAX_ITER_COUNT: usize = 65536;
 #[cfg_attr(feature = "serde", derive(::serde::Serialize))]
 pub struct Win32ModuleListInfo {
     module_base: Address,
-
-    ldr_data_base_offs: usize,
-    ldr_data_size_offs: usize,
-    ldr_data_name_offs: usize,
+    offsets: Win32ArchOffsets,
 }
 
 impl Win32ModuleListInfo {
@@ -57,25 +54,14 @@ impl Win32ModuleListInfo {
     }
 
     pub fn with_base(module_base: Address, arch: ArchitectureObj) -> Result<Win32ModuleListInfo> {
-        let offsets = Win32ArchOffsets::from(arch);
-
         trace!("module_base={:x}", module_base);
 
-        let (ldr_data_base_offs, ldr_data_size_offs, ldr_data_name_offs) = (
-            offsets.ldr_data_base,
-            offsets.ldr_data_size,
-            offsets.ldr_data_name,
-        );
-
-        trace!("ldr_data_base_offs={:x}", ldr_data_base_offs);
-        trace!("ldr_data_size_offs={:x}", ldr_data_size_offs);
-        trace!("ldr_data_name_offs={:x}", ldr_data_name_offs);
+        let offsets = Win32ArchOffsets::from(arch);
+        trace!("offsets={:?}", offsets);
 
         Ok(Win32ModuleListInfo {
             module_base,
-            ldr_data_base_offs,
-            ldr_data_size_offs,
-            ldr_data_name_offs,
+            offsets,
         })
     }
 
@@ -114,17 +100,20 @@ impl Win32ModuleListInfo {
         mem: &mut V,
         arch: ArchitectureObj,
     ) -> Result<Win32ModuleInfo> {
-        let base = mem.virt_read_addr_arch(arch, entry + self.ldr_data_base_offs)?;
+        let base = mem.virt_read_addr_arch(arch, entry + self.offsets.ldr_data_base)?;
 
         trace!("base={:x}", base);
 
         let size = mem
-            .virt_read_addr_arch(arch, entry + self.ldr_data_size_offs)?
+            .virt_read_addr_arch(arch, entry + self.offsets.ldr_data_size)?
             .as_usize();
 
         trace!("size={:x}", size);
 
-        let name = mem.virt_read_unicode_string(arch, entry + self.ldr_data_name_offs)?;
+        let path = mem.virt_read_unicode_string(arch, entry + self.offsets.ldr_data_full_name)?;
+        trace!("path={}", path);
+
+        let name = mem.virt_read_unicode_string(arch, entry + self.offsets.ldr_data_base_name)?;
         trace!("name={}", name);
 
         Ok(Win32ModuleInfo {
@@ -132,6 +121,7 @@ impl Win32ModuleListInfo {
             parent_eprocess,
             base,
             size,
+            path,
             name,
         })
     }
@@ -379,15 +369,11 @@ impl<T: VirtualMemory> Win32Process<T> {
     }
 
     pub fn main_module_info(&mut self) -> Result<Win32ModuleInfo> {
-        // TODO: compare base addr instead of module names
         let module_list = self.module_list()?;
         module_list
             .into_iter()
             .inspect(|module| trace!("{:x} {}", module.base(), module.name()))
-            .find(|module| {
-                module.name()[..module.name().len().min(IMAGE_FILE_NAME_LENGTH - 1)].to_lowercase()
-                    == self.proc_info.name.to_lowercase()
-            })
+            .find(|module| module.base == self.proc_info.section_base)
             .ok_or_else(|| Error::ModuleInfo)
     }
 

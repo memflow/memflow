@@ -35,11 +35,18 @@ typedef uint32_t PID;
 
 typedef Win32Process_FFIVirtualMemory Win32Process;
 
+typedef struct Win32ArchOffsets {
+    uintptr_t peb_ldr;
+    uintptr_t ldr_list;
+    uintptr_t ldr_data_base;
+    uintptr_t ldr_data_size;
+    uintptr_t ldr_data_full_name;
+    uintptr_t ldr_data_base_name;
+} Win32ArchOffsets;
+
 typedef struct Win32ModuleListInfo {
     Address module_base;
-    uintptr_t ldr_data_base_offs;
-    uintptr_t ldr_data_size_offs;
-    uintptr_t ldr_data_name_offs;
+    Win32ArchOffsets offsets;
 } Win32ModuleListInfo;
 
 #ifdef __cplusplus
@@ -240,6 +247,18 @@ void process_free(Win32Process *process);
  * `out` must be a valid buffer able to contain `max_len` references to `Win32ModuleInfo`.
  */
 uintptr_t process_module_list(Win32Process *process, Win32ModuleInfo **out, uintptr_t max_len);
+
+/**
+ * Retrieve the main module of the process
+ *
+ * This function searches for a module with a base address
+ * matching the section_base address from the ProcessInfo structure.
+ * It then returns a reference to a newly allocated
+ * `Win32ModuleInfo` object, if a module was found (null otherwise).
+ *
+ * The reference later needs to be freed with `module_info_free`
+ */
+Win32ModuleInfo *process_main_module_info(Win32Process *process);
 
 /**
  * Lookup a module

@@ -61,16 +61,22 @@ impl ConnectorInventory {
     /// use memflow::connector::ConnectorInventory;
     ///
     /// let inventory = unsafe {
-    ///     ConnectorInventory::with_path("./")
+    ///     ConnectorInventory::scan_path("./")
     /// }.unwrap();
     /// ```
-    pub unsafe fn with_path<P: AsRef<Path>>(path: P) -> Result<Self> {
+    pub unsafe fn scan_path<P: AsRef<Path>>(path: P) -> Result<Self> {
         let mut dir = PathBuf::default();
         dir.push(path);
 
         let mut ret = Self { connectors: vec![] };
         ret.add_dir(dir)?;
         Ok(ret)
+    }
+
+    #[doc(hidden)]
+    #[deprecated]
+    pub unsafe fn with_path<P: AsRef<Path>>(path: P) -> Result<Self> {
+        Self::scan_path(path)
     }
 
     /// Creates a new inventory of connectors by searching various paths.
@@ -93,10 +99,10 @@ impl ConnectorInventory {
     /// use memflow::connector::ConnectorInventory;
     ///
     /// let inventory = unsafe {
-    ///     ConnectorInventory::try_new()
-    /// }.unwrap();
+    ///     ConnectorInventory::scan()
+    /// };
     /// ```
-    pub unsafe fn try_new() -> Result<Self> {
+    pub unsafe fn scan() -> Self {
         #[cfg(unix)]
         let extra_paths: Vec<&str> = vec![
             "/opt",
@@ -137,7 +143,13 @@ impl ConnectorInventory {
             ret.add_dir(path).ok();
         }
 
-        Ok(ret)
+        ret
+    }
+
+    #[doc(hidden)]
+    #[deprecated]
+    pub unsafe fn try_new() -> Result<Self> {
+        Ok(Self::scan())
     }
 
     /// Adds a library directory to the inventory
@@ -156,12 +168,34 @@ impl ConnectorInventory {
         for entry in read_dir(dir).map_err(|_| Error::IO("unable to read directory"))? {
             let entry = entry.map_err(|_| Error::IO("unable to read directory entry"))?;
             if let Ok(connector) = Connector::try_with(entry.path()) {
-                info!("adding connector: {:?}", entry.path());
-                self.connectors.push(connector);
+                if self
+                    .connectors
+                    .iter()
+                    .find(|c| connector.name == c.name)
+                    .is_none()
+                {
+                    info!("adding connector '{}': {:?}", connector.name, entry.path());
+                    self.connectors.push(connector);
+                } else {
+                    debug!(
+                        "skipping connector '{}' because it was added already: {:?}",
+                        connector.name,
+                        entry.path()
+                    );
+                }
             }
         }
 
         Ok(self)
+    }
+
+    /// Returns the names of all currently available connectors that can be used
+    /// when calling `create_connector` or `create_connector_default`.
+    pub fn available_connectors(&self) -> Vec<String> {
+        self.connectors
+            .iter()
+            .map(|c| c.name.clone())
+            .collect::<Vec<_>>()
     }
 
     /// Tries to create a new connector instance for the connector with the given name.
@@ -185,7 +219,7 @@ impl ConnectorInventory {
     /// use memflow::connector::{ConnectorInventory, ConnectorArgs};
     ///
     /// let inventory = unsafe {
-    ///     ConnectorInventory::with_path("./")
+    ///     ConnectorInventory::scan_path("./")
     /// }.unwrap();
     /// let connector = unsafe {
     ///     inventory.create_connector("coredump", &ConnectorArgs::new())
@@ -243,7 +277,7 @@ impl ConnectorInventory {
     /// use memflow::connector::{ConnectorInventory, ConnectorArgs};
     ///
     /// let inventory = unsafe {
-    ///     ConnectorInventory::with_path("./")
+    ///     ConnectorInventory::scan_path("./")
     /// }.unwrap();
     /// let connector = unsafe {
     ///     inventory.create_connector_default("coredump")

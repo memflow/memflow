@@ -85,27 +85,27 @@ typedef uint8_t PageType;
 /**
  * The page explicitly has no flags.
  */
-#define PageType_NONE (uint8_t)0
+#define PageType_NONE 0
 /**
  * The page type is not known.
  */
-#define PageType_UNKNOWN (uint8_t)1
+#define PageType_UNKNOWN 1
 /**
  * The page contains page table entries.
  */
-#define PageType_PAGE_TABLE (uint8_t)2
+#define PageType_PAGE_TABLE 2
 /**
  * The page is a writeable page.
  */
-#define PageType_WRITEABLE (uint8_t)4
+#define PageType_WRITEABLE 4
 /**
  * The page is read only.
  */
-#define PageType_READ_ONLY (uint8_t)8
+#define PageType_READ_ONLY 8
 /**
  * The page is not executable.
  */
-#define PageType_NOEXEC (uint8_t)16
+#define PageType_NOEXEC 16
 
 /**
  * This type represents a wrapper over a [address](address/index.html)

@@ -257,6 +257,10 @@ uintptr_t process_module_list(Win32Process *process, Win32ModuleInfo **out, uint
  * `Win32ModuleInfo` object, if a module was found (null otherwise).
  *
  * The reference later needs to be freed with `module_info_free`
+ *
+ * # Safety
+ *
+ * `process` must be a valid Win32Process pointer.
  */
 Win32ModuleInfo *process_main_module_info(Win32Process *process);
 
@@ -270,6 +274,7 @@ Win32ModuleInfo *process_main_module_info(Win32Process *process);
  *
  * # Safety
  *
+ * `process` must be a valid Win32Process pointer.
  * `name` must be a valid null terminated string.
  */
 Win32ModuleInfo *process_module_info(Win32Process *process, const char *name);

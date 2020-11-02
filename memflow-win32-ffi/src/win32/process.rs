@@ -95,6 +95,10 @@ pub unsafe extern "C" fn process_module_list(
 /// `Win32ModuleInfo` object, if a module was found (null otherwise).
 ///
 /// The reference later needs to be freed with `module_info_free`
+///
+/// # Safety
+///
+/// `process` must be a valid Win32Process pointer.
 #[no_mangle]
 pub unsafe extern "C" fn process_main_module_info(
     process: &mut Win32Process,
@@ -115,6 +119,7 @@ pub unsafe extern "C" fn process_main_module_info(
 ///
 /// # Safety
 ///
+/// `process` must be a valid Win32Process pointer.
 /// `name` must be a valid null terminated string.
 #[no_mangle]
 pub unsafe extern "C" fn process_module_info(

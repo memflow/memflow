@@ -3,13 +3,13 @@ pub(crate) mod pehelper;
 mod x64;
 mod x86;
 
-use std::prelude::v1::*;
-
 use super::{StartBlock, Win32GUID, Win32Version};
 use crate::error::{Error, PartialResultExt, Result};
 
-use log::{info, warn};
 use std::convert::TryInto;
+use std::prelude::v1::*;
+
+use log::{info, warn};
 
 use memflow::mem::VirtualMemory;
 use memflow::types::Address;

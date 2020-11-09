@@ -1,13 +1,48 @@
+use super::{ArchMMUSpec, MMUTranslationBase};
 use crate::iter::SplitAtIndex;
 use crate::types::Address;
-use bumpalo::{collections::Vec as BumpVec, Bump};
+use log::trace;
 use std::cmp::Ordering;
 
-pub type TranslateVec<'a, T> = BumpVec<'a, TranslationChunk<'a, T>>;
+pub type TranslateVec = Vec<TranslationChunk<Address>>;
+pub type TranslateDataVec<T> = Vec<TranslateData<T>>;
 
+#[derive(Debug)]
 pub struct TranslateData<T> {
     pub addr: Address,
     pub buf: T,
+}
+
+/*impl<T> TranslateData<T> {
+    pub fn new((addr, buf): (Address, T)) -> Self {
+        Self { addr, buf }
+    }
+}*/
+
+impl<T: SplitAtIndex> TranslateData<T> {
+    pub fn split_at_address(&mut self, addr: Address) -> (Self, Option<Self>) {
+        if addr < self.addr {
+            self.split_at(0)
+        } else {
+            self.split_at(addr - self.addr)
+        }
+    }
+
+    /*pub fn split_inclusive_at_address(&mut self, addr: Address) -> (Self, Option<Self>) {
+        if addr < self.addr {
+            self.split_at(0)
+        } else {
+            self.split_inclusive_at(addr - self.addr)
+        }
+    }*/
+
+    pub fn split_at_address_rev(&mut self, addr: Address) -> (Option<Self>, Self) {
+        if addr > self.addr + self.length() {
+            self.split_at_rev(0)
+        } else {
+            self.split_at_rev((self.addr + self.length()) - addr)
+        }
+    }
 }
 
 impl<T: SplitAtIndex> Ord for TranslateData<T> {
@@ -76,170 +111,187 @@ impl<T: SplitAtIndex> SplitAtIndex for TranslateData<T> {
 }
 
 /// Abstracts away a list of TranslateData in a splittable manner
-pub struct TranslationChunk<'a, T> {
-    pub pt_addr: Address,
-    pub vec: BumpVec<'a, TranslateData<T>>,
+#[derive(Debug)]
+pub struct TranslationChunk<T> {
+    pub pt_addr: T,
+    pub addr_count: usize,
     min_addr: Address,
     max_addr: Address,
+    pub step: usize,
 }
 
-impl<'a, T> TranslationChunk<'a, T> {
-    pub fn min_addr(&self) -> Address {
-        self.min_addr
+impl<T> TranslationChunk<T> {
+    pub fn new(pt_addr: T) -> Self {
+        let (min, max) = (!0u64, 0u64);
+        Self::with_minmax(pt_addr, min.into(), max.into())
     }
 
-    pub fn max_addr(&self) -> Address {
-        self.max_addr
-    }
-}
-
-impl<'a, T: SplitAtIndex> TranslationChunk<'a, T> {
-    pub fn new(pt_addr: Address, vec: BumpVec<'a, TranslateData<T>>) -> Self {
-        let (min, max) = vec.iter().fold((!0u64, 0u64), |(cmin, cmax), elem| {
-            (
-                std::cmp::min(cmin, elem.addr.as_u64()),
-                std::cmp::max(cmax, elem.addr.as_u64() + elem.length() as u64),
-            )
-        });
-
-        Self::with_minmax(pt_addr, vec, min.into(), max.into()) //std::cmp::max(min, max).into())
-    }
-
-    pub fn with_minmax(
-        pt_addr: Address,
-        vec: BumpVec<'a, TranslateData<T>>,
-        min_addr: Address,
-        max_addr: Address,
-    ) -> Self {
+    pub fn with_minmax(pt_addr: T, min_addr: Address, max_addr: Address) -> Self {
         Self {
             pt_addr,
-            vec,
+            addr_count: 0,
+            step: 0,
             min_addr,
             max_addr,
         }
     }
+}
 
-    pub fn recalc_minmax(&mut self) {
-        let (min, max) = self.vec.iter().fold((!0u64, 0u64), |(cmin, cmax), elem| {
-            (
-                std::cmp::min(cmin, elem.addr.as_u64()),
-                std::cmp::max(cmax, elem.addr.as_u64() + elem.length() as u64),
-            )
-        });
-
-        self.min_addr = min.into();
-        self.max_addr = max.into();
+impl<T: MMUTranslationBase> TranslationChunk<T> {
+    /// Pushes data to stack updating min/max bounds
+    pub fn push_data<U: SplitAtIndex /*, O: Extend<TranslateData<U>>*/>(
+        &mut self,
+        data: TranslateData<U>,
+        stack: &mut TranslateDataVec<U>,
+    ) {
+        self.min_addr = std::cmp::min(self.min_addr, data.addr);
+        self.max_addr = std::cmp::max(self.max_addr, data.addr + data.length());
+        self.addr_count += 1;
+        stack.push(data);
     }
 
-    pub fn consume_mut(&mut self, arena: &'a Bump) -> Self {
-        let pt_addr = std::mem::replace(&mut self.pt_addr, Address::null());
-        let vec = std::mem::replace(&mut self.vec, BumpVec::new_in(arena));
-        let min_addr = std::mem::replace(&mut self.min_addr, Address::invalid());
-        let max_addr = std::mem::replace(&mut self.max_addr, Address::null());
-
-        Self {
-            pt_addr,
-            vec,
-            min_addr,
-            max_addr,
-        }
-    }
-
-    pub fn merge_with(&mut self, mut other: Self) {
-        //if other has a vec with larger capacity, then first swap them
-        if self.vec.capacity() < other.vec.capacity() {
-            std::mem::swap(self, &mut other);
-        }
-
-        self.vec.extend(other.vec.into_iter());
-
-        self.min_addr = std::cmp::min(self.min_addr, other.min_addr);
-        self.max_addr = std::cmp::max(self.max_addr, other.max_addr);
-    }
-
-    pub fn split_at_inclusive(mut self, idx: usize, arena: &'a Bump) -> (Self, Option<Self>) {
-        let len = self.max_addr - self.min_addr;
-
-        if len <= idx {
-            (self, None)
+    /// Pops the address from stack without modifying bounds
+    pub fn pop_data<U: SplitAtIndex>(
+        &mut self,
+        stack: &mut TranslateDataVec<U>,
+    ) -> Option<TranslateData<U>> {
+        if self.addr_count > 0 {
+            self.addr_count -= 1;
+            stack.pop()
         } else {
-            let mut vec_right = BumpVec::new_in(arena);
-            let min_addr = self.min_addr;
-            let end_addr = min_addr + std::cmp::min(len - 1, idx);
-            let pt_addr = self.pt_addr;
+            None
+        }
+    }
 
-            let mut left_min = Address::invalid();
-            let mut left_max = Address::null();
+    pub fn verify_bounds<'a, U: SplitAtIndex + 'a, I: Iterator<Item = &'a TranslateData<U>>>(
+        &self,
+        iter: &mut I,
+    ) -> bool {
+        for e in iter.take(self.addr_count) {
+            if e.addr < self.min_addr || e.addr + e.length() > self.max_addr {
+                trace!(
+                    "Bound verification failed! {:#?} {:x}+{:x}",
+                    &self,
+                    e.addr,
+                    e.length()
+                );
+                return false;
+            }
+        }
+        true
+    }
 
-            let mut right_min = Address::invalid();
-            let mut right_max = Address::null();
+    // TODO: This needs a drop impl that consumes the iterator!!!
+    pub fn into_addr_iter<'a, U: 'a + SplitAtIndex>(
+        self,
+        addr_stack: &'a mut TranslateDataVec<U>,
+    ) -> impl 'a + Iterator<Item = TranslateData<U>> {
+        (0..self.addr_count).map(move |_| addr_stack.pop().unwrap())
+    }
 
-            for i in (0..self.vec.len()).rev() {
-                let data = self.vec.get_mut(i).unwrap();
-                if data.addr <= end_addr {
-                    let idx = end_addr - data.addr;
-                    //Need to remove empty ones
-                    let (left, right) = data.split_inclusive_at(idx);
-                    if left.length() > 0 {
-                        left_min = std::cmp::min(left_min, left.addr);
-                        left_max = std::cmp::max(left_max, left.addr + left.length());
-                        *data = left;
-                    } else {
-                        self.vec.swap_remove(i);
-                    }
-                    if let Some(right) = right {
-                        right_min = std::cmp::min(right_min, right.addr);
-                        right_max = std::cmp::max(right_max, right.addr + right.length());
-                        vec_right.push(right);
-                    }
-                } else {
-                    right_min = std::cmp::min(right_min, data.addr);
-                    right_max = std::cmp::max(right_max, data.addr + data.length());
-                    vec_right.push(self.vec.swap_remove(i));
+    pub fn split_chunk<'a, U: 'a + SplitAtIndex /*, O: Extend<TranslationChunk<Address>>*/>(
+        mut self,
+        spec: &ArchMMUSpec,
+        (mut addr_stack, mut tmp_addr_stack): (
+            &'a mut TranslateDataVec<U>,
+            &'a mut TranslateDataVec<U>,
+        ),
+        (chunks_out, addrs_out): (&mut TranslateVec, &mut TranslateDataVec<U>),
+    ) {
+        let align_as = spec.page_size_step_unchecked(self.step);
+        let step_size = spec.page_size_step_unchecked(self.step + 1);
+
+        debug_assert!(self.verify_bounds(&mut addr_stack.iter().rev()), "SPL 1");
+
+        //TODO: mask out the addresses to limit them within address space
+        //this is in particular for the first step where addresses are split between positive and
+        //negative sides
+        let upper: u64 = (self.max_addr - 1).as_page_aligned(step_size).as_u64();
+        let lower: u64 = self.min_addr.as_page_aligned(step_size).as_u64();
+
+        debug_assert!(self.step == 0 || (upper - lower) <= align_as as _);
+
+        // Walk in reverse so that lowest addresses always end up
+        // first in the stack. This preserves translation order
+        for (cnt, addr) in (lower..=upper).rev().step_by(step_size).enumerate() {
+            debug_assert!(self.step == 0 || cnt < 0x200);
+
+            let addr = Address::from(addr);
+            let index = (addr - addr.as_page_aligned(align_as)) / step_size;
+            let (pt_addr, _) = self.pt_addr.get_pt_by_index(index);
+            let pt_addr = spec.vtop_step(pt_addr, addr, self.step);
+
+            let mut new_chunk = TranslationChunk::new(pt_addr);
+
+            for _ in 0..self.addr_count {
+                // TODO: We need to remove the None check here
+                let mut data = self.pop_data(addr_stack).unwrap();
+
+                debug_assert!(
+                    data.addr >= self.min_addr,
+                    "__ {} {:x}+{:x} | {:#?}",
+                    cnt,
+                    data.addr,
+                    data.length(),
+                    &self
+                );
+                debug_assert!(
+                    data.addr + data.length() <= self.max_addr,
+                    "{} {:x}+{:x} | {:#?}",
+                    cnt,
+                    data.addr,
+                    data.length(),
+                    &self
+                );
+
+                /*if data.addr > addr + (step_size - 1) {
+                    self.push_data(data, tmp_addr_stack);
+                    continue;
                 }
+
+                // Must be inclusive, otherwise we will get an overflow
+                let (left, right) = data.split_inclusive_at_address(addr + (step_size - 1));
+
+                debug_assert!(left.length() <= step_size);
+
+                new_chunk.push_data(left, addrs_out);
+
+                if let Some(data) = right {
+                    self.push_data(data, tmp_addr_stack);
+                }*/
+
+                //trace!("{:x}-{:x} | {:x}", data.addr + data.length(), data.length(), addr + (step_size - 1));
+
+                if data.addr + data.length() <= addr {
+                    self.push_data(data, tmp_addr_stack);
+                    continue;
+                }
+
+                let (left, right) = data.split_at_address(addr);
+
+                let data = right.unwrap();
+                {
+                    debug_assert!(data.length() <= step_size);
+                    new_chunk.push_data(data, addrs_out);
+                    //debug_assert!(new_chunk.verify_bounds(&mut addrs_out.iter().rev()), "PSP2");
+                }
+
+                if left.length() > 0 {
+                    self.push_data(left, tmp_addr_stack);
+                }
+
+                //debug_assert!(self.verify_bounds(&mut tmp_addr_stack.iter().rev()), "SP2");
             }
 
-            self.min_addr = left_min;
-            self.max_addr = left_max;
-
-            if vec_right.is_empty() {
-                (self, None)
-            } else {
-                (
-                    self,
-                    Some(TranslationChunk::with_minmax(
-                        pt_addr, vec_right, right_min, right_max,
-                    )),
-                )
+            if new_chunk.addr_count > 0 {
+                new_chunk.step = self.step;
+                //debug_assert!(new_chunk.verify_bounds(&mut addrs_out.iter().rev()), "PSP");
+                chunks_out.push(new_chunk);
             }
+
+            std::mem::swap(&mut addr_stack, &mut tmp_addr_stack);
         }
-    }
-}
 
-impl<'a, T: SplitAtIndex> SplitAtIndex for (&'a Bump, TranslationChunk<'a, T>) {
-    fn split_at(&mut self, idx: usize) -> (Self, Option<Self>) {
-        if idx == 0 {
-            let chunk = self.1.consume_mut(self.0);
-            ((self.0, self.1.consume_mut(self.0)), Some((self.0, chunk)))
-        } else {
-            self.split_inclusive_at(idx - 1)
-        }
-    }
-
-    fn split_inclusive_at(&mut self, idx: usize) -> (Self, Option<Self>) {
-        let chunk = self.1.consume_mut(self.0);
-        let (left, right) = chunk.split_at_inclusive(idx, self.0);
-        ((self.0, left), right.map(|x| (self.0, x)))
-    }
-
-    fn unsplit(&mut self, left: Self, right: Option<Self>) {
-        self.1.merge_with(left.1);
-        if let Some(chunk) = right {
-            self.1.merge_with(chunk.1);
-        }
-    }
-
-    fn length(&self) -> usize {
-        self.1.max_addr() - self.1.min_addr()
+        debug_assert!(self.addr_count == 0);
     }
 }

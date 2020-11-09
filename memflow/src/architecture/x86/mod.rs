@@ -3,7 +3,10 @@ pub mod x32_pae;
 pub mod x64;
 
 use super::{
-    mmu_spec::{translate_data::TranslateVec, ArchMMUSpec, MMUTranslationBase},
+    mmu_spec::{
+        translate_data::{TranslateDataVec, TranslationChunk},
+        ArchMMUSpec, MMUTranslationBase,
+    },
     Architecture, ArchitectureObj, Endianess, ScopedVirtualTranslate,
 };
 
@@ -89,16 +92,16 @@ impl ScopedVirtualTranslate for X86ScopedVirtualTranslate {
 }
 
 #[repr(transparent)]
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct X86PageTableBase(Address);
 
 impl MMUTranslationBase for X86PageTableBase {
-    fn get_initial_pt(&self, _: Address) -> Address {
+    fn get_pt_by_virt_addr(&self, _: Address) -> Address {
         self.0
     }
 
-    fn get_pt_by_index(&self, _: usize) -> Address {
-        self.0
+    fn get_pt_by_index(&self, idx: usize) -> (Address, usize) {
+        (self.0, idx)
     }
 
     fn pt_count(&self) -> usize {
@@ -109,13 +112,13 @@ impl MMUTranslationBase for X86PageTableBase {
         &self,
         spec: &ArchMMUSpec,
         addr: (Address, B),
-        data_to_translate: &mut TranslateVec<B>,
+        work_group: (&mut TranslationChunk<Self>, &mut TranslateDataVec<B>),
         out_fail: &mut O,
     ) where
         B: SplitAtIndex,
         O: Extend<(Error, Address, B)>,
     {
-        spec.virt_addr_filter(addr, &mut data_to_translate[0].vec, out_fail);
+        spec.virt_addr_filter(addr, work_group, out_fail);
     }
 }
 

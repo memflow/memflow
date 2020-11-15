@@ -99,21 +99,21 @@ impl Keyboard {
                 }
             }
         } else {
-            // 48 8B 05 ? ? ? ? 48 89 81 ? ? 00 00 48 8B 8F + 0x3
+            // 48 8B 05 ? ? ? ? 48 89 81 ? ? 00 00 48 8B 8F
             let re = Regex::new("(?-u)\\x48\\x8B\\x05(?s:.)(?s:.)(?s:.)(?s:.)\\x48\\x89\\x81(?s:.)(?s:.)\\x00\\x00\\x48\\x8B\\x8F")
                 .map_err(|_| Error::Other("malformed gafAsyncKeyState signature"))?;
             let buf_offs = re
                 .find(&module_buf[..])
                 .ok_or_else(|| Error::Other("unable to find gafAsyncKeyState signature"))?
                 .start()
-                + 0x3;
+                + 3;
 
             // compute rip relative addr
             let export_offs = buf_offs as u32
                 + u32::from_le_bytes(module_buf[buf_offs..buf_offs + 4].try_into().unwrap())
-                + 0x4;
+                + 4;
             debug!("gafAsyncKeyState export found at: {:x}", export_offs);
-            Address::from(win32kbase_module_info.base() + export_offs as usize)
+            win32kbase_module_info.base() + export_offs as usize
         };
 
         Ok(Self {
@@ -182,11 +182,10 @@ macro_rules! is_key_down {
 
 impl KeyboardState {
     /// Returns true wether the given key was pressed.
-    /// This function accepts a valid microsoft virtual keycode.
+    /// This function accepts a valid windows virtual keycode.
+    /// In case of supplying a invalid key this function will just return false cleanly.
     ///
     /// A list of all Keycodes can be found on the [msdn](https://docs.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes).
-    ///
-    /// In case of supplying a invalid key this function will just return false cleanly.
     pub fn is_down(&self, vk: i32) -> bool {
         if vk < 0 || vk > 256 {
             false

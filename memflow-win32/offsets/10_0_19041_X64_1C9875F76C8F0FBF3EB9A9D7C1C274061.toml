@@ -20,3 +20,4 @@ kthread_teb = 240
 ethread_list_entry = 1256
 teb_peb = 96
 teb_peb_x86 = 48
+eproc_vad_root = 0

@@ -116,13 +116,15 @@ impl Win32Offsets {
             .map_err(|_| Error::PDB("_LIST_ENTRY not found"))?;
         let kproc = PdbStruct::with(pdb_slice, "_KPROCESS")
             .map_err(|_| Error::PDB("_KPROCESS not found"))?;
-        let eproc = PdbStruct::with(pdb_slice, "_EPROCESS")
+            let eproc = PdbStruct::with(pdb_slice, "_EPROCESS")
             .map_err(|_| Error::PDB("_EPROCESS not found"))?;
         let ethread =
             PdbStruct::with(pdb_slice, "_ETHREAD").map_err(|_| Error::PDB("_ETHREAD not found"))?;
         let kthread =
             PdbStruct::with(pdb_slice, "_KTHREAD").map_err(|_| Error::PDB("_KTHREAD not found"))?;
-        let teb = PdbStruct::with(pdb_slice, "_TEB").map_err(|_| Error::PDB("_TEB not found"))?;
+            let teb = PdbStruct::with(pdb_slice, "_TEB").map_err(|_| Error::PDB("_TEB not found"))?;
+            let balanced_node = PdbStruct::with(pdb_slice, "_RTL_BALANCED_NODE").map_err(|_| Error::PDB("_RTL_BALANCED_NODE not found"))?;
+            let address_node = PdbStruct::with(pdb_slice, "_MMADDRESS_NODE").map_err(|_| Error::PDB("_MMADDRESS_NODE not found"))?;
 
         let list_blink = list
             .find_field("Blink")
@@ -162,6 +164,33 @@ impl Win32Offsets {
             .find_field("ThreadListHead")
             .ok_or_else(|| Error::PDB("_EPROCESS::ThreadListHead not found"))?
             .offset as _;
+            let eproc_vad_root = eproc
+            .find_field("VadRoot") // MM_AVL_TABLE *PhysicalVadRoot / MM_AVL_TABLE VadRoot / RTL_AVL_TREE VadRoot
+            .ok_or_else(|| Error::PDB("_EPROCESS::VadRoot not found"))?
+            .offset as _;
+            let eproc_vad_root_type = eproc
+            .find_field("VadRoot") // MM_AVL_TABLE *PhysicalVadRoot / MM_AVL_TABLE VadRoot / RTL_AVL_TREE VadRoot
+            .ok_or_else(|| Error::PDB("_EPROCESS::VadRoot not found"))?
+            .type_name.clone();
+            println!("type_name: {}", eproc_vad_root_type);
+            println!("type_name: {}", eproc_vad_root_type);
+            println!("type_name: {}", eproc_vad_root_type);
+            println!("type_name: {}", eproc_vad_root_type);
+
+            let left = address_node.find_field("LeftChild").unwrap().offset;
+            let right = address_node.find_field("RightChild").unwrap().offset;
+            println!("left: {}", left);
+            println!("right: {}", right);
+
+            /*
+            let test = eproc
+            .find_field("VadRoot") // MM_AVL_TABLE *PhysicalVadRoot / MM_AVL_TABLE VadRoot / RTL_AVL_TREE VadRoot
+            .ok_or_else(|| Error::PDB("_EPROCESS::VadRoot not found"))?
+            .offset as _;
+            println!("test: {}", test);
+            println!("test: {}", test);
+            println!("test: {}", test);
+            */
 
         // windows 10 uses an uppercase W whereas older windows versions (windows 7) uses a lowercase w
         let eproc_wow64 = match eproc
@@ -210,6 +239,7 @@ impl Win32Offsets {
                 eproc_exit_status,
                 eproc_thread_list,
                 eproc_wow64,
+                eproc_vad_root,
 
                 kthread_teb,
                 ethread_list_entry,

@@ -180,6 +180,8 @@ pub struct Win32OffsetTable {
     pub eproc_thread_list: u32,
     /// Since version 5.0
     pub eproc_wow64: u32,
+    /// Since version xxx
+    pub eproc_vad_root: u32,
 
     /// Since version 6.2
     pub kthread_teb: u32,

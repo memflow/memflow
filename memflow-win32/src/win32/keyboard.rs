@@ -83,42 +83,12 @@ impl Keyboard {
         debug!("fetched {:x} bytes from win32kbase.sys", module_buf.len());
 
         // TODO: lazy
-        let export_addr = if let Ok(pe) = PeView::from_bytes(&module_buf).map_err(Error::from) {
-            match pe
-                .get_export_by_name("gafAsyncKeyState")
-                .map_err(Error::from)?
-            {
-                Export::Symbol(s) => {
-                    debug!("gafAsyncKeyState export found at: {:x}", *s);
-                    win32kbase_module_info.base() + *s as usize
-                }
-                Export::Forward(_) => {
-                    return Err(Error::Other(
-                        "export gafAsyncKeyState found but it is forwarded",
-                    ))
-                }
-            }
-        } else {
-            // 48 8B 05 ? ? ? ? 48 89 81 ? ? 00 00 48 8B 8F + 0x3
-            let re = Regex::new("(?-u)\\x48\\x8B\\x05(?s:.)(?s:.)(?s:.)(?s:.)\\x48\\x89\\x81(?s:.)(?s:.)\\x00\\x00\\x48\\x8B\\x8F")
-                .map_err(|_| Error::Other("malformed gafAsyncKeyState signature"))?;
-            let buf_offs = re
-                .find(&module_buf[..])
-                .ok_or_else(|| Error::Other("unable to find gafAsyncKeyState signature"))?
-                .start()
-                + 0x3;
-
-            // compute rip relative addr
-            let export_offs = buf_offs as u32
-                + u32::from_le_bytes(module_buf[buf_offs..buf_offs + 4].try_into().unwrap())
-                + 0x4;
-            debug!("gafAsyncKeyState export found at: {:x}", export_offs);
-            Address::from(win32kbase_module_info.base() + export_offs as usize)
-        };
+        let export_addr =
+            Self::find_gaf_pe(&module_buf).or_else(|_| Self::find_gaf_sig(&module_buf))?;
 
         Ok(Self {
             user_process_info,
-            key_state_addr: export_addr,
+            key_state_addr: win32kbase_module_info.base() + export_addr,
         })
     }
 
@@ -150,6 +120,41 @@ impl Keyboard {
         process: &mut Win32Process<T>,
     ) -> Result<KeyboardState> {
         self.state(&mut process.virt_mem)
+    }
+
+    fn find_gaf_pe(module_buf: &[u8]) -> Result<usize> {
+        let pe = PeView::from_bytes(module_buf).map_err(Error::from)?;
+
+        match pe
+            .get_export_by_name("gafAsyncKeyState")
+            .map_err(Error::from)?
+        {
+            Export::Symbol(s) => {
+                debug!("gafAsyncKeyState export found at: {:x}", *s);
+                Ok(*s as usize)
+            }
+            Export::Forward(_) => Err(Error::Other(
+                "export gafAsyncKeyState found but it is forwarded",
+            )),
+        }
+    }
+
+    fn find_gaf_sig(module_buf: &[u8]) -> Result<usize> {
+        // 48 8B 05 ? ? ? ? 48 89 81 ? ? 00 00 48 8B 8F + 0x3
+        let re = Regex::new("(?-u)\\x48\\x8B\\x05(?s:.)(?s:.)(?s:.)(?s:.)\\x48\\x89\\x81(?s:.)(?s:.)\\x00\\x00\\x48\\x8B\\x8F")
+                    .map_err(|_| Error::Other("malformed gafAsyncKeyState signature"))?;
+        let buf_offs = re
+            .find(&module_buf[..])
+            .ok_or_else(|| Error::Other("unable to find gafAsyncKeyState signature"))?
+            .start()
+            + 0x3;
+
+        // compute rip relative addr
+        let export_offs = buf_offs as u32
+            + u32::from_le_bytes(module_buf[buf_offs..buf_offs + 4].try_into().unwrap())
+            + 0x4;
+        debug!("gafAsyncKeyState export found at: {:x}", export_offs);
+        Ok(export_offs as usize)
     }
 }
 

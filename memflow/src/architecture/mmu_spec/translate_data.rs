@@ -4,8 +4,10 @@ use crate::types::Address;
 use log::trace;
 use std::cmp::Ordering;
 
-pub type TranslateVec = Vec<TranslationChunk<Address>>;
-pub type TranslateDataVec<T> = Vec<TranslateData<T>>;
+use super::MVec;
+
+pub type TranslateVec<'a> = MVec<'a, TranslationChunk<Address>>;
+pub type TranslateDataVec<'a, T> = MVec<'a, TranslateData<T>>;
 
 #[derive(Debug)]
 pub struct TranslateData<T> {
@@ -182,22 +184,35 @@ impl<T: MMUTranslationBase> TranslationChunk<T> {
     }
 
     // TODO: This needs a drop impl that consumes the iterator!!!
-    pub fn into_addr_iter<'a, U: 'a + SplitAtIndex>(
+    /*pub fn into_addr_iter<U: SplitAtIndex>(
         self,
-        addr_stack: &'a mut TranslateDataVec<U>,
-    ) -> impl 'a + Iterator<Item = TranslateData<U>> {
-        (0..self.addr_count).map(move |_| addr_stack.pop().unwrap())
+        addr_stack: &mut TranslateDataVec<U>,
+    ) -> impl Iterator<Item = TranslateData<U>> {
+        (0..self.addr_count).map(|_| addr_stack.pop().unwrap())
+    }*/
+
+    pub fn next_max_addr_count(&self, spec: &ArchMMUSpec) -> usize {
+        let step_size = spec.page_size_step_unchecked(self.step + 1);
+
+        let add = if (self.max_addr - self.min_addr) % step_size != 0 {
+            1
+        } else {
+            0
+        };
+
+        self.addr_count * ((self.max_addr - self.min_addr) / step_size + add)
     }
 
-    pub fn split_chunk<'a, U: 'a + SplitAtIndex /*, O: Extend<TranslationChunk<Address>>*/>(
+    pub fn split_chunk<'a, U: SplitAtIndex /*, O: Extend<TranslationChunk<Address>>*/>(
         mut self,
         spec: &ArchMMUSpec,
-        (mut addr_stack, mut tmp_addr_stack): (
-            &'a mut TranslateDataVec<U>,
-            &'a mut TranslateDataVec<U>,
-        ),
+        (addr_stack, tmp_addr_stack): (&mut TranslateDataVec<U>, &mut TranslateDataVec<U>),
         (chunks_out, addrs_out): (&mut TranslateVec, &mut TranslateDataVec<U>),
     ) {
+        let mut addr_stack: &mut TranslateDataVec<U> = unsafe { std::mem::transmute(addr_stack) };
+        let mut tmp_addr_stack: &mut TranslateDataVec<U> =
+            unsafe { std::mem::transmute(tmp_addr_stack) };
+
         let align_as = spec.page_size_step_unchecked(self.step);
         let step_size = spec.page_size_step_unchecked(self.step + 1);
 
@@ -289,7 +304,10 @@ impl<T: MMUTranslationBase> TranslationChunk<T> {
                 chunks_out.push(new_chunk);
             }
 
-            std::mem::swap(&mut addr_stack, &mut tmp_addr_stack);
+            let t_addr_stack = addr_stack;
+            addr_stack = tmp_addr_stack;
+            tmp_addr_stack = t_addr_stack;
+            //std::mem::swap(&mut addr_stack, &mut tmp_addr_stack);
         }
 
         debug_assert!(self.addr_count == 0);

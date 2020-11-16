@@ -30,6 +30,7 @@ memmap = { version = "0.7", optional = true }
 serde = { version = "1.0", optional = true, default-features = false, features = ["derive", "alloc"] }
 dirs = { version = "3.0", optional = true }
 hashbrown = "0.8"
+fixed-slice-vec = "0.7.1"
 
 [dev-dependencies]
 x86_64 = { version = "0.12", default-features = false }

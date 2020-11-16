@@ -6,6 +6,8 @@ use std::cmp::Ordering;
 
 use super::MVec;
 
+use std::time::{Duration, Instant};
+
 pub type TranslateVec<'a> = MVec<'a, TranslationChunk<Address>>;
 pub type TranslateDataVec<'a, T> = MVec<'a, TranslateData<T>>;
 
@@ -294,7 +296,6 @@ impl<T: MMUTranslationBase> TranslationChunk<T> {
                 if left.length() > 0 {
                     self.push_data(left, tmp_addr_stack);
                 }
-
                 //debug_assert!(self.verify_bounds(&mut tmp_addr_stack.iter().rev()), "SP2");
             }
 

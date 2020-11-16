@@ -1,14 +1,14 @@
 use super::{
-    super::{ArchMMUSpec, ArchitectureObj, Endianess, ScopedVirtualTranslate},
+    super::{ArchMMUDef, ArchMMUSpec, ArchitectureObj, Endianess, ScopedVirtualTranslate},
     X86Architecture, X86ScopedVirtualTranslate,
 };
 
 use crate::types::Address;
 
-pub(super) const ARCH_SPEC: X86Architecture = X86Architecture {
+pub(super) static ARCH_SPEC: X86Architecture = X86Architecture {
     bits: 32,
     endianess: Endianess::LittleEndian,
-    mmu: ArchMMUSpec {
+    mmu: ArchMMUDef {
         virtual_address_splits: &[2, 9, 9, 12],
         valid_final_page_steps: &[2, 3],
         address_space_bits: 36,
@@ -18,7 +18,8 @@ pub(super) const ARCH_SPEC: X86Architecture = X86Architecture {
         writeable_bit: 1,
         nx_bit: 63,
         large_page_bit: 7,
-    },
+    }
+    .into_spec(),
 };
 
 pub static ARCH: ArchitectureObj = &ARCH_SPEC;
@@ -33,8 +34,8 @@ mod tests {
     use crate::architecture::mmu_spec::ArchMMUSpec;
     use crate::types::{size, Address};
 
-    fn get_mmu_spec() -> ArchMMUSpec {
-        super::ARCH_SPEC.mmu
+    fn get_mmu_spec() -> &'static ArchMMUSpec {
+        &super::ARCH_SPEC.mmu
     }
 
     #[test]

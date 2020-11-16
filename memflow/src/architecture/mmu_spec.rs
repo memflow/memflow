@@ -23,7 +23,7 @@ macro_rules! vtop_trace {
     ( $( $x:expr ),* ) => {};
 }
 
-/// The `ArchMMUSpec` structure defines how a real memory management unit should behave when
+/// The `ArchMMUDef` structure defines how a real memory management unit should behave when
 /// translating virtual memory addresses to physical ones.
 ///
 /// The core logic of virtual to physical memory translation is practically the same, but different
@@ -41,7 +41,7 @@ macro_rules! vtop_trace {
 /// is also the same for the x86 (non-PAE) architecture that has different PTE and pointer sizes.
 /// All that differentiates the translation process is the data inside this structure.
 #[derive(Debug)]
-pub struct ArchMMUSpec {
+pub struct ArchMMUDef {
     /// defines the way virtual addresses gets split (the last element
     /// being the final physical page offset, and thus treated a bit differently)
     pub virtual_address_splits: &'static [u8],
@@ -101,7 +101,6 @@ pub trait MMUTranslationBase: Clone + Copy + core::fmt::Debug {
 
         for (_, data) in (0..working_addr_count).zip(addrs) {
             self.virt_addr_filter(spec, data, (&mut init_chunk, waiting_addrs), out_fail);
-            // if (end - start).split_count() >= working_addr_count { break; }
             if init_chunk.next_max_addr_count(spec) >= working_addr_count {
                 break;
             }
@@ -143,7 +142,11 @@ impl MMUTranslationBase for Address {
     //TODO: Optimized fill_init_vec impl for non-split page tables
 }
 
-impl ArchMMUSpec {
+impl ArchMMUDef {
+    pub const fn into_spec(self) -> ArchMMUSpec {
+        ArchMMUSpec::from_def(self)
+    }
+
     /// Mask a page table entry address to retrieve the next page table entry
     ///
     /// This function uses virtual_address_splits to mask the first bits out in `pte_addr`, but
@@ -170,6 +173,177 @@ impl ArchMMUSpec {
         let mask = Address::bit_mask(min..max);
         vtop_trace!("pte_addr_mask={:b}", mask.as_u64());
         pte_addr.as_u64() & mask.as_u64()
+    }
+
+    const fn virt_addr_bit_range(&self, step: usize) -> (u8, u8) {
+        let max_index_bits = {
+            let subsl = &self.virtual_address_splits;
+            let mut accum = 0;
+            let mut i = step;
+            while i < subsl.len() {
+                accum += subsl[i];
+                i += 1;
+            }
+            accum
+        };
+        let min_index_bits = max_index_bits - self.virtual_address_splits[step];
+        (min_index_bits, max_index_bits)
+    }
+
+    fn virt_addr_to_pte_offset(&self, virt_addr: Address, step: usize) -> u64 {
+        let (min, max) = self.virt_addr_bit_range(step);
+        vtop_trace!("virt_addr_bit_range for step {} = ({}, {})", step, min, max);
+
+        let shifted = virt_addr.as_u64() >> min;
+        let mask = Address::bit_mask(0..(max - min - 1));
+
+        (shifted & mask.as_u64()) * self.pte_size as u64
+    }
+
+    fn virt_addr_to_page_offset(&self, virt_addr: Address, step: usize) -> u64 {
+        let max = self.virt_addr_bit_range(step).1;
+        virt_addr.as_u64() & Address::bit_mask(0..(max - 1)).as_u64()
+    }
+
+    /// Return the number of splits of virtual addresses
+    ///
+    /// The returned value will be one more than the number of page table levels
+    pub fn split_count(&self) -> usize {
+        self.virtual_address_splits.len()
+    }
+
+    pub const fn spare_allocs(&self) -> usize {
+        let mut i = 1;
+        let mut fold = 0;
+        while i < self.virtual_address_splits.len() {
+            fold += (1 << self.virtual_address_splits[i - 1]);
+            i += 1;
+        }
+        fold
+    }
+
+    /// Calculate the size of the page table entry leaf in bytes
+    ///
+    /// This will return the number of page table entries at a specific step multiplied by the
+    /// `pte_size`. Usually this will be an entire page, but in certain cases, like the highest
+    /// mapping level of x86 with PAE, it will be less.
+    ///
+    /// # Arguments
+    ///
+    /// * `step` - the current step in the page walk
+    pub const fn pt_leaf_size(&self, step: usize) -> usize {
+        let (min, max) = self.virt_addr_bit_range(step);
+        (1 << (max - min)) * self.pte_size
+    }
+
+    /// Get the page size of a specific step without checking if such page could exist
+    ///
+    /// # Arguments
+    ///
+    /// * `step` - the current step in the page walk
+    pub const fn page_size_step_unchecked(&self, step: usize) -> usize {
+        let max_index_bits = {
+            let mut subsl = &self.virtual_address_splits;
+            let mut i = step;
+            let mut accum = 0;
+            while i < subsl.len() {
+                accum += subsl[i];
+                i += 1;
+            }
+            accum
+        };
+        (1u64 << max_index_bits) as usize
+    }
+
+    /// Get the page size of a specific page walk step
+    ///
+    /// This function is preferable to use externally, because in debug builds it will check if such
+    /// page could exist, and if can not, it will panic
+    ///
+    /// # Arguments
+    ///
+    /// * `step` - the current step in the page walk
+    pub fn page_size_step(&self, step: usize) -> usize {
+        debug_assert!(self.valid_final_page_steps.binary_search(&step).is_ok());
+        self.page_size_step_unchecked(step)
+    }
+}
+
+const MAX_LEVELS: usize = 8;
+
+pub struct ArchMMUSpec {
+    pub def: ArchMMUDef,
+    pub pte_addr_masks: [u64; MAX_LEVELS],
+    pub virt_addr_shifts: [u8; MAX_LEVELS],
+    pub virt_addr_masks: [u64; MAX_LEVELS],
+    pub virt_addr_page_masks: [u64; MAX_LEVELS],
+    pub valid_final_page_steps: [bool; MAX_LEVELS],
+    pub pt_leaf_size: [usize; MAX_LEVELS],
+    pub page_size_step: [usize; MAX_LEVELS],
+    pub spare_allocs: usize,
+}
+
+impl From<ArchMMUDef> for ArchMMUSpec {
+    fn from(def: ArchMMUDef) -> Self {
+        Self::from_def(def)
+    }
+}
+
+impl ArchMMUSpec {
+    pub const fn from_def(def: ArchMMUDef) -> Self {
+        let mut pte_addr_masks = [0; MAX_LEVELS];
+        let mut virt_addr_shifts = [0; MAX_LEVELS];
+        let mut virt_addr_masks = [0; MAX_LEVELS];
+        let mut virt_addr_page_masks = [0; MAX_LEVELS];
+        let mut valid_final_page_steps = [false; MAX_LEVELS];
+        let mut pt_leaf_size = [0; MAX_LEVELS];
+        let mut page_size_step = [0; MAX_LEVELS];
+        let spare_allocs = def.spare_allocs();
+
+        let mut i = 0;
+        while i < def.virtual_address_splits.len() {
+            let max = def.address_space_bits - 1;
+            let min = def.virtual_address_splits[i]
+                + if i == def.virtual_address_splits.len() - 1 {
+                    0
+                } else {
+                    def.pte_size.to_le().trailing_zeros() as u8
+                };
+            let mask = Address::bit_mask_u8(min..max);
+            pte_addr_masks[i] = mask.as_u64();
+
+            pt_leaf_size[i] = def.pt_leaf_size(i);
+            page_size_step[i] = def.page_size_step_unchecked(i);
+
+            let (min, max) = def.virt_addr_bit_range(i);
+            virt_addr_shifts[i] = min;
+            virt_addr_masks[i] = Address::bit_mask_u8(0..(max - min - 1)).as_u64();
+            virt_addr_page_masks[i] = Address::bit_mask_u8(0..(max - 1)).as_u64();
+
+            i += 1;
+        }
+
+        i = 0;
+        while i < def.valid_final_page_steps.len() {
+            valid_final_page_steps[def.valid_final_page_steps[i]] = true;
+            i += 1;
+        }
+
+        Self {
+            def,
+            pte_addr_masks,
+            virt_addr_shifts,
+            virt_addr_masks,
+            virt_addr_page_masks,
+            valid_final_page_steps,
+            pt_leaf_size,
+            page_size_step,
+            spare_allocs,
+        }
+    }
+
+    pub fn pte_addr_mask(&self, pte_addr: Address, step: usize) -> u64 {
+        pte_addr.as_u64() & self.pte_addr_masks[step]
     }
 
     /// Filter out the input virtual address range to be in bounds
@@ -199,14 +373,14 @@ impl ArchMMUSpec {
         let mut tr_data = TranslateData { addr, buf };
 
         // Trim to virt address space limit
-        let (mut left, reject) =
-            tr_data.split_inclusive_at(Address::bit_mask(0..(self.addr_size * 8 - 1)).as_usize());
+        let (mut left, reject) = tr_data
+            .split_inclusive_at(Address::bit_mask(0..(self.def.addr_size * 8 - 1)).as_usize());
 
         if let Some(data) = reject {
             fail_out.extend(Some((Error::VirtualTranslate, data.addr, data.buf)));
         }
 
-        let virt_bit_range = self.virt_addr_bit_range(0).1;
+        let virt_bit_range = self.def.virt_addr_bit_range(0).1;
         let virt_range = 1u64 << (virt_bit_range - 1);
         vtop_trace!("vbr {:x} | {:x}", virt_bit_range, virt_range);
 
@@ -218,7 +392,7 @@ impl ArchMMUSpec {
 
             // The upper half has to be all negative (all bits set), so compare the masks to see if
             // it is the case.
-            let lhs = Address::bit_mask(virt_bit_range..(self.addr_size * 8 - 1)).as_u64();
+            let lhs = Address::bit_mask(virt_bit_range..(self.def.addr_size * 8 - 1)).as_u64();
             let rhs = higher.addr.as_u64() & lhs;
 
             if (lhs ^ rhs) == 0 {
@@ -239,52 +413,12 @@ impl ArchMMUSpec {
         }
     }
 
-    fn virt_addr_bit_range(&self, step: usize) -> (u8, u8) {
-        let max_index_bits = self.virtual_address_splits[step..].iter().sum::<u8>();
-        let min_index_bits = max_index_bits - self.virtual_address_splits[step];
-        (min_index_bits, max_index_bits)
-    }
-
-    fn virt_addr_to_pte_offset(&self, virt_addr: Address, step: usize) -> u64 {
-        let (min, max) = self.virt_addr_bit_range(step);
-        vtop_trace!("virt_addr_bit_range for step {} = ({}, {})", step, min, max);
-
-        let shifted = virt_addr.as_u64() >> min;
-        let mask = Address::bit_mask(0..(max - min - 1));
-
-        (shifted & mask.as_u64()) * self.pte_size as u64
-    }
-
-    fn virt_addr_to_page_offset(&self, virt_addr: Address, step: usize) -> u64 {
-        let max = self.virt_addr_bit_range(step).1;
-        virt_addr.as_u64() & Address::bit_mask(0..(max - 1)).as_u64()
-    }
-
-    /// Return the number of splits of virtual addresses
-    ///
-    /// The returned value will be one more than the number of page table levels
     pub fn split_count(&self) -> usize {
-        self.virtual_address_splits.len()
+        self.def.virtual_address_splits.len()
     }
 
-    pub fn spare_allocs(&self) -> usize {
-        let mut iter = self.virtual_address_splits.iter();
-        let _ = iter.next_back();
-        iter.fold(0, |acc, x| acc + (1 << x))
-    }
-
-    /// Calculate the size of the page table entry leaf in bytes
-    ///
-    /// This will return the number of page table entries at a specific step multiplied by the
-    /// `pte_size`. Usually this will be an entire page, but in certain cases, like the highest
-    /// mapping level of x86 with PAE, it will be less.
-    ///
-    /// # Arguments
-    ///
-    /// * `step` - the current step in the page walk
     pub fn pt_leaf_size(&self, step: usize) -> usize {
-        let (min, max) = self.virt_addr_bit_range(step);
-        (1 << (max - min)) * self.pte_size
+        self.pt_leaf_size[step]
     }
 
     /// Perform a virtual translation step, returning the next PTE address to read
@@ -300,14 +434,22 @@ impl ArchMMUSpec {
         )
     }
 
+    pub fn virt_addr_to_pte_offset(&self, virt_addr: Address, step: usize) -> u64 {
+        ((virt_addr.as_u64() >> self.virt_addr_shifts[step]) & self.virt_addr_masks[step])
+            * self.def.pte_size as u64
+    }
+
+    pub fn virt_addr_to_page_offset(&self, virt_addr: Address, step: usize) -> u64 {
+        virt_addr.as_u64() & self.virt_addr_page_masks[step]
+    }
+
     /// Get the page size of a specific step without checking if such page could exist
     ///
     /// # Arguments
     ///
     /// * `step` - the current step in the page walk
     pub fn page_size_step_unchecked(&self, step: usize) -> usize {
-        let max_index_bits = self.virtual_address_splits[step..].iter().sum::<u8>();
-        (1u64 << max_index_bits) as usize
+        self.page_size_step[step]
     }
 
     /// Get the page size of a specific page walk step
@@ -319,7 +461,7 @@ impl ArchMMUSpec {
     ///
     /// * `step` - the current step in the page walk
     pub fn page_size_step(&self, step: usize) -> usize {
-        debug_assert!(self.valid_final_page_steps.binary_search(&step).is_ok());
+        debug_assert!(self.valid_final_page_steps[step]);
         self.page_size_step_unchecked(step)
     }
 
@@ -333,7 +475,7 @@ impl ArchMMUSpec {
     ///
     /// * `level` - page mapping level to get the size of (1 meaning the smallest page)
     pub fn page_size_level(&self, level: usize) -> usize {
-        self.page_size_step(self.virtual_address_splits.len() - level)
+        self.page_size_step(self.def.virtual_address_splits.len() - level)
     }
 
     /// Get the final physical page
@@ -360,8 +502,8 @@ impl ArchMMUSpec {
         PhysicalAddress::with_page(
             phys_addr,
             PageType::default()
-                .write(pte_addr.bit_at(self.writeable_bit))
-                .noexec(pte_addr.bit_at(self.nx_bit)),
+                .write(pte_addr.bit_at(self.def.writeable_bit))
+                .noexec(pte_addr.bit_at(self.def.nx_bit)),
             self.page_size_step(step),
         )
     }
@@ -373,7 +515,7 @@ impl ArchMMUSpec {
     /// * `pte_addr` - current page table entry
     /// * `step` - the current step in the page walk
     pub fn check_entry(&self, pte_addr: Address, step: usize) -> bool {
-        step == 0 || pte_addr.bit_at(self.present_bit)
+        step == 0 || pte_addr.bit_at(self.def.present_bit)
     }
 
     /// Check if the current page table entry contains a physical page
@@ -388,9 +530,8 @@ impl ArchMMUSpec {
     /// * `pte_addr` - current page table entry
     /// * `step` - the current step the page walk
     pub fn is_final_mapping(&self, pte_addr: Address, step: usize) -> bool {
-        (step == self.virtual_address_splits.len() - 1)
-            || (pte_addr.bit_at(self.large_page_bit)
-                && self.valid_final_page_steps.binary_search(&step).is_ok())
+        (step == self.def.virtual_address_splits.len() - 1)
+            || (pte_addr.bit_at(self.def.large_page_bit) && self.valid_final_page_steps[step])
     }
 
     /// This function will do a virtual to physical memory translation for the `ArchMMUSpec` in
@@ -420,9 +561,9 @@ impl ArchMMUSpec {
         let slice = unsafe { std::slice::from_raw_parts_mut(ptr.as_ptr() as *mut _, total_alloc) };
 
         // remove * self.pte_size
-        let pt1_size = 1usize << self.virtual_address_splits[0];
+        let pt1_size = 1usize << self.def.virtual_address_splits[0];
 
-        let spare_allocs = self.spare_allocs();
+        let spare_allocs = self.spare_allocs;
 
         let spare_chunks = std::cmp::max(0x100, pt1_size);
         let total_chunks = spare_chunks + spare_chunks * spare_allocs;

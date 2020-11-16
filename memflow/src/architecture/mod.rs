@@ -17,6 +17,7 @@ pub mod x86;
 
 mod mmu_spec;
 
+pub(crate) use mmu_spec::ArchMMUDef;
 pub use mmu_spec::ArchMMUSpec;
 
 use crate::error::{Error, Result};

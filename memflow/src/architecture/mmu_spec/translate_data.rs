@@ -8,6 +8,20 @@ use super::MVec;
 
 use std::time::{Duration, Instant};
 
+pub struct Tracer {}
+
+impl Tracer {
+    pub fn new() -> Self {
+        Self {}
+    }
+
+    pub fn trace_step(&mut self, text: &'static str) {}
+}
+
+impl Drop for Tracer {
+    fn drop(&mut self) {}
+}
+
 pub type TranslateVec<'a> = MVec<'a, TranslationChunk<Address>>;
 pub type TranslateDataVec<'a, T> = MVec<'a, TranslateData<T>>;
 
@@ -209,16 +223,30 @@ impl<T: MMUTranslationBase> TranslationChunk<T> {
         mut self,
         spec: &ArchMMUSpec,
         (addr_stack, tmp_addr_stack): (&mut TranslateDataVec<U>, &mut TranslateDataVec<U>),
-        (chunks_out, addrs_out): (&mut TranslateVec, &mut TranslateDataVec<U>),
+        out_target: &mut (TranslateVec, TranslateDataVec<U>),
+        wait_target: &mut (TranslateVec, TranslateDataVec<U>),
+        tracer: &mut Tracer,
     ) {
+        tracer.trace_step("enter_split_chunk");
+
+        //TODO: THESE NEED TO GO
         let mut addr_stack: &mut TranslateDataVec<U> = unsafe { std::mem::transmute(addr_stack) };
         let mut tmp_addr_stack: &mut TranslateDataVec<U> =
             unsafe { std::mem::transmute(tmp_addr_stack) };
 
+        let mut out_target: &mut (TranslateVec, TranslateDataVec<U>) =
+            unsafe { std::mem::transmute(out_target) };
+        let mut wait_target: &mut (TranslateVec, TranslateDataVec<U>) =
+            unsafe { std::mem::transmute(wait_target) };
+
+        //let mut tracer = Tracer::new();
+
         let align_as = spec.page_size_step_unchecked(self.step);
         let step_size = spec.page_size_step_unchecked(self.step + 1);
 
-        debug_assert!(self.verify_bounds(&mut addr_stack.iter().rev()), "SPL 1");
+        //tracer.trace_step("align_vals");
+
+        //debug_assert!(self.verify_bounds(&mut addr_stack.iter().rev()), "SPL 1");
 
         //TODO: mask out the addresses to limit them within address space
         //this is in particular for the first step where addresses are split between positive and
@@ -226,14 +254,13 @@ impl<T: MMUTranslationBase> TranslationChunk<T> {
         let upper: u64 = (self.max_addr - 1).as_page_aligned(step_size).as_u64();
         let lower: u64 = self.min_addr.as_page_aligned(step_size).as_u64();
 
-        debug_assert!(self.step == 0 || (upper - lower) <= align_as as _);
+        //debug_assert!(self.step == 0 || (upper - lower) <= align_as as _);
 
-        // Walk in reverse so that lowest addresses always end up
-        // first in the stack. This preserves translation order
-        for (cnt, addr) in (lower..=upper).rev().step_by(step_size).enumerate() {
-            debug_assert!(self.step == 0 || cnt < 0x200);
+        tracer.trace_step("split_enter_loop");
 
-            let addr = Address::from(addr);
+        if upper == lower {
+            let (chunks_out, addrs_out) = out_target;
+            let addr = Address::from(lower);
             let index = (addr - addr.as_page_aligned(align_as)) / step_size;
             let (pt_addr, _) = self.pt_addr.get_pt_by_index(index);
             let pt_addr = spec.vtop_step(pt_addr, addr, self.step);
@@ -241,8 +268,44 @@ impl<T: MMUTranslationBase> TranslationChunk<T> {
             let mut new_chunk = TranslationChunk::new(pt_addr);
 
             for _ in 0..self.addr_count {
+                let len = addr_stack.len();
+                let mut data = addr_stack.pop().unwrap();
+                new_chunk.push_data(data, addrs_out);
+            }
+
+            new_chunk.step = self.step;
+            chunks_out.push(new_chunk);
+
+            return;
+        }
+
+        // Walk in reverse so that lowest addresses always end up
+        // first in the stack. This preserves translation order
+        for (cnt, addr) in (lower..=upper).rev().step_by(step_size).enumerate() {
+            //debug_assert!(self.step == 0 || cnt < 0x200);
+
+            let (chunks_out, addrs_out) = if out_target.0.capacity() != out_target.0.len()
+                && out_target.1.capacity() - out_target.1.len() >= self.addr_count
+            {
+                &mut out_target
+            } else {
+                &mut wait_target
+            };
+
+            let addr = Address::from(addr);
+            let index = (addr - addr.as_page_aligned(align_as)) / step_size;
+            let (pt_addr, _) = self.pt_addr.get_pt_by_index(index);
+            //tracer.trace_step("split_pt_by_index");
+            let pt_addr = spec.vtop_step(pt_addr, addr, self.step);
+            //tracer.trace_step("split_vtop_step");
+
+            let mut new_chunk = TranslationChunk::new(pt_addr);
+            tracer.trace_step("split_new_chunk");
+
+            for _ in 0..self.addr_count {
                 // TODO: We need to remove the None check here
                 let mut data = self.pop_data(addr_stack).unwrap();
+                tracer.trace_step("split_pop_data");
 
                 debug_assert!(
                     data.addr >= self.min_addr,
@@ -261,34 +324,11 @@ impl<T: MMUTranslationBase> TranslationChunk<T> {
                     &self
                 );
 
-                /*if data.addr > addr + (step_size - 1) {
-                    self.push_data(data, tmp_addr_stack);
-                    continue;
-                }
-
-                // Must be inclusive, otherwise we will get an overflow
-                let (left, right) = data.split_inclusive_at_address(addr + (step_size - 1));
-
-                debug_assert!(left.length() <= step_size);
-
-                new_chunk.push_data(left, addrs_out);
+                let (left, right) = data.split_at_address(addr);
+                //tracer.trace_step("split_split_at");
 
                 if let Some(data) = right {
-                    self.push_data(data, tmp_addr_stack);
-                }*/
-
-                //trace!("{:x}-{:x} | {:x}", data.addr + data.length(), data.length(), addr + (step_size - 1));
-
-                if data.addr + data.length() <= addr {
-                    self.push_data(data, tmp_addr_stack);
-                    continue;
-                }
-
-                let (left, right) = data.split_at_address(addr);
-
-                let data = right.unwrap();
-                {
-                    debug_assert!(data.length() <= step_size);
+                    //debug_assert!(data.length() <= step_size);
                     new_chunk.push_data(data, addrs_out);
                     //debug_assert!(new_chunk.verify_bounds(&mut addrs_out.iter().rev()), "PSP2");
                 }
@@ -296,6 +336,8 @@ impl<T: MMUTranslationBase> TranslationChunk<T> {
                 if left.length() > 0 {
                     self.push_data(left, tmp_addr_stack);
                 }
+                tracer.trace_step("split_pushed_addr");
+
                 //debug_assert!(self.verify_bounds(&mut tmp_addr_stack.iter().rev()), "SP2");
             }
 
@@ -303,12 +345,15 @@ impl<T: MMUTranslationBase> TranslationChunk<T> {
                 new_chunk.step = self.step;
                 //debug_assert!(new_chunk.verify_bounds(&mut addrs_out.iter().rev()), "PSP");
                 chunks_out.push(new_chunk);
+                //tracer.trace_step("split_push_chunk");
             }
 
             let t_addr_stack = addr_stack;
             addr_stack = tmp_addr_stack;
             tmp_addr_stack = t_addr_stack;
             //std::mem::swap(&mut addr_stack, &mut tmp_addr_stack);
+
+            tracer.trace_step("page_split");
         }
 
         debug_assert!(self.addr_count == 0);

@@ -7,6 +7,7 @@ use crate::types::{Address, PageType, PhysicalAddress};
 pub(crate) use fixed_slice_vec::FixedSliceVec as MVec;
 use std::alloc::Layout;
 use std::convert::TryInto;
+use translate_data::Tracer;
 use translate_data::{TranslateData, TranslateDataVec, TranslateVec, TranslationChunk};
 
 use bumpalo::Bump;
@@ -90,8 +91,10 @@ pub trait MMUTranslationBase: Clone + Copy + core::fmt::Debug {
         out_fail: &mut FO,
         addrs: &mut VI,
         (waiting_addrs, tmp_addrs): (&mut TranslateDataVec<B>, &mut TranslateDataVec<B>),
-        work_vecs: (&mut TranslateVec, &mut TranslateDataVec<B>),
+        work_vecs: &mut (TranslateVec, TranslateDataVec<B>),
+        next_work_vecs: &mut (TranslateVec, TranslateDataVec<B>),
         working_addr_count: usize,
+        tracer: &mut Tracer,
     ) where
         VI: Iterator<Item = (Address, B)>,
         FO: Extend<(Error, Address, B)>,
@@ -108,7 +111,13 @@ pub trait MMUTranslationBase: Clone + Copy + core::fmt::Debug {
 
         if init_chunk.addr_count > 0 {
             vtop_trace!("init_chunk = {:#?}", &init_chunk);
-            init_chunk.split_chunk(spec, (waiting_addrs, tmp_addrs), work_vecs);
+            init_chunk.split_chunk(
+                spec,
+                (waiting_addrs, tmp_addrs),
+                work_vecs,
+                next_work_vecs,
+                tracer,
+            );
         }
     }
 }
@@ -274,7 +283,7 @@ const MAX_LEVELS: usize = 8;
 pub struct ArchMMUSpec {
     pub def: ArchMMUDef,
     pub pte_addr_masks: [u64; MAX_LEVELS],
-    pub virt_addr_shifts: [u8; MAX_LEVELS],
+    pub virt_addr_bit_ranges: [(u8, u8); MAX_LEVELS],
     pub virt_addr_masks: [u64; MAX_LEVELS],
     pub virt_addr_page_masks: [u64; MAX_LEVELS],
     pub valid_final_page_steps: [bool; MAX_LEVELS],
@@ -292,7 +301,7 @@ impl From<ArchMMUDef> for ArchMMUSpec {
 impl ArchMMUSpec {
     pub const fn from_def(def: ArchMMUDef) -> Self {
         let mut pte_addr_masks = [0; MAX_LEVELS];
-        let mut virt_addr_shifts = [0; MAX_LEVELS];
+        let mut virt_addr_bit_ranges = [(0, 0); MAX_LEVELS];
         let mut virt_addr_masks = [0; MAX_LEVELS];
         let mut virt_addr_page_masks = [0; MAX_LEVELS];
         let mut valid_final_page_steps = [false; MAX_LEVELS];
@@ -316,7 +325,7 @@ impl ArchMMUSpec {
             page_size_step[i] = def.page_size_step_unchecked(i);
 
             let (min, max) = def.virt_addr_bit_range(i);
-            virt_addr_shifts[i] = min;
+            virt_addr_bit_ranges[i] = (min, max);
             virt_addr_masks[i] = Address::bit_mask_u8(0..(max - min - 1)).as_u64();
             virt_addr_page_masks[i] = Address::bit_mask_u8(0..(max - 1)).as_u64();
 
@@ -332,7 +341,7 @@ impl ArchMMUSpec {
         Self {
             def,
             pte_addr_masks,
-            virt_addr_shifts,
+            virt_addr_bit_ranges,
             virt_addr_masks,
             virt_addr_page_masks,
             valid_final_page_steps,
@@ -380,7 +389,7 @@ impl ArchMMUSpec {
             fail_out.extend(Some((Error::VirtualTranslate, data.addr, data.buf)));
         }
 
-        let virt_bit_range = self.def.virt_addr_bit_range(0).1;
+        let virt_bit_range = self.virt_addr_bit_ranges[0].1;
         let virt_range = 1u64 << (virt_bit_range - 1);
         vtop_trace!("vbr {:x} | {:x}", virt_bit_range, virt_range);
 
@@ -435,7 +444,7 @@ impl ArchMMUSpec {
     }
 
     pub fn virt_addr_to_pte_offset(&self, virt_addr: Address, step: usize) -> u64 {
-        ((virt_addr.as_u64() >> self.virt_addr_shifts[step]) & self.virt_addr_masks[step])
+        ((virt_addr.as_u64() >> self.virt_addr_bit_ranges[step].0) & self.virt_addr_masks[step])
             * self.def.pte_size as u64
     }
 
@@ -553,8 +562,9 @@ impl ArchMMUSpec {
         FO: Extend<(Error, Address, B)>,
     {
         vtop_trace!("virt_to_phys_iter_with_mmu");
+        let mut tracer = translate_data::Tracer::new();
 
-        let total_alloc = crate::types::size::mb(128);
+        let total_alloc = crate::types::size::mb(160);
         let layout = Layout::from_size_align(total_alloc, 64).unwrap();
         let ptr = arena.alloc_layout(layout);
 
@@ -590,6 +600,8 @@ impl ArchMMUSpec {
         // use waiting stack only later
         let (working_bytes, slice) = slice.split_at_mut(spare_chunks * chunk_size);
         let mut working_stack = MVec::from_uninit_bytes(working_bytes);
+        let (working_bytes, slice) = slice.split_at_mut(spare_chunks * chunk_size);
+        let mut working_stack2 = MVec::from_uninit_bytes(working_bytes);
         let (waiting_bytes, slice) = slice.split_at_mut(total_chunks * chunk_size);
         let mut waiting_stack = MVec::from_uninit_bytes(waiting_bytes);
 
@@ -601,170 +613,115 @@ impl ArchMMUSpec {
 
         let (working_addrs_bytes, slice) = slice.split_at_mut(working_addr_count * data_size);
         let mut working_addrs = MVec::from_uninit_bytes(working_addrs_bytes);
+        let (working_addrs_bytes, slice) = slice.split_at_mut(working_addr_count * data_size);
+        let mut working_addrs2 = MVec::from_uninit_bytes(working_addrs_bytes);
         let (waiting_addrs_bytes, slice) = slice.split_at_mut(total_addr_count * data_size);
         let mut waiting_addrs = MVec::from_uninit_bytes(waiting_addrs_bytes);
         let (tmp_addrs_bytes, _slice) = slice.split_at_mut(working_addr_count * data_size);
         let mut tmp_addrs = MVec::from_uninit_bytes(tmp_addrs_bytes);
+
+        tracer.trace_step("alloc");
+        tracer.trace_step("alloc");
+
+        let mut working_pair = (working_stack, working_addrs);
+        let mut next_working_pair = (working_stack2, working_addrs2);
 
         dtb.fill_init_chunk(
             &self,
             out_fail,
             &mut addrs,
             (&mut waiting_addrs, &mut tmp_addrs),
-            (&mut working_stack, &mut working_addrs),
+            &mut working_pair,
+            &mut next_working_pair,
             working_addr_count,
+            &mut tracer,
         );
 
-        //log::trace!("{:x} {:x} {:x} {:x}", waiting_addrs.len(), waiting_stack.len(), working_addrs.len(), working_stack.len());
+        let mut waiting_pair = (waiting_stack, waiting_addrs);
 
-        while !working_stack.is_empty() {
+        tracer.trace_step("init");
+
+        //log::trace!("{:x} {:x} {:x} {:x}", waiting_addrs.len(), waiting_stack.len(), working_addrs.len(), working_stack.len());
+        while !working_pair.0.is_empty() {
             // Perform the reads here
-            if let Err(err) =
-                self.read_pt_address_iter(mem, &mut working_stack, &mut pt_buf, &mut pt_read)
-            {
+            if let Err(err) = self.read_pt_address_iter(
+                mem,
+                &mut working_pair.0,
+                &mut pt_buf,
+                &mut pt_read,
+                &mut tracer,
+            ) {
                 vtop_trace!("read_pt_address_iter failure: {}", err);
 
-                while let Some(data) = working_addrs.pop() {
+                while let Some(data) = working_pair.1.pop() {
                     out_fail.extend(Some((err, data.addr, data.buf)));
                 }
 
-                while let Some(data) = waiting_addrs.pop() {
+                while let Some(data) = waiting_pair.1.pop() {
                     out_fail.extend(Some((err, data.addr, data.buf)));
                 }
 
                 /*out_fail.extend(
-                    working_addrs
-                        .into_iter()
-                        .chain(waiting_addrs.into_iter())
-                        .map(|data| (err, data.addr, data.buf)),
+                working_addrs
+                .into_iter()
+                .chain(waiting_addrs.into_iter())
+                .map(|data| (err, data.addr, data.buf)),
                 );*/
 
                 return;
             }
 
-            let mut prev_entry = Address::NULL;
+            tracer.trace_step("read");
 
-            while let Some(mut chunk) = working_stack.pop() {
-                vtop_trace!("chunk = {:#?}", &chunk);
+            self.work_through_stack(
+                &mut working_pair,
+                &mut next_working_pair,
+                out,
+                out_fail,
+                &mut tracer,
+                &mut waiting_pair,
+                &mut tmp_addrs,
+            );
 
-                chunk.step += 1;
+            debug_assert!(working_pair.1.is_empty());
 
-                // This is extremely important!
-                // It is a something of a heuristic against
-                // page tables that have all entries set to the same page table.
-                //
-                // For instance, windows has such global page tables, it is actually
-                // just 2-3 page tables, starting from level 4 which go down one at
-                // a time, covering an insane region, but not actually pointing anywhere.
-                //
-                // Page map chokes on these scenarios, and once again - it's page tables
-                // that point nowhere! So we just try and ignore them.
-                //
-                // Some cases this _may_ cause issues, but it's extremely rare to have
-                // 2 identical pages right next to each other. If there is ever a documented
-                // case however, then we will need to workaround that.
-                let pprev_entry = prev_entry;
-                prev_entry = chunk.pt_addr;
-
-                if !self.check_entry(chunk.pt_addr, chunk.step + 1) || chunk.pt_addr == pprev_entry
-                {
-                    while let Some(entry) = chunk.pop_data(&mut working_addrs) {
-                        out_fail.extend(Some((Error::VirtualTranslate, entry.addr, entry.buf)));
-                    }
-                } else if self.is_final_mapping(chunk.pt_addr, chunk.step) {
-                    let pt_addr = chunk.pt_addr;
-                    let step = chunk.step;
-                    while let Some(entry) = chunk.pop_data(&mut working_addrs) {
-                        out.extend(Some((
-                            self.get_phys_page(pt_addr, entry.addr, step),
-                            entry.buf,
-                        )));
-                    }
-                /*out.extend(
-                    chunk.into_addr_iter(&mut working_addrs).map(|entry| {
-                        (self.get_phys_page(pt_addr, entry.addr, step), entry.buf)
-                    }),
-                );*/
-                } else {
-                    // We still need to continue the page walk.
-                    // Split the chunk up into the waiting queue
-                    chunk.split_chunk(
-                        self,
-                        (&mut working_addrs, &mut tmp_addrs),
-                        (&mut waiting_stack, &mut waiting_addrs),
-                    );
-
-                    debug_assert!(tmp_addrs.is_empty());
-
-                    /*{
-                        let mut addr_iter = working_addrs.iter().rev();
-                        for (i, c) in working_stack.iter().rev().enumerate() {
-                            assert!(c.verify_bounds(&mut addr_iter), "PPWO {} {:#?}", i, c);
-                        }
-                    }
-
-                    {
-                        let mut addr_iter = waiting_addrs.iter().rev();
-                        for (i, c) in waiting_stack.iter().rev().enumerate() {
-                            assert!(c.verify_bounds(&mut addr_iter), "PPWA {} {:#?}", i, c);
-                        }
-                    }*/
-                }
-            }
-
-            debug_assert!(working_addrs.is_empty());
-
-            if !waiting_stack.is_empty() {
-                while let Some(mut chunk) = waiting_stack.pop() {
-                    if working_stack.len() >= spare_chunks
-                        || (working_addrs.len() + chunk.addr_count > working_addr_count
-                            && !working_stack.is_empty())
-                    {
-                        waiting_stack.push(chunk);
-                        break;
-                    } else {
-                        let mut new_chunk = TranslationChunk::new(chunk.pt_addr);
-                        new_chunk.step = chunk.step;
-                        for _ in (0..chunk.addr_count).zip(working_addrs.len()..working_addr_count)
-                        {
-                            let addr = chunk.pop_data(&mut waiting_addrs).unwrap();
-                            new_chunk.push_data(addr, &mut working_addrs);
-                        }
-
-                        if chunk.addr_count > 0 {
-                            waiting_stack.push(chunk);
-                        }
-
-                        working_stack.push(new_chunk);
-                    }
-                }
-            } else {
-                // TODO: Maybe feed it in directly?? Idk. Probably want to do it if <50% addresses
-                // are full after waiting stack is done
-                dtb.fill_init_chunk(
-                    &self,
+            if next_working_pair.0.is_empty() {
+                self.refill_stack(
+                    dtb,
+                    spare_chunks,
+                    &mut working_pair,
+                    &mut next_working_pair,
                     out_fail,
                     &mut addrs,
-                    (&mut waiting_addrs, &mut tmp_addrs),
-                    (&mut working_stack, &mut working_addrs),
+                    &mut tracer,
                     working_addr_count,
+                    &mut waiting_pair,
+                    &mut tmp_addrs,
                 );
+            } else {
+                std::mem::swap(&mut working_pair, &mut next_working_pair);
             }
         }
+        tracer.trace_step("end");
 
-        debug_assert!(waiting_stack.is_empty());
+        debug_assert!(waiting_pair.0.is_empty());
+        debug_assert!(working_pair.0.is_empty());
+        debug_assert!(next_working_pair.0.is_empty());
     }
 
+    #[inline(never)]
     fn read_pt_address_iter<T>(
         &self,
         mem: &mut T,
         chunks: &mut TranslateVec,
         pt_buf: &mut MVec<u8>,
         pt_read: &mut MVec<PhysicalReadData>,
+        tracer: &mut Tracer,
     ) -> Result<()>
     where
         T: PhysicalMemory + ?Sized,
     {
+        //let mut tracer = translate_data::Tracer::new();
         //TODO: use self.pt_leaf_size(step) (need to handle LittleEndian::read_u64)
         let pte_size = 8;
 
@@ -789,7 +746,11 @@ impl ArchMMUSpec {
             ));
         }
 
+        tracer.trace_step("read_prep");
+
         mem.phys_read_raw_list(pt_read)?;
+
+        tracer.trace_step("do_read");
 
         for (ref mut chunk, PhysicalReadData(_, buf)) in chunks.iter_mut().zip(pt_read.iter()) {
             let pt_addr = Address::from(u64::from_le_bytes(buf[0..8].try_into().unwrap()));
@@ -798,6 +759,158 @@ impl ArchMMUSpec {
 
         pt_read.clear();
 
+        tracer.trace_step("read_post");
+
         Ok(())
+    }
+
+    #[inline(never)]
+    fn refill_stack<B: SplitAtIndex, D, VI, FO>(
+        &self,
+        dtb: D,
+        spare_chunks: usize,
+        mut working_pair: &mut (TranslateVec, TranslateDataVec<B>),
+        next_working_pair: &mut (TranslateVec, TranslateDataVec<B>),
+        out_fail: &mut FO,
+        addrs: &mut VI,
+        tracer: &mut Tracer,
+        working_addr_count: usize,
+        (waiting_stack, waiting_addrs): &mut (TranslateVec, TranslateDataVec<B>),
+        tmp_addrs: &mut TranslateDataVec<B>,
+    ) where
+        D: MMUTranslationBase,
+        FO: Extend<(Error, Address, B)>,
+        VI: Iterator<Item = (Address, B)>,
+    {
+        let (working_stack, working_addrs) = &mut working_pair;
+        if !waiting_stack.is_empty() {
+            while let Some(mut chunk) = waiting_stack.pop() {
+                if working_stack.len() >= spare_chunks
+                    || (working_addrs.len() + chunk.addr_count > working_addr_count
+                        && !working_stack.is_empty())
+                {
+                    waiting_stack.push(chunk);
+                    break;
+                } else {
+                    let mut new_chunk = TranslationChunk::new(chunk.pt_addr);
+                    new_chunk.step = chunk.step;
+                    for _ in (0..chunk.addr_count).zip(working_addrs.len()..working_addr_count) {
+                        let addr = chunk.pop_data(waiting_addrs).unwrap();
+                        new_chunk.push_data(addr, working_addrs);
+                    }
+
+                    if chunk.addr_count > 0 {
+                        waiting_stack.push(chunk);
+                    }
+
+                    working_stack.push(new_chunk);
+                }
+            }
+            tracer.trace_step("fill_wait");
+        } else {
+            // TODO: Maybe feed it in directly?? Idk. Probably want to do it if <50% addresses
+            // are full after waiting stack is done
+            dtb.fill_init_chunk(
+                &self,
+                out_fail,
+                addrs,
+                (waiting_addrs, tmp_addrs),
+                working_pair,
+                next_working_pair,
+                working_addr_count,
+                tracer,
+            );
+            tracer.trace_step("fill_init");
+        }
+    }
+
+    #[inline(never)]
+    fn work_through_stack<B: SplitAtIndex, VO, FO>(
+        &self,
+        (working_stack, working_addrs): &mut (TranslateVec, TranslateDataVec<B>),
+        mut next_working_pair: &mut (TranslateVec, TranslateDataVec<B>),
+        out: &mut VO,
+        out_fail: &mut FO,
+        tracer: &mut Tracer,
+        waiting_pair: &mut (TranslateVec, TranslateDataVec<B>),
+        tmp_addrs: &mut TranslateDataVec<B>,
+    ) where
+        VO: Extend<(PhysicalAddress, B)>,
+        FO: Extend<(Error, Address, B)>,
+    {
+        let mut prev_entry = Address::NULL;
+
+        while let Some(mut chunk) = working_stack.pop() {
+            vtop_trace!("chunk = {:#?}", &chunk);
+
+            chunk.step += 1;
+
+            // This is extremely important!
+            // It is a something of a heuristic against
+            // page tables that have all entries set to the same page table.
+            //
+            // For instance, windows has such global page tables, it is actually
+            // just 2-3 page tables, starting from level 4 which go down one at
+            // a time, covering an insane region, but not actually pointing anywhere.
+            //
+            // Page map chokes on these scenarios, and once again - it's page tables
+            // that point nowhere! So we just try and ignore them.
+            //
+            // Some cases this _may_ cause issues, but it's extremely rare to have
+            // 2 identical pages right next to each other. If there is ever a documented
+            // case however, then we will need to workaround that.
+            let pprev_entry = prev_entry;
+            prev_entry = chunk.pt_addr;
+
+            if !self.check_entry(chunk.pt_addr, chunk.step + 1) || chunk.pt_addr == pprev_entry {
+                while let Some(entry) = chunk.pop_data(working_addrs) {
+                    out_fail.extend(Some((Error::VirtualTranslate, entry.addr, entry.buf)));
+                }
+                tracer.trace_step("fail");
+            } else if self.is_final_mapping(chunk.pt_addr, chunk.step) {
+                let pt_addr = chunk.pt_addr;
+                let step = chunk.step;
+                while let Some(entry) = chunk.pop_data(working_addrs) {
+                    out.extend(Some((
+                        self.get_phys_page(pt_addr, entry.addr, step),
+                        entry.buf,
+                    )));
+                }
+                tracer.trace_step("finish");
+            /*out.extend(
+                chunk.into_addr_iter(&mut working_addrs).map(|entry| {
+                    (self.get_phys_page(pt_addr, entry.addr, step), entry.buf)
+                }),
+            );*/
+            } else {
+                // We still need to continue the page walk.
+                // Split the chunk up into the waiting queue
+                chunk.split_chunk(
+                    self,
+                    (working_addrs, tmp_addrs),
+                    next_working_pair,
+                    waiting_pair,
+                    tracer,
+                );
+
+                tracer.trace_step("split");
+
+                debug_assert!(tmp_addrs.is_empty());
+
+                /*{
+                    let mut addr_iter = working_addrs.iter().rev();
+                    for (i, c) in working_stack.iter().rev().enumerate() {
+                        assert!(c.verify_bounds(&mut addr_iter), "PPWO {} {:#?}", i, c);
+                    }
+                }
+
+                {
+                    let mut addr_iter = waiting_addrs.iter().rev();
+                    for (i, c) in waiting_stack.iter().rev().enumerate() {
+                        assert!(c.verify_bounds(&mut addr_iter), "PPWA {} {:#?}", i, c);
+                    }
+                }*/
+            }
+        }
     }
 }

@@ -1,29 +1,24 @@
 use super::{ArchMMUSpec, MMUTranslationBase};
 use crate::iter::SplitAtIndex;
 use crate::types::Address;
-use log::trace;
 use std::cmp::Ordering;
 
 use super::MVec;
 
-use std::time::{Duration, Instant};
-
-pub struct Tracer {}
-
-impl Tracer {
-    pub fn new() -> Self {
-        Self {}
-    }
-
-    pub fn trace_step(&mut self, text: &'static str) {}
-}
-
-impl Drop for Tracer {
-    fn drop(&mut self) {}
-}
-
 pub type TranslateVec<'a> = MVec<'a, TranslationChunk<Address>>;
 pub type TranslateDataVec<'a, T> = MVec<'a, TranslateData<T>>;
+
+fn shorten_datavec_lifetime<'a: 'b, 'b, O>(
+    r: &'b mut TranslateDataVec<'a, O>,
+) -> &'b mut TranslateDataVec<'b, O> {
+    unsafe { std::mem::transmute(r) }
+}
+
+fn shorten_pair_lifetime<'a: 't, 'b: 't, 't, O>(
+    r: &'t mut (TranslateVec<'a>, TranslateDataVec<'b, O>),
+) -> &'t mut (TranslateVec<'t>, TranslateDataVec<'t, O>) {
+    unsafe { std::mem::transmute(r) }
+}
 
 #[derive(Debug)]
 pub struct TranslateData<T> {
@@ -181,13 +176,13 @@ impl<T: MMUTranslationBase> TranslationChunk<T> {
         }
     }
 
-    pub fn verify_bounds<'a, U: SplitAtIndex + 'a, I: Iterator<Item = &'a TranslateData<U>>>(
+    /*pub fn verify_bounds<'a, U: SplitAtIndex + 'a, I: Iterator<Item = &'a TranslateData<U>>>(
         &self,
         iter: &mut I,
     ) -> bool {
         for e in iter.take(self.addr_count) {
             if e.addr < self.min_addr || e.addr + e.length() > self.max_addr {
-                trace!(
+                log::trace!(
                     "Bound verification failed! {:#?} {:x}+{:x}",
                     &self,
                     e.addr,
@@ -197,7 +192,7 @@ impl<T: MMUTranslationBase> TranslationChunk<T> {
             }
         }
         true
-    }
+    }*/
 
     // TODO: This needs a drop impl that consumes the iterator!!!
     /*pub fn into_addr_iter<U: SplitAtIndex>(
@@ -219,32 +214,20 @@ impl<T: MMUTranslationBase> TranslationChunk<T> {
         self.addr_count * ((self.max_addr - self.min_addr) / step_size + add)
     }
 
-    pub fn split_chunk<'a, U: SplitAtIndex /*, O: Extend<TranslationChunk<Address>>*/>(
+    pub fn split_chunk<U: SplitAtIndex>(
         mut self,
         spec: &ArchMMUSpec,
         (addr_stack, tmp_addr_stack): (&mut TranslateDataVec<U>, &mut TranslateDataVec<U>),
         out_target: &mut (TranslateVec, TranslateDataVec<U>),
         wait_target: &mut (TranslateVec, TranslateDataVec<U>),
-        tracer: &mut Tracer,
     ) {
-        tracer.trace_step("enter_split_chunk");
-
-        //TODO: THESE NEED TO GO
-        let mut addr_stack: &mut TranslateDataVec<U> = unsafe { std::mem::transmute(addr_stack) };
-        let mut tmp_addr_stack: &mut TranslateDataVec<U> =
-            unsafe { std::mem::transmute(tmp_addr_stack) };
-
-        let mut out_target: &mut (TranslateVec, TranslateDataVec<U>) =
-            unsafe { std::mem::transmute(out_target) };
-        let mut wait_target: &mut (TranslateVec, TranslateDataVec<U>) =
-            unsafe { std::mem::transmute(wait_target) };
-
-        //let mut tracer = Tracer::new();
+        let mut addr_stack = shorten_datavec_lifetime(addr_stack);
+        let mut tmp_addr_stack = shorten_datavec_lifetime(tmp_addr_stack);
+        let mut out_target = shorten_pair_lifetime(out_target);
+        let mut wait_target = shorten_pair_lifetime(wait_target);
 
         let align_as = spec.page_size_step_unchecked(self.step);
         let step_size = spec.page_size_step_unchecked(self.step + 1);
-
-        //tracer.trace_step("align_vals");
 
         //debug_assert!(self.verify_bounds(&mut addr_stack.iter().rev()), "SPL 1");
 
@@ -256,9 +239,8 @@ impl<T: MMUTranslationBase> TranslationChunk<T> {
 
         //debug_assert!(self.step == 0 || (upper - lower) <= align_as as _);
 
-        tracer.trace_step("split_enter_loop");
-
-        if upper == lower {
+        // This particular code does not seem to help with LTO
+        /*if upper == lower {
             let (chunks_out, addrs_out) = out_target;
             let addr = Address::from(lower);
             let index = (addr - addr.as_page_aligned(align_as)) / step_size;
@@ -268,8 +250,7 @@ impl<T: MMUTranslationBase> TranslationChunk<T> {
             let mut new_chunk = TranslationChunk::new(pt_addr);
 
             for _ in 0..self.addr_count {
-                let len = addr_stack.len();
-                let mut data = addr_stack.pop().unwrap();
+                let data = addr_stack.pop().unwrap();
                 new_chunk.push_data(data, addrs_out);
             }
 
@@ -277,13 +258,11 @@ impl<T: MMUTranslationBase> TranslationChunk<T> {
             chunks_out.push(new_chunk);
 
             return;
-        }
+        }*/
 
         // Walk in reverse so that lowest addresses always end up
         // first in the stack. This preserves translation order
         for (cnt, addr) in (lower..=upper).rev().step_by(step_size).enumerate() {
-            //debug_assert!(self.step == 0 || cnt < 0x200);
-
             let (chunks_out, addrs_out) = if out_target.0.capacity() != out_target.0.len()
                 && out_target.1.capacity() - out_target.1.len() >= self.addr_count
             {
@@ -295,17 +274,12 @@ impl<T: MMUTranslationBase> TranslationChunk<T> {
             let addr = Address::from(addr);
             let index = (addr - addr.as_page_aligned(align_as)) / step_size;
             let (pt_addr, _) = self.pt_addr.get_pt_by_index(index);
-            //tracer.trace_step("split_pt_by_index");
             let pt_addr = spec.vtop_step(pt_addr, addr, self.step);
-            //tracer.trace_step("split_vtop_step");
 
             let mut new_chunk = TranslationChunk::new(pt_addr);
-            tracer.trace_step("split_new_chunk");
 
             for _ in 0..self.addr_count {
-                // TODO: We need to remove the None check here
                 let mut data = self.pop_data(addr_stack).unwrap();
-                tracer.trace_step("split_pop_data");
 
                 debug_assert!(
                     data.addr >= self.min_addr,
@@ -325,35 +299,22 @@ impl<T: MMUTranslationBase> TranslationChunk<T> {
                 );
 
                 let (left, right) = data.split_at_address(addr);
-                //tracer.trace_step("split_split_at");
 
                 if let Some(data) = right {
-                    //debug_assert!(data.length() <= step_size);
                     new_chunk.push_data(data, addrs_out);
-                    //debug_assert!(new_chunk.verify_bounds(&mut addrs_out.iter().rev()), "PSP2");
                 }
 
                 if left.length() > 0 {
                     self.push_data(left, tmp_addr_stack);
                 }
-                tracer.trace_step("split_pushed_addr");
-
-                //debug_assert!(self.verify_bounds(&mut tmp_addr_stack.iter().rev()), "SP2");
             }
 
             if new_chunk.addr_count > 0 {
                 new_chunk.step = self.step;
-                //debug_assert!(new_chunk.verify_bounds(&mut addrs_out.iter().rev()), "PSP");
                 chunks_out.push(new_chunk);
-                //tracer.trace_step("split_push_chunk");
             }
 
-            let t_addr_stack = addr_stack;
-            addr_stack = tmp_addr_stack;
-            tmp_addr_stack = t_addr_stack;
-            //std::mem::swap(&mut addr_stack, &mut tmp_addr_stack);
-
-            tracer.trace_step("page_split");
+            std::mem::swap(&mut addr_stack, &mut tmp_addr_stack);
         }
 
         debug_assert!(self.addr_count == 0);

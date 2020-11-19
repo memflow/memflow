@@ -7,7 +7,6 @@ use crate::types::{Address, PageType, PhysicalAddress};
 pub(crate) use fixed_slice_vec::FixedSliceVec as MVec;
 use std::alloc::Layout;
 use std::convert::TryInto;
-use translate_data::Tracer;
 use translate_data::{TranslateData, TranslateDataVec, TranslateVec, TranslationChunk};
 
 use bumpalo::Bump;
@@ -93,14 +92,14 @@ pub trait MMUTranslationBase: Clone + Copy + core::fmt::Debug {
         (waiting_addrs, tmp_addrs): (&mut TranslateDataVec<B>, &mut TranslateDataVec<B>),
         work_vecs: &mut (TranslateVec, TranslateDataVec<B>),
         next_work_vecs: &mut (TranslateVec, TranslateDataVec<B>),
-        working_addr_count: usize,
-        tracer: &mut Tracer,
     ) where
         VI: Iterator<Item = (Address, B)>,
         FO: Extend<(Error, Address, B)>,
         B: SplitAtIndex,
     {
         let mut init_chunk = TranslationChunk::new(*self);
+
+        let working_addr_count = work_vecs.1.capacity();
 
         for (_, data) in (0..working_addr_count).zip(addrs) {
             self.virt_addr_filter(spec, data, (&mut init_chunk, waiting_addrs), out_fail);
@@ -111,13 +110,7 @@ pub trait MMUTranslationBase: Clone + Copy + core::fmt::Debug {
 
         if init_chunk.addr_count > 0 {
             vtop_trace!("init_chunk = {:#?}", &init_chunk);
-            init_chunk.split_chunk(
-                spec,
-                (waiting_addrs, tmp_addrs),
-                work_vecs,
-                next_work_vecs,
-                tracer,
-            );
+            init_chunk.split_chunk(spec, (waiting_addrs, tmp_addrs), work_vecs, next_work_vecs);
         }
     }
 }
@@ -199,21 +192,6 @@ impl ArchMMUDef {
         (min_index_bits, max_index_bits)
     }
 
-    fn virt_addr_to_pte_offset(&self, virt_addr: Address, step: usize) -> u64 {
-        let (min, max) = self.virt_addr_bit_range(step);
-        vtop_trace!("virt_addr_bit_range for step {} = ({}, {})", step, min, max);
-
-        let shifted = virt_addr.as_u64() >> min;
-        let mask = Address::bit_mask(0..(max - min - 1));
-
-        (shifted & mask.as_u64()) * self.pte_size as u64
-    }
-
-    fn virt_addr_to_page_offset(&self, virt_addr: Address, step: usize) -> u64 {
-        let max = self.virt_addr_bit_range(step).1;
-        virt_addr.as_u64() & Address::bit_mask(0..(max - 1)).as_u64()
-    }
-
     /// Return the number of splits of virtual addresses
     ///
     /// The returned value will be one more than the number of page table levels
@@ -225,7 +203,7 @@ impl ArchMMUDef {
         let mut i = 1;
         let mut fold = 0;
         while i < self.virtual_address_splits.len() {
-            fold += (1 << self.virtual_address_splits[i - 1]);
+            fold += 1 << self.virtual_address_splits[i - 1];
             i += 1;
         }
         fold
@@ -252,7 +230,7 @@ impl ArchMMUDef {
     /// * `step` - the current step in the page walk
     pub const fn page_size_step_unchecked(&self, step: usize) -> usize {
         let max_index_bits = {
-            let mut subsl = &self.virtual_address_splits;
+            let subsl = &self.virtual_address_splits;
             let mut i = step;
             let mut accum = 0;
             while i < subsl.len() {
@@ -562,7 +540,6 @@ impl ArchMMUSpec {
         FO: Extend<(Error, Address, B)>,
     {
         vtop_trace!("virt_to_phys_iter_with_mmu");
-        let mut tracer = translate_data::Tracer::new();
 
         let total_alloc = crate::types::size::mb(160);
         let layout = Layout::from_size_align(total_alloc, 64).unwrap();
@@ -599,11 +576,11 @@ impl ArchMMUSpec {
         // Pop stuff in directly to working stack,
         // use waiting stack only later
         let (working_bytes, slice) = slice.split_at_mut(spare_chunks * chunk_size);
-        let mut working_stack = MVec::from_uninit_bytes(working_bytes);
+        let working_stack = MVec::from_uninit_bytes(working_bytes);
         let (working_bytes, slice) = slice.split_at_mut(spare_chunks * chunk_size);
-        let mut working_stack2 = MVec::from_uninit_bytes(working_bytes);
+        let working_stack2 = MVec::from_uninit_bytes(working_bytes);
         let (waiting_bytes, slice) = slice.split_at_mut(total_chunks * chunk_size);
-        let mut waiting_stack = MVec::from_uninit_bytes(waiting_bytes);
+        let waiting_stack = MVec::from_uninit_bytes(waiting_bytes);
 
         let (pt_buf_bytes, slice) = slice.split_at_mut(spare_chunks * 8);
         let mut pt_buf = MVec::from_uninit_bytes(pt_buf_bytes);
@@ -612,16 +589,13 @@ impl ArchMMUSpec {
         let mut pt_read = MVec::from_uninit_bytes(pt_read_bytes);
 
         let (working_addrs_bytes, slice) = slice.split_at_mut(working_addr_count * data_size);
-        let mut working_addrs = MVec::from_uninit_bytes(working_addrs_bytes);
+        let working_addrs = MVec::from_uninit_bytes(working_addrs_bytes);
         let (working_addrs_bytes, slice) = slice.split_at_mut(working_addr_count * data_size);
-        let mut working_addrs2 = MVec::from_uninit_bytes(working_addrs_bytes);
+        let working_addrs2 = MVec::from_uninit_bytes(working_addrs_bytes);
         let (waiting_addrs_bytes, slice) = slice.split_at_mut(total_addr_count * data_size);
         let mut waiting_addrs = MVec::from_uninit_bytes(waiting_addrs_bytes);
         let (tmp_addrs_bytes, _slice) = slice.split_at_mut(working_addr_count * data_size);
         let mut tmp_addrs = MVec::from_uninit_bytes(tmp_addrs_bytes);
-
-        tracer.trace_step("alloc");
-        tracer.trace_step("alloc");
 
         let mut working_pair = (working_stack, working_addrs);
         let mut next_working_pair = (working_stack2, working_addrs2);
@@ -633,24 +607,16 @@ impl ArchMMUSpec {
             (&mut waiting_addrs, &mut tmp_addrs),
             &mut working_pair,
             &mut next_working_pair,
-            working_addr_count,
-            &mut tracer,
         );
 
         let mut waiting_pair = (waiting_stack, waiting_addrs);
 
-        tracer.trace_step("init");
-
         //log::trace!("{:x} {:x} {:x} {:x}", waiting_addrs.len(), waiting_stack.len(), working_addrs.len(), working_stack.len());
         while !working_pair.0.is_empty() {
             // Perform the reads here
-            if let Err(err) = self.read_pt_address_iter(
-                mem,
-                &mut working_pair.0,
-                &mut pt_buf,
-                &mut pt_read,
-                &mut tracer,
-            ) {
+            if let Err(err) =
+                self.read_pt_address_iter(mem, &mut working_pair.0, &mut pt_buf, &mut pt_read)
+            {
                 vtop_trace!("read_pt_address_iter failure: {}", err);
 
                 while let Some(data) = working_pair.1.pop() {
@@ -671,14 +637,11 @@ impl ArchMMUSpec {
                 return;
             }
 
-            tracer.trace_step("read");
-
             self.work_through_stack(
                 &mut working_pair,
                 &mut next_working_pair,
                 out,
                 out_fail,
-                &mut tracer,
                 &mut waiting_pair,
                 &mut tmp_addrs,
             );
@@ -693,7 +656,6 @@ impl ArchMMUSpec {
                     &mut next_working_pair,
                     out_fail,
                     &mut addrs,
-                    &mut tracer,
                     working_addr_count,
                     &mut waiting_pair,
                     &mut tmp_addrs,
@@ -702,7 +664,6 @@ impl ArchMMUSpec {
                 std::mem::swap(&mut working_pair, &mut next_working_pair);
             }
         }
-        tracer.trace_step("end");
 
         debug_assert!(waiting_pair.0.is_empty());
         debug_assert!(working_pair.0.is_empty());
@@ -716,12 +677,10 @@ impl ArchMMUSpec {
         chunks: &mut TranslateVec,
         pt_buf: &mut MVec<u8>,
         pt_read: &mut MVec<PhysicalReadData>,
-        tracer: &mut Tracer,
     ) -> Result<()>
     where
         T: PhysicalMemory + ?Sized,
     {
-        //let mut tracer = translate_data::Tracer::new();
         //TODO: use self.pt_leaf_size(step) (need to handle LittleEndian::read_u64)
         let pte_size = 8;
 
@@ -746,11 +705,7 @@ impl ArchMMUSpec {
             ));
         }
 
-        tracer.trace_step("read_prep");
-
         mem.phys_read_raw_list(pt_read)?;
-
-        tracer.trace_step("do_read");
 
         for (ref mut chunk, PhysicalReadData(_, buf)) in chunks.iter_mut().zip(pt_read.iter()) {
             let pt_addr = Address::from(u64::from_le_bytes(buf[0..8].try_into().unwrap()));
@@ -759,12 +714,11 @@ impl ArchMMUSpec {
 
         pt_read.clear();
 
-        tracer.trace_step("read_post");
-
         Ok(())
     }
 
     #[inline(never)]
+    #[allow(clippy::too_many_arguments)]
     fn refill_stack<B: SplitAtIndex, D, VI, FO>(
         &self,
         dtb: D,
@@ -773,7 +727,6 @@ impl ArchMMUSpec {
         next_working_pair: &mut (TranslateVec, TranslateDataVec<B>),
         out_fail: &mut FO,
         addrs: &mut VI,
-        tracer: &mut Tracer,
         working_addr_count: usize,
         (waiting_stack, waiting_addrs): &mut (TranslateVec, TranslateDataVec<B>),
         tmp_addrs: &mut TranslateDataVec<B>,
@@ -806,7 +759,6 @@ impl ArchMMUSpec {
                     working_stack.push(new_chunk);
                 }
             }
-            tracer.trace_step("fill_wait");
         } else {
             // TODO: Maybe feed it in directly?? Idk. Probably want to do it if <50% addresses
             // are full after waiting stack is done
@@ -817,21 +769,18 @@ impl ArchMMUSpec {
                 (waiting_addrs, tmp_addrs),
                 working_pair,
                 next_working_pair,
-                working_addr_count,
-                tracer,
             );
-            tracer.trace_step("fill_init");
         }
     }
 
     #[inline(never)]
+    #[allow(clippy::too_many_arguments)]
     fn work_through_stack<B: SplitAtIndex, VO, FO>(
         &self,
         (working_stack, working_addrs): &mut (TranslateVec, TranslateDataVec<B>),
-        mut next_working_pair: &mut (TranslateVec, TranslateDataVec<B>),
+        next_working_pair: &mut (TranslateVec, TranslateDataVec<B>),
         out: &mut VO,
         out_fail: &mut FO,
-        tracer: &mut Tracer,
         waiting_pair: &mut (TranslateVec, TranslateDataVec<B>),
         tmp_addrs: &mut TranslateDataVec<B>,
     ) where
@@ -866,7 +815,6 @@ impl ArchMMUSpec {
                 while let Some(entry) = chunk.pop_data(working_addrs) {
                     out_fail.extend(Some((Error::VirtualTranslate, entry.addr, entry.buf)));
                 }
-                tracer.trace_step("fail");
             } else if self.is_final_mapping(chunk.pt_addr, chunk.step) {
                 let pt_addr = chunk.pt_addr;
                 let step = chunk.step;
@@ -876,7 +824,6 @@ impl ArchMMUSpec {
                         entry.buf,
                     )));
                 }
-                tracer.trace_step("finish");
             /*out.extend(
                 chunk.into_addr_iter(&mut working_addrs).map(|entry| {
                     (self.get_phys_page(pt_addr, entry.addr, step), entry.buf)
@@ -890,10 +837,7 @@ impl ArchMMUSpec {
                     (working_addrs, tmp_addrs),
                     next_working_pair,
                     waiting_pair,
-                    tracer,
                 );
-
-                tracer.trace_step("split");
 
                 debug_assert!(tmp_addrs.is_empty());
 

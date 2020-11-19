@@ -1,5 +1,5 @@
 use super::{
-    super::{ArchMMUDef, ArchMMUSpec, ArchitectureObj, Endianess, ScopedVirtualTranslate},
+    super::{ArchMMUDef, ArchitectureObj, Endianess, ScopedVirtualTranslate},
     X86Architecture, X86ScopedVirtualTranslate,
 };
 

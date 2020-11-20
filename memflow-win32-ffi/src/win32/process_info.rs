@@ -21,6 +21,16 @@ pub extern "C" fn process_info_section_base(info: &Win32ProcessInfo) -> Address 
 }
 
 #[no_mangle]
+pub extern "C" fn process_info_exit_status(info: &Win32ProcessInfo) -> i32 {
+    info.exit_status
+}
+
+#[no_mangle]
+pub extern "C" fn process_info_ethread(info: &Win32ProcessInfo) -> Address {
+    info.ethread
+}
+
+#[no_mangle]
 pub extern "C" fn process_info_wow64(info: &Win32ProcessInfo) -> Address {
     info.wow64()
 }

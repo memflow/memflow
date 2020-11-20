@@ -22,7 +22,7 @@ use log::trace;
 /// ConnectorInventory is inherently unsafe, because it loads shared libraries which can not be
 /// guaranteed to be safe.
 #[no_mangle]
-pub unsafe extern "C" fn inventory_try_new() -> &'static mut ConnectorInventory {
+pub unsafe extern "C" fn inventory_scan() -> &'static mut ConnectorInventory {
     to_heap(ConnectorInventory::scan())
 }
 
@@ -32,7 +32,7 @@ pub unsafe extern "C" fn inventory_try_new() -> &'static mut ConnectorInventory 
 ///
 /// `path` must be a valid null terminated string
 #[no_mangle]
-pub unsafe extern "C" fn inventory_with_path(
+pub unsafe extern "C" fn inventory_scan_path(
     path: *const c_char,
 ) -> Option<&'static mut ConnectorInventory> {
     let rpath = CStr::from_ptr(path).to_string_lossy();

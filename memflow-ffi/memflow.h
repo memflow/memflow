@@ -166,7 +166,7 @@ PhysicalAddress addr_to_paddr(Address address);
  * ConnectorInventory is inherently unsafe, because it loads shared libraries which can not be
  * guaranteed to be safe.
  */
-ConnectorInventory *inventory_try_new(void);
+ConnectorInventory *inventory_scan(void);
 
 /**
  * Create a new inventory with custom path string
@@ -175,7 +175,7 @@ ConnectorInventory *inventory_try_new(void);
  *
  * `path` must be a valid null terminated string
  */
-ConnectorInventory *inventory_with_path(const char *path);
+ConnectorInventory *inventory_scan_path(const char *path);
 
 /**
  * Add a directory to an existing inventory

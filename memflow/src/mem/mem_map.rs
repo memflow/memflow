@@ -5,7 +5,6 @@ use crate::types::{Address, PhysicalAddress};
 use std::cmp::Ordering;
 use std::default::Default;
 use std::fmt;
-use std::path::Path;
 use std::prelude::v1::*;
 
 /// The `MemoryMap`struct provides a mechanism to map addresses from the linear address space
@@ -203,8 +202,8 @@ impl MemoryMap<(Address, usize)> {
     /// ```
     ///
     /// The `real_base` parameter is optional. If it is not set there will be no re-mapping.
-    #[cfg(feature = "serde")]
-    pub fn open<P: AsRef<Path>>(path: P) -> Result<Self> {
+    #[cfg(feature = "memmapfiles")]
+    pub fn open<P: AsRef<::std::path::Path>>(path: P) -> Result<Self> {
         let contents = ::std::fs::read_to_string(path)
             .map_err(|_| Error::Other("unable to open the memory mapping file"))?;
         let mappings: MemoryMapFile = ::toml::from_str(&contents)
@@ -605,7 +604,7 @@ mod tests {
         map.push_range(0x2000.into(), 0x20ff.into(), 0.into());
     }
 
-    #[cfg(feature = "serde")]
+    #[cfg(feature = "memmapfiles")]
     #[test]
     fn test_load_toml() {
         let mappings: MemoryMapFile = ::toml::from_str(

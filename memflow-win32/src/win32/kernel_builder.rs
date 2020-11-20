@@ -12,6 +12,7 @@ use memflow::mem::{
     CachedMemoryAccess, CachedVirtualTranslate, DefaultCacheValidator, DirectTranslate,
     PhysicalMemory, VirtualTranslate,
 };
+use memflow::types::Address;
 
 /// Builder for a Windows Kernel structure.
 ///
@@ -112,6 +113,8 @@ pub struct KernelBuilder<T, TK, VK> {
     connector: T,
 
     arch: Option<ArchitectureObj>,
+    kernel_hint: Option<Address>,
+    dtb: Option<Address>,
 
     #[cfg(feature = "symstore")]
     symbol_store: Option<SymbolStore>,
@@ -129,6 +132,8 @@ where
             connector,
 
             arch: None,
+            kernel_hint: None,
+            dtb: None,
 
             #[cfg(feature = "symstore")]
             symbol_store: Some(SymbolStore::default()),
@@ -150,6 +155,12 @@ where
         let mut kernel_scanner = KernelInfo::scanner(&mut self.connector);
         if let Some(arch) = self.arch {
             kernel_scanner = kernel_scanner.arch(arch);
+        }
+        if let Some(kernel_hint) = self.kernel_hint {
+            kernel_scanner = kernel_scanner.kernel_hint(kernel_hint);
+        }
+        if let Some(dtb) = self.dtb {
+            kernel_scanner = kernel_scanner.dtb(dtb);
         }
         let kernel_info = kernel_scanner.scan()?;
 
@@ -191,6 +202,16 @@ where
 
     pub fn arch(mut self, arch: ArchitectureObj) -> Self {
         self.arch = Some(arch);
+        self
+    }
+
+    pub fn kernel_hint(mut self, kernel_hint: Address) -> Self {
+        self.kernel_hint = Some(kernel_hint);
+        self
+    }
+
+    pub fn dtb(mut self, dtb: Address) -> Self {
+        self.dtb = Some(dtb);
         self
     }
 
@@ -270,6 +291,8 @@ where
             connector: self.connector,
 
             arch: self.arch,
+            kernel_hint: self.kernel_hint,
+            dtb: self.dtb,
 
             #[cfg(feature = "symstore")]
             symbol_store: self.symbol_store,
@@ -323,6 +346,8 @@ where
             connector: self.connector,
 
             arch: self.arch,
+            kernel_hint: self.kernel_hint,
+            dtb: self.dtb,
 
             #[cfg(feature = "symstore")]
             symbol_store: self.symbol_store,
@@ -366,6 +391,8 @@ where
             connector: self.connector,
 
             arch: self.arch,
+            kernel_hint: self.kernel_hint,
+            dtb: self.dtb,
 
             #[cfg(feature = "symstore")]
             symbol_store: self.symbol_store,

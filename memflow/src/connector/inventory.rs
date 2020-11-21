@@ -4,13 +4,12 @@ Connector inventory interface.
 
 use crate::error::{Error, Result};
 use crate::mem::{
-    CloneablePhysicalMemory, PhysicalMemory, PhysicalMemoryBox, PhysicalMemoryMetadata,
-    PhysicalReadData, PhysicalWriteData,
+    PhysicalMemory, PhysicalMemoryBox, PhysicalMemoryMetadata, PhysicalReadData, PhysicalWriteData,
 };
 
 use super::ConnectorArgs;
 
-use std::ffi::CString;
+use std::ffi::{c_void, CString};
 use std::fs::read_dir;
 use std::os::raw::c_char;
 use std::path::{Path, PathBuf};
@@ -48,19 +47,23 @@ pub struct ConnectorDescriptor {
 #[repr(C)]
 #[derive(Clone)]
 pub struct ConnectorFunctionTable {
-    pub init: extern "C" fn(log_level: i32) -> (),
+    pub create: extern "C" fn(log_level: i32, args: *const c_char) -> Option<&'static mut c_void>,
 
-    pub create: extern "C" fn(args: *const c_char) -> Option<&'static mut Box<dyn PhysicalMemory>>,
+    pub phys_read_raw_list: extern "C" fn(
+        phys_mem: Option<&mut c_void>,
+        read_data: *mut PhysicalReadData,
+        read_data_count: usize,
+    ) -> i32,
+    pub phys_write_raw_list: extern "C" fn(
+        phys_mem: Option<&mut c_void>,
+        write_data: *const PhysicalWriteData,
+        write_data_count: usize,
+    ) -> i32,
+    pub metadata: extern "C" fn(phys_mem: Option<&c_void>) -> PhysicalMemoryMetadata,
 
-    pub phys_read_raw_list: extern "C" fn(phys_mem: Option<&mut Box<dyn PhysicalMemory>>) -> i32,
-    pub phys_write_raw_list: extern "C" fn(phys_mem: Option<&mut Box<dyn PhysicalMemory>>) -> i32,
-    pub metadata: extern "C" fn(phys_mem: Option<&Box<dyn PhysicalMemory>>) -> i32,
+    pub clone: extern "C" fn(phys_mem: Option<&c_void>) -> Option<&'static mut c_void>,
 
-    pub clone: extern "C" fn(
-        phys_mem: Option<&Box<dyn PhysicalMemory>>,
-    ) -> Option<&'static mut Box<dyn PhysicalMemory>>,
-
-    pub drop: extern "C" fn(phys_mem: Option<&mut Box<dyn PhysicalMemory>>),
+    pub drop: extern "C" fn(phys_mem: Option<&mut c_void>),
 }
 
 /// Holds an inventory of available connectors.
@@ -394,7 +397,7 @@ impl Connector {
 
         // We do not want to return error with data from the shared library
         // that may get unloaded before it gets displayed
-        let instance = (self.vtable.create)(cstr.as_ptr())
+        let instance = (self.vtable.create)(log::max_level() as i32, cstr.as_ptr())
             .ok_or_else(|| Error::Connector("conn_create failed"))?;
 
         //let instance = connector_res?;
@@ -413,7 +416,7 @@ impl Connector {
 /// This structure is returned by `Connector`. It is needed to maintain reference
 /// counts to the loaded connector library.
 pub struct ConnectorInstance {
-    instance: &'static mut Box<dyn PhysicalMemory>,
+    instance: &'static mut c_void,
     vtable: ConnectorFunctionTable,
 
     /// Internal library arc.
@@ -430,33 +433,21 @@ pub struct ConnectorInstance {
 // down/upcasting can result in issues when not going through the FFI
 
 // TODO: safety
-unsafe impl Sync for ConnectorInstance {}
-unsafe impl Send for ConnectorInstance {}
-
-/*
-impl std::ops::Deref for ConnectorInstance {
-    type Target = dyn CloneablePhysicalMemory;
-
-    fn deref(&self) -> &Self::Target {
-        &*self.instance
-    }
-}
-
-impl std::ops::DerefMut for ConnectorInstance {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut *self.instance
-    }
-}
-*/
+//unsafe impl Sync for ConnectorInstance {}
+//unsafe impl Send for ConnectorInstance {}
 
 impl PhysicalMemory for ConnectorInstance {
     fn phys_read_raw_list(&mut self, data: &mut [PhysicalReadData]) -> Result<()> {
-        (self.vtable.phys_read_raw_list)(Some(self.instance));
+        (self.vtable.phys_read_raw_list)(Some(self.instance), data.as_mut_ptr(), data.len());
         Ok(())
     }
 
     fn phys_write_raw_list(&mut self, data: &[PhysicalWriteData]) -> Result<()> {
-        (self.vtable.phys_write_raw_list)(Some(self.instance));
+        (self.vtable.phys_write_raw_list)(
+            Some(self.instance),
+            data.as_ptr() as *mut PhysicalWriteData,
+            data.len(),
+        );
         Ok(())
     }
 

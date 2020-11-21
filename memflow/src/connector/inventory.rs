@@ -256,7 +256,7 @@ impl ConnectorInventory {
     /// use memflow::derive::connector;
     ///
     /// #[connector(name = "dummy", ty = "DummyMemory")]
-    /// pub fn create_connector(_log_level: i32, _args: &ConnectorArgs) -> Result<DummyMemory> {
+    /// pub fn create_connector(_log_level: log::Level, _args: &ConnectorArgs) -> Result<DummyMemory> {
     ///     Ok(DummyMemory::new(size::mb(16)))
     /// }
     /// ```

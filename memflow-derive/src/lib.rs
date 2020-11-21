@@ -66,6 +66,15 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
             log_level: i32,
             args: *const ::std::os::raw::c_char,
         ) -> std::option::Option<&'static mut ::std::ffi::c_void> {
+            let level = match log_level {
+                0 => ::log::Level::Error,
+                1 => ::log::Level::Warn,
+                2 => ::log::Level::Info,
+                3 => ::log::Level::Debug,
+                4 => ::log::Level::Trace,
+                _ => ::log::Level::Trace,
+            };
+
             let argsstr = unsafe { ::std::ffi::CStr::from_ptr(args) }.to_str()
                 .or_else(|e| {
                     ::log::error!("error converting connector args: {}", e);
@@ -79,7 +88,7 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
                 })
                 .ok()?;
 
-            let conn = Box::new(#func_name(log_level, &conn_args)
+            let conn = Box::new(#func_name(level, &conn_args)
                 .or_else(|e| {
                     ::log::error!("{}", e);
                     Err(e)

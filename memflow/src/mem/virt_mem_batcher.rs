@@ -1,10 +1,10 @@
 use std::prelude::v1::*;
 
 use crate::error::PartialResult;
-use crate::types::Address;
-use crate::virt_mem::{
+use crate::mem::virt_mem::{
     VirtualMemory, VirtualReadData, VirtualReadIterator, VirtualWriteData, VirtualWriteIterator,
 };
+use crate::types::Address;
 
 use dataview::Pod;
 

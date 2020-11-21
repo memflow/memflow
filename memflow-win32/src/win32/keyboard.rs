@@ -12,8 +12,8 @@ Therefor the Keyboard will by default find the winlogon.exe or wininit.exe proce
 ```
 use std::{thread, time};
 
-use memflow::{PhysicalMemory, VirtualTranslate};
-use memflow_win32::{Kernel, Keyboard};
+use memflow::mem::{PhysicalMemory, VirtualTranslate};
+use memflow_win32::win32::{Kernel, Keyboard};
 
 fn test<T: PhysicalMemory, V: VirtualTranslate>(kernel: &mut Kernel<T, V>) {
     let kbd = Keyboard::try_with(kernel).unwrap();

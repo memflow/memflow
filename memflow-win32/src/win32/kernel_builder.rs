@@ -30,8 +30,8 @@ use memflow::types::Address;
 ///
 /// Using the builder with default values:
 /// ```
-/// use memflow::PhysicalMemory;
-/// use memflow_win32::Kernel;
+/// use memflow::mem::PhysicalMemory;
+/// use memflow_win32::win32::Kernel;
 ///
 /// fn test<T: PhysicalMemory>(connector: T) {
 ///     let _kernel = Kernel::builder(connector)
@@ -42,8 +42,8 @@ use memflow::types::Address;
 ///
 /// Using the builder with default cache configurations:
 /// ```
-/// use memflow::PhysicalMemory;
-/// use memflow_win32::Kernel;
+/// use memflow::mem::PhysicalMemory;
+/// use memflow_win32::win32::Kernel;
 ///
 /// fn test<T: PhysicalMemory>(connector: T) {
 ///     let _kernel = Kernel::builder(connector)
@@ -55,8 +55,8 @@ use memflow::types::Address;
 ///
 /// Customizing the caches:
 /// ```
-/// use memflow::{PhysicalMemory, CachedMemoryAccess, CachedVirtualTranslate};
-/// use memflow_win32::Kernel;
+/// use memflow::mem::{PhysicalMemory, CachedMemoryAccess, CachedVirtualTranslate};
+/// use memflow_win32::win32::Kernel;
 ///
 /// fn test<T: PhysicalMemory>(connector: T) {
 ///     let _kernel = Kernel::builder(connector)
@@ -81,8 +81,8 @@ use memflow::types::Address;
 ///
 /// Manual initialization of the above examples would look like the following:
 /// ```
-/// use memflow::{DirectTranslate, PhysicalMemory, CachedMemoryAccess, CachedVirtualTranslate};
-/// use memflow_win32::{KernelInfo, Win32Offsets, Kernel};
+/// use memflow::prelude::v1::*;
+/// use memflow_win32::prelude::{KernelInfo, Win32Offsets, Kernel};
 ///
 /// fn test<T: PhysicalMemory>(mut connector: T) {
 ///     // Use the ntoskrnl scanner to find the relevant KernelInfo (start_block, arch, dtb, ntoskrnl, etc)
@@ -221,8 +221,8 @@ where
     /// # Examples
     ///
     /// ```
-    /// use memflow::PhysicalMemory;
-    /// use memflow_win32::{Kernel, SymbolStore};
+    /// use memflow::mem::PhysicalMemory;
+    /// use memflow_win32::prelude::{Kernel, SymbolStore};
     ///
     /// fn test<T: PhysicalMemory>(connector: T) {
     ///     let _kernel = Kernel::builder(connector)
@@ -245,8 +245,9 @@ where
     /// # Examples
     ///
     /// ```
-    /// use memflow::PhysicalMemory;
-    /// use memflow_win32::{Kernel, SymbolStore};
+    /// use memflow::mem::PhysicalMemory;
+    /// use memflow_win32::win32::Kernel;
+    /// use memflow_win32::offsets::SymbolStore;
     ///
     /// fn test<T: PhysicalMemory>(connector: T) {
     ///     let _kernel = Kernel::builder(connector)
@@ -270,8 +271,8 @@ where
     /// # Examples
     ///
     /// ```
-    /// use memflow::PhysicalMemory;
-    /// use memflow_win32::Kernel;
+    /// use memflow::mem::PhysicalMemory;
+    /// use memflow_win32::win32::Kernel;
     ///
     /// fn test<T: PhysicalMemory>(connector: T) {
     ///     let _kernel = Kernel::builder(connector)
@@ -320,8 +321,8 @@ where
     /// # Examples
     ///
     /// ```
-    /// use memflow::{PhysicalMemory, CachedMemoryAccess};
-    /// use memflow_win32::Kernel;
+    /// use memflow::mem::{PhysicalMemory, CachedMemoryAccess};
+    /// use memflow_win32::win32::Kernel;
     ///
     /// fn test<T: PhysicalMemory>(connector: T) {
     ///     let _kernel = Kernel::builder(connector)
@@ -365,8 +366,8 @@ where
     /// # Examples
     ///
     /// ```
-    /// use memflow::{PhysicalMemory, CachedVirtualTranslate};
-    /// use memflow_win32::Kernel;
+    /// use memflow::mem::{PhysicalMemory, CachedVirtualTranslate};
+    /// use memflow_win32::win32::Kernel;
     ///
     /// fn test<T: PhysicalMemory>(connector: T) {
     ///     let _kernel = Kernel::builder(connector)

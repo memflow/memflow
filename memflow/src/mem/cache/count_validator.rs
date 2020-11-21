@@ -41,8 +41,7 @@ impl CountCacheValidator {
     ///
     /// # Examples:
     /// ```
-    /// use memflow::mem::CountCacheValidator;
-    /// use memflow::CacheValidator;
+    /// use memflow::mem::{CacheValidator, CountCacheValidator};
     ///
     /// let mut validator = CountCacheValidator::new(100);
     ///

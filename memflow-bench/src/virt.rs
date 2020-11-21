@@ -6,8 +6,9 @@ use memflow::mem::{
 };
 
 use memflow::architecture::ScopedVirtualTranslate;
-
-use memflow::{size, OsProcessInfo, OsProcessModuleInfo, PageType};
+use memflow::error::Result;
+use memflow::process::*;
+use memflow::types::*;
 
 use rand::prelude::*;
 use rand::{Rng, SeedableRng};
@@ -136,7 +137,7 @@ fn seq_read_params<
     func_name: String,
     cache_size: u64,
     use_tlb: bool,
-    initialize_ctx: &dyn Fn() -> memflow::Result<(T, V, P, S, M)>,
+    initialize_ctx: &dyn Fn() -> Result<(T, V, P, S, M)>,
 ) {
     for &size in [0x8, 0x10, 0x100, 0x1000, 0x10000].iter() {
         group.throughput(Throughput::Bytes(size));
@@ -168,7 +169,7 @@ fn chunk_read_params<
     func_name: String,
     cache_size: u64,
     use_tlb: bool,
-    initialize_ctx: &dyn Fn() -> memflow::Result<(T, V, P, S, M)>,
+    initialize_ctx: &dyn Fn() -> Result<(T, V, P, S, M)>,
 ) {
     for &size in [0x8, 0x10, 0x100, 0x1000].iter() {
         for &chunk_size in [1, 4, 16, 64].iter() {
@@ -200,7 +201,7 @@ pub fn seq_read<
 >(
     c: &mut Criterion,
     backend_name: &str,
-    initialize_ctx: &dyn Fn() -> memflow::Result<(T, V, P, S, M)>,
+    initialize_ctx: &dyn Fn() -> Result<(T, V, P, S, M)>,
 ) {
     let plot_config = PlotConfiguration::default().summary_scale(AxisScale::Logarithmic);
 
@@ -248,7 +249,7 @@ pub fn chunk_read<
 >(
     c: &mut Criterion,
     backend_name: &str,
-    initialize_ctx: &dyn Fn() -> memflow::Result<(T, V, P, S, M)>,
+    initialize_ctx: &dyn Fn() -> Result<(T, V, P, S, M)>,
 ) {
     let plot_config = PlotConfiguration::default().summary_scale(AxisScale::Logarithmic);
 

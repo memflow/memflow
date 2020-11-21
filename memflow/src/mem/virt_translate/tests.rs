@@ -1,6 +1,6 @@
 use crate::architecture::x86::x64;
 
-use crate::dummy::DummyMemory;
+use crate::mem::dummy::DummyMemory;
 use crate::mem::{DirectTranslate, VirtualDMA, VirtualMemory, VirtualTranslate};
 use crate::types::size;
 

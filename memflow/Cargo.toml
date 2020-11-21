@@ -17,6 +17,7 @@ maintenance = { status = "actively-developed" }
 codecov = { repository = "github", branch = "master", service = "github" }
 
 [dependencies]
+memflow-derive = { path = "../memflow-derive" }
 dataview = { version = "0.1", features = ["derive_pod"] }
 log = "0.4"
 bitflags = "1.2"
@@ -38,10 +39,8 @@ serde = { version = "1.0", optional = true, default-features = false, features =
 toml = { version = "0.5", optional = true }
 
 [dev-dependencies]
-x86_64 = { version = "0.12", default-features = false }
 rand = { version = "0.7" }
 rand_xorshift = "0.2"
-memflow-derive = { path = "../memflow-derive" }
 
 [features]
 default = ["std", "serde_derive", "inventory", "filemap", "memmapfiles"]

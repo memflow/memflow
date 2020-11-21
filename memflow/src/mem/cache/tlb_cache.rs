@@ -2,8 +2,8 @@ use std::prelude::v1::*;
 
 use super::CacheValidator;
 use crate::architecture::{ArchitectureObj, ScopedVirtualTranslate};
+use crate::error::{Error, Result};
 use crate::types::{Address, PhysicalAddress};
-use crate::{Error, Result};
 
 #[derive(Clone, Copy)]
 pub struct TLBEntry {

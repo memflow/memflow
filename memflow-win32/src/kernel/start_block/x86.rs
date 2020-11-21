@@ -17,16 +17,12 @@ fn check_page(base: Address, mem: &[u8]) -> bool {
         return false;
     }
 
-    match mem
+    matches!(mem
         .iter()
         .step_by(4)
         .skip(0x200)
         .filter(|&&x| x == 0x63 || x == 0xe3)
-        .count()
-    {
-        x if x > 16 => true,
-        _ => false,
-    }
+        .count(), x if x > 16)
 }
 
 pub fn find(mem: &[u8]) -> Result<StartBlock> {

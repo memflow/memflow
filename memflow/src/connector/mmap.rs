@@ -2,12 +2,12 @@
 Basic connector which works on mapped memory.
 */
 
+use crate::error::{Error, Result};
 use crate::iter::FnExtend;
 use crate::mem::{
     MemoryMap, PhysicalMemory, PhysicalMemoryMetadata, PhysicalReadData, PhysicalWriteData,
 };
 use crate::types::Address;
-use crate::{Error, Result};
 
 pub struct MappedPhysicalMemory<T, F> {
     info: F,

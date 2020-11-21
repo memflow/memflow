@@ -44,7 +44,19 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
         pub static MEMFLOW_CONNECTOR: ::memflow::connector::ConnectorDescriptor = ::memflow::connector::ConnectorDescriptor {
             connector_version: ::memflow::connector::MEMFLOW_CONNECTOR_VERSION,
             name: CONNECTOR_NAME,
-            factory: connector_factory,
+            vtable: ::memflow::connector::ConnectorFunctionTable {
+                init:,
+
+                create:,
+
+                phys_read_raw_list:,
+                phys_write_raw_list:,
+                metadata:,
+
+                clone:,
+
+                drop:,
+            },
         };
 
         #[cfg(feature = "inventory")]

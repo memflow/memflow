@@ -15,7 +15,7 @@ use std::io::Write;
 use log::{error, Level};
 
 use memflow::connector::*;
-use memflow_win32::{Kernel, Win32OffsetFile};
+use memflow_win32::win32::{Kernel, Win32OffsetFile};
 
 pub fn main() {
     let connector_name = std::env::args().nth(1).unwrap();

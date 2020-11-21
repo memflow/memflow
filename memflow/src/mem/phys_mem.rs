@@ -1,8 +1,8 @@
 use std::prelude::v1::*;
 
 use super::PhysicalMemoryBatcher;
+use crate::error::Result;
 use crate::types::PhysicalAddress;
-use crate::Result;
 
 use std::mem::MaybeUninit;
 
@@ -86,7 +86,7 @@ use dataview::Pod;
 ///     println!("addr: {:x}", addr);
 /// }
 ///
-/// # use memflow::dummy::DummyMemory;
+/// # use memflow::mem::dummy::DummyMemory;
 /// # use memflow::types::size;
 /// # read(&mut DummyMemory::new(size::mb(4)));
 /// ```

@@ -6,7 +6,7 @@ use log::{error, Level};
 
 use memflow::connector::*;
 
-use memflow_win32::{Kernel, Win32OffsetFile};
+use memflow_win32::prelude::{Kernel, Win32OffsetFile};
 
 pub fn main() {
     let matches = App::new("dump offsets example")
@@ -50,7 +50,7 @@ pub fn main() {
         .unwrap();
 
     // create inventory + connector
-    let inventory = unsafe { ConnectorInventory::try_new() }.unwrap();
+    let inventory = unsafe { ConnectorInventory::scan() };
     let connector = unsafe {
         inventory.create_connector(
             matches.value_of("connector").unwrap(),

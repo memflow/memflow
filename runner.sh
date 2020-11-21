@@ -2,7 +2,7 @@
 
 if [[ ! -z $RUST_SUDO ]]; then
 
-    exec sudo $@
+    exec sudo -E $@
 
 else
 

@@ -9,8 +9,8 @@ use memflow::mem::{
 };
 
 use memflow::iter::FnExtend;
+use memflow::process::PID;
 use memflow::types::{size, Address, PageType};
-use memflow::PID;
 
 use super::process::Win32Process;
 use crate::kernel::start_block::StartBlock;

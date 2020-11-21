@@ -32,30 +32,34 @@ extern crate bitflags;
 extern crate smallvec;
 
 pub mod error;
-#[doc(hidden)]
-pub use error::*;
 
 #[macro_use]
 pub mod types;
-#[doc(hidden)]
-pub use types::*;
 
 pub mod architecture;
-#[doc(hidden)]
-pub use architecture::*;
 
 pub mod mem;
-#[doc(hidden)]
-pub use mem::*;
 
 pub mod connector;
-#[doc(hidden)]
-pub use connector::*;
 
 pub mod process;
-#[doc(hidden)]
-pub use process::*;
 
 pub mod iter;
-#[doc(hidden)]
-pub use iter::*;
+
+pub mod derive {
+    pub use memflow_derive::*;
+}
+
+pub mod prelude {
+    pub mod v1 {
+        pub use crate::architecture::*;
+        pub use crate::connector::*;
+        pub use crate::derive::*;
+        pub use crate::error::*;
+        pub use crate::iter::*;
+        pub use crate::mem::*;
+        pub use crate::process::*;
+        pub use crate::types::*;
+    }
+    pub use v1::*;
+}

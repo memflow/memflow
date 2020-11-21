@@ -27,9 +27,9 @@ where
     /// # Examples
     ///
     /// ```
-    /// # use memflow::Result;
+    /// # use memflow::error::Result;
     /// # use memflow::types::{PhysicalAddress, Address};
-    /// # use memflow::dummy::DummyMemory;
+    /// # use memflow::mem::dummy::DummyMemory;
     /// use memflow::types::size;
     /// use memflow::architecture::x86::x64;
     /// use memflow::iter::FnExtend;
@@ -71,7 +71,7 @@ where
     /// // We tried to translate one byte out of the mapped memory, it had to fail
     /// assert_eq!(translated_data.len(), buffer_length - 1);
     ///
-    /// # Ok::<(), memflow::Error>(())
+    /// # Ok::<(), memflow::error::Error>(())
     /// ```
     fn virt_to_phys_iter<T, B, D, VI, VO, FO>(
         &mut self,

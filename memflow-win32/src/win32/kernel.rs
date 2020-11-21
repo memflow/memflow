@@ -6,7 +6,7 @@ use super::{
 };
 
 use crate::error::{Error, Result};
-use crate::offsets::{Win32ArchOffsets, Win32Offsets};
+use crate::offsets::Win32Offsets;
 
 use log::{info, trace};
 use std::fmt;
@@ -160,20 +160,6 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
 
         let kernel_modules =
             reader.virt_read_addr_arch(self.kernel_info.start_block.arch, loaded_module_list)?;
-
-        // determine the offsets to be used when working with this process
-        let (ldr_data_base_offs, ldr_data_size_offs, ldr_data_name_offs) = {
-            let offsets = Win32ArchOffsets::from(self.kernel_info.start_block.arch);
-            (
-                offsets.ldr_data_base,
-                offsets.ldr_data_size,
-                offsets.ldr_data_name,
-            )
-        };
-
-        trace!("ldr_data_base_offs={:x}", ldr_data_base_offs);
-        trace!("ldr_data_size_offs={:x}", ldr_data_size_offs);
-        trace!("ldr_data_name_offs={:x}", ldr_data_name_offs);
 
         Ok(Win32ProcessInfo {
             address: self.kernel_info.kernel_base,
@@ -398,14 +384,15 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
     /// Finds a process by it's name and returns the `Win32ProcessInfo` struct.
     /// If no process with the specified name can be found this function will return an Error.
     pub fn process_info(&mut self, name: &str) -> Result<Win32ProcessInfo> {
+        let name16 = name[..name.len().min(IMAGE_FILE_NAME_LENGTH - 1)].to_lowercase();
+
         let process_info_list = self.process_info_list()?;
         let candidates = process_info_list
             .iter()
             .inspect(|process| trace!("{} {}", process.pid(), process.name()))
             .filter(|process| {
                 // strip process name to IMAGE_FILE_NAME_LENGTH without trailing \0
-                process.name().to_lowercase()
-                    == name[..name.len().min(IMAGE_FILE_NAME_LENGTH - 1)].to_lowercase()
+                process.name().to_lowercase() == name16
             })
             .collect::<Vec<_>>();
 

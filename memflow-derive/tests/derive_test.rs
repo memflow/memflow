@@ -1,4 +1,4 @@
-use memflow::byte_swap::ByteSwap;
+use memflow::types::byte_swap::ByteSwap;
 use memflow_derive::*;
 
 #[derive(ByteSwap)]

@@ -9,9 +9,8 @@ use memflow::mem::*;
 use memflow_win32::win32::Kernel;
 
 pub fn parallel_init<T: PhysicalMemory + Clone + 'static>(connector: T) {
-    let pool = (0..8).map(|_| connector.clone()).collect::<Vec<_>>();
-
-    let threads = pool
+    (0..8)
+        .map(|_| connector.clone())
         .into_iter()
         .map(|c| {
             thread::spawn(move || {
@@ -22,26 +21,21 @@ pub fn parallel_init<T: PhysicalMemory + Clone + 'static>(connector: T) {
                     .unwrap();
             })
         })
-        .collect::<Vec<_>>();
-
-    threads.into_iter().for_each(|t| t.join().unwrap());
+        .for_each(|t| t.join().unwrap());
 }
 
 pub fn parallel_kernels<T: PhysicalMemory + Clone + 'static>(connector: T) {
     let kernel = Kernel::builder(connector).build().unwrap();
 
-    let pool = (0..8).map(|_| kernel.clone()).collect::<Vec<_>>();
-
-    let threads = pool
+    (0..8)
+        .map(|_| kernel.clone())
         .into_iter()
         .map(|mut k| {
             thread::spawn(move || {
                 let _eprocesses = k.eprocess_list().unwrap();
             })
         })
-        .collect::<Vec<_>>();
-
-    threads.into_iter().for_each(|t| t.join().unwrap());
+        .for_each(|t| t.join().unwrap());
 }
 
 pub fn parallel_kernels_cached<T: PhysicalMemory + Clone + 'static>(connector: T) {
@@ -50,9 +44,8 @@ pub fn parallel_kernels_cached<T: PhysicalMemory + Clone + 'static>(connector: T
         .build()
         .unwrap();
 
-    let pool = (0..8).map(|_| kernel.clone()).collect::<Vec<_>>();
-
-    let threads = pool
+    (0..8)
+        .map(|_| kernel.clone())
         .into_iter()
         .map(|mut k| {
             thread::spawn(move || {
@@ -60,9 +53,7 @@ pub fn parallel_kernels_cached<T: PhysicalMemory + Clone + 'static>(connector: T
                 info!("eprocesses list fetched: {}", eprocesses.len());
             })
         })
-        .collect::<Vec<_>>();
-
-    threads.into_iter().for_each(|t| t.join().unwrap());
+        .for_each(|t| t.join().unwrap());
 }
 
 pub fn parallel_processes<T: PhysicalMemory + Clone + 'static>(connector: T) {
@@ -73,9 +64,8 @@ pub fn parallel_processes<T: PhysicalMemory + Clone + 'static>(connector: T) {
 
     let process = kernel.into_process("wininit.exe").unwrap();
 
-    let pool = (0..8).map(|_| process.clone()).collect::<Vec<_>>();
-
-    let threads = pool
+    (0..8)
+        .map(|_| process.clone())
         .into_iter()
         .map(|mut p| {
             thread::spawn(move || {
@@ -83,9 +73,7 @@ pub fn parallel_processes<T: PhysicalMemory + Clone + 'static>(connector: T) {
                 info!("wininit.exe module_list: {}", module_list.len());
             })
         })
-        .collect::<Vec<_>>();
-
-    threads.into_iter().for_each(|t| t.join().unwrap());
+        .for_each(|t| t.join().unwrap());
 }
 
 pub fn main() {
@@ -124,7 +112,7 @@ pub fn main() {
         .unwrap();
 
     // create inventory + connector
-    let inventory = unsafe { ConnectorInventory::try_new() }.unwrap();
+    let inventory = unsafe { ConnectorInventory::scan() };
     let connector = unsafe {
         inventory.create_connector(
             matches.value_of("connector").unwrap(),

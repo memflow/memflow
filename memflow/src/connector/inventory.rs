@@ -3,9 +3,7 @@ Connector inventory interface.
 */
 
 use crate::error::{Error, Result};
-use crate::mem::{
-    PhysicalMemory, PhysicalMemoryBox, PhysicalMemoryMetadata, PhysicalReadData, PhysicalWriteData,
-};
+use crate::mem::{PhysicalMemory, PhysicalMemoryMetadata, PhysicalReadData, PhysicalWriteData};
 
 use super::ConnectorArgs;
 
@@ -22,9 +20,6 @@ use libloading::Library;
 /// Exported memflow connector version
 pub const MEMFLOW_CONNECTOR_VERSION: i32 = 6;
 
-/// Type of a single connector instance
-pub type ConnectorType = PhysicalMemoryBox;
-
 /// Describes a connector
 #[repr(C)]
 pub struct ConnectorDescriptor {
@@ -38,9 +33,7 @@ pub struct ConnectorDescriptor {
     /// This name will be used when loading a connector from a connector inventory.
     pub name: &'static str,
 
-    /// The factory function for the connector.
-    /// Calling this function will produce new connector instances.
-    //pub factory: extern "C" fn(args: &ConnectorArgs) -> Result<ConnectorType>,
+    /// The vtable for all opaque function calls to the connector.
     pub vtable: ConnectorFunctionTable,
 }
 

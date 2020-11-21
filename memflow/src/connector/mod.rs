@@ -19,7 +19,7 @@ pub mod inventory;
 #[cfg(feature = "inventory")]
 pub use inventory::{
     Connector, ConnectorDescriptor, ConnectorFunctionTable, ConnectorInstance, ConnectorInventory,
-    ConnectorType, MEMFLOW_CONNECTOR_VERSION,
+    MEMFLOW_CONNECTOR_VERSION,
 };
 
 #[cfg(feature = "std")]

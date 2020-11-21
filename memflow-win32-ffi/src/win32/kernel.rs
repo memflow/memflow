@@ -5,7 +5,7 @@ use memflow_win32::win32::{kernel, Win32ProcessInfo, Win32VirtualTranslate};
 
 use memflow::mem::{
     cache::{CachedMemoryAccess, CachedVirtualTranslate, TimedCacheValidator},
-    CloneablePhysicalMemory, DirectTranslate, VirtualDMA,
+    phys_mem::CloneablePhysicalMemory, DirectTranslate, VirtualDMA,
 };
 
 use memflow::iter::FnExtend;

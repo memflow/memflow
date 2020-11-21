@@ -125,6 +125,7 @@ Some connectors also require different permissions. Please refer to the individu
 These are the currently officially existing connetors:
 - [qemu_procfs](https://github.com/memflow/memflow-qemu-procfs)
 - [kvm](https://github.com/memflow/memflow-kvm)
+- [pcileech](https://github.com/memflow/memflow-pcileech)
 - [coredump](https://github.com/memflow/memflow-coredump)
 
 In case you write your own connector please hit us up with a merge request so we can maintain a list of third-party connectors as well.

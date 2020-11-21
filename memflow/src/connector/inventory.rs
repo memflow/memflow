@@ -147,6 +147,10 @@ impl ConnectorInventory {
             ret.add_dir(path).ok();
         }
 
+        if let Ok(pwd) = std::env::current_dir() {
+            ret.add_dir(pwd).ok();
+        }
+
         ret
     }
 

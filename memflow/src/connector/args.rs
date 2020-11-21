@@ -2,6 +2,7 @@
 Connector argument handler.
 */
 
+use std::fmt;
 use std::prelude::v1::*;
 
 use crate::error::{Error, Result};
@@ -33,6 +34,34 @@ use hashbrown::HashMap;
 #[derive(Debug, Clone)]
 pub struct ConnectorArgs {
     map: HashMap<String, String>,
+}
+
+impl fmt::Display for ConnectorArgs {
+    /// Generates a string of key-value pairs containing the underlying data of the ConnectorArgs.
+    ///
+    /// This function will produce a string that can be properly parsed by the `parse` function again.
+    ///
+    /// # Remarks
+    ///
+    /// The sorting order of the underlying `HashMap` is random.
+    /// This function only guarantees that the 'default' value (if it is set) will be the first element.
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut result = Vec::new();
+
+        if let Some(default) = self.get_default() {
+            result.push(default.clone());
+        }
+
+        result.extend(
+            self.map
+                .iter()
+                .filter(|(key, _)| key.as_str() != "default")
+                .map(|(key, value)| format!("{}={}", key, value))
+                .collect::<Vec<_>>(),
+        );
+
+        write!(f, "{}", result.join(","))
+    }
 }
 
 impl ConnectorArgs {
@@ -76,32 +105,6 @@ impl ConnectorArgs {
         // }
 
         Ok(Self { map })
-    }
-
-    /// Generates a string of key-value pairs containing the underlying data of the ConnectorArgs.
-    ///
-    /// This function will produce a string that can be properly parsed by the `parse` function again.
-    ///
-    /// # Remarks
-    ///
-    /// The sorting order of the underlying `HashMap` is random.
-    /// This function only guarantees that the 'default' value (if it is set) will be the first element.
-    pub fn to_string(&self) -> String {
-        let mut result = Vec::new();
-
-        if let Some(default) = self.get_default() {
-            result.push(default.clone());
-        }
-
-        result.extend(
-            self.map
-                .iter()
-                .filter(|(key, _)| key.as_str() != "default")
-                .map(|(key, value)| format!("{}={}", key, value))
-                .collect::<Vec<_>>(),
-        );
-
-        result.join(",")
     }
 
     /// Consumes self, inserts the given key-value pair and returns the self again.

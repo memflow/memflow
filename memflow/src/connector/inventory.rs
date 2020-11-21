@@ -43,20 +43,20 @@ pub struct ConnectorFunctionTable {
     pub create: extern "C" fn(log_level: i32, args: *const c_char) -> Option<&'static mut c_void>,
 
     pub phys_read_raw_list: extern "C" fn(
-        phys_mem: Option<&mut c_void>,
+        phys_mem: &mut c_void,
         read_data: *mut PhysicalReadData,
         read_data_count: usize,
     ) -> i32,
     pub phys_write_raw_list: extern "C" fn(
-        phys_mem: Option<&mut c_void>,
+        phys_mem: &mut c_void,
         write_data: *const PhysicalWriteData,
         write_data_count: usize,
     ) -> i32,
-    pub metadata: extern "C" fn(phys_mem: Option<&c_void>) -> PhysicalMemoryMetadata,
+    pub metadata: extern "C" fn(phys_mem: &c_void) -> PhysicalMemoryMetadata,
 
-    pub clone: extern "C" fn(phys_mem: Option<&c_void>) -> Option<&'static mut c_void>,
+    pub clone: extern "C" fn(phys_mem: &c_void) -> Option<&'static mut c_void>,
 
-    pub drop: extern "C" fn(phys_mem: Option<&mut c_void>),
+    pub drop: extern "C" fn(phys_mem: &mut c_void),
 }
 
 /// Holds an inventory of available connectors.
@@ -369,7 +369,7 @@ impl Connector {
         Ok(Self {
             _library: Arc::new(library),
             name: desc.name.to_string(),
-            vtable: desc.vtable.clone(),
+            vtable: desc.vtable,
         })
     }
 
@@ -391,7 +391,7 @@ impl Connector {
         // We do not want to return error with data from the shared library
         // that may get unloaded before it gets displayed
         let instance = (self.vtable.create)(log::max_level() as i32, cstr.as_ptr())
-            .ok_or_else(|| Error::Connector("conn_create failed"))?;
+            .ok_or_else(|| Error::Connector("create() failed"))?;
 
         //let instance = connector_res?;
 
@@ -424,13 +424,13 @@ pub struct ConnectorInstance {
 
 impl PhysicalMemory for ConnectorInstance {
     fn phys_read_raw_list(&mut self, data: &mut [PhysicalReadData]) -> Result<()> {
-        (self.vtable.phys_read_raw_list)(Some(self.instance), data.as_mut_ptr(), data.len());
+        (self.vtable.phys_read_raw_list)(self.instance, data.as_mut_ptr(), data.len());
         Ok(())
     }
 
     fn phys_write_raw_list(&mut self, data: &[PhysicalWriteData]) -> Result<()> {
         (self.vtable.phys_write_raw_list)(
-            Some(self.instance),
+            self.instance,
             data.as_ptr() as *mut PhysicalWriteData,
             data.len(),
         );
@@ -438,17 +438,13 @@ impl PhysicalMemory for ConnectorInstance {
     }
 
     fn metadata(&self) -> PhysicalMemoryMetadata {
-        (self.vtable.metadata)(Some(self.instance));
-        PhysicalMemoryMetadata {
-            size: 0,
-            readonly: false,
-        }
+        (self.vtable.metadata)(self.instance)
     }
 }
 
 impl Clone for ConnectorInstance {
     fn clone(&self) -> Self {
-        let instance = (self.vtable.clone)(Some(self.instance)).expect("Unable to clone Connector");
+        let instance = (self.vtable.clone)(self.instance).expect("Unable to clone Connector");
         Self {
             instance,
             vtable: self.vtable.clone(),
@@ -460,6 +456,6 @@ impl Clone for ConnectorInstance {
 
 impl Drop for ConnectorInstance {
     fn drop(&mut self) {
-        (self.vtable.drop)(Some(self.instance));
+        (self.vtable.drop)(self.instance);
     }
 }

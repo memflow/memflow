@@ -65,7 +65,7 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
         extern "C" fn mf_create(
             log_level: i32,
             args: *const ::std::os::raw::c_char,
-        ) -> std::option::Option<&'static mut c_void> {
+        ) -> std::option::Option<&'static mut ::std::ffi::c_void> {
             let argsstr = unsafe { ::std::ffi::CStr::from_ptr(args) }.to_str().ok()?;
             let conn_args = ::memflow::connector::ConnectorArgs::parse(argsstr).ok()?;
 
@@ -77,10 +77,12 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
         #[doc(hidden)]
         #[no_mangle]
         extern "C" fn mf_phys_read_raw_list(
-            phys_mem: std::option::Option<&mut c_void>,
+            phys_mem: std::option::Option<&mut ::std::ffi::c_void>,
             read_data: *mut ::memflow::mem::PhysicalReadData,
             read_data_count: usize,
         ) -> i32 {
+            use ::memflow::mem::PhysicalMemory;
+
             if let Some(conn_box) = phys_mem {
                 let mut conn: Box<#connector_type> = unsafe { Box::from_raw(::std::mem::transmute(conn_box)) };
                 let read_data_slice = unsafe { std::slice::from_raw_parts_mut(read_data, read_data_count) };
@@ -88,7 +90,7 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
                     Ok(_) => 0,
                     Err(_) => -1,
                 };
-                std::mem::forget(conn);
+                ::std::mem::forget(conn);
                 result
             } else {
                 -1
@@ -99,10 +101,12 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
         #[doc(hidden)]
         #[no_mangle]
         extern "C" fn mf_phys_write_raw_list(
-            phys_mem: std::option::Option<&mut c_void>,
+            phys_mem: std::option::Option<&mut ::std::ffi::c_void>,
             write_data: *const ::memflow::mem::PhysicalWriteData,
             write_data_count: usize,
         ) -> i32 {
+            use ::memflow::mem::PhysicalMemory;
+
             if let Some(conn_box) = phys_mem {
                 let mut conn: Box<#connector_type> = unsafe { Box::from_raw(::std::mem::transmute(conn_box)) };
                 let write_data_slice =
@@ -111,7 +115,7 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
                     Ok(_) => 0,
                     Err(_) => -1,
                 };
-                std::mem::forget(conn);
+                ::std::mem::forget(conn);
                 result
             } else {
                 -1
@@ -121,14 +125,16 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
         #[cfg(feature = "inventory")]
         #[doc(hidden)]
         #[no_mangle]
-        extern "C" fn mf_metadata(phys_mem: std::option::Option<&c_void>) -> PhysicalMemoryMetadata {
+        extern "C" fn mf_metadata(phys_mem: std::option::Option<&::std::ffi::c_void>) -> ::memflow::mem::PhysicalMemoryMetadata {
+            use ::memflow::mem::PhysicalMemory;
+
             if let Some(conn_box) = phys_mem {
                 let conn: Box<#connector_type> = unsafe { Box::from_raw(::std::mem::transmute(conn_box)) };
                 let metadata = conn.as_ref().metadata();
-                std::mem::forget(conn);
+                ::std::mem::forget(conn);
                 metadata
             } else {
-                PhysicalMemoryMetadata {
+                ::memflow::mem::PhysicalMemoryMetadata {
                     size: 0,
                     readonly: true,
                 }
@@ -139,12 +145,12 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
         #[doc(hidden)]
         #[no_mangle]
         extern "C" fn mf_clone(
-            phys_mem: std::option::Option<&c_void>,
-        ) -> std::option::Option<&'static mut c_void> {
+            phys_mem: std::option::Option<&::std::ffi::c_void>,
+        ) -> std::option::Option<&'static mut ::std::ffi::c_void> {
             if let Some(conn_box) = phys_mem {
                 let conn: Box<#connector_type> = unsafe { Box::from_raw(::std::mem::transmute(conn_box)) };
                 let cloned_conn = Box::new(conn.as_ref().clone());
-                std::mem::forget(conn);
+                ::std::mem::forget(conn);
                 Some(unsafe { ::std::mem::transmute(Box::into_raw(cloned_conn)) })
             } else {
                 None
@@ -154,7 +160,7 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
         #[cfg(feature = "inventory")]
         #[doc(hidden)]
         #[no_mangle]
-        extern "C" fn mf_drop(phys_mem: std::option::Option<&mut c_void>) {
+        extern "C" fn mf_drop(phys_mem: std::option::Option<&mut ::std::ffi::c_void>) {
             if let Some(conn_box) = phys_mem {
                 let _: Box<#connector_type> = unsafe { Box::from_raw(::std::mem::transmute(conn_box)) };
                 // drop box

@@ -260,10 +260,10 @@ impl ConnectorInventory {
     /// use memflow::types::size;
     /// use memflow::mem::dummy::DummyMemory;
     /// use memflow::connector::ConnectorArgs;
-    /// use memflow_derive::connector;
+    /// use memflow::derive::connector;
     ///
-    /// #[connector(name = "dummy")]
-    /// pub fn create_connector(_args: &ConnectorArgs) -> Result<DummyMemory> {
+    /// #[connector(name = "dummy", ty = "DummyMemory")]
+    /// pub fn create_connector(_log_level: i32, _args: &ConnectorArgs) -> Result<DummyMemory> {
     ///     Ok(DummyMemory::new(size::mb(16)))
     /// }
     /// ```
@@ -428,13 +428,6 @@ pub struct ConnectorInstance {
     /// If the library is unloaded prior to the instance this will lead to a SIGSEGV.
     _library: Arc<Library>,
 }
-
-// TODO: implement PhysicalMemory on ConnectorInstance instead of down/upcasting
-// down/upcasting can result in issues when not going through the FFI
-
-// TODO: safety
-//unsafe impl Sync for ConnectorInstance {}
-//unsafe impl Send for ConnectorInstance {}
 
 impl PhysicalMemory for ConnectorInstance {
     fn phys_read_raw_list(&mut self, data: &mut [PhysicalReadData]) -> Result<()> {

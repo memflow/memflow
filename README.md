@@ -122,7 +122,7 @@ dynamically load a connector at runtime. When using the library programmatically
 
 Some connectors also require different permissions. Please refer to the individual connector repositories for more information.
 
-These are the currently officially existing connetors:
+These are the currently officially existing connectors:
 - [qemu_procfs](https://github.com/memflow/memflow-qemu-procfs)
 - [kvm](https://github.com/memflow/memflow-kvm)
 - [coredump](https://github.com/memflow/memflow-coredump)

@@ -1,5 +1,5 @@
 use memflow::{
-    architecture::{x86, ArchitectureObj, ScopedVirtualTranslate},
+    architecture::{arm, x86, ArchitectureObj, ScopedVirtualTranslate},
     error::Error,
     iter::SplitAtIndex,
     mem::{PhysicalMemory, VirtualDMA, VirtualMemory, VirtualTranslate},
@@ -42,8 +42,13 @@ impl ScopedVirtualTranslate for Win32VirtualTranslate {
         out_fail: &mut FO,
         tmp_buf: &mut [std::mem::MaybeUninit<u8>],
     ) {
-        let translator = x86::new_translator(self.dtb, self.sys_arch).unwrap();
-        translator.virt_to_phys_iter(mem, addrs, out, out_fail, tmp_buf)
+        if let Ok(translator) = x86::new_translator(self.dtb, self.sys_arch) {
+            translator.virt_to_phys_iter(mem, addrs, out, out_fail, tmp_buf)
+        } else if let Ok(translator) = arm::new_translator_nonsplit(self.dtb, self.sys_arch) {
+            translator.virt_to_phys_iter(mem, addrs, out, out_fail, tmp_buf)
+        } else {
+            panic!("Invalid architecture");
+        }
     }
 
     fn translation_table_id(&self, _address: Address) -> usize {

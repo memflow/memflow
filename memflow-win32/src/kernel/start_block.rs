@@ -1,3 +1,4 @@
+mod aarch64;
 mod x64;
 mod x86;
 mod x86pae;
@@ -29,6 +30,16 @@ pub fn find_fallback<T: PhysicalMemory>(mem: &mut T, arch: ArchitectureObj) -> R
         mem.phys_read_raw_into(PhysicalAddress::NULL, &mut low16m)?;
 
         x64::find(&low16m)
+    } else if arch == architecture::arm::aarch64::ARCH {
+        // read low 16mb stub
+        let mut low16m = vec![0; size::mb(16)];
+
+        //TODO: configure this, but so far arm null starts at this address
+        mem.phys_read_raw_into(aarch64::PHYS_BASE.into(), &mut low16m)?;
+
+        log::trace!("FINDING ARM");
+
+        aarch64::find(&low16m)
     } else {
         Err(Error::Initialization(
             "start_block: fallback not implemented for given arch",
@@ -63,6 +74,8 @@ pub fn find<T: PhysicalMemory>(mem: &mut T, arch: Option<ArchitectureObj>) -> Re
             let mut low16m = vec![0; size::mb(16)];
             mem.phys_read_raw_into(PhysicalAddress::NULL, &mut low16m)?;
             x86::find(&low16m)
+        } else if arch == architecture::arm::aarch64::ARCH {
+            find_fallback(mem, arch)
         } else {
             Err(Error::InvalidArchitecture)
         }
@@ -70,6 +83,7 @@ pub fn find<T: PhysicalMemory>(mem: &mut T, arch: Option<ArchitectureObj>) -> Re
         find(mem, Some(architecture::x86::x64::ARCH))
             .or_else(|_| find(mem, Some(architecture::x86::x32_pae::ARCH)))
             .or_else(|_| find(mem, Some(architecture::x86::x32::ARCH)))
+            .or_else(|_| find(mem, Some(architecture::arm::aarch64::ARCH)))
             .map_err(|_| Error::Initialization("unable to find dtb"))
     }
 }

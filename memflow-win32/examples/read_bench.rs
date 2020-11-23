@@ -133,7 +133,7 @@ fn read_bench<T: PhysicalMemory + ?Sized, V: VirtualTranslate>(
                 tmod,
                 &[0x10000, 0x1000, 0x100, 0x10, 0x8],
                 &[32, 8, 1],
-                0x0010_0000 * 1,
+                0x0010_0000,
             );
 
             break;

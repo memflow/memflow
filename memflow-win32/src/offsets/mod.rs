@@ -52,13 +52,22 @@ pub const X64: Win32ArchOffsets = Win32ArchOffsets {
     ldr_data_base_name: 0x58,
 };
 
+pub const AARCH64: Win32ArchOffsets = Win32ArchOffsets {
+    peb_ldr: 0x18,
+    ldr_list: 0x10,
+    ldr_data_base: 0x30,
+    ldr_data_size: 0x40,
+    ldr_data_full_name: 0x48,
+    ldr_data_base_name: 0x58,
+};
+
 impl Win32OffsetsArchitecture {
     #[inline]
     fn offsets(&self) -> &'static Win32ArchOffsets {
         match self {
             Win32OffsetsArchitecture::X64 => &X64,
             Win32OffsetsArchitecture::X86 => &X86,
-            Win32OffsetsArchitecture::AArch64 => panic!("Not implemented"),
+            Win32OffsetsArchitecture::AArch64 => &AARCH64,
         }
     }
 }
@@ -92,8 +101,9 @@ impl From<ArchitectureObj> for Win32OffsetsArchitecture {
             Self::X86
         } else if arch == architecture::x86::x64::ARCH {
             Self::X64
+        } else if arch == architecture::arm::aarch64::ARCH {
+            Self::AArch64
         } else {
-            // We do not have AArch64, but that is in the plans...
             panic!("Invalid architecture specified")
         }
     }

@@ -3,7 +3,7 @@ pub mod x32_pae;
 pub mod x64;
 
 use super::{
-    mmu_spec::{
+    mmu::{
         translate_data::{TranslateDataVec, TranslationChunk},
         ArchMMUSpec, MMUTranslationBase,
     },

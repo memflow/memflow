@@ -30,7 +30,7 @@ pub fn new_translator(dtb: Address) -> impl ScopedVirtualTranslate {
 
 #[cfg(test)]
 mod tests {
-    use crate::architecture::mmu_spec::ArchMMUSpec;
+    use crate::architecture::mmu::ArchMMUSpec;
     use crate::types::{size, Address, PageType};
 
     fn get_mmu_spec() -> &'static ArchMMUSpec {

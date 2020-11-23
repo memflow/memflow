@@ -14,11 +14,10 @@ that memflow know the proper byte order of the target system.
 */
 
 pub mod x86;
+#[macro_use]
+mod mmu;
 
-mod mmu_spec;
-
-pub(crate) use mmu_spec::ArchMMUDef;
-pub use mmu_spec::ArchMMUSpec;
+pub(crate) use mmu::ArchMMUDef;
 
 use crate::error::{Error, Result};
 use crate::iter::{FnExtend, SplitAtIndex};

@@ -31,7 +31,7 @@ pub fn new_translator(dtb: Address) -> impl ScopedVirtualTranslate {
 //x64 tests MMU rigorously, here we will only test a few special cases
 #[cfg(test)]
 mod tests {
-    use crate::architecture::mmu_spec::ArchMMUSpec;
+    use crate::architecture::mmu::ArchMMUSpec;
     use crate::types::{size, Address};
 
     fn get_mmu_spec() -> &'static ArchMMUSpec {

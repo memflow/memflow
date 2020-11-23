@@ -8,16 +8,16 @@ use super::MVec;
 pub type TranslateVec<'a> = MVec<'a, TranslationChunk<Address>>;
 pub type TranslateDataVec<'a, T> = MVec<'a, TranslateData<T>>;
 
-fn shorten_datavec_lifetime<'a: 'b, 'b, O>(
+unsafe fn shorten_datavec_lifetime<'a: 'b, 'b, O>(
     r: &'b mut TranslateDataVec<'a, O>,
 ) -> &'b mut TranslateDataVec<'b, O> {
-    unsafe { std::mem::transmute(r) }
+    std::mem::transmute(r)
 }
 
-fn shorten_pair_lifetime<'a: 't, 'b: 't, 't, O>(
+unsafe fn shorten_pair_lifetime<'a: 't, 'b: 't, 't, O>(
     r: &'t mut (TranslateVec<'a>, TranslateDataVec<'b, O>),
 ) -> &'t mut (TranslateVec<'t>, TranslateDataVec<'t, O>) {
-    unsafe { std::mem::transmute(r) }
+    std::mem::transmute(r)
 }
 
 #[derive(Debug)]
@@ -221,10 +221,10 @@ impl<T: MMUTranslationBase> TranslationChunk<T> {
         out_target: &mut (TranslateVec, TranslateDataVec<U>),
         wait_target: &mut (TranslateVec, TranslateDataVec<U>),
     ) {
-        let mut addr_stack = shorten_datavec_lifetime(addr_stack);
-        let mut tmp_addr_stack = shorten_datavec_lifetime(tmp_addr_stack);
-        let mut out_target = shorten_pair_lifetime(out_target);
-        let mut wait_target = shorten_pair_lifetime(wait_target);
+        let mut addr_stack = unsafe { shorten_datavec_lifetime(addr_stack) };
+        let mut tmp_addr_stack = unsafe { shorten_datavec_lifetime(tmp_addr_stack) };
+        let mut out_target = unsafe { shorten_pair_lifetime(out_target) };
+        let mut wait_target = unsafe { shorten_pair_lifetime(wait_target) };
 
         let align_as = spec.page_size_step_unchecked(self.step);
         let step_size = spec.page_size_step_unchecked(self.step + 1);

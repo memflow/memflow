@@ -1,5 +1,6 @@
 pub(crate) mod translate_data;
 
+use super::Endianess;
 use crate::error::{Error, Result};
 use crate::iter::SplitAtIndex;
 use crate::mem::{PhysicalMemory, PhysicalReadData};
@@ -50,6 +51,8 @@ pub struct ArchMMUDef {
     pub valid_final_page_steps: &'static [usize],
     /// define the address space upper bound (32 for x86, 52 for x86_64)
     pub address_space_bits: u8,
+    /// Defines the byte order of the architecture
+    pub endianess: Endianess,
     /// native pointer size in bytes for the architecture.
     pub addr_size: u8,
     /// size of an individual page table entry in bytes.
@@ -173,8 +176,8 @@ impl ArchMMUDef {
                 self.pte_size.to_le().trailing_zeros() as u8
             };
         let mask = Address::bit_mask(min..max);
-        vtop_trace!("pte_addr_mask={:b}", mask.as_u64());
-        pte_addr.as_u64() & mask.as_u64()
+        vtop_trace!("pte_addr_mask={:b}", u64::from_le(mask.as_u64()));
+        pte_addr.as_u64() & u64::from_le(mask.as_u64())
     }
 
     const fn virt_addr_bit_range(&self, step: usize) -> (u8, u8) {
@@ -330,7 +333,7 @@ impl ArchMMUSpec {
     }
 
     pub fn pte_addr_mask(&self, pte_addr: Address, step: usize) -> u64 {
-        pte_addr.as_u64() & self.pte_addr_masks[step]
+        pte_addr.as_u64() & u64::from_le(self.pte_addr_masks[step])
     }
 
     /// Filter out the input virtual address range to be in bounds
@@ -422,12 +425,14 @@ impl ArchMMUSpec {
     }
 
     pub fn virt_addr_to_pte_offset(&self, virt_addr: Address, step: usize) -> u64 {
-        ((virt_addr.as_u64() >> self.virt_addr_bit_ranges[step].0) & self.virt_addr_masks[step])
-            * self.def.pte_size as u64
+        u64::from_le(
+            (virt_addr.as_u64().to_le() >> self.virt_addr_bit_ranges[step].0)
+                & self.virt_addr_masks[step],
+        ) * self.def.pte_size as u64
     }
 
     pub fn virt_addr_to_page_offset(&self, virt_addr: Address, step: usize) -> u64 {
-        virt_addr.as_u64() & self.virt_addr_page_masks[step]
+        virt_addr.as_u64() & u64::from_le(self.virt_addr_page_masks[step])
     }
 
     /// Get the page size of a specific step without checking if such page could exist
@@ -582,19 +587,13 @@ impl ArchMMUSpec {
         let (waiting_bytes, slice) = slice.split_at_mut(total_chunks * chunk_size);
         let waiting_stack = MVec::from_uninit_bytes(waiting_bytes);
 
-        let (pt_buf_bytes, slice) = slice.split_at_mut(spare_chunks * 8);
-        let mut pt_buf = MVec::from_uninit_bytes(pt_buf_bytes);
-        let (pt_read_bytes, slice) =
-            slice.split_at_mut(spare_chunks * std::mem::size_of::<PhysicalReadData>());
-        let mut pt_read = MVec::from_uninit_bytes(pt_read_bytes);
-
         let (working_addrs_bytes, slice) = slice.split_at_mut(working_addr_count * data_size);
         let working_addrs = MVec::from_uninit_bytes(working_addrs_bytes);
         let (working_addrs_bytes, slice) = slice.split_at_mut(working_addr_count * data_size);
         let working_addrs2 = MVec::from_uninit_bytes(working_addrs_bytes);
         let (waiting_addrs_bytes, slice) = slice.split_at_mut(total_addr_count * data_size);
         let mut waiting_addrs = MVec::from_uninit_bytes(waiting_addrs_bytes);
-        let (tmp_addrs_bytes, _slice) = slice.split_at_mut(working_addr_count * data_size);
+        let (tmp_addrs_bytes, slice) = slice.split_at_mut(working_addr_count * data_size);
         let mut tmp_addrs = MVec::from_uninit_bytes(tmp_addrs_bytes);
 
         let mut working_pair = (working_stack, working_addrs);
@@ -611,11 +610,27 @@ impl ArchMMUSpec {
 
         let mut waiting_pair = (waiting_stack, waiting_addrs);
 
+        let buf_to_addr: fn(&[u8]) -> Address = match (self.def.endianess, self.def.pte_size) {
+            (Endianess::LittleEndian, 8) => {
+                |buf| Address::from(u64::from_le_bytes(buf.try_into().unwrap()))
+            }
+            (Endianess::LittleEndian, 4) => {
+                |buf| Address::from(u32::from_le_bytes(buf.try_into().unwrap()))
+            }
+            (Endianess::BigEndian, 8) => {
+                |buf| Address::from(u64::from_be_bytes(buf.try_into().unwrap()))
+            }
+            (Endianess::BigEndian, 4) => {
+                |buf| Address::from(u32::from_be_bytes(buf.try_into().unwrap()))
+            }
+            _ => |_| Address::NULL,
+        };
+
         //log::trace!("{:x} {:x} {:x} {:x}", waiting_addrs.len(), waiting_stack.len(), working_addrs.len(), working_stack.len());
         while !working_pair.0.is_empty() {
             // Perform the reads here
             if let Err(err) =
-                self.read_pt_address_iter(mem, &mut working_pair.0, &mut pt_buf, &mut pt_read)
+                self.read_pt_address_iter(mem, &mut working_pair.0, slice, buf_to_addr)
             {
                 vtop_trace!("read_pt_address_iter failure: {}", err);
 
@@ -626,13 +641,6 @@ impl ArchMMUSpec {
                 while let Some(data) = waiting_pair.1.pop() {
                     out_fail.extend(Some((err, data.addr, data.buf)));
                 }
-
-                /*out_fail.extend(
-                working_addrs
-                .into_iter()
-                .chain(waiting_addrs.into_iter())
-                .map(|data| (err, data.addr, data.buf)),
-                );*/
 
                 return;
             }
@@ -675,24 +683,24 @@ impl ArchMMUSpec {
         &self,
         mem: &mut T,
         chunks: &mut TranslateVec,
-        pt_buf: &mut MVec<u8>,
-        pt_read: &mut MVec<PhysicalReadData>,
+        slice: &mut [std::mem::MaybeUninit<u8>],
+        buf_to_addr: fn(&[u8]) -> Address,
     ) -> Result<()>
     where
         T: PhysicalMemory + ?Sized,
     {
-        //TODO: use self.pt_leaf_size(step) (need to handle LittleEndian::read_u64)
-        let pte_size = 8;
+        let pte_size = self.def.pte_size;
+
+        let (pt_buf_bytes, slice) = slice.split_at_mut(chunks.len() * pte_size);
+        let mut pt_buf = MVec::from_uninit_bytes(pt_buf_bytes);
+        let (pt_read_bytes, _slice) =
+            slice.split_at_mut(chunks.len() * std::mem::size_of::<PhysicalReadData>());
+        let mut pt_read = MVec::from_uninit_bytes(pt_read_bytes);
 
         while pt_buf.len() < pte_size * chunks.len() {
             pt_buf.push(0);
         }
         let pt_buf = &mut pt_buf[0..(pte_size * chunks.len())];
-
-        debug_assert!(pt_read.is_empty());
-
-        //This is safe, because pt_read gets cleared at the end of the function
-        let pt_read: &mut MVec<PhysicalReadData> = unsafe { std::mem::transmute(pt_read) };
 
         for (chunk, tr_chunk) in pt_buf.chunks_exact_mut(pte_size).zip(chunks.iter()) {
             pt_read.push(PhysicalReadData(
@@ -705,14 +713,13 @@ impl ArchMMUSpec {
             ));
         }
 
-        mem.phys_read_raw_list(pt_read)?;
+        mem.phys_read_raw_list(&mut pt_read)?;
 
-        for (ref mut chunk, PhysicalReadData(_, buf)) in chunks.iter_mut().zip(pt_read.iter()) {
-            let pt_addr = Address::from(u64::from_le_bytes(buf[0..8].try_into().unwrap()));
+        for (ref mut chunk, PhysicalReadData(_, buf)) in chunks.iter_mut().zip(pt_read.into_iter())
+        {
+            let pt_addr = buf_to_addr(*buf);
             chunk.pt_addr = pt_addr;
         }
-
-        pt_read.clear();
 
         Ok(())
     }
@@ -824,11 +831,6 @@ impl ArchMMUSpec {
                         entry.buf,
                     )));
                 }
-            /*out.extend(
-                chunk.into_addr_iter(&mut working_addrs).map(|entry| {
-                    (self.get_phys_page(pt_addr, entry.addr, step), entry.buf)
-                }),
-            );*/
             } else {
                 // We still need to continue the page walk.
                 // Split the chunk up into the waiting queue

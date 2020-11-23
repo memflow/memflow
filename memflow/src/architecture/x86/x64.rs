@@ -7,11 +7,11 @@ use crate::types::Address;
 
 pub(super) static ARCH_SPEC: X86Architecture = X86Architecture {
     bits: 64,
-    endianess: Endianess::LittleEndian,
     mmu: ArchMMUDef {
         virtual_address_splits: &[9, 9, 9, 9, 12],
         valid_final_page_steps: &[2, 3, 4],
         address_space_bits: 52,
+        endianess: Endianess::LittleEndian,
         addr_size: 8,
         pte_size: 8,
         present_bit: 0,

@@ -19,8 +19,6 @@ use crate::types::{Address, PhysicalAddress};
 pub struct X86Architecture {
     /// Defines how many bits does the native word size have
     bits: u8,
-    /// Defines the byte order of the architecture
-    endianess: Endianess,
     /// Defines the underlying MMU used for address translation
     mmu: ArchMMUSpec,
 }
@@ -31,7 +29,7 @@ impl Architecture for X86Architecture {
     }
 
     fn endianess(&self) -> Endianess {
-        self.endianess
+        self.mmu.def.endianess
     }
 
     fn page_size(&self) -> usize {

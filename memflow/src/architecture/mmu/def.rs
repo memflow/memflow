@@ -36,13 +36,13 @@ pub struct ArchMMUDef {
     /// size of an individual page table entry in bytes.
     pub pte_size: usize,
     /// index of a bit in PTE defining whether the page is present or not.
-    pub present_bit: u8,
+    pub present_bit: fn(Address) -> bool,
     /// index of a bit in PTE defining if the page is writeable.
-    pub writeable_bit: u8,
+    pub writeable_bit: fn(Address) -> bool,
     /// index of a bit in PTE defining if the page is non-executable.
-    pub nx_bit: u8,
-    /// index of a bit in PTE defining if the PTE points to a large page.
-    pub large_page_bit: u8,
+    pub nx_bit: fn(Address) -> bool,
+    /// function for checking a bit in PTE to see if the PTE points to a large page.
+    pub large_page_bit: fn(Address) -> bool,
 }
 
 impl ArchMMUDef {

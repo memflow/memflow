@@ -82,6 +82,22 @@ impl Address {
         Address::NULL
     }
 
+    /// Returns an address with input value.
+    ///
+    /// Useful for defining constants
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use memflow::types::Address;
+    ///
+    /// const TEN: Address = Address::from_u64(10)
+    /// ```
+    #[inline]
+    pub const fn from_u64(item: u64) -> Self {
+        Self { 0: item }
+    }
+
     /// Creates a a bit mask.
     /// This function accepts an (half-open) range excluding the end bit from the mask.
     ///

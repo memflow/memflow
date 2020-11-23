@@ -13,6 +13,7 @@ When reading/writing data from/to the target it is necessary
 that memflow know the proper byte order of the target system.
 */
 
+pub mod arm;
 pub mod x86;
 #[macro_use]
 mod mmu;

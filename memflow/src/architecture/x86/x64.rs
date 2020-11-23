@@ -14,10 +14,10 @@ pub(super) static ARCH_SPEC: X86Architecture = X86Architecture {
         endianess: Endianess::LittleEndian,
         addr_size: 8,
         pte_size: 8,
-        present_bit: 0,
-        writeable_bit: 1,
-        nx_bit: 63,
-        large_page_bit: 7,
+        present_bit: |a| a.bit_at(0),
+        writeable_bit: |a| a.bit_at(1),
+        nx_bit: |a| a.bit_at(63),
+        large_page_bit: |a| a.bit_at(7),
     }
     .into_spec(),
 };

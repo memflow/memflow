@@ -14,10 +14,10 @@ pub(super) static ARCH_SPEC: X86Architecture = X86Architecture {
         endianess: Endianess::LittleEndian,
         addr_size: 4,
         pte_size: 4,
-        present_bit: 0,
-        writeable_bit: 1,
-        nx_bit: 31, //Actually, NX is unsupported in x86 non-PAE, we have to do something about it
-        large_page_bit: 7,
+        present_bit: |a| a.bit_at(0),
+        writeable_bit: |a| a.bit_at(1),
+        nx_bit: |_| false,
+        large_page_bit: |a| a.bit_at(7),
     }
     .into_spec(),
 };

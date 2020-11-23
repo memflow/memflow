@@ -2,6 +2,7 @@
 Connector argument handler.
 */
 
+use std::fmt;
 use std::prelude::v1::*;
 
 use crate::error::{Error, Result};
@@ -33,6 +34,34 @@ use hashbrown::HashMap;
 #[derive(Debug, Clone)]
 pub struct ConnectorArgs {
     map: HashMap<String, String>,
+}
+
+impl fmt::Display for ConnectorArgs {
+    /// Generates a string of key-value pairs containing the underlying data of the ConnectorArgs.
+    ///
+    /// This function will produce a string that can be properly parsed by the `parse` function again.
+    ///
+    /// # Remarks
+    ///
+    /// The sorting order of the underlying `HashMap` is random.
+    /// This function only guarantees that the 'default' value (if it is set) will be the first element.
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut result = Vec::new();
+
+        if let Some(default) = self.get_default() {
+            result.push(default.clone());
+        }
+
+        result.extend(
+            self.map
+                .iter()
+                .filter(|(key, _)| key.as_str() != "default")
+                .map(|(key, value)| format!("{}={}", key, value))
+                .collect::<Vec<_>>(),
+        );
+
+        write!(f, "{}", result.join(","))
+    }
 }
 
 impl ConnectorArgs {
@@ -134,6 +163,12 @@ impl TryFrom<String> for ConnectorArgs {
     }
 }
 
+impl Into<String> for ConnectorArgs {
+    fn into(self) -> String {
+        self.to_string()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -179,5 +214,27 @@ mod tests {
         let argstr = "opt1=test1,test0";
         let args = ConnectorArgs::parse(argstr).unwrap();
         assert_eq!(args.get_default(), None);
+    }
+
+    #[test]
+    pub fn to_string() {
+        let argstr = "opt1=test1,opt2=test2,opt3=test3";
+        let args = ConnectorArgs::parse(argstr).unwrap();
+        let args2 = ConnectorArgs::parse(&args.to_string()).unwrap();
+        assert_eq!(args2.get_default(), None);
+        assert_eq!(args2.get("opt1").unwrap(), "test1");
+        assert_eq!(args2.get("opt2").unwrap(), "test2");
+        assert_eq!(args2.get("opt3").unwrap(), "test3");
+    }
+
+    #[test]
+    pub fn to_string_with_default() {
+        let argstr = "test0,opt1=test1,opt2=test2,opt3=test3";
+        let args = ConnectorArgs::parse(argstr).unwrap();
+        let args2 = ConnectorArgs::parse(&args.to_string()).unwrap();
+        assert_eq!(args2.get_default().unwrap(), "test0");
+        assert_eq!(args2.get("opt1").unwrap(), "test1");
+        assert_eq!(args2.get("opt2").unwrap(), "test2");
+        assert_eq!(args2.get("opt3").unwrap(), "test3");
     }
 }

@@ -5,12 +5,13 @@ use memflow_win32::win32::{kernel, Win32ProcessInfo, Win32VirtualTranslate};
 
 use memflow::mem::{
     cache::{CachedMemoryAccess, CachedVirtualTranslate, TimedCacheValidator},
-    CloneablePhysicalMemory, DirectTranslate, VirtualDMA,
+    phys_mem::CloneablePhysicalMemory,
+    DirectTranslate, VirtualDMA,
 };
 
 use memflow::iter::FnExtend;
+use memflow::process::PID;
 use memflow::types::{size, Address, PageType};
-use memflow::PID;
 
 use super::process::Win32Process;
 use crate::kernel::start_block::StartBlock;

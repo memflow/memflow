@@ -23,7 +23,7 @@ use bumpalo::{collections::Vec as BumpVec, Bump};
 /// ```
 /// use memflow::mem::cache::CachedVirtualTranslate;
 /// # use memflow::architecture::x86::x64;
-/// # use memflow::dummy::DummyMemory;
+/// # use memflow::mem::dummy::DummyMemory;
 /// # use memflow::mem::{DirectTranslate, VirtualDMA, VirtualMemory, VirtualTranslate};
 /// # use memflow::types::size;
 /// # let mut mem = DummyMemory::new(size::mb(32));
@@ -43,7 +43,7 @@ use bumpalo::{collections::Vec as BumpVec, Bump};
 /// use std::time::{Duration, Instant};
 /// # use memflow::mem::cache::CachedVirtualTranslate;
 /// # use memflow::architecture::x86::x64;
-/// # use memflow::dummy::DummyMemory;
+/// # use memflow::mem::dummy::DummyMemory;
 /// # use memflow::mem::{DirectTranslate, VirtualDMA, VirtualMemory, VirtualTranslate};
 /// # use memflow::types::size;
 /// # let mut mem = DummyMemory::new(size::mb(32));
@@ -278,12 +278,12 @@ impl<V: VirtualTranslate, Q: CacheValidator> CachedVirtualTranslateBuilder<V, Q>
 mod tests {
     use crate::architecture::x86;
 
-    use crate::dummy::DummyMemory;
+    use crate::error::PartialResultExt;
     use crate::mem::cache::cached_vat::CachedVirtualTranslate;
     use crate::mem::cache::timed_validator::TimedCacheValidator;
+    use crate::mem::{dummy::DummyMemory, DirectTranslate, PhysicalMemory};
     use crate::mem::{VirtualDMA, VirtualMemory};
     use crate::types::{size, Address};
-    use crate::*;
     use coarsetime::Duration;
 
     fn build_mem(

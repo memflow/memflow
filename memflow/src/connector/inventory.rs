@@ -3,11 +3,13 @@ Connector inventory interface.
 */
 
 use crate::error::{Error, Result};
-use crate::mem::{CloneablePhysicalMemory, PhysicalMemoryBox};
+use crate::mem::{PhysicalMemory, PhysicalMemoryMetadata, PhysicalReadData, PhysicalWriteData};
 
 use super::ConnectorArgs;
 
+use std::ffi::{c_void, CString};
 use std::fs::read_dir;
+use std::os::raw::c_char;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -16,12 +18,10 @@ use log::{debug, error, info, warn};
 use libloading::Library;
 
 /// Exported memflow connector version
-pub const MEMFLOW_CONNECTOR_VERSION: i32 = 5;
-
-/// Type of a single connector instance
-pub type ConnectorType = PhysicalMemoryBox;
+pub const MEMFLOW_CONNECTOR_VERSION: i32 = 6;
 
 /// Describes a connector
+#[repr(C)]
 pub struct ConnectorDescriptor {
     /// The connector inventory api version for when the connector was built.
     /// This has to be set to `MEMFLOW_CONNECTOR_VERSION` of memflow.
@@ -33,9 +33,30 @@ pub struct ConnectorDescriptor {
     /// This name will be used when loading a connector from a connector inventory.
     pub name: &'static str,
 
-    /// The factory function for the connector.
-    /// Calling this function will produce new connector instances.
-    pub factory: extern "C" fn(args: &ConnectorArgs) -> Result<ConnectorType>,
+    /// The vtable for all opaque function calls to the connector.
+    pub vtable: ConnectorFunctionTable,
+}
+
+#[repr(C)]
+#[derive(Clone)]
+pub struct ConnectorFunctionTable {
+    pub create: extern "C" fn(log_level: i32, args: *const c_char) -> Option<&'static mut c_void>,
+
+    pub phys_read_raw_list: extern "C" fn(
+        phys_mem: &mut c_void,
+        read_data: *mut PhysicalReadData,
+        read_data_count: usize,
+    ) -> i32,
+    pub phys_write_raw_list: extern "C" fn(
+        phys_mem: &mut c_void,
+        write_data: *const PhysicalWriteData,
+        write_data_count: usize,
+    ) -> i32,
+    pub metadata: extern "C" fn(phys_mem: &c_void) -> PhysicalMemoryMetadata,
+
+    pub clone: extern "C" fn(phys_mem: &c_void) -> Option<&'static mut c_void>,
+
+    pub drop: extern "C" fn(phys_mem: &mut c_void),
 }
 
 /// Holds an inventory of available connectors.
@@ -61,16 +82,22 @@ impl ConnectorInventory {
     /// use memflow::connector::ConnectorInventory;
     ///
     /// let inventory = unsafe {
-    ///     ConnectorInventory::with_path("./")
+    ///     ConnectorInventory::scan_path("./")
     /// }.unwrap();
     /// ```
-    pub unsafe fn with_path<P: AsRef<Path>>(path: P) -> Result<Self> {
+    pub unsafe fn scan_path<P: AsRef<Path>>(path: P) -> Result<Self> {
         let mut dir = PathBuf::default();
         dir.push(path);
 
         let mut ret = Self { connectors: vec![] };
         ret.add_dir(dir)?;
         Ok(ret)
+    }
+
+    #[doc(hidden)]
+    #[deprecated]
+    pub unsafe fn with_path<P: AsRef<Path>>(path: P) -> Result<Self> {
+        Self::scan_path(path)
     }
 
     /// Creates a new inventory of connectors by searching various paths.
@@ -93,10 +120,10 @@ impl ConnectorInventory {
     /// use memflow::connector::ConnectorInventory;
     ///
     /// let inventory = unsafe {
-    ///     ConnectorInventory::try_new()
-    /// }.unwrap();
+    ///     ConnectorInventory::scan()
+    /// };
     /// ```
-    pub unsafe fn try_new() -> Result<Self> {
+    pub unsafe fn scan() -> Self {
         #[cfg(unix)]
         let extra_paths: Vec<&str> = vec![
             "/opt",
@@ -137,7 +164,17 @@ impl ConnectorInventory {
             ret.add_dir(path).ok();
         }
 
-        Ok(ret)
+        if let Ok(pwd) = std::env::current_dir() {
+            ret.add_dir(pwd).ok();
+        }
+
+        ret
+    }
+
+    #[doc(hidden)]
+    #[deprecated]
+    pub unsafe fn try_new() -> Result<Self> {
+        Ok(Self::scan())
     }
 
     /// Adds a library directory to the inventory
@@ -156,12 +193,34 @@ impl ConnectorInventory {
         for entry in read_dir(dir).map_err(|_| Error::IO("unable to read directory"))? {
             let entry = entry.map_err(|_| Error::IO("unable to read directory entry"))?;
             if let Ok(connector) = Connector::try_with(entry.path()) {
-                info!("adding connector: {:?}", entry.path());
-                self.connectors.push(connector);
+                if self
+                    .connectors
+                    .iter()
+                    .find(|c| connector.name == c.name)
+                    .is_none()
+                {
+                    info!("adding connector '{}': {:?}", connector.name, entry.path());
+                    self.connectors.push(connector);
+                } else {
+                    debug!(
+                        "skipping connector '{}' because it was added already: {:?}",
+                        connector.name,
+                        entry.path()
+                    );
+                }
             }
         }
 
         Ok(self)
+    }
+
+    /// Returns the names of all currently available connectors that can be used
+    /// when calling `create_connector` or `create_connector_default`.
+    pub fn available_connectors(&self) -> Vec<String> {
+        self.connectors
+            .iter()
+            .map(|c| c.name.clone())
+            .collect::<Vec<_>>()
     }
 
     /// Tries to create a new connector instance for the connector with the given name.
@@ -185,7 +244,7 @@ impl ConnectorInventory {
     /// use memflow::connector::{ConnectorInventory, ConnectorArgs};
     ///
     /// let inventory = unsafe {
-    ///     ConnectorInventory::with_path("./")
+    ///     ConnectorInventory::scan_path("./")
     /// }.unwrap();
     /// let connector = unsafe {
     ///     inventory.create_connector("coredump", &ConnectorArgs::new())
@@ -198,10 +257,10 @@ impl ConnectorInventory {
     /// use memflow::types::size;
     /// use memflow::mem::dummy::DummyMemory;
     /// use memflow::connector::ConnectorArgs;
-    /// use memflow_derive::connector;
+    /// use memflow::derive::connector;
     ///
-    /// #[connector(name = "dummy")]
-    /// pub fn create_connector(_args: &ConnectorArgs) -> Result<DummyMemory> {
+    /// #[connector(name = "dummy", ty = "DummyMemory")]
+    /// pub fn create_connector(_log_level: log::Level, _args: &ConnectorArgs) -> Result<DummyMemory> {
     ///     Ok(DummyMemory::new(size::mb(16)))
     /// }
     /// ```
@@ -243,7 +302,7 @@ impl ConnectorInventory {
     /// use memflow::connector::{ConnectorInventory, ConnectorArgs};
     ///
     /// let inventory = unsafe {
-    ///     ConnectorInventory::with_path("./")
+    ///     ConnectorInventory::scan_path("./")
     /// }.unwrap();
     /// let connector = unsafe {
     ///     inventory.create_connector_default("coredump")
@@ -270,11 +329,12 @@ impl ConnectorInventory {
 ///     connector_lib.create(&ConnectorArgs::new())
 /// }.unwrap();
 /// ```
+#[repr(C)]
 #[derive(Clone)]
 pub struct Connector {
     _library: Arc<Library>,
     name: String,
-    factory: extern "C" fn(args: &ConnectorArgs) -> Result<ConnectorType>,
+    vtable: ConnectorFunctionTable,
 }
 
 impl Connector {
@@ -313,7 +373,7 @@ impl Connector {
         Ok(Self {
             _library: Arc::new(library),
             name: desc.name.to_string(),
-            factory: desc.factory,
+            vtable: desc.vtable,
         })
     }
 
@@ -329,19 +389,21 @@ impl Connector {
     ///
     /// It is adviced to use a proc macro for defining a connector.
     pub unsafe fn create(&self, args: &ConnectorArgs) -> Result<ConnectorInstance> {
-        let connector_res = (self.factory)(args);
-
-        if let Err(err) = connector_res {
-            debug!("{}", err)
-        }
+        let cstr = CString::new(args.to_string())
+            .map_err(|_| Error::Connector("args could not be parsed"))?;
 
         // We do not want to return error with data from the shared library
         // that may get unloaded before it gets displayed
-        let instance = connector_res.map_err(|_| Error::Connector("Failed to create connector"))?;
+        let instance = (self.vtable.create)(log::max_level() as i32, cstr.as_ptr())
+            .ok_or_else(|| Error::Connector("create() failed"))?;
+
+        //let instance = connector_res?;
 
         Ok(ConnectorInstance {
-            _library: self._library.clone(),
             instance,
+            vtable: self.vtable.clone(),
+
+            _library: self._library.clone(),
         })
     }
 }
@@ -350,9 +412,9 @@ impl Connector {
 ///
 /// This structure is returned by `Connector`. It is needed to maintain reference
 /// counts to the loaded connector library.
-#[derive(Clone)]
 pub struct ConnectorInstance {
-    instance: ConnectorType,
+    instance: &'static mut c_void,
+    vtable: ConnectorFunctionTable,
 
     /// Internal library arc.
     ///
@@ -364,16 +426,40 @@ pub struct ConnectorInstance {
     _library: Arc<Library>,
 }
 
-impl std::ops::Deref for ConnectorInstance {
-    type Target = dyn CloneablePhysicalMemory;
+impl PhysicalMemory for ConnectorInstance {
+    fn phys_read_raw_list(&mut self, data: &mut [PhysicalReadData]) -> Result<()> {
+        (self.vtable.phys_read_raw_list)(self.instance, data.as_mut_ptr(), data.len());
+        Ok(())
+    }
 
-    fn deref(&self) -> &Self::Target {
-        &*self.instance
+    fn phys_write_raw_list(&mut self, data: &[PhysicalWriteData]) -> Result<()> {
+        (self.vtable.phys_write_raw_list)(
+            self.instance,
+            data.as_ptr() as *mut PhysicalWriteData,
+            data.len(),
+        );
+        Ok(())
+    }
+
+    fn metadata(&self) -> PhysicalMemoryMetadata {
+        (self.vtable.metadata)(self.instance)
     }
 }
 
-impl std::ops::DerefMut for ConnectorInstance {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut *self.instance
+impl Clone for ConnectorInstance {
+    fn clone(&self) -> Self {
+        let instance = (self.vtable.clone)(self.instance).expect("Unable to clone Connector");
+        Self {
+            instance,
+            vtable: self.vtable.clone(),
+
+            _library: self._library.clone(),
+        }
+    }
+}
+
+impl Drop for ConnectorInstance {
+    fn drop(&mut self) {
+        (self.vtable.drop)(self.instance);
     }
 }

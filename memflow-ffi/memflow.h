@@ -6,10 +6,6 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#ifdef __cplusplus
-namespace memflow {
-#endif // __cplusplus
-
 /**
  * Identifies the byte order of a architecture
  *
@@ -148,7 +144,7 @@ extern const ArchitectureObj *X86_32_PAE;
 
 extern const ArchitectureObj *X86_64;
 
-void log_init(int32_t level);
+void log_init(int32_t level_num);
 
 /**
  * Helper to convert `Address` to a `PhysicalAddress`
@@ -170,7 +166,7 @@ PhysicalAddress addr_to_paddr(Address address);
  * ConnectorInventory is inherently unsafe, because it loads shared libraries which can not be
  * guaranteed to be safe.
  */
-ConnectorInventory *inventory_try_new(void);
+ConnectorInventory *inventory_scan(void);
 
 /**
  * Create a new inventory with custom path string
@@ -179,7 +175,7 @@ ConnectorInventory *inventory_try_new(void);
  *
  * `path` must be a valid null terminated string
  */
-ConnectorInventory *inventory_with_path(const char *path);
+ConnectorInventory *inventory_scan_path(const char *path);
 
 /**
  * Add a directory to an existing inventory
@@ -503,10 +499,6 @@ void os_process_module_free(OsProcessModuleInfoObj *obj);
 
 #ifdef __cplusplus
 } // extern "C"
-#endif // __cplusplus
-
-#ifdef __cplusplus
-} // namespace memflow
 #endif // __cplusplus
 
 #endif /* MEMFLOW_H */

@@ -1,5 +1,6 @@
 use memflow::{
     architecture::{x86, ArchitectureObj, ScopedVirtualTranslate},
+    error::Error,
     iter::SplitAtIndex,
     mem::{PhysicalMemory, VirtualDMA, VirtualMemory, VirtualTranslate},
     types::{Address, PhysicalAddress},
@@ -32,7 +33,7 @@ impl ScopedVirtualTranslate for Win32VirtualTranslate {
         B: SplitAtIndex,
         VI: Iterator<Item = (Address, B)>,
         VO: Extend<(PhysicalAddress, B)>,
-        FO: Extend<(memflow::Error, Address, B)>,
+        FO: Extend<(Error, Address, B)>,
     >(
         &self,
         mem: &mut T,

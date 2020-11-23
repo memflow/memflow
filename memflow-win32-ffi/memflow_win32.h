@@ -7,10 +7,6 @@
 #include <stdlib.h>
 #include "memflow.h"
 
-#ifdef __cplusplus
-namespace memflow_win32 {
-#endif // __cplusplus
-
 typedef struct Kernel_FFIMemory__FFIVirtualTranslate Kernel_FFIMemory__FFIVirtualTranslate;
 
 typedef struct Win32ModuleInfo Win32ModuleInfo;
@@ -39,11 +35,18 @@ typedef uint32_t PID;
 
 typedef Win32Process_FFIVirtualMemory Win32Process;
 
+typedef struct Win32ArchOffsets {
+    uintptr_t peb_ldr;
+    uintptr_t ldr_list;
+    uintptr_t ldr_data_base;
+    uintptr_t ldr_data_size;
+    uintptr_t ldr_data_full_name;
+    uintptr_t ldr_data_base_name;
+} Win32ArchOffsets;
+
 typedef struct Win32ModuleListInfo {
     Address module_base;
-    uintptr_t ldr_data_base_offs;
-    uintptr_t ldr_data_size_offs;
-    uintptr_t ldr_data_name_offs;
+    Win32ArchOffsets offsets;
 } Win32ModuleListInfo;
 
 #ifdef __cplusplus
@@ -246,6 +249,22 @@ void process_free(Win32Process *process);
 uintptr_t process_module_list(Win32Process *process, Win32ModuleInfo **out, uintptr_t max_len);
 
 /**
+ * Retrieve the main module of the process
+ *
+ * This function searches for a module with a base address
+ * matching the section_base address from the ProcessInfo structure.
+ * It then returns a reference to a newly allocated
+ * `Win32ModuleInfo` object, if a module was found (null otherwise).
+ *
+ * The reference later needs to be freed with `module_info_free`
+ *
+ * # Safety
+ *
+ * `process` must be a valid Win32Process pointer.
+ */
+Win32ModuleInfo *process_main_module_info(Win32Process *process);
+
+/**
  * Lookup a module
  *
  * This will search for a module called `name`, and return a reference to a newly allocated
@@ -255,6 +274,7 @@ uintptr_t process_module_list(Win32Process *process, Win32ModuleInfo **out, uint
  *
  * # Safety
  *
+ * `process` must be a valid Win32Process pointer.
  * `name` must be a valid null terminated string.
  */
 Win32ModuleInfo *process_module_info(Win32Process *process, const char *name);
@@ -264,6 +284,10 @@ OsProcessInfoObj *process_info_trait(Win32ProcessInfo *info);
 Address process_info_dtb(const Win32ProcessInfo *info);
 
 Address process_info_section_base(const Win32ProcessInfo *info);
+
+int32_t process_info_exit_status(const Win32ProcessInfo *info);
+
+Address process_info_ethread(const Win32ProcessInfo *info);
 
 Address process_info_wow64(const Win32ProcessInfo *info);
 
@@ -292,10 +316,6 @@ void process_info_free(Win32ProcessInfo *info);
 
 #ifdef __cplusplus
 } // extern "C"
-#endif // __cplusplus
-
-#ifdef __cplusplus
-} // namespace memflow_win32
 #endif // __cplusplus
 
 #endif /* MEMFLOW_WIN32_H */

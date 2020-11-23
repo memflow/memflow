@@ -8,11 +8,10 @@ pub struct Win32ModuleInfo {
     pub peb_entry: Address,
     pub parent_eprocess: Address, // parent "reference"
 
-    pub base: Address,
-    pub size: usize,
-    pub name: String,
-    // exports
-    // sections
+    pub base: Address, // _LDR_DATA_TABLE_ENTRY::DllBase
+    pub size: usize,   // _LDR_DATA_TABLE_ENTRY::SizeOfImage
+    pub path: String,  // _LDR_DATA_TABLE_ENTRY::FullDllName
+    pub name: String,  // _LDR_DATA_TABLE_ENTRY::BaseDllName
 }
 
 impl OsProcessModuleInfo for Win32ModuleInfo {

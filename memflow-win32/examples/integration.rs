@@ -1,8 +1,8 @@
 use memflow::connector::*;
 use memflow::mem::*;
 
+use memflow_win32::error::{Error, Result};
 use memflow_win32::win32::{Kernel, Win32ModuleInfo, Win32Process};
-use memflow_win32::{Error, Result};
 
 use clap::*;
 use log::Level;
@@ -17,7 +17,7 @@ fn main() -> Result<()> {
     let args = ConnectorArgs::parse(&args_str)?;
 
     // create inventory + connector
-    let inventory = unsafe { ConnectorInventory::try_new()? };
+    let inventory = unsafe { ConnectorInventory::scan() };
     let connector = unsafe { inventory.create_connector(&connector, &args)? };
 
     let mut kernel = build_kernel(connector)?;

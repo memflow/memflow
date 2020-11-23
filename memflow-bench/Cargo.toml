@@ -1,13 +1,13 @@
 [package]
 name = "memflow-bench"
-version = "0.1.1"
+version = "0.1.4"
 authors = ["Aurimas Blažulionis <0x60@pm.me>"]
 edition = "2018"
-license = "MIT"
 description = "benchmarks for the memflow physical memory introspection framework"
+readme = "README.md"
 homepage = "https://memflow.github.io"
 repository = "https://github.com/memflow/memflow"
-readme = "README.md"
+license-file = "../LICENSE"
 keywords = [ "memflow", "introspection", "memory", "dma" ]
 categories = [ "memory-management", "os" ]
 publish = false

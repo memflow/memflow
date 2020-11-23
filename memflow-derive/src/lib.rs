@@ -6,6 +6,7 @@ use syn::{parse_macro_input, AttributeArgs, Data, DeriveInput, Fields, ItemFn};
 #[derive(Debug, FromMeta)]
 struct ConnectorFactoryArgs {
     name: String,
+    ty: syn::Ident,
     #[darling(default)]
     version: Option<String>,
 }
@@ -29,6 +30,7 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
     };
 
     let connector_name = args.name;
+    let connector_type = args.ty;
 
     let func = parse_macro_input!(input as ItemFn);
     let func_name = &func.sig.ident;
@@ -44,17 +46,122 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
         pub static MEMFLOW_CONNECTOR: ::memflow::connector::ConnectorDescriptor = ::memflow::connector::ConnectorDescriptor {
             connector_version: ::memflow::connector::MEMFLOW_CONNECTOR_VERSION,
             name: CONNECTOR_NAME,
-            factory: connector_factory,
+            vtable: ::memflow::connector::ConnectorFunctionTable {
+                create: mf_create,
+
+                phys_read_raw_list: mf_phys_read_raw_list,
+                phys_write_raw_list: mf_phys_write_raw_list,
+                metadata: mf_metadata,
+
+                clone: mf_clone,
+
+                drop: mf_drop,
+            },
         };
 
         #[cfg(feature = "inventory")]
-        pub extern "C" fn connector_factory(args: &::memflow::connector::ConnectorArgs) -> ::memflow::error::Result<::memflow::connector::ConnectorType> {
-            let connector = #func_name(args)?;
-            Ok(Box::new(connector))
+        #[doc(hidden)]
+        #[no_mangle]
+        extern "C" fn mf_create(
+            log_level: i32,
+            args: *const ::std::os::raw::c_char,
+        ) -> std::option::Option<&'static mut ::std::ffi::c_void> {
+            let level = match log_level {
+                0 => ::log::Level::Error,
+                1 => ::log::Level::Warn,
+                2 => ::log::Level::Info,
+                3 => ::log::Level::Debug,
+                4 => ::log::Level::Trace,
+                _ => ::log::Level::Trace,
+            };
+
+            let argsstr = unsafe { ::std::ffi::CStr::from_ptr(args) }.to_str()
+                .or_else(|e| {
+                    ::log::error!("error converting connector args: {}", e);
+                    Err(e)
+                })
+                .ok()?;
+            let conn_args = ::memflow::connector::ConnectorArgs::parse(argsstr)
+                .or_else(|e| {
+                    ::log::error!("error parsing connector args: {}", e);
+                    Err(e)
+                })
+                .ok()?;
+
+            let conn = Box::new(#func_name(level, &conn_args)
+                .or_else(|e| {
+                    ::log::error!("{}", e);
+                    Err(e)
+                })
+                .ok()?);
+            Some(unsafe { &mut *(Box::into_raw(conn) as *mut ::std::ffi::c_void) })
         }
 
-        pub fn static_connector_factory(args: &::memflow::connector::ConnectorArgs) -> ::memflow::error::Result<impl ::memflow::mem::PhysicalMemory> {
-            #func_name(args)
+        #[cfg(feature = "inventory")]
+        #[doc(hidden)]
+        #[no_mangle]
+        extern "C" fn mf_phys_read_raw_list(
+            phys_mem: &mut ::std::ffi::c_void,
+            read_data: *mut ::memflow::mem::PhysicalReadData,
+            read_data_count: usize,
+        ) -> i32 {
+            use ::memflow::mem::PhysicalMemory;
+
+            let conn = unsafe { &mut *(phys_mem as *mut ::std::ffi::c_void as *mut #connector_type) };
+            let read_data_slice = unsafe { std::slice::from_raw_parts_mut(read_data, read_data_count) };
+            match conn.phys_read_raw_list(read_data_slice) {
+                Ok(_) => 0,
+                Err(_) => -1,
+            }
+        }
+
+        #[cfg(feature = "inventory")]
+        #[doc(hidden)]
+        #[no_mangle]
+        extern "C" fn mf_phys_write_raw_list(
+            phys_mem: &mut ::std::ffi::c_void,
+            write_data: *const ::memflow::mem::PhysicalWriteData,
+            write_data_count: usize,
+        ) -> i32 {
+            use ::memflow::mem::PhysicalMemory;
+
+            let conn = unsafe { &mut *(phys_mem as *mut ::std::ffi::c_void as *mut #connector_type) };
+            let write_data_slice =
+                unsafe { std::slice::from_raw_parts(write_data, write_data_count) };
+            match conn.phys_write_raw_list(write_data_slice) {
+                Ok(_) => 0,
+                Err(_) => -1,
+            }
+        }
+
+        #[cfg(feature = "inventory")]
+        #[doc(hidden)]
+        #[no_mangle]
+        extern "C" fn mf_metadata(phys_mem: &::std::ffi::c_void) -> ::memflow::mem::PhysicalMemoryMetadata {
+            use ::memflow::mem::PhysicalMemory;
+
+            let conn = unsafe { &*(phys_mem as *const ::std::ffi::c_void as *const #connector_type) };
+            let metadata = conn.metadata();
+            metadata
+        }
+
+        #[cfg(feature = "inventory")]
+        #[doc(hidden)]
+        #[no_mangle]
+        extern "C" fn mf_clone(
+            phys_mem: &::std::ffi::c_void,
+        ) -> std::option::Option<&'static mut ::std::ffi::c_void> {
+            let conn = unsafe { &*(phys_mem as *const ::std::ffi::c_void as *const #connector_type) };
+            let cloned_conn = Box::new(conn.clone());
+            Some(unsafe { &mut *(Box::into_raw(cloned_conn) as *mut ::std::ffi::c_void) })
+        }
+
+        #[cfg(feature = "inventory")]
+        #[doc(hidden)]
+        #[no_mangle]
+        extern "C" fn mf_drop(phys_mem: &mut ::std::ffi::c_void) {
+            let _: Box<#connector_type> = unsafe { Box::from_raw(::std::mem::transmute(phys_mem)) };
+            // drop box
         }
 
         #func

@@ -87,6 +87,29 @@ pub unsafe extern "C" fn process_module_list(
         .unwrap_or_default()
 }
 
+/// Retrieve the main module of the process
+///
+/// This function searches for a module with a base address
+/// matching the section_base address from the ProcessInfo structure.
+/// It then returns a reference to a newly allocated
+/// `Win32ModuleInfo` object, if a module was found (null otherwise).
+///
+/// The reference later needs to be freed with `module_info_free`
+///
+/// # Safety
+///
+/// `process` must be a valid Win32Process pointer.
+#[no_mangle]
+pub unsafe extern "C" fn process_main_module_info(
+    process: &mut Win32Process,
+) -> Option<&'static mut Win32ModuleInfo> {
+    process
+        .main_module_info()
+        .map(to_heap)
+        .map_err(inspect_err)
+        .ok()
+}
+
 /// Lookup a module
 ///
 /// This will search for a module called `name`, and return a reference to a newly allocated
@@ -96,6 +119,7 @@ pub unsafe extern "C" fn process_module_list(
 ///
 /// # Safety
 ///
+/// `process` must be a valid Win32Process pointer.
 /// `name` must be a valid null terminated string.
 #[no_mangle]
 pub unsafe extern "C" fn process_module_info(

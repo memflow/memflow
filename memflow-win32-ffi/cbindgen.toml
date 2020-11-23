@@ -1,7 +1,6 @@
 language = "C"
 
 include_guard = "MEMFLOW_WIN32_H"
-namespace = "memflow_win32"
 tab_width = 4
 documentation_style = "doxy"
 style = "both"

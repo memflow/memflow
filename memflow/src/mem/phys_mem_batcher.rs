@@ -1,11 +1,11 @@
 use std::prelude::v1::*;
 
-use crate::phys_mem::{
+use crate::error::Result;
+use crate::mem::phys_mem::{
     PhysicalMemory, PhysicalReadData, PhysicalReadIterator, PhysicalWriteData,
     PhysicalWriteIterator,
 };
 use crate::types::PhysicalAddress;
-use crate::Result;
 
 use dataview::Pod;
 

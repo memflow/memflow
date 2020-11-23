@@ -18,7 +18,7 @@ pub mod inventory;
 #[doc(hidden)]
 #[cfg(feature = "inventory")]
 pub use inventory::{
-    Connector, ConnectorDescriptor, ConnectorInstance, ConnectorInventory, ConnectorType,
+    Connector, ConnectorDescriptor, ConnectorFunctionTable, ConnectorInstance, ConnectorInventory,
     MEMFLOW_CONNECTOR_VERSION,
 };
 

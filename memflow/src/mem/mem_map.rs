@@ -1,6 +1,6 @@
-use crate::types::{Address, PhysicalAddress};
-
+use crate::error::{Error, Result};
 use crate::iter::{SplitAtIndex, SplitAtIndexNoMutation};
+use crate::types::{Address, PhysicalAddress};
 
 use std::cmp::Ordering;
 use std::default::Default;
@@ -170,7 +170,58 @@ impl<M: SplitAtIndexNoMutation> MemoryMap<M> {
     }
 }
 
+#[cfg(feature = "serde")]
+#[derive(::serde::Deserialize)]
+struct MemoryMapFile {
+    #[serde(rename = "range")]
+    ranges: Vec<MemoryMapFileRange>,
+}
+
+#[cfg(feature = "serde")]
+#[derive(::serde::Deserialize)]
+struct MemoryMapFileRange {
+    base: u64,
+    length: u64,
+    real_base: Option<u64>,
+}
+
 impl MemoryMap<(Address, usize)> {
+    /// Constructs a new memory map by parsing the mapping table from a [TOML](https://toml.io/) file.
+    ///
+    /// The file must contain a mapping table in the following format:
+    ///
+    /// ```toml
+    /// [[range]]
+    /// base=0x1000
+    /// length=0x1000
+    ///
+    /// [[range]]
+    /// base=0x2000
+    /// length=0x1000
+    /// real_base=0x3000
+    /// ```
+    ///
+    /// The `real_base` parameter is optional. If it is not set there will be no re-mapping.
+    #[cfg(feature = "memmapfiles")]
+    pub fn open<P: AsRef<::std::path::Path>>(path: P) -> Result<Self> {
+        let contents = ::std::fs::read_to_string(path)
+            .map_err(|_| Error::Other("unable to open the memory mapping file"))?;
+        let mappings: MemoryMapFile = ::toml::from_str(&contents)
+            .map_err(|_| Error::Other("unable to parse the memory mapping toml file"))?;
+
+        let mut result = MemoryMap::new();
+        for range in mappings.ranges.iter() {
+            let real_base = range.real_base.unwrap_or_else(|| range.base);
+            result.push_range(
+                range.base.into(),
+                (range.base + range.length).into(),
+                real_base.into(),
+            );
+        }
+
+        Ok(result)
+    }
+
     /// Adds a new memory mapping to this memory map by specifying base address and size of the mapping.
     ///
     /// When adding overlapping memory regions this function will panic!
@@ -551,5 +602,26 @@ mod tests {
 
         // should panic
         map.push_range(0x2000.into(), 0x20ff.into(), 0.into());
+    }
+
+    #[cfg(feature = "memmapfiles")]
+    #[test]
+    fn test_load_toml() {
+        let mappings: MemoryMapFile = ::toml::from_str(
+            "
+[[range]]
+base=0x1000
+length=0x1000
+
+[[range]]
+base=0x2000
+length=0x1000
+real_base=0x3000",
+        )
+        .unwrap();
+
+        assert_eq!(mappings.ranges.len(), 2);
+        assert_eq!(mappings.ranges[0].real_base, None);
+        assert_eq!(mappings.ranges[1].real_base, Some(0x3000));
     }
 }

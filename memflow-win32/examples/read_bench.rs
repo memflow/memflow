@@ -179,7 +179,7 @@ fn main() -> Result<()> {
         .unwrap();
 
     // create inventory + connector
-    let inventory = unsafe { ConnectorInventory::try_new() }.unwrap();
+    let inventory = unsafe { ConnectorInventory::scan() };
     let mut connector = unsafe {
         inventory.create_connector(
             matches.value_of("connector").unwrap(),

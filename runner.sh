@@ -1,11 +1,18 @@
 #!/bin/bash
 
-if [[ "$@" =~ "qemu_procfs" ]]; then
-	CWD=$(pwd)
-	DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
-	cd $DIR
-	bash setperms.sh
-	cd $CWD
-fi
+if [[ ! -z $RUST_SUDO ]]; then
 
-exec $@
+    exec sudo -E $@
+
+else
+
+    if [[ ! -z $RUST_SETPTRACE ]]; then
+        if [[ -z "$(getcap $1 | grep -i cap_sys_ptrace)" ]]; then
+            echo "setting CAP_SYS_PTRACE=ep for $1"
+            sudo setcap 'CAP_SYS_PTRACE=ep' $1
+        fi
+    fi
+
+    exec $@
+
+fi

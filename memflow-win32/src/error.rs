@@ -6,7 +6,7 @@ use std::{convert, fmt, result, str};
 use std::error;
 
 // forward declare partial result extension from core for easier access
-pub use memflow::PartialResultExt;
+pub use memflow::error::PartialResultExt;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 pub enum Error {
@@ -27,7 +27,7 @@ pub enum Error {
     /// memflow core error.
     ///
     /// Catch-all for memflow core related errors.
-    Core(memflow::Error),
+    Core(memflow::error::Error),
     PDB(&'static str),
     /// PE error.
     ///
@@ -51,16 +51,16 @@ impl convert::From<&'static str> for Error {
 }
 
 /// Convert from flow_core::Error
-impl From<memflow::Error> for Error {
-    fn from(error: memflow::Error) -> Error {
+impl From<memflow::error::Error> for Error {
+    fn from(error: memflow::error::Error) -> Error {
         Error::Core(error)
     }
 }
 
 /// Convert from flow_core::PartialError
-impl<T> From<memflow::PartialError<T>> for Error {
-    fn from(_error: memflow::PartialError<T>) -> Error {
-        Error::Core(memflow::Error::Partial)
+impl<T> From<memflow::error::PartialError<T>> for Error {
+    fn from(_error: memflow::error::PartialError<T>) -> Error {
+        Error::Core(memflow::error::Error::Partial)
     }
 }
 

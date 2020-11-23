@@ -24,7 +24,6 @@ use crate::iter::{FnExtend, SplitAtIndex};
 use crate::mem::PhysicalMemory;
 
 use crate::types::{Address, PhysicalAddress};
-pub use bumpalo::{collections::Vec as BumpVec, Bump};
 
 /// Identifies the byte order of a architecture
 ///
@@ -53,7 +52,8 @@ pub trait ScopedVirtualTranslate: Clone + Copy + Send {
         mem: &mut T,
         addr: Address,
     ) -> Result<PhysicalAddress> {
-        let arena = Bump::new();
+        let mut buf: [std::mem::MaybeUninit<u8>; 128] =
+            unsafe { std::mem::MaybeUninit::uninit().assume_init() };
         let mut output = None;
         let mut success = FnExtend::new(|elem: (PhysicalAddress, _)| {
             if output.is_none() {
@@ -67,7 +67,7 @@ pub trait ScopedVirtualTranslate: Clone + Copy + Send {
             Some((addr, 1)).into_iter(),
             &mut success,
             &mut fail,
-            &arena,
+            &mut buf,
         );
         output.map(Ok).unwrap_or_else(|| Err(output_err.unwrap()))
     }
@@ -84,7 +84,7 @@ pub trait ScopedVirtualTranslate: Clone + Copy + Send {
         addrs: VI,
         out: &mut VO,
         out_fail: &mut FO,
-        arena: &Bump,
+        tmp_buf: &mut [std::mem::MaybeUninit<u8>],
     );
 
     fn translation_table_id(&self, address: Address) -> usize;

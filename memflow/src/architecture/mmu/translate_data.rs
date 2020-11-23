@@ -176,32 +176,6 @@ impl<T: MMUTranslationBase> TranslationChunk<T> {
         }
     }
 
-    /*pub fn verify_bounds<'a, U: SplitAtIndex + 'a, I: Iterator<Item = &'a TranslateData<U>>>(
-        &self,
-        iter: &mut I,
-    ) -> bool {
-        for e in iter.take(self.addr_count) {
-            if e.addr < self.min_addr || e.addr + e.length() > self.max_addr {
-                log::trace!(
-                    "Bound verification failed! {:#?} {:x}+{:x}",
-                    &self,
-                    e.addr,
-                    e.length()
-                );
-                return false;
-            }
-        }
-        true
-    }*/
-
-    // TODO: This needs a drop impl that consumes the iterator!!!
-    /*pub fn into_addr_iter<U: SplitAtIndex>(
-        self,
-        addr_stack: &mut TranslateDataVec<U>,
-    ) -> impl Iterator<Item = TranslateData<U>> {
-        (0..self.addr_count).map(|_| addr_stack.pop().unwrap())
-    }*/
-
     pub fn next_max_addr_count(&self, spec: &ArchMMUSpec) -> usize {
         let step_size = spec.page_size_step_unchecked(self.step + 1);
 
@@ -214,6 +188,7 @@ impl<T: MMUTranslationBase> TranslationChunk<T> {
         self.addr_count * ((self.max_addr - self.min_addr) / step_size + add)
     }
 
+    /// Splits the chunk into multiple smaller ones for the next VTOP step.
     pub fn split_chunk<U: SplitAtIndex>(
         mut self,
         spec: &ArchMMUSpec,
@@ -221,6 +196,10 @@ impl<T: MMUTranslationBase> TranslationChunk<T> {
         out_target: &mut (TranslateVec, TranslateDataVec<U>),
         wait_target: &mut (TranslateVec, TranslateDataVec<U>),
     ) {
+        // We ideally would not do this, but honestly this is a better alternative
+        // to lifetime torture.
+        // The input vecs are allocated by the same functions, and the data that's being held
+        // should not really be lifetime dependent in the context of VTOP
         let mut addr_stack = unsafe { shorten_datavec_lifetime(addr_stack) };
         let mut tmp_addr_stack = unsafe { shorten_datavec_lifetime(tmp_addr_stack) };
         let mut out_target = unsafe { shorten_pair_lifetime(out_target) };
@@ -229,36 +208,11 @@ impl<T: MMUTranslationBase> TranslationChunk<T> {
         let align_as = spec.page_size_step_unchecked(self.step);
         let step_size = spec.page_size_step_unchecked(self.step + 1);
 
-        //debug_assert!(self.verify_bounds(&mut addr_stack.iter().rev()), "SPL 1");
-
         //TODO: mask out the addresses to limit them within address space
         //this is in particular for the first step where addresses are split between positive and
         //negative sides
         let upper: u64 = (self.max_addr - 1).as_page_aligned(step_size).as_u64();
         let lower: u64 = self.min_addr.as_page_aligned(step_size).as_u64();
-
-        //debug_assert!(self.step == 0 || (upper - lower) <= align_as as _);
-
-        // This particular code does not seem to help with LTO
-        /*if upper == lower {
-            let (chunks_out, addrs_out) = out_target;
-            let addr = Address::from(lower);
-            let index = (addr - addr.as_page_aligned(align_as)) / step_size;
-            let (pt_addr, _) = self.pt_addr.get_pt_by_index(index);
-            let pt_addr = spec.vtop_step(pt_addr, addr, self.step);
-
-            let mut new_chunk = TranslationChunk::new(pt_addr);
-
-            for _ in 0..self.addr_count {
-                let data = addr_stack.pop().unwrap();
-                new_chunk.push_data(data, addrs_out);
-            }
-
-            new_chunk.step = self.step;
-            chunks_out.push(new_chunk);
-
-            return;
-        }*/
 
         // Walk in reverse so that lowest addresses always end up
         // first in the stack. This preserves translation order

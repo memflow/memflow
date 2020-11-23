@@ -39,10 +39,10 @@ impl ScopedVirtualTranslate for Win32VirtualTranslate {
         addrs: VI,
         out: &mut VO,
         out_fail: &mut FO,
-        arena: &memflow::architecture::Bump,
+        tmp_buf: &mut [std::mem::MaybeUninit<u8>],
     ) {
         let translator = x86::new_translator(self.dtb, self.sys_arch).unwrap();
-        translator.virt_to_phys_iter(mem, addrs, out, out_fail, arena)
+        translator.virt_to_phys_iter(mem, addrs, out, out_fail, tmp_buf)
     }
 
     fn translation_table_id(&self, _address: Address) -> usize {

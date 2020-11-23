@@ -2,15 +2,8 @@ pub mod x32;
 pub mod x32_pae;
 pub mod x64;
 
-use super::{
-    mmu::{
-        translate_data::{TranslateDataVec, TranslationChunk},
-        ArchMMUSpec, MMUTranslationBase,
-    },
-    Architecture, ArchitectureObj, Endianess, ScopedVirtualTranslate,
-};
+use super::{mmu::ArchMMUSpec, Architecture, ArchitectureObj, Endianess, ScopedVirtualTranslate};
 
-use super::Bump;
 use crate::error::{Error, Result};
 use crate::iter::SplitAtIndex;
 use crate::mem::PhysicalMemory;
@@ -48,15 +41,12 @@ impl Architecture for X86Architecture {
 #[derive(Clone, Copy)]
 pub struct X86ScopedVirtualTranslate {
     arch: &'static X86Architecture,
-    dtb: X86PageTableBase,
+    dtb: Address,
 }
 
 impl X86ScopedVirtualTranslate {
     pub fn new(arch: &'static X86Architecture, dtb: Address) -> Self {
-        Self {
-            arch,
-            dtb: X86PageTableBase(dtb),
-        }
+        Self { arch, dtb }
     }
 }
 
@@ -73,50 +63,19 @@ impl ScopedVirtualTranslate for X86ScopedVirtualTranslate {
         addrs: VI,
         out: &mut VO,
         out_fail: &mut FO,
-        arena: &Bump,
+        tmp_buf: &mut [std::mem::MaybeUninit<u8>],
     ) {
         self.arch
             .mmu
-            .virt_to_phys_iter(mem, self.dtb, addrs, out, out_fail, arena)
+            .virt_to_phys_iter(mem, self.dtb, addrs, out, out_fail, tmp_buf)
     }
 
     fn translation_table_id(&self, _address: Address) -> usize {
-        self.dtb.0.as_u64().overflowing_shr(12).0 as usize
+        self.dtb.as_u64().overflowing_shr(12).0 as usize
     }
 
     fn arch(&self) -> ArchitectureObj {
         self.arch
-    }
-}
-
-#[repr(transparent)]
-#[derive(Clone, Copy, Debug)]
-pub struct X86PageTableBase(Address);
-
-impl MMUTranslationBase for X86PageTableBase {
-    fn get_pt_by_virt_addr(&self, _: Address) -> Address {
-        self.0
-    }
-
-    fn get_pt_by_index(&self, idx: usize) -> (Address, usize) {
-        (self.0, idx)
-    }
-
-    fn pt_count(&self) -> usize {
-        1
-    }
-
-    fn virt_addr_filter<B, O>(
-        &self,
-        spec: &ArchMMUSpec,
-        addr: (Address, B),
-        work_group: (&mut TranslationChunk<Self>, &mut TranslateDataVec<B>),
-        out_fail: &mut O,
-    ) where
-        B: SplitAtIndex,
-        O: Extend<(Error, Address, B)>,
-    {
-        spec.virt_addr_filter(addr, work_group, out_fail);
     }
 }
 

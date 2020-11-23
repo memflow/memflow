@@ -11,15 +11,17 @@ pub(crate) use spec::ArchMMUSpec;
 use translate_data::{TranslateDataVec, TranslateVec, TranslationChunk};
 
 pub trait MMUTranslationBase: Clone + Copy + core::fmt::Debug {
-    // Retrieves page table address by virtual address
+    /// Retrieves page table address by virtual address
     fn get_pt_by_virt_addr(&self, address: Address) -> Address;
 
-    // Retreives page table address, and its index by index within
-    // For instance, on ARM index 257 would return kernel page table
-    // address, and index 1. On X86, however, this is a no-op that returns
-    // underlying page table Address and `idx`.
+    /// Retreives page table address, and its index by index within
+    /// For instance, on ARM index 257 would return kernel page table
+    /// address, and index 1. On X86, however, this is a no-op that returns
+    /// underlying page table Address and `idx`.
     fn get_pt_by_index(&self, idx: usize) -> (Address, usize);
 
+    /// Retreives number of page tables used by translation base. 1 on X86,
+    /// 1-2 on ARM (Win32 ARM merges both page tables)
     fn pt_count(&self) -> usize;
 
     fn virt_addr_filter<B: SplitAtIndex, O: Extend<(Error, Address, B)>>(
@@ -85,6 +87,4 @@ impl MMUTranslationBase for Address {
     {
         spec.virt_addr_filter(addr, work_group, out_fail);
     }
-
-    //TODO: Optimized fill_init_vec impl for non-split page tables
 }

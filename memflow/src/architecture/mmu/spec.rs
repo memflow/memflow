@@ -136,12 +136,13 @@ impl ArchMMUSpec {
         let virt_bit_range = self.virt_addr_bit_ranges[0].1;
         let virt_range = 1u64 << (virt_bit_range - 1);
         vtop_trace!("vbr {:x} | {:x}", virt_bit_range, virt_range);
+        let arch_bit_range = (!0u64) >> (64 - self.def.addr_size * 8);
 
         let (lower, higher) = left.split_at_address(virt_range.into());
 
         if let Some(mut data) = higher {
             let (reject, higher) =
-                data.split_at_address_rev((0u64.wrapping_sub(virt_range).wrapping_sub(1)).into());
+                data.split_at_address_rev((arch_bit_range.wrapping_sub(virt_range)).into());
 
             // The upper half has to be all negative (all bits set), so compare the masks to see if
             // it is the case.
@@ -328,7 +329,8 @@ impl ArchMMUSpec {
         let working_stack_count = 2;
         let total_addr_mul = spare_allocs;
 
-        let elem_count = slice.len()
+        // 2 * 8 are extra bytes for alignment in read funcs
+        let elem_count = (slice.len() - 2 * 8)
             / ((total_chunks_mul + working_stack_count) * chunk_size
             + pte_size
             + prd_size
@@ -464,10 +466,10 @@ impl ArchMMUSpec {
     {
         let pte_size = self.def.pte_size;
 
-        let (pt_buf_bytes, slice) = slice.split_at_mut(chunks.len() * pte_size);
+        let (pt_buf_bytes, slice) = slice.split_at_mut(chunks.len() * pte_size + 8);
         let mut pt_buf = MVec::from_uninit_bytes(pt_buf_bytes);
         let (pt_read_bytes, _slice) =
-            slice.split_at_mut(chunks.len() * std::mem::size_of::<PhysicalReadData>());
+            slice.split_at_mut(chunks.len() * std::mem::size_of::<PhysicalReadData>() + 8);
         let mut pt_read = MVec::from_uninit_bytes(pt_read_bytes);
 
         pt_buf.extend((0..).map(|_| 0).take(pte_size * chunks.len()));

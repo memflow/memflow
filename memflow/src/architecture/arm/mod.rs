@@ -42,6 +42,7 @@ impl Architecture for ARMArchitecture {
     }
 }
 
+// TODO: Add granularity
 #[derive(Clone, Copy)]
 pub struct ARMScopedVirtualTranslate {
     arch: &'static ARMArchitecture,

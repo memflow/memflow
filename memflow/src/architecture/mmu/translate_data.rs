@@ -152,15 +152,15 @@ impl<T> TranslationChunk<T> {
 
 impl<T: MMUTranslationBase> TranslationChunk<T> {
     /// Pushes data to stack updating min/max bounds
-    pub fn push_data<U: SplitAtIndex, O: Extend<TranslateData<U>>>(
+    pub fn push_data<U: SplitAtIndex>(
         &mut self,
         data: TranslateData<U>,
-        stack: &mut O,
+        stack: &mut TranslateDataVec<U>,
     ) {
         self.min_addr = std::cmp::min(self.min_addr, data.addr);
         self.max_addr = std::cmp::max(self.max_addr, data.addr + data.length());
         self.addr_count += 1;
-        stack.extend(Some(data));
+        stack.push(data);
     }
 
     /// Pops the address from stack without modifying bounds

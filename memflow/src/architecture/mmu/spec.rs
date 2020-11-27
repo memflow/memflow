@@ -541,8 +541,7 @@ impl ArchMMUSpec {
                     for _ in
                         (0..chunk.addr_count).zip(working_addrs.len()..working_addrs.capacity())
                     {
-                        let addr = waiting_addrs.pop().unwrap();
-                        chunk.addr_count -= 1;
+                        let addr = chunk.pop_data(waiting_addrs).unwrap();
                         new_chunk.push_data(addr, working_addrs);
                     }
 

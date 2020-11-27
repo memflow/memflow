@@ -309,7 +309,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
             &mut self.phys_mem,
             proc_arch,
             Win32VirtualTranslate::new(self.kernel_info.start_block.arch, dtb),
-            DirectTranslate::new(),
+            &mut self.vat,
         );
 
         if let Some(teb) = teb_wow64 {

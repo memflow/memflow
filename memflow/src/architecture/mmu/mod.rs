@@ -37,9 +37,9 @@ pub trait MMUTranslationBase: Clone + Copy + core::fmt::Debug {
         spec: &ArchMMUSpec,
         out_fail: &mut FO,
         addrs: &mut VI,
-        (waiting_addrs, tmp_addrs): (&mut TranslateDataVec<B>, &mut TranslateDataVec<B>),
+        (next_work_addrs, tmp_addrs): (&mut TranslateDataVec<B>, &mut TranslateDataVec<B>),
         work_vecs: &mut (TranslateVec, TranslateDataVec<B>),
-        next_work_vecs: &mut (TranslateVec, TranslateDataVec<B>),
+        wait_vecs: &mut (TranslateVec, TranslateDataVec<B>),
     ) where
         VI: Iterator<Item = (Address, B)>,
         FO: Extend<(Error, Address, B)>,
@@ -50,14 +50,14 @@ pub trait MMUTranslationBase: Clone + Copy + core::fmt::Debug {
         let working_addr_count = work_vecs.1.capacity();
 
         for (_, data) in (0..working_addr_count).zip(addrs) {
-            self.virt_addr_filter(spec, data, (&mut init_chunk, waiting_addrs), out_fail);
+            self.virt_addr_filter(spec, data, (&mut init_chunk, next_work_addrs), out_fail);
             if init_chunk.next_max_addr_count(spec) >= working_addr_count {
                 break;
             }
         }
 
         if init_chunk.addr_count > 0 {
-            init_chunk.split_chunk(spec, (waiting_addrs, tmp_addrs), work_vecs, next_work_vecs);
+            init_chunk.split_chunk(spec, (next_work_addrs, tmp_addrs), work_vecs, wait_vecs);
         }
     }
 }

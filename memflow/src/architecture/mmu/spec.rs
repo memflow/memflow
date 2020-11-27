@@ -319,7 +319,7 @@ impl ArchMMUSpec {
         // and it needs to be split to smaller chunks, we need space for them. In addition,
         // we need to reserve enough space for several more splits like that, because
         // the same scenario can occur for every single page mapping level.
-        let chunk_size = std::mem::size_of::<TranslationChunk<TranslateData<B>>>();
+        let chunk_size = std::mem::size_of::<TranslationChunk<Address>>();
         let data_size = std::mem::size_of::<TranslateData<B>>();
         let prd_size = std::mem::size_of::<PhysicalReadData>();
         let pte_size = self.def.pte_size;
@@ -337,16 +337,10 @@ impl ArchMMUSpec {
             // The +1 is for tmp_addrs
             + (total_addr_mul + working_stack_count + 1) * data_size);
 
-        let pt1_size = 1usize << self.def.virtual_address_splits[0];
-
-        // We need to support at least the number of entries in initial page table,
-        // because one chunk can split into smaller chunks that are at least that size
-        if elem_count < pt1_size {
-            log::trace!(
-                "input buffer may be too small! ({:x} vs {:x})",
-                elem_count,
-                pt1_size
-            );
+        // We need to support at least the number of addresses virt_addr_filter is going to split
+        // us into. It is a tough one, but 2 is the bare minimum for x86
+        if elem_count < 3 {
+            log::trace!("input buffer may be too small! ({:x})", elem_count);
         }
 
         let waiting_chunks = elem_count * (1 + spare_allocs);
@@ -369,26 +363,28 @@ impl ArchMMUSpec {
         let (working_addrs_bytes, slice) = slice.split_at_mut(elem_count * data_size);
         let working_addrs = MVec::from_uninit_bytes(working_addrs_bytes);
         let (working_addrs_bytes, slice) = slice.split_at_mut(elem_count * data_size);
-        let working_addrs2 = MVec::from_uninit_bytes(working_addrs_bytes);
+        let mut working_addrs2 = MVec::from_uninit_bytes(working_addrs_bytes);
         let (waiting_addrs_bytes, slice) = slice.split_at_mut(waiting_addr_count * data_size);
-        let mut waiting_addrs = MVec::from_uninit_bytes(waiting_addrs_bytes);
+        let waiting_addrs = MVec::from_uninit_bytes(waiting_addrs_bytes);
         let (tmp_addrs_bytes, slice) = slice.split_at_mut(elem_count * data_size);
         let mut tmp_addrs = MVec::from_uninit_bytes(tmp_addrs_bytes);
 
         let mut working_pair = (working_stack, working_addrs);
-        let mut next_working_pair = (working_stack2, working_addrs2);
+        let mut waiting_pair = (waiting_stack, waiting_addrs);
 
+        // Fill up working_pair and waiting_pair from the iterator
         dtb.fill_init_chunk(
             &self,
             out_fail,
             &mut addrs,
-            (&mut waiting_addrs, &mut tmp_addrs),
+            (&mut working_addrs2, &mut tmp_addrs),
             &mut working_pair,
-            &mut next_working_pair,
+            &mut waiting_pair,
         );
 
-        let mut waiting_pair = (waiting_stack, waiting_addrs);
+        let mut next_working_pair = (working_stack2, working_addrs2);
 
+        // Set up endianess translation functions
         let buf_to_addr: fn(&[u8]) -> Address = match (self.def.endianess, self.def.pte_size) {
             (Endianess::LittleEndian, 8) => {
                 |buf| Address::from(u64::from_le_bytes(buf.try_into().unwrap()))
@@ -404,6 +400,9 @@ impl ArchMMUSpec {
             }
             _ => |_| Address::NULL,
         };
+
+        // see work_through_stack for usage
+        let mut prev_pt_address = [Address::NULL; MAX_LEVELS];
 
         while !working_pair.0.is_empty() {
             // Perform the reads here
@@ -423,6 +422,7 @@ impl ArchMMUSpec {
                 return;
             }
 
+            // Check read results, mark entries for lower levels, etc. etc.
             self.work_through_stack(
                 &mut working_pair,
                 &mut next_working_pair,
@@ -430,10 +430,16 @@ impl ArchMMUSpec {
                 out_fail,
                 &mut waiting_pair,
                 &mut tmp_addrs,
+                &mut prev_pt_address,
             );
 
             debug_assert!(working_pair.1.is_empty());
 
+            // next_working_stack would get filled up if there were any splits going.
+            // Even if it is not fully filled up, it might not worth going through the
+            // trouble, because additional checks would negatively impact single element
+            // translations. (TODO: use some bool flag?).
+            // Instead, just swap the pairs, that is the fastest way to go.
             if next_working_pair.0.is_empty() {
                 self.refill_stack(
                     dtb,
@@ -466,6 +472,8 @@ impl ArchMMUSpec {
     {
         let pte_size = self.def.pte_size;
 
+        // Create temporary read bufs.
+        // We need extra bytes for alignment
         let (pt_buf_bytes, slice) = slice.split_at_mut(chunks.len() * pte_size + 8);
         let mut pt_buf = MVec::from_uninit_bytes(pt_buf_bytes);
         let (pt_read_bytes, _slice) =
@@ -487,6 +495,7 @@ impl ArchMMUSpec {
 
         mem.phys_read_raw_list(&mut pt_read)?;
 
+        // Move the read value into the chunk
         for (ref mut chunk, PhysicalReadData(_, buf)) in chunks.iter_mut().zip(pt_read.iter()) {
             let pt_addr = buf_to_addr(*buf);
             chunk.pt_addr = pt_addr;
@@ -499,24 +508,26 @@ impl ArchMMUSpec {
     fn refill_stack<B: SplitAtIndex, D, VI, FO>(
         &self,
         dtb: D,
-        mut working_pair: &mut (TranslateVec, TranslateDataVec<B>),
+        working_pair: &mut (TranslateVec, TranslateDataVec<B>),
         next_working_pair: &mut (TranslateVec, TranslateDataVec<B>),
         out_fail: &mut FO,
         addrs: &mut VI,
-        (waiting_stack, waiting_addrs): &mut (TranslateVec, TranslateDataVec<B>),
+        waiting_pair: &mut (TranslateVec, TranslateDataVec<B>),
         tmp_addrs: &mut TranslateDataVec<B>,
     ) where
         D: MMUTranslationBase,
         FO: Extend<(Error, Address, B)>,
         VI: Iterator<Item = (Address, B)>,
     {
-        let (working_stack, working_addrs) = &mut working_pair;
-
         // If there is a waiting stack, use it
-        if !waiting_stack.is_empty() {
+        if !waiting_pair.0.is_empty() {
+            let (working_stack, working_addrs) = working_pair;
+            let (waiting_stack, waiting_addrs) = waiting_pair;
+
             while let Some(mut chunk) = waiting_stack.pop() {
                 // Make sure working stack does not overflow
                 if working_stack.len() >= working_stack.capacity()
+                    || working_addrs.len() >= working_addrs.capacity()
                     || (working_addrs.len() + chunk.addr_count > working_stack.capacity()
                         && !working_stack.is_empty())
                 {
@@ -530,7 +541,8 @@ impl ArchMMUSpec {
                     for _ in
                         (0..chunk.addr_count).zip(working_addrs.len()..working_addrs.capacity())
                     {
-                        let addr = chunk.pop_data(waiting_addrs).unwrap();
+                        let addr = waiting_addrs.pop().unwrap();
+                        chunk.addr_count -= 1;
                         new_chunk.push_data(addr, working_addrs);
                     }
 
@@ -546,9 +558,9 @@ impl ArchMMUSpec {
                 &self,
                 out_fail,
                 addrs,
-                (waiting_addrs, tmp_addrs),
+                (&mut next_working_pair.1, tmp_addrs),
                 working_pair,
-                next_working_pair,
+                waiting_pair,
             );
         }
     }
@@ -563,16 +575,13 @@ impl ArchMMUSpec {
         out_fail: &mut FO,
         waiting_pair: &mut (TranslateVec, TranslateDataVec<B>),
         tmp_addrs: &mut TranslateDataVec<B>,
+        prev_pt_address: &mut [Address],
     ) where
         VO: Extend<(PhysicalAddress, B)>,
         FO: Extend<(Error, Address, B)>,
     {
-        let mut prev_entry = Address::NULL;
-
         while let Some(mut chunk) = working_stack.pop() {
-            vtop_trace!("chunk = {:#?}", &chunk);
-
-            chunk.step += 1;
+            vtop_trace!("chunk = {:x} {:x}", chunk.step, chunk.pt_addr);
 
             // This is extremely important!
             // It is a something of a heuristic against
@@ -588,10 +597,12 @@ impl ArchMMUSpec {
             // Some cases this _may_ cause issues, but it's extremely rare to have
             // 2 identical pages right next to each other. If there is ever a documented
             // case however, then we will need to workaround that.
-            let pprev_entry = prev_entry;
-            prev_entry = chunk.pt_addr;
+            let prev_address = prev_pt_address[chunk.step];
+            prev_pt_address[chunk.step] = chunk.pt_addr;
 
-            if !self.check_entry(chunk.pt_addr, chunk.step + 1) || chunk.pt_addr == pprev_entry {
+            chunk.step += 1;
+
+            if !self.check_entry(chunk.pt_addr, chunk.step + 1) || chunk.pt_addr == prev_address {
                 // Failure
                 while let Some(entry) = chunk.pop_data(working_addrs) {
                     out_fail.extend(Some((Error::VirtualTranslate, entry.addr, entry.buf)));

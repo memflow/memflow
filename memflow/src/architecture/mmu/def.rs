@@ -101,6 +101,7 @@ impl ArchMMUDef {
         self.virtual_address_splits.len()
     }
 
+    /// Returns the upper bound of number of splits that can occur when performing translation
     pub const fn spare_allocs(&self) -> usize {
         let mut i = 1;
         let mut fold = 0;

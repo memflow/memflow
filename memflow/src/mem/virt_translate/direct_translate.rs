@@ -15,7 +15,7 @@ pub struct DirectTranslate {
 
 impl DirectTranslate {
     pub fn new() -> Self {
-        Self::with_capacity(size::mb(128))
+        Self::with_capacity(size::mb(64))
     }
 
     pub fn with_capacity(size: usize) -> Self {

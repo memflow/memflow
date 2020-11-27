@@ -128,7 +128,7 @@ impl<T: SplitAtIndex> SplitAtIndex for TranslateData<T> {
 pub struct TranslationChunk<T> {
     pub pt_addr: T,
     pub addr_count: usize,
-    min_addr: Address,
+    pub min_addr: Address,
     max_addr: Address,
     pub step: usize,
 }
@@ -152,15 +152,15 @@ impl<T> TranslationChunk<T> {
 
 impl<T: MMUTranslationBase> TranslationChunk<T> {
     /// Pushes data to stack updating min/max bounds
-    pub fn push_data<U: SplitAtIndex /*, O: Extend<TranslateData<U>>*/>(
+    pub fn push_data<U: SplitAtIndex, O: Extend<TranslateData<U>>>(
         &mut self,
         data: TranslateData<U>,
-        stack: &mut TranslateDataVec<U>,
+        stack: &mut O,
     ) {
         self.min_addr = std::cmp::min(self.min_addr, data.addr);
         self.max_addr = std::cmp::max(self.max_addr, data.addr + data.length());
         self.addr_count += 1;
-        stack.push(data);
+        stack.extend(Some(data));
     }
 
     /// Pops the address from stack without modifying bounds
@@ -196,6 +196,7 @@ impl<T: MMUTranslationBase> TranslationChunk<T> {
         out_target: &mut (TranslateVec, TranslateDataVec<U>),
         wait_target: &mut (TranslateVec, TranslateDataVec<U>),
     ) {
+        // Safety:
         // We ideally would not do this, but honestly this is a better alternative
         // to lifetime torture.
         // The input vecs are allocated by the same functions, and the data that's being held
@@ -217,8 +218,13 @@ impl<T: MMUTranslationBase> TranslationChunk<T> {
         // Walk in reverse so that lowest addresses always end up
         // first in the stack. This preserves translation order
         for (cnt, addr) in (lower..=upper).rev().step_by(step_size).enumerate() {
-            let (chunks_out, addrs_out) = if out_target.0.capacity() != out_target.0.len()
-                && out_target.1.capacity() - out_target.1.len() >= self.addr_count
+            // Also, we need to push the upper elements to the waiting stack preemptively...
+            // This might result in slight performance loss, but keeps the order
+            let remaining = (addr - lower) as usize / step_size + 1;
+
+            let (chunks_out, addrs_out) = if out_target.0.capacity()
+                >= out_target.0.len() + remaining
+                && out_target.1.capacity() >= out_target.1.len() + self.addr_count * remaining
             {
                 &mut out_target
             } else {
@@ -232,6 +238,7 @@ impl<T: MMUTranslationBase> TranslationChunk<T> {
 
             let mut new_chunk = TranslationChunk::new(pt_addr);
 
+            // Go through each address and check it individually
             for _ in 0..self.addr_count {
                 let mut data = self.pop_data(addr_stack).unwrap();
 
@@ -258,6 +265,7 @@ impl<T: MMUTranslationBase> TranslationChunk<T> {
                     new_chunk.push_data(data, addrs_out);
                 }
 
+                // There was some leftover data
                 if left.length() > 0 {
                     self.push_data(left, tmp_addr_stack);
                 }

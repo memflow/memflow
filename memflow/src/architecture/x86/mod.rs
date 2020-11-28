@@ -2,12 +2,8 @@ pub mod x32;
 pub mod x32_pae;
 pub mod x64;
 
-use super::{
-    mmu_spec::{translate_data::TranslateVec, ArchMMUSpec, MMUTranslationBase},
-    Architecture, ArchitectureObj, Endianess, ScopedVirtualTranslate,
-};
+use super::{mmu::ArchMMUSpec, Architecture, ArchitectureObj, Endianess, ScopedVirtualTranslate};
 
-use super::Bump;
 use crate::error::{Error, Result};
 use crate::iter::SplitAtIndex;
 use crate::mem::PhysicalMemory;
@@ -16,8 +12,6 @@ use crate::types::{Address, PhysicalAddress};
 pub struct X86Architecture {
     /// Defines how many bits does the native word size have
     bits: u8,
-    /// Defines the byte order of the architecture
-    endianess: Endianess,
     /// Defines the underlying MMU used for address translation
     mmu: ArchMMUSpec,
 }
@@ -28,7 +22,7 @@ impl Architecture for X86Architecture {
     }
 
     fn endianess(&self) -> Endianess {
-        self.endianess
+        self.mmu.def.endianess
     }
 
     fn page_size(&self) -> usize {
@@ -36,26 +30,23 @@ impl Architecture for X86Architecture {
     }
 
     fn size_addr(&self) -> usize {
-        self.mmu.addr_size.into()
+        self.mmu.def.addr_size.into()
     }
 
     fn address_space_bits(&self) -> u8 {
-        self.mmu.address_space_bits
+        self.mmu.def.address_space_bits
     }
 }
 
 #[derive(Clone, Copy)]
 pub struct X86ScopedVirtualTranslate {
     arch: &'static X86Architecture,
-    dtb: X86PageTableBase,
+    dtb: Address,
 }
 
 impl X86ScopedVirtualTranslate {
     pub fn new(arch: &'static X86Architecture, dtb: Address) -> Self {
-        Self {
-            arch,
-            dtb: X86PageTableBase(dtb),
-        }
+        Self { arch, dtb }
     }
 }
 
@@ -72,50 +63,19 @@ impl ScopedVirtualTranslate for X86ScopedVirtualTranslate {
         addrs: VI,
         out: &mut VO,
         out_fail: &mut FO,
-        arena: &Bump,
+        tmp_buf: &mut [std::mem::MaybeUninit<u8>],
     ) {
         self.arch
             .mmu
-            .virt_to_phys_iter(mem, self.dtb, addrs, out, out_fail, arena)
+            .virt_to_phys_iter(mem, self.dtb, addrs, out, out_fail, tmp_buf)
     }
 
     fn translation_table_id(&self, _address: Address) -> usize {
-        self.dtb.0.as_u64().overflowing_shr(12).0 as usize
+        self.dtb.as_u64().overflowing_shr(12).0 as usize
     }
 
     fn arch(&self) -> ArchitectureObj {
         self.arch
-    }
-}
-
-#[repr(transparent)]
-#[derive(Clone, Copy)]
-pub struct X86PageTableBase(Address);
-
-impl MMUTranslationBase for X86PageTableBase {
-    fn get_initial_pt(&self, _: Address) -> Address {
-        self.0
-    }
-
-    fn get_pt_by_index(&self, _: usize) -> Address {
-        self.0
-    }
-
-    fn pt_count(&self) -> usize {
-        1
-    }
-
-    fn virt_addr_filter<B, O>(
-        &self,
-        spec: &ArchMMUSpec,
-        addr: (Address, B),
-        data_to_translate: &mut TranslateVec<B>,
-        out_fail: &mut O,
-    ) where
-        B: SplitAtIndex,
-        O: Extend<(Error, Address, B)>,
-    {
-        spec.virt_addr_filter(addr, &mut data_to_translate[0].vec, out_fail);
     }
 }
 

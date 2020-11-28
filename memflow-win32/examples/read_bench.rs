@@ -50,7 +50,11 @@ fn rwtest<T: VirtualMemory>(
                 module.base().as_u64() + module.size() as u64,
             );
 
-            while done_size < read_size {
+            // This code will increase the read size for higher number of chunks
+            // Since optimized vtop should scale very well with chunk sizes.
+            let chunk_multiplier = *o * (i.trailing_zeros() as usize + 1);
+
+            while done_size < read_size * chunk_multiplier {
                 for (_, addr) in bufs.iter_mut() {
                     *addr = base_addr + rng.gen_range(0, 0x2000);
                 }
@@ -133,7 +137,7 @@ fn read_bench<T: PhysicalMemory + ?Sized, V: VirtualTranslate>(
                 tmod,
                 &[0x10000, 0x1000, 0x100, 0x10, 0x8],
                 &[32, 8, 1],
-                0x0010_0000 * 32,
+                0x0010_0000,
             );
 
             break;

@@ -3,28 +3,31 @@ use crate::architecture::ScopedVirtualTranslate;
 use crate::error::Error;
 use crate::iter::SplitAtIndex;
 use crate::mem::PhysicalMemory;
-use crate::types::{Address, PhysicalAddress};
-use bumpalo::Bump;
+use crate::types::{size, Address, PhysicalAddress};
 
 /*
 The `DirectTranslate` struct provides a default implementation for `VirtualTranslate` for physical memory.
 */
 #[derive(Debug, Default)]
 pub struct DirectTranslate {
-    arena: Bump,
+    tmp_buf: Box<[std::mem::MaybeUninit<u8>]>,
 }
 
 impl DirectTranslate {
     pub fn new() -> Self {
+        Self::with_capacity(size::mb(64))
+    }
+
+    pub fn with_capacity(size: usize) -> Self {
         Self {
-            arena: Bump::with_capacity(0x4000),
+            tmp_buf: vec![std::mem::MaybeUninit::new(0); size].into_boxed_slice(),
         }
     }
 }
 
 impl Clone for DirectTranslate {
     fn clone(&self) -> Self {
-        Self::new()
+        Self::with_capacity(self.tmp_buf.len())
     }
 }
 
@@ -44,7 +47,6 @@ impl VirtualTranslate for DirectTranslate {
         VO: Extend<(PhysicalAddress, B)>,
         FO: Extend<(Error, Address, B)>,
     {
-        self.arena.reset();
-        translator.virt_to_phys_iter(phys_mem, addrs, out, out_fail, &self.arena)
+        translator.virt_to_phys_iter(phys_mem, addrs, out, out_fail, &mut self.tmp_buf)
     }
 }

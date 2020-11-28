@@ -1,24 +1,25 @@
 use super::{
-    super::{ArchMMUSpec, ArchitectureObj, Endianess, ScopedVirtualTranslate},
+    super::{ArchMMUDef, ArchitectureObj, Endianess, ScopedVirtualTranslate},
     X86Architecture, X86ScopedVirtualTranslate,
 };
 
 use crate::types::Address;
 
-pub(super) const ARCH_SPEC: X86Architecture = X86Architecture {
+pub(super) static ARCH_SPEC: X86Architecture = X86Architecture {
     bits: 64,
-    endianess: Endianess::LittleEndian,
-    mmu: ArchMMUSpec {
+    mmu: ArchMMUDef {
         virtual_address_splits: &[9, 9, 9, 9, 12],
         valid_final_page_steps: &[2, 3, 4],
         address_space_bits: 52,
+        endianess: Endianess::LittleEndian,
         addr_size: 8,
         pte_size: 8,
-        present_bit: 0,
-        writeable_bit: 1,
-        nx_bit: 63,
-        large_page_bit: 7,
-    },
+        present_bit: |a| a.bit_at(0),
+        writeable_bit: |a| a.bit_at(1),
+        nx_bit: |a| a.bit_at(63),
+        large_page_bit: |a| a.bit_at(7),
+    }
+    .into_spec(),
 };
 
 pub static ARCH: ArchitectureObj = &ARCH_SPEC;
@@ -29,11 +30,11 @@ pub fn new_translator(dtb: Address) -> impl ScopedVirtualTranslate {
 
 #[cfg(test)]
 mod tests {
-    use crate::architecture::mmu_spec::ArchMMUSpec;
+    use crate::architecture::mmu::ArchMMUSpec;
     use crate::types::{size, Address, PageType};
 
-    fn get_mmu_spec() -> ArchMMUSpec {
-        super::ARCH_SPEC.mmu
+    fn get_mmu_spec() -> &'static ArchMMUSpec {
+        &super::ARCH_SPEC.mmu
     }
 
     #[test]

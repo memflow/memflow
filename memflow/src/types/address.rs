@@ -82,6 +82,22 @@ impl Address {
         Address::NULL
     }
 
+    /// Returns an address with input value.
+    ///
+    /// Useful for defining constants
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use memflow::types::Address;
+    ///
+    /// const TEN: Address = Address::from_u64(10)
+    /// ```
+    #[inline]
+    pub const fn from_u64(item: u64) -> Self {
+        Self { 0: item }
+    }
+
     /// Creates a a bit mask.
     /// This function accepts an (half-open) range excluding the end bit from the mask.
     ///
@@ -96,6 +112,20 @@ impl Address {
         ((0xffff_ffff_ffff_ffff >> (63 - bits.end.try_into().ok().unwrap()))
             & !(((1 as u64) << bits.start.try_into().ok().unwrap()) - 1))
             .into()
+    }
+
+    /// Creates a a bit mask (const version with u8 range).
+    /// This function accepts an (half-open) range excluding the end bit from the mask.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use memflow::types::Address;
+    ///
+    /// println!("mask: {}", Address::bit_mask(0..11));
+    /// ```
+    pub const fn bit_mask_u8(bits: ops::Range<u8>) -> Address {
+        Address((0xffff_ffff_ffff_ffff >> (63 - bits.end)) & !(((1 as u64) << bits.start) - 1))
     }
 
     /// Checks wether the address is zero or not.

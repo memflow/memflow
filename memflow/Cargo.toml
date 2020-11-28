@@ -29,11 +29,11 @@ rand_xorshift = { version = "0.2", optional = true }
 bumpalo = { version = "3.4", features = ["collections"] }
 no-std-compat = { version = "0.4", features = ["alloc"] }
 itertools = { version = "0.9", default-features = false }
-vector-trees = { version = "0.1", git = "https://github.com/h33p/vector-trees", features = ["bumpalo"] }
-hashbrown = "0.8"
 libloading = { version = "0.6", optional = true }
 memmap = { version = "0.7", optional = true }
 dirs = { version = "3.0", optional = true }
+hashbrown = "0.8"
+fixed-slice-vec = "0.7.1"
 
 serde = { version = "1.0", optional = true, default-features = false, features = ["derive", "alloc"] }
 toml = { version = "0.5", optional = true }

@@ -90,7 +90,7 @@ pub fn find<T: VirtualMemory>(
     match page_map
         .into_iter()
         .flat_map(|(va, size)| size.page_chunks(va, size::mb(2)))
-        .filter(|&(_, size)| size == size::mb(2))
+        .filter(|(_, size)| *size > size::kb(256))
         .filter_map(|(va, _)| find_with_va(virt_mem, va.as_u64()).ok())
         .next()
     {

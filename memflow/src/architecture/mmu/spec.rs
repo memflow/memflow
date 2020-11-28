@@ -402,7 +402,7 @@ impl ArchMMUSpec {
         };
 
         // see work_through_stack for usage
-        let mut prev_pt_address = [Address::NULL; MAX_LEVELS];
+        let mut prev_pt_address = [(Address::NULL, Address::NULL); MAX_LEVELS];
 
         while !working_pair.0.is_empty() {
             // Perform the reads here
@@ -574,7 +574,7 @@ impl ArchMMUSpec {
         out_fail: &mut FO,
         waiting_pair: &mut (TranslateVec, TranslateDataVec<B>),
         tmp_addrs: &mut TranslateDataVec<B>,
-        prev_pt_address: &mut [Address],
+        prev_pt_address: &mut [(Address, Address)],
     ) where
         VO: Extend<(PhysicalAddress, B)>,
         FO: Extend<(Error, Address, B)>,
@@ -597,11 +597,19 @@ impl ArchMMUSpec {
             // 2 identical pages right next to each other. If there is ever a documented
             // case however, then we will need to workaround that.
             let prev_address = prev_pt_address[chunk.step];
-            prev_pt_address[chunk.step] = chunk.pt_addr;
+            let cur_addr = (
+                chunk.pt_addr,
+                chunk
+                    .min_addr
+                    .as_page_aligned(self.page_size_step_unchecked(chunk.step + 1)),
+            );
+            prev_pt_address[chunk.step] = cur_addr;
 
             chunk.step += 1;
 
-            if !self.check_entry(chunk.pt_addr, chunk.step + 1) || chunk.pt_addr == prev_address {
+            if !self.check_entry(chunk.pt_addr, chunk.step + 1)
+                || (cur_addr.0 == prev_address.0 && cur_addr.1 != prev_address.1)
+            {
                 // Failure
                 while let Some(entry) = chunk.pop_data(working_addrs) {
                     out_fail.extend(Some((Error::VirtualTranslate, entry.addr, entry.buf)));

@@ -53,10 +53,14 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
                 &mut vat,
             );
 
-            if let Ok(dtb) = reader.virt_read_addr_arch(
-                kernel_info.start_block.arch,
-                kernel_info.eprocess_base + offsets.kproc_dtb(),
-            ) {
+            if let Some(Some(dtb)) = reader
+                .virt_read_addr_arch(
+                    kernel_info.start_block.arch,
+                    kernel_info.eprocess_base + offsets.kproc_dtb(),
+                )
+                .ok()
+                .map(|a| a.as_page_aligned(4096).non_null())
+            {
                 dtb
             } else {
                 kernel_info.start_block.dtb

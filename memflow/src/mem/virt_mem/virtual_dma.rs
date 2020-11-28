@@ -179,6 +179,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate, D: ScopedVirtualTranslate> VirtualM
         );
 
         self.phys_mem.phys_read_raw_list(&mut translation)?;
+
         if !partial_read {
             Ok(())
         } else {

@@ -378,9 +378,10 @@ impl<
                         ));
                     }
 
-                    break;
+                    return None;
                 }
             }
+            self.fail_out.extend(Some((addr, buf)));
         }
         None
     }
@@ -508,11 +509,13 @@ mod tests {
         map.push_remap(0x1000.into(), 0x1000, 0.into());
         map.push_remap(0x3000.into(), 0x1000, 0x2000.into());
 
-        let mut void = FnExtend::void();
+        let mut void = vec![];
         assert_eq!(map.map(0x00ff.into(), 1, &mut void).next(), None);
         assert_eq!(map.map(0x20ff.into(), 1, &mut void).next(), None);
         assert_eq!(map.map(0x4000.into(), 1, &mut void).next(), None);
         assert_eq!(map.map(0x40ff.into(), 1, &mut void).next(), None);
+
+        assert_eq!(void.len(), 4);
     }
 
     #[test]

@@ -89,9 +89,9 @@ impl Address {
     /// # Examples
     ///
     /// ```
-    /// use memflow::types::Address;
+    /// use memflow::types::{Address, size};
     ///
-    /// const TEN: Address = Address::from_u64(10)
+    /// const TEN_GIGABYTES: Address = Address::from_u64(size::gb(10) as u64);
     /// ```
     #[inline]
     pub const fn from_u64(item: u64) -> Self {

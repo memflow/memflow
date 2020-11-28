@@ -37,8 +37,6 @@ pub fn find_fallback<T: PhysicalMemory>(mem: &mut T, arch: ArchitectureObj) -> R
         //TODO: configure this, but so far arm null starts at this address
         mem.phys_read_raw_into(aarch64::PHYS_BASE.into(), &mut low16m)?;
 
-        log::trace!("FINDING ARM");
-
         aarch64::find(&low16m)
     } else {
         Err(Error::Initialization(

@@ -6,8 +6,9 @@ use std::convert::TryInto;
 use memflow::architecture::arm::aarch64;
 use memflow::types::{size, Address};
 
-pub const PHYS_BASE: Address = Address::from_u64(0x40000000);
+pub const PHYS_BASE: Address = Address::from_u64(size::gb(1) as u64);
 
+// mem here has to be a single page (4kb sized)
 fn find_pt(addr: Address, mem: &[u8]) -> Option<Address> {
     // TODO: global define / config setting
     let max_mem = size::gb(512) as u64;

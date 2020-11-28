@@ -26,12 +26,6 @@ pub struct TranslateData<T> {
     pub buf: T,
 }
 
-/*impl<T> TranslateData<T> {
-    pub fn new((addr, buf): (Address, T)) -> Self {
-        Self { addr, buf }
-    }
-}*/
-
 impl<T: SplitAtIndex> TranslateData<T> {
     pub fn split_at_address(&mut self, addr: Address) -> (Self, Option<Self>) {
         if addr < self.addr {
@@ -40,14 +34,6 @@ impl<T: SplitAtIndex> TranslateData<T> {
             self.split_at(addr - self.addr)
         }
     }
-
-    /*pub fn split_inclusive_at_address(&mut self, addr: Address) -> (Self, Option<Self>) {
-        if addr < self.addr {
-            self.split_at(0)
-        } else {
-            self.split_inclusive_at(addr - self.addr)
-        }
-    }*/
 
     pub fn split_at_address_rev(&mut self, addr: Address) -> (Option<Self>, Self) {
         if addr > self.addr + self.length() {

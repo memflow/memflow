@@ -395,7 +395,7 @@ impl Connector {
         // We do not want to return error with data from the shared library
         // that may get unloaded before it gets displayed
         let instance = (self.vtable.create)(log::max_level() as i32, cstr.as_ptr())
-            .ok_or_else(|| Error::Connector("create() failed"))?;
+            .ok_or(Error::Connector("create() failed"))?;
 
         //let instance = connector_res?;
 

@@ -377,7 +377,7 @@ impl<T: VirtualMemory> Win32Process<T> {
             .into_iter()
             .inspect(|module| trace!("{:x} {}", module.base(), module.name()))
             .find(|module| module.base == self.proc_info.section_base)
-            .ok_or_else(|| Error::ModuleInfo)
+            .ok_or(Error::ModuleInfo)
     }
 
     pub fn module_info(&mut self, name: &str) -> Result<Win32ModuleInfo> {
@@ -386,7 +386,7 @@ impl<T: VirtualMemory> Win32Process<T> {
             .into_iter()
             .inspect(|module| trace!("{:x} {}", module.base(), module.name()))
             .find(|module| module.name() == name)
-            .ok_or_else(|| Error::ModuleInfo)
+            .ok_or(Error::ModuleInfo)
     }
 }
 

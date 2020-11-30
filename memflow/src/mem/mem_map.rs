@@ -211,7 +211,7 @@ impl MemoryMap<(Address, usize)> {
 
         let mut result = MemoryMap::new();
         for range in mappings.ranges.iter() {
-            let real_base = range.real_base.unwrap_or_else(|| range.base);
+            let real_base = range.real_base.unwrap_or(range.base);
             result.push_range(
                 range.base.into(),
                 (range.base + range.length).into(),

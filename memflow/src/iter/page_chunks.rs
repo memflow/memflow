@@ -23,7 +23,7 @@ pub trait SplitAtIndex {
     /// the actual value being consumed. This is useful when splitting slices and needing to
     /// unsplit them.
     ///
-    /// # Safety:
+    /// # Safety
     ///
     /// Mutating self reference and returned values after the split is undefined behaviour,
     /// because both self, and returned values can point to the same mutable region
@@ -50,7 +50,7 @@ pub trait SplitAtIndex {
     ///
     /// This is effectively split_at_mut(idx + 1), with a safeguard for idx == usize::MAX.
     ///
-    /// # Safety:
+    /// # Safety
     ///
     /// The same safety rules apply as with `split_at_mut`. Mutating the value after the function
     /// call is undefined, and should not be done until returned values are dropped.

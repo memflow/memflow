@@ -346,7 +346,7 @@ impl<
 
                     let (left_reject, right) = buf.split_at(offset);
 
-                    if left_reject.length() > 0 {
+                    if let Some(left_reject) = left_reject {
                         self.fail_out.extend(Some((addr, left_reject)));
                     }
 
@@ -355,6 +355,7 @@ impl<
                     if let Some(mut leftover) = right {
                         let off = map_elem.base + output.length() - addr;
                         let (ret, keep) = leftover.split_at(off);
+                        let ret_length = ret.as_ref().map(|r| r.length()).unwrap_or_default();
 
                         let cur_map_pos = &mut self.cur_map_pos;
                         let in_iter = &mut self.in_iter;
@@ -364,7 +365,7 @@ impl<
                                 //If memory is in right order, this will skip the current mapping,
                                 //but not reset the search
                                 *cur_map_pos = i + 1;
-                                (addr + ret.length(), x)
+                                (addr + ret_length, x)
                             })
                             .or_else(|| {
                                 *cur_map_pos = 0;
@@ -372,10 +373,13 @@ impl<
                             });
 
                         let off = addr - map_elem.base;
-                        return Some((
-                            output.split_at(off).1.unwrap().split_at(ret.length()).0,
-                            ret,
-                        ));
+                        return output
+                            .split_at(off)
+                            .1
+                            .unwrap()
+                            .split_at(ret_length)
+                            .0
+                            .zip(ret);
                     }
 
                     return None;

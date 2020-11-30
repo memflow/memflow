@@ -9,42 +9,36 @@ use std::iter::*;
 pub trait SplitAtIndexNoMutation: SplitAtIndex {}
 
 pub trait SplitAtIndex {
-    fn split_at(&mut self, idx: usize) -> (Self, Option<Self>)
+    fn split_at(&mut self, idx: usize) -> (Option<Self>, Option<Self>)
     where
         Self: Sized;
 
-    fn split_inclusive_at(&mut self, idx: usize) -> (Self, Option<Self>)
+    fn split_inclusive_at(&mut self, idx: usize) -> (Option<Self>, Option<Self>)
     where
         Self: Sized,
     {
-        if idx == core::usize::MAX && self.length() != 0 {
-            //This is a pretty sketchy implementation, but it will be correct when overflows are a problem.
+        if idx == core::usize::MAX {
+            // This is a pretty sketchy implementation,
+            // but it will be correct when overflows are a problem.
             let (_, right) = self.split_at(0);
-            (right.unwrap(), None)
+            (right, None)
         } else {
             self.split_at(idx + 1)
         }
     }
 
-    fn split_at_rev(&mut self, idx: usize) -> (Option<Self>, Self)
+    fn split_at_rev(&mut self, idx: usize) -> (Option<Self>, Option<Self>)
     where
         Self: Sized,
     {
-        let (left, right) = {
-            if let Some(idx) = self.length().checked_sub(idx) {
-                self.split_inclusive_at(idx)
-            } else {
-                self.split_at(0)
-            }
-        };
-
-        (
-            if left.length() == 0 { None } else { Some(left) },
-            right.unwrap(),
-        )
+        if let Some(idx) = self.length().checked_sub(idx) {
+            self.split_inclusive_at(idx)
+        } else {
+            self.split_at(0)
+        }
     }
 
-    fn unsplit(&mut self, _left: Self, _right: Option<Self>)
+    fn unsplit(&mut self, _left: Option<Self>, _right: Option<Self>)
     where
         Self: Sized,
     {
@@ -60,19 +54,13 @@ pub trait SplitAtIndex {
 impl SplitAtIndexNoMutation for usize {}
 
 impl SplitAtIndex for usize {
-    fn split_inclusive_at(&mut self, idx: usize) -> (Self, Option<Self>) {
-        if *self == 0 || *self - 1 <= idx {
-            (*self, None)
+    fn split_at(&mut self, idx: usize) -> (Option<Self>, Option<Self>) {
+        if idx == 0 {
+            (None, Some(*self))
+        } else if (*self as usize) <= idx {
+            (Some(*self), None)
         } else {
-            (idx + 1, Some(*self - idx - 1))
-        }
-    }
-
-    fn split_at(&mut self, idx: usize) -> (Self, Option<Self>) {
-        if (*self as usize) <= idx {
-            (*self, None)
-        } else {
-            (idx, Some(*self - idx))
+            (Some(idx), Some(*self - idx))
         }
     }
 
@@ -88,25 +76,14 @@ impl SplitAtIndex for usize {
 impl<T: SplitAtIndexNoMutation> SplitAtIndexNoMutation for (Address, T) {}
 
 impl<T: SplitAtIndex> SplitAtIndex for (Address, T) {
-    fn split_inclusive_at(&mut self, idx: usize) -> (Self, Option<Self>) {
-        let (left, right) = self.1.split_inclusive_at(idx);
-
-        if let Some(right) = right {
-            let left_len = left.length();
-            ((self.0, left), Some((self.0 + left_len, right)))
-        } else {
-            ((self.0, left), None)
-        }
-    }
-
-    fn split_at(&mut self, idx: usize) -> (Self, Option<Self>) {
+    fn split_at(&mut self, idx: usize) -> (Option<Self>, Option<Self>) {
         let (left, right) = self.1.split_at(idx);
 
-        if let Some(right) = right {
+        if let Some(left) = left {
             let left_len = left.length();
-            ((self.0, left), Some((self.0 + left_len, right)))
+            (Some((self.0, left)), Some(self.0 + left_len).zip(right))
         } else {
-            ((self.0, left), None)
+            (None, Some(self.0).zip(right))
         }
     }
 
@@ -122,15 +99,12 @@ impl<T: SplitAtIndex> SplitAtIndex for (Address, T) {
 impl<T> SplitAtIndexNoMutation for &[T] {}
 
 impl<T> SplitAtIndex for &[T] {
-    fn split_inclusive_at(&mut self, idx: usize) -> (Self, Option<Self>) {
-        let mid = core::cmp::min(self.len(), core::cmp::min(self.len(), idx) + 1);
-        let (left, right) = (*self).split_at(mid);
-        (left, if right.is_empty() { None } else { Some(right) })
-    }
-
-    fn split_at(&mut self, idx: usize) -> (Self, Option<Self>) {
+    fn split_at(&mut self, idx: usize) -> (Option<Self>, Option<Self>) {
         let (left, right) = (*self).split_at(core::cmp::min(self.len(), idx));
-        (left, if right.is_empty() { None } else { Some(right) })
+        (
+            if left.is_empty() { None } else { Some(left) },
+            if right.is_empty() { None } else { Some(right) },
+        )
     }
 
     fn length(&self) -> usize {
@@ -141,24 +115,16 @@ impl<T> SplitAtIndex for &[T] {
 impl<T> SplitAtIndexNoMutation for &mut [T] {}
 
 impl<T> SplitAtIndex for &mut [T] {
-    fn split_inclusive_at(&mut self, idx: usize) -> (Self, Option<Self>) {
-        let mid = core::cmp::min(self.len(), core::cmp::min(self.len(), idx) + 1);
-        let ptr = self.as_mut_ptr();
-        (
-            unsafe { core::slice::from_raw_parts_mut(ptr, mid) },
-            if mid != self.len() {
-                Some(unsafe { core::slice::from_raw_parts_mut(ptr.add(mid), self.len() - mid) })
-            } else {
-                None
-            },
-        )
-    }
-
-    fn split_at(&mut self, idx: usize) -> (Self, Option<Self>) {
+    // TODO: handle safety, this is actually unsafe
+    fn split_at(&mut self, idx: usize) -> (Option<Self>, Option<Self>) {
         let mid = core::cmp::min(self.len(), idx);
         let ptr = self.as_mut_ptr();
         (
-            unsafe { core::slice::from_raw_parts_mut(ptr, mid) },
+            if mid != 0 {
+                Some(unsafe { core::slice::from_raw_parts_mut(ptr, mid) })
+            } else {
+                None
+            },
             if mid != self.len() {
                 Some(unsafe { core::slice::from_raw_parts_mut(ptr.add(mid), self.len() - mid) })
             } else {
@@ -199,7 +165,7 @@ impl<T: SplitAtIndex, FS: FnMut(Address, &T, Option<&T>) -> bool> Iterator
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        let v = core::mem::replace(&mut self.v, None);
+        let v = self.v.take();
 
         if let Some(mut buf) = v {
             loop {
@@ -215,10 +181,11 @@ impl<T: SplitAtIndex, FS: FnMut(Address, &T, Option<&T>) -> bool> Iterator
                 .wrapping_add(self.cur_off);
 
                 let (head, tail) = buf.split_inclusive_at(end_len);
+                let head = head.unwrap();
                 if tail.is_some() && !(self.check_split_fn)(self.cur_address, &head, tail.as_ref())
                 {
                     self.cur_off = end_len + 1;
-                    buf.unsplit(head, tail);
+                    buf.unsplit(Some(head), tail);
                 } else {
                     self.v = tail;
                     let next_address =

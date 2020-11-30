@@ -126,8 +126,9 @@ impl ArchMMUSpec {
         let mut tr_data = TranslateData { addr, buf };
 
         // Trim to virt address space limit
-        let (mut left, reject) = tr_data
+        let (left, reject) = tr_data
             .split_inclusive_at(Address::bit_mask(0..(self.def.addr_size * 8 - 1)).as_usize());
+        let mut left = left.unwrap();
 
         if let Some(data) = reject {
             fail_out.extend(Some((Error::VirtualTranslate, data.addr, data.buf)));
@@ -144,24 +145,28 @@ impl ArchMMUSpec {
             let (reject, higher) =
                 data.split_at_address_rev((arch_bit_range.wrapping_sub(virt_range)).into());
 
-            // The upper half has to be all negative (all bits set), so compare the masks to see if
-            // it is the case.
-            let lhs = Address::bit_mask(virt_bit_range..(self.def.addr_size * 8 - 1)).as_u64();
-            let rhs = higher.addr.as_u64() & lhs;
+            if let Some(higher) = higher {
+                // The upper half has to be all negative (all bits set), so compare the masks
+                // to see if it is the case.
+                let lhs = Address::bit_mask(virt_bit_range..(self.def.addr_size * 8 - 1)).as_u64();
+                let rhs = higher.addr.as_u64() & lhs;
 
-            if (lhs ^ rhs) == 0 {
-                if higher.length() > 0 {
+                if (lhs ^ rhs) == 0 {
                     vtop_trace!("higher {:x}+{:x}", higher.addr, higher.length());
                     chunks.push_data(higher, addrs_out);
-                }
 
-                if let Some(data) = reject {
+                    if let Some(data) = reject {
+                        fail_out.extend(Some((Error::VirtualTranslate, data.addr, data.buf)));
+                    }
+                } else {
                     fail_out.extend(Some((Error::VirtualTranslate, data.addr, data.buf)));
                 }
+            } else {
+                fail_out.extend(Some((Error::VirtualTranslate, data.addr, data.buf)));
             }
         }
 
-        if lower.length() > 0 {
+        if let Some(lower) = lower {
             vtop_trace!("lower {:x}+{:x}", lower.addr, lower.length());
             chunks.push_data(lower, addrs_out);
         }

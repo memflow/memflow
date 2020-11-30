@@ -92,7 +92,7 @@ jobs:
           profile: minimal
           toolchain: nightly-2020-11-24
           override: true
-      - run: rustup +nightly component add rust-src
+          components: rust-src
       - name: Build no_std crate
         run: cd nostd-test; cargo build --all-features --verbose
 

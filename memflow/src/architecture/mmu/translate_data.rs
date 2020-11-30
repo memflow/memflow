@@ -27,16 +27,14 @@ pub struct TranslateData<T> {
 }
 
 impl<T: SplitAtIndex> TranslateData<T> {
-    pub fn split_at_address(&mut self, addr: Address) -> (Option<Self>, Option<Self>) {
-        self.split_at(addr.as_u64().saturating_sub(self.addr.as_u64()) as usize)
+    pub fn split_at_address(self, addr: Address) -> (Option<Self>, Option<Self>) {
+        let sub = self.addr.as_u64();
+        self.split_at(addr.as_u64().saturating_sub(sub) as usize)
     }
 
-    pub fn split_at_address_rev(&mut self, addr: Address) -> (Option<Self>, Option<Self>) {
-        self.split_at_rev(
-            (self.addr + self.length())
-                .as_u64()
-                .saturating_sub(addr.as_u64()) as usize,
-        )
+    pub fn split_at_address_rev(self, addr: Address) -> (Option<Self>, Option<Self>) {
+        let base = self.addr + self.length();
+        self.split_at_rev(base.as_u64().saturating_sub(addr.as_u64()) as usize)
     }
 }
 
@@ -61,12 +59,28 @@ impl<T> PartialEq for TranslateData<T> {
 }
 
 impl<T: SplitAtIndex> SplitAtIndex for TranslateData<T> {
-    fn split_at(&mut self, idx: usize) -> (Option<Self>, Option<Self>)
+    fn split_at(self, idx: usize) -> (Option<Self>, Option<Self>)
     where
         Self: Sized,
     {
         let addr = self.addr;
         let (bleft, bright) = self.buf.split_at(idx);
+
+        (
+            bleft.map(|buf| TranslateData { buf, addr }),
+            bright.map(|buf| TranslateData {
+                buf,
+                addr: addr + idx,
+            }),
+        )
+    }
+
+    unsafe fn split_at_mut(&mut self, idx: usize) -> (Option<Self>, Option<Self>)
+    where
+        Self: Sized,
+    {
+        let addr = self.addr;
+        let (bleft, bright) = self.buf.split_at_mut(idx);
 
         (
             bleft.map(|buf| TranslateData { buf, addr }),
@@ -211,7 +225,7 @@ impl<T: MMUTranslationBase> TranslationChunk<T> {
 
             // Go through each address and check it individually
             for _ in 0..self.addr_count {
-                let mut data = self.pop_data(addr_stack).unwrap();
+                let data = self.pop_data(addr_stack).unwrap();
 
                 debug_assert!(
                     data.addr >= self.min_addr,

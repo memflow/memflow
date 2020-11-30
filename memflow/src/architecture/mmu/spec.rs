@@ -123,12 +123,12 @@ impl ArchMMUSpec {
         FO: Extend<(Error, Address, B)>,
     {
         vtop_trace!("total {:x}+{:x}", addr, buf.length());
-        let mut tr_data = TranslateData { addr, buf };
+        let tr_data = TranslateData { addr, buf };
 
         // Trim to virt address space limit
         let (left, reject) = tr_data
             .split_inclusive_at(Address::bit_mask(0..(self.def.addr_size * 8 - 1)).as_usize());
-        let mut left = left.unwrap();
+        let left = left.unwrap();
 
         if let Some(data) = reject {
             fail_out.extend(Some((Error::VirtualTranslate, data.addr, data.buf)));
@@ -141,9 +141,13 @@ impl ArchMMUSpec {
 
         let (lower, higher) = left.split_at_address(virt_range.into());
 
-        if let Some(mut data) = higher {
+        if let Some(data) = higher {
             let (reject, higher) =
                 data.split_at_address_rev((arch_bit_range.wrapping_sub(virt_range)).into());
+
+            if let Some(data) = reject {
+                fail_out.extend(Some((Error::VirtualTranslate, data.addr, data.buf)));
+            }
 
             if let Some(higher) = higher {
                 // The upper half has to be all negative (all bits set), so compare the masks
@@ -154,15 +158,9 @@ impl ArchMMUSpec {
                 if (lhs ^ rhs) == 0 {
                     vtop_trace!("higher {:x}+{:x}", higher.addr, higher.length());
                     chunks.push_data(higher, addrs_out);
-
-                    if let Some(data) = reject {
-                        fail_out.extend(Some((Error::VirtualTranslate, data.addr, data.buf)));
-                    }
                 } else {
-                    fail_out.extend(Some((Error::VirtualTranslate, data.addr, data.buf)));
+                    fail_out.extend(Some((Error::VirtualTranslate, higher.addr, higher.buf)));
                 }
-            } else {
-                fail_out.extend(Some((Error::VirtualTranslate, data.addr, data.buf)));
             }
         }
 

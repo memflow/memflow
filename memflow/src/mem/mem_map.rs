@@ -1,5 +1,5 @@
 use crate::error::{Error, Result};
-use crate::iter::{SplitAtIndex, SplitAtIndexNoMutation};
+use crate::iter::SplitAtIndex;
 use crate::types::{Address, PhysicalAddress};
 
 use std::cmp::Ordering;
@@ -56,7 +56,7 @@ impl<M> MemoryMapping<M> {
     }
 }
 
-impl<M: SplitAtIndexNoMutation> Default for MemoryMap<M> {
+impl<M: SplitAtIndex> Default for MemoryMap<M> {
     fn default() -> Self {
         Self {
             mappings: Vec::new(),
@@ -67,7 +67,7 @@ impl<M: SplitAtIndexNoMutation> Default for MemoryMap<M> {
 type InnerIter<M> = std::vec::IntoIter<MemoryMapping<M>>;
 type InnerFunc<T, M> = fn(MemoryMapping<M>) -> T;
 
-impl<M: SplitAtIndexNoMutation> IntoIterator for MemoryMap<M> {
+impl<M: SplitAtIndex> IntoIterator for MemoryMap<M> {
     type Item = (Address, M);
     type IntoIter = std::iter::Map<InnerIter<M>, InnerFunc<Self::Item, M>>;
 
@@ -78,7 +78,7 @@ impl<M: SplitAtIndexNoMutation> IntoIterator for MemoryMap<M> {
     }
 }
 
-impl<M: SplitAtIndexNoMutation> MemoryMap<M> {
+impl<M: SplitAtIndex> MemoryMap<M> {
     /// Constructs a new memory map.
     ///
     /// This function is identical to `MemoryMap::default()`.
@@ -308,7 +308,7 @@ pub struct MemoryMapIterator<'a, I, M, T, F> {
 impl<
         'a,
         I: Iterator<Item = (Address, T)>,
-        M: SplitAtIndexNoMutation,
+        M: SplitAtIndex,
         T: SplitAtIndex,
         F: Extend<(Address, T)>,
     > MemoryMapIterator<'a, I, M, T, F>
@@ -324,7 +324,7 @@ impl<
     }
 
     fn get_next(&mut self) -> Option<(M, T)> {
-        if let Some((mut addr, mut buf)) = self.cur_elem.take() {
+        if let Some((mut addr, buf)) = self.cur_elem.take() {
             if self.map.len() >= MIN_BSEARCH_THRESH && self.cur_map_pos == 0 {
                 self.cur_map_pos = match self.map.binary_search_by(|map_elem| {
                     if map_elem.base > addr {
@@ -352,7 +352,7 @@ impl<
 
                     addr += offset;
 
-                    if let Some(mut leftover) = right {
+                    if let Some(leftover) = right {
                         let off = map_elem.base + output.length() - addr;
                         let (ret, keep) = leftover.split_at(off);
                         let ret_length = ret.as_ref().map(|r| r.length()).unwrap_or_default();
@@ -373,13 +373,8 @@ impl<
                             });
 
                         let off = addr - map_elem.base;
-                        return output
-                            .split_at(off)
-                            .1
-                            .unwrap()
-                            .split_at(ret_length)
-                            .0
-                            .zip(ret);
+                        let split_left = unsafe { output.split_at_mut(off).1 };
+                        return split_left.unwrap().split_at(ret_length).0.zip(ret);
                     }
 
                     return None;
@@ -394,7 +389,7 @@ impl<
 impl<
         'a,
         I: Iterator<Item = (Address, T)>,
-        M: SplitAtIndexNoMutation,
+        M: SplitAtIndex,
         T: SplitAtIndex,
         F: Extend<(Address, T)>,
     > Iterator for MemoryMapIterator<'a, I, M, T, F>

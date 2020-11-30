@@ -1,67 +1,111 @@
 use crate::types::Address;
 use std::iter::*;
 
-/// This trait indicates that it is safe to not have to call unsplit for the object
-///
-/// Some objects implementing `SplitAtIndex` may only do so by mutating its internal state, however,
-/// if it is possible to do without doing so, implement this trait as well to allow structures that
-/// use splittable objects, but may not call unsplit afterwards use your type genericly.
-pub trait SplitAtIndexNoMutation: SplitAtIndex {}
-
 pub trait SplitAtIndex {
-    fn split_at(&mut self, idx: usize) -> (Option<Self>, Option<Self>)
+    /// Split data at a given index
+    ///
+    /// This method will split the underlying data at a given index into up to 2 possible values.
+    ///
+    /// What a split means very much depends on the underlying type. sizes are split literally,
+    /// into 2 sizes, one being up to idx, the other being what's left over. Slices are split into
+    /// subslices. (Address, impl SplitAtIndex) pairs are split very much like slices (with Address
+    /// describing the starting address of the data, and the second element being pretty much
+    /// anything).
+    ///
+    /// But the core idea is - to allow splittable data, be split, in a generic way.
+    fn split_at(self, idx: usize) -> (Option<Self>, Option<Self>)
     where
         Self: Sized;
 
-    fn split_inclusive_at(&mut self, idx: usize) -> (Option<Self>, Option<Self>)
+    /// Split data using mutable reference
+    ///
+    /// This should behave the same as split_at, but work with mutable ref being input, instead of
+    /// the actual value being consumed. This is useful when splitting slices and needing to
+    /// unsplit them.
+    ///
+    /// # Safety:
+    ///
+    /// Mutating self reference and returned values after the split is undefined behaviour,
+    /// because both self, and returned values can point to the same mutable region
+    /// (for example: &mut [u8])
+    unsafe fn split_at_mut(&mut self, idx: usize) -> (Option<Self>, Option<Self>)
+    where
+        Self: Sized;
+
+    /// Inclusive version of `split_at`
+    ///
+    /// This is effectively split_at(idx + 1), with a safeguard for idx == usize::MAX.
+    fn split_inclusive_at(self, idx: usize) -> (Option<Self>, Option<Self>)
     where
         Self: Sized,
     {
         if idx == core::usize::MAX {
-            // This is a pretty sketchy implementation,
-            // but it will be correct when overflows are a problem.
-            let (_, right) = self.split_at(0);
-            (right, None)
+            (Some(self), None)
         } else {
             self.split_at(idx + 1)
         }
     }
 
-    fn split_at_rev(&mut self, idx: usize) -> (Option<Self>, Option<Self>)
+    /// Inclusive version of `split_at_mut`
+    ///
+    /// This is effectively split_at_mut(idx + 1), with a safeguard for idx == usize::MAX.
+    ///
+    /// # Safety:
+    ///
+    /// The same safety rules apply as with `split_at_mut`. Mutating the value after the function
+    /// call is undefined, and should not be done until returned values are dropped.
+    unsafe fn split_inclusive_at_mut(&mut self, idx: usize) -> (Option<Self>, Option<Self>)
+    where
+        Self: Sized,
+    {
+        if idx == core::usize::MAX {
+            let (_, right) = self.split_at_mut(0);
+            (right, None)
+        } else {
+            self.split_at_mut(idx + 1)
+        }
+    }
+
+    /// Reverse version of `split_at`
+    ///
+    /// This will perform splits with index offsetting from the end of the data
+    fn split_at_rev(self, idx: usize) -> (Option<Self>, Option<Self>)
     where
         Self: Sized,
     {
         if let Some(idx) = self.length().checked_sub(idx) {
             self.split_inclusive_at(idx)
         } else {
-            self.split_at(0)
+            (None, Some(self))
         }
     }
 
-    fn unsplit(&mut self, _left: Option<Self>, _right: Option<Self>)
-    where
-        Self: Sized,
-    {
-    }
-
+    /// Returns the length of the data
+    ///
+    /// This is the length in terms of how many indexes can be used to split the data.
     fn length(&self) -> usize;
 
+    /// Returns an allocation size hint for the data
+    ///
+    /// This is purely a hint, but not really an exact value of how much data needs allocating.
     fn size_hint(&self) -> usize {
         self.length()
     }
 }
 
-impl SplitAtIndexNoMutation for usize {}
-
 impl SplitAtIndex for usize {
-    fn split_at(&mut self, idx: usize) -> (Option<Self>, Option<Self>) {
+    fn split_at(self, idx: usize) -> (Option<Self>, Option<Self>) {
         if idx == 0 {
-            (None, Some(*self))
-        } else if (*self as usize) <= idx {
-            (Some(*self), None)
+            (None, Some(self))
+        } else if self <= idx {
+            (Some(self), None)
         } else {
-            (Some(idx), Some(*self - idx))
+            (Some(idx), Some(self - idx))
         }
+    }
+
+    unsafe fn split_at_mut(&mut self, idx: usize) -> (Option<Self>, Option<Self>) {
+        (*self).split_at(idx)
     }
 
     fn length(&self) -> usize {
@@ -73,11 +117,20 @@ impl SplitAtIndex for usize {
     }
 }
 
-impl<T: SplitAtIndexNoMutation> SplitAtIndexNoMutation for (Address, T) {}
-
 impl<T: SplitAtIndex> SplitAtIndex for (Address, T) {
-    fn split_at(&mut self, idx: usize) -> (Option<Self>, Option<Self>) {
+    fn split_at(self, idx: usize) -> (Option<Self>, Option<Self>) {
         let (left, right) = self.1.split_at(idx);
+
+        if let Some(left) = left {
+            let left_len = left.length();
+            (Some((self.0, left)), Some(self.0 + left_len).zip(right))
+        } else {
+            (None, Some(self.0).zip(right))
+        }
+    }
+
+    unsafe fn split_at_mut(&mut self, idx: usize) -> (Option<Self>, Option<Self>) {
+        let (left, right) = self.1.split_at_mut(idx);
 
         if let Some(left) = left {
             let left_len = left.length();
@@ -96,10 +149,16 @@ impl<T: SplitAtIndex> SplitAtIndex for (Address, T) {
     }
 }
 
-impl<T> SplitAtIndexNoMutation for &[T] {}
-
 impl<T> SplitAtIndex for &[T] {
-    fn split_at(&mut self, idx: usize) -> (Option<Self>, Option<Self>) {
+    fn split_at(self, idx: usize) -> (Option<Self>, Option<Self>) {
+        let (left, right) = (*self).split_at(core::cmp::min(self.len(), idx));
+        (
+            if left.is_empty() { None } else { Some(left) },
+            if right.is_empty() { None } else { Some(right) },
+        )
+    }
+
+    unsafe fn split_at_mut(&mut self, idx: usize) -> (Option<Self>, Option<Self>) {
         let (left, right) = (*self).split_at(core::cmp::min(self.len(), idx));
         (
             if left.is_empty() { None } else { Some(left) },
@@ -112,21 +171,29 @@ impl<T> SplitAtIndex for &[T] {
     }
 }
 
-impl<T> SplitAtIndexNoMutation for &mut [T] {}
-
 impl<T> SplitAtIndex for &mut [T] {
-    // TODO: handle safety, this is actually unsafe
-    fn split_at(&mut self, idx: usize) -> (Option<Self>, Option<Self>) {
+    fn split_at(self, idx: usize) -> (Option<Self>, Option<Self>) {
+        let (left, right) = (*self).split_at_mut(core::cmp::min(self.len(), idx));
+        (
+            if left.is_empty() { None } else { Some(left) },
+            if right.is_empty() { None } else { Some(right) },
+        )
+    }
+
+    unsafe fn split_at_mut(&mut self, idx: usize) -> (Option<Self>, Option<Self>) {
         let mid = core::cmp::min(self.len(), idx);
         let ptr = self.as_mut_ptr();
         (
             if mid != 0 {
-                Some(unsafe { core::slice::from_raw_parts_mut(ptr, mid) })
+                Some(core::slice::from_raw_parts_mut(ptr, mid))
             } else {
                 None
             },
             if mid != self.len() {
-                Some(unsafe { core::slice::from_raw_parts_mut(ptr.add(mid), self.len() - mid) })
+                Some(core::slice::from_raw_parts_mut(
+                    ptr.add(mid),
+                    self.len() - mid,
+                ))
             } else {
                 None
             },
@@ -180,12 +247,11 @@ impl<T: SplitAtIndex, FS: FnMut(Address, &T, Option<&T>) -> bool> Iterator
                 .wrapping_sub(1)
                 .wrapping_add(self.cur_off);
 
-                let (head, tail) = buf.split_inclusive_at(end_len);
+                let (head, tail) = unsafe { buf.split_inclusive_at_mut(end_len) };
                 let head = head.unwrap();
                 if tail.is_some() && !(self.check_split_fn)(self.cur_address, &head, tail.as_ref())
                 {
                     self.cur_off = end_len + 1;
-                    buf.unsplit(Some(head), tail);
                 } else {
                     self.v = tail;
                     let next_address =

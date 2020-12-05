@@ -1,14 +1,49 @@
 use darling::FromMeta;
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{parse_macro_input, AttributeArgs, Data, DeriveInput, Fields, ItemFn};
+use syn::{parse_macro_input, AttributeArgs, Data, DeriveInput, Fields, ItemFn, ReturnType, Type};
 
 #[derive(Debug, FromMeta)]
 struct ConnectorFactoryArgs {
     name: String,
-    ty: syn::Ident,
     #[darling(default)]
     version: Option<String>,
+}
+
+fn parse_resulting_type(output: &ReturnType) -> Option<syn::Type> {
+    // There is a return type
+    let ty = if let ReturnType::Type(_, ty) = output {
+        ty
+    } else {
+        return None;
+    };
+
+    // Return type is a specific type
+    let ty = if let Type::Path(ty) = &**ty {
+        ty
+    } else {
+        return None;
+    };
+
+    // Take the first segment
+    let first = &ty.path.segments.first()?;
+
+    // It is a bracketed segment (for generic type)
+    let args = if let syn::PathArguments::AngleBracketed(args) = &first.arguments {
+        args
+    } else {
+        return None;
+    };
+
+    // There is an argument (Result<T, ...>)
+    let first_arg = args.args.first()?;
+
+    // It is a type
+    if let syn::GenericArgument::Type(arg) = &first_arg {
+        Some(arg.clone())
+    } else {
+        None
+    }
 }
 
 // We should add conditional compilation for the crate-type here
@@ -30,22 +65,84 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
     };
 
     let connector_name = args.name;
-    let connector_type = args.ty;
 
     let func = parse_macro_input!(input as ItemFn);
     let func_name = &func.sig.ident;
 
-    let gen = quote! {
-        #[cfg(feature = "inventory")]
-        #[doc(hidden)]
-        pub static CONNECTOR_NAME: &str = #connector_name;
+    let connector_type = parse_resulting_type(&func.sig.output).expect("invalid return type");
 
-        #[cfg(feature = "inventory")]
+    let create_gen = if func.sig.inputs.len() > 1 {
+        quote! {
+            #[doc(hidden)]
+            extern "C" fn mf_create(
+                args: *const ::std::os::raw::c_char,
+                log_level: i32,
+            ) -> std::option::Option<&'static mut ::std::ffi::c_void> {
+                let level = match log_level {
+                    0 => ::log::Level::Error,
+                    1 => ::log::Level::Warn,
+                    2 => ::log::Level::Info,
+                    3 => ::log::Level::Debug,
+                    4 => ::log::Level::Trace,
+                    _ => ::log::Level::Trace,
+                };
+
+                let argsstr = unsafe { ::std::ffi::CStr::from_ptr(args) }.to_str()
+                    .or_else(|e| {
+                        ::log::error!("error converting connector args: {}", e);
+                        Err(e)
+                    })
+                    .ok()?;
+                let conn_args = ::memflow::connector::ConnectorArgs::parse(argsstr)
+                    .or_else(|e| {
+                        ::log::error!("error parsing connector args: {}", e);
+                        Err(e)
+                    })
+                    .ok()?;
+
+                let conn = Box::new(#func_name(&conn_args, level)
+                    .or_else(|e| {
+                        ::log::error!("{}", e);
+                        Err(e)
+                    })
+                    .ok()?);
+                Some(unsafe { &mut *(Box::into_raw(conn) as *mut ::std::ffi::c_void) })
+            }
+        }
+    } else {
+        quote! {
+            #[doc(hidden)]
+            extern "C" fn mf_create(
+                args: *const ::std::os::raw::c_char,
+                _: i32,
+            ) -> std::option::Option<&'static mut ::std::ffi::c_void> {
+                let argsstr = unsafe { ::std::ffi::CStr::from_ptr(args) }.to_str()
+                    .or_else(|e| {
+                        Err(e)
+                    })
+                    .ok()?;
+                let conn_args = ::memflow::connector::ConnectorArgs::parse(argsstr)
+                    .or_else(|e| {
+                        Err(e)
+                    })
+                    .ok()?;
+
+                let conn = Box::new(#func_name(&conn_args)
+                    .or_else(|e| {
+                        Err(e)
+                    })
+                    .ok()?);
+                Some(unsafe { &mut *(Box::into_raw(conn) as *mut ::std::ffi::c_void) })
+            }
+        }
+    };
+
+    let mut gen = quote! {
         #[doc(hidden)]
         #[no_mangle]
         pub static MEMFLOW_CONNECTOR: ::memflow::connector::ConnectorDescriptor = ::memflow::connector::ConnectorDescriptor {
             connector_version: ::memflow::connector::MEMFLOW_CONNECTOR_VERSION,
-            name: CONNECTOR_NAME,
+            name: #connector_name,
             vtable: ::memflow::connector::ConnectorFunctionTable {
                 create: mf_create,
 
@@ -59,47 +156,7 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
             },
         };
 
-        #[cfg(feature = "inventory")]
         #[doc(hidden)]
-        #[no_mangle]
-        extern "C" fn mf_create(
-            log_level: i32,
-            args: *const ::std::os::raw::c_char,
-        ) -> std::option::Option<&'static mut ::std::ffi::c_void> {
-            let level = match log_level {
-                0 => ::log::Level::Error,
-                1 => ::log::Level::Warn,
-                2 => ::log::Level::Info,
-                3 => ::log::Level::Debug,
-                4 => ::log::Level::Trace,
-                _ => ::log::Level::Trace,
-            };
-
-            let argsstr = unsafe { ::std::ffi::CStr::from_ptr(args) }.to_str()
-                .or_else(|e| {
-                    ::log::error!("error converting connector args: {}", e);
-                    Err(e)
-                })
-                .ok()?;
-            let conn_args = ::memflow::connector::ConnectorArgs::parse(argsstr)
-                .or_else(|e| {
-                    ::log::error!("error parsing connector args: {}", e);
-                    Err(e)
-                })
-                .ok()?;
-
-            let conn = Box::new(#func_name(level, &conn_args)
-                .or_else(|e| {
-                    ::log::error!("{}", e);
-                    Err(e)
-                })
-                .ok()?);
-            Some(unsafe { &mut *(Box::into_raw(conn) as *mut ::std::ffi::c_void) })
-        }
-
-        #[cfg(feature = "inventory")]
-        #[doc(hidden)]
-        #[no_mangle]
         extern "C" fn mf_phys_read_raw_list(
             phys_mem: &mut ::std::ffi::c_void,
             read_data: *mut ::memflow::mem::PhysicalReadData,
@@ -115,9 +172,7 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
             }
         }
 
-        #[cfg(feature = "inventory")]
         #[doc(hidden)]
-        #[no_mangle]
         extern "C" fn mf_phys_write_raw_list(
             phys_mem: &mut ::std::ffi::c_void,
             write_data: *const ::memflow::mem::PhysicalWriteData,
@@ -134,9 +189,7 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
             }
         }
 
-        #[cfg(feature = "inventory")]
         #[doc(hidden)]
-        #[no_mangle]
         extern "C" fn mf_metadata(phys_mem: &::std::ffi::c_void) -> ::memflow::mem::PhysicalMemoryMetadata {
             use ::memflow::mem::PhysicalMemory;
 
@@ -145,9 +198,7 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
             metadata
         }
 
-        #[cfg(feature = "inventory")]
         #[doc(hidden)]
-        #[no_mangle]
         extern "C" fn mf_clone(
             phys_mem: &::std::ffi::c_void,
         ) -> std::option::Option<&'static mut ::std::ffi::c_void> {
@@ -156,9 +207,7 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
             Some(unsafe { &mut *(Box::into_raw(cloned_conn) as *mut ::std::ffi::c_void) })
         }
 
-        #[cfg(feature = "inventory")]
         #[doc(hidden)]
-        #[no_mangle]
         extern "C" fn mf_drop(phys_mem: &mut ::std::ffi::c_void) {
             let _: Box<#connector_type> = unsafe { Box::from_raw(::std::mem::transmute(phys_mem)) };
             // drop box
@@ -166,6 +215,9 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
 
         #func
     };
+
+    gen.extend(create_gen);
+
     gen.into()
 }
 

@@ -2,7 +2,7 @@
 #define MEMFLOW_WIN32_HLAPI_H
 
 #include "memflow_cpp.h"
-#include <memflow_win32.h>
+#include "memflow_win32.h"
 #include "binddestr.h"
 
 #ifndef NO_STL_CONTAINERS

@@ -1,7 +1,7 @@
 #ifndef MEMFLOW_HLAPI_H
 #define MEMFLOW_HLAPI_H
 
-#include <memflow.h>
+#include "memflow.h"
 #include "binddestr.h"
 
 #ifndef NO_STL_CONTAINERS

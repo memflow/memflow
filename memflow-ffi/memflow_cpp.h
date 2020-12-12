@@ -42,6 +42,18 @@ struct CPhysicalMemory
     WRAP_FN_RAW(phys_write_raw);
     WRAP_FN_RAW(phys_write_u32);
     WRAP_FN_RAW(phys_write_u64);
+
+    template<typename T>
+    T phys_read(Address address) {
+        T data;
+        this->phys_read_raw_into(address, &data, sizeof(T));
+        return data;
+    }
+
+    template<typename T>
+    int32_t phys_write(Address address, T &data) {
+        return this->phys_write_raw(address, data, sizeof(T));
+    }
 };
 
 struct CCloneablePhysicalMemory
@@ -68,6 +80,18 @@ struct CVirtualMemory
     WRAP_FN_RAW(virt_write_raw);
     WRAP_FN_RAW(virt_write_u32);
     WRAP_FN_RAW(virt_write_u64);
+
+    template<typename T>
+    T virt_read(Address address) {
+        T data;
+        this->virt_read_raw_into(address, &data, sizeof(T));
+        return data;
+    }
+
+    template<typename T>
+    int32_t virt_write(Address address, T &data) {
+        return this->virt_write_raw(address, data, sizeof(T));
+    }
 };
 
 struct CArchitecture

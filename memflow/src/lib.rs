@@ -63,3 +63,6 @@ pub mod prelude {
     }
     pub use v1::*;
 }
+
+#[deprecated]
+pub use prelude::v1::*;

@@ -89,7 +89,7 @@ impl Error {
             Error::SymbolStore(e) => ("error in symbol store", Some(e)),
             Error::ProcessInfo => ("error retrieving process info", None),
             Error::ModuleInfo => ("error retrieving module info", None),
-            Error::Core(e) => ("error in core", Some(e.to_str())),
+            Error::Core(e) => e.to_str_pair(),
             Error::PDB(e) => ("error handling pdb", Some(e)),
             Error::PE(e) => ("error handling pe", Some(e.to_str())),
             Error::Encoding => ("encoding error", None),

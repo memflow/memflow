@@ -88,6 +88,7 @@ You will find a folder called `memflow` in any of the following locations:
 
 On Windows you can put the connector dll in a folder named `memflow`
 that is either in your current PATH or put it in `C:\Users\{Username}\.local\lib\memflow`.
+Additionally connectors can be placed in the working directory of the process as well.
 
 Now you can just run the examples by providing the appropiate connector name:
 

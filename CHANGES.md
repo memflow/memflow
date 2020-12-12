@@ -8,6 +8,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 - Added C++ bindings for the FFI
 - Fixed core errors not displaying the full error message when wrapped in a win32 error
 - Changed windows inventory search path from [user]/.local/lib/memflow to [user]/Documents/memflow
+- Added {PWD} to inventory search path
 
 ## 0.1.4
 - Removed namespaces in FFI headers and unused dependencies

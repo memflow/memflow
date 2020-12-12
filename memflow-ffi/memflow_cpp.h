@@ -36,8 +36,7 @@ struct CPhysicalMemory
     WRAP_FN_RAW(phys_read_raw_list);
     WRAP_FN_RAW(phys_write_raw_list);
     WRAP_FN_RAW(phys_metadata);
-    // TODO: Fix the name in upstream
-    WRAP_FN_RAW(phys_read_raw);
+    WRAP_FN_RAW(phys_read_raw_into);
     WRAP_FN_RAW(phys_read_u32);
     WRAP_FN_RAW(phys_read_u64);
     WRAP_FN_RAW(phys_write_raw);
@@ -79,8 +78,7 @@ struct CArchitecture
 
     WRAP_FN(arch, bits);
     WRAP_FN(arch, endianess);
-    // TODO: Fix this in upstream
-    WRAP_FN_RAW(page_size);
+    WRAP_FN(arch, page_size);
     WRAP_FN(arch, size_addr);
     WRAP_FN(arch, address_space_bits);
     WRAP_FN_RAW(is_x86_arch);

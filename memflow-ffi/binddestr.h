@@ -25,7 +25,7 @@ struct BindDestr
         }
     }
 
-    inline operator T *() {
+    inline operator const T *() const {
         return this->inner;
     }
 

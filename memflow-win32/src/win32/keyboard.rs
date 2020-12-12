@@ -148,7 +148,7 @@ impl Keyboard {
                     .map_err(|_| Error::Other("malformed gafAsyncKeyState signature"))?;
         let buf_offs = re
             .find(&module_buf[..])
-            .ok_or_else(|| Error::Other("unable to find gafAsyncKeyState signature"))?
+            .ok_or(Error::Other("unable to find gafAsyncKeyState signature"))?
             .start()
             + 0x3;
 

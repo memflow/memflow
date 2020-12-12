@@ -61,9 +61,11 @@ pub fn find_guid<T: VirtualMemory>(virt_mem: &mut T, kernel_base: Address) -> Re
         .map(|e| e.entry())
         .filter_map(std::result::Result::ok)
         .find(|&e| e.as_code_view().is_some())
-        .ok_or_else(|| Error::Initialization("unable to find codeview debug_data entry"))?
+        .ok_or(Error::Initialization(
+            "unable to find codeview debug_data entry",
+        ))?
         .as_code_view()
-        .ok_or_else(|| Error::PE(pelite::Error::Unmapped))?;
+        .ok_or(Error::PE(pelite::Error::Unmapped))?;
 
     let signature = match code_view {
         CodeView::Cv70 { image, .. } => image.Signature,

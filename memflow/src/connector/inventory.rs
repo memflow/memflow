@@ -18,7 +18,7 @@ use log::{debug, error, info, warn};
 use libloading::Library;
 
 /// Exported memflow connector version
-pub const MEMFLOW_CONNECTOR_VERSION: i32 = 6;
+pub const MEMFLOW_CONNECTOR_VERSION: i32 = 7;
 
 /// Describes a connector
 #[repr(C)]
@@ -40,7 +40,7 @@ pub struct ConnectorDescriptor {
 #[repr(C)]
 #[derive(Clone)]
 pub struct ConnectorFunctionTable {
-    pub create: extern "C" fn(log_level: i32, args: *const c_char) -> Option<&'static mut c_void>,
+    pub create: extern "C" fn(args: *const c_char, log_level: i32) -> Option<&'static mut c_void>,
 
     pub phys_read_raw_list: extern "C" fn(
         phys_mem: &mut c_void,
@@ -259,8 +259,8 @@ impl ConnectorInventory {
     /// use memflow::connector::ConnectorArgs;
     /// use memflow::derive::connector;
     ///
-    /// #[connector(name = "dummy", ty = "DummyMemory")]
-    /// pub fn create_connector(_log_level: log::Level, _args: &ConnectorArgs) -> Result<DummyMemory> {
+    /// #[connector(name = "dummy")]
+    /// pub fn create_connector(_args: &ConnectorArgs, _log_level: log::Level) -> Result<DummyMemory> {
     ///     Ok(DummyMemory::new(size::mb(16)))
     /// }
     /// ```
@@ -394,8 +394,8 @@ impl Connector {
 
         // We do not want to return error with data from the shared library
         // that may get unloaded before it gets displayed
-        let instance = (self.vtable.create)(log::max_level() as i32, cstr.as_ptr())
-            .ok_or_else(|| Error::Connector("create() failed"))?;
+        let instance = (self.vtable.create)(cstr.as_ptr(), log::max_level() as i32)
+            .ok_or(Error::Connector("create() failed"))?;
 
         //let instance = connector_res?;
 

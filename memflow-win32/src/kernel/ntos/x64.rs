@@ -72,7 +72,7 @@ fn find_with_va<T: VirtualMemory>(virt_mem: &mut T, va_base: u64) -> Result<u64>
             name == "ntoskrnl.exe"
         })
         .map(|(i, _, _)| va_base + i as u64 * x64::ARCH.page_size() as u64)
-        .ok_or_else(|| Error::Initialization("unable to locate ntoskrnl.exe"))
+        .ok_or(Error::Initialization("unable to locate ntoskrnl.exe"))
 }
 
 pub fn find<T: VirtualMemory>(

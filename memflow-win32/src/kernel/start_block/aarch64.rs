@@ -47,5 +47,7 @@ pub fn find(mem: &[u8]) -> Result<StartBlock> {
             dtb: addr,
         })
         .next()
-        .ok_or_else(|| Error::Initialization("unable to find aarch64 dtb in lowstub < 16M"))
+        .ok_or(Error::Initialization(
+            "unable to find aarch64 dtb in lowstub < 16M",
+        ))
 }

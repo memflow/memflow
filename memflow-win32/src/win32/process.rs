@@ -35,8 +35,8 @@ pub struct Win32ModuleListInfo {
 }
 
 impl Win32ModuleListInfo {
-    pub fn with_peb<V: VirtualMemory>(
-        mem: &mut V,
+    pub fn with_peb(
+        mem: &mut impl VirtualMemory,
         peb: Address,
         arch: ArchitectureObj,
     ) -> Result<Win32ModuleListInfo> {
@@ -69,9 +69,9 @@ impl Win32ModuleListInfo {
         self.module_base
     }
 
-    pub fn module_entry_list<V: VirtualMemory>(
+    pub fn module_entry_list(
         &self,
-        mem: &mut V,
+        mem: &mut impl VirtualMemory,
         arch: ArchitectureObj,
     ) -> Result<Vec<Address>> {
         let mut list = Vec::new();
@@ -93,11 +93,11 @@ impl Win32ModuleListInfo {
         Ok(list)
     }
 
-    pub fn module_info_from_entry<V: VirtualMemory>(
+    pub fn module_info_from_entry(
         &self,
         entry: Address,
         parent_eprocess: Address,
-        mem: &mut V,
+        mem: &mut impl VirtualMemory,
         arch: ArchitectureObj,
     ) -> Result<Win32ModuleInfo> {
         let base = mem.virt_read_addr_arch(arch, entry + self.offsets.ldr_data_base)?;
@@ -294,13 +294,10 @@ impl<'a, T: PhysicalMemory, V: VirtualTranslate>
 }
 
 impl<T: VirtualMemory> Win32Process<T> {
-    fn module_list_with_infos_extend<
-        E: Extend<Win32ModuleInfo>,
-        I: Iterator<Item = (Win32ModuleListInfo, ArchitectureObj)>,
-    >(
+    fn module_list_with_infos_extend(
         &mut self,
-        module_infos: I,
-        out: &mut E,
+        module_infos: impl Iterator<Item = (Win32ModuleListInfo, ArchitectureObj)>,
+        out: &mut impl Extend<Win32ModuleInfo>,
     ) -> Result<()> {
         for (info, arch) in module_infos {
             out.extend(
@@ -345,13 +342,18 @@ impl<T: VirtualMemory> Win32Process<T> {
         info.module_entry_list(&mut self.virt_mem, arch)
     }
 
+    /// Generate a module list and return a resulting Vec
     pub fn module_list(&mut self) -> Result<Vec<Win32ModuleInfo>> {
         let mut vec = Vec::new();
         self.module_list_extend(&mut vec)?;
         Ok(vec)
     }
 
-    pub fn module_list_extend<E: Extend<Win32ModuleInfo>>(&mut self, out: &mut E) -> Result<()> {
+    /// Generate a module list extending into `out` variable.
+    pub fn module_list_extend(&mut self, out: &mut impl Extend<Win32ModuleInfo>) -> Result<()> {
+        // Creates a list of module lists.
+        // The native list is always there, and if module_info_wow64 is not None,
+        // then the emulated architecture list is also used.
         let infos = [
             (
                 Some(self.proc_info.module_info_native),
@@ -360,10 +362,11 @@ impl<T: VirtualMemory> Win32Process<T> {
             (self.proc_info.module_info_wow64, self.proc_info.proc_arch),
         ];
 
+        // Here we end up filtering out module_info_wow64 if it doesn't exist
         let iter = infos
             .iter()
             .cloned()
-            .filter_map(|(info, arch)| info.map(|info| (info, arch)));
+            .filter_map(|(info, arch)| info.zip(Some(arch)));
 
         self.module_list_with_infos_extend(iter, out)
     }
@@ -374,7 +377,7 @@ impl<T: VirtualMemory> Win32Process<T> {
             .into_iter()
             .inspect(|module| trace!("{:x} {}", module.base(), module.name()))
             .find(|module| module.base == self.proc_info.section_base)
-            .ok_or_else(|| Error::ModuleInfo)
+            .ok_or(Error::ModuleInfo)
     }
 
     pub fn module_info(&mut self, name: &str) -> Result<Win32ModuleInfo> {
@@ -383,7 +386,7 @@ impl<T: VirtualMemory> Win32Process<T> {
             .into_iter()
             .inspect(|module| trace!("{:x} {}", module.base(), module.name()))
             .find(|module| module.name() == name)
-            .ok_or_else(|| Error::ModuleInfo)
+            .ok_or(Error::ModuleInfo)
     }
 }
 

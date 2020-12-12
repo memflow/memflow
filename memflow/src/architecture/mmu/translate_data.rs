@@ -27,20 +27,14 @@ pub struct TranslateData<T> {
 }
 
 impl<T: SplitAtIndex> TranslateData<T> {
-    pub fn split_at_address(&mut self, addr: Address) -> (Self, Option<Self>) {
-        if addr < self.addr {
-            self.split_at(0)
-        } else {
-            self.split_at(addr - self.addr)
-        }
+    pub fn split_at_address(self, addr: Address) -> (Option<Self>, Option<Self>) {
+        let sub = self.addr.as_u64();
+        self.split_at(addr.as_u64().saturating_sub(sub) as usize)
     }
 
-    pub fn split_at_address_rev(&mut self, addr: Address) -> (Option<Self>, Self) {
-        if addr > self.addr + self.length() {
-            self.split_at_rev(0)
-        } else {
-            self.split_at_rev((self.addr + self.length()) - addr)
-        }
+    pub fn split_at_address_rev(self, addr: Address) -> (Option<Self>, Option<Self>) {
+        let base = self.addr + self.length();
+        self.split_at_rev(base.as_u64().saturating_sub(addr.as_u64()) as usize)
     }
 }
 
@@ -65,37 +59,34 @@ impl<T> PartialEq for TranslateData<T> {
 }
 
 impl<T: SplitAtIndex> SplitAtIndex for TranslateData<T> {
-    fn split_inclusive_at(&mut self, idx: usize) -> (Self, Option<Self>)
-    where
-        Self: Sized,
-    {
-        let addr = self.addr;
-
-        let (bleft, bright) = self.buf.split_inclusive_at(idx);
-        let bl_len = bleft.length();
-
-        (
-            TranslateData { addr, buf: bleft },
-            bright.map(|buf| TranslateData {
-                buf,
-                addr: addr + bl_len,
-            }),
-        )
-    }
-
-    fn split_at(&mut self, idx: usize) -> (Self, Option<Self>)
+    fn split_at(self, idx: usize) -> (Option<Self>, Option<Self>)
     where
         Self: Sized,
     {
         let addr = self.addr;
         let (bleft, bright) = self.buf.split_at(idx);
-        let bl_len = bleft.length();
 
         (
-            TranslateData { addr, buf: bleft },
+            bleft.map(|buf| TranslateData { buf, addr }),
             bright.map(|buf| TranslateData {
                 buf,
-                addr: addr + bl_len,
+                addr: addr + idx,
+            }),
+        )
+    }
+
+    unsafe fn split_at_mut(&mut self, idx: usize) -> (Option<Self>, Option<Self>)
+    where
+        Self: Sized,
+    {
+        let addr = self.addr;
+        let (bleft, bright) = self.buf.split_at_mut(idx);
+
+        (
+            bleft.map(|buf| TranslateData { buf, addr }),
+            bright.map(|buf| TranslateData {
+                buf,
+                addr: addr + idx,
             }),
         )
     }
@@ -201,9 +192,17 @@ impl<T: MMUTranslationBase> TranslationChunk<T> {
         let upper: u64 = (self.max_addr - 1).as_page_aligned(step_size).as_u64();
         let lower: u64 = self.min_addr.as_page_aligned(step_size).as_u64();
 
+        let mut cur_max_addr = !0u64;
+
         // Walk in reverse so that lowest addresses always end up
         // first in the stack. This preserves translation order
         for (cnt, addr) in (lower..=upper).rev().step_by(step_size).enumerate() {
+            if addr > cur_max_addr {
+                continue;
+            }
+
+            cur_max_addr = 0;
+
             // Also, we need to push the upper elements to the waiting stack preemptively...
             // This might result in slight performance loss, but keeps the order
             let remaining = (addr - lower) as usize / step_size + 1;
@@ -226,7 +225,7 @@ impl<T: MMUTranslationBase> TranslationChunk<T> {
 
             // Go through each address and check it individually
             for _ in 0..self.addr_count {
-                let mut data = self.pop_data(addr_stack).unwrap();
+                let data = self.pop_data(addr_stack).unwrap();
 
                 debug_assert!(
                     data.addr >= self.min_addr,
@@ -252,8 +251,10 @@ impl<T: MMUTranslationBase> TranslationChunk<T> {
                 }
 
                 // There was some leftover data
-                if left.length() > 0 {
-                    self.push_data(left, tmp_addr_stack);
+                if let Some(data) = left {
+                    cur_max_addr =
+                        std::cmp::max((data.addr + data.length()).as_u64(), cur_max_addr);
+                    self.push_data(data, tmp_addr_stack);
                 }
             }
 

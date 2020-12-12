@@ -4,6 +4,7 @@ use crate::error::Error;
 use crate::iter::SplitAtIndex;
 use crate::mem::PhysicalMemory;
 use crate::types::{size, Address, PhysicalAddress};
+use std::prelude::v1::*;
 
 /*
 The `DirectTranslate` struct provides a default implementation for `VirtualTranslate` for physical memory.

@@ -18,6 +18,7 @@ Transitioning from C FFI to C++ FFI:
 - Methods are implemented as class members. Most methods loose their prefix. The change looks like this: `process_module_info(Win32Process *process, const char *name)` becomes `CWin32Process::module_info(this, const char *name)`.
   - Calling methods changes into calling a function on the object, instead of with the object. Example: `process_module_info(proc, "ntdll.dll")` becomes `proc.module_info("ntdll.dll")`.
   - Exception to this are `virt`, and `phys` read/write functions. They do not loose their prefix, because they do have the prefix in the Rust library. So, `virt_read_u64(mem, addr)` becomes `mem.virt_read_u64(addr)`.
+- There are extra convenience functions that utilize STL's `string`, and `vector` containers. Getting process/module names, and lists becomes much simpler.
 
 ## 0.1.4
 - Removed namespaces in FFI headers and unused dependencies

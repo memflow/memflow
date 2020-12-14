@@ -17,7 +17,7 @@ maintenance = { status = "actively-developed" }
 codecov = { repository = "github", branch = "master", service = "github" }
 
 [dependencies]
-memflow-derive = { path = "../memflow-derive" }
+memflow-derive = { version = "0.1", path = "../memflow-derive" }
 dataview = { version = "0.1", features = ["derive_pod"] }
 log = "0.4"
 bitflags = "1.2"

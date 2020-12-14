@@ -285,6 +285,10 @@ Address process_info_dtb(const Win32ProcessInfo *info);
 
 Address process_info_section_base(const Win32ProcessInfo *info);
 
+int32_t process_info_exit_status(const Win32ProcessInfo *info);
+
+Address process_info_ethread(const Win32ProcessInfo *info);
+
 Address process_info_wow64(const Win32ProcessInfo *info);
 
 Address process_info_peb(const Win32ProcessInfo *info);

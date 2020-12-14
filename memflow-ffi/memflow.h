@@ -85,27 +85,27 @@ typedef uint8_t PageType;
 /**
  * The page explicitly has no flags.
  */
-#define PageType_NONE 0
+#define PageType_NONE (uint8_t)0
 /**
  * The page type is not known.
  */
-#define PageType_UNKNOWN 1
+#define PageType_UNKNOWN (uint8_t)1
 /**
  * The page contains page table entries.
  */
-#define PageType_PAGE_TABLE 2
+#define PageType_PAGE_TABLE (uint8_t)2
 /**
  * The page is a writeable page.
  */
-#define PageType_WRITEABLE 4
+#define PageType_WRITEABLE (uint8_t)4
 /**
  * The page is read only.
  */
-#define PageType_READ_ONLY 8
+#define PageType_READ_ONLY (uint8_t)8
 /**
  * The page is not executable.
  */
-#define PageType_NOEXEC 16
+#define PageType_NOEXEC (uint8_t)16
 
 /**
  * This type represents a wrapper over a [address](address/index.html)
@@ -166,7 +166,7 @@ PhysicalAddress addr_to_paddr(Address address);
  * ConnectorInventory is inherently unsafe, because it loads shared libraries which can not be
  * guaranteed to be safe.
  */
-ConnectorInventory *inventory_try_new(void);
+ConnectorInventory *inventory_scan(void);
 
 /**
  * Create a new inventory with custom path string
@@ -175,7 +175,7 @@ ConnectorInventory *inventory_try_new(void);
  *
  * `path` must be a valid null terminated string
  */
-ConnectorInventory *inventory_with_path(const char *path);
+ConnectorInventory *inventory_scan_path(const char *path);
 
 /**
  * Add a directory to an existing inventory
@@ -307,7 +307,10 @@ PhysicalMemoryMetadata phys_metadata(const PhysicalMemoryObj *mem);
  *
  * `out` must be a valid pointer to a data buffer of at least `len` size.
  */
-int32_t phys_read_raw(PhysicalMemoryObj *mem, PhysicalAddress addr, uint8_t *out, uintptr_t len);
+int32_t phys_read_raw_into(PhysicalMemoryObj *mem,
+                           PhysicalAddress addr,
+                           uint8_t *out,
+                           uintptr_t len);
 
 /**
  * Read a single 32-bit value from a provided `PhysicalAddress`
@@ -420,7 +423,7 @@ uint8_t arch_bits(const ArchitectureObj *arch);
 
 Endianess arch_endianess(const ArchitectureObj *arch);
 
-uintptr_t page_size(const ArchitectureObj *arch);
+uintptr_t arch_page_size(const ArchitectureObj *arch);
 
 uintptr_t arch_size_addr(const ArchitectureObj *arch);
 

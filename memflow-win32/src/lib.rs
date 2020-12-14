@@ -7,17 +7,22 @@ It is used to interface with windows targets.
 extern crate no_std_compat as std;
 
 pub mod error;
-#[doc(hidden)]
-pub use error::*;
 
 pub mod kernel;
-#[doc(hidden)]
-pub use kernel::*;
 
 pub mod offsets;
-#[doc(hidden)]
-pub use offsets::*;
 
 pub mod win32;
-#[doc(hidden)]
-pub use win32::*;
+
+pub mod prelude {
+    pub mod v1 {
+        pub use crate::error::*;
+        pub use crate::kernel::*;
+        pub use crate::offsets::*;
+        pub use crate::win32::*;
+    }
+    pub use v1::*;
+}
+
+#[deprecated]
+pub use prelude::v1::*;

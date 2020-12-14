@@ -51,7 +51,7 @@ impl<T: PhysicalMemory, D: ScopedVirtualTranslate> VirtualDMA<T, DirectTranslate
     ///     println!("addr: {:x}", addr);
     ///     # assert_eq!(addr, 0x00ff_00ff_00ff_00ff);
     /// }
-    /// # use memflow::dummy::DummyMemory;
+    /// # use memflow::mem::dummy::DummyMemory;
     /// # use memflow::types::size;
     /// # use memflow::mem::DirectTranslate;
     /// # let (mut mem, dtb, virt_base) = DummyMemory::new_and_dtb(size::mb(4), size::mb(2), &[255, 0, 255, 0, 255, 0, 255, 0]);
@@ -92,7 +92,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate, D: ScopedVirtualTranslate> VirtualD
     ///     println!("addr: {:x}", addr);
     ///     # assert_eq!(addr, 0x00ff_00ff_00ff_00ff);
     /// }
-    /// # use memflow::dummy::DummyMemory;
+    /// # use memflow::mem::dummy::DummyMemory;
     /// # use memflow::types::size;
     /// # use memflow::mem::DirectTranslate;
     /// # let (mut mem, dtb, virt_base) = DummyMemory::new_and_dtb(size::mb(4), size::mb(2), &[255, 0, 255, 0, 255, 0, 255, 0]);

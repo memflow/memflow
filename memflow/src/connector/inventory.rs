@@ -130,17 +130,25 @@ impl ConnectorInventory {
                 .flatten(),
         );
 
+        #[cfg(unix)]
         let path_iter = path_iter.chain(
             dirs::home_dir()
                 .map(|dir| dir.join(".local").join("lib"))
                 .into_iter(),
         );
 
+        #[cfg(not(unix))]
+        let path_iter = path_iter.chain(dirs::document_dir().into_iter());
+
         let mut ret = Self { connectors: vec![] };
 
         for mut path in path_iter {
             path.push("memflow");
             ret.add_dir(path).ok();
+        }
+
+        if let Ok(pwd) = std::env::current_dir() {
+            ret.add_dir(pwd).ok();
         }
 
         ret

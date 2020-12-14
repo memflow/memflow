@@ -3,14 +3,9 @@ use memflow_bench::{phys, vat, virt};
 
 use criterion::*;
 
-use memflow::architecture::ScopedVirtualTranslate;
-use memflow::connector::ConnectorArgs;
 use memflow::error::{Error, Result};
-use memflow::mem::{DirectTranslate, PhysicalMemory};
-
-use memflow_win32::{
-    Kernel, KernelInfo, Win32ModuleInfo, Win32Offsets, Win32Process, Win32ProcessInfo,
-};
+use memflow::prelude::v1::*;
+use memflow_win32::prelude::v1::*;
 
 use rand::prelude::*;
 use rand::{Rng, SeedableRng};

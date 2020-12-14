@@ -46,7 +46,7 @@ use dataview::Pod;
 ///     println!("value: {}", foo.some_value);
 /// }
 ///
-/// # use memflow::dummy::DummyMemory;
+/// # use memflow::mem::dummy::DummyMemory;
 /// # use memflow::types::size;
 /// # read_foo_bar(&mut DummyMemory::new_virt(size::mb(4), size::mb(2), &[]).0);
 ///
@@ -75,7 +75,7 @@ use dataview::Pod;
 ///     println!("value: {}", foo.some_value);
 /// }
 ///
-/// # use memflow::dummy::DummyMemory;
+/// # use memflow::mem::dummy::DummyMemory;
 /// # use memflow::types::size;
 /// # read_foo_bar(&mut DummyMemory::new_virt(size::mb(4), size::mb(2), &[]).0);
 /// ```

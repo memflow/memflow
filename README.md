@@ -88,6 +88,7 @@ You will find a folder called `memflow` in any of the following locations:
 
 On Windows, you can put the connector DLL in a folder named `memflow`
 that is either in your current PATH or put it in `C:\Users\{Username}\.local\lib\memflow`.
+Additionally connectors can be placed in the working directory of the process as well.
 
 Now you can just run the examples by providing the appropriate connector name:
 
@@ -125,6 +126,7 @@ Some connectors also require different permissions. Please refer to the individu
 These are the currently officially existing connectors:
 - [qemu_procfs](https://github.com/memflow/memflow-qemu-procfs)
 - [kvm](https://github.com/memflow/memflow-kvm)
+- [pcileech](https://github.com/memflow/memflow-pcileech)
 - [coredump](https://github.com/memflow/memflow-coredump)
 
 In case you write your own connector please hit us up with a merge request so we can maintain a list of third-party connectors as well.

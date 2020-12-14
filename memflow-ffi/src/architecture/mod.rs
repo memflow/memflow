@@ -13,7 +13,7 @@ pub extern "C" fn arch_endianess(arch: &ArchitectureObj) -> Endianess {
 }
 
 #[no_mangle]
-pub extern "C" fn page_size(arch: &ArchitectureObj) -> usize {
+pub extern "C" fn arch_page_size(arch: &ArchitectureObj) -> usize {
     arch.page_size()
 }
 

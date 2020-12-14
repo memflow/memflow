@@ -1,8 +1,6 @@
 use criterion::*;
 
-use memflow::mem::{PhysicalMemory, PhysicalMemoryMetadata, PhysicalReadData, PhysicalWriteData};
-use memflow::types::{size, Address, PhysicalAddress};
-use memflow::Result;
+use memflow::prelude::v1::*;
 
 //use memflow::mem::dummy::DummyMemory as Memory;
 

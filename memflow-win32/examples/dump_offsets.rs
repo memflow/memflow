@@ -6,7 +6,7 @@ use log::{error, Level};
 
 use memflow::connector::*;
 
-use memflow_win32::{Kernel, Win32OffsetFile};
+use memflow_win32::prelude::{Kernel, Win32OffsetFile};
 
 pub fn main() {
     let matches = App::new("dump offsets example")

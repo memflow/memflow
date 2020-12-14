@@ -1,6 +1,6 @@
+use crate::error::{Error, Result};
 use crate::mem::MemoryMap;
 use crate::types::Address;
-use crate::{Error, Result};
 use memmap::{Mmap, MmapMut, MmapOptions};
 
 use std::fs::File;

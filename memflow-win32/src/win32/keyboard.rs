@@ -12,8 +12,8 @@ Therefor the Keyboard will by default find the winlogon.exe or wininit.exe proce
 ```
 use std::{thread, time};
 
-use memflow::{PhysicalMemory, VirtualTranslate};
-use memflow_win32::{Kernel, Keyboard};
+use memflow::mem::{PhysicalMemory, VirtualTranslate};
+use memflow_win32::win32::{Kernel, Keyboard};
 
 fn test<T: PhysicalMemory, V: VirtualTranslate>(kernel: &mut Kernel<T, V>) {
     let kbd = Keyboard::try_with(kernel).unwrap();
@@ -32,7 +32,6 @@ use crate::error::{Error, Result};
 use std::convert::TryInto;
 
 use log::debug;
-use regex::bytes::*;
 
 use memflow::error::PartialResultExt;
 use memflow::mem::{PhysicalMemory, VirtualMemory, VirtualTranslate};
@@ -139,7 +138,11 @@ impl Keyboard {
         }
     }
 
+    // TODO: replace with a custom signature scanning crate
+    #[cfg(feature = "regex")]
     fn find_gaf_sig(module_buf: &[u8]) -> Result<usize> {
+        use ::regex::bytes::*;
+
         // 48 8B 05 ? ? ? ? 48 89 81 ? ? 00 00 48 8B 8F + 0x3
         let re = Regex::new("(?-u)\\x48\\x8B\\x05(?s:.)(?s:.)(?s:.)(?s:.)\\x48\\x89\\x81(?s:.)(?s:.)\\x00\\x00\\x48\\x8B\\x8F")
                     .map_err(|_| Error::Other("malformed gafAsyncKeyState signature"))?;
@@ -155,6 +158,11 @@ impl Keyboard {
             + 0x4;
         debug!("gafAsyncKeyState export found at: {:x}", export_offs);
         Ok(export_offs as usize)
+    }
+
+    #[cfg(not(feature = "regex"))]
+    fn find_gaf_sig(module_buf: &[u8]) -> Result<usize> {
+        Err(Error::Other("signature scanning requires std"))
     }
 }
 

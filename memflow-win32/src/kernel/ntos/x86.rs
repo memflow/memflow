@@ -6,9 +6,9 @@ use crate::kernel::StartBlock;
 
 use log::{debug, info};
 
+use memflow::error::PartialResultExt;
 use memflow::mem::VirtualMemory;
 use memflow::types::{size, Address};
-use memflow::PartialResultExt;
 
 use dataview::Pod;
 use pelite::image::IMAGE_DOS_HEADER;

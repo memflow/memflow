@@ -2,6 +2,7 @@
 32-bit Pointer abstraction.
 */
 
+use crate::dataview::Pod;
 use crate::error::PartialResult;
 use crate::mem::VirtualMemory;
 use crate::types::{Address, ByteSwap};
@@ -9,8 +10,6 @@ use crate::types::{Address, ByteSwap};
 use std::marker::PhantomData;
 use std::mem::size_of;
 use std::{cmp, fmt, hash, ops};
-
-use dataview::Pod;
 
 /// This type can be used in structs that are being read from the target memory.
 /// It holds a phantom type that can be used to describe the proper type of the pointer
@@ -26,7 +25,7 @@ use dataview::Pod;
 /// ```
 /// use memflow::types::Pointer32;
 /// use memflow::mem::VirtualMemory;
-/// use dataview::Pod;
+/// use memflow::dataview::Pod;
 ///
 /// #[repr(C)]
 /// #[derive(Clone, Debug, Pod)]
@@ -55,7 +54,7 @@ use dataview::Pod;
 /// ```
 /// use memflow::types::Pointer32;
 /// use memflow::mem::VirtualMemory;
-/// use dataview::Pod;
+/// use memflow::dataview::Pod;
 ///
 /// #[repr(C)]
 /// #[derive(Clone, Debug, Pod)]

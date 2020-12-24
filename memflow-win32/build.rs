@@ -1,4 +1,3 @@
-use dataview::Pod;
 use std::{
     env,
     error::Error,
@@ -6,6 +5,8 @@ use std::{
     io::{Read, Write},
     path::Path,
 };
+
+use memflow::dataview::Pod;
 
 #[path = "src/offsets/offset_table.rs"]
 #[cfg(feature = "embed_offsets")]

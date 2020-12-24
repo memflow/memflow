@@ -6,11 +6,11 @@ use crate::kernel::StartBlock;
 
 use log::{debug, info};
 
+use memflow::dataview::Pod;
 use memflow::error::PartialResultExt;
 use memflow::mem::VirtualMemory;
 use memflow::types::{size, Address};
 
-use dataview::Pod;
 use pelite::image::IMAGE_DOS_HEADER;
 
 const SIZE_256MB: usize = size::mb(256);

@@ -48,11 +48,12 @@ pub mod iter;
 
 // forward declare
 pub mod derive {
-    pub use memflow_derive::*;
+    pub use ::memflow_derive::*;
 }
 
 pub mod dataview {
     pub use ::dataview::*;
+    pub use ::memflow_derive::Pod;
 }
 
 pub mod prelude {

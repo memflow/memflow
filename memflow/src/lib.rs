@@ -46,14 +46,20 @@ pub mod process;
 
 pub mod iter;
 
+// forward declare
 pub mod derive {
     pub use memflow_derive::*;
+}
+
+pub mod dataview {
+    pub use ::dataview::*;
 }
 
 pub mod prelude {
     pub mod v1 {
         pub use crate::architecture::*;
         pub use crate::connector::*;
+        pub use crate::dataview::*;
         pub use crate::derive::*;
         pub use crate::error::*;
         pub use crate::iter::*;

@@ -55,6 +55,10 @@ pub mod dataview {
     pub use ::dataview::*;
 }
 
+// this is required because the macro in the dataview crate
+// will search for $crate::Pod in the crates root.
+pub use ::dataview::Pod;
+
 pub mod prelude {
     pub mod v1 {
         pub use crate::architecture::*;

@@ -403,6 +403,7 @@ impl<T: ?Sized> fmt::Display for Pointer32<T> {
 }
 
 unsafe impl<T: ?Sized + 'static> Pod for Pointer32<T> {}
+const _: [(); std::mem::size_of::<Pointer32<()>>()] = [(); std::mem::size_of::<u32>()];
 
 impl<T: ?Sized + 'static> ByteSwap for Pointer32<T> {
     fn byte_swap(&mut self) {

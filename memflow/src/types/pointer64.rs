@@ -404,6 +404,7 @@ impl<T: ?Sized> fmt::Display for Pointer64<T> {
 }
 
 unsafe impl<T: ?Sized + 'static> Pod for Pointer64<T> {}
+const _: [(); std::mem::size_of::<Pointer64<()>>()] = [(); std::mem::size_of::<u64>()];
 
 impl<T: ?Sized + 'static> ByteSwap for Pointer64<T> {
     fn byte_swap(&mut self) {

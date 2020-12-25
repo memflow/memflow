@@ -126,41 +126,41 @@ impl Win32Offsets {
 
         let list_blink = list
             .find_field("Blink")
-            .ok_or_else(|| Error::PDB("_LIST_ENTRY::Blink not found"))?
+            .ok_or(Error::PDB("_LIST_ENTRY::Blink not found"))?
             .offset as _;
 
         let eproc_link = eproc
             .find_field("ActiveProcessLinks")
-            .ok_or_else(|| Error::PDB("_EPROCESS::ActiveProcessLinks not found"))?
+            .ok_or(Error::PDB("_EPROCESS::ActiveProcessLinks not found"))?
             .offset as _;
 
         let kproc_dtb = kproc
             .find_field("DirectoryTableBase")
-            .ok_or_else(|| Error::PDB("_KPROCESS::DirectoryTableBase not found"))?
+            .ok_or(Error::PDB("_KPROCESS::DirectoryTableBase not found"))?
             .offset as _;
         let eproc_pid = eproc
             .find_field("UniqueProcessId")
-            .ok_or_else(|| Error::PDB("_EPROCESS::UniqueProcessId not found"))?
+            .ok_or(Error::PDB("_EPROCESS::UniqueProcessId not found"))?
             .offset as _;
         let eproc_name = eproc
             .find_field("ImageFileName")
-            .ok_or_else(|| Error::PDB("_EPROCESS::ImageFileName not found"))?
+            .ok_or(Error::PDB("_EPROCESS::ImageFileName not found"))?
             .offset as _;
         let eproc_peb = eproc
             .find_field("Peb")
-            .ok_or_else(|| Error::PDB("_EPROCESS::Peb not found"))?
+            .ok_or(Error::PDB("_EPROCESS::Peb not found"))?
             .offset as _;
         let eproc_section_base = eproc
             .find_field("SectionBaseAddress")
-            .ok_or_else(|| Error::PDB("_EPROCESS::SectionBaseAddress not found"))?
+            .ok_or(Error::PDB("_EPROCESS::SectionBaseAddress not found"))?
             .offset as _;
         let eproc_exit_status = eproc
             .find_field("ExitStatus")
-            .ok_or_else(|| Error::PDB("_EPROCESS::ExitStatus not found"))?
+            .ok_or(Error::PDB("_EPROCESS::ExitStatus not found"))?
             .offset as _;
         let eproc_thread_list = eproc
             .find_field("ThreadListHead")
-            .ok_or_else(|| Error::PDB("_EPROCESS::ThreadListHead not found"))?
+            .ok_or(Error::PDB("_EPROCESS::ThreadListHead not found"))?
             .offset as _;
 
         // windows 10 uses an uppercase W whereas older windows versions (windows 7) uses a lowercase w
@@ -175,22 +175,22 @@ impl Win32Offsets {
         // threads
         let kthread_teb = kthread
             .find_field("Teb")
-            .ok_or_else(|| Error::PDB("_KTHREAD::Teb not found"))?
+            .ok_or(Error::PDB("_KTHREAD::Teb not found"))?
             .offset as _;
         let ethread_list_entry = ethread
             .find_field("ThreadListEntry")
-            .ok_or_else(|| Error::PDB("_ETHREAD::ThreadListEntry not found"))?
+            .ok_or(Error::PDB("_ETHREAD::ThreadListEntry not found"))?
             .offset as _;
         let teb_peb = teb
             .find_field("ProcessEnvironmentBlock")
-            .ok_or_else(|| Error::PDB("_TEB::ProcessEnvironmentBlock not found"))?
+            .ok_or(Error::PDB("_TEB::ProcessEnvironmentBlock not found"))?
             .offset as _;
         let teb_peb_x86 = if let Ok(teb32) =
             PdbStruct::with(pdb_slice, "_TEB32").map_err(|_| Error::PDB("_TEB32 not found"))
         {
             teb32
                 .find_field("ProcessEnvironmentBlock")
-                .ok_or_else(|| Error::PDB("_TEB32::ProcessEnvironmentBlock not found"))?
+                .ok_or(Error::PDB("_TEB32::ProcessEnvironmentBlock not found"))?
                 .offset as _
         } else {
             0

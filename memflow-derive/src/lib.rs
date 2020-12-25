@@ -93,9 +93,9 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
 /// See https://github.com/CasualX/dataview/blob/master/derive_pod/lib.rs for the original implementation.
 #[proc_macro_derive(Pod)]
 pub fn pod_derive(input: TokenStream) -> TokenStream {
-    return format!("::memflow::dataview::derive_pod!{{ {} }}", input)
+    format!("::memflow::dataview::derive_pod!{{ {} }}", input)
         .parse()
-        .unwrap();
+        .unwrap()
 }
 
 #[proc_macro_derive(ByteSwap)]

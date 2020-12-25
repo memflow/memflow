@@ -163,6 +163,11 @@ impl Address {
 
     /// Converts the address into a `u32` value.
     ///
+    /// # Remarks:
+    ///
+    /// This function internally uses `as u32` which can cause a wrap-around
+    /// in case the internal 64-bit value does not fit the 32-bit `u32`.
+    ///
     /// # Examples
     ///
     /// ```
@@ -194,6 +199,12 @@ impl Address {
     }
 
     /// Converts the address into a `usize` value.
+    ///
+    /// # Remarks:
+    ///
+    /// When compiling for a 32-bit architecture the size of `usize`
+    /// is only 32-bit. Since this function internally uses `as usize` it can cause a wrap-around
+    /// in case the internal 64-bit value does not fit in the 32-bit `usize`.
     ///
     /// # Examples
     ///

@@ -406,7 +406,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
                 .iter()
                 .inspect(|&module| trace!("{:x} {}", module.base(), module.name()))
                 .find(|&module| module.name().to_lowercase() == name.to_lowercase())
-                .ok_or_else(|| Error::ModuleInfo)
+                .ok_or(Error::ModuleInfo)
                 .is_ok()
             {
                 return Ok(candidate.clone());
@@ -428,7 +428,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
                 .into_iter()
                 .inspect(|process| trace!("{} {}", process.pid(), process.name()))
                 .find(|process| process.pid == pid)
-                .ok_or_else(|| Error::Other("pid not found"))
+                .ok_or(Error::Other("pid not found"))
         } else {
             // kernel pid
             self.kernel_process_info()

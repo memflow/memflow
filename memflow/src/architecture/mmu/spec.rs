@@ -4,6 +4,7 @@ use crate::architecture::Endianess;
 use super::translate_data::{TranslateData, TranslateDataVec, TranslateVec, TranslationChunk};
 use super::MMUTranslationBase;
 use crate::error::{Error, Result};
+use crate::iter::FlowIters;
 use crate::iter::SplitAtIndex;
 use crate::mem::{PhysicalMemory, PhysicalReadData};
 use crate::types::{Address, PageType, PhysicalAddress};
@@ -300,7 +301,7 @@ impl ArchMMUSpec {
         &self,
         mem: &mut T,
         dtb: D,
-        mut addrs: VI,
+        addrs: VI,
         out: &mut VO,
         out_fail: &mut FO,
         slice: &mut [std::mem::MaybeUninit<u8>],
@@ -313,6 +314,8 @@ impl ArchMMUSpec {
         FO: Extend<(Error, Address, B)>,
     {
         vtop_trace!("virt_to_phys_iter_with_mmu");
+
+        let mut addrs = addrs.double_peekable();
 
         // We need to calculate in advance how we are going to split the allocated buffer.
         // There is one important parameter `elem_count`, which determines
@@ -332,22 +335,48 @@ impl ArchMMUSpec {
         let working_stack_count = 2;
         let total_addr_mul = spare_allocs;
 
-        // 2 * 8 are extra bytes for alignment in read funcs
-        let elem_count = (slice.len() - 2 * 8)
-            / ((total_chunks_mul + working_stack_count) * chunk_size
+        let size_per_elem = (total_chunks_mul + working_stack_count) * chunk_size
             + pte_size
             + prd_size
             // The +1 is for tmp_addrs
-            + (total_addr_mul + working_stack_count + 1) * data_size);
+            + (total_addr_mul + working_stack_count + 1) * data_size;
 
-        // We need to support at least the number of addresses virt_addr_filter is going to split
-        // us into. It is a tough one, but 2 is the bare minimum for x86
-        if elem_count < 3 {
-            log::trace!("input buffer may be too small! ({:x})", elem_count);
-        }
+        let (elem_count, waiting_chunks, waiting_addr_count) = {
+            // 2 * 8 are extra bytes for alignment in read funcs
+            let elem_count = (slice.len() - 2 * 8) / size_per_elem;
+            let waiting_chunks = elem_count * (1 + spare_allocs);
+            let waiting_addr_count = elem_count * spare_allocs;
 
-        let waiting_chunks = elem_count * (1 + spare_allocs);
-        let waiting_addr_count = elem_count * spare_allocs;
+            // We need to support at least the number of addresses virt_addr_filter is going to split
+            // us into. It is a tough one, but 2 is the bare minimum for x86
+            if elem_count == 0 {
+                // This is for the case of single element translation
+                if !addrs.is_next_last()
+                    || addrs
+                        .double_peek()
+                        .0
+                        .as_ref()
+                        .map(|e| e.length())
+                        .unwrap_or(0)
+                        > 1
+                {
+                    log::trace!(
+                        "input buffer is too small! Stability not guaranteed! ({:x})",
+                        slice.len()
+                    );
+                }
+                (1, 1, 1)
+            } else if elem_count < 3 {
+                log::trace!(
+                    "input buffer may be too small! ({:x} {:x})",
+                    elem_count,
+                    slice.len()
+                );
+                (elem_count, waiting_chunks, waiting_addr_count)
+            } else {
+                (elem_count, waiting_chunks, waiting_addr_count)
+            }
+        };
 
         vtop_trace!(
             "elem_count = {:x}; waiting_chunks = {:x};",

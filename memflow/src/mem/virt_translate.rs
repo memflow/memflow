@@ -9,6 +9,7 @@ mod tests;
 
 use crate::error::{Error, Result};
 
+use crate::iter::FnExtend;
 use crate::mem::PhysicalMemory;
 use crate::types::{Address, PhysicalAddress};
 
@@ -18,6 +19,8 @@ pub trait VirtualTranslate
 where
     Self: Send,
 {
+    /// Translate a list of virtual addresses
+    ///
     /// This function will do a virtual to physical memory translation for the
     /// `ScopedVirtualTranslate` over multiple elements.
     ///
@@ -30,10 +33,10 @@ where
     /// # use memflow::error::Result;
     /// # use memflow::types::{PhysicalAddress, Address};
     /// # use memflow::mem::dummy::DummyMemory;
+    /// use memflow::mem::{VirtualTranslate, DirectTranslate};
     /// use memflow::types::size;
     /// use memflow::architecture::x86::x64;
     /// use memflow::iter::FnExtend;
-    /// use memflow::mem::{VirtualTranslate, DirectTranslate};
     ///
     /// # const VIRT_MEM_SIZE: usize = size::mb(8);
     /// # const CHUNK_SIZE: usize = 2;
@@ -88,27 +91,73 @@ where
         VO: Extend<(PhysicalAddress, B)>,
         FO: Extend<(Error, Address, B)>;
 
-    // helpers
+    /// Translate a single virtual address
+    ///
+    /// This function will do a virtual to physical memory translation for the
+    /// `ScopedVirtualTranslate` for single address returning either PhysicalAddress, or an error.
+    ///
+    /// # Examples
+    /// ```
+    /// # use memflow::error::Result;
+    /// # use memflow::types::{PhysicalAddress, Address};
+    /// # use memflow::mem::dummy::DummyMemory;
+    /// # use memflow::types::size;
+    /// # use memflow::architecture::ScopedVirtualTranslate;
+    /// use memflow::mem::{VirtualTranslate, DirectTranslate};
+    /// use memflow::architecture::x86::x64;
+    ///
+    /// # const VIRT_MEM_SIZE: usize = size::mb(8);
+    /// # const CHUNK_SIZE: usize = 2;
+    /// #
+    /// # let mut mem = DummyMemory::new(size::mb(16));
+    /// # let (dtb, virtual_base) = mem.alloc_dtb(VIRT_MEM_SIZE, &[]);
+    /// # let translator = x64::new_translator(dtb);
+    /// let arch = x64::ARCH;
+    ///
+    /// let mut direct_translate = DirectTranslate::new();
+    ///
+    /// // Translate a mapped address
+    /// let res = direct_translate.virt_to_phys(
+    ///     &mut mem,
+    ///     &translator,
+    ///     virtual_base,
+    /// );
+    ///
+    /// assert!(res.is_ok());
+    ///
+    /// // Translate unmapped address
+    /// let res = direct_translate.virt_to_phys(
+    ///     &mut mem,
+    ///     &translator,
+    ///     virtual_base - 1,
+    /// );
+    ///
+    /// assert!(res.is_err());
+    ///
+    /// ```
     fn virt_to_phys<T: PhysicalMemory + ?Sized, D: ScopedVirtualTranslate>(
         &mut self,
         phys_mem: &mut T,
         translator: &D,
         vaddr: Address,
     ) -> Result<PhysicalAddress> {
-        let mut vec = vec![]; //Vec::new_in(&arena);
-        let mut vec_fail = vec![]; //BumpVec::new_in(&arena);
+        let mut output = None;
+        let mut success = FnExtend::new(|elem: (PhysicalAddress, _)| {
+            if output.is_none() {
+                output = Some(elem.0);
+            }
+        });
+        let mut output_err = None;
+        let mut fail = FnExtend::new(|elem: (Error, _, _)| output_err = Some(elem.0));
+
         self.virt_to_phys_iter(
             phys_mem,
             translator,
             Some((vaddr, 1)).into_iter(),
-            &mut vec,
-            &mut vec_fail,
+            &mut success,
+            &mut fail,
         );
-        if let Some(ret) = vec.pop() {
-            Ok(ret.0)
-        } else {
-            Err(vec_fail.pop().unwrap().0)
-        }
+        output.map(Ok).unwrap_or_else(|| Err(output_err.unwrap()))
     }
 }
 

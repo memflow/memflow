@@ -48,12 +48,48 @@ pub enum Endianess {
 /// On x86 architectures, it is a single `Address` - a CR3 register. But other architectures may
 /// use multiple translation bases, or use a completely different translation mechanism (MIPS).
 pub trait ScopedVirtualTranslate: Clone + Copy + Send {
+    /// Translate a single virtual address
+    ///
+    /// # Examples
+    /// ```
+    /// # use memflow::error::Result;
+    /// # use memflow::types::{PhysicalAddress, Address};
+    /// # use memflow::mem::dummy::DummyMemory;
+    /// use memflow::architecture::ScopedVirtualTranslate;
+    /// use memflow::architecture::x86::x64;
+    /// use memflow::types::size;
+    ///
+    /// # const VIRT_MEM_SIZE: usize = size::mb(8);
+    /// # const CHUNK_SIZE: usize = 2;
+    /// #
+    /// # let mut mem = DummyMemory::new(size::mb(16));
+    /// # let (dtb, virtual_base) = mem.alloc_dtb(VIRT_MEM_SIZE, &[]);
+    /// # let translator = x64::new_translator(dtb);
+    /// let arch = x64::ARCH;
+    ///
+    /// // Translate a mapped address
+    /// let res = translator.virt_to_phys(
+    ///     &mut mem,
+    ///     virtual_base,
+    /// );
+    ///
+    /// assert!(res.is_ok());
+    ///
+    /// // Translate unmapped address
+    /// let res = translator.virt_to_phys(
+    ///     &mut mem,
+    ///     virtual_base - 1,
+    /// );
+    ///
+    /// assert!(res.is_err());
+    ///
+    /// ```
     fn virt_to_phys<T: PhysicalMemory>(
         &self,
         mem: &mut T,
         addr: Address,
     ) -> Result<PhysicalAddress> {
-        let mut buf: [std::mem::MaybeUninit<u8>; 128] =
+        let mut buf: [std::mem::MaybeUninit<u8>; 512] =
             unsafe { std::mem::MaybeUninit::uninit().assume_init() };
         let mut output = None;
         let mut success = FnExtend::new(|elem: (PhysicalAddress, _)| {

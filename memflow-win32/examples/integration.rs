@@ -1,4 +1,4 @@
-use memflow::connector::*;
+use memflow::dynamic::*;
 use memflow::mem::*;
 
 use memflow_win32::error::{Error, Result};
@@ -14,7 +14,7 @@ static mut HAD_ERROR: bool = false;
 fn main() -> Result<()> {
     let (connector, args_str) = parse_args();
 
-    let args = ConnectorArgs::parse(&args_str)?;
+    let args = Args::parse(&args_str)?;
 
     // create inventory + connector
     let inventory = unsafe { ConnectorInventory::scan() };

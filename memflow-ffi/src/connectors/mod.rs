@@ -2,7 +2,7 @@ use std::ffi::CStr;
 use std::os::raw::c_char;
 use std::path::PathBuf;
 
-use memflow::connector::{ConnectorArgs, ConnectorInventory};
+use memflow::dynamic::{Args, ConnectorInventory};
 
 use crate::util::*;
 
@@ -93,7 +93,7 @@ pub unsafe extern "C" fn inventory_create_connector(
             .map(to_heap)
     } else {
         let rargs = CStr::from_ptr(args).to_string_lossy();
-        let conn_args = ConnectorArgs::parse(&rargs).map_err(inspect_err).ok()?;
+        let conn_args = Args::parse(&rargs).map_err(inspect_err).ok()?;
 
         inv.create_connector(&rname, &conn_args)
             .map_err(inspect_err)

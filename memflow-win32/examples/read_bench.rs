@@ -4,7 +4,7 @@ use std::time::{Duration, Instant};
 use clap::*;
 use log::Level;
 
-use memflow::connector::*;
+use memflow::dynamic::*;
 use memflow::mem::*;
 use memflow::process::*;
 use memflow::types::*;
@@ -187,7 +187,7 @@ fn main() -> Result<()> {
     let mut connector = unsafe {
         inventory.create_connector(
             matches.value_of("connector").unwrap(),
-            &ConnectorArgs::parse(matches.value_of("args").unwrap()).unwrap(),
+            &Args::parse(matches.value_of("args").unwrap()).unwrap(),
         )
     }
     .unwrap();

@@ -16,28 +16,28 @@ use hashbrown::HashMap;
 ///
 /// Construct from a string:
 /// ```
-/// use memflow::connector::ConnectorArgs;
+/// use memflow::dynamic::Args;
 /// use std::convert::TryFrom;
 ///
 /// let argstr = "opt1=test1,opt2=test2,opt3=test3";
-/// let args = ConnectorArgs::parse(argstr).unwrap();
+/// let args = Args::parse(argstr).unwrap();
 /// ```
 ///
 /// Construct as builder:
 /// ```
-/// use memflow::connector::ConnectorArgs;
+/// use memflow::dynamic::Args;
 ///
-/// let args = ConnectorArgs::new()
+/// let args = Args::new()
 ///     .insert("arg1", "test1")
 ///     .insert("arg2", "test2");
 /// ```
 #[derive(Debug, Clone)]
-pub struct ConnectorArgs {
+pub struct Args {
     map: HashMap<String, String>,
 }
 
-impl fmt::Display for ConnectorArgs {
-    /// Generates a string of key-value pairs containing the underlying data of the ConnectorArgs.
+impl fmt::Display for Args {
+    /// Generates a string of key-value pairs containing the underlying data of the Args.
     ///
     /// This function will produce a string that can be properly parsed by the `parse` function again.
     ///
@@ -64,20 +64,20 @@ impl fmt::Display for ConnectorArgs {
     }
 }
 
-impl ConnectorArgs {
-    /// Creates an empty `ConnectorArgs` struct.
+impl Args {
+    /// Creates an empty `Args` struct.
     pub fn new() -> Self {
         Self {
             map: HashMap::new(),
         }
     }
 
-    /// Creates a `ConnectorArgs` struct with a default (unnamed) value.
+    /// Creates a `Args` struct with a default (unnamed) value.
     pub fn with_default(value: &str) -> Self {
         Self::new().insert("default", value)
     }
 
-    /// Tries to create a `ConnectorArgs` structure from an argument string.
+    /// Tries to create a `Args` structure from an argument string.
     ///
     /// The argument string is a string of comma seperated key-value pairs.
     ///
@@ -115,9 +115,9 @@ impl ConnectorArgs {
     /// # Examples
     ///
     /// ```
-    /// use memflow::connector::ConnectorArgs;
+    /// use memflow::dynamic::Args;
     ///
-    /// let args = ConnectorArgs::new()
+    /// let args = Args::new()
     ///     .insert("arg1", "test1")
     ///     .insert("arg2", "test2");
     /// ```
@@ -141,29 +141,29 @@ impl ConnectorArgs {
     }
 }
 
-impl Default for ConnectorArgs {
+impl Default for Args {
     fn default() -> Self {
-        ConnectorArgs::new()
+        Args::new()
     }
 }
 
-impl TryFrom<&str> for ConnectorArgs {
+impl TryFrom<&str> for Args {
     type Error = Error;
 
     fn try_from(args: &str) -> Result<Self> {
-        ConnectorArgs::parse(args)
+        Args::parse(args)
     }
 }
 
-impl TryFrom<String> for ConnectorArgs {
+impl TryFrom<String> for Args {
     type Error = Error;
 
     fn try_from(args: String) -> Result<Self> {
-        ConnectorArgs::parse(&args)
+        Args::parse(&args)
     }
 }
 
-impl Into<String> for ConnectorArgs {
+impl Into<String> for Args {
     fn into(self) -> String {
         self.to_string()
     }
@@ -176,7 +176,7 @@ mod tests {
     #[test]
     pub fn from_str() {
         let argstr = "opt1=test1,opt2=test2,opt3=test3";
-        let args = ConnectorArgs::parse(argstr).unwrap();
+        let args = Args::parse(argstr).unwrap();
         assert_eq!(args.get("opt1").unwrap(), "test1");
         assert_eq!(args.get("opt2").unwrap(), "test2");
         assert_eq!(args.get("opt3").unwrap(), "test3");
@@ -185,7 +185,7 @@ mod tests {
     #[test]
     pub fn from_str_default() {
         let argstr = "test0,opt1=test1,opt2=test2,opt3=test3";
-        let args = ConnectorArgs::parse(argstr).unwrap();
+        let args = Args::parse(argstr).unwrap();
         assert_eq!(args.get_default().unwrap(), "test0");
         assert_eq!(args.get("opt1").unwrap(), "test1");
         assert_eq!(args.get("opt2").unwrap(), "test2");
@@ -195,16 +195,14 @@ mod tests {
     #[test]
     pub fn from_str_default2() {
         let argstr = "opt1=test1,test0";
-        let args = ConnectorArgs::parse(argstr).unwrap();
+        let args = Args::parse(argstr).unwrap();
         assert_eq!(args.get_default(), None);
         assert_eq!(args.get("opt1").unwrap(), "test1");
     }
 
     #[test]
     pub fn builder() {
-        let args = ConnectorArgs::new()
-            .insert("arg1", "test1")
-            .insert("arg2", "test2");
+        let args = Args::new().insert("arg1", "test1").insert("arg2", "test2");
         assert_eq!(args.get("arg1").unwrap(), "test1");
         assert_eq!(args.get("arg2").unwrap(), "test2");
     }
@@ -212,15 +210,15 @@ mod tests {
     #[test]
     pub fn parse_empty() {
         let argstr = "opt1=test1,test0";
-        let args = ConnectorArgs::parse(argstr).unwrap();
+        let args = Args::parse(argstr).unwrap();
         assert_eq!(args.get_default(), None);
     }
 
     #[test]
     pub fn to_string() {
         let argstr = "opt1=test1,opt2=test2,opt3=test3";
-        let args = ConnectorArgs::parse(argstr).unwrap();
-        let args2 = ConnectorArgs::parse(&args.to_string()).unwrap();
+        let args = Args::parse(argstr).unwrap();
+        let args2 = Args::parse(&args.to_string()).unwrap();
         assert_eq!(args2.get_default(), None);
         assert_eq!(args2.get("opt1").unwrap(), "test1");
         assert_eq!(args2.get("opt2").unwrap(), "test2");
@@ -230,8 +228,8 @@ mod tests {
     #[test]
     pub fn to_string_with_default() {
         let argstr = "test0,opt1=test1,opt2=test2,opt3=test3";
-        let args = ConnectorArgs::parse(argstr).unwrap();
-        let args2 = ConnectorArgs::parse(&args.to_string()).unwrap();
+        let args = Args::parse(argstr).unwrap();
+        let args2 = Args::parse(&args.to_string()).unwrap();
         assert_eq!(args2.get_default().unwrap(), "test0");
         assert_eq!(args2.get("opt1").unwrap(), "test1");
         assert_eq!(args2.get("opt2").unwrap(), "test2");

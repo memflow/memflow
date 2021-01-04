@@ -43,7 +43,7 @@ rand = { version = "0.7" }
 rand_xorshift = "0.2"
 
 [features]
-default = ["std", "serde_derive", "inventory", "filemap", "memmapfiles"]
+default = ["std", "serde_derive", "dynamic", "filemap", "memmapfiles"]
 trace_mmu = [] # enables debug traces in the mmu (very verbose)
 dummy_mem = ["rand", "rand_xorshift"]
 std = ["coarsetime", "no-std-compat/std"]
@@ -51,5 +51,5 @@ collections = []
 alloc = []
 serde_derive = ["serde"]
 memmapfiles = ["toml", "serde_derive"]
-inventory = ["libloading", "dirs"]
+dynamic = ["libloading", "dirs"]
 filemap = ["memmap"]

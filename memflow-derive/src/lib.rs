@@ -93,7 +93,7 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
                         Err(e)
                     })
                     .ok()?;
-                let conn_args = ::memflow::connector::ConnectorArgs::parse(argsstr)
+                let conn_args = ::memflow::dynamic::Args::parse(argsstr)
                     .or_else(|e| {
                         ::log::error!("error parsing connector args: {}", e);
                         Err(e)
@@ -121,7 +121,7 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
                         Err(e)
                     })
                     .ok()?;
-                let conn_args = ::memflow::connector::ConnectorArgs::parse(argsstr)
+                let conn_args = ::memflow::dynamic::Args::parse(argsstr)
                     .or_else(|e| {
                         Err(e)
                     })
@@ -140,19 +140,20 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
     let mut gen = quote! {
         #[doc(hidden)]
         #[no_mangle]
-        pub static MEMFLOW_CONNECTOR: ::memflow::connector::ConnectorDescriptor = ::memflow::connector::ConnectorDescriptor {
-            connector_version: ::memflow::connector::MEMFLOW_CONNECTOR_VERSION,
+        pub static MEMFLOW_CONNECTOR: ::memflow::dynamic::ConnectorDescriptor = ::memflow::dynamic::ConnectorDescriptor {
+            connector_version: ::memflow::dynamic::MEMFLOW_CONNECTOR_VERSION,
             name: #connector_name,
-            vtable: ::memflow::connector::ConnectorFunctionTable {
-                create: mf_create,
-
-                phys_read_raw_list: mf_phys_read_raw_list,
-                phys_write_raw_list: mf_phys_write_raw_list,
-                metadata: mf_metadata,
-
-                clone: mf_clone,
-
-                drop: mf_drop,
+            vtable: ::memflow::dynamic::ConnectorFunctionTable {
+                base: ::memflow::dynamic::ConnectorBaseTable {
+                    create: mf_create,
+                    clone: mf_clone,
+                    drop: mf_drop,
+                },
+                phys: ::memflow::dynamic::PhysicalMemoryFunctionTable {
+                    phys_read_raw_list: mf_phys_read_raw_list,
+                    phys_write_raw_list: mf_phys_write_raw_list,
+                    metadata: mf_metadata,
+                }
             },
         };
 

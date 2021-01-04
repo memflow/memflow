@@ -3,7 +3,7 @@ use std::thread;
 use clap::*;
 use log::{info, Level};
 
-use memflow::connector::*;
+use memflow::dynamic::*;
 use memflow::mem::*;
 
 use memflow_win32::win32::Kernel;
@@ -116,7 +116,7 @@ pub fn main() {
     let connector = unsafe {
         inventory.create_connector(
             matches.value_of("connector").unwrap(),
-            &ConnectorArgs::parse(matches.value_of("args").unwrap()).unwrap(),
+            &Args::parse(matches.value_of("args").unwrap()).unwrap(),
         )
     }
     .unwrap();

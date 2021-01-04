@@ -29,10 +29,7 @@ pub trait Loadable: Sized {
     type Instance;
 
     fn exists(&self, instances: &[LibInstance<Self>]) -> bool {
-        instances
-            .iter()
-            .find(|i| i.loader.ident() == self.ident())
-            .is_some()
+        instances.iter().any(|i| i.loader.ident() == self.ident())
     }
 
     fn ident(&self) -> &str;
@@ -44,9 +41,14 @@ pub trait Loadable: Sized {
     /// matches the one specified here. This is especially true if
     /// the loaded library implements the necessary interface manually.
     ///
-    /// It is adviced to use a proc macro for defining a connector.
+    /// It is adviced to use a provided proc macro to define a valid library.
     unsafe fn load(library: Library, path: impl AsRef<Path>) -> Result<LibInstance<Self>>;
 
+    /// # Safety
+    ///
+    /// Loading third party libraries is inherently unsafe and the compiler
+    /// cannot guarantee that the implementation of the library matches the one
+    /// specified here.
     unsafe fn load_path(path: impl AsRef<Path>) -> Result<LibInstance<Self>> {
         let library =
             Library::new(path.as_ref()).map_err(|_| Error::Connector("unable to load library"))?;
@@ -54,6 +56,10 @@ pub trait Loadable: Sized {
         Self::load(library, path)
     }
 
+    /// Creates an `Instance` of the library
+    ///
+    /// This function assumes that `load` performed necessary safety checks
+    /// for validity of the library.
     fn instantiate(&self, lib: Arc<Library>, args: &Args) -> Result<Self::Instance>;
 }
 
@@ -62,7 +68,7 @@ pub struct LibInventory<T> {
 }
 
 impl<F, T: Loadable<Instance = F>> LibInventory<T> {
-    /// Creates a new inventory of connectors from the provided path.
+    /// Creates a new inventory of generic libraries from the provided path.
     /// The path has to be a valid directory or the function will fail with an `Error::IO` error.
     ///
     /// # Safety
@@ -97,7 +103,7 @@ impl<F, T: Loadable<Instance = F>> LibInventory<T> {
         Self::scan_path(path)
     }
 
-    /// Creates a new inventory of connectors by searching various paths.
+    /// Creates a new inventory of generic libraries by searching various paths.
     ///
     /// It will query PATH, and an additional set of of directories (standard unix ones, if unix,
     /// and "HOME/.local/lib" on all OSes) for "memflow" directory, and if there is one, then
@@ -215,7 +221,7 @@ impl<F, T: Loadable<Instance = F>> LibInventory<T> {
     }
 
     /// Returns the names of all currently available libs that can be used
-    /// when calling `create_connector` or `create_connector_default`.
+    /// when calling `instantiate` or `instantiate_default`.
     pub fn available_libs(&self) -> Vec<String> {
         self.libs
             .iter()
@@ -223,19 +229,16 @@ impl<F, T: Loadable<Instance = F>> LibInventory<T> {
             .collect::<Vec<_>>()
     }
 
-    /// Tries to create a new connector instance for the connector with the given name.
-    /// The connector will be initialized with the args provided to this call.
+    /// Tries to create a new instance for the library with the given name.
+    /// The instance will be initialized with the args provided to this call.
     ///
-    /// In case no connector could be found this will throw an `Error::Connector`.
+    /// In case no library could be found this will throw an `Error::Library`.
     ///
     /// # Safety
     ///
-    /// Loading third party libraries is inherently unsafe and the compiler
-    /// cannot guarantee that the implementation of the library
-    /// matches the one specified here. This is especially true if
-    /// the loaded library implements the necessary interface manually.
-    ///
-    /// It is adviced to use a proc macro for defining a connector.
+    /// This function assumes all libraries were loaded with appropriate safety
+    /// checks in place. This function is safe, but can crash if previous checks
+    /// fail.
     ///
     /// # Examples
     ///
@@ -247,7 +250,7 @@ impl<F, T: Loadable<Instance = F>> LibInventory<T> {
     ///     ConnectorInventory::scan_path("./")
     /// }.unwrap();
     /// let connector = unsafe {
-    ///     inventory.create_connector("coredump", &Args::new())
+    ///     inventory.instantiate("coredump", &Args::new())
     /// }.unwrap();
     /// ```
     ///
@@ -264,7 +267,7 @@ impl<F, T: Loadable<Instance = F>> LibInventory<T> {
     ///     Ok(DummyMemory::new(size::mb(16)))
     /// }
     /// ```
-    pub unsafe fn create_connector(&self, name: &str, args: &Args) -> Result<F> {
+    pub fn instantiate(&self, name: &str, args: &Args) -> Result<F> {
         let lib = self
             .libs
             .iter()
@@ -275,7 +278,7 @@ impl<F, T: Loadable<Instance = F>> LibInventory<T> {
                     name,
                     self.libs
                         .iter()
-                        .map(|c| c.loader.ident().clone())
+                        .map(|c| c.loader.ident().to_string())
                         .collect::<Vec<_>>()
                         .join(", ")
                 );
@@ -284,7 +287,7 @@ impl<F, T: Loadable<Instance = F>> LibInventory<T> {
         lib.loader.instantiate(lib.library.clone(), args)
     }
 
-    /// Creates a connector in the same way `create_connector` does but without any arguments provided.
+    /// Creates an instance in the same way `instantiate` does but without any arguments provided.
     ///
     /// # Safety
     ///
@@ -301,11 +304,11 @@ impl<F, T: Loadable<Instance = F>> LibInventory<T> {
     ///     ConnectorInventory::scan_path("./")
     /// }.unwrap();
     /// let connector = unsafe {
-    ///     inventory.create_connector_default("coredump")
+    ///     inventory.instantiate_default("coredump")
     /// }.unwrap();
     /// ```
-    pub unsafe fn create_connector_default(&self, name: &str) -> Result<F> {
-        self.create_connector(name, &Args::default())
+    pub fn instantiate_default(&self, name: &str) -> Result<F> {
+        self.instantiate(name, &Args::default())
     }
 }
 

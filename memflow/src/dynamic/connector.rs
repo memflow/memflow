@@ -187,7 +187,7 @@ impl Clone for ConnectorInstance {
         let instance = (self.vtable.base.clone)(self.instance).expect("Unable to clone Connector");
         Self {
             instance,
-            vtable: self.vtable.clone(),
+            vtable: self.vtable,
             library: self.library.clone(),
         }
     }
@@ -249,7 +249,7 @@ impl Loadable for LoadableConnector {
         Ok(ConnectorInstance {
             instance,
             vtable,
-            library: lib.clone(),
+            library: lib,
         })
     }
 }

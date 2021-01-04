@@ -85,7 +85,7 @@ pub unsafe extern "C" fn inventory_create_connector(
     let rname = CStr::from_ptr(name).to_string_lossy();
 
     if args.is_null() {
-        inv.create_connector_default(&rname)
+        inv.instantiate_default(&rname)
             .map_err(inspect_err)
             .ok()
             .map(to_heap)
@@ -95,7 +95,7 @@ pub unsafe extern "C" fn inventory_create_connector(
         let rargs = CStr::from_ptr(args).to_string_lossy();
         let conn_args = Args::parse(&rargs).map_err(inspect_err).ok()?;
 
-        inv.create_connector(&rname, &conn_args)
+        inv.instantiate(&rname, &conn_args)
             .map_err(inspect_err)
             .ok()
             .map(to_heap)

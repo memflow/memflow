@@ -44,13 +44,12 @@ pub fn main() {
 
     // create inventory + connector
     let inventory = unsafe { ConnectorInventory::scan() };
-    let connector = unsafe {
-        inventory.create_connector(
+    let connector = inventory
+        .instantiate(
             matches.value_of("connector").unwrap(),
             &Args::parse(matches.value_of("args").unwrap()).unwrap(),
         )
-    }
-    .unwrap();
+        .unwrap();
 
     // creating the kernel object
     let mut kernel = Kernel::builder(connector)

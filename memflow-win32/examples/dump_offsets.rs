@@ -51,13 +51,12 @@ pub fn main() {
 
     // create inventory + connector
     let inventory = unsafe { ConnectorInventory::scan() };
-    let connector = unsafe {
-        inventory.create_connector(
+    let connector = inventory
+        .instantiate(
             matches.value_of("connector").unwrap(),
             &Args::parse(matches.value_of("args").unwrap()).unwrap(),
         )
-    }
-    .unwrap();
+        .unwrap();
 
     let kernel = Kernel::builder(connector)
         .build_default_caches()

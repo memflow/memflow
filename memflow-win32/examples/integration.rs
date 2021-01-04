@@ -18,7 +18,7 @@ fn main() -> Result<()> {
 
     // create inventory + connector
     let inventory = unsafe { ConnectorInventory::scan() };
-    let connector = unsafe { inventory.create_connector(&connector, &args)? };
+    let connector = inventory.instantiate(&connector, &args)?;
 
     let mut kernel = build_kernel(connector)?;
 

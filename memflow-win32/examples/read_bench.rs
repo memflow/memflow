@@ -184,13 +184,12 @@ fn main() -> Result<()> {
 
     // create inventory + connector
     let inventory = unsafe { ConnectorInventory::scan() };
-    let mut connector = unsafe {
-        inventory.create_connector(
+    let mut connector = inventory
+        .instantiate(
             matches.value_of("connector").unwrap(),
             &Args::parse(matches.value_of("args").unwrap()).unwrap(),
         )
-    }
-    .unwrap();
+        .unwrap();
 
     // scan for win32 kernel
     let kernel_info = KernelInfo::scanner(&mut connector).scan()?;

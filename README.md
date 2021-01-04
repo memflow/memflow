@@ -9,7 +9,7 @@
 
 memflow is a library that allows live memory introspection of running systems and their snapshots. Due to its modular approach it trivial to support almost any scenario where Direct Memory Access is available.
 
-The very core of the library is a [PhysicalMemory](https://docs.rs/memflow/latest/memflow/mem/phys_mem/trait.PhysicalMemory.html) that provides direct memory access in an abstract environment. This object that can be defined both statically, and dynamically with the use of the `inventory` feature. If `inventory` is enabled, it is possible to dynamically load libraries that provide Direct Memory Access.
+The very core of the library is a [PhysicalMemory](https://docs.rs/memflow/latest/memflow/mem/phys_mem/trait.PhysicalMemory.html) that provides direct memory access in an abstract environment. This object that can be defined both statically, and dynamically with the use of the `dynamic` feature. If `dynamic` is enabled, it is possible to dynamically load libraries that provide Direct Memory Access.
 
 Through the use of OS abstraction layers, like [memflow-win32](https://github.com/memflow/memflow/tree/master/memflow-win32), user can gain access to virtual memory of individual processes, by creating objects that implement [VirtualMemory](https://docs.rs/memflow/latest/memflow/mem/virt_mem/trait.VirtualMemory.html).
 
@@ -66,7 +66,7 @@ Alternatively you can run the benchmarks via `cargo bench` (can pass regex filte
 
 ## Running Examples
 
-All examples support the memflow connector inventory system.
+All examples support the memflow connector `dynamic` inventory system.
 You will have to install at least one `connector` to use the examples.
 
 To install a connector just use the [memflowup](https://github.com/memflow/memflowup) utility,
@@ -118,7 +118,7 @@ memflow-win32 is tested on the latest Windows 10 versions all the way down to Wi
 
 ## Connectors
 
-All examples provided in this repository are using the inventory to
+All examples provided in this repository are using the `dynamic` inventory to
 dynamically load a connector at runtime. When using the library programatically it is possible to just statically link a connector into the code.
 
 Some connectors also require different permissions. Please refer to the individual connector repositories for more information.

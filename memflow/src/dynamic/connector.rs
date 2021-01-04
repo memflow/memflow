@@ -5,6 +5,7 @@ use super::{Args, LibInstance, Loadable};
 
 use std::ffi::{c_void, CString};
 use std::os::raw::c_char;
+use std::path::Path;
 use std::sync::Arc;
 
 use libloading::Library;
@@ -44,49 +45,44 @@ pub struct ConnectorFunctionTable {
 
 impl ConnectorFunctionTable {
     pub fn create_vtable<T: PhysicalMemory + Clone>(
-        create: extern "C" fn(
-            *const ::std::os::raw::c_char,
-            i32,
-        ) -> Option<&'static mut ::std::ffi::c_void>,
+        create: extern "C" fn(*const c_char, i32) -> Option<&'static mut c_void>,
     ) -> Self {
         Self {
-            base: ConnectorBaseTable {
-                create,
-                clone: mf_clone::<T>,
-                drop: mf_drop::<T>,
-            },
-            phys: PhysicalMemoryFunctionTable {
-                phys_read_raw_list: phys_read_raw_list_int::<T>,
-                phys_write_raw_list: phys_write_raw_list_int::<T>,
-                metadata: metadata_int::<T>,
-            },
+            base: ConnectorBaseTable::new::<T>(create),
+            phys: PhysicalMemoryFunctionTable::new::<T>(),
         }
     }
-}
-
-#[doc(hidden)]
-extern "C" fn mf_clone<T: Clone>(
-    phys_mem: &::std::ffi::c_void,
-) -> std::option::Option<&'static mut ::std::ffi::c_void> {
-    let conn = unsafe { &*(phys_mem as *const ::std::ffi::c_void as *const T) };
-    let cloned_conn = Box::new(conn.clone());
-    Some(unsafe { &mut *(Box::into_raw(cloned_conn) as *mut ::std::ffi::c_void) })
-}
-
-#[doc(hidden)]
-extern "C" fn mf_drop<T: PhysicalMemory>(phys_mem: &mut ::std::ffi::c_void) {
-    let _: Box<T> = unsafe { Box::from_raw(::std::mem::transmute(phys_mem)) };
-    // drop box
 }
 
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct ConnectorBaseTable {
     pub create: extern "C" fn(args: *const c_char, log_level: i32) -> Option<&'static mut c_void>,
-
     pub clone: extern "C" fn(phys_mem: &c_void) -> Option<&'static mut c_void>,
-
     pub drop: extern "C" fn(phys_mem: &mut c_void),
+}
+
+impl ConnectorBaseTable {
+    pub fn new<T: PhysicalMemory + Clone>(
+        create: extern "C" fn(*const c_char, i32) -> Option<&'static mut c_void>,
+    ) -> Self {
+        Self {
+            create,
+            clone: clone_int::<T>,
+            drop: drop_int::<T>,
+        }
+    }
+}
+
+extern "C" fn clone_int<T: Clone>(phys_mem: &c_void) -> Option<&'static mut c_void> {
+    let conn = unsafe { &*(phys_mem as *const c_void as *const T) };
+    let cloned_conn = Box::new(conn.clone());
+    Some(unsafe { &mut *(Box::into_raw(cloned_conn) as *mut c_void) })
+}
+
+extern "C" fn drop_int<T: PhysicalMemory>(phys_mem: &mut c_void) {
+    let _: Box<T> = unsafe { Box::from_raw(std::mem::transmute(phys_mem)) };
+    // drop box
 }
 
 #[repr(C)]
@@ -105,10 +101,8 @@ pub struct PhysicalMemoryFunctionTable {
     pub metadata: extern "C" fn(phys_mem: &c_void) -> PhysicalMemoryMetadata,
 }
 
-pub struct GenericInto<T>(std::marker::PhantomData<T>);
-
-impl<T: PhysicalMemory> GenericInto<T> {
-    pub fn new() -> PhysicalMemoryFunctionTable {
+impl PhysicalMemoryFunctionTable {
+    pub fn new<T: PhysicalMemory>() -> PhysicalMemoryFunctionTable {
         PhysicalMemoryFunctionTable {
             phys_write_raw_list: phys_write_raw_list_int::<T>,
             phys_read_raw_list: phys_read_raw_list_int::<T>,
@@ -122,7 +116,7 @@ extern "C" fn phys_write_raw_list_int<T: PhysicalMemory>(
     write_data: *const PhysicalWriteData,
     write_data_count: usize,
 ) -> i32 {
-    let conn = unsafe { &mut *(phys_mem as *mut ::std::ffi::c_void as *mut T) };
+    let conn = unsafe { &mut *(phys_mem as *mut c_void as *mut T) };
     let write_data_slice = unsafe { std::slice::from_raw_parts(write_data, write_data_count) };
 
     match conn.phys_write_raw_list(write_data_slice) {
@@ -136,7 +130,7 @@ extern "C" fn phys_read_raw_list_int<T: PhysicalMemory>(
     read_data: *mut PhysicalReadData,
     read_data_count: usize,
 ) -> i32 {
-    let conn = unsafe { &mut *(phys_mem as *mut ::std::ffi::c_void as *mut T) };
+    let conn = unsafe { &mut *(phys_mem as *mut c_void as *mut T) };
     let read_data_slice = unsafe { std::slice::from_raw_parts_mut(read_data, read_data_count) };
 
     match conn.phys_read_raw_list(read_data_slice) {
@@ -146,7 +140,7 @@ extern "C" fn phys_read_raw_list_int<T: PhysicalMemory>(
 }
 
 extern "C" fn metadata_int<T: PhysicalMemory>(phys_mem: &c_void) -> PhysicalMemoryMetadata {
-    let conn = unsafe { &*(phys_mem as *const ::std::ffi::c_void as *const T) };
+    let conn = unsafe { &*(phys_mem as *const c_void as *const T) };
     conn.metadata()
 }
 
@@ -216,7 +210,7 @@ impl Loadable for LoadableConnector {
         self.descriptor.name
     }
 
-    unsafe fn load(library: Library) -> Result<LibInstance<Self>> {
+    unsafe fn load(library: Library, path: impl AsRef<Path>) -> Result<LibInstance<Self>> {
         let descriptor = library
             .get::<*mut ConnectorDescriptor>(b"MEMFLOW_CONNECTOR\0")
             .map_err(|_| Error::Connector("connector descriptor not found"))?
@@ -225,7 +219,9 @@ impl Loadable for LoadableConnector {
         if descriptor.connector_version != MEMFLOW_CONNECTOR_VERSION {
             warn!(
                 "connector {:?} has a different version. version {} required, found {}.",
-                "PATHHOLDER", MEMFLOW_CONNECTOR_VERSION, descriptor.connector_version
+                path.as_ref(),
+                MEMFLOW_CONNECTOR_VERSION,
+                descriptor.connector_version
             );
             return Err(Error::Connector("connector version mismatch"));
         }

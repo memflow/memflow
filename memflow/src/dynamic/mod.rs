@@ -45,13 +45,13 @@ pub trait Loadable: Sized {
     /// the loaded library implements the necessary interface manually.
     ///
     /// It is adviced to use a proc macro for defining a connector.
-    unsafe fn load(library: Library) -> Result<LibInstance<Self>>;
+    unsafe fn load(library: Library, path: impl AsRef<Path>) -> Result<LibInstance<Self>>;
 
     unsafe fn load_path(path: impl AsRef<Path>) -> Result<LibInstance<Self>> {
         let library =
             Library::new(path.as_ref()).map_err(|_| Error::Connector("unable to load library"))?;
 
-        Self::load(library)
+        Self::load(library, path)
     }
 
     fn instantiate(&self, lib: Arc<Library>, args: &Args) -> Result<Self::Instance>;

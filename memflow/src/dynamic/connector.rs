@@ -28,7 +28,7 @@ pub struct ConnectorDescriptor {
     pub name: &'static str,
 
     /// The vtable for all opaque function calls to the connector.
-    pub vtable: ConnectorFunctionTable,
+    pub create_vtable: extern "C" fn() -> ConnectorFunctionTable,
 }
 
 #[repr(C)]
@@ -36,11 +36,47 @@ pub struct ConnectorDescriptor {
 pub struct ConnectorFunctionTable {
     /// The vtable for object creation and cloning
     pub base: ConnectorBaseTable,
-
     /// The vtable for all physical memory funmction calls to the connector.
     pub phys: PhysicalMemoryFunctionTable,
     // further optional table expansion with Option<&'static SomeFunctionTable>
     // ...
+}
+
+impl ConnectorFunctionTable {
+    pub fn create_vtable<T: PhysicalMemory + Clone>(
+        create: extern "C" fn(
+            *const ::std::os::raw::c_char,
+            i32,
+        ) -> Option<&'static mut ::std::ffi::c_void>,
+    ) -> Self {
+        Self {
+            base: ConnectorBaseTable {
+                create,
+                clone: mf_clone::<T>,
+                drop: mf_drop::<T>,
+            },
+            phys: PhysicalMemoryFunctionTable {
+                phys_read_raw_list: phys_read_raw_list_int::<T>,
+                phys_write_raw_list: phys_write_raw_list_int::<T>,
+                metadata: metadata_int::<T>,
+            },
+        }
+    }
+}
+
+#[doc(hidden)]
+extern "C" fn mf_clone<T: Clone>(
+    phys_mem: &::std::ffi::c_void,
+) -> std::option::Option<&'static mut ::std::ffi::c_void> {
+    let conn = unsafe { &*(phys_mem as *const ::std::ffi::c_void as *const T) };
+    let cloned_conn = Box::new(conn.clone());
+    Some(unsafe { &mut *(Box::into_raw(cloned_conn) as *mut ::std::ffi::c_void) })
+}
+
+#[doc(hidden)]
+extern "C" fn mf_drop<T: PhysicalMemory>(phys_mem: &mut ::std::ffi::c_void) {
+    let _: Box<T> = unsafe { Box::from_raw(::std::mem::transmute(phys_mem)) };
+    // drop box
 }
 
 #[repr(C)]
@@ -67,6 +103,51 @@ pub struct PhysicalMemoryFunctionTable {
         write_data_count: usize,
     ) -> i32,
     pub metadata: extern "C" fn(phys_mem: &c_void) -> PhysicalMemoryMetadata,
+}
+
+pub struct GenericInto<T>(std::marker::PhantomData<T>);
+
+impl<T: PhysicalMemory> GenericInto<T> {
+    pub fn new() -> PhysicalMemoryFunctionTable {
+        PhysicalMemoryFunctionTable {
+            phys_write_raw_list: phys_write_raw_list_int::<T>,
+            phys_read_raw_list: phys_read_raw_list_int::<T>,
+            metadata: metadata_int::<T>,
+        }
+    }
+}
+
+extern "C" fn phys_write_raw_list_int<T: PhysicalMemory>(
+    phys_mem: &mut c_void,
+    write_data: *const PhysicalWriteData,
+    write_data_count: usize,
+) -> i32 {
+    let conn = unsafe { &mut *(phys_mem as *mut ::std::ffi::c_void as *mut T) };
+    let write_data_slice = unsafe { std::slice::from_raw_parts(write_data, write_data_count) };
+
+    match conn.phys_write_raw_list(write_data_slice) {
+        Ok(_) => 0,
+        Err(_) => -1,
+    }
+}
+
+extern "C" fn phys_read_raw_list_int<T: PhysicalMemory>(
+    phys_mem: &mut c_void,
+    read_data: *mut PhysicalReadData,
+    read_data_count: usize,
+) -> i32 {
+    let conn = unsafe { &mut *(phys_mem as *mut ::std::ffi::c_void as *mut T) };
+    let read_data_slice = unsafe { std::slice::from_raw_parts_mut(read_data, read_data_count) };
+
+    match conn.phys_read_raw_list(read_data_slice) {
+        Ok(_) => 0,
+        Err(_) => -1,
+    }
+}
+
+extern "C" fn metadata_int<T: PhysicalMemory>(phys_mem: &c_void) -> PhysicalMemoryMetadata {
+    let conn = unsafe { &*(phys_mem as *const ::std::ffi::c_void as *const T) };
+    conn.metadata()
 }
 
 /// Describes initialized connector instance
@@ -162,14 +243,16 @@ impl Loadable for LoadableConnector {
         let cstr = CString::new(args.to_string())
             .map_err(|_| Error::Connector("args could not be parsed"))?;
 
+        let vtable = (self.descriptor.create_vtable)();
+
         // We do not want to return error with data from the shared library
         // that may get unloaded before it gets displayed
-        let instance = (self.descriptor.vtable.base.create)(cstr.as_ptr(), log::max_level() as i32)
+        let instance = (vtable.base.create)(cstr.as_ptr(), log::max_level() as i32)
             .ok_or(Error::Connector("create() failed"))?;
 
         Ok(ConnectorInstance {
             instance,
-            vtable: self.descriptor.vtable,
+            vtable,
             library: lib.clone(),
         })
     }

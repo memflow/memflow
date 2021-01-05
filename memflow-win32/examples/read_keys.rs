@@ -3,7 +3,7 @@ use std::{thread, time};
 use clap::*;
 use log::Level;
 
-use memflow::dynamic::*;
+use memflow::plugins::*;
 
 use memflow_win32::win32::{Kernel, Keyboard};
 
@@ -43,9 +43,9 @@ pub fn main() {
         .unwrap();
 
     // create inventory + connector
-    let inventory = unsafe { ConnectorInventory::scan() };
+    let inventory = unsafe { Inventory::scan() };
     let connector = inventory
-        .instantiate(
+        .create_connector(
             matches.value_of("connector").unwrap(),
             &Args::parse(matches.value_of("args").unwrap()).unwrap(),
         )

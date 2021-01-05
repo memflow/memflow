@@ -1,5 +1,5 @@
-use memflow::dynamic::*;
 use memflow::mem::*;
+use memflow::plugins::*;
 
 use memflow_win32::error::{Error, Result};
 use memflow_win32::win32::{Kernel, Win32ModuleInfo, Win32Process};
@@ -17,8 +17,8 @@ fn main() -> Result<()> {
     let args = Args::parse(&args_str)?;
 
     // create inventory + connector
-    let inventory = unsafe { ConnectorInventory::scan() };
-    let connector = inventory.instantiate(&connector, &args)?;
+    let inventory = unsafe { Inventory::scan() };
+    let connector = inventory.create_connector(&connector, &args)?;
 
     let mut kernel = build_kernel(connector)?;
 

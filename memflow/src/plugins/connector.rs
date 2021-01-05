@@ -68,19 +68,19 @@ impl ConnectorBaseTable {
     ) -> Self {
         Self {
             create,
-            clone: clone_int::<T>,
-            drop: drop_int::<T>,
+            clone: clone_internal::<T>,
+            drop: drop_internal::<T>,
         }
     }
 }
 
-extern "C" fn clone_int<T: Clone>(phys_mem: &c_void) -> Option<&'static mut c_void> {
+extern "C" fn clone_internal<T: Clone>(phys_mem: &c_void) -> Option<&'static mut c_void> {
     let conn = unsafe { &*(phys_mem as *const c_void as *const T) };
     let cloned_conn = Box::new(conn.clone());
     Some(unsafe { &mut *(Box::into_raw(cloned_conn) as *mut c_void) })
 }
 
-extern "C" fn drop_int<T: PhysicalMemory>(phys_mem: &mut c_void) {
+extern "C" fn drop_internal<T: PhysicalMemory>(phys_mem: &mut c_void) {
     let _: Box<T> = unsafe { Box::from_raw(std::mem::transmute(phys_mem)) };
     // drop box
 }
@@ -104,14 +104,14 @@ pub struct PhysicalMemoryFunctionTable {
 impl PhysicalMemoryFunctionTable {
     pub fn new<T: PhysicalMemory>() -> PhysicalMemoryFunctionTable {
         PhysicalMemoryFunctionTable {
-            phys_write_raw_list: phys_write_raw_list_int::<T>,
-            phys_read_raw_list: phys_read_raw_list_int::<T>,
-            metadata: metadata_int::<T>,
+            phys_write_raw_list: phys_write_raw_list_internal::<T>,
+            phys_read_raw_list: phys_read_raw_list_internal::<T>,
+            metadata: metadata_internal::<T>,
         }
     }
 }
 
-extern "C" fn phys_write_raw_list_int<T: PhysicalMemory>(
+extern "C" fn phys_write_raw_list_internal<T: PhysicalMemory>(
     phys_mem: &mut c_void,
     write_data: *const PhysicalWriteData,
     write_data_count: usize,
@@ -125,7 +125,7 @@ extern "C" fn phys_write_raw_list_int<T: PhysicalMemory>(
     }
 }
 
-extern "C" fn phys_read_raw_list_int<T: PhysicalMemory>(
+extern "C" fn phys_read_raw_list_internal<T: PhysicalMemory>(
     phys_mem: &mut c_void,
     read_data: *mut PhysicalReadData,
     read_data_count: usize,
@@ -139,7 +139,7 @@ extern "C" fn phys_read_raw_list_int<T: PhysicalMemory>(
     }
 }
 
-extern "C" fn metadata_int<T: PhysicalMemory>(phys_mem: &c_void) -> PhysicalMemoryMetadata {
+extern "C" fn metadata_internal<T: PhysicalMemory>(phys_mem: &c_void) -> PhysicalMemoryMetadata {
     let conn = unsafe { &*(phys_mem as *const c_void as *const T) };
     conn.metadata()
 }
@@ -210,7 +210,7 @@ impl Loadable for LoadableConnector {
         self.descriptor.name
     }
 
-    unsafe fn load(library: Library, path: impl AsRef<Path>) -> Result<LibInstance<Self>> {
+    unsafe fn load(library: &Arc<Library>, path: impl AsRef<Path>) -> Result<LibInstance<Self>> {
         let descriptor = library
             .get::<*mut ConnectorDescriptor>(b"MEMFLOW_CONNECTOR\0")
             .map_err(|_| Error::Connector("connector descriptor not found"))?
@@ -227,7 +227,7 @@ impl Loadable for LoadableConnector {
         }
 
         Ok(LibInstance {
-            library: Arc::new(library),
+            library: library.clone(),
             loader: LoadableConnector { descriptor },
         })
     }
@@ -253,5 +253,3 @@ impl Loadable for LoadableConnector {
         })
     }
 }
-
-pub type ConnectorInventory = super::LibInventory<LoadableConnector>;

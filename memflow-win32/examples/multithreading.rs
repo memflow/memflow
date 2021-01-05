@@ -3,8 +3,8 @@ use std::thread;
 use clap::*;
 use log::{info, Level};
 
-use memflow::dynamic::*;
 use memflow::mem::*;
+use memflow::plugins::*;
 
 use memflow_win32::win32::Kernel;
 
@@ -112,9 +112,9 @@ pub fn main() {
         .unwrap();
 
     // create inventory + connector
-    let inventory = unsafe { ConnectorInventory::scan() };
+    let inventory = unsafe { Inventory::scan() };
     let connector = inventory
-        .instantiate(
+        .create_connector(
             matches.value_of("connector").unwrap(),
             &Args::parse(matches.value_of("args").unwrap()).unwrap(),
         )

@@ -2,7 +2,7 @@ use std::ffi::CStr;
 use std::os::raw::c_char;
 use std::path::PathBuf;
 
-use memflow::dynamic::{Args, ConnectorInventory};
+use memflow::plugins::{Args, Inventory};
 
 use crate::util::*;
 
@@ -19,11 +19,11 @@ use log::trace;
 ///
 /// # Safety
 ///
-/// ConnectorInventory is inherently unsafe, because it loads shared libraries which can not be
+/// Inventory is inherently unsafe, because it loads shared libraries which can not be
 /// guaranteed to be safe.
 #[no_mangle]
-pub unsafe extern "C" fn inventory_scan() -> &'static mut ConnectorInventory {
-    to_heap(ConnectorInventory::scan())
+pub unsafe extern "C" fn inventory_scan() -> &'static mut Inventory {
+    to_heap(Inventory::scan())
 }
 
 /// Create a new inventory with custom path string
@@ -34,9 +34,9 @@ pub unsafe extern "C" fn inventory_scan() -> &'static mut ConnectorInventory {
 #[no_mangle]
 pub unsafe extern "C" fn inventory_scan_path(
     path: *const c_char,
-) -> Option<&'static mut ConnectorInventory> {
+) -> Option<&'static mut Inventory> {
     let rpath = CStr::from_ptr(path).to_string_lossy();
-    ConnectorInventory::scan_path(rpath.to_string())
+    Inventory::scan_path(rpath.to_string())
         .map_err(inspect_err)
         .ok()
         .map(to_heap)
@@ -48,10 +48,7 @@ pub unsafe extern "C" fn inventory_scan_path(
 ///
 /// `dir` must be a valid null terminated string
 #[no_mangle]
-pub unsafe extern "C" fn inventory_add_dir(
-    inv: &mut ConnectorInventory,
-    dir: *const c_char,
-) -> i32 {
+pub unsafe extern "C" fn inventory_add_dir(inv: &mut Inventory, dir: *const c_char) -> i32 {
     let rdir = CStr::from_ptr(dir).to_string_lossy();
 
     inv.add_dir(PathBuf::from(rdir.to_string()))
@@ -78,14 +75,14 @@ pub unsafe extern "C" fn inventory_add_dir(
 /// freed, because that operation could cause the underlying shared library to get unloaded.
 #[no_mangle]
 pub unsafe extern "C" fn inventory_create_connector(
-    inv: &mut ConnectorInventory,
+    inv: &mut Inventory,
     name: *const c_char,
     args: *const c_char,
 ) -> Option<&'static mut CloneablePhysicalMemoryObj> {
     let rname = CStr::from_ptr(name).to_string_lossy();
 
     if args.is_null() {
-        inv.instantiate_default(&rname)
+        inv.create_connector_default(&rname)
             .map_err(inspect_err)
             .ok()
             .map(to_heap)
@@ -95,7 +92,7 @@ pub unsafe extern "C" fn inventory_create_connector(
         let rargs = CStr::from_ptr(args).to_string_lossy();
         let conn_args = Args::parse(&rargs).map_err(inspect_err).ok()?;
 
-        inv.instantiate(&rname, &conn_args)
+        inv.create_connector(&rname, &conn_args)
             .map_err(inspect_err)
             .ok()
             .map(to_heap)
@@ -141,10 +138,10 @@ pub unsafe extern "C" fn connector_free(conn: &'static mut CloneablePhysicalMemo
 ///
 /// # Safety
 ///
-/// `inv` must point to a valid `ConnectorInventory` that was created using one of the provided
+/// `inv` must point to a valid `Inventory` that was created using one of the provided
 /// functions.
 #[no_mangle]
-pub unsafe extern "C" fn inventory_free(inv: &'static mut ConnectorInventory) {
+pub unsafe extern "C" fn inventory_free(inv: &'static mut Inventory) {
     trace!("inventory_free: {:?}", inv as *mut _);
     let _ = Box::from_raw(inv);
 }

@@ -3,7 +3,7 @@ Module containing connector and OS layer inventory related functions.
 
 This module contains functions to interface with dynamically loaded connectors and OS layers.
 
-This module is gated behind `dynamic` feature
+This module is gated behind `plugins` feature
 */
 
 pub mod args;
@@ -13,7 +13,7 @@ pub use args::Args;
 pub mod connector;
 pub use connector::{
     ConnectorBaseTable, ConnectorDescriptor, ConnectorFunctionTable, ConnectorInstance,
-    ConnectorInventory, PhysicalMemoryFunctionTable, MEMFLOW_CONNECTOR_VERSION,
+    PhysicalMemoryFunctionTable, MEMFLOW_CONNECTOR_VERSION,
 };
 
 use crate::error::*;
@@ -25,6 +25,7 @@ use std::sync::Arc;
 
 use libloading::Library;
 
+/// Defines a common interface for loadable plugins
 pub trait Loadable: Sized {
     type Instance;
 
@@ -42,18 +43,34 @@ pub trait Loadable: Sized {
     /// the loaded library implements the necessary interface manually.
     ///
     /// It is adviced to use a provided proc macro to define a valid library.
-    unsafe fn load(library: Library, path: impl AsRef<Path>) -> Result<LibInstance<Self>>;
+    unsafe fn load(library: &Arc<Library>, path: impl AsRef<Path>) -> Result<LibInstance<Self>>;
 
     /// # Safety
     ///
     /// Loading third party libraries is inherently unsafe and the compiler
     /// cannot guarantee that the implementation of the library matches the one
     /// specified here.
-    unsafe fn load_path(path: impl AsRef<Path>) -> Result<LibInstance<Self>> {
-        let library =
-            Library::new(path.as_ref()).map_err(|_| Error::Connector("unable to load library"))?;
-
-        Self::load(library, path)
+    unsafe fn load_into(
+        lib: &Arc<Library>,
+        path: impl AsRef<Path>,
+        out: &mut Vec<LibInstance<Self>>,
+    ) {
+        if let Ok(lib) = Self::load(lib, &path) {
+            if !lib.loader.exists(out) {
+                info!(
+                    "adding library '{}': {:?}",
+                    lib.loader.ident(),
+                    path.as_ref()
+                );
+                out.push(lib);
+            } else {
+                debug!(
+                    "skipping library '{}' because it was added already: {:?}",
+                    lib.loader.ident(),
+                    path.as_ref()
+                );
+            }
+        }
     }
 
     /// Creates an `Instance` of the library
@@ -63,12 +80,12 @@ pub trait Loadable: Sized {
     fn instantiate(&self, lib: Arc<Library>, args: &Args) -> Result<Self::Instance>;
 }
 
-pub struct LibInventory<T> {
-    libs: Vec<LibInstance<T>>,
+pub struct Inventory {
+    connectors: Vec<LibInstance<connector::LoadableConnector>>,
 }
 
-impl<F, T: Loadable<Instance = F>> LibInventory<T> {
-    /// Creates a new inventory of generic libraries from the provided path.
+impl Inventory {
+    /// Creates a new inventory of plugins from the provided path.
     /// The path has to be a valid directory or the function will fail with an `Error::IO` error.
     ///
     /// # Safety
@@ -82,28 +99,22 @@ impl<F, T: Loadable<Instance = F>> LibInventory<T> {
     ///
     /// Creating a inventory:
     /// ```
-    /// use memflow::dynamic::ConnectorInventory;
+    /// use memflow::plugins::Inventory;
     ///
     /// let inventory = unsafe {
-    ///     ConnectorInventory::scan_path("./")
+    ///     Inventory::scan_path("./")
     /// }.unwrap();
     /// ```
     pub unsafe fn scan_path<P: AsRef<Path>>(path: P) -> Result<Self> {
         let mut dir = PathBuf::default();
         dir.push(path);
 
-        let mut ret = Self { libs: vec![] };
+        let mut ret = Self { connectors: vec![] };
         ret.add_dir(dir)?;
         Ok(ret)
     }
 
-    #[doc(hidden)]
-    #[deprecated]
-    pub unsafe fn with_path<P: AsRef<Path>>(path: P) -> Result<Self> {
-        Self::scan_path(path)
-    }
-
-    /// Creates a new inventory of generic libraries by searching various paths.
+    /// Creates a new inventory of plugins by searching various paths.
     ///
     /// It will query PATH, and an additional set of of directories (standard unix ones, if unix,
     /// and "HOME/.local/lib" on all OSes) for "memflow" directory, and if there is one, then
@@ -120,10 +131,10 @@ impl<F, T: Loadable<Instance = F>> LibInventory<T> {
     ///
     /// Creating an inventory:
     /// ```
-    /// use memflow::dynamic::ConnectorInventory;
+    /// use memflow::plugins::Inventory;
     ///
     /// let inventory = unsafe {
-    ///     ConnectorInventory::scan()
+    ///     Inventory::scan()
     /// };
     /// ```
     pub unsafe fn scan() -> Self {
@@ -160,7 +171,7 @@ impl<F, T: Loadable<Instance = F>> LibInventory<T> {
                 .into_iter(),
         );
 
-        let mut ret = Self { libs: vec![] };
+        let mut ret = Self { connectors: vec![] };
 
         for mut path in path_iter {
             path.push("memflow");
@@ -174,12 +185,6 @@ impl<F, T: Loadable<Instance = F>> LibInventory<T> {
         ret
     }
 
-    #[doc(hidden)]
-    #[deprecated]
-    pub unsafe fn try_new() -> Result<Self> {
-        Ok(Self::scan())
-    }
-
     /// Adds a library directory to the inventory
     ///
     /// # Safety
@@ -191,39 +196,25 @@ impl<F, T: Loadable<Instance = F>> LibInventory<T> {
             return Err(Error::IO("invalid path argument"));
         }
 
-        info!(
-            "scanning {:?} for libraries of type {}",
-            dir,
-            std::any::type_name::<T>()
-        );
+        info!("scanning {:?} for libraries", dir,);
 
         for entry in read_dir(dir).map_err(|_| Error::IO("unable to read directory"))? {
             let entry = entry.map_err(|_| Error::IO("unable to read directory entry"))?;
-            if let Ok(lib) = T::load_path(entry.path()) {
-                if !lib.loader.exists(&self.libs) {
-                    info!(
-                        "adding library '{}': {:?}",
-                        lib.loader.ident(),
-                        entry.path()
-                    );
-                    self.libs.push(lib);
-                } else {
-                    debug!(
-                        "skipping library '{}' because it was added already: {:?}",
-                        lib.loader.ident(),
-                        entry.path()
-                    );
-                }
+            if let Ok(lib) = Library::new(entry.path())
+                .map_err(|_| Error::Connector("unable to load library"))
+                .map(Arc::new)
+            {
+                Loadable::load_into(&lib, entry.path(), &mut self.connectors);
             }
         }
 
         Ok(self)
     }
 
-    /// Returns the names of all currently available libs that can be used
-    /// when calling `instantiate` or `instantiate_default`.
-    pub fn available_libs(&self) -> Vec<String> {
-        self.libs
+    /// Returns the names of all currently available connectors that can be used
+    /// when calling `instantiate` or `create_connector_default`.
+    pub fn available_connectors(&self) -> Vec<String> {
+        self.connectors
             .iter()
             .map(|c| c.loader.ident().to_string())
             .collect::<Vec<_>>()
@@ -244,13 +235,13 @@ impl<F, T: Loadable<Instance = F>> LibInventory<T> {
     ///
     /// Creating a connector instance:
     /// ```no_run
-    /// use memflow::dynamic::{ConnectorInventory, Args};
+    /// use memflow::plugins::{Inventory, Args};
     ///
     /// let inventory = unsafe {
-    ///     ConnectorInventory::scan_path("./")
+    ///     Inventory::scan_path("./")
     /// }.unwrap();
     /// let connector = unsafe {
-    ///     inventory.instantiate("coredump", &Args::new())
+    ///     inventory.create_connector("coredump", &Args::new())
     /// }.unwrap();
     /// ```
     ///
@@ -259,7 +250,7 @@ impl<F, T: Loadable<Instance = F>> LibInventory<T> {
     /// use memflow::error::Result;
     /// use memflow::types::size;
     /// use memflow::mem::dummy::DummyMemory;
-    /// use memflow::dynamic::Args;
+    /// use memflow::plugins::Args;
     /// use memflow::derive::connector;
     ///
     /// #[connector(name = "dummy")]
@@ -267,16 +258,16 @@ impl<F, T: Loadable<Instance = F>> LibInventory<T> {
     ///     Ok(DummyMemory::new(size::mb(16)))
     /// }
     /// ```
-    pub fn instantiate(&self, name: &str, args: &Args) -> Result<F> {
+    pub fn create_connector(&self, name: &str, args: &Args) -> Result<ConnectorInstance> {
         let lib = self
-            .libs
+            .connectors
             .iter()
             .find(|c| c.loader.ident() == name)
             .ok_or_else(|| {
                 error!(
                     "unable to find connector with name '{}'. available connectors are: {}",
                     name,
-                    self.libs
+                    self.connectors
                         .iter()
                         .map(|c| c.loader.ident().to_string())
                         .collect::<Vec<_>>()
@@ -298,17 +289,17 @@ impl<F, T: Loadable<Instance = F>> LibInventory<T> {
     ///
     /// Creating a connector instance:
     /// ```no_run
-    /// use memflow::dynamic::{ConnectorInventory, Args};
+    /// use memflow::plugins::{Inventory, Args};
     ///
     /// let inventory = unsafe {
-    ///     ConnectorInventory::scan_path("./")
+    ///     Inventory::scan_path("./")
     /// }.unwrap();
     /// let connector = unsafe {
-    ///     inventory.instantiate_default("coredump")
+    ///     inventory.create_connector_default("coredump")
     /// }.unwrap();
     /// ```
-    pub fn instantiate_default(&self, name: &str) -> Result<F> {
-        self.instantiate(name, &Args::default())
+    pub fn create_connector_default(&self, name: &str) -> Result<ConnectorInstance> {
+        self.create_connector(name, &Args::default())
     }
 }
 

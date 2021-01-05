@@ -93,7 +93,7 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
                         Err(e)
                     })
                     .ok()?;
-                let conn_args = ::memflow::dynamic::Args::parse(argsstr)
+                let conn_args = ::memflow::plugins::Args::parse(argsstr)
                     .or_else(|e| {
                         ::log::error!("error parsing connector args: {}", e);
                         Err(e)
@@ -121,7 +121,7 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
                         Err(e)
                     })
                     .ok()?;
-                let conn_args = ::memflow::dynamic::Args::parse(argsstr)
+                let conn_args = ::memflow::plugins::Args::parse(argsstr)
                     .or_else(|e| {
                         Err(e)
                     })
@@ -140,14 +140,14 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
     let mut gen = quote! {
         #[doc(hidden)]
         #[no_mangle]
-        pub static MEMFLOW_CONNECTOR: ::memflow::dynamic::ConnectorDescriptor = ::memflow::dynamic::ConnectorDescriptor {
-            connector_version: ::memflow::dynamic::MEMFLOW_CONNECTOR_VERSION,
+        pub static MEMFLOW_CONNECTOR: ::memflow::plugins::ConnectorDescriptor = ::memflow::plugins::ConnectorDescriptor {
+            connector_version: ::memflow::plugins::MEMFLOW_CONNECTOR_VERSION,
             name: #connector_name,
             create_vtable: mf_create_vtable,
         };
 
-        extern "C" fn mf_create_vtable() -> ::memflow::dynamic::ConnectorFunctionTable {
-            ::memflow::dynamic::ConnectorFunctionTable::create_vtable::<#connector_type>(mf_create)
+        extern "C" fn mf_create_vtable() -> ::memflow::plugins::ConnectorFunctionTable {
+            ::memflow::plugins::ConnectorFunctionTable::create_vtable::<#connector_type>(mf_create)
         }
 
         #func

@@ -16,7 +16,7 @@ use hashbrown::HashMap;
 ///
 /// Construct from a string:
 /// ```
-/// use memflow::dynamic::Args;
+/// use memflow::plugins::Args;
 /// use std::convert::TryFrom;
 ///
 /// let argstr = "opt1=test1,opt2=test2,opt3=test3";
@@ -25,7 +25,7 @@ use hashbrown::HashMap;
 ///
 /// Construct as builder:
 /// ```
-/// use memflow::dynamic::Args;
+/// use memflow::plugins::Args;
 ///
 /// let args = Args::new()
 ///     .insert("arg1", "test1")
@@ -115,7 +115,7 @@ impl Args {
     /// # Examples
     ///
     /// ```
-    /// use memflow::dynamic::Args;
+    /// use memflow::plugins::Args;
     ///
     /// let args = Args::new()
     ///     .insert("arg1", "test1")

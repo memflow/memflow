@@ -4,8 +4,8 @@ use std::time::{Duration, Instant};
 use clap::*;
 use log::Level;
 
-use memflow::dynamic::*;
 use memflow::mem::*;
+use memflow::plugins::*;
 use memflow::process::*;
 use memflow::types::*;
 
@@ -183,9 +183,9 @@ fn main() -> Result<()> {
         .unwrap();
 
     // create inventory + connector
-    let inventory = unsafe { ConnectorInventory::scan() };
+    let inventory = unsafe { Inventory::scan() };
     let mut connector = inventory
-        .instantiate(
+        .create_connector(
             matches.value_of("connector").unwrap(),
             &Args::parse(matches.value_of("args").unwrap()).unwrap(),
         )

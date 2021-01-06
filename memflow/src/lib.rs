@@ -3,8 +3,8 @@ memflow is a library that allows live memory introspection of running systems an
 Due to its modular approach it trivial to support almost any scenario where Direct Memory Access is available.
 
 The very core of the library is a [PhysicalMemory](mem/phys_mem/index.html) that provides direct memory access in an abstract environment.
-This object that can be defined both statically, and dynamically with the use of the `inventory` feature.
-If `inventory` is enabled, it is possible to dynamically load libraries that provide Direct Memory Access.
+This object that can be defined both statically, and pluginsally with the use of the `dynamic` feature.
+If `plugins` is enabled, it is possible to dynamically load libraries that provide Direct Memory Access.
 
 Through the use of OS abstraction layers, like [memflow-win32](https://github.com/memflow/memflow/tree/master/memflow-win32),
 user can gain access to virtual memory of individual processes,
@@ -42,6 +42,9 @@ pub mod mem;
 
 pub mod connector;
 
+#[cfg(feature = "plugins")]
+pub mod plugins;
+
 pub mod process;
 
 pub mod iter;
@@ -58,6 +61,8 @@ pub mod prelude {
         pub use crate::error::*;
         pub use crate::iter::*;
         pub use crate::mem::*;
+        #[cfg(feature = "plugins")]
+        pub use crate::plugins::*;
         pub use crate::process::*;
         pub use crate::types::*;
     }

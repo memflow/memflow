@@ -93,7 +93,7 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
                         Err(e)
                     })
                     .ok()?;
-                let conn_args = ::memflow::connector::ConnectorArgs::parse(argsstr)
+                let conn_args = ::memflow::plugins::Args::parse(argsstr)
                     .or_else(|e| {
                         ::log::error!("error parsing connector args: {}", e);
                         Err(e)
@@ -121,7 +121,7 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
                         Err(e)
                     })
                     .ok()?;
-                let conn_args = ::memflow::connector::ConnectorArgs::parse(argsstr)
+                let conn_args = ::memflow::plugins::Args::parse(argsstr)
                     .or_else(|e| {
                         Err(e)
                     })
@@ -140,77 +140,14 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
     let mut gen = quote! {
         #[doc(hidden)]
         #[no_mangle]
-        pub static MEMFLOW_CONNECTOR: ::memflow::connector::ConnectorDescriptor = ::memflow::connector::ConnectorDescriptor {
-            connector_version: ::memflow::connector::MEMFLOW_CONNECTOR_VERSION,
+        pub static MEMFLOW_CONNECTOR: ::memflow::plugins::ConnectorDescriptor = ::memflow::plugins::ConnectorDescriptor {
+            connector_version: ::memflow::plugins::MEMFLOW_CONNECTOR_VERSION,
             name: #connector_name,
-            vtable: ::memflow::connector::ConnectorFunctionTable {
-                create: mf_create,
-
-                phys_read_raw_list: mf_phys_read_raw_list,
-                phys_write_raw_list: mf_phys_write_raw_list,
-                metadata: mf_metadata,
-
-                clone: mf_clone,
-
-                drop: mf_drop,
-            },
+            create_vtable: mf_create_vtable,
         };
 
-        #[doc(hidden)]
-        extern "C" fn mf_phys_read_raw_list(
-            phys_mem: &mut ::std::ffi::c_void,
-            read_data: *mut ::memflow::mem::PhysicalReadData,
-            read_data_count: usize,
-        ) -> i32 {
-            use ::memflow::mem::PhysicalMemory;
-
-            let conn = unsafe { &mut *(phys_mem as *mut ::std::ffi::c_void as *mut #connector_type) };
-            let read_data_slice = unsafe { std::slice::from_raw_parts_mut(read_data, read_data_count) };
-            match conn.phys_read_raw_list(read_data_slice) {
-                Ok(_) => 0,
-                Err(_) => -1,
-            }
-        }
-
-        #[doc(hidden)]
-        extern "C" fn mf_phys_write_raw_list(
-            phys_mem: &mut ::std::ffi::c_void,
-            write_data: *const ::memflow::mem::PhysicalWriteData,
-            write_data_count: usize,
-        ) -> i32 {
-            use ::memflow::mem::PhysicalMemory;
-
-            let conn = unsafe { &mut *(phys_mem as *mut ::std::ffi::c_void as *mut #connector_type) };
-            let write_data_slice =
-                unsafe { std::slice::from_raw_parts(write_data, write_data_count) };
-            match conn.phys_write_raw_list(write_data_slice) {
-                Ok(_) => 0,
-                Err(_) => -1,
-            }
-        }
-
-        #[doc(hidden)]
-        extern "C" fn mf_metadata(phys_mem: &::std::ffi::c_void) -> ::memflow::mem::PhysicalMemoryMetadata {
-            use ::memflow::mem::PhysicalMemory;
-
-            let conn = unsafe { &*(phys_mem as *const ::std::ffi::c_void as *const #connector_type) };
-            let metadata = conn.metadata();
-            metadata
-        }
-
-        #[doc(hidden)]
-        extern "C" fn mf_clone(
-            phys_mem: &::std::ffi::c_void,
-        ) -> std::option::Option<&'static mut ::std::ffi::c_void> {
-            let conn = unsafe { &*(phys_mem as *const ::std::ffi::c_void as *const #connector_type) };
-            let cloned_conn = Box::new(conn.clone());
-            Some(unsafe { &mut *(Box::into_raw(cloned_conn) as *mut ::std::ffi::c_void) })
-        }
-
-        #[doc(hidden)]
-        extern "C" fn mf_drop(phys_mem: &mut ::std::ffi::c_void) {
-            let _: Box<#connector_type> = unsafe { Box::from_raw(::std::mem::transmute(phys_mem)) };
-            // drop box
+        extern "C" fn mf_create_vtable() -> ::memflow::plugins::ConnectorFunctionTable {
+            ::memflow::plugins::ConnectorFunctionTable::create_vtable::<#connector_type>(mf_create)
         }
 
         #func

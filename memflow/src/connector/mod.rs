@@ -9,19 +9,6 @@ This module also contains functions to interface with dynamically loaded connect
 The inventory system is feature gated behind the `inventory` feature.
 */
 
-pub mod args;
-#[doc(hidden)]
-pub use args::ConnectorArgs;
-
-#[cfg(feature = "inventory")]
-pub mod inventory;
-#[doc(hidden)]
-#[cfg(feature = "inventory")]
-pub use inventory::{
-    Connector, ConnectorDescriptor, ConnectorFunctionTable, ConnectorInstance, ConnectorInventory,
-    MEMFLOW_CONNECTOR_VERSION,
-};
-
 #[cfg(feature = "std")]
 pub mod fileio;
 #[doc(hidden)]

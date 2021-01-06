@@ -11,8 +11,8 @@ use rand::prelude::*;
 use rand::{Rng, SeedableRng};
 use rand_xorshift::XorShiftRng as CurRng;
 
-fn create_connector(args: &ConnectorArgs) -> Result<impl PhysicalMemory> {
-    unsafe { memflow::connector::ConnectorInventory::scan().create_connector("qemu_procfs", args) }
+fn create_connector(args: &Args) -> Result<impl PhysicalMemory> {
+    unsafe { Inventory::scan().create_connector("qemu_procfs", args) }
 }
 
 fn initialize_virt_ctx() -> Result<(
@@ -22,7 +22,7 @@ fn initialize_virt_ctx() -> Result<(
     impl ScopedVirtualTranslate,
     Win32ModuleInfo,
 )> {
-    let mut phys_mem = create_connector(&ConnectorArgs::new())?;
+    let mut phys_mem = create_connector(&Args::new())?;
 
     let kernel_info = KernelInfo::scanner(&mut phys_mem)
         .scan()
@@ -70,8 +70,8 @@ fn initialize_virt_ctx() -> Result<(
 fn win32_read_group(c: &mut Criterion) {
     virt::seq_read(c, "win32", &initialize_virt_ctx);
     virt::chunk_read(c, "win32", &initialize_virt_ctx);
-    phys::seq_read(c, "win32", &|| create_connector(&ConnectorArgs::new()));
-    phys::chunk_read(c, "win32", &|| create_connector(&ConnectorArgs::new()));
+    phys::seq_read(c, "win32", &|| create_connector(&Args::new()));
+    phys::chunk_read(c, "win32", &|| create_connector(&Args::new()));
     vat::chunk_vat(c, "win32", &initialize_virt_ctx);
 }
 

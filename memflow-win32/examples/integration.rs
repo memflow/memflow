@@ -1,5 +1,5 @@
-use memflow::connector::*;
 use memflow::mem::*;
+use memflow::plugins::*;
 
 use memflow_win32::error::{Error, Result};
 use memflow_win32::win32::{Kernel, Win32ModuleInfo, Win32Process};
@@ -14,11 +14,11 @@ static mut HAD_ERROR: bool = false;
 fn main() -> Result<()> {
     let (connector, args_str) = parse_args();
 
-    let args = ConnectorArgs::parse(&args_str)?;
+    let args = Args::parse(&args_str)?;
 
     // create inventory + connector
-    let inventory = unsafe { ConnectorInventory::scan() };
-    let connector = unsafe { inventory.create_connector(&connector, &args)? };
+    let inventory = unsafe { Inventory::scan() };
+    let connector = inventory.create_connector(&connector, &args)?;
 
     let mut kernel = build_kernel(connector)?;
 

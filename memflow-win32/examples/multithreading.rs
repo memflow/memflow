@@ -3,8 +3,8 @@ use std::thread;
 use clap::*;
 use log::{info, Level};
 
-use memflow::connector::*;
 use memflow::mem::*;
+use memflow::plugins::*;
 
 use memflow_win32::win32::Kernel;
 
@@ -112,14 +112,13 @@ pub fn main() {
         .unwrap();
 
     // create inventory + connector
-    let inventory = unsafe { ConnectorInventory::scan() };
-    let connector = unsafe {
-        inventory.create_connector(
+    let inventory = unsafe { Inventory::scan() };
+    let connector = inventory
+        .create_connector(
             matches.value_of("connector").unwrap(),
-            &ConnectorArgs::parse(matches.value_of("args").unwrap()).unwrap(),
+            &Args::parse(matches.value_of("args").unwrap()).unwrap(),
         )
-    }
-    .unwrap();
+        .unwrap();
 
     // parallel test functions
     // see each function's implementation for further details

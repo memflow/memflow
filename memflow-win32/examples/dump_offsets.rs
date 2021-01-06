@@ -4,7 +4,7 @@ use std::io::Write;
 use clap::*;
 use log::{error, Level};
 
-use memflow::connector::*;
+use memflow::plugins::*;
 
 use memflow_win32::prelude::{Kernel, Win32OffsetFile};
 
@@ -50,14 +50,13 @@ pub fn main() {
         .unwrap();
 
     // create inventory + connector
-    let inventory = unsafe { ConnectorInventory::scan() };
-    let connector = unsafe {
-        inventory.create_connector(
+    let inventory = unsafe { Inventory::scan() };
+    let connector = inventory
+        .create_connector(
             matches.value_of("connector").unwrap(),
-            &ConnectorArgs::parse(matches.value_of("args").unwrap()).unwrap(),
+            &Args::parse(matches.value_of("args").unwrap()).unwrap(),
         )
-    }
-    .unwrap();
+        .unwrap();
 
     let kernel = Kernel::builder(connector)
         .build_default_caches()

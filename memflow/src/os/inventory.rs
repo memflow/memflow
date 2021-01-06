@@ -21,5 +21,3 @@ pub struct OSDescriptor {
     /// The vtable for all opaque function calls to the connector.
     pub vtable: OSFunctionTable,
 }
-
-

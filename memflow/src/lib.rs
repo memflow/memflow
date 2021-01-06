@@ -45,6 +45,8 @@ pub mod connector;
 #[cfg(feature = "plugins")]
 pub mod plugins;
 
+pub mod os;
+
 pub mod process;
 
 pub mod iter;

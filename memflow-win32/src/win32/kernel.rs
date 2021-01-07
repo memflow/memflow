@@ -13,6 +13,7 @@ use std::fmt;
 
 use memflow::architecture::x86;
 use memflow::mem::{DirectTranslate, PhysicalMemory, VirtualDMA, VirtualMemory, VirtualTranslate};
+use memflow::os::ProcessInfo;
 use memflow::process::{OperatingSystem, OsProcessInfo, OsProcessModuleInfo, PID};
 use memflow::types::Address;
 
@@ -166,10 +167,13 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
             reader.virt_read_addr_arch(self.kernel_info.start_block.arch, loaded_module_list)?;
 
         Ok(Win32ProcessInfo {
-            address: self.kernel_info.kernel_base,
-
-            pid: 0,
-            name: "ntoskrnl.exe".to_string(),
+            base: ProcessInfo {
+                address: self.kernel_info.kernel_base,
+                pid: 0,
+                name: "ntoskrnl.exe".into(),
+                sys_arch: self.kernel_info.start_block.arch,
+                proc_arch: self.kernel_info.start_block.arch,
+            },
             dtb: self.sysproc_dtb,
             section_base: Address::NULL, // TODO: see below
             exit_status: EXIT_STATUS_STILL_ACTIVE,
@@ -187,9 +191,6 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
                 self.kernel_info.start_block.arch,
             )?,
             module_info_wow64: None,
-
-            sys_arch: self.kernel_info.start_block.arch,
-            proc_arch: self.kernel_info.start_block.arch,
         })
     }
 
@@ -205,8 +206,9 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
         let pid: PID = reader.virt_read(eprocess + self.offsets.eproc_pid())?;
         trace!("pid={}", pid);
 
-        let name =
-            reader.virt_read_cstr(eprocess + self.offsets.eproc_name(), IMAGE_FILE_NAME_LENGTH)?;
+        let name = reader
+            .virt_read_cstr(eprocess + self.offsets.eproc_name(), IMAGE_FILE_NAME_LENGTH)?
+            .into();
         trace!("name={}", name);
 
         let dtb = reader.virt_read_addr_arch(
@@ -339,10 +341,14 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
             .transpose()?;
 
         Ok(Win32ProcessInfo {
-            address: eprocess,
+            base: ProcessInfo {
+                address: eprocess,
+                pid,
+                name,
+                sys_arch,
+                proc_arch,
+            },
 
-            pid,
-            name,
             dtb,
             section_base,
             exit_status,
@@ -357,9 +363,6 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
 
             module_info_native,
             module_info_wow64,
-
-            sys_arch,
-            proc_arch,
         })
     }
 
@@ -431,7 +434,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
             process_info_list
                 .into_iter()
                 .inspect(|process| trace!("{} {}", process.pid(), process.name()))
-                .find(|process| process.pid == pid)
+                .find(|process| process.base.pid == pid)
                 .ok_or(Error::Other("pid not found"))
         } else {
             // kernel pid

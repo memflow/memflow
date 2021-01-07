@@ -1,20 +1,41 @@
 use crate::prelude::v1::*;
-use std::ffi::CString;
-use std::os::raw::c_char;
 
 #[repr(C)]
+#[derive(Clone, Debug)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize))]
 pub struct ModuleInfo {
-    addr: Address,
-    parent_process: Address,
-    base: Address,
-    size: Address,
-    name: *mut c_char,
-}
-
-impl Drop for ModuleInfo {
-    fn drop(&mut self) {
-        let _ = unsafe { CString::from_raw(self.name) };
-    }
+    /// Returns the address of the module header.
+    ///
+    /// # Remarks
+    ///
+    /// On Windows this will be the address where the [`PEB`](https://docs.microsoft.com/en-us/windows/win32/api/winternl/ns-winternl-peb) entry is stored.
+    pub address: Address,
+    /// The base address of the parent process.
+    ///
+    /// # Remarks
+    ///
+    /// This field is analog to the `ProcessInfo::address` field.
+    pub parent_process: Address,
+    /// The actual base address of this module.
+    ///
+    /// # Remarks
+    ///
+    /// The base address is contained in the virtual address range of the process
+    /// this module belongs to.
+    pub base: Address,
+    /// Size of the module
+    pub size: usize,
+    /// Name of the module
+    pub name: ReprCStr,
+    /// Architecture of the module
+    ///
+    /// # Remarks
+    ///
+    /// Emulated processes often have 2 separate lists of modules, one visible to the emulated
+    /// context (e.g. all 32-bit modules in a WoW64 process), and the other for all native modules
+    /// needed to support the process emulation. This should be equal to either
+    /// `ProcessInfo::proc_arch`, or `ProcessInfo::sys_arch` of the parent process.
+    pub arch: ArchitectureObj,
 }
 
 pub type ModuleInfoCallback<'a> = OpaqueCallback<'a, ModuleInfo>;

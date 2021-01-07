@@ -10,6 +10,7 @@ use std::fmt;
 
 use memflow::architecture::ArchitectureObj;
 use memflow::mem::{PhysicalMemory, VirtualDMA, VirtualMemory, VirtualTranslate};
+use memflow::os::{ModuleInfoCallback, Process, ProcessInfo};
 use memflow::process::{OsProcessInfo, OsProcessModuleInfo, PID};
 use memflow::types::Address;
 
@@ -130,11 +131,9 @@ impl Win32ModuleListInfo {
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize))]
 pub struct Win32ProcessInfo {
-    pub address: Address,
+    pub base: ProcessInfo,
 
     // general information from eprocess
-    pub pid: PID,
-    pub name: String,
     pub dtb: Address,
     pub section_base: Address,
     pub exit_status: Win32ExitStatus,
@@ -152,10 +151,6 @@ pub struct Win32ProcessInfo {
     // modules
     pub module_info_native: Win32ModuleListInfo,
     pub module_info_wow64: Option<Win32ModuleListInfo>,
-
-    // architecture
-    pub sys_arch: ArchitectureObj,
-    pub proc_arch: ArchitectureObj,
 }
 
 impl Win32ProcessInfo {
@@ -200,29 +195,29 @@ impl Win32ProcessInfo {
     }
 
     pub fn translator(&self) -> Win32VirtualTranslate {
-        Win32VirtualTranslate::new(self.sys_arch, self.dtb)
+        Win32VirtualTranslate::new(self.base.sys_arch, self.dtb)
     }
 }
 
 impl OsProcessInfo for Win32ProcessInfo {
     fn address(&self) -> Address {
-        self.address
+        self.base.address
     }
 
     fn pid(&self) -> PID {
-        self.pid
+        self.base.pid
     }
 
     fn name(&self) -> String {
-        self.name.clone()
+        self.base.name.as_ref().into()
     }
 
     fn sys_arch(&self) -> ArchitectureObj {
-        self.sys_arch
+        self.base.sys_arch
     }
 
     fn proc_arch(&self) -> ArchitectureObj {
-        self.proc_arch
+        self.base.proc_arch
     }
 }
 
@@ -241,6 +236,38 @@ impl<T: Clone> Clone for Win32Process<T> {
     }
 }
 
+impl<T: PhysicalMemory + Clone, V: VirtualTranslate + Clone> Process
+    for Win32Process<VirtualDMA<T, V, Win32VirtualTranslate>>
+{
+    type VirtualMemoryType = VirtualDMA<T, V, Win32VirtualTranslate>;
+    //type VirtualTranslateType: VirtualTranslate;
+
+    /// Retrieves virtual memory object for the process
+    fn virt_mem(&mut self) -> &mut Self::VirtualMemoryType {
+        &mut self.virt_mem
+    }
+
+    /// Retrieves virtual address translator for the process (if applicable)
+    //fn vat(&mut self) -> Option<&mut Self::VirtualTranslateType>;
+
+    /// Walks the process' module list and calls the provided callback for each module
+    fn module_list_callback(
+        &mut self,
+        _target_arch: Option<ArchitectureObj>,
+        _callback: ModuleInfoCallback,
+    ) -> memflow::error::Result<()> {
+        //match target_arch {
+        //    _ => {}
+        //}
+        Ok(())
+    }
+
+    /// Retreives the process info
+    fn info(&self) -> &ProcessInfo {
+        &self.proc_info.base
+    }
+}
+
 // TODO: replace the following impls with a dedicated builder
 // TODO: add non cloneable thing
 impl<'a, T: PhysicalMemory, V: VirtualTranslate>
@@ -249,7 +276,7 @@ impl<'a, T: PhysicalMemory, V: VirtualTranslate>
     pub fn with_kernel(kernel: Kernel<T, V>, proc_info: Win32ProcessInfo) -> Self {
         let virt_mem = VirtualDMA::with_vat(
             kernel.phys_mem,
-            proc_info.proc_arch,
+            proc_info.base.proc_arch,
             proc_info.translator(),
             kernel.vat,
         );
@@ -281,7 +308,7 @@ impl<'a, T: PhysicalMemory, V: VirtualTranslate>
     pub fn with_kernel_ref(kernel: &'a mut Kernel<T, V>, proc_info: Win32ProcessInfo) -> Self {
         let virt_mem = VirtualDMA::with_vat(
             &mut kernel.phys_mem,
-            proc_info.proc_arch,
+            proc_info.base.proc_arch,
             proc_info.translator(),
             &mut kernel.vat,
         );
@@ -306,7 +333,7 @@ impl<T: VirtualMemory> Win32Process<T> {
                     .filter_map(|&peb| {
                         info.module_info_from_entry(
                             peb,
-                            self.proc_info.address,
+                            self.proc_info.base.address,
                             &mut self.virt_mem,
                             arch,
                         )
@@ -319,16 +346,22 @@ impl<T: VirtualMemory> Win32Process<T> {
 
     pub fn module_entry_list(&mut self) -> Result<Vec<Address>> {
         let (info, arch) = if let Some(info_wow64) = self.proc_info.module_info_wow64 {
-            (info_wow64, self.proc_info.proc_arch)
+            (info_wow64, self.proc_info.base.proc_arch)
         } else {
-            (self.proc_info.module_info_native, self.proc_info.sys_arch)
+            (
+                self.proc_info.module_info_native,
+                self.proc_info.base.sys_arch,
+            )
         };
 
         info.module_entry_list(&mut self.virt_mem, arch)
     }
 
     pub fn module_entry_list_native(&mut self) -> Result<Vec<Address>> {
-        let (info, arch) = (self.proc_info.module_info_native, self.proc_info.sys_arch);
+        let (info, arch) = (
+            self.proc_info.module_info_native,
+            self.proc_info.base.sys_arch,
+        );
         info.module_entry_list(&mut self.virt_mem, arch)
     }
 
@@ -337,7 +370,7 @@ impl<T: VirtualMemory> Win32Process<T> {
             self.proc_info
                 .module_info_wow64
                 .ok_or(Error::Other("WoW64 module list does not exist"))?,
-            self.proc_info.proc_arch,
+            self.proc_info.base.proc_arch,
         );
         info.module_entry_list(&mut self.virt_mem, arch)
     }
@@ -357,9 +390,12 @@ impl<T: VirtualMemory> Win32Process<T> {
         let infos = [
             (
                 Some(self.proc_info.module_info_native),
-                self.proc_info.sys_arch,
+                self.proc_info.base.sys_arch,
             ),
-            (self.proc_info.module_info_wow64, self.proc_info.proc_arch),
+            (
+                self.proc_info.module_info_wow64,
+                self.proc_info.base.proc_arch,
+            ),
         ];
 
         // Here we end up filtering out module_info_wow64 if it doesn't exist

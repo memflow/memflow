@@ -88,13 +88,17 @@ fn main() -> Result<()> {
         let proc_list = kernel.process_info_list()?;
         let lsass = proc_list
             .iter()
-            .find(|p| p.name.to_lowercase() == "lsass.exe");
+            .find(|p| p.base.name.to_string().to_lowercase() == "lsass.exe");
         println!("lsass.exe ... {}", some_str(&lsass));
         println!();
 
         if let Some(proc) = lsass {
-            println!("{} info:", proc.name);
-            println!("pid: {} ... {}", proc.pid, bool_str(proc.pid < 10000));
+            println!("{} info:", proc.base.name);
+            println!(
+                "pid: {} ... {}",
+                proc.base.pid,
+                bool_str(proc.base.pid < 10000)
+            );
             println!("dtb: {} ... {}", proc.dtb, some_str(&proc.dtb.non_null()));
             println!(
                 "section_base: {} ... {}",

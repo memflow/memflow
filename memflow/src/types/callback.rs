@@ -26,7 +26,7 @@ impl<'a, T, F> Callback<'a, T, F> {
     pub fn into_opaque(self) -> Callback<'a, c_void, F> {
         unsafe {
             Callback {
-                data: std::mem::transmute(self.data),
+                data: &mut *(self.data as *mut T as *mut std::ffi::c_void),
                 func: std::mem::transmute(self.func),
             }
         }
@@ -37,9 +37,9 @@ impl<'a, T, F> Callback<'a, T, F> {
     }
 }
 
-impl<'a, T: FnOnce(F), F> From<&'a mut T> for OpaqueCallback<'a, F> {
+impl<'a, T: FnMut(F), F> From<&'a mut T> for OpaqueCallback<'a, F> {
     fn from(func: &'a mut T) -> Self {
-        extern "C" fn callback<T: FnOnce(F), F>(func: &mut T, data: F) {
+        extern "C" fn callback<T: FnMut(F), F>(func: &mut T, data: F) {
             func(data);
         }
 
@@ -48,5 +48,13 @@ impl<'a, T: FnOnce(F), F> From<&'a mut T> for OpaqueCallback<'a, F> {
             func: callback::<T, F>,
         }
         .into()
+    }
+}
+
+impl<'a, T> std::iter::Extend<T> for OpaqueCallback<'a, T> {
+    fn extend<F: IntoIterator<Item = T>>(&mut self, iter: F) {
+        for item in iter {
+            self.call(item);
+        }
     }
 }

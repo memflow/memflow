@@ -1,10 +1,10 @@
-use super::{OSProcess, ProcessInfo, ProcessInfoCallback};
+use super::{Process, ProcessInfo, ProcessInfoCallback};
 use crate::prelude::v1::*;
 
-pub trait OSKernel<T: PhysicalMemory>: Send {
+pub trait Kernel<T: PhysicalMemory>: Send {
     type VirtualMemoryType: VirtualMemory;
-    type ProcessType: OSProcess;
-    type IntoProcessType: OSProcess;
+    type ProcessType: Process;
+    type IntoProcessType: Process;
 
     /// Retreives physical memory object from kerenl
     fn phys_mem(&mut self) -> &mut T;

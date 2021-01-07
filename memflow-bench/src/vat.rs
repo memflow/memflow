@@ -6,6 +6,7 @@ use memflow::architecture::ScopedVirtualTranslate;
 
 use memflow::error::Result;
 use memflow::iter::FnExtend;
+use memflow::os::*;
 use memflow::process::*;
 use memflow::types::*;
 
@@ -13,27 +14,22 @@ use rand::prelude::*;
 use rand::{Rng, SeedableRng};
 use rand_xorshift::XorShiftRng as CurRng;
 
-fn vat_test_with_mem<
-    T: PhysicalMemory,
-    V: VirtualTranslate,
-    S: ScopedVirtualTranslate,
-    M: OsProcessModuleInfo,
->(
+fn vat_test_with_mem<T: PhysicalMemory, V: VirtualTranslate, S: ScopedVirtualTranslate>(
     bench: &mut Bencher,
     phys_mem: &mut T,
     vat: &mut V,
     chunk_count: usize,
     translations: usize,
     translator: S,
-    module: M,
+    module: ModuleInfo,
 ) {
     let mut rng = CurRng::from_rng(thread_rng()).unwrap();
 
     let mut bufs = vec![Address::null(); translations];
 
     let base_addr = rng.gen_range(
-        module.base().as_u64(),
-        module.base().as_u64() + module.size() as u64,
+        module.base.as_u64(),
+        module.base.as_u64() + module.size as u64,
     );
 
     for addr in bufs.iter_mut() {
@@ -62,14 +58,13 @@ fn vat_test_with_ctx<
     V: VirtualTranslate,
     P: OsProcessInfo,
     S: ScopedVirtualTranslate,
-    M: OsProcessModuleInfo,
 >(
     bench: &mut Bencher,
     cache_size: u64,
     chunks: usize,
     translations: usize,
     use_tlb: bool,
-    (mut mem, mut vat, prc, translator, tmod): (T, V, P, S, M),
+    (mut mem, mut vat, prc, translator, tmod): (T, V, P, S, ModuleInfo),
 ) {
     if cache_size > 0 {
         let cache = CachedMemoryAccess::builder(&mut mem)
@@ -136,13 +131,12 @@ fn chunk_vat_params<
     V: VirtualTranslate,
     P: OsProcessInfo,
     S: ScopedVirtualTranslate,
-    M: OsProcessModuleInfo,
 >(
     group: &mut BenchmarkGroup<'_, measurement::WallTime>,
     func_name: String,
     cache_size: u64,
     use_tlb: bool,
-    initialize_ctx: &dyn Fn() -> Result<(T, V, P, S, M)>,
+    initialize_ctx: &dyn Fn() -> Result<(T, V, P, S, ModuleInfo)>,
 ) {
     let size = 0x10;
     for &chunk_size in [1, 4, 16, 64].iter() {
@@ -169,11 +163,10 @@ pub fn chunk_vat<
     V: VirtualTranslate,
     P: OsProcessInfo,
     S: ScopedVirtualTranslate,
-    M: OsProcessModuleInfo,
 >(
     c: &mut Criterion,
     backend_name: &str,
-    initialize_ctx: &dyn Fn() -> Result<(T, V, P, S, M)>,
+    initialize_ctx: &dyn Fn() -> Result<(T, V, P, S, ModuleInfo)>,
 ) {
     let plot_config = PlotConfiguration::default().summary_scale(AxisScale::Logarithmic);
 

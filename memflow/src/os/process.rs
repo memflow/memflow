@@ -28,11 +28,21 @@ pub trait Process: Send {
     /// # Arguments
     /// * `target_arch` - sets which architecture to retrieve the modules for (if emulated). Choose
     /// between `Some(ProcessInfo::sys_arch())`, and `Some(ProcessInfo::proc_arch())`. `None` for all.
-    fn module_list(&mut self, target_arch: Option<ArchitectureObj>) -> Result<Vec<ModuleInfo>> {
+    fn module_list_arch(
+        &mut self,
+        target_arch: Option<ArchitectureObj>,
+    ) -> Result<Vec<ModuleInfo>> {
         let mut ret = vec![];
         let callback = &mut |data| ret.push(data);
         self.module_list_callback(target_arch, callback.into())?;
         Ok(ret)
+    }
+
+    /// Retrieves a module list for the process
+    ///
+    /// This is equivalent to `Process::module_list_arch(None)`
+    fn module_list(&mut self) -> Result<Vec<ModuleInfo>> {
+        self.module_list_arch(None)
     }
 
     /// Retreives the process info

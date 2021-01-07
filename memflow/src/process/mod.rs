@@ -46,36 +46,4 @@ pub trait OsProcessInfo {
     fn proc_arch(&self) -> ArchitectureObj;
 }
 
-// TODO: Range impl for base to size?
-/// Trait describing OS independent module information.
-pub trait OsProcessModuleInfo {
-    /// Returns the address of the module header.
-    ///
-    /// # Remarks
-    ///
-    /// On Windows this will return the address where the [`PEB`](https://docs.microsoft.com/en-us/windows/win32/api/winternl/ns-winternl-peb) entry is stored.
-    fn address(&self) -> Address;
-
-    /// Returns the base address of the parent process.
-    ///
-    /// # Remarks
-    ///
-    /// This method is analog to the `OsProcessInfo::address` function.
-    fn parent_process(&self) -> Address;
-
-    /// Returns the actual base address of this module.
-    ///
-    /// # Remarks
-    ///
-    /// The base address is contained in the virtual address range of the process
-    /// this module belongs to.
-    fn base(&self) -> Address;
-
-    /// Returns the size of the module.
-    fn size(&self) -> usize;
-
-    /// Returns the full name of the module.
-    fn name(&self) -> String;
-}
-
 // TODO: Exports / Sections / etc

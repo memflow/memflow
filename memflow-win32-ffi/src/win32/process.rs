@@ -1,9 +1,9 @@
 use super::kernel::{FFIVirtualMemory, Kernel};
 
-use memflow::iter::FnExtend;
+use memflow::os::{ModuleInfo, Process};
 use memflow_ffi::mem::virt_mem::VirtualMemoryObj;
 use memflow_ffi::util::*;
-use memflow_win32::win32::{self, Win32ModuleInfo, Win32ProcessInfo};
+use memflow_win32::win32::{self, Win32ProcessInfo};
 
 use std::ffi::CStr;
 use std::os::raw::c_char;
@@ -55,32 +55,30 @@ pub unsafe extern "C" fn process_free(process: &'static mut Win32Process) {
 
 /// Retrieve a process module list
 ///
-/// This will fill up to `max_len` elements into `out` with references to `Win32ModuleInfo` objects.
-///
-/// These references then need to be freed with `module_info_free`
+/// This will fill up to `max_len` elements into `out` with `ModuleInfo` objects.
 ///
 /// # Safety
 ///
-/// `out` must be a valid buffer able to contain `max_len` references to `Win32ModuleInfo`.
+/// `out` must be a valid buffer able to contain `max_len` `ModuleInfo` objects.
 #[no_mangle]
 pub unsafe extern "C" fn process_module_list(
     process: &mut Win32Process,
-    out: *mut &'static mut Win32ModuleInfo,
+    out: *mut ModuleInfo,
     max_len: usize,
 ) -> usize {
     let mut ret = 0;
 
     let buffer = std::slice::from_raw_parts_mut(out, max_len);
 
-    let mut extend_fn = FnExtend::new(|info| {
+    let callback = &mut |info| {
         if ret < max_len {
-            buffer[ret] = to_heap(info);
+            buffer[ret] = info;
             ret += 1;
         }
-    });
+    };
 
     process
-        .module_list_extend(&mut extend_fn)
+        .module_list_callback(None, callback.into())
         .map_err(inspect_err)
         .ok()
         .map(|_| ret)
@@ -91,46 +89,41 @@ pub unsafe extern "C" fn process_module_list(
 ///
 /// This function searches for a module with a base address
 /// matching the section_base address from the ProcessInfo structure.
-/// It then returns a reference to a newly allocated
-/// `Win32ModuleInfo` object, if a module was found (null otherwise).
-///
-/// The reference later needs to be freed with `module_info_free`
-///
-/// # Safety
-///
-/// `process` must be a valid Win32Process pointer.
+/// It then writes a `ModuleInfo` object into the address given, and
+/// returns `0`, on error, `-1` is returned.
 #[no_mangle]
-pub unsafe extern "C" fn process_main_module_info(
+pub extern "C" fn process_main_module_info(
     process: &mut Win32Process,
-) -> Option<&'static mut Win32ModuleInfo> {
-    process
-        .main_module_info()
-        .map(to_heap)
-        .map_err(inspect_err)
-        .ok()
+    output: &mut ModuleInfo,
+) -> i32 {
+    if let Ok(m) = process.main_module_info().map_err(inspect_err) {
+        *output = m;
+        0
+    } else {
+        -1
+    }
 }
 
 /// Lookup a module
 ///
-/// This will search for a module called `name`, and return a reference to a newly allocated
-/// `Win32ModuleInfo` object, if a module was found (null otherwise).
-///
-/// The reference later needs to be freed with `module_info_free`
+/// This will search for a module called `name`, and write the `ModuleInfo` object
+/// if it was found, and return `0`. On error, `-1` is returned
 ///
 /// # Safety
 ///
-/// `process` must be a valid Win32Process pointer.
 /// `name` must be a valid null terminated string.
 #[no_mangle]
 pub unsafe extern "C" fn process_module_info(
     process: &mut Win32Process,
     name: *const c_char,
-) -> Option<&'static mut Win32ModuleInfo> {
+    output: &mut ModuleInfo,
+) -> i32 {
     let name = CStr::from_ptr(name).to_string_lossy();
 
-    process
-        .module_info(&name)
-        .map(to_heap)
-        .map_err(inspect_err)
-        .ok()
+    if let Ok(m) = process.module_info(&name).map_err(inspect_err) {
+        *output = m;
+        0
+    } else {
+        -1
+    }
 }

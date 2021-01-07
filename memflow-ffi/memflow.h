@@ -36,14 +36,11 @@ typedef struct ArchitectureObj ArchitectureObj;
 
 typedef struct CloneablePhysicalMemoryObj CloneablePhysicalMemoryObj;
 
-/**
- * Holds an inventory of available connectors.
- */
-typedef struct ConnectorInventory ConnectorInventory;
+#if defined(USE_MEMFLOW_PLUGINS)
+typedef struct Inventory Inventory;
+#endif
 
 typedef struct OsProcessInfoObj OsProcessInfoObj;
-
-typedef struct OsProcessModuleInfoObj OsProcessModuleInfoObj;
 
 typedef struct PhysicalMemoryObj PhysicalMemoryObj;
 
@@ -85,27 +82,27 @@ typedef uint8_t PageType;
 /**
  * The page explicitly has no flags.
  */
-#define PageType_NONE 0
+#define PageType_NONE (uint8_t)0
 /**
  * The page type is not known.
  */
-#define PageType_UNKNOWN 1
+#define PageType_UNKNOWN (uint8_t)1
 /**
  * The page contains page table entries.
  */
-#define PageType_PAGE_TABLE 2
+#define PageType_PAGE_TABLE (uint8_t)2
 /**
  * The page is a writeable page.
  */
-#define PageType_WRITEABLE 4
+#define PageType_WRITEABLE (uint8_t)4
 /**
  * The page is read only.
  */
-#define PageType_READ_ONLY 8
+#define PageType_READ_ONLY (uint8_t)8
 /**
  * The page is not executable.
  */
-#define PageType_NOEXEC 16
+#define PageType_NOEXEC (uint8_t)16
 
 /**
  * This type represents a wrapper over a [address](address/index.html)
@@ -163,10 +160,10 @@ PhysicalAddress addr_to_paddr(Address address);
  *
  * # Safety
  *
- * ConnectorInventory is inherently unsafe, because it loads shared libraries which can not be
+ * Inventory is inherently unsafe, because it loads shared libraries which can not be
  * guaranteed to be safe.
  */
-ConnectorInventory *inventory_scan(void);
+Inventory *inventory_scan(void);
 
 /**
  * Create a new inventory with custom path string
@@ -175,7 +172,7 @@ ConnectorInventory *inventory_scan(void);
  *
  * `path` must be a valid null terminated string
  */
-ConnectorInventory *inventory_scan_path(const char *path);
+Inventory *inventory_scan_path(const char *path);
 
 /**
  * Add a directory to an existing inventory
@@ -184,7 +181,7 @@ ConnectorInventory *inventory_scan_path(const char *path);
  *
  * `dir` must be a valid null terminated string
  */
-int32_t inventory_add_dir(ConnectorInventory *inv, const char *dir);
+int32_t inventory_add_dir(Inventory *inv, const char *dir);
 
 /**
  * Create a connector with given arguments
@@ -206,7 +203,7 @@ int32_t inventory_add_dir(ConnectorInventory *inv, const char *dir);
  * Any error strings returned by the connector must not be outputed after the connector gets
  * freed, because that operation could cause the underlying shared library to get unloaded.
  */
-CloneablePhysicalMemoryObj *inventory_create_connector(ConnectorInventory *inv,
+CloneablePhysicalMemoryObj *inventory_create_connector(Inventory *inv,
                                                        const char *name,
                                                        const char *args);
 
@@ -242,10 +239,10 @@ void connector_free(CloneablePhysicalMemoryObj *conn);
  *
  * # Safety
  *
- * `inv` must point to a valid `ConnectorInventory` that was created using one of the provided
+ * `inv` must point to a valid `Inventory` that was created using one of the provided
  * functions.
  */
-void inventory_free(ConnectorInventory *inv);
+void inventory_free(Inventory *inv);
 
 /**
  * Downcast a cloneable physical memory into a physical memory object.
@@ -466,36 +463,6 @@ const ArchitectureObj *os_process_info_proc_arch(const OsProcessInfoObj *obj);
  * functions.
  */
 void os_process_info_free(OsProcessInfoObj *obj);
-
-Address os_process_module_address(const OsProcessModuleInfoObj *obj);
-
-Address os_process_module_parent_process(const OsProcessModuleInfoObj *obj);
-
-Address os_process_module_base(const OsProcessModuleInfoObj *obj);
-
-uintptr_t os_process_module_size(const OsProcessModuleInfoObj *obj);
-
-/**
- * Retreive name of the module
- *
- * This will copy at most `max_len` characters (including the null terminator) into `out` of the
- * name.
- *
- * # Safety
- *
- * `out` must be a buffer with at least `max_len` size
- */
-uintptr_t os_process_module_name(const OsProcessModuleInfoObj *obj, char *out, uintptr_t max_len);
-
-/**
- * Free a OsProcessModuleInfoObj reference
- *
- * # Safety
- *
- * `obj` must point to a valid `OsProcessModuleInfoObj`, and was created using one of the API's
- * functions.
- */
-void os_process_module_free(OsProcessModuleInfoObj *obj);
 
 #ifdef __cplusplus
 } // extern "C"

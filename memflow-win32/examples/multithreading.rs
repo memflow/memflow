@@ -4,6 +4,7 @@ use clap::*;
 use log::{info, Level};
 
 use memflow::mem::*;
+use memflow::os::*;
 use memflow::plugins::*;
 
 use memflow_win32::win32::Kernel;

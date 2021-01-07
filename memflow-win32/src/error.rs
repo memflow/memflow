@@ -57,6 +57,15 @@ impl From<memflow::error::Error> for Error {
     }
 }
 
+impl From<Error> for memflow::error::Error {
+    fn from(error: Error) -> memflow::error::Error {
+        match error {
+            Error::Core(e) => e,
+            e => memflow::error::Error::Other(e.to_str()),
+        }
+    }
+}
+
 /// Convert from flow_core::PartialError
 impl<T> From<memflow::error::PartialError<T>> for Error {
     fn from(_error: memflow::error::PartialError<T>) -> Error {

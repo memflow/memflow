@@ -1,8 +1,9 @@
 use memflow::mem::*;
+use memflow::os::*;
 use memflow::plugins::*;
 
 use memflow_win32::error::{Error, Result};
-use memflow_win32::win32::{Kernel, Win32ModuleInfo, Win32Process};
+use memflow_win32::win32::{Kernel, Win32Process};
 
 use clap::*;
 use log::Level;
@@ -157,8 +158,8 @@ fn bool_str(b: bool) -> ColoredString {
     }
 }
 
-fn modules<V: VirtualMemory>(process: &mut Win32Process<V>) -> Result<Vec<Win32ModuleInfo>> {
-    let modules = process.module_list();
+fn modules<V: VirtualMemory>(process: &mut Win32Process<V>) -> Result<Vec<ModuleInfo>> {
+    let modules = process.module_list().map_err(From::from);
     println!("modules ... {}", ok_str(&modules));
     modules
 }

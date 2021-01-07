@@ -5,20 +5,21 @@ use clap::*;
 use log::Level;
 
 use memflow::mem::*;
+use memflow::os::{ModuleInfo, Process};
 use memflow::plugins::*;
 use memflow::process::*;
 use memflow::types::*;
 
 use memflow_win32::error::Result;
 use memflow_win32::offsets::Win32Offsets;
-use memflow_win32::win32::{Kernel, KernelInfo, Win32ModuleInfo, Win32Process};
+use memflow_win32::win32::{Kernel, KernelInfo, Win32Process};
 
 use rand::{Rng, SeedableRng};
 use rand_xorshift::XorShiftRng as CurRng;
 
 fn rwtest<T: VirtualMemory>(
     proc: &mut Win32Process<T>,
-    module: &dyn OsProcessModuleInfo,
+    module: &ModuleInfo,
     chunk_sizes: &[usize],
     chunk_counts: &[usize],
     read_size: usize,
@@ -46,8 +47,8 @@ fn rwtest<T: VirtualMemory>(
             let mut bufs = vec![(vec![0 as u8; *i], 0); *o];
 
             let base_addr = rng.gen_range(
-                module.base().as_u64(),
-                module.base().as_u64() + module.size() as u64,
+                module.base.as_u64(),
+                module.base.as_u64() + module.size as u64,
             );
 
             // This code will increase the read size for higher number of chunks
@@ -109,18 +110,18 @@ fn read_bench<T: PhysicalMemory + ?Sized, V: VirtualTranslate>(
             proc_list[rng.gen_range(0, proc_list.len())].clone(),
         );
 
-        let mod_list: Vec<Win32ModuleInfo> = prc
+        let mod_list: Vec<ModuleInfo> = prc
             .module_list()?
             .into_iter()
-            .filter(|module| module.size() > 0x1000)
+            .filter(|module| module.size > 0x1000)
             .collect();
 
         if !mod_list.is_empty() {
             let tmod = &mod_list[rng.gen_range(0, mod_list.len())];
             println!(
                 "Found test module {} ({:x}) in {}",
-                tmod.name(),
-                tmod.size(),
+                tmod.name,
+                tmod.size,
                 prc.proc_info.name(),
             );
 

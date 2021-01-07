@@ -3,7 +3,7 @@ use memflow_bench::*;
 
 use criterion::*;
 
-use memflow::mem::dummy::{DummyMemory as Memory, DummyModule, DummyProcess};
+use memflow::mem::dummy::{DummyMemory as Memory, DummyProcess};
 use memflow::prelude::v1::*;
 
 fn initialize_virt_ctx() -> Result<(
@@ -11,7 +11,7 @@ fn initialize_virt_ctx() -> Result<(
     DirectTranslate,
     DummyProcess,
     impl ScopedVirtualTranslate,
-    DummyModule,
+    ModuleInfo,
 )> {
     let mut mem = Memory::new(size::mb(64));
 

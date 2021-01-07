@@ -30,6 +30,14 @@ impl AsRef<str> for ReprCStr {
     }
 }
 
+impl std::ops::Deref for ReprCStr {
+    type Target = str;
+
+    fn deref(&self) -> &Self::Target {
+        self.as_ref()
+    }
+}
+
 impl Drop for ReprCStr {
     fn drop(&mut self) {
         let _ = unsafe { CString::from_raw(self.0) };

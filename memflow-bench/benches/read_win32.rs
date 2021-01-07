@@ -6,6 +6,7 @@ use criterion::*;
 use memflow::error::{Error, Result};
 use memflow::prelude::v1::*;
 use memflow_win32::prelude::v1::*;
+use memflow_win32::win32::Kernel;
 
 use rand::prelude::*;
 use rand::{Rng, SeedableRng};
@@ -20,7 +21,7 @@ fn initialize_virt_ctx() -> Result<(
     DirectTranslate,
     Win32ProcessInfo,
     impl ScopedVirtualTranslate,
-    Win32ModuleInfo,
+    ModuleInfo,
 )> {
     let mut phys_mem = create_connector(&Args::new())?;
 
@@ -47,7 +48,7 @@ fn initialize_virt_ctx() -> Result<(
             rng.gen_range(0, proc_list.len())
         };
 
-        let mod_list: Vec<Win32ModuleInfo> = {
+        let mod_list: Vec<ModuleInfo> = {
             let mut prc = Win32Process::with_kernel_ref(&mut kernel, proc_list[idx].clone());
             prc.module_list()
                 .unwrap_or_default()

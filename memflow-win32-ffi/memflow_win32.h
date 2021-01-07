@@ -7,9 +7,9 @@
 #include <stdlib.h>
 #include "memflow.h"
 
-typedef struct Kernel_FFIMemory__FFIVirtualTranslate Kernel_FFIMemory__FFIVirtualTranslate;
+typedef struct ArchitectureObj ArchitectureObj;
 
-typedef struct Win32ModuleInfo Win32ModuleInfo;
+typedef struct Kernel_FFIMemory__FFIVirtualTranslate Kernel_FFIMemory__FFIVirtualTranslate;
 
 typedef struct Win32ProcessInfo Win32ProcessInfo;
 
@@ -34,6 +34,59 @@ typedef struct Win32Version {
 typedef uint32_t PID;
 
 typedef Win32Process_FFIVirtualMemory Win32Process;
+
+typedef char *ReprCStr;
+
+typedef struct ModuleInfo {
+    /**
+     * Returns the address of the module header.
+     *
+     * # Remarks
+     *
+     * On Windows this will be the address where the [`PEB`](https://docs.microsoft.com/en-us/windows/win32/api/winternl/ns-winternl-peb) entry is stored.
+     */
+    Address address;
+    /**
+     * The base address of the parent process.
+     *
+     * # Remarks
+     *
+     * This field is analog to the `ProcessInfo::address` field.
+     */
+    Address parent_process;
+    /**
+     * The actual base address of this module.
+     *
+     * # Remarks
+     *
+     * The base address is contained in the virtual address range of the process
+     * this module belongs to.
+     */
+    Address base;
+    /**
+     * Size of the module
+     */
+    uintptr_t size;
+    /**
+     * Name of the module
+     */
+    ReprCStr name;
+    /**
+     * Path of the module
+     */
+    ReprCStr path;
+    /**
+     * Architecture of the module
+     *
+     * # Remarks
+     *
+     * Emulated processes often have 2 separate lists of modules, one visible to the emulated
+     * context (e.g. all 32-bit modules in a WoW64 process), and the other for all native modules
+     * needed to support the process emulation. This should be equal to either
+     * `ProcessInfo::proc_arch`, or `ProcessInfo::sys_arch` of the parent process.
+     */
+    ArchitectureObj arch;
+} ModuleInfo;
 
 typedef struct Win32ArchOffsets {
     uintptr_t peb_ldr;
@@ -189,21 +242,6 @@ Win32Process *kernel_into_process_pid(Kernel *kernel, PID pid);
  */
 Win32Process *kernel_into_kernel_process(Kernel *kernel);
 
-OsProcessModuleInfoObj *module_info_trait(Win32ModuleInfo *info);
-
-/**
- * Free a win32 module info instance.
- *
- * Note that it is not the same as `OsProcessModuleInfoObj`, and those references need to be freed
- * manually.
- *
- * # Safety
- *
- * `info` must be a unique heap allocated reference to `Win32ModuleInfo`, and after this call the
- * reference will become invalid.
- */
-void module_info_free(Win32ModuleInfo *info);
-
 /**
  * Create a process with kernel and process info
  *
@@ -238,46 +276,35 @@ void process_free(Win32Process *process);
 /**
  * Retrieve a process module list
  *
- * This will fill up to `max_len` elements into `out` with references to `Win32ModuleInfo` objects.
- *
- * These references then need to be freed with `module_info_free`
+ * This will fill up to `max_len` elements into `out` with `ModuleInfo` objects.
  *
  * # Safety
  *
- * `out` must be a valid buffer able to contain `max_len` references to `Win32ModuleInfo`.
+ * `out` must be a valid buffer able to contain `max_len` `ModuleInfo` objects.
  */
-uintptr_t process_module_list(Win32Process *process, Win32ModuleInfo **out, uintptr_t max_len);
+uintptr_t process_module_list(Win32Process *process, ModuleInfo *out, uintptr_t max_len);
 
 /**
  * Retrieve the main module of the process
  *
  * This function searches for a module with a base address
  * matching the section_base address from the ProcessInfo structure.
- * It then returns a reference to a newly allocated
- * `Win32ModuleInfo` object, if a module was found (null otherwise).
- *
- * The reference later needs to be freed with `module_info_free`
- *
- * # Safety
- *
- * `process` must be a valid Win32Process pointer.
+ * It then writes a `ModuleInfo` object into the address given, and
+ * returns `0`, on error, `-1` is returned.
  */
-Win32ModuleInfo *process_main_module_info(Win32Process *process);
+int32_t process_main_module_info(Win32Process *process, ModuleInfo *output);
 
 /**
  * Lookup a module
  *
- * This will search for a module called `name`, and return a reference to a newly allocated
- * `Win32ModuleInfo` object, if a module was found (null otherwise).
- *
- * The reference later needs to be freed with `module_info_free`
+ * This will search for a module called `name`, and write the `ModuleInfo` object
+ * if it was found, and return `0`. On error, `-1` is returned
  *
  * # Safety
  *
- * `process` must be a valid Win32Process pointer.
  * `name` must be a valid null terminated string.
  */
-Win32ModuleInfo *process_module_info(Win32Process *process, const char *name);
+int32_t process_module_info(Win32Process *process, const char *name, ModuleInfo *output);
 
 OsProcessInfoObj *process_info_trait(Win32ProcessInfo *info);
 

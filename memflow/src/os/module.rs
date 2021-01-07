@@ -27,6 +27,8 @@ pub struct ModuleInfo {
     pub size: usize,
     /// Name of the module
     pub name: ReprCStr,
+    /// Path of the module
+    pub path: ReprCStr,
     /// Architecture of the module
     ///
     /// # Remarks

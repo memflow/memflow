@@ -7,7 +7,8 @@ use crate::mem::{
     MemoryMap, PhysicalMemory, PhysicalMemoryMetadata, PhysicalReadData, PhysicalWriteData,
     VirtualMemory,
 };
-use crate::process::{OsProcessInfo, OsProcessModuleInfo, PID};
+use crate::os::ModuleInfo;
+use crate::process::{OsProcessInfo, PID};
 use crate::types::{size, Address};
 
 use rand::seq::SliceRandom;
@@ -84,33 +85,6 @@ impl PageInfo {
     }
 }
 
-pub struct DummyModule {
-    base: Address,
-    size: usize,
-}
-
-impl OsProcessModuleInfo for DummyModule {
-    fn address(&self) -> Address {
-        Address::INVALID
-    }
-
-    fn parent_process(&self) -> Address {
-        Address::INVALID
-    }
-
-    fn base(&self) -> Address {
-        self.base
-    }
-
-    fn size(&self) -> usize {
-        self.size
-    }
-
-    fn name(&self) -> String {
-        String::from("dummy.so")
-    }
-}
-
 pub struct DummyProcess {
     address: Address,
     map_size: usize,
@@ -119,10 +93,15 @@ pub struct DummyProcess {
 }
 
 impl DummyProcess {
-    pub fn get_module(&self, min_size: usize) -> DummyModule {
-        DummyModule {
+    pub fn get_module(&self, min_size: usize) -> ModuleInfo {
+        ModuleInfo {
+            address: Address::INVALID,
+            parent_process: Address::INVALID,
             base: self.address + thread_rng().gen_range(0, self.map_size / 2),
             size: (thread_rng().gen_range(min_size, self.map_size) / 2),
+            name: "dummy.so".into(),
+            path: "/".into(),
+            arch: x64::ARCH,
         }
     }
 

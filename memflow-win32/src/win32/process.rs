@@ -1,6 +1,6 @@
 use std::prelude::v1::*;
 
-use super::{Kernel, Win32ModuleInfo};
+use super::Kernel;
 use crate::error::{Error, Result};
 use crate::offsets::Win32ArchOffsets;
 use crate::win32::VirtualReadUnicodeString;
@@ -10,8 +10,8 @@ use std::fmt;
 
 use memflow::architecture::ArchitectureObj;
 use memflow::mem::{PhysicalMemory, VirtualDMA, VirtualMemory, VirtualTranslate};
-use memflow::os::{ModuleInfoCallback, Process, ProcessInfo};
-use memflow::process::{OsProcessInfo, OsProcessModuleInfo, PID};
+use memflow::os::{ModuleInfo, ModuleInfoCallback, Process, ProcessInfo};
+use memflow::process::{OsProcessInfo, PID};
 use memflow::types::Address;
 
 use super::Win32VirtualTranslate;
@@ -100,7 +100,7 @@ impl Win32ModuleListInfo {
         parent_eprocess: Address,
         mem: &mut impl VirtualMemory,
         arch: ArchitectureObj,
-    ) -> Result<Win32ModuleInfo> {
+    ) -> Result<ModuleInfo> {
         let base = mem.virt_read_addr_arch(arch, entry + self.offsets.ldr_data_base)?;
 
         trace!("base={:x}", base);
@@ -117,13 +117,14 @@ impl Win32ModuleListInfo {
         let name = mem.virt_read_unicode_string(arch, entry + self.offsets.ldr_data_base_name)?;
         trace!("name={}", name);
 
-        Ok(Win32ModuleInfo {
-            peb_entry: entry,
-            parent_eprocess,
+        Ok(ModuleInfo {
+            address: entry,
+            parent_process: parent_eprocess,
             base,
             size,
-            path,
-            name,
+            path: path.into(),
+            name: name.into(),
+            arch,
         })
     }
 }
@@ -236,10 +237,8 @@ impl<T: Clone> Clone for Win32Process<T> {
     }
 }
 
-impl<T: PhysicalMemory + Clone, V: VirtualTranslate + Clone> Process
-    for Win32Process<VirtualDMA<T, V, Win32VirtualTranslate>>
-{
-    type VirtualMemoryType = VirtualDMA<T, V, Win32VirtualTranslate>;
+impl<T: VirtualMemory> Process for Win32Process<T> {
+    type VirtualMemoryType = T;
     //type VirtualTranslateType: VirtualTranslate;
 
     /// Retrieves virtual memory object for the process
@@ -253,13 +252,35 @@ impl<T: PhysicalMemory + Clone, V: VirtualTranslate + Clone> Process
     /// Walks the process' module list and calls the provided callback for each module
     fn module_list_callback(
         &mut self,
-        _target_arch: Option<ArchitectureObj>,
-        _callback: ModuleInfoCallback,
+        target_arch: Option<ArchitectureObj>,
+        mut callback: ModuleInfoCallback,
     ) -> memflow::error::Result<()> {
-        //match target_arch {
-        //    _ => {}
-        //}
-        Ok(())
+        let infos = [
+            (
+                Some(self.proc_info.module_info_native),
+                self.proc_info.base.sys_arch,
+            ),
+            (
+                self.proc_info.module_info_wow64,
+                self.proc_info.base.proc_arch,
+            ),
+        ];
+
+        // Here we end up filtering out module_info_wow64 if it doesn't exist
+        let iter = infos
+            .iter()
+            .filter(|(_, a)| {
+                if let Some(ta) = target_arch {
+                    *a == ta
+                } else {
+                    true
+                }
+            })
+            .cloned()
+            .filter_map(|(info, arch)| info.zip(Some(arch)));
+
+        self.module_list_with_infos_extend(iter, &mut callback)
+            .map_err(From::from)
     }
 
     /// Retreives the process info
@@ -324,7 +345,7 @@ impl<T: VirtualMemory> Win32Process<T> {
     fn module_list_with_infos_extend(
         &mut self,
         module_infos: impl Iterator<Item = (Win32ModuleListInfo, ArchitectureObj)>,
-        out: &mut impl Extend<Win32ModuleInfo>,
+        out: &mut impl Extend<ModuleInfo>,
     ) -> Result<()> {
         for (info, arch) in module_infos {
             out.extend(
@@ -374,54 +395,27 @@ impl<T: VirtualMemory> Win32Process<T> {
         );
         info.module_entry_list(&mut self.virt_mem, arch)
     }
+}
 
-    /// Generate a module list and return a resulting Vec
-    pub fn module_list(&mut self) -> Result<Vec<Win32ModuleInfo>> {
-        let mut vec = Vec::new();
-        self.module_list_extend(&mut vec)?;
-        Ok(vec)
-    }
-
-    /// Generate a module list extending into `out` variable.
-    pub fn module_list_extend(&mut self, out: &mut impl Extend<Win32ModuleInfo>) -> Result<()> {
-        // Creates a list of module lists.
-        // The native list is always there, and if module_info_wow64 is not None,
-        // then the emulated architecture list is also used.
-        let infos = [
-            (
-                Some(self.proc_info.module_info_native),
-                self.proc_info.base.sys_arch,
-            ),
-            (
-                self.proc_info.module_info_wow64,
-                self.proc_info.base.proc_arch,
-            ),
-        ];
-
-        // Here we end up filtering out module_info_wow64 if it doesn't exist
-        let iter = infos
-            .iter()
-            .cloned()
-            .filter_map(|(info, arch)| info.zip(Some(arch)));
-
-        self.module_list_with_infos_extend(iter, out)
-    }
-
-    pub fn main_module_info(&mut self) -> Result<Win32ModuleInfo> {
+impl<T: VirtualMemory> Win32Process<T>
+where
+    Self: Process,
+{
+    pub fn main_module_info(&mut self) -> Result<ModuleInfo> {
         let module_list = self.module_list()?;
         module_list
             .into_iter()
-            .inspect(|module| trace!("{:x} {}", module.base(), module.name()))
+            .inspect(|module| trace!("{:x} {}", module.base, module.name))
             .find(|module| module.base == self.proc_info.section_base)
             .ok_or(Error::ModuleInfo)
     }
 
-    pub fn module_info(&mut self, name: &str) -> Result<Win32ModuleInfo> {
+    pub fn module_info(&mut self, name: &str) -> Result<ModuleInfo> {
         let module_list = self.module_list()?;
         module_list
             .into_iter()
-            .inspect(|module| trace!("{:x} {}", module.base(), module.name()))
-            .find(|module| module.name() == name)
+            .inspect(|module| trace!("{:x} {}", module.base, module.name))
+            .find(|module| module.name.as_ref() == name)
             .ok_or(Error::ModuleInfo)
     }
 }

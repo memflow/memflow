@@ -63,6 +63,7 @@ pub mod prelude {
         pub use crate::error::*;
         pub use crate::iter::*;
         pub use crate::mem::*;
+        pub use crate::os::*;
         #[cfg(feature = "plugins")]
         pub use crate::plugins::*;
         pub use crate::process::*;

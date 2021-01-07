@@ -13,8 +13,8 @@ use std::fmt;
 
 use memflow::architecture::x86;
 use memflow::mem::{DirectTranslate, PhysicalMemory, VirtualDMA, VirtualMemory, VirtualTranslate};
-use memflow::os::ProcessInfo;
-use memflow::process::{OperatingSystem, OsProcessInfo, OsProcessModuleInfo, PID};
+use memflow::os::{Process, ProcessInfo};
+use memflow::process::{OperatingSystem, OsProcessInfo, PID};
 use memflow::types::Address;
 
 use pelite::{self, pe64::exports::Export, PeView};
@@ -411,8 +411,8 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
             if process
                 .module_list()?
                 .iter()
-                .inspect(|&module| trace!("{:x} {}", module.base(), module.name()))
-                .find(|&module| module.name().to_lowercase() == name.to_lowercase())
+                .inspect(|&module| trace!("{:x} {}", module.base, module.name))
+                .find(|&module| module.name.to_string().to_lowercase() == name.to_lowercase())
                 .ok_or(Error::ModuleInfo)
                 .is_ok()
             {

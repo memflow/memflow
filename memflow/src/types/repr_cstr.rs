@@ -1,14 +1,33 @@
-use std::ffi::{CStr, CString};
-use std::os::raw::c_char;
+use std::prelude::v1::*;
+use std::slice::*;
+use std::str::from_utf8_unchecked;
 
 #[repr(transparent)]
-pub struct ReprCStr(*mut c_char);
+pub struct ReprCStr(*mut i8);
 
 unsafe impl Send for ReprCStr {}
 
+unsafe fn string_size(mut ptr: *const i8) -> usize {
+    (1..)
+        .take_while(|_| {
+            let ret = *ptr;
+            ptr = ptr.offset(1);
+            ret != 0
+        })
+        .last()
+        .unwrap_or(0)
+        + 1
+}
+
 impl From<&str> for ReprCStr {
     fn from(from: &str) -> Self {
-        Self(CString::new(from).expect("CString::new failed").into_raw())
+        let b = from
+            .bytes()
+            .take_while(|&b| b != 0)
+            .chain(Some(0))
+            .collect::<Vec<_>>()
+            .into_boxed_slice();
+        Self(Box::leak(b).as_mut_ptr() as *mut _)
     }
 }
 
@@ -18,15 +37,9 @@ impl From<String> for ReprCStr {
     }
 }
 
-impl From<ReprCStr> for CString {
-    fn from(from: ReprCStr) -> CString {
-        unsafe { CString::from_raw(from.0) }
-    }
-}
-
 impl AsRef<str> for ReprCStr {
     fn as_ref(&self) -> &str {
-        unsafe { CStr::from_ptr(self.0) }.to_str().unwrap()
+        unsafe { from_utf8_unchecked(from_raw_parts(self.0 as *const _, string_size(self.0) - 1)) }
     }
 }
 
@@ -40,7 +53,7 @@ impl std::ops::Deref for ReprCStr {
 
 impl Drop for ReprCStr {
     fn drop(&mut self) {
-        let _ = unsafe { CString::from_raw(self.0) };
+        let _ = unsafe { Box::from_raw(from_raw_parts_mut(self.0 as *mut _, string_size(self.0))) };
     }
 }
 
@@ -98,5 +111,16 @@ impl<'de> serde::Deserialize<'de> for ReprCStr {
         }
 
         deserializer.deserialize_str(ReprCStrVisitor)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::ReprCStr;
+    #[test]
+    fn string_size_matches() {
+        assert_eq!(0, ReprCStr::from("").as_ref().len());
+        assert_eq!(1, ReprCStr::from("1").as_ref().len());
+        assert_eq!(5, ReprCStr::from("12345").as_ref().len());
     }
 }

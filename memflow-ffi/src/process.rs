@@ -61,4 +61,3 @@ pub extern "C" fn os_process_info_proc_arch(obj: &OsProcessInfoObj) -> &Architec
 pub unsafe extern "C" fn os_process_info_free(obj: &'static mut OsProcessInfoObj) {
     let _ = Box::from_raw(obj);
 }
-

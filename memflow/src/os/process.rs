@@ -1,5 +1,6 @@
 use super::{ModuleInfo, ModuleInfoCallback};
-use crate::prelude::v1::*;
+use crate::prelude::v1::{Result, *};
+use std::prelude::v1::*;
 
 pub trait Process: Send {
     type VirtualMemoryType: VirtualMemory;

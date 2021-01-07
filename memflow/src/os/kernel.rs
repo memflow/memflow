@@ -1,5 +1,6 @@
 use super::{Process, ProcessInfo, ProcessInfoCallback};
-use crate::prelude::v1::*;
+use crate::prelude::v1::{Result, *};
+use std::prelude::v1::*;
 
 pub trait Kernel<T: PhysicalMemory>: Send {
     type VirtualMemoryType: VirtualMemory;

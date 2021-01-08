@@ -14,9 +14,9 @@ use std::fmt;
 
 use memflow::architecture::x86;
 use memflow::mem::{DirectTranslate, PhysicalMemory, VirtualDMA, VirtualMemory, VirtualTranslate};
-use memflow::os::{Kernel, Process, ProcessInfo, ProcessInfoCallback};
+use memflow::os::{AddressCallback, Kernel, ModuleInfo, Process, ProcessInfo};
 use memflow::process::{OsProcessInfo, PID};
-use memflow::types::Address;
+use memflow::types::{Address, ReprCStr};
 
 use pelite::{self, pe64::exports::Export, PeView};
 
@@ -322,6 +322,78 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
         })
     }
 
+    fn process_info_fullname(&mut self, info: Win32ProcessInfo) -> Result<Win32ProcessInfo> {
+        let cloned_base = info.base.clone();
+        let mut name = info.base.name;
+        let callback = &mut |_: &mut _, m: ModuleInfo| {
+            if m.name.as_ref().starts_with(name.as_ref()) {
+                name = m.name;
+                false
+            } else {
+                true
+            }
+        };
+        let sys_arch = info.base.sys_arch;
+        let mut process = self.process_by_info(cloned_base)?;
+        process.module_list_callback(Some(sys_arch), callback.into())?;
+        Ok(Win32ProcessInfo {
+            base: ProcessInfo { name, ..info.base },
+            ..info
+        })
+    }
+
+    fn process_info_base_by_address(&mut self, address: Address) -> Result<ProcessInfo> {
+        let pid: PID = self
+            .virt_mem
+            .virt_read(address + self.offsets.eproc_pid())?;
+        trace!("pid={}", pid);
+
+        let name: ReprCStr = self
+            .virt_mem
+            .virt_read_cstr(address + self.offsets.eproc_name(), IMAGE_FILE_NAME_LENGTH)?
+            .into();
+        trace!("name={}", name);
+
+        let wow64 = if self.offsets.eproc_wow64() == 0 {
+            trace!("eproc_wow64=null; skipping wow64 detection");
+            Address::null()
+        } else {
+            trace!(
+                "eproc_wow64={:x}; trying to read wow64 pointer",
+                self.offsets.eproc_wow64()
+            );
+            self.virt_mem.virt_read_addr_arch(
+                self.kernel_info.start_block.arch,
+                address + self.offsets.eproc_wow64(),
+            )?
+        };
+        trace!("wow64={:x}", wow64);
+
+        // determine process architecture
+        let sys_arch = self.kernel_info.start_block.arch;
+        trace!("sys_arch={:?}", sys_arch);
+        let proc_arch = match sys_arch.bits() {
+            64 => {
+                if wow64.is_null() {
+                    x86::x64::ARCH
+                } else {
+                    x86::x32::ARCH
+                }
+            }
+            32 => x86::x32::ARCH,
+            _ => return Err(Error::InvalidArchitecture),
+        };
+        trace!("proc_arch={:?}", proc_arch);
+
+        Ok(ProcessInfo {
+            address,
+            pid,
+            name,
+            sys_arch,
+            proc_arch,
+        })
+    }
+
     pub fn process_info_from_eprocess(&mut self, eprocess: Address) -> Result<Win32ProcessInfo> {
         self.process_info_by_address(eprocess)
             .map_err(From::from)
@@ -492,67 +564,22 @@ impl<'a, T: PhysicalMemory + 'a, V: VirtualTranslate + 'a> Kernel<'a> for Win32K
         &mut self.virt_mem
     }
 
-    /// Walks a process list and calls a callback for each process
+    /// Walks a process list and calls a callback for each process structure address
     ///
     /// The callback is fully opaque. We need this style so that C FFI can work seamlessly.
-    fn process_list_callback(
+    fn process_address_list_callback(
         &mut self,
-        _callback: ProcessInfoCallback,
+        _callback: AddressCallback<Self>,
     ) -> memflow::error::Result<()> {
         Err("unimplemented".into())
     }
 
     /// Find process information by its internal address
     fn process_info_by_address(&mut self, address: Address) -> memflow::error::Result<ProcessInfo> {
-        let pid: PID = self
-            .virt_mem
-            .virt_read(address + self.offsets.eproc_pid())?;
-        trace!("pid={}", pid);
-
-        let name = self
-            .virt_mem
-            .virt_read_cstr(address + self.offsets.eproc_name(), IMAGE_FILE_NAME_LENGTH)?
-            .into();
-        trace!("name={}", name);
-
-        let wow64 = if self.offsets.eproc_wow64() == 0 {
-            trace!("eproc_wow64=null; skipping wow64 detection");
-            Address::null()
-        } else {
-            trace!(
-                "eproc_wow64={:x}; trying to read wow64 pointer",
-                self.offsets.eproc_wow64()
-            );
-            self.virt_mem.virt_read_addr_arch(
-                self.kernel_info.start_block.arch,
-                address + self.offsets.eproc_wow64(),
-            )?
-        };
-        trace!("wow64={:x}", wow64);
-
-        // determine process architecture
-        let sys_arch = self.kernel_info.start_block.arch;
-        trace!("sys_arch={:?}", sys_arch);
-        let proc_arch = match sys_arch.bits() {
-            64 => {
-                if wow64.is_null() {
-                    x86::x64::ARCH
-                } else {
-                    x86::x32::ARCH
-                }
-            }
-            32 => x86::x32::ARCH,
-            _ => return Err(Error::InvalidArchitecture.into()),
-        };
-        trace!("proc_arch={:?}", proc_arch);
-
-        Ok(ProcessInfo {
-            address,
-            pid,
-            name,
-            sys_arch,
-            proc_arch,
-        })
+        let base = self.process_info_base_by_address(address)?;
+        let info = self.process_info_from_base(base)?;
+        let info = self.process_info_fullname(info)?;
+        Ok(info.base)
     }
 
     /// Creates a process by its internal address

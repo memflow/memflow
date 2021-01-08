@@ -1,4 +1,4 @@
-use super::{ModuleInfo, ModuleInfoCallback};
+use super::{ModuleAddressInfo, ModuleInfo, ModuleInfoCallback};
 use crate::prelude::v1::{Result, *};
 use std::prelude::v1::*;
 
@@ -12,6 +12,19 @@ pub trait Process: Send {
     /// Retrieves virtual address translator for the process (if applicable)
     //fn vat(&mut self) -> Option<&mut Self::VirtualTranslateType>;
 
+    /// Walks the process' module list and calls the provided callback for each module structure
+    /// address
+    ///
+    /// # Arguments
+    /// * `target_arch` - sets which architecture to retrieve the modules for (if emulated). Choose
+    /// between `Some(ProcessInfo::sys_arch())`, and `Some(ProcessInfo::proc_arch())`. `None` for all.
+    /// * `callback` - where to pass each matching module to. This is an opaque callback.
+    fn module_address_list_callback(
+        &mut self,
+        target_arch: Option<ArchitectureObj>,
+        callback: ModuleAddressCallback<Self>,
+    ) -> Result<()>;
+
     /// Walks the process' module list and calls the provided callback for each module
     ///
     /// # Arguments
@@ -21,8 +34,30 @@ pub trait Process: Send {
     fn module_list_callback(
         &mut self,
         target_arch: Option<ArchitectureObj>,
-        callback: ModuleInfoCallback,
-    ) -> Result<()>;
+        mut callback: ModuleInfoCallback<Self>,
+    ) -> Result<()> {
+        let inner_callback = &mut |s: &mut Self, ModuleAddressInfo { address, arch }| match s
+            .module_info_by_address(address, arch)
+        {
+            Ok(info) => callback.call(s, info),
+            Err(e) => {
+                log::trace!("Error loading module {:x} {:?}", address, e);
+                false
+            }
+        };
+        self.module_address_list_callback(target_arch, inner_callback.into())
+    }
+
+    /// Retreives a module by its structure address and architecture
+    ///
+    /// # Arguments
+    /// * `address` - address where module's information resides in
+    /// * `architecture` - architecture of the module. Should be either `ProcessInfo::proc_arch`, or `ProcessInfo::sys_arch`.
+    fn module_info_by_address(
+        &mut self,
+        address: Address,
+        architecture: ArchitectureObj,
+    ) -> Result<ModuleInfo>;
 
     /// Retrieves a module list for the process
     ///
@@ -34,8 +69,7 @@ pub trait Process: Send {
         target_arch: Option<ArchitectureObj>,
     ) -> Result<Vec<ModuleInfo>> {
         let mut ret = vec![];
-        let callback = &mut |data| ret.push(data);
-        self.module_list_callback(target_arch, callback.into())?;
+        self.module_list_callback(target_arch, (&mut ret).into())?;
         Ok(ret)
     }
 
@@ -77,4 +111,4 @@ pub struct ProcessInfo {
     pub proc_arch: ArchitectureObj,
 }
 
-pub type ProcessInfoCallback<'a> = OpaqueCallback<'a, ProcessInfo>;
+pub type ProcessInfoCallback<'a, T> = OpaqueCallback<'a, T, ProcessInfo>;

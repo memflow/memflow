@@ -70,10 +70,13 @@ pub unsafe extern "C" fn process_module_list(
 
     let buffer = std::slice::from_raw_parts_mut(out, max_len);
 
-    let callback = &mut |info| {
+    let callback = &mut |_: &mut _, info| {
         if ret < max_len {
             buffer[ret] = info;
             ret += 1;
+            true
+        } else {
+            false
         }
     };
 

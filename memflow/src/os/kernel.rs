@@ -1,4 +1,4 @@
-use super::{Process, ProcessInfo, ProcessInfoCallback};
+use super::{AddressCallback, Process, ProcessInfo, ProcessInfoCallback};
 use crate::prelude::v1::{Result, *};
 use std::prelude::v1::*;
 
@@ -14,16 +14,38 @@ pub trait Kernel<'a>: Send {
     /// Retrieves virtual memory object for the kernel memory
     fn virt_mem(&'a mut self) -> Self::VirtualMemoryType;
 
+    /// Walks a process list and calls a callback for each process structure address
+    ///
+    /// The callback is fully opaque. We need this style so that C FFI can work seamlessly.
+    fn process_address_list_callback(&mut self, callback: AddressCallback<Self>) -> Result<()>;
+
+    /// Retrieves a process address list
+    ///
+    /// This will be a list of unique internal addresses for underlying process structures
+    fn process_address_list(&mut self) -> Result<Vec<Address>> {
+        let mut ret = vec![];
+        self.process_address_list_callback((&mut ret).into())?;
+        Ok(ret)
+    }
+
     /// Walks a process list and calls a callback for each process
     ///
     /// The callback is fully opaque. We need this style so that C FFI can work seamlessly.
-    fn process_list_callback(&mut self, callback: ProcessInfoCallback) -> Result<()>;
+    fn process_list_callback(&mut self, mut callback: ProcessInfoCallback<Self>) -> Result<()> {
+        let inner_callback = &mut |s: &mut Self, addr| match s.process_info_by_address(addr) {
+            Ok(info) => callback.call(s, info),
+            Err(e) => {
+                log::trace!("Failed to read process {:x} {:?}", addr, e);
+                false
+            }
+        };
+        self.process_address_list_callback(inner_callback.into())
+    }
 
-    /// Retreives a process list
+    /// Retrieves a process list
     fn process_list(&mut self) -> Result<Vec<ProcessInfo>> {
         let mut ret = vec![];
-        let callback = &mut |data| ret.push(data);
-        self.process_list_callback(callback.into())?;
+        self.process_list_callback((&mut ret).into())?;
         Ok(ret)
     }
 
@@ -33,9 +55,12 @@ pub trait Kernel<'a>: Send {
     /// Find process information by its name
     fn process_info_by_name(&mut self, name: &str) -> Result<ProcessInfo> {
         let mut ret = Err("No process found".into());
-        let callback = &mut |data: ProcessInfo| {
-            if ret.is_err() && data.name.as_ref() == name {
-                ret = Ok(data)
+        let callback = &mut |_: &mut Self, data: ProcessInfo| {
+            if data.name.as_ref() == name {
+                ret = Ok(data);
+                false
+            } else {
+                true
             }
         };
         self.process_list_callback(callback.into())?;
@@ -45,9 +70,12 @@ pub trait Kernel<'a>: Send {
     /// Find process information by its ID
     fn process_info_by_pid(&mut self, pid: PID) -> Result<ProcessInfo> {
         let mut ret = Err("No process found".into());
-        let callback = &mut |data: ProcessInfo| {
+        let callback = &mut |_: &mut Self, data: ProcessInfo| {
             if data.pid == pid {
-                ret = Ok(data)
+                ret = Ok(data);
+                false
+            } else {
+                true
             }
         };
         self.process_list_callback(callback.into())?;

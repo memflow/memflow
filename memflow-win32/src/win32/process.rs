@@ -10,7 +10,9 @@ use std::fmt;
 
 use memflow::architecture::ArchitectureObj;
 use memflow::mem::{PhysicalMemory, VirtualDMA, VirtualMemory, VirtualTranslate};
-use memflow::os::{ModuleInfo, ModuleInfoCallback, Process, ProcessInfo};
+use memflow::os::{
+    AddressCallback, ModuleAddressCallback, ModuleAddressInfo, ModuleInfo, Process, ProcessInfo,
+};
 use memflow::process::{OsProcessInfo, PID};
 use memflow::types::Address;
 
@@ -70,18 +72,29 @@ impl Win32ModuleListInfo {
         self.module_base
     }
 
-    pub fn module_entry_list(
+    pub fn module_entry_list<P: Process>(
         &self,
-        mem: &mut impl VirtualMemory,
+        proc: &mut P,
         arch: ArchitectureObj,
     ) -> Result<Vec<Address>> {
-        let mut list = Vec::new();
+        let mut out = vec![];
+        self.module_entry_list_callback(proc, arch, (&mut out).into())?;
+        Ok(out)
+    }
 
+    pub fn module_entry_list_callback<P: Process>(
+        &self,
+        proc: &mut P,
+        arch: ArchitectureObj,
+        mut callback: AddressCallback<P>,
+    ) -> Result<()> {
         let list_start = self.module_base;
         let mut list_entry = list_start;
         for _ in 0..MAX_ITER_COUNT {
-            list.push(list_entry);
-            list_entry = mem.virt_read_addr_arch(arch, list_entry)?;
+            if !callback.call(proc, list_entry) {
+                break;
+            }
+            list_entry = proc.virt_mem().virt_read_addr_arch(arch, list_entry)?;
             // Break on misaligned entry. On NT 4.0 list end is misaligned, maybe it's a flag?
             if list_entry.is_null()
                 || (list_entry.as_u64() & 0b111) != 0
@@ -91,7 +104,7 @@ impl Win32ModuleListInfo {
             }
         }
 
-        Ok(list)
+        Ok(())
     }
 
     pub fn module_info_from_entry(
@@ -250,10 +263,10 @@ impl<T: VirtualMemory> Process for Win32Process<T> {
     //fn vat(&mut self) -> Option<&mut Self::VirtualTranslateType>;
 
     /// Walks the process' module list and calls the provided callback for each module
-    fn module_list_callback(
+    fn module_address_list_callback(
         &mut self,
         target_arch: Option<ArchitectureObj>,
-        mut callback: ModuleInfoCallback,
+        mut callback: ModuleAddressCallback<Self>,
     ) -> memflow::error::Result<()> {
         let infos = [
             (
@@ -279,8 +292,36 @@ impl<T: VirtualMemory> Process for Win32Process<T> {
             .cloned()
             .filter_map(|(info, arch)| info.zip(Some(arch)));
 
-        self.module_list_with_infos_extend(iter, &mut callback)
+        self.module_address_list_with_infos_callback(iter, &mut callback)
             .map_err(From::from)
+    }
+
+    /// Retreives a module by its structure address and architecture
+    ///
+    /// # Arguments
+    /// * `address` - address where module's information resides in
+    /// * `architecture` - architecture of the module. Should be either `ProcessInfo::proc_arch`, or `ProcessInfo::sys_arch`.
+    fn module_info_by_address(
+        &mut self,
+        address: Address,
+        architecture: ArchitectureObj,
+    ) -> memflow::error::Result<ModuleInfo> {
+        let info = if architecture == self.proc_info.sys_arch() {
+            Some(&mut self.proc_info.module_info_native)
+        } else if architecture == self.proc_info.proc_arch() {
+            self.proc_info.module_info_wow64.as_mut()
+        } else {
+            None
+        }
+        .ok_or(Error::InvalidArchitecture)?;
+
+        info.module_info_from_entry(
+            address,
+            self.proc_info.base.address,
+            &mut self.virt_mem,
+            architecture,
+        )
+        .map_err(From::from)
     }
 
     /// Retreives the process info
@@ -344,25 +385,15 @@ impl<'a, T: PhysicalMemory, V: VirtualTranslate>
 }
 
 impl<T: VirtualMemory> Win32Process<T> {
-    fn module_list_with_infos_extend(
+    fn module_address_list_with_infos_callback(
         &mut self,
         module_infos: impl Iterator<Item = (Win32ModuleListInfo, ArchitectureObj)>,
-        out: &mut impl Extend<ModuleInfo>,
+        out: &mut ModuleAddressCallback<Self>,
     ) -> Result<()> {
         for (info, arch) in module_infos {
-            out.extend(
-                info.module_entry_list(&mut self.virt_mem, arch)?
-                    .iter()
-                    .filter_map(|&peb| {
-                        info.module_info_from_entry(
-                            peb,
-                            self.proc_info.base.address,
-                            &mut self.virt_mem,
-                            arch,
-                        )
-                        .ok()
-                    }),
-            );
+            let callback =
+                &mut |s: &mut _, address| out.call(s, ModuleAddressInfo { address, arch });
+            info.module_entry_list_callback(self, arch, callback.into())?;
         }
         Ok(())
     }
@@ -377,7 +408,7 @@ impl<T: VirtualMemory> Win32Process<T> {
             )
         };
 
-        info.module_entry_list(&mut self.virt_mem, arch)
+        info.module_entry_list(self, arch)
     }
 
     pub fn module_entry_list_native(&mut self) -> Result<Vec<Address>> {
@@ -385,7 +416,7 @@ impl<T: VirtualMemory> Win32Process<T> {
             self.proc_info.module_info_native,
             self.proc_info.base.sys_arch,
         );
-        info.module_entry_list(&mut self.virt_mem, arch)
+        info.module_entry_list(self, arch)
     }
 
     pub fn module_entry_list_wow64(&mut self) -> Result<Vec<Address>> {
@@ -395,7 +426,7 @@ impl<T: VirtualMemory> Win32Process<T> {
                 .ok_or(Error::Other("WoW64 module list does not exist"))?,
             self.proc_info.base.proc_arch,
         );
-        info.module_entry_list(&mut self.virt_mem, arch)
+        info.module_entry_list(self, arch)
     }
 }
 

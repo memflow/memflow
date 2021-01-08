@@ -2,6 +2,7 @@ use memflow_ffi::mem::phys_mem::CloneablePhysicalMemoryObj;
 use memflow_ffi::util::*;
 use memflow_win32::kernel::Win32Version;
 use memflow_win32::win32::{kernel, Win32ProcessInfo, Win32VirtualTranslate};
+use memflow::os::Kernel;
 
 use memflow::mem::{
     cache::{CachedMemoryAccess, CachedVirtualTranslate, TimedCacheValidator},
@@ -27,7 +28,7 @@ pub(crate) type FFIVirtualTranslate = CachedVirtualTranslate<DirectTranslate, Ti
 pub(crate) type FFIVirtualMemory =
     VirtualDMA<FFIMemory, FFIVirtualTranslate, Win32VirtualTranslate>;
 
-pub type Kernel = kernel::Win32Kernel<FFIMemory, FFIVirtualTranslate>;
+pub type Win32Kernel = kernel::Win32Kernel<FFIMemory, FFIVirtualTranslate>;
 
 /// Build a cloneable kernel object with default caching parameters
 ///
@@ -40,7 +41,7 @@ pub type Kernel = kernel::Win32Kernel<FFIMemory, FFIVirtualTranslate>;
 #[no_mangle]
 pub unsafe extern "C" fn kernel_build(
     mem: &'static mut CloneablePhysicalMemoryObj,
-) -> Option<&'static mut Kernel> {
+) -> Option<&'static mut Win32Kernel> {
     let mem: Box<dyn CloneablePhysicalMemory> = Box::from_raw(*Box::from_raw(mem));
     kernel::Win32Kernel::builder(mem)
         .build_default_caches()
@@ -68,7 +69,7 @@ pub unsafe extern "C" fn kernel_build_custom(
     page_cache_size_kb: usize,
     vat_cache_time_ms: u64,
     vat_cache_entries: usize,
-) -> Option<&'static mut Kernel> {
+) -> Option<&'static mut Win32Kernel> {
     let mem: Box<dyn CloneablePhysicalMemory> = Box::from_raw(*Box::from_raw(mem));
     kernel::Win32Kernel::builder(mem)
         .build_page_cache(move |connector, arch| {
@@ -99,7 +100,7 @@ pub unsafe extern "C" fn kernel_build_custom(
 }
 
 #[no_mangle]
-pub extern "C" fn kernel_clone(kernel: &Kernel) -> &'static mut Kernel {
+pub extern "C" fn kernel_clone(kernel: &Win32Kernel) -> &'static mut Win32Kernel {
     Box::leak(Box::new((*kernel).clone()))
 }
 
@@ -111,7 +112,7 @@ pub extern "C" fn kernel_clone(kernel: &Kernel) -> &'static mut Kernel {
 ///
 /// `kernel` must be a valid reference heap allocated by one of the above functions.
 #[no_mangle]
-pub unsafe extern "C" fn kernel_free(kernel: &'static mut Kernel) {
+pub unsafe extern "C" fn kernel_free(kernel: &'static mut Win32Kernel) {
     let _ = Box::from_raw(kernel);
 }
 
@@ -125,24 +126,24 @@ pub unsafe extern "C" fn kernel_free(kernel: &'static mut Kernel) {
 /// `kernel` must be a valid reference heap allocated by one of the above functions.
 #[no_mangle]
 pub unsafe extern "C" fn kernel_destroy(
-    kernel: &'static mut Kernel,
+    kernel: &'static mut Win32Kernel,
 ) -> &'static mut CloneablePhysicalMemoryObj {
     let kernel = Box::from_raw(kernel);
     Box::leak(Box::new(Box::leak(kernel.destroy().0.destroy())))
 }
 
 #[no_mangle]
-pub extern "C" fn kernel_start_block(kernel: &Kernel) -> StartBlock {
+pub extern "C" fn kernel_start_block(kernel: &Win32Kernel) -> StartBlock {
     kernel.kernel_info.start_block.into()
 }
 
 #[no_mangle]
-pub extern "C" fn kernel_winver(kernel: &Kernel) -> Win32Version {
+pub extern "C" fn kernel_winver(kernel: &Win32Kernel) -> Win32Version {
     kernel.kernel_info.kernel_winver.mask_build_number()
 }
 
 #[no_mangle]
-pub extern "C" fn kernel_winver_unmasked(kernel: &Kernel) -> Win32Version {
+pub extern "C" fn kernel_winver_unmasked(kernel: &Win32Kernel) -> Win32Version {
     kernel.kernel_info.kernel_winver
 }
 
@@ -153,7 +154,7 @@ pub extern "C" fn kernel_winver_unmasked(kernel: &Kernel) -> Win32Version {
 /// `buffer` must be a valid buffer of size at least `max_size`
 #[no_mangle]
 pub unsafe extern "C" fn kernel_eprocess_list(
-    kernel: &'static mut Kernel,
+    kernel: &'static mut Win32Kernel,
     buffer: *mut Address,
     max_size: usize,
 ) -> usize {
@@ -186,7 +187,7 @@ pub unsafe extern "C" fn kernel_eprocess_list(
 /// `buffer` must be a valid that can contain at least `max_size` references to `Win32ProcessInfo`.
 #[no_mangle]
 pub unsafe extern "C" fn kernel_process_info_list(
-    kernel: &'static mut Kernel,
+    kernel: &'static mut Win32Kernel,
     buffer: *mut &'static mut Win32ProcessInfo,
     max_size: usize,
 ) -> usize {
@@ -213,7 +214,7 @@ pub unsafe extern "C" fn kernel_process_info_list(
 
 #[no_mangle]
 pub extern "C" fn kernel_kernel_process_info(
-    kernel: &'static mut Kernel,
+    kernel: &'static mut Win32Kernel,
 ) -> Option<&'static mut Win32ProcessInfo> {
     kernel
         .kernel_process_info()
@@ -224,7 +225,7 @@ pub extern "C" fn kernel_kernel_process_info(
 
 #[no_mangle]
 pub extern "C" fn kernel_process_info_from_eprocess(
-    kernel: &'static mut Kernel,
+    kernel: &'static mut Win32Kernel,
     eprocess: Address,
 ) -> Option<&'static mut Win32ProcessInfo> {
     kernel
@@ -241,7 +242,7 @@ pub extern "C" fn kernel_process_info_from_eprocess(
 /// `name` must be a valid null terminated string
 #[no_mangle]
 pub unsafe extern "C" fn kernel_process_info(
-    kernel: &'static mut Kernel,
+    kernel: &'static mut Win32Kernel,
     name: *const c_char,
 ) -> Option<&'static mut Win32ProcessInfo> {
     let name = CStr::from_ptr(name).to_string_lossy();
@@ -254,7 +255,7 @@ pub unsafe extern "C" fn kernel_process_info(
 
 #[no_mangle]
 pub extern "C" fn kernel_process_info_pid(
-    kernel: &'static mut Kernel,
+    kernel: &'static mut Win32Kernel,
     pid: PID,
 ) -> Option<&'static mut Win32ProcessInfo> {
     kernel
@@ -278,13 +279,13 @@ pub extern "C" fn kernel_process_info_pid(
 /// invalid.
 #[no_mangle]
 pub unsafe extern "C" fn kernel_into_process(
-    kernel: &'static mut Kernel,
+    kernel: &'static mut Win32Kernel,
     name: *const c_char,
 ) -> Option<&'static mut Win32Process> {
     let kernel = Box::from_raw(kernel);
     let name = CStr::from_ptr(name).to_string_lossy();
     kernel
-        .into_process(&name)
+        .into_process_by_name(&name)
         .map_err(inspect_err)
         .ok()
         .map(to_heap)
@@ -300,12 +301,12 @@ pub unsafe extern "C" fn kernel_into_process(
 /// invalid.
 #[no_mangle]
 pub unsafe extern "C" fn kernel_into_process_pid(
-    kernel: &'static mut Kernel,
+    kernel: &'static mut Win32Kernel,
     pid: PID,
 ) -> Option<&'static mut Win32Process> {
     let kernel = Box::from_raw(kernel);
     kernel
-        .into_process_pid(pid)
+        .into_process_by_pid(pid)
         .map_err(inspect_err)
         .ok()
         .map(to_heap)
@@ -321,7 +322,7 @@ pub unsafe extern "C" fn kernel_into_process_pid(
 /// invalid.
 #[no_mangle]
 pub unsafe extern "C" fn kernel_into_kernel_process(
-    kernel: &'static mut Kernel,
+    kernel: &'static mut Win32Kernel,
 ) -> Option<&'static mut Win32Process> {
     let kernel = Box::from_raw(kernel);
     kernel

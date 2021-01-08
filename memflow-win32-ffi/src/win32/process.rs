@@ -1,4 +1,4 @@
-use super::kernel::{FFIVirtualMemory, Kernel};
+use super::kernel::{FFIVirtualMemory, Win32Kernel};
 
 use memflow::os::{ModuleInfo, Process};
 use memflow_ffi::mem::virt_mem::VirtualMemoryObj;
@@ -18,7 +18,7 @@ pub type Win32Process = win32::Win32Process<FFIVirtualMemory>;
 /// call, the reference becomes invalid.
 #[no_mangle]
 pub unsafe extern "C" fn process_with_kernel(
-    kernel: &'static mut Kernel,
+    kernel: &'static mut Win32Kernel,
     proc_info: &Win32ProcessInfo,
 ) -> &'static mut Win32Process {
     let kernel = Box::from_raw(kernel);

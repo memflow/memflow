@@ -494,22 +494,6 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
         let proc_info = self.process_info(name)?;
         Ok(Win32Process::with_kernel(self, proc_info))
     }
-
-    /// Finds a process by its process id and constructs a `Win32Process` struct
-    /// by consuming the kernel struct and moving it into the process.
-    ///
-    /// If necessary the kernel can be retrieved back by calling `destroy()` on the process again.
-    ///
-    /// If no process with the specified name can be found this function will return an Error.
-    ///
-    /// This function can be useful for quickly accessing a process.
-    pub fn into_process_pid(
-        mut self,
-        pid: PID,
-    ) -> Result<Win32Process<VirtualDMA<T, V, Win32VirtualTranslate>>> {
-        let proc_info = self.process_info_pid(pid)?;
-        Ok(Win32Process::with_kernel(self, proc_info))
-    }
 }
 
 impl<T: PhysicalMemory> Win32Kernel<T, DirectTranslate> {
@@ -544,41 +528,35 @@ impl<'a, T: PhysicalMemory + 'a, V: VirtualTranslate + 'a> Kernel<'a> for Win32K
         Err("unimplemented".into())
     }
 
-    /// Creates a process by its name
-    ///
-    /// It will share the underlying memory resources
-    fn process_by_name(&'a mut self, _name: &str) -> memflow::error::Result<Self::ProcessType> {
-        Err("unimplemented".into())
-    }
-    /// Creates a process by its ID
-    ///
-    /// It will share the underlying memory resources
-    fn process_by_pid(&'a mut self, _pid: PID) -> memflow::error::Result<Self::ProcessType> {
-        Err("unimplemented".into())
-    }
-    /// Creates a process by its internal address
-    ///
-    /// It will share the underlying memory resources
-    fn process_by_addr(&'a mut self, _addr: Address) -> memflow::error::Result<Self::ProcessType> {
+    /// Find process information by its internal address
+    fn process_info_by_address(
+        &mut self,
+        _address: Address,
+    ) -> memflow::error::Result<ProcessInfo> {
         Err("unimplemented".into())
     }
 
-    /// Creates a process by its name
+    /// Creates a process by its internal address
     ///
-    /// It will consume the kernel and not affect memory usage
-    fn into_process_by_name(self, _name: &str) -> memflow::error::Result<Self::IntoProcessType> {
+    /// It will share the underlying memory resources
+    fn process_by_info(
+        &'a mut self,
+        _info: ProcessInfo,
+    ) -> memflow::error::Result<Self::ProcessType> {
         Err("unimplemented".into())
     }
-    /// Creates a process by its ID
-    ///
-    /// It will consume the kernel and not affect memory usage
-    fn into_process_by_pid(self, _pid: PID) -> memflow::error::Result<Self::IntoProcessType> {
-        Err("unimplemented".into())
-    }
+
     /// Creates a process by its internal address
     ///
     /// It will consume the kernel and not affect memory usage
-    fn into_process_by_addr(self, _addr: Address) -> memflow::error::Result<Self::IntoProcessType> {
+    ///
+    /// If no process with the specified address can be found this function will return an Error.
+    ///
+    /// This function can be useful for quickly accessing a process.
+    fn into_process_by_info(
+        self,
+        _info: ProcessInfo,
+    ) -> memflow::error::Result<Self::IntoProcessType> {
         Err("unimplemented".into())
     }
 }

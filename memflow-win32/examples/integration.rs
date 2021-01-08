@@ -3,7 +3,7 @@ use memflow::os::*;
 use memflow::plugins::*;
 
 use memflow_win32::error::{Error, Result};
-use memflow_win32::win32::{Kernel, Win32Process};
+use memflow_win32::win32::{Win32Kernel, Win32Process};
 
 use clap::*;
 use log::Level;
@@ -166,8 +166,8 @@ fn modules<V: VirtualMemory>(process: &mut Win32Process<V>) -> Result<Vec<Module
 
 fn build_kernel<T: PhysicalMemory>(
     mem: T,
-) -> Result<Kernel<impl PhysicalMemory, impl VirtualTranslate>> {
-    let kernel = Kernel::builder(mem).build_default_caches().build();
+) -> Result<Win32Kernel<impl PhysicalMemory, impl VirtualTranslate>> {
+    let kernel = Win32Kernel::builder(mem).build_default_caches().build();
     println!("Kernel::build ... {}", ok_str(&kernel));
     println!();
     kernel

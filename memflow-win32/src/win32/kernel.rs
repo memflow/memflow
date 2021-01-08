@@ -1,8 +1,9 @@
 use std::prelude::v1::*;
 
 use super::{
-    process::EXIT_STATUS_STILL_ACTIVE, process::IMAGE_FILE_NAME_LENGTH, KernelBuilder, KernelInfo,
-    Win32ExitStatus, Win32ModuleListInfo, Win32Process, Win32ProcessInfo, Win32VirtualTranslate,
+    process::EXIT_STATUS_STILL_ACTIVE, process::IMAGE_FILE_NAME_LENGTH, Win32KernelInfo,
+    Win32ExitStatus, Win32KernelBuilder, Win32ModuleListInfo, Win32Process, Win32ProcessInfo,
+    Win32VirtualTranslate,
 };
 
 use crate::error::{Error, Result};
@@ -22,23 +23,23 @@ use pelite::{self, pe64::exports::Export, PeView};
 const MAX_ITER_COUNT: usize = 65536;
 
 #[derive(Clone)]
-pub struct Kernel<T, V> {
+pub struct Win32Kernel<T, V> {
     pub phys_mem: T,
     pub vat: V,
     pub offsets: Win32Offsets,
 
-    pub kernel_info: KernelInfo,
+    pub kernel_info: Win32KernelInfo,
     pub sysproc_dtb: Address,
 }
 
-impl<T: PhysicalMemory, V: VirtualTranslate> OperatingSystem for Kernel<T, V> {}
+impl<T: PhysicalMemory, V: VirtualTranslate> OperatingSystem for Win32Kernel<T, V> {}
 
-impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
+impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
     pub fn new(
         mut phys_mem: T,
         mut vat: V,
         offsets: Win32Offsets,
-        kernel_info: KernelInfo,
+        kernel_info: Win32KernelInfo,
     ) -> Self {
         // start_block only contains the winload's dtb which might
         // be different to the one used in the actual kernel.
@@ -524,13 +525,13 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Kernel<T, V> {
     }
 }
 
-impl<T: PhysicalMemory> Kernel<T, DirectTranslate> {
-    pub fn builder(connector: T) -> KernelBuilder<T, T, DirectTranslate> {
-        KernelBuilder::<T, T, DirectTranslate>::new(connector)
+impl<T: PhysicalMemory> Win32Kernel<T, DirectTranslate> {
+    pub fn builder(connector: T) -> Win32KernelBuilder<T, T, DirectTranslate> {
+        Win32KernelBuilder::<T, T, DirectTranslate>::new(connector)
     }
 }
 
-impl<T: PhysicalMemory, V: VirtualTranslate> fmt::Debug for Kernel<T, V> {
+impl<T: PhysicalMemory, V: VirtualTranslate> fmt::Debug for Win32Kernel<T, V> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{:?}", self.kernel_info)
     }

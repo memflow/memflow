@@ -12,7 +12,7 @@ use super::Win32VirtualTranslate;
 
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize))]
-pub struct KernelInfo {
+pub struct Win32KernelInfo {
     pub start_block: StartBlock,
 
     pub kernel_base: Address,
@@ -24,7 +24,7 @@ pub struct KernelInfo {
     pub eprocess_base: Address,
 }
 
-impl KernelInfo {
+impl Win32KernelInfo {
     pub fn scanner<T: PhysicalMemory>(mem: T) -> KernelInfoScanner<T> {
         KernelInfoScanner::new(mem)
     }
@@ -47,7 +47,7 @@ impl<T: PhysicalMemory> KernelInfoScanner<T> {
         }
     }
 
-    pub fn scan(mut self) -> Result<KernelInfo> {
+    pub fn scan(mut self) -> Result<Win32KernelInfo> {
         let start_block = if let (Some(arch), Some(dtb), Some(kernel_hint)) =
             (self.arch, self.dtb, self.kernel_hint)
         {
@@ -72,7 +72,7 @@ impl<T: PhysicalMemory> KernelInfoScanner<T> {
         })
     }
 
-    fn scan_block(&mut self, start_block: StartBlock) -> Result<KernelInfo> {
+    fn scan_block(&mut self, start_block: StartBlock) -> Result<Win32KernelInfo> {
         info!(
             "arch={:?} kernel_hint={:x} dtb={:x}",
             start_block.arch, start_block.kernel_hint, start_block.dtb
@@ -113,7 +113,7 @@ impl<T: PhysicalMemory> KernelInfoScanner<T> {
         // see Kernel::new() for more information.
         info!("start_block.dtb={:x}", start_block.dtb);
 
-        Ok(KernelInfo {
+        Ok(Win32KernelInfo {
             start_block,
 
             kernel_base,

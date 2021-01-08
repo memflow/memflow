@@ -12,7 +12,7 @@ use memflow::types::*;
 
 use memflow_win32::error::Result;
 use memflow_win32::offsets::Win32Offsets;
-use memflow_win32::win32::{Kernel, KernelInfo, Win32Process};
+use memflow_win32::win32::{Win32KernelInfo, Win32Kernel, Win32Process};
 
 use rand::{Rng, SeedableRng};
 use rand_xorshift::XorShiftRng as CurRng;
@@ -97,10 +97,10 @@ fn rwtest<T: VirtualMemory>(
 fn read_bench<T: PhysicalMemory + ?Sized, V: VirtualTranslate>(
     phys_mem: &mut T,
     vat: &mut V,
-    kernel_info: KernelInfo,
+    kernel_info: Win32KernelInfo,
 ) -> Result<()> {
     let offsets = Win32Offsets::builder().kernel_info(&kernel_info).build()?;
-    let mut kernel = Kernel::new(phys_mem, vat, offsets, kernel_info);
+    let mut kernel = Win32Kernel::new(phys_mem, vat, offsets, kernel_info);
 
     let proc_list = kernel.process_info_list()?;
     let mut rng = CurRng::seed_from_u64(rand::thread_rng().gen_range(0, !0u64));
@@ -193,7 +193,7 @@ fn main() -> Result<()> {
         .unwrap();
 
     // scan for win32 kernel
-    let kernel_info = KernelInfo::scanner(&mut connector).scan()?;
+    let kernel_info = Win32KernelInfo::scanner(&mut connector).scan()?;
 
     let mut vat = DirectTranslate::new();
 

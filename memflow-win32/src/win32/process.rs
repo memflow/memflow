@@ -1,6 +1,6 @@
 use std::prelude::v1::*;
 
-use super::Kernel;
+use super::Win32Kernel;
 use crate::error::{Error, Result};
 use crate::offsets::Win32ArchOffsets;
 use crate::win32::VirtualReadUnicodeString;
@@ -294,7 +294,7 @@ impl<T: VirtualMemory> Process for Win32Process<T> {
 impl<'a, T: PhysicalMemory, V: VirtualTranslate>
     Win32Process<VirtualDMA<T, V, Win32VirtualTranslate>>
 {
-    pub fn with_kernel(kernel: Kernel<T, V>, proc_info: Win32ProcessInfo) -> Self {
+    pub fn with_kernel(kernel: Win32Kernel<T, V>, proc_info: Win32ProcessInfo) -> Self {
         let virt_mem = VirtualDMA::with_vat(
             kernel.phys_mem,
             proc_info.base.proc_arch,
@@ -326,7 +326,7 @@ impl<'a, T: PhysicalMemory, V: VirtualTranslate>
     ///
     /// When u need a cloneable Process u have to use the `::with_kernel` function
     /// which will move the kernel object.
-    pub fn with_kernel_ref(kernel: &'a mut Kernel<T, V>, proc_info: Win32ProcessInfo) -> Self {
+    pub fn with_kernel_ref(kernel: &'a mut Win32Kernel<T, V>, proc_info: Win32ProcessInfo) -> Self {
         let virt_mem = VirtualDMA::with_vat(
             &mut kernel.phys_mem,
             proc_info.base.proc_arch,

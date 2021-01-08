@@ -5,7 +5,7 @@ use log::Level;
 
 use memflow::plugins::*;
 
-use memflow_win32::win32::{Kernel, Keyboard};
+use memflow_win32::win32::{Keyboard, Win32Kernel};
 
 pub fn main() {
     let matches = App::new("read_keys example")
@@ -52,7 +52,7 @@ pub fn main() {
         .unwrap();
 
     // creating the kernel object
-    let mut kernel = Kernel::builder(connector)
+    let mut kernel = Win32Kernel::builder(connector)
         .build_default_caches()
         .build()
         .unwrap();

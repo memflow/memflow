@@ -27,7 +27,7 @@ pub(crate) type FFIVirtualTranslate = CachedVirtualTranslate<DirectTranslate, Ti
 pub(crate) type FFIVirtualMemory =
     VirtualDMA<FFIMemory, FFIVirtualTranslate, Win32VirtualTranslate>;
 
-pub type Kernel = kernel::Kernel<FFIMemory, FFIVirtualTranslate>;
+pub type Kernel = kernel::Win32Kernel<FFIMemory, FFIVirtualTranslate>;
 
 /// Build a cloneable kernel object with default caching parameters
 ///
@@ -42,7 +42,7 @@ pub unsafe extern "C" fn kernel_build(
     mem: &'static mut CloneablePhysicalMemoryObj,
 ) -> Option<&'static mut Kernel> {
     let mem: Box<dyn CloneablePhysicalMemory> = Box::from_raw(*Box::from_raw(mem));
-    kernel::Kernel::builder(mem)
+    kernel::Win32Kernel::builder(mem)
         .build_default_caches()
         .build()
         .map_err(inspect_err)
@@ -70,7 +70,7 @@ pub unsafe extern "C" fn kernel_build_custom(
     vat_cache_entries: usize,
 ) -> Option<&'static mut Kernel> {
     let mem: Box<dyn CloneablePhysicalMemory> = Box::from_raw(*Box::from_raw(mem));
-    kernel::Kernel::builder(mem)
+    kernel::Win32Kernel::builder(mem)
         .build_page_cache(move |connector, arch| {
             CachedMemoryAccess::builder(connector)
                 .arch(arch)

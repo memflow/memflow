@@ -6,7 +6,7 @@ use log::{error, Level};
 
 use memflow::plugins::*;
 
-use memflow_win32::prelude::{Kernel, Win32OffsetFile};
+use memflow_win32::prelude::{Win32Kernel, Win32OffsetFile};
 
 pub fn main() {
     let matches = App::new("dump offsets example")
@@ -58,7 +58,7 @@ pub fn main() {
         )
         .unwrap();
 
-    let kernel = Kernel::builder(connector)
+    let kernel = Win32Kernel::builder(connector)
         .build_default_caches()
         .build()
         .unwrap();

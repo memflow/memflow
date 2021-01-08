@@ -2,9 +2,9 @@ pub mod kernel;
 pub mod kernel_builder;
 pub mod kernel_info;
 
-pub use kernel::Kernel;
-pub use kernel_builder::KernelBuilder;
-pub use kernel_info::KernelInfo;
+pub use kernel::Win32Kernel;
+pub use kernel_builder::Win32KernelBuilder;
+pub use kernel_info::Win32KernelInfo;
 
 pub mod keyboard;
 pub mod process;

@@ -7,7 +7,7 @@ use memflow::mem::*;
 use memflow::os::*;
 use memflow::plugins::*;
 
-use memflow_win32::win32::Kernel;
+use memflow_win32::win32::Win32Kernel;
 
 pub fn parallel_init<T: PhysicalMemory + Clone + 'static>(connector: T) {
     (0..8)
@@ -15,7 +15,7 @@ pub fn parallel_init<T: PhysicalMemory + Clone + 'static>(connector: T) {
         .into_iter()
         .map(|c| {
             thread::spawn(move || {
-                Kernel::builder(c)
+                Win32Kernel::builder(c)
                     .no_symbol_store()
                     .build_default_caches()
                     .build()
@@ -26,7 +26,7 @@ pub fn parallel_init<T: PhysicalMemory + Clone + 'static>(connector: T) {
 }
 
 pub fn parallel_kernels<T: PhysicalMemory + Clone + 'static>(connector: T) {
-    let kernel = Kernel::builder(connector).build().unwrap();
+    let kernel = Win32Kernel::builder(connector).build().unwrap();
 
     (0..8)
         .map(|_| kernel.clone())
@@ -40,7 +40,7 @@ pub fn parallel_kernels<T: PhysicalMemory + Clone + 'static>(connector: T) {
 }
 
 pub fn parallel_kernels_cached<T: PhysicalMemory + Clone + 'static>(connector: T) {
-    let kernel = Kernel::builder(connector)
+    let kernel = Win32Kernel::builder(connector)
         .build_default_caches()
         .build()
         .unwrap();
@@ -58,7 +58,7 @@ pub fn parallel_kernels_cached<T: PhysicalMemory + Clone + 'static>(connector: T
 }
 
 pub fn parallel_processes<T: PhysicalMemory + Clone + 'static>(connector: T) {
-    let kernel = Kernel::builder(connector)
+    let kernel = Win32Kernel::builder(connector)
         .build_default_caches()
         .build()
         .unwrap();

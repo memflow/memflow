@@ -8,7 +8,7 @@ use super::{Win32Offsets, Win32OffsetsArchitecture};
 
 use crate::error::{Error, Result};
 use crate::kernel::{Win32GUID, Win32Version};
-use crate::win32::KernelInfo;
+use crate::win32::Win32KernelInfo;
 
 #[repr(align(16))]
 struct Align16<T>(pub T);
@@ -178,7 +178,7 @@ impl Win32OffsetBuilder {
         self
     }
 
-    pub fn kernel_info(mut self, kernel_info: &KernelInfo) -> Self {
+    pub fn kernel_info(mut self, kernel_info: &Win32KernelInfo) -> Self {
         if self.guid.is_none() {
             self.guid = kernel_info.kernel_guid.clone();
         }

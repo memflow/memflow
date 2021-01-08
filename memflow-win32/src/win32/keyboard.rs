@@ -13,9 +13,9 @@ Therefor the Keyboard will by default find the winlogon.exe or wininit.exe proce
 use std::{thread, time};
 
 use memflow::mem::{PhysicalMemory, VirtualTranslate};
-use memflow_win32::win32::{Kernel, Keyboard};
+use memflow_win32::win32::{Win32Kernel, Keyboard};
 
-fn test<T: PhysicalMemory, V: VirtualTranslate>(kernel: &mut Kernel<T, V>) {
+fn test<T: PhysicalMemory, V: VirtualTranslate>(kernel: &mut Win32Kernel<T, V>) {
     let kbd = Keyboard::try_with(kernel).unwrap();
 
     loop {
@@ -26,7 +26,7 @@ fn test<T: PhysicalMemory, V: VirtualTranslate>(kernel: &mut Kernel<T, V>) {
 }
 ```
 */
-use super::{Kernel, Win32Process, Win32ProcessInfo};
+use super::{Win32Kernel, Win32Process, Win32ProcessInfo};
 use crate::error::{Error, Result};
 
 use std::convert::TryInto;
@@ -56,7 +56,7 @@ pub struct KeyboardState {
 
 impl Keyboard {
     pub fn try_with<T: PhysicalMemory, V: VirtualTranslate>(
-        kernel: &mut Kernel<T, V>,
+        kernel: &mut Win32Kernel<T, V>,
     ) -> Result<Self> {
         let kernel_process_info = kernel.kernel_process_info()?;
         debug!("found ntoskrnl.exe: {:?}", kernel_process_info);
@@ -103,7 +103,7 @@ impl Keyboard {
     /// the gafAsyncKeyState from the win32kbase.sys kernel module.
     pub fn state_with_kernel<T: PhysicalMemory, V: VirtualTranslate>(
         &self,
-        kernel: &mut Kernel<T, V>,
+        kernel: &mut Win32Kernel<T, V>,
     ) -> Result<KeyboardState> {
         let mut user_process =
             Win32Process::with_kernel_ref(kernel, self.user_process_info.clone());

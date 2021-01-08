@@ -186,24 +186,48 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
         })
     }
 
-    pub fn process_info_from_eprocess(&mut self, eprocess: Address) -> Result<Win32ProcessInfo> {
-        let pid: PID = self
-            .virt_mem
-            .virt_read(eprocess + self.offsets.eproc_pid())?;
-        trace!("pid={}", pid);
-
-        let name = self
-            .virt_mem
-            .virt_read_cstr(eprocess + self.offsets.eproc_name(), IMAGE_FILE_NAME_LENGTH)?
-            .into();
-        trace!("name={}", name);
-
+    pub fn process_info_from_base(&mut self, base: ProcessInfo) -> Result<Win32ProcessInfo> {
         let dtb = self.virt_mem.virt_read_addr_arch(
             self.kernel_info.start_block.arch,
-            eprocess + self.offsets.kproc_dtb(),
+            base.address + self.offsets.kproc_dtb(),
         )?;
         trace!("dtb={:x}", dtb);
 
+        // read native_peb (either the process peb or the peb containing the wow64 helpers)
+        let native_peb = self.virt_mem.virt_read_addr_arch(
+            self.kernel_info.start_block.arch,
+            base.address + self.offsets.eproc_peb(),
+        )?;
+        trace!("native_peb={:x}", native_peb);
+
+        let section_base = self.virt_mem.virt_read_addr_arch(
+            self.kernel_info.start_block.arch,
+            base.address + self.offsets.eproc_section_base(),
+        )?;
+        trace!("section_base={:x}", section_base);
+
+        let exit_status: Win32ExitStatus = self
+            .virt_mem
+            .virt_read(base.address + self.offsets.eproc_exit_status())?;
+        trace!("exit_status={}", exit_status);
+
+        // find first ethread
+        let ethread = self.virt_mem.virt_read_addr_arch(
+            self.kernel_info.start_block.arch,
+            base.address + self.offsets.eproc_thread_list(),
+        )? - self.offsets.ethread_list_entry();
+        trace!("ethread={:x}", ethread);
+
+        let peb_native = self
+            .virt_mem
+            .virt_read_addr_arch(
+                self.kernel_info.start_block.arch,
+                base.address + self.offsets.eproc_peb(),
+            )?
+            .non_null()
+            .ok_or(Error::Other("Could not retrieve peb_native"))?;
+
+        // TODO: Avoid doing this twice
         let wow64 = if self.offsets.eproc_wow64() == 0 {
             trace!("eproc_wow64=null; skipping wow64 detection");
             Address::null()
@@ -214,60 +238,10 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
             );
             self.virt_mem.virt_read_addr_arch(
                 self.kernel_info.start_block.arch,
-                eprocess + self.offsets.eproc_wow64(),
+                base.address + self.offsets.eproc_wow64(),
             )?
         };
         trace!("wow64={:x}", wow64);
-
-        // determine process architecture
-        let sys_arch = self.kernel_info.start_block.arch;
-        trace!("sys_arch={:?}", sys_arch);
-        let proc_arch = match sys_arch.bits() {
-            64 => {
-                if wow64.is_null() {
-                    x86::x64::ARCH
-                } else {
-                    x86::x32::ARCH
-                }
-            }
-            32 => x86::x32::ARCH,
-            _ => return Err(Error::InvalidArchitecture),
-        };
-        trace!("proc_arch={:?}", proc_arch);
-
-        // read native_peb (either the process peb or the peb containing the wow64 helpers)
-        let native_peb = self.virt_mem.virt_read_addr_arch(
-            self.kernel_info.start_block.arch,
-            eprocess + self.offsets.eproc_peb(),
-        )?;
-        trace!("native_peb={:x}", native_peb);
-
-        let section_base = self.virt_mem.virt_read_addr_arch(
-            self.kernel_info.start_block.arch,
-            eprocess + self.offsets.eproc_section_base(),
-        )?;
-        trace!("section_base={:x}", section_base);
-
-        let exit_status: Win32ExitStatus = self
-            .virt_mem
-            .virt_read(eprocess + self.offsets.eproc_exit_status())?;
-        trace!("exit_status={}", exit_status);
-
-        // find first ethread
-        let ethread = self.virt_mem.virt_read_addr_arch(
-            self.kernel_info.start_block.arch,
-            eprocess + self.offsets.eproc_thread_list(),
-        )? - self.offsets.ethread_list_entry();
-        trace!("ethread={:x}", ethread);
-
-        let peb_native = self
-            .virt_mem
-            .virt_read_addr_arch(
-                self.kernel_info.start_block.arch,
-                eprocess + self.offsets.eproc_peb(),
-            )?
-            .non_null()
-            .ok_or(Error::Other("Could not retrieve peb_native"))?;
 
         let mut peb_wow64 = None;
 
@@ -283,7 +257,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
             if !teb.is_null() {
                 (
                     Some(teb),
-                    if wow64.is_null() {
+                    if base.proc_arch == base.sys_arch {
                         None
                     } else {
                         Some(teb + 0x2000)
@@ -301,7 +275,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
         let (phys_mem, vat) = self.virt_mem.borrow_both();
         let mut proc_reader = VirtualDMA::with_vat(
             phys_mem,
-            proc_arch,
+            base.proc_arch,
             Win32VirtualTranslate::new(self.kernel_info.start_block.arch, dtb),
             vat,
         );
@@ -322,20 +296,14 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
         trace!("peb_native={:?}", peb_native);
 
         let module_info_native =
-            Win32ModuleListInfo::with_peb(&mut proc_reader, peb_native, sys_arch)?;
+            Win32ModuleListInfo::with_peb(&mut proc_reader, peb_native, base.sys_arch)?;
 
         let module_info_wow64 = peb_wow64
-            .map(|peb| Win32ModuleListInfo::with_peb(&mut proc_reader, peb, proc_arch))
+            .map(|peb| Win32ModuleListInfo::with_peb(&mut proc_reader, peb, base.proc_arch))
             .transpose()?;
 
         Ok(Win32ProcessInfo {
-            base: ProcessInfo {
-                address: eprocess,
-                pid,
-                name,
-                sys_arch,
-                proc_arch,
-            },
+            base,
 
             dtb,
             section_base,
@@ -352,6 +320,12 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
             module_info_native,
             module_info_wow64,
         })
+    }
+
+    pub fn process_info_from_eprocess(&mut self, eprocess: Address) -> Result<Win32ProcessInfo> {
+        self.process_info_by_address(eprocess)
+            .map_err(From::from)
+            .and_then(|i| self.process_info_from_base(i))
     }
 
     pub fn process_info_list_extend<E: Extend<Win32ProcessInfo>>(
@@ -529,11 +503,56 @@ impl<'a, T: PhysicalMemory + 'a, V: VirtualTranslate + 'a> Kernel<'a> for Win32K
     }
 
     /// Find process information by its internal address
-    fn process_info_by_address(
-        &mut self,
-        _address: Address,
-    ) -> memflow::error::Result<ProcessInfo> {
-        Err("unimplemented".into())
+    fn process_info_by_address(&mut self, address: Address) -> memflow::error::Result<ProcessInfo> {
+        let pid: PID = self
+            .virt_mem
+            .virt_read(address + self.offsets.eproc_pid())?;
+        trace!("pid={}", pid);
+
+        let name = self
+            .virt_mem
+            .virt_read_cstr(address + self.offsets.eproc_name(), IMAGE_FILE_NAME_LENGTH)?
+            .into();
+        trace!("name={}", name);
+
+        let wow64 = if self.offsets.eproc_wow64() == 0 {
+            trace!("eproc_wow64=null; skipping wow64 detection");
+            Address::null()
+        } else {
+            trace!(
+                "eproc_wow64={:x}; trying to read wow64 pointer",
+                self.offsets.eproc_wow64()
+            );
+            self.virt_mem.virt_read_addr_arch(
+                self.kernel_info.start_block.arch,
+                address + self.offsets.eproc_wow64(),
+            )?
+        };
+        trace!("wow64={:x}", wow64);
+
+        // determine process architecture
+        let sys_arch = self.kernel_info.start_block.arch;
+        trace!("sys_arch={:?}", sys_arch);
+        let proc_arch = match sys_arch.bits() {
+            64 => {
+                if wow64.is_null() {
+                    x86::x64::ARCH
+                } else {
+                    x86::x32::ARCH
+                }
+            }
+            32 => x86::x32::ARCH,
+            _ => return Err(Error::InvalidArchitecture.into()),
+        };
+        trace!("proc_arch={:?}", proc_arch);
+
+        Ok(ProcessInfo {
+            address,
+            pid,
+            name,
+            sys_arch,
+            proc_arch,
+        })
     }
 
     /// Creates a process by its internal address
@@ -541,9 +560,10 @@ impl<'a, T: PhysicalMemory + 'a, V: VirtualTranslate + 'a> Kernel<'a> for Win32K
     /// It will share the underlying memory resources
     fn process_by_info(
         &'a mut self,
-        _info: ProcessInfo,
+        info: ProcessInfo,
     ) -> memflow::error::Result<Self::ProcessType> {
-        Err("unimplemented".into())
+        let proc_info = self.process_info_from_base(info)?;
+        Ok(Win32Process::with_kernel_ref(self, proc_info))
     }
 
     /// Creates a process by its internal address
@@ -554,10 +574,11 @@ impl<'a, T: PhysicalMemory + 'a, V: VirtualTranslate + 'a> Kernel<'a> for Win32K
     ///
     /// This function can be useful for quickly accessing a process.
     fn into_process_by_info(
-        self,
-        _info: ProcessInfo,
+        mut self,
+        info: ProcessInfo,
     ) -> memflow::error::Result<Self::IntoProcessType> {
-        Err("unimplemented".into())
+        let proc_info = self.process_info_from_base(info)?;
+        Ok(Win32Process::with_kernel(self, proc_info))
     }
 }
 

@@ -196,7 +196,7 @@ where
     }
 
     #[cfg(not(feature = "symstore"))]
-    fn build_offsets(&self, kernel_info: &KernelInfo) -> Result<Win32Offsets> {
+    fn build_offsets(&self, kernel_info: &Win32KernelInfo) -> Result<Win32Offsets> {
         Win32Offsets::builder().kernel_info(&kernel_info).build()
     }
 

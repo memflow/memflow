@@ -1,8 +1,8 @@
+use memflow::os::Kernel;
 use memflow_ffi::mem::phys_mem::CloneablePhysicalMemoryObj;
 use memflow_ffi::util::*;
 use memflow_win32::kernel::Win32Version;
 use memflow_win32::win32::{kernel, Win32ProcessInfo, Win32VirtualTranslate};
-use memflow::os::Kernel;
 
 use memflow::mem::{
     cache::{CachedMemoryAccess, CachedVirtualTranslate, TimedCacheValidator},

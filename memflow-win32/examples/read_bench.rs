@@ -12,7 +12,7 @@ use memflow::types::*;
 
 use memflow_win32::error::Result;
 use memflow_win32::offsets::Win32Offsets;
-use memflow_win32::win32::{Win32KernelInfo, Win32Kernel, Win32Process};
+use memflow_win32::win32::{Win32Kernel, Win32KernelInfo, Win32Process};
 
 use rand::{Rng, SeedableRng};
 use rand_xorshift::XorShiftRng as CurRng;

@@ -128,7 +128,7 @@ pub unsafe extern "C" fn kernel_destroy(
     kernel: &'static mut Kernel,
 ) -> &'static mut CloneablePhysicalMemoryObj {
     let kernel = Box::from_raw(kernel);
-    Box::leak(Box::new(Box::leak(kernel.destroy().destroy())))
+    Box::leak(Box::new(Box::leak(kernel.destroy().0.destroy())))
 }
 
 #[no_mangle]

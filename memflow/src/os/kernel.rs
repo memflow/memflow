@@ -2,16 +2,17 @@ use super::{Process, ProcessInfo, ProcessInfoCallback};
 use crate::prelude::v1::{Result, *};
 use std::prelude::v1::*;
 
-pub trait Kernel<T: PhysicalMemory>: Send {
-    type VirtualMemoryType: VirtualMemory;
-    type ProcessType: Process;
+pub trait Kernel<'a>: Send {
+    type PhysicalMemoryType: PhysicalMemory + 'a;
+    type VirtualMemoryType: VirtualMemory + 'a;
+    type ProcessType: Process + 'a;
     type IntoProcessType: Process;
 
-    /// Retreives physical memory object from kerenl
-    fn phys_mem(&mut self) -> &mut T;
+    /// Retreives physical memory object from kernel
+    fn phys_mem(&'a mut self) -> Self::PhysicalMemoryType;
 
     /// Retrieves virtual memory object for the kernel memory
-    fn virt_mem(&mut self) -> &mut Self::VirtualMemoryType;
+    fn virt_mem(&'a mut self) -> Self::VirtualMemoryType;
 
     /// Walks a process list and calls a callback for each process
     ///
@@ -29,15 +30,15 @@ pub trait Kernel<T: PhysicalMemory>: Send {
     /// Creates a process by its name
     ///
     /// It will share the underlying memory resources
-    fn process_by_name(&mut self, name: &str) -> Result<Self::ProcessType>;
+    fn process_by_name(&'a mut self, name: &str) -> Result<Self::ProcessType>;
     /// Creates a process by its ID
     ///
     /// It will share the underlying memory resources
-    fn process_by_pid(&mut self, pid: PID) -> Result<Self::ProcessType>;
+    fn process_by_pid(&'a mut self, pid: PID) -> Result<Self::ProcessType>;
     /// Creates a process by its internal address
     ///
     /// It will share the underlying memory resources
-    fn process_by_addr(&mut self, addr: Address) -> Result<Self::ProcessType>;
+    fn process_by_addr(&'a mut self, addr: Address) -> Result<Self::ProcessType>;
 
     /// Creates a process by its name
     ///

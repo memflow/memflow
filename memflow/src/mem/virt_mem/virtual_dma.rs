@@ -134,8 +134,20 @@ impl<T: PhysicalMemory, V: VirtualTranslate, D: ScopedVirtualTranslate> VirtualD
     }
 
     /// Consume the self object and returns the containing memory connection
-    pub fn destroy(self) -> T {
-        self.phys_mem
+    pub fn destroy(self) -> (T, V) {
+        (self.phys_mem, self.vat)
+    }
+
+    pub fn borrow_both(&mut self) -> (&mut T, &mut V) {
+        (&mut self.phys_mem, &mut self.vat)
+    }
+
+    pub fn phys_mem(&mut self) -> &mut T {
+        &mut self.phys_mem
+    }
+
+    pub fn vat(&mut self) -> &mut V {
+        &mut self.vat
     }
 }
 

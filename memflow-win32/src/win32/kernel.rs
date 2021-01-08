@@ -1,8 +1,8 @@
 use std::prelude::v1::*;
 
 use super::{
-    process::EXIT_STATUS_STILL_ACTIVE, process::IMAGE_FILE_NAME_LENGTH, Win32KernelInfo,
-    Win32ExitStatus, Win32KernelBuilder, Win32ModuleListInfo, Win32Process, Win32ProcessInfo,
+    process::EXIT_STATUS_STILL_ACTIVE, process::IMAGE_FILE_NAME_LENGTH, Win32ExitStatus,
+    Win32KernelBuilder, Win32KernelInfo, Win32ModuleListInfo, Win32Process, Win32ProcessInfo,
     Win32VirtualTranslate,
 };
 
@@ -14,8 +14,8 @@ use std::fmt;
 
 use memflow::architecture::x86;
 use memflow::mem::{DirectTranslate, PhysicalMemory, VirtualDMA, VirtualMemory, VirtualTranslate};
-use memflow::os::{Process, ProcessInfo};
-use memflow::process::{OperatingSystem, OsProcessInfo, PID};
+use memflow::os::{Kernel, Process, ProcessInfo, ProcessInfoCallback};
+use memflow::process::{OsProcessInfo, PID};
 use memflow::types::Address;
 
 use pelite::{self, pe64::exports::Export, PeView};
@@ -24,15 +24,12 @@ const MAX_ITER_COUNT: usize = 65536;
 
 #[derive(Clone)]
 pub struct Win32Kernel<T, V> {
-    pub phys_mem: T,
-    pub vat: V,
+    pub virt_mem: VirtualDMA<T, V, Win32VirtualTranslate>,
     pub offsets: Win32Offsets,
 
     pub kernel_info: Win32KernelInfo,
     pub sysproc_dtb: Address,
 }
-
-impl<T: PhysicalMemory, V: VirtualTranslate> OperatingSystem for Win32Kernel<T, V> {}
 
 impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
     pub fn new(
@@ -71,8 +68,15 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
         info!("sysproc_dtb={:x}", sysproc_dtb);
 
         Self {
-            phys_mem,
-            vat,
+            virt_mem: VirtualDMA::with_vat(
+                phys_mem,
+                kernel_info.start_block.arch,
+                Win32VirtualTranslate::new(
+                    kernel_info.start_block.arch,
+                    kernel_info.start_block.dtb,
+                ),
+                vat,
+            ),
             offsets,
 
             kernel_info,
@@ -81,8 +85,8 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
     }
 
     /// Consume the self object and return the containing memory connection
-    pub fn destroy(self) -> T {
-        self.phys_mem
+    pub fn destroy(self) -> (T, V) {
+        self.virt_mem.destroy()
     }
 
     pub fn eprocess_list(&mut self) -> Result<Vec<Address>> {
@@ -93,14 +97,6 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
     }
 
     pub fn eprocess_list_extend<E: Extend<Address>>(&mut self, eprocs: &mut E) -> Result<()> {
-        // TODO: create a VirtualDMA constructor for kernel_info
-        let mut reader = VirtualDMA::with_vat(
-            &mut self.phys_mem,
-            self.kernel_info.start_block.arch,
-            Win32VirtualTranslate::new(self.kernel_info.start_block.arch, self.sysproc_dtb),
-            &mut self.vat,
-        );
-
         let list_start = self.kernel_info.eprocess_base + self.offsets.eproc_link();
         let mut list_entry = list_start;
 
@@ -109,10 +105,11 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
             trace!("eprocess={}", eprocess);
 
             // test flink + blink before adding the process
-            let flink_entry =
-                reader.virt_read_addr_arch(self.kernel_info.start_block.arch, list_entry)?;
+            let flink_entry = self
+                .virt_mem
+                .virt_read_addr_arch(self.kernel_info.start_block.arch, list_entry)?;
             trace!("flink_entry={}", flink_entry);
-            let blink_entry = reader.virt_read_addr_arch(
+            let blink_entry = self.virt_mem.virt_read_addr_arch(
                 self.kernel_info.start_block.arch,
                 list_entry + self.offsets.list_blink(),
             )?;
@@ -137,19 +134,12 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
     }
 
     pub fn kernel_process_info(&mut self) -> Result<Win32ProcessInfo> {
-        // TODO: create a VirtualDMA constructor for kernel_info
-        let mut reader = VirtualDMA::with_vat(
-            &mut self.phys_mem,
-            self.kernel_info.start_block.arch,
-            Win32VirtualTranslate::new(self.kernel_info.start_block.arch, self.sysproc_dtb),
-            &mut self.vat,
-        );
-
         // TODO: cache pe globally
         // find PsLoadedModuleList
         let loaded_module_list = {
-            let image =
-                reader.virt_read_raw(self.kernel_info.kernel_base, self.kernel_info.kernel_size)?;
+            let image = self
+                .virt_mem
+                .virt_read_raw(self.kernel_info.kernel_base, self.kernel_info.kernel_size)?;
             let pe = PeView::from_bytes(&image).map_err(Error::PE)?;
             match pe
                 .get_export_by_name("PsLoadedModuleList")
@@ -164,8 +154,9 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
             }
         };
 
-        let kernel_modules =
-            reader.virt_read_addr_arch(self.kernel_info.start_block.arch, loaded_module_list)?;
+        let kernel_modules = self
+            .virt_mem
+            .virt_read_addr_arch(self.kernel_info.start_block.arch, loaded_module_list)?;
 
         Ok(Win32ProcessInfo {
             base: ProcessInfo {
@@ -196,23 +187,18 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
     }
 
     pub fn process_info_from_eprocess(&mut self, eprocess: Address) -> Result<Win32ProcessInfo> {
-        // TODO: create a VirtualDMA constructor for kernel_info
-        let mut reader = VirtualDMA::with_vat(
-            &mut self.phys_mem,
-            self.kernel_info.start_block.arch,
-            Win32VirtualTranslate::new(self.kernel_info.start_block.arch, self.sysproc_dtb),
-            &mut self.vat,
-        );
-
-        let pid: PID = reader.virt_read(eprocess + self.offsets.eproc_pid())?;
+        let pid: PID = self
+            .virt_mem
+            .virt_read(eprocess + self.offsets.eproc_pid())?;
         trace!("pid={}", pid);
 
-        let name = reader
+        let name = self
+            .virt_mem
             .virt_read_cstr(eprocess + self.offsets.eproc_name(), IMAGE_FILE_NAME_LENGTH)?
             .into();
         trace!("name={}", name);
 
-        let dtb = reader.virt_read_addr_arch(
+        let dtb = self.virt_mem.virt_read_addr_arch(
             self.kernel_info.start_block.arch,
             eprocess + self.offsets.kproc_dtb(),
         )?;
@@ -226,7 +212,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
                 "eproc_wow64={:x}; trying to read wow64 pointer",
                 self.offsets.eproc_wow64()
             );
-            reader.virt_read_addr_arch(
+            self.virt_mem.virt_read_addr_arch(
                 self.kernel_info.start_block.arch,
                 eprocess + self.offsets.eproc_wow64(),
             )?
@@ -250,30 +236,32 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
         trace!("proc_arch={:?}", proc_arch);
 
         // read native_peb (either the process peb or the peb containing the wow64 helpers)
-        let native_peb = reader.virt_read_addr_arch(
+        let native_peb = self.virt_mem.virt_read_addr_arch(
             self.kernel_info.start_block.arch,
             eprocess + self.offsets.eproc_peb(),
         )?;
         trace!("native_peb={:x}", native_peb);
 
-        let section_base = reader.virt_read_addr_arch(
+        let section_base = self.virt_mem.virt_read_addr_arch(
             self.kernel_info.start_block.arch,
             eprocess + self.offsets.eproc_section_base(),
         )?;
         trace!("section_base={:x}", section_base);
 
-        let exit_status: Win32ExitStatus =
-            reader.virt_read(eprocess + self.offsets.eproc_exit_status())?;
+        let exit_status: Win32ExitStatus = self
+            .virt_mem
+            .virt_read(eprocess + self.offsets.eproc_exit_status())?;
         trace!("exit_status={}", exit_status);
 
         // find first ethread
-        let ethread = reader.virt_read_addr_arch(
+        let ethread = self.virt_mem.virt_read_addr_arch(
             self.kernel_info.start_block.arch,
             eprocess + self.offsets.eproc_thread_list(),
         )? - self.offsets.ethread_list_entry();
         trace!("ethread={:x}", ethread);
 
-        let peb_native = reader
+        let peb_native = self
+            .virt_mem
             .virt_read_addr_arch(
                 self.kernel_info.start_block.arch,
                 eprocess + self.offsets.eproc_peb(),
@@ -285,7 +273,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
 
         // TODO: does this need to be read with the process ctx?
         let (teb, teb_wow64) = if self.kernel_info.kernel_winver >= (6, 2).into() {
-            let teb = reader.virt_read_addr_arch(
+            let teb = self.virt_mem.virt_read_addr_arch(
                 self.kernel_info.start_block.arch,
                 ethread + self.offsets.kthread_teb(),
             )?;
@@ -308,15 +296,14 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
             (None, None)
         };
 
-        std::mem::drop(reader);
-
         // construct reader with process dtb
         // TODO: can tlb be used here already?
+        let (phys_mem, vat) = self.virt_mem.borrow_both();
         let mut proc_reader = VirtualDMA::with_vat(
-            &mut self.phys_mem,
+            phys_mem,
             proc_arch,
             Win32VirtualTranslate::new(self.kernel_info.start_block.arch, dtb),
-            &mut self.vat,
+            vat,
         );
 
         if let Some(teb) = teb_wow64 {
@@ -528,6 +515,71 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
 impl<T: PhysicalMemory> Win32Kernel<T, DirectTranslate> {
     pub fn builder(connector: T) -> Win32KernelBuilder<T, T, DirectTranslate> {
         Win32KernelBuilder::<T, T, DirectTranslate>::new(connector)
+    }
+}
+
+impl<'a, T: PhysicalMemory + 'a, V: VirtualTranslate + 'a> Kernel<'a> for Win32Kernel<T, V> {
+    type PhysicalMemoryType = &'a mut T;
+    type VirtualMemoryType = &'a mut VirtualDMA<T, V, Win32VirtualTranslate>;
+    type ProcessType = Win32Process<VirtualDMA<&'a mut T, &'a mut V, Win32VirtualTranslate>>;
+    type IntoProcessType = Win32Process<VirtualDMA<T, V, Win32VirtualTranslate>>;
+
+    /// Retreives physical memory object from kernel
+    fn phys_mem(&'a mut self) -> Self::PhysicalMemoryType {
+        self.virt_mem.phys_mem()
+    }
+
+    /// Retrieves virtual memory object for the kernel memory
+    fn virt_mem(&'a mut self) -> Self::VirtualMemoryType {
+        &mut self.virt_mem
+    }
+
+    /// Walks a process list and calls a callback for each process
+    ///
+    /// The callback is fully opaque. We need this style so that C FFI can work seamlessly.
+    fn process_list_callback(
+        &mut self,
+        _callback: ProcessInfoCallback,
+    ) -> memflow::error::Result<()> {
+        Err("unimplemented".into())
+    }
+
+    /// Creates a process by its name
+    ///
+    /// It will share the underlying memory resources
+    fn process_by_name(&'a mut self, _name: &str) -> memflow::error::Result<Self::ProcessType> {
+        Err("unimplemented".into())
+    }
+    /// Creates a process by its ID
+    ///
+    /// It will share the underlying memory resources
+    fn process_by_pid(&'a mut self, _pid: PID) -> memflow::error::Result<Self::ProcessType> {
+        Err("unimplemented".into())
+    }
+    /// Creates a process by its internal address
+    ///
+    /// It will share the underlying memory resources
+    fn process_by_addr(&'a mut self, _addr: Address) -> memflow::error::Result<Self::ProcessType> {
+        Err("unimplemented".into())
+    }
+
+    /// Creates a process by its name
+    ///
+    /// It will consume the kernel and not affect memory usage
+    fn into_process_by_name(self, _name: &str) -> memflow::error::Result<Self::IntoProcessType> {
+        Err("unimplemented".into())
+    }
+    /// Creates a process by its ID
+    ///
+    /// It will consume the kernel and not affect memory usage
+    fn into_process_by_pid(self, _pid: PID) -> memflow::error::Result<Self::IntoProcessType> {
+        Err("unimplemented".into())
+    }
+    /// Creates a process by its internal address
+    ///
+    /// It will consume the kernel and not affect memory usage
+    fn into_process_by_addr(self, _addr: Address) -> memflow::error::Result<Self::IntoProcessType> {
+        Err("unimplemented".into())
     }
 }
 

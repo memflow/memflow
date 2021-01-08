@@ -295,11 +295,12 @@ impl<'a, T: PhysicalMemory, V: VirtualTranslate>
     Win32Process<VirtualDMA<T, V, Win32VirtualTranslate>>
 {
     pub fn with_kernel(kernel: Win32Kernel<T, V>, proc_info: Win32ProcessInfo) -> Self {
+        let (phys_mem, vat) = kernel.virt_mem.destroy();
         let virt_mem = VirtualDMA::with_vat(
-            kernel.phys_mem,
+            phys_mem,
             proc_info.base.proc_arch,
             proc_info.translator(),
-            kernel.vat,
+            vat,
         );
 
         Self {
@@ -309,7 +310,7 @@ impl<'a, T: PhysicalMemory, V: VirtualTranslate>
     }
 
     /// Consume the self object and returns the containing memory connection
-    pub fn destroy(self) -> T {
+    pub fn destroy(self) -> (T, V) {
         self.virt_mem.destroy()
     }
 }
@@ -327,11 +328,12 @@ impl<'a, T: PhysicalMemory, V: VirtualTranslate>
     /// When u need a cloneable Process u have to use the `::with_kernel` function
     /// which will move the kernel object.
     pub fn with_kernel_ref(kernel: &'a mut Win32Kernel<T, V>, proc_info: Win32ProcessInfo) -> Self {
+        let (phys_mem, vat) = kernel.virt_mem.borrow_both();
         let virt_mem = VirtualDMA::with_vat(
-            &mut kernel.phys_mem,
+            phys_mem,
             proc_info.base.proc_arch,
             proc_info.translator(),
-            &mut kernel.vat,
+            vat,
         );
 
         Self {

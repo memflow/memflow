@@ -1,5 +1,5 @@
 use crate::architecture::x86::x64;
-use crate::architecture::{ArchitectureObj, ScopedVirtualTranslate};
+use crate::architecture::ScopedVirtualTranslate;
 use crate::connector::MappedPhysicalMemory;
 use crate::error::Result;
 use crate::mem::virt_mem::VirtualDMA;
@@ -7,8 +7,7 @@ use crate::mem::{
     MemoryMap, PhysicalMemory, PhysicalMemoryMetadata, PhysicalReadData, PhysicalWriteData,
     VirtualMemory,
 };
-use crate::os::ModuleInfo;
-use crate::process::{OsProcessInfo, PID};
+use crate::os::{ModuleInfo, ProcessInfo, PID};
 use crate::types::{size, Address};
 
 use rand::seq::SliceRandom;
@@ -85,10 +84,10 @@ impl PageInfo {
     }
 }
 
+#[derive(Clone)]
 pub struct DummyProcess {
-    address: Address,
+    pub base: ProcessInfo,
     map_size: usize,
-    pid: PID,
     dtb: Address,
 }
 
@@ -97,7 +96,7 @@ impl DummyProcess {
         ModuleInfo {
             address: Address::INVALID,
             parent_process: Address::INVALID,
-            base: self.address + thread_rng().gen_range(0, self.map_size / 2),
+            base: self.base.address + thread_rng().gen_range(0, self.map_size / 2),
             size: (thread_rng().gen_range(min_size, self.map_size) / 2),
             name: "dummy.so".into(),
             path: "/".into(),
@@ -110,28 +109,6 @@ impl DummyProcess {
     }
 }
 
-impl OsProcessInfo for DummyProcess {
-    fn address(&self) -> Address {
-        self.address
-    }
-
-    fn pid(&self) -> PID {
-        self.pid
-    }
-
-    fn name(&self) -> String {
-        String::from("Dummy")
-    }
-
-    fn sys_arch(&self) -> ArchitectureObj {
-        x64::ARCH
-    }
-
-    fn proc_arch(&self) -> ArchitectureObj {
-        x64::ARCH
-    }
-}
-
 pub struct DummyMemory {
     buf: Arc<Box<[u8]>>,
     mem: MappedPhysicalMemory<&'static mut [u8], MemoryMap<&'static mut [u8]>>,
@@ -139,6 +116,7 @@ pub struct DummyMemory {
     pt_pages: Vec<PageInfo>,
     last_pid: PID,
     rng: XorShiftRng,
+    processes: Vec<DummyProcess>,
 }
 
 impl Clone for DummyMemory {
@@ -159,6 +137,7 @@ impl Clone for DummyMemory {
             pt_pages: vec![],
             last_pid: self.last_pid,
             rng: self.rng.clone(),
+            processes: self.processes.clone(),
         }
     }
 }
@@ -285,6 +264,7 @@ impl DummyMemory {
             pt_pages: vec![],
             last_pid: 0,
             rng,
+            processes: vec![],
         }
     }
 
@@ -311,12 +291,21 @@ impl DummyMemory {
 
         self.last_pid += 1;
 
-        DummyProcess {
-            address,
+        let ret = DummyProcess {
+            base: ProcessInfo {
+                address,
+                pid: self.last_pid,
+                name: "Dummy".into(),
+                sys_arch: x64::ARCH,
+                proc_arch: x64::ARCH,
+            },
             dtb,
-            pid: self.last_pid,
             map_size,
-        }
+        };
+
+        self.processes.push(ret.clone());
+
+        ret
     }
 
     pub fn vtop(&mut self, dtb_base: Address, virt_addr: Address) -> Option<Address> {

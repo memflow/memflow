@@ -108,7 +108,8 @@ impl Error {
 
     /// Returns a simple string representation of the error.
     pub fn to_str(self) -> &'static str {
-        self.to_str_pair().0
+        let pair = self.to_str_pair();
+        pair.1.unwrap_or(pair.0)
     }
 }
 

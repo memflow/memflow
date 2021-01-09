@@ -19,7 +19,7 @@ fn create_connector(args: &Args) -> Result<impl PhysicalMemory> {
 fn initialize_virt_ctx() -> Result<(
     impl PhysicalMemory,
     DirectTranslate,
-    Win32ProcessInfo,
+    ProcessInfo,
     impl ScopedVirtualTranslate,
     ModuleInfo,
 )> {
@@ -49,7 +49,7 @@ fn initialize_virt_ctx() -> Result<(
         };
 
         let mod_list: Vec<ModuleInfo> = {
-            let mut prc = Win32Process::with_kernel_ref(&mut kernel, proc_list[idx].clone());
+            let mut prc = kernel.process_by_info(proc_list[idx].clone())?;
             prc.module_list()
                 .unwrap_or_default()
                 .into_iter()
@@ -60,7 +60,7 @@ fn initialize_virt_ctx() -> Result<(
         if !mod_list.is_empty() {
             let tmod = &mod_list[rng.gen_range(0, mod_list.len())];
             let proc = proc_list[idx].clone();
-            let translator = proc.translator();
+            let translator = kernel.process_info_from_base(proc.clone())?.translator();
             return Ok((phys_mem, vat, proc, translator, tmod.clone())); // TODO: remove clone of mem + vat
         }
     }

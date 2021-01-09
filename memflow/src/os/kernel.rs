@@ -3,16 +3,8 @@ use crate::prelude::v1::{Result, *};
 use std::prelude::v1::*;
 
 pub trait Kernel<'a>: Send {
-    type PhysicalMemoryType: PhysicalMemory + 'a;
-    type VirtualMemoryType: VirtualMemory + 'a;
     type ProcessType: Process + 'a;
     type IntoProcessType: Process;
-
-    /// Retreives physical memory object from kernel
-    fn phys_mem(&'a mut self) -> Self::PhysicalMemoryType;
-
-    /// Retrieves virtual memory object for the kernel memory
-    fn virt_mem(&'a mut self) -> Self::VirtualMemoryType;
 
     /// Walks a process list and calls a callback for each process structure address
     ///
@@ -31,7 +23,10 @@ pub trait Kernel<'a>: Send {
     /// Walks a process list and calls a callback for each process
     ///
     /// The callback is fully opaque. We need this style so that C FFI can work seamlessly.
-    fn process_list_callback(&mut self, mut callback: ProcessInfoCallback<Self>) -> Result<()> {
+    fn process_info_list_callback(
+        &mut self,
+        mut callback: ProcessInfoCallback<Self>,
+    ) -> Result<()> {
         let inner_callback = &mut |s: &mut Self, addr| match s.process_info_by_address(addr) {
             Ok(info) => callback.call(s, info),
             Err(e) => {
@@ -43,9 +38,9 @@ pub trait Kernel<'a>: Send {
     }
 
     /// Retrieves a process list
-    fn process_list(&mut self) -> Result<Vec<ProcessInfo>> {
+    fn process_info_list(&mut self) -> Result<Vec<ProcessInfo>> {
         let mut ret = vec![];
-        self.process_list_callback((&mut ret).into())?;
+        self.process_info_list_callback((&mut ret).into())?;
         Ok(ret)
     }
 
@@ -63,7 +58,7 @@ pub trait Kernel<'a>: Send {
                 true
             }
         };
-        self.process_list_callback(callback.into())?;
+        self.process_info_list_callback(callback.into())?;
         ret
     }
 
@@ -78,20 +73,31 @@ pub trait Kernel<'a>: Send {
                 true
             }
         };
-        self.process_list_callback(callback.into())?;
+        self.process_info_list_callback(callback.into())?;
         ret
     }
 
-    /// Construct a process by its info
+    /// Construct a process by its info, borrowing the kernel
     ///
     /// It will share the underlying memory resources
     fn process_by_info(&'a mut self, info: ProcessInfo) -> Result<Self::ProcessType>;
-    /// Construct a process by its info
+    /// Construct a process by its info, consuming the kernel
     ///
     /// This function will consume the Kernel instance and move its resources into the process
     fn into_process_by_info(self, info: ProcessInfo) -> Result<Self::IntoProcessType>;
 
-    /// Creates a process by its internal address
+    /// Construct a kernel address space process, borrowing the kernel
+    ///
+    /// It will share the underlying memory resources
+    fn kernel_process(&'a mut self) -> Result<Self::ProcessType>;
+    /// Construct a kernel address space process, consuming the kernel
+    ///
+    /// This function will consume the Kernel instance and move its resources into the process
+    fn into_kernel_process(self) -> Result<Self::IntoProcessType>
+    where
+        Self: Sized;
+
+    /// Creates a process by its internal address, borrowing the kernel
     ///
     /// It will share the underlying memory resources
     ///
@@ -102,7 +108,7 @@ pub trait Kernel<'a>: Send {
         self.process_info_by_address(addr)
             .and_then(move |i| self.process_by_info(i))
     }
-    /// Creates a process by its name
+    /// Creates a process by its name, borrowing the kernel
     ///
     /// It will share the underlying memory resources
     ///
@@ -113,7 +119,7 @@ pub trait Kernel<'a>: Send {
         self.process_info_by_name(name)
             .and_then(move |i| self.process_by_info(i))
     }
-    /// Creates a process by its ID
+    /// Creates a process by its ID, borrowing the kernel
     ///
     /// It will share the underlying memory resources
     ///
@@ -125,7 +131,7 @@ pub trait Kernel<'a>: Send {
             .and_then(move |i| self.process_by_info(i))
     }
 
-    /// Creates a process by its internal address
+    /// Creates a process by its internal address, consuming the kernel
     ///
     /// It will consume the kernel and not affect memory usage
     ///
@@ -139,7 +145,7 @@ pub trait Kernel<'a>: Send {
         self.process_info_by_address(addr)
             .and_then(|i| self.into_process_by_info(i))
     }
-    /// Creates a process by its name
+    /// Creates a process by its name, consuming the kernel
     ///
     /// It will consume the kernel and not affect memory usage
     ///
@@ -153,7 +159,7 @@ pub trait Kernel<'a>: Send {
         self.process_info_by_name(name)
             .and_then(|i| self.into_process_by_info(i))
     }
-    /// Creates a process by its ID
+    /// Creates a process by its ID, consuming the kernel
     ///
     /// It will consume the kernel and not affect memory usage
     ///

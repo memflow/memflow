@@ -13,7 +13,6 @@ use memflow::mem::{PhysicalMemory, VirtualDMA, VirtualMemory, VirtualTranslate};
 use memflow::os::{
     AddressCallback, ModuleAddressCallback, ModuleAddressInfo, ModuleInfo, Process, ProcessInfo,
 };
-use memflow::process::{OsProcessInfo, PID};
 use memflow::types::Address;
 
 use super::Win32VirtualTranslate;
@@ -159,11 +158,11 @@ pub struct Win32ProcessInfo {
     pub teb_wow64: Option<Address>,
 
     // peb
-    pub peb_native: Address,
+    pub peb_native: Option<Address>,
     pub peb_wow64: Option<Address>,
 
     // modules
-    pub module_info_native: Win32ModuleListInfo,
+    pub module_info_native: Option<Win32ModuleListInfo>,
     pub module_info_wow64: Option<Win32ModuleListInfo>,
 }
 
@@ -172,15 +171,15 @@ impl Win32ProcessInfo {
         self.wow64
     }
 
-    pub fn peb(&self) -> Address {
+    pub fn peb(&self) -> Option<Address> {
         if let Some(peb) = self.peb_wow64 {
-            peb
+            Some(peb)
         } else {
             self.peb_native
         }
     }
 
-    pub fn peb_native(&self) -> Address {
+    pub fn peb_native(&self) -> Option<Address> {
         self.peb_native
     }
 
@@ -192,15 +191,15 @@ impl Win32ProcessInfo {
     ///
     /// If the process is a wow64 process, module_info_wow64 is returned, otherwise, module_info_native is
     /// returned.
-    pub fn module_info(&self) -> Win32ModuleListInfo {
+    pub fn module_info(&self) -> Option<Win32ModuleListInfo> {
         if !self.wow64.is_null() {
-            self.module_info_wow64.unwrap()
+            self.module_info_wow64
         } else {
             self.module_info_native
         }
     }
 
-    pub fn module_info_native(&self) -> Win32ModuleListInfo {
+    pub fn module_info_native(&self) -> Option<Win32ModuleListInfo> {
         self.module_info_native
     }
 
@@ -210,28 +209,6 @@ impl Win32ProcessInfo {
 
     pub fn translator(&self) -> Win32VirtualTranslate {
         Win32VirtualTranslate::new(self.base.sys_arch, self.dtb)
-    }
-}
-
-impl OsProcessInfo for Win32ProcessInfo {
-    fn address(&self) -> Address {
-        self.base.address
-    }
-
-    fn pid(&self) -> PID {
-        self.base.pid
-    }
-
-    fn name(&self) -> String {
-        self.base.name.as_ref().into()
-    }
-
-    fn sys_arch(&self) -> ArchitectureObj {
-        self.base.sys_arch
-    }
-
-    fn proc_arch(&self) -> ArchitectureObj {
-        self.base.proc_arch
     }
 }
 
@@ -270,7 +247,7 @@ impl<T: VirtualMemory> Process for Win32Process<T> {
     ) -> memflow::error::Result<()> {
         let infos = [
             (
-                Some(self.proc_info.module_info_native),
+                self.proc_info.module_info_native,
                 self.proc_info.base.sys_arch,
             ),
             (
@@ -306,9 +283,9 @@ impl<T: VirtualMemory> Process for Win32Process<T> {
         address: Address,
         architecture: ArchitectureObj,
     ) -> memflow::error::Result<ModuleInfo> {
-        let info = if architecture == self.proc_info.sys_arch() {
-            Some(&mut self.proc_info.module_info_native)
-        } else if architecture == self.proc_info.proc_arch() {
+        let info = if architecture == self.proc_info.base.sys_arch {
+            self.proc_info.module_info_native.as_mut()
+        } else if architecture == self.proc_info.base.proc_arch {
             self.proc_info.module_info_wow64.as_mut()
         } else {
             None
@@ -396,37 +373,6 @@ impl<T: VirtualMemory> Win32Process<T> {
             info.module_entry_list_callback(self, arch, callback.into())?;
         }
         Ok(())
-    }
-
-    pub fn module_entry_list(&mut self) -> Result<Vec<Address>> {
-        let (info, arch) = if let Some(info_wow64) = self.proc_info.module_info_wow64 {
-            (info_wow64, self.proc_info.base.proc_arch)
-        } else {
-            (
-                self.proc_info.module_info_native,
-                self.proc_info.base.sys_arch,
-            )
-        };
-
-        info.module_entry_list(self, arch)
-    }
-
-    pub fn module_entry_list_native(&mut self) -> Result<Vec<Address>> {
-        let (info, arch) = (
-            self.proc_info.module_info_native,
-            self.proc_info.base.sys_arch,
-        );
-        info.module_entry_list(self, arch)
-    }
-
-    pub fn module_entry_list_wow64(&mut self) -> Result<Vec<Address>> {
-        let (info, arch) = (
-            self.proc_info
-                .module_info_wow64
-                .ok_or(Error::Other("WoW64 module list does not exist"))?,
-            self.proc_info.base.proc_arch,
-        );
-        info.module_entry_list(self, arch)
     }
 }
 

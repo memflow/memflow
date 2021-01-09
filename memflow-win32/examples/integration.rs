@@ -89,43 +89,48 @@ fn main() -> Result<()> {
         let proc_list = kernel.process_info_list()?;
         let lsass = proc_list
             .iter()
-            .find(|p| p.base.name.to_string().to_lowercase() == "lsass.exe");
+            .find(|p| p.name.to_string().to_lowercase() == "lsass.exe");
         println!("lsass.exe ... {}", some_str(&lsass));
         println!();
 
         if let Some(proc) = lsass {
-            println!("{} info:", proc.base.name);
+            println!("{} info:", proc.name);
+            println!("pid: {} ... {}", proc.pid, bool_str(proc.pid < 10000));
+            let win32_proc = kernel.process_info_from_base(proc.clone())?;
             println!(
-                "pid: {} ... {}",
-                proc.base.pid,
-                bool_str(proc.base.pid < 10000)
+                "dtb: {} ... {}",
+                win32_proc.dtb,
+                some_str(&win32_proc.dtb.non_null())
             );
-            println!("dtb: {} ... {}", proc.dtb, some_str(&proc.dtb.non_null()));
             println!(
                 "section_base: {} ... {}",
-                proc.section_base,
-                some_str(&proc.section_base.non_null())
+                win32_proc.section_base,
+                some_str(&win32_proc.section_base.non_null())
             );
             println!(
                 "ethread: {} ... {}",
-                proc.ethread,
-                some_str(&proc.ethread.non_null())
+                win32_proc.ethread,
+                some_str(&win32_proc.ethread.non_null())
             );
-            println!("teb: {:?} ... {}", proc.teb, bool_str(proc.teb.is_none()));
+            println!(
+                "teb: {:?} ... {}",
+                win32_proc.teb,
+                bool_str(win32_proc.teb.is_none())
+            );
             println!(
                 "teb_wow64: {:?} ... {}",
-                proc.teb_wow64,
-                bool_str(proc.teb_wow64.is_none())
+                win32_proc.teb_wow64,
+                bool_str(win32_proc.teb_wow64.is_none())
             );
             println!(
-                "peb_native: {} ... {}",
-                proc.peb_native,
-                some_str(&proc.peb_native.non_null())
+                "peb_native: {:?} ... {}",
+                win32_proc.peb_native,
+                some_str(&win32_proc.peb_native)
             );
             println!(
                 "peb_wow64: {:?} ... {}",
-                proc.teb_wow64,
-                bool_str(proc.peb_wow64.is_none())
+                win32_proc.teb_wow64,
+                bool_str(win32_proc.peb_wow64.is_none())
             );
         }
     }

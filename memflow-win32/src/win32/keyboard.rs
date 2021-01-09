@@ -26,8 +26,9 @@ fn test<T: PhysicalMemory, V: VirtualTranslate>(kernel: &mut Win32Kernel<T, V>) 
 }
 ```
 */
-use super::{Win32Kernel, Win32Process, Win32ProcessInfo};
+use super::{Win32Kernel, Win32Process};
 use crate::error::{Error, Result};
+use memflow::os::{Kernel, Process, ProcessInfo};
 
 use std::convert::TryInto;
 
@@ -42,7 +43,7 @@ use pelite::{self, pe64::exports::Export, PeView};
 /// Interface for accessing the target's keyboard state.
 #[derive(Clone, Debug)]
 pub struct Keyboard {
-    user_process_info: Win32ProcessInfo,
+    user_process_info: ProcessInfo,
     key_state_addr: Address,
 }
 
@@ -58,24 +59,21 @@ impl Keyboard {
     pub fn try_with<T: PhysicalMemory, V: VirtualTranslate>(
         kernel: &mut Win32Kernel<T, V>,
     ) -> Result<Self> {
-        let kernel_process_info = kernel.kernel_process_info()?;
-        debug!("found ntoskrnl.exe: {:?}", kernel_process_info);
-
         let win32kbase_module_info = {
-            let mut ntoskrnl_process = Win32Process::with_kernel_ref(kernel, kernel_process_info);
+            let mut ntoskrnl_process = kernel.kernel_process()?;
             ntoskrnl_process.module_info("win32kbase.sys")?
         };
         debug!("found win32kbase.sys: {:?}", win32kbase_module_info);
 
         let user_process_info = kernel
-            .process_info("winlogon.exe")
-            .or_else(|_| kernel.process_info("wininit.exe"))?;
-        let mut user_process = Win32Process::with_kernel_ref(kernel, user_process_info.clone());
+            .process_info_by_name("winlogon.exe")
+            .or_else(|_| kernel.process_info_by_name("wininit.exe"))?;
+        let mut user_process = kernel.process_by_info(user_process_info.clone())?;
         debug!("found user proxy process: {:?}", user_process);
 
         // read with user_process dtb
         let module_buf = user_process
-            .virt_mem
+            .virt_mem()
             .virt_read_raw(win32kbase_module_info.base, win32kbase_module_info.size)
             .data_part()?;
         debug!("fetched {:x} bytes from win32kbase.sys", module_buf.len());
@@ -105,9 +103,8 @@ impl Keyboard {
         &self,
         kernel: &mut Win32Kernel<T, V>,
     ) -> Result<KeyboardState> {
-        let mut user_process =
-            Win32Process::with_kernel_ref(kernel, self.user_process_info.clone());
-        self.state(&mut user_process.virt_mem)
+        let mut user_process = kernel.process_by_info(self.user_process_info.clone())?;
+        self.state(&mut user_process.virt_mem())
     }
 
     /// Fetches the kernel's gafAsyncKeyState state with a processes context.

@@ -50,3 +50,5 @@ pub struct ModuleAddressInfo {
 }
 
 pub type ModuleAddressCallback<'a, T> = OpaqueCallback<'a, T, ModuleAddressInfo>;
+
+// TODO: Exports / Sections / etc

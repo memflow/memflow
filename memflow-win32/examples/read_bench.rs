@@ -5,9 +5,8 @@ use clap::*;
 use log::Level;
 
 use memflow::mem::*;
-use memflow::os::{ModuleInfo, Process};
+use memflow::os::{Kernel, ModuleInfo, Process};
 use memflow::plugins::*;
-use memflow::process::*;
 use memflow::types::*;
 
 use memflow_win32::error::Result;
@@ -105,10 +104,8 @@ fn read_bench<T: PhysicalMemory + ?Sized, V: VirtualTranslate>(
     let proc_list = kernel.process_info_list()?;
     let mut rng = CurRng::seed_from_u64(rand::thread_rng().gen_range(0, !0u64));
     loop {
-        let mut prc = Win32Process::with_kernel_ref(
-            &mut kernel,
-            proc_list[rng.gen_range(0, proc_list.len())].clone(),
-        );
+        let mut prc =
+            kernel.process_by_info(proc_list[rng.gen_range(0, proc_list.len())].clone())?;
 
         let mod_list: Vec<ModuleInfo> = prc
             .module_list()?
@@ -122,7 +119,7 @@ fn read_bench<T: PhysicalMemory + ?Sized, V: VirtualTranslate>(
                 "Found test module {} ({:x}) in {}",
                 tmod.name,
                 tmod.size,
-                prc.proc_info.name(),
+                prc.info().name,
             );
 
             let mem_map = prc.virt_mem.virt_page_map(size::gb(1));

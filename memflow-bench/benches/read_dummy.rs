@@ -3,13 +3,13 @@ use memflow_bench::*;
 
 use criterion::*;
 
-use memflow::mem::dummy::{DummyMemory as Memory, DummyProcess};
+use memflow::mem::dummy::DummyMemory as Memory;
 use memflow::prelude::v1::*;
 
 fn initialize_virt_ctx() -> Result<(
     Memory,
     DirectTranslate,
-    DummyProcess,
+    ProcessInfo,
     impl ScopedVirtualTranslate,
     ModuleInfo,
 )> {
@@ -20,7 +20,7 @@ fn initialize_virt_ctx() -> Result<(
     let proc = mem.alloc_process(size::mb(60), &[]);
     let module = proc.get_module(size::mb(4));
     let translator = proc.translator();
-    Ok((mem, vat, proc, translator, module))
+    Ok((mem, vat, proc.base, translator, module))
 }
 
 fn dummy_read_group(c: &mut Criterion) {

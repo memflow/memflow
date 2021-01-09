@@ -47,8 +47,6 @@ pub mod plugins;
 
 pub mod os;
 
-pub mod process;
-
 pub mod iter;
 
 pub mod derive {
@@ -66,7 +64,6 @@ pub mod prelude {
         pub use crate::os::*;
         #[cfg(feature = "plugins")]
         pub use crate::plugins::*;
-        pub use crate::process::*;
         pub use crate::types::*;
     }
     pub use v1::*;

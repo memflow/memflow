@@ -7,7 +7,6 @@ use memflow::architecture::ScopedVirtualTranslate;
 use memflow::error::Result;
 use memflow::iter::FnExtend;
 use memflow::os::*;
-use memflow::process::*;
 use memflow::types::*;
 
 use rand::prelude::*;
@@ -53,29 +52,24 @@ fn vat_test_with_mem<T: PhysicalMemory, V: VirtualTranslate, S: ScopedVirtualTra
     });
 }
 
-fn vat_test_with_ctx<
-    T: PhysicalMemory,
-    V: VirtualTranslate,
-    P: OsProcessInfo,
-    S: ScopedVirtualTranslate,
->(
+fn vat_test_with_ctx<T: PhysicalMemory, V: VirtualTranslate, S: ScopedVirtualTranslate>(
     bench: &mut Bencher,
     cache_size: u64,
     chunks: usize,
     translations: usize,
     use_tlb: bool,
-    (mut mem, mut vat, prc, translator, tmod): (T, V, P, S, ModuleInfo),
+    (mut mem, mut vat, prc, translator, tmod): (T, V, ProcessInfo, S, ModuleInfo),
 ) {
     if cache_size > 0 {
         let cache = CachedMemoryAccess::builder(&mut mem)
-            .arch(prc.sys_arch())
+            .arch(prc.sys_arch)
             .cache_size(size::mb(cache_size as usize))
             .page_type_mask(PageType::PAGE_TABLE | PageType::READ_ONLY | PageType::WRITEABLE);
 
         if use_tlb {
             let mut mem = cache.build().unwrap();
             let mut vat = CachedVirtualTranslate::builder(vat)
-                .arch(prc.sys_arch())
+                .arch(prc.sys_arch)
                 .build()
                 .unwrap();
             vat_test_with_mem(
@@ -101,7 +95,7 @@ fn vat_test_with_ctx<
         }
     } else if use_tlb {
         let mut vat = CachedVirtualTranslate::builder(vat)
-            .arch(prc.sys_arch())
+            .arch(prc.sys_arch)
             .build()
             .unwrap();
         vat_test_with_mem(
@@ -126,17 +120,12 @@ fn vat_test_with_ctx<
     }
 }
 
-fn chunk_vat_params<
-    T: PhysicalMemory,
-    V: VirtualTranslate,
-    P: OsProcessInfo,
-    S: ScopedVirtualTranslate,
->(
+fn chunk_vat_params<T: PhysicalMemory, V: VirtualTranslate, S: ScopedVirtualTranslate>(
     group: &mut BenchmarkGroup<'_, measurement::WallTime>,
     func_name: String,
     cache_size: u64,
     use_tlb: bool,
-    initialize_ctx: &dyn Fn() -> Result<(T, V, P, S, ModuleInfo)>,
+    initialize_ctx: &dyn Fn() -> Result<(T, V, ProcessInfo, S, ModuleInfo)>,
 ) {
     let size = 0x10;
     for &chunk_size in [1, 4, 16, 64].iter() {
@@ -158,15 +147,10 @@ fn chunk_vat_params<
     }
 }
 
-pub fn chunk_vat<
-    T: PhysicalMemory,
-    V: VirtualTranslate,
-    P: OsProcessInfo,
-    S: ScopedVirtualTranslate,
->(
+pub fn chunk_vat<T: PhysicalMemory, V: VirtualTranslate, S: ScopedVirtualTranslate>(
     c: &mut Criterion,
     backend_name: &str,
-    initialize_ctx: &dyn Fn() -> Result<(T, V, P, S, ModuleInfo)>,
+    initialize_ctx: &dyn Fn() -> Result<(T, V, ProcessInfo, S, ModuleInfo)>,
 ) {
     let plot_config = PlotConfiguration::default().summary_scale(AxisScale::Logarithmic);
 

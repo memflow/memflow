@@ -2,6 +2,8 @@ use super::{ModuleAddressInfo, ModuleInfo, ModuleInfoCallback};
 use crate::prelude::v1::{Result, *};
 use std::prelude::v1::*;
 
+pub type PID = u32;
+
 pub trait Process: Send {
     type VirtualMemoryType: VirtualMemory;
     //type VirtualTranslateType: VirtualTranslate;

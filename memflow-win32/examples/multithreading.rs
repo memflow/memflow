@@ -33,7 +33,7 @@ pub fn parallel_kernels<T: PhysicalMemory + Clone + 'static>(connector: T) {
         .into_iter()
         .map(|mut k| {
             thread::spawn(move || {
-                let _eprocesses = k.eprocess_list().unwrap();
+                let _eprocesses = k.process_address_list().unwrap();
             })
         })
         .for_each(|t| t.join().unwrap());
@@ -50,7 +50,7 @@ pub fn parallel_kernels_cached<T: PhysicalMemory + Clone + 'static>(connector: T
         .into_iter()
         .map(|mut k| {
             thread::spawn(move || {
-                let eprocesses = k.eprocess_list().unwrap();
+                let eprocesses = k.process_address_list().unwrap();
                 info!("eprocesses list fetched: {}", eprocesses.len());
             })
         })
@@ -63,7 +63,7 @@ pub fn parallel_processes<T: PhysicalMemory + Clone + 'static>(connector: T) {
         .build()
         .unwrap();
 
-    let process = kernel.into_process("wininit.exe").unwrap();
+    let process = kernel.into_process_by_name("wininit.exe").unwrap();
 
     (0..8)
         .map(|_| process.clone())

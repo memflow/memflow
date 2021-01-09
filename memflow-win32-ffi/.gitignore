@@ -1,6 +1,0 @@
-/target
-**/*.rs.bk
-bindings
-**/node_modules
-**/*.out
-**/*.o

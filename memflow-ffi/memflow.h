@@ -36,11 +36,7 @@ typedef struct ArchitectureObj ArchitectureObj;
 
 typedef struct CloneablePhysicalMemoryObj CloneablePhysicalMemoryObj;
 
-#if defined(USE_MEMFLOW_PLUGINS)
 typedef struct Inventory Inventory;
-#endif
-
-typedef struct OsProcessInfoObj OsProcessInfoObj;
 
 typedef struct PhysicalMemoryObj PhysicalMemoryObj;
 
@@ -125,11 +121,6 @@ typedef struct PhysicalMemoryMetadata {
     uintptr_t size;
     bool readonly;
 } PhysicalMemoryMetadata;
-
-/**
- * Type alias for a PID.
- */
-typedef uint32_t PID;
 
 #ifdef __cplusplus
 extern "C" {
@@ -433,36 +424,6 @@ uint8_t arch_address_space_bits(const ArchitectureObj *arch);
 void arch_free(ArchitectureObj *arch);
 
 bool is_x86_arch(const ArchitectureObj *arch);
-
-Address os_process_info_address(const OsProcessInfoObj *obj);
-
-PID os_process_info_pid(const OsProcessInfoObj *obj);
-
-/**
- * Retreive name of the process
- *
- * This will copy at most `max_len` characters (including the null terminator) into `out` of the
- * name.
- *
- * # Safety
- *
- * `out` must be a buffer with at least `max_len` size
- */
-uintptr_t os_process_info_name(const OsProcessInfoObj *obj, char *out, uintptr_t max_len);
-
-const ArchitectureObj *os_process_info_sys_arch(const OsProcessInfoObj *obj);
-
-const ArchitectureObj *os_process_info_proc_arch(const OsProcessInfoObj *obj);
-
-/**
- * Free a OsProcessInfoObj reference
- *
- * # Safety
- *
- * `obj` must point to a valid `OsProcessInfoObj`, and was created using one of the API's
- * functions.
- */
-void os_process_info_free(OsProcessInfoObj *obj);
 
 #ifdef __cplusplus
 } // extern "C"

@@ -5,6 +5,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
+typedef void *Arc_Library;
 
 /**
  * Identifies the byte order of a architecture
@@ -31,8 +32,6 @@ enum Endianess
 #ifndef __cplusplus
 typedef uint8_t Endianess;
 #endif // __cplusplus
-
-typedef struct Arc_Library Arc_Library;
 
 typedef struct ArchitectureObj ArchitectureObj;
 
@@ -163,7 +162,7 @@ typedef struct ConnectorInstance {
      *
      * If the library is unloaded prior to the instance this will lead to a SIGSEGV.
      */
-    struct Arc_Library library;
+    Arc_Library library;
 } ConnectorInstance;
 
 #ifdef __cplusplus

@@ -1,7 +1,7 @@
 use crate::error::*;
 use crate::mem::{PhysicalMemory, PhysicalMemoryMetadata, PhysicalReadData, PhysicalWriteData};
 
-use super::{Args, LibInstance, Loadable};
+use super::{Args, LibInstance, Loadable, OptionVoid};
 
 use std::ffi::{c_void, CString};
 use std::os::raw::c_char;
@@ -45,7 +45,7 @@ pub struct ConnectorFunctionTable {
 
 impl ConnectorFunctionTable {
     pub fn create_vtable<T: PhysicalMemory + Clone>(
-        create: extern "C" fn(*const c_char, i32) -> Option<&'static mut c_void>,
+        create: extern "C" fn(*const c_char, i32) -> OptionVoid,
     ) -> Self {
         Self {
             base: ConnectorBaseTable::new::<T>(create),
@@ -57,14 +57,14 @@ impl ConnectorFunctionTable {
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct ConnectorBaseTable {
-    pub create: extern "C" fn(args: *const c_char, log_level: i32) -> Option<&'static mut c_void>,
-    pub clone: extern "C" fn(phys_mem: &c_void) -> Option<&'static mut c_void>,
+    pub create: extern "C" fn(args: *const c_char, log_level: i32) -> OptionVoid,
+    pub clone: extern "C" fn(phys_mem: &c_void) -> OptionVoid,
     pub drop: extern "C" fn(phys_mem: &mut c_void),
 }
 
 impl ConnectorBaseTable {
     pub fn new<T: PhysicalMemory + Clone>(
-        create: extern "C" fn(*const c_char, i32) -> Option<&'static mut c_void>,
+        create: extern "C" fn(*const c_char, i32) -> OptionVoid,
     ) -> Self {
         Self {
             create,
@@ -74,7 +74,7 @@ impl ConnectorBaseTable {
     }
 }
 
-extern "C" fn clone_internal<T: Clone>(phys_mem: &c_void) -> Option<&'static mut c_void> {
+extern "C" fn clone_internal<T: Clone>(phys_mem: &c_void) -> OptionVoid {
     let conn = unsafe { &*(phys_mem as *const c_void as *const T) };
     let cloned_conn = Box::new(conn.clone());
     Some(unsafe { &mut *(Box::into_raw(cloned_conn) as *mut c_void) })
@@ -148,6 +148,7 @@ extern "C" fn metadata_internal<T: PhysicalMemory>(phys_mem: &c_void) -> Physica
 ///
 /// This structure is returned by `Connector`. It is needed to maintain reference
 /// counts to the loaded connector library.
+#[repr(C)]
 pub struct ConnectorInstance {
     instance: &'static mut c_void,
     vtable: ConnectorFunctionTable,

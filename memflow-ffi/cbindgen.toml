@@ -17,3 +17,6 @@ bitflags = true
 
 [fn]
 sort_by = "None"
+
+[export.rename]
+"OptionVoid" = "pvoid"

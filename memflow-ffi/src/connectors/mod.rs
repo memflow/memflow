@@ -2,11 +2,9 @@ use std::ffi::CStr;
 use std::os::raw::c_char;
 use std::path::PathBuf;
 
-use memflow::plugins::{Args, Inventory};
+use memflow::plugins::{Args, ConnectorInstance, Inventory};
 
 use crate::util::*;
-
-use crate::mem::phys_mem::CloneablePhysicalMemoryObj;
 
 use log::trace;
 
@@ -78,15 +76,13 @@ pub unsafe extern "C" fn inventory_create_connector(
     inv: &mut Inventory,
     name: *const c_char,
     args: *const c_char,
-) -> Option<&'static mut CloneablePhysicalMemoryObj> {
+) -> Option<&'static mut ConnectorInstance> {
     let rname = CStr::from_ptr(name).to_string_lossy();
 
     if args.is_null() {
         inv.create_connector_default(&rname)
             .map_err(inspect_err)
             .ok()
-            .map(to_heap)
-            .map(|c| c as CloneablePhysicalMemoryObj)
             .map(to_heap)
     } else {
         let rargs = CStr::from_ptr(args).to_string_lossy();
@@ -95,8 +91,6 @@ pub unsafe extern "C" fn inventory_create_connector(
         inv.create_connector(&rname, &conn_args)
             .map_err(inspect_err)
             .ok()
-            .map(to_heap)
-            .map(|c| c as CloneablePhysicalMemoryObj)
             .map(to_heap)
     }
 }
@@ -113,25 +107,25 @@ pub unsafe extern "C" fn inventory_create_connector(
 /// functions.
 #[no_mangle]
 pub unsafe extern "C" fn connector_clone(
-    conn: &CloneablePhysicalMemoryObj,
-) -> &'static mut CloneablePhysicalMemoryObj {
+    conn: &ConnectorInstance,
+) -> &'static mut ConnectorInstance {
     trace!("connector_clone: {:?}", conn as *const _);
-    Box::leak(Box::new(Box::leak(conn.clone_box())))
+    Box::leak(Box::new(conn.clone()))
 }
 
 /// Free a connector instance
 ///
 /// # Safety
 ///
-/// `conn` has to point to a valid `CloneablePhysicalMemoryObj` created by one of the provided
+/// `conn` has to point to a valid `ConnectorInstance` created by one of the provided
 /// functions.
 ///
 /// There has to be no instance of `PhysicalMemory` created from the input `conn`, because they
 /// will become invalid.
 #[no_mangle]
-pub unsafe extern "C" fn connector_free(conn: &'static mut CloneablePhysicalMemoryObj) {
+pub unsafe extern "C" fn connector_free(conn: &'static mut ConnectorInstance) {
     trace!("connector_free: {:?}", conn as *mut _);
-    let _ = Box::from_raw(*Box::from_raw(conn));
+    let _ = Box::from_raw(conn);
 }
 
 /// Free a connector inventory

@@ -6,9 +6,14 @@ This module contains functions to interface with dynamically loaded connectors a
 This module is gated behind `plugins` feature
 */
 
+use std::prelude::v1::*;
+
 pub mod args;
 #[doc(hidden)]
 pub use args::Args;
+
+// cbindgen fails to properly parse this as return type
+pub type OptionVoid = Option<&'static mut std::ffi::c_void>;
 
 pub mod connector;
 pub use connector::{
@@ -16,7 +21,7 @@ pub use connector::{
     PhysicalMemoryFunctionTable, MEMFLOW_CONNECTOR_VERSION,
 };
 
-use crate::error::*;
+use crate::error::{Result, *};
 
 use log::*;
 use std::fs::read_dir;

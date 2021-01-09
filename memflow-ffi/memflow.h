@@ -32,13 +32,11 @@ enum Endianess
 typedef uint8_t Endianess;
 #endif // __cplusplus
 
+typedef struct Arc_Library Arc_Library;
+
 typedef struct ArchitectureObj ArchitectureObj;
 
-typedef struct CloneablePhysicalMemoryObj CloneablePhysicalMemoryObj;
-
 typedef struct Inventory Inventory;
-
-typedef struct PhysicalMemoryObj PhysicalMemoryObj;
 
 typedef struct PhysicalReadData PhysicalReadData;
 
@@ -117,20 +115,66 @@ typedef struct PhysicalAddress {
     uint8_t page_size_log2;
 } PhysicalAddress;
 
+typedef void *pvoid;
+
+typedef struct ConnectorBaseTable {
+    pvoid (*create)(const char *args, int32_t log_level);
+    pvoid (*clone)(const void *phys_mem);
+    void (*drop)(void *phys_mem);
+} ConnectorBaseTable;
+
 typedef struct PhysicalMemoryMetadata {
     uintptr_t size;
     bool readonly;
 } PhysicalMemoryMetadata;
 
+typedef struct PhysicalMemoryFunctionTable {
+    int32_t (*phys_read_raw_list)(void *phys_mem, struct PhysicalReadData *read_data, uintptr_t read_data_count);
+    int32_t (*phys_write_raw_list)(void *phys_mem, const struct PhysicalWriteData *write_data, uintptr_t write_data_count);
+    struct PhysicalMemoryMetadata (*metadata)(const void *phys_mem);
+} PhysicalMemoryFunctionTable;
+
+typedef struct ConnectorFunctionTable {
+    /**
+     * The vtable for object creation and cloning
+     */
+    struct ConnectorBaseTable base;
+    /**
+     * The vtable for all physical memory funmction calls to the connector.
+     */
+    struct PhysicalMemoryFunctionTable phys;
+} ConnectorFunctionTable;
+
+/**
+ * Describes initialized connector instance
+ *
+ * This structure is returned by `Connector`. It is needed to maintain reference
+ * counts to the loaded connector library.
+ */
+typedef struct ConnectorInstance {
+    void *instance;
+    struct ConnectorFunctionTable vtable;
+    /**
+     * Internal library arc.
+     *
+     * This will keep the library loaded in memory as long as the connector instance is alive.
+     * This has to be the last member of the struct so the library will be unloaded _after_
+     * the instance is destroyed.
+     *
+     * If the library is unloaded prior to the instance this will lead to a SIGSEGV.
+     */
+    struct Arc_Library library;
+} ConnectorInstance;
+
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
 
-extern const ArchitectureObj *X86_32;
+extern const struct ArchitectureObj *X86_32;
 
-extern const ArchitectureObj *X86_32_PAE;
+extern const struct ArchitectureObj *X86_32_PAE;
 
-extern const ArchitectureObj *X86_64;
+extern const struct ArchitectureObj *X86_64;
 
 void log_init(int32_t level_num);
 
@@ -139,7 +183,7 @@ void log_init(int32_t level_num);
  *
  * This will create a `PhysicalAddress` with `UNKNOWN` PageType.
  */
-PhysicalAddress addr_to_paddr(Address address);
+struct PhysicalAddress addr_to_paddr(Address address);
 
 /**
  * Create a new connector inventory
@@ -154,7 +198,7 @@ PhysicalAddress addr_to_paddr(Address address);
  * Inventory is inherently unsafe, because it loads shared libraries which can not be
  * guaranteed to be safe.
  */
-Inventory *inventory_scan(void);
+struct Inventory *inventory_scan(void);
 
 /**
  * Create a new inventory with custom path string
@@ -163,7 +207,7 @@ Inventory *inventory_scan(void);
  *
  * `path` must be a valid null terminated string
  */
-Inventory *inventory_scan_path(const char *path);
+struct Inventory *inventory_scan_path(const char *path);
 
 /**
  * Add a directory to an existing inventory
@@ -172,7 +216,7 @@ Inventory *inventory_scan_path(const char *path);
  *
  * `dir` must be a valid null terminated string
  */
-int32_t inventory_add_dir(Inventory *inv, const char *dir);
+int32_t inventory_add_dir(struct Inventory *inv, const char *dir);
 
 /**
  * Create a connector with given arguments
@@ -194,9 +238,9 @@ int32_t inventory_add_dir(Inventory *inv, const char *dir);
  * Any error strings returned by the connector must not be outputed after the connector gets
  * freed, because that operation could cause the underlying shared library to get unloaded.
  */
-CloneablePhysicalMemoryObj *inventory_create_connector(Inventory *inv,
-                                                       const char *name,
-                                                       const char *args);
+struct ConnectorInstance *inventory_create_connector(struct Inventory *inv,
+                                                     const char *name,
+                                                     const char *args);
 
 /**
  * Clone a connector
@@ -210,20 +254,20 @@ CloneablePhysicalMemoryObj *inventory_create_connector(Inventory *inv,
  * `conn` has to point to a a valid `CloneablePhysicalMemory` created by one of the provided
  * functions.
  */
-CloneablePhysicalMemoryObj *connector_clone(const CloneablePhysicalMemoryObj *conn);
+struct ConnectorInstance *connector_clone(const struct ConnectorInstance *conn);
 
 /**
  * Free a connector instance
  *
  * # Safety
  *
- * `conn` has to point to a valid `CloneablePhysicalMemoryObj` created by one of the provided
+ * `conn` has to point to a valid `ConnectorInstance` created by one of the provided
  * functions.
  *
  * There has to be no instance of `PhysicalMemory` created from the input `conn`, because they
  * will become invalid.
  */
-void connector_free(CloneablePhysicalMemoryObj *conn);
+void connector_free(struct ConnectorInstance *conn);
 
 /**
  * Free a connector inventory
@@ -233,31 +277,7 @@ void connector_free(CloneablePhysicalMemoryObj *conn);
  * `inv` must point to a valid `Inventory` that was created using one of the provided
  * functions.
  */
-void inventory_free(Inventory *inv);
-
-/**
- * Downcast a cloneable physical memory into a physical memory object.
- *
- * This function will take a `cloneable` and turn it into a `PhysicalMemoryObj`, which then can be
- * used by physical memory functions.
- *
- * Please note that this does not free `cloneable`, and the reference is still valid for further
- * operations.
- */
-PhysicalMemoryObj *downcast_cloneable(CloneablePhysicalMemoryObj *cloneable);
-
-/**
- * Free a `PhysicalMemoryObj`
- *
- * This will free a reference to a `PhysicalMemoryObj`. If the physical memory object was created
- * using `downcast_cloneable`, this will NOT free the cloneable reference.
- *
- * # Safety
- *
- * `mem` must point to a valid `PhysicalMemoryObj` that was created using one of the provided
- * functions.
- */
-void phys_free(PhysicalMemoryObj *mem);
+void inventory_free(struct Inventory *inv);
 
 /**
  * Read a list of values
@@ -269,7 +289,9 @@ void phys_free(PhysicalMemoryObj *mem);
  *
  * `data` must be a valid array of `PhysicalReadData` with the length of at least `len`
  */
-int32_t phys_read_raw_list(PhysicalMemoryObj *mem, PhysicalReadData *data, uintptr_t len);
+int32_t phys_read_raw_list(struct ConnectorInstance *mem,
+                           struct PhysicalReadData *data,
+                           uintptr_t len);
 
 /**
  * Write a list of values
@@ -281,12 +303,14 @@ int32_t phys_read_raw_list(PhysicalMemoryObj *mem, PhysicalReadData *data, uintp
  *
  * `data` must be a valid array of `PhysicalWriteData` with the length of at least `len`
  */
-int32_t phys_write_raw_list(PhysicalMemoryObj *mem, const PhysicalWriteData *data, uintptr_t len);
+int32_t phys_write_raw_list(struct ConnectorInstance *mem,
+                            const struct PhysicalWriteData *data,
+                            uintptr_t len);
 
 /**
  * Retrieve metadata about the physical memory object
  */
-PhysicalMemoryMetadata phys_metadata(const PhysicalMemoryObj *mem);
+struct PhysicalMemoryMetadata phys_metadata(const struct ConnectorInstance *mem);
 
 /**
  * Read a single value into `out` from a provided `PhysicalAddress`
@@ -295,17 +319,20 @@ PhysicalMemoryMetadata phys_metadata(const PhysicalMemoryObj *mem);
  *
  * `out` must be a valid pointer to a data buffer of at least `len` size.
  */
-int32_t phys_read_raw(PhysicalMemoryObj *mem, PhysicalAddress addr, uint8_t *out, uintptr_t len);
+int32_t phys_read_raw(struct ConnectorInstance *mem,
+                      struct PhysicalAddress addr,
+                      uint8_t *out,
+                      uintptr_t len);
 
 /**
  * Read a single 32-bit value from a provided `PhysicalAddress`
  */
-uint32_t phys_read_u32(PhysicalMemoryObj *mem, PhysicalAddress addr);
+uint32_t phys_read_u32(struct ConnectorInstance *mem, struct PhysicalAddress addr);
 
 /**
  * Read a single 64-bit value from a provided `PhysicalAddress`
  */
-uint64_t phys_read_u64(PhysicalMemoryObj *mem, PhysicalAddress addr);
+uint64_t phys_read_u64(struct ConnectorInstance *mem, struct PhysicalAddress addr);
 
 /**
  * Write a single value from `input` into a provided `PhysicalAddress`
@@ -314,20 +341,20 @@ uint64_t phys_read_u64(PhysicalMemoryObj *mem, PhysicalAddress addr);
  *
  * `input` must be a valid pointer to a data buffer of at least `len` size.
  */
-int32_t phys_write_raw(PhysicalMemoryObj *mem,
-                       PhysicalAddress addr,
+int32_t phys_write_raw(struct ConnectorInstance *mem,
+                       struct PhysicalAddress addr,
                        const uint8_t *input,
                        uintptr_t len);
 
 /**
  * Write a single 32-bit value into a provided `PhysicalAddress`
  */
-int32_t phys_write_u32(PhysicalMemoryObj *mem, PhysicalAddress addr, uint32_t val);
+int32_t phys_write_u32(struct ConnectorInstance *mem, struct PhysicalAddress addr, uint32_t val);
 
 /**
  * Write a single 64-bit value into a provided `PhysicalAddress`
  */
-int32_t phys_write_u64(PhysicalMemoryObj *mem, PhysicalAddress addr, uint64_t val);
+int32_t phys_write_u64(struct ConnectorInstance *mem, struct PhysicalAddress addr, uint64_t val);
 
 /**
  * Free a virtual memory object reference
@@ -338,7 +365,7 @@ int32_t phys_write_u64(PhysicalMemoryObj *mem, PhysicalAddress addr, uint64_t va
  *
  * `mem` must be a valid reference to a virtual memory object.
  */
-void virt_free(VirtualMemoryObj *mem);
+void virt_free(struct VirtualMemoryObj *mem);
 
 /**
  * Read a list of values
@@ -351,7 +378,9 @@ void virt_free(VirtualMemoryObj *mem);
  *
  * `data` must be a valid array of `VirtualReadData` with the length of at least `len`
  */
-int32_t virt_read_raw_list(VirtualMemoryObj *mem, VirtualReadData *data, uintptr_t len);
+int32_t virt_read_raw_list(struct VirtualMemoryObj *mem,
+                           struct VirtualReadData *data,
+                           uintptr_t len);
 
 /**
  * Write a list of values
@@ -364,7 +393,9 @@ int32_t virt_read_raw_list(VirtualMemoryObj *mem, VirtualReadData *data, uintptr
  *
  * `data` must be a valid array of `VirtualWriteData` with the length of at least `len`
  */
-int32_t virt_write_raw_list(VirtualMemoryObj *mem, const VirtualWriteData *data, uintptr_t len);
+int32_t virt_write_raw_list(struct VirtualMemoryObj *mem,
+                            const struct VirtualWriteData *data,
+                            uintptr_t len);
 
 /**
  * Read a single value into `out` from a provided `Address`
@@ -373,17 +404,17 @@ int32_t virt_write_raw_list(VirtualMemoryObj *mem, const VirtualWriteData *data,
  *
  * `out` must be a valid pointer to a data buffer of at least `len` size.
  */
-int32_t virt_read_raw_into(VirtualMemoryObj *mem, Address addr, uint8_t *out, uintptr_t len);
+int32_t virt_read_raw_into(struct VirtualMemoryObj *mem, Address addr, uint8_t *out, uintptr_t len);
 
 /**
  * Read a single 32-bit value from a provided `Address`
  */
-uint32_t virt_read_u32(VirtualMemoryObj *mem, Address addr);
+uint32_t virt_read_u32(struct VirtualMemoryObj *mem, Address addr);
 
 /**
  * Read a single 64-bit value from a provided `Address`
  */
-uint64_t virt_read_u64(VirtualMemoryObj *mem, Address addr);
+uint64_t virt_read_u64(struct VirtualMemoryObj *mem, Address addr);
 
 /**
  * Write a single value from `input` into a provided `Address`
@@ -392,27 +423,30 @@ uint64_t virt_read_u64(VirtualMemoryObj *mem, Address addr);
  *
  * `input` must be a valid pointer to a data buffer of at least `len` size.
  */
-int32_t virt_write_raw(VirtualMemoryObj *mem, Address addr, const uint8_t *input, uintptr_t len);
+int32_t virt_write_raw(struct VirtualMemoryObj *mem,
+                       Address addr,
+                       const uint8_t *input,
+                       uintptr_t len);
 
 /**
  * Write a single 32-bit value into a provided `Address`
  */
-int32_t virt_write_u32(VirtualMemoryObj *mem, Address addr, uint32_t val);
+int32_t virt_write_u32(struct VirtualMemoryObj *mem, Address addr, uint32_t val);
 
 /**
  * Write a single 64-bit value into a provided `Address`
  */
-int32_t virt_write_u64(VirtualMemoryObj *mem, Address addr, uint64_t val);
+int32_t virt_write_u64(struct VirtualMemoryObj *mem, Address addr, uint64_t val);
 
-uint8_t arch_bits(const ArchitectureObj *arch);
+uint8_t arch_bits(const struct ArchitectureObj *arch);
 
-Endianess arch_endianess(const ArchitectureObj *arch);
+Endianess arch_endianess(const struct ArchitectureObj *arch);
 
-uintptr_t page_size(const ArchitectureObj *arch);
+uintptr_t page_size(const struct ArchitectureObj *arch);
 
-uintptr_t arch_size_addr(const ArchitectureObj *arch);
+uintptr_t arch_size_addr(const struct ArchitectureObj *arch);
 
-uint8_t arch_address_space_bits(const ArchitectureObj *arch);
+uint8_t arch_address_space_bits(const struct ArchitectureObj *arch);
 
 /**
  * Free an architecture reference
@@ -421,9 +455,9 @@ uint8_t arch_address_space_bits(const ArchitectureObj *arch);
  *
  * `arch` must be a valid heap allocated reference created by one of the API's functions.
  */
-void arch_free(ArchitectureObj *arch);
+void arch_free(struct ArchitectureObj *arch);
 
-bool is_x86_arch(const ArchitectureObj *arch);
+bool is_x86_arch(const struct ArchitectureObj *arch);
 
 #ifdef __cplusplus
 } // extern "C"

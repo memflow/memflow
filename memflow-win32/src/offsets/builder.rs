@@ -186,7 +186,7 @@ impl Win32OffsetBuilder {
             self.winver = Some(kernel_info.kernel_winver);
         }
         if self.arch.is_none() {
-            self.arch = Some(kernel_info.start_block.arch.into());
+            self.arch = Some(kernel_info.base_info.arch.into());
         }
         self
     }

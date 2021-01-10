@@ -3,7 +3,7 @@ pub mod kernel;
 pub mod module;
 pub mod process;
 
-pub use kernel::Kernel;
+pub use kernel::{Kernel, KernelInfo};
 pub use module::{ModuleAddressCallback, ModuleAddressInfo, ModuleInfo, ModuleInfoCallback};
 pub use process::{Process, ProcessInfo, ProcessInfoCallback, PID};
 

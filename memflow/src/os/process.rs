@@ -39,7 +39,7 @@ pub trait Process: Send {
         mut callback: ModuleInfoCallback<Self>,
     ) -> Result<()> {
         let inner_callback = &mut |s: &mut Self, ModuleAddressInfo { address, arch }| match s
-            .module_info_by_address(address, arch)
+            .module_by_address(address, arch)
         {
             Ok(info) => callback.call(s, info),
             Err(e) => {
@@ -55,11 +55,46 @@ pub trait Process: Send {
     /// # Arguments
     /// * `address` - address where module's information resides in
     /// * `architecture` - architecture of the module. Should be either `ProcessInfo::proc_arch`, or `ProcessInfo::sys_arch`.
-    fn module_info_by_address(
+    fn module_by_address(
         &mut self,
         address: Address,
         architecture: ArchitectureObj,
     ) -> Result<ModuleInfo>;
+
+    /// Finds a process module by its name under specified architecture
+    ///
+    /// This function can be useful for quickly accessing a specific module
+    ///
+    /// # Arguments
+    /// * `name` - name of the module to find
+    /// * `architecture` - architecture of the module. Should be either `ProcessInfo::proc_arch`, or `ProcessInfo::sys_arch`, or None for both.
+    fn module_by_name_arch(
+        &mut self,
+        name: &str,
+        architecture: Option<ArchitectureObj>,
+    ) -> Result<ModuleInfo> {
+        let mut ret = Err("No module found".into());
+        let callback = &mut |_: &mut Self, data: ModuleInfo| {
+            if data.name.as_ref() == name {
+                ret = Ok(data);
+                false
+            } else {
+                true
+            }
+        };
+        self.module_list_callback(architecture, callback.into())?;
+        ret
+    }
+
+    /// Finds any architecture process module by its name
+    ///
+    /// This function can be useful for quickly accessing a specific module
+    ///
+    /// # Arguments
+    /// * `name` - name of the module to find
+    fn module_by_name(&mut self, name: &str) -> Result<ModuleInfo> {
+        self.module_by_name_arch(name, None)
+    }
 
     /// Retrieves a module list for the process
     ///
@@ -80,6 +115,19 @@ pub trait Process: Send {
     /// This is equivalent to `Process::module_list_arch(None)`
     fn module_list(&mut self) -> Result<Vec<ModuleInfo>> {
         self.module_list_arch(None)
+    }
+
+    /// Retrieves address of the primary module structure of the process
+    ///
+    /// This will generally be for the initial executable that was run
+    fn primary_module_address(&mut self) -> Result<Address>;
+
+    /// Retrieves information for the primary module of the process
+    ///
+    /// This will generally be the initial executable that was run
+    fn primary_module(&mut self) -> Result<ModuleInfo> {
+        let addr = self.primary_module_address()?;
+        self.module_by_address(addr, self.info().proc_arch)
     }
 
     /// Retreives the process info

@@ -3,7 +3,7 @@ use memflow::os::*;
 use memflow::plugins::*;
 
 use memflow_win32::error::{Error, Result};
-use memflow_win32::win32::{Win32Kernel, Win32Process};
+use memflow_win32::win32::Win32Kernel;
 
 use clap::*;
 use log::Level;
@@ -26,21 +26,17 @@ fn main() -> Result<()> {
     {
         println!("Kernel info:");
         let info = &kernel.kernel_info;
-        let start_block = &info.start_block;
+        let base_info = &info.base_info;
+        println!("dtb {:x} ... {}", info.dtb, some_str(&info.dtb.non_null()));
         println!(
-            "{:#?} ... {}",
-            start_block,
-            some_str(&start_block.dtb.non_null())
+            "base: {:x} ... {}",
+            base_info.base,
+            some_str(&base_info.base.non_null())
         );
         println!(
-            "kernel_base: {:x} ... {}",
-            info.kernel_base,
-            some_str(&info.kernel_base.non_null())
-        );
-        println!(
-            "kernel_size: {:x} ... {}",
-            info.kernel_size,
-            bool_str(info.kernel_size != 0)
+            "size: {:x} ... {}",
+            base_info.size,
+            bool_str(base_info.size != 0)
         );
         println!(
             "kernel_guid: {:?} ... {}",
@@ -61,11 +57,7 @@ fn main() -> Result<()> {
     }
 
     {
-        println!("Kernel Process:");
-        if let Ok(proc_info) = kernel.kernel_process_info() {
-            let mut kernel_proc = Win32Process::with_kernel_ref(&mut kernel, proc_info);
-            let modules = modules(&mut kernel_proc)?;
-            println!("checking module list:");
+        if let Ok(modules) = kernel_modules(&mut kernel) {
             println!(
                 "ntoskrnl.exe ... {}",
                 some_str(
@@ -78,8 +70,6 @@ fn main() -> Result<()> {
                 "hal.dll ... {}",
                 some_str(&modules.iter().find(|e| e.name.to_lowercase() == "hal.dll"))
             );
-        } else {
-            println!("{}", bool_str(false));
         }
         println!();
     }
@@ -163,9 +153,9 @@ fn bool_str(b: bool) -> ColoredString {
     }
 }
 
-fn modules<V: VirtualMemory>(process: &mut Win32Process<V>) -> Result<Vec<ModuleInfo>> {
-    let modules = process.module_list().map_err(From::from);
-    println!("modules ... {}", ok_str(&modules));
+fn kernel_modules<'a>(kernel: &mut impl Kernel<'a>) -> Result<Vec<ModuleInfo>> {
+    let modules = kernel.module_list().map_err(From::from);
+    println!("kernel modules ... {}", ok_str(&modules));
     modules
 }
 

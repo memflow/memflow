@@ -86,17 +86,6 @@ pub trait Kernel<'a>: Send {
     /// This function will consume the Kernel instance and move its resources into the process
     fn into_process_by_info(self, info: ProcessInfo) -> Result<Self::IntoProcessType>;
 
-    /// Construct a kernel address space process, borrowing the kernel
-    ///
-    /// It will share the underlying memory resources
-    fn kernel_process(&'a mut self) -> Result<Self::ProcessType>;
-    /// Construct a kernel address space process, consuming the kernel
-    ///
-    /// This function will consume the Kernel instance and move its resources into the process
-    fn into_kernel_process(self) -> Result<Self::IntoProcessType>
-    where
-        Self: Sized;
-
     /// Creates a process by its internal address, borrowing the kernel
     ///
     /// It will share the underlying memory resources
@@ -173,4 +162,72 @@ pub trait Kernel<'a>: Send {
         self.process_info_by_pid(pid)
             .and_then(|i| self.into_process_by_info(i))
     }
+
+    /// Walks the kernel module list and calls the provided callback for each module structure
+    /// address
+    ///
+    /// # Arguments
+    /// * `callback` - where to pass each matching module to. This is an opaque callback.
+    fn module_address_list_callback(&mut self, callback: AddressCallback<Self>) -> Result<()>;
+
+    /// Walks the kernel module list and calls the provided callback for each module
+    ///
+    /// # Arguments
+    /// * `callback` - where to pass each matching module to. This is an opaque callback.
+    fn module_list_callback(&mut self, mut callback: ModuleInfoCallback<Self>) -> Result<()> {
+        let inner_callback =
+            &mut |s: &mut Self, address: Address| match s.module_by_address(address) {
+                Ok(info) => callback.call(s, info),
+                Err(e) => {
+                    log::trace!("Error loading module {:x} {:?}", address, e);
+                    false
+                }
+            };
+        self.module_address_list_callback(inner_callback.into())
+    }
+
+    /// Retrieves a module list for the kernel
+    fn module_list(&mut self) -> Result<Vec<ModuleInfo>> {
+        let mut ret = vec![];
+        self.module_list_callback((&mut ret).into())?;
+        Ok(ret)
+    }
+
+    /// Retreives a module by its structure address
+    ///
+    /// # Arguments
+    /// * `address` - address where module's information resides in
+    fn module_by_address(&mut self, address: Address) -> Result<ModuleInfo>;
+
+    /// Finds a kernel module by its name
+    ///
+    /// This function can be useful for quickly accessing a specific module
+    fn module_by_name(&mut self, name: &str) -> Result<ModuleInfo> {
+        let mut ret = Err("No module found".into());
+        let callback = &mut |_: &mut Self, data: ModuleInfo| {
+            if data.name.as_ref() == name {
+                ret = Ok(data);
+                false
+            } else {
+                true
+            }
+        };
+        self.module_list_callback(callback.into())?;
+        ret
+    }
+
+    /// Retreives the kernel info
+    fn info(&self) -> &KernelInfo;
+}
+
+#[repr(C)]
+#[derive(Clone, Debug)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize))]
+pub struct KernelInfo {
+    /// Base address of the kernel
+    pub base: Address,
+    /// Size of the kernel
+    pub size: usize,
+    /// System architecture
+    pub arch: ArchitectureObj,
 }

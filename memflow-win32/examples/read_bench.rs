@@ -200,12 +200,12 @@ fn main() -> Result<()> {
     println!();
     println!("Benchmarking cached reads:");
     let mut mem_cached = CachedMemoryAccess::builder(&mut connector)
-        .arch(kernel_info.start_block.arch)
+        .arch(kernel_info.base_info.arch)
         .build()
         .unwrap();
 
     let mut vat_cached = CachedVirtualTranslate::builder(vat)
-        .arch(kernel_info.start_block.arch)
+        .arch(kernel_info.base_info.arch)
         .build()
         .unwrap();
 

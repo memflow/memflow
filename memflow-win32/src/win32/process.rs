@@ -1,18 +1,13 @@
 use std::prelude::v1::*;
 
-use super::Win32Kernel;
+use super::{Win32Kernel, Win32ModuleListInfo};
 use crate::error::{Error, Result};
-use crate::offsets::Win32ArchOffsets;
-use crate::win32::VirtualReadUnicodeString;
 
-use log::trace;
 use std::fmt;
 
 use memflow::architecture::ArchitectureObj;
 use memflow::mem::{PhysicalMemory, VirtualDMA, VirtualMemory, VirtualTranslate};
-use memflow::os::{
-    AddressCallback, ModuleAddressCallback, ModuleAddressInfo, ModuleInfo, Process, ProcessInfo,
-};
+use memflow::os::{ModuleAddressCallback, ModuleAddressInfo, ModuleInfo, Process, ProcessInfo};
 use memflow::types::Address;
 
 use super::Win32VirtualTranslate;
@@ -25,121 +20,6 @@ pub const EXIT_STATUS_STILL_ACTIVE: i32 = 259;
 
 /// EPROCESS ImageFileName byte length
 pub const IMAGE_FILE_NAME_LENGTH: usize = 15;
-
-const MAX_ITER_COUNT: usize = 65536;
-
-#[derive(Debug, Clone, Copy)]
-#[repr(C)]
-#[cfg_attr(feature = "serde", derive(::serde::Serialize))]
-pub struct Win32ModuleListInfo {
-    module_base: Address,
-    offsets: Win32ArchOffsets,
-}
-
-impl Win32ModuleListInfo {
-    pub fn with_peb(
-        mem: &mut impl VirtualMemory,
-        peb: Address,
-        arch: ArchitectureObj,
-    ) -> Result<Win32ModuleListInfo> {
-        let offsets = Win32ArchOffsets::from(arch);
-
-        trace!("peb_ldr_offs={:x}", offsets.peb_ldr);
-        trace!("ldr_list_offs={:x}", offsets.ldr_list);
-
-        let peb_ldr = mem.virt_read_addr_arch(arch, peb + offsets.peb_ldr)?;
-        trace!("peb_ldr={:x}", peb_ldr);
-
-        let module_base = mem.virt_read_addr_arch(arch, peb_ldr + offsets.ldr_list)?;
-
-        Self::with_base(module_base, arch)
-    }
-
-    pub fn with_base(module_base: Address, arch: ArchitectureObj) -> Result<Win32ModuleListInfo> {
-        trace!("module_base={:x}", module_base);
-
-        let offsets = Win32ArchOffsets::from(arch);
-        trace!("offsets={:?}", offsets);
-
-        Ok(Win32ModuleListInfo {
-            module_base,
-            offsets,
-        })
-    }
-
-    pub fn module_base(&self) -> Address {
-        self.module_base
-    }
-
-    pub fn module_entry_list<P: Process>(
-        &self,
-        proc: &mut P,
-        arch: ArchitectureObj,
-    ) -> Result<Vec<Address>> {
-        let mut out = vec![];
-        self.module_entry_list_callback(proc, arch, (&mut out).into())?;
-        Ok(out)
-    }
-
-    pub fn module_entry_list_callback<P: Process>(
-        &self,
-        proc: &mut P,
-        arch: ArchitectureObj,
-        mut callback: AddressCallback<P>,
-    ) -> Result<()> {
-        let list_start = self.module_base;
-        let mut list_entry = list_start;
-        for _ in 0..MAX_ITER_COUNT {
-            if !callback.call(proc, list_entry) {
-                break;
-            }
-            list_entry = proc.virt_mem().virt_read_addr_arch(arch, list_entry)?;
-            // Break on misaligned entry. On NT 4.0 list end is misaligned, maybe it's a flag?
-            if list_entry.is_null()
-                || (list_entry.as_u64() & 0b111) != 0
-                || list_entry == self.module_base
-            {
-                break;
-            }
-        }
-
-        Ok(())
-    }
-
-    pub fn module_info_from_entry(
-        &self,
-        entry: Address,
-        parent_eprocess: Address,
-        mem: &mut impl VirtualMemory,
-        arch: ArchitectureObj,
-    ) -> Result<ModuleInfo> {
-        let base = mem.virt_read_addr_arch(arch, entry + self.offsets.ldr_data_base)?;
-
-        trace!("base={:x}", base);
-
-        let size = mem
-            .virt_read_addr_arch(arch, entry + self.offsets.ldr_data_size)?
-            .as_usize();
-
-        trace!("size={:x}", size);
-
-        let path = mem.virt_read_unicode_string(arch, entry + self.offsets.ldr_data_full_name)?;
-        trace!("path={}", path);
-
-        let name = mem.virt_read_unicode_string(arch, entry + self.offsets.ldr_data_base_name)?;
-        trace!("name={}", name);
-
-        Ok(ModuleInfo {
-            address: entry,
-            parent_process: parent_eprocess,
-            base,
-            size,
-            path: path.into(),
-            name: name.into(),
-            arch,
-        })
-    }
-}
 
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize))]
@@ -227,6 +107,12 @@ impl<T: Clone> Clone for Win32Process<T> {
     }
 }
 
+impl<V: VirtualMemory> AsMut<V> for Win32Process<V> {
+    fn as_mut(&mut self) -> &mut V {
+        &mut self.virt_mem
+    }
+}
+
 impl<T: VirtualMemory> Process for Win32Process<T> {
     type VirtualMemoryType = T;
     //type VirtualTranslateType: VirtualTranslate;
@@ -278,7 +164,7 @@ impl<T: VirtualMemory> Process for Win32Process<T> {
     /// # Arguments
     /// * `address` - address where module's information resides in
     /// * `architecture` - architecture of the module. Should be either `ProcessInfo::proc_arch`, or `ProcessInfo::sys_arch`.
-    fn module_info_by_address(
+    fn module_by_address(
         &mut self,
         address: Address,
         architecture: ArchitectureObj,
@@ -299,6 +185,34 @@ impl<T: VirtualMemory> Process for Win32Process<T> {
             architecture,
         )
         .map_err(From::from)
+    }
+
+    /// Retrieves address of the primary module structure of the process
+    ///
+    /// This will be the module of the executable that is being run, and whose name is stored in
+    /// _EPROCESS::IMAGE_FILE_NAME
+    fn primary_module_address(&mut self) -> memflow::error::Result<Address> {
+        let mut ret = Err("No module found".into());
+        let callback = &mut |s: &mut Self, ModuleAddressInfo { address, arch }| {
+            let info = if arch == s.proc_info.base.sys_arch {
+                s.proc_info.module_info_native.as_mut()
+            } else {
+                s.proc_info.module_info_wow64.as_mut()
+            }
+            .unwrap();
+
+            if let Ok((addr, true)) = info
+                .module_base_from_entry(address, &mut s.virt_mem, arch)
+                .map(|b| (b, b == s.proc_info.section_base))
+            {
+                ret = Ok(addr);
+                false
+            } else {
+                true
+            }
+        };
+        self.module_address_list_callback(Some(self.proc_info.base.proc_arch), callback.into())?;
+        ret
     }
 
     /// Retreives the process info
@@ -373,29 +287,6 @@ impl<T: VirtualMemory> Win32Process<T> {
             info.module_entry_list_callback(self, arch, callback.into())?;
         }
         Ok(())
-    }
-}
-
-impl<T: VirtualMemory> Win32Process<T>
-where
-    Self: Process,
-{
-    pub fn main_module_info(&mut self) -> Result<ModuleInfo> {
-        let module_list = self.module_list()?;
-        module_list
-            .into_iter()
-            .inspect(|module| trace!("{:x} {}", module.base, module.name))
-            .find(|module| module.base == self.proc_info.section_base)
-            .ok_or(Error::ModuleInfo)
-    }
-
-    pub fn module_info(&mut self, name: &str) -> Result<ModuleInfo> {
-        let module_list = self.module_list()?;
-        module_list
-            .into_iter()
-            .inspect(|module| trace!("{:x} {}", module.base, module.name))
-            .find(|module| module.name.as_ref() == name)
-            .ok_or(Error::ModuleInfo)
     }
 }
 

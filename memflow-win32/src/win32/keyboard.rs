@@ -59,10 +59,7 @@ impl Keyboard {
     pub fn try_with<T: PhysicalMemory, V: VirtualTranslate>(
         kernel: &mut Win32Kernel<T, V>,
     ) -> Result<Self> {
-        let win32kbase_module_info = {
-            let mut ntoskrnl_process = kernel.kernel_process()?;
-            ntoskrnl_process.module_info("win32kbase.sys")?
-        };
+        let win32kbase_module_info = kernel.module_by_name("win32kbase.sys")?;
         debug!("found win32kbase.sys: {:?}", win32kbase_module_info);
 
         let user_process_info = kernel

@@ -6,6 +6,7 @@ use log::{info, warn};
 
 use memflow::architecture::ArchitectureObj;
 use memflow::mem::{DirectTranslate, PhysicalMemory, VirtualDMA};
+use memflow::os::KernelInfo;
 use memflow::types::Address;
 
 use super::Win32VirtualTranslate;
@@ -13,10 +14,8 @@ use super::Win32VirtualTranslate;
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize))]
 pub struct Win32KernelInfo {
-    pub start_block: StartBlock,
-
-    pub kernel_base: Address,
-    pub kernel_size: usize,
+    pub base_info: KernelInfo,
+    pub dtb: Address,
 
     pub kernel_guid: Option<Win32GUID>,
     pub kernel_winver: Win32Version,
@@ -87,14 +86,14 @@ impl<T: PhysicalMemory> KernelInfoScanner<T> {
         );
 
         // find ntoskrnl.exe base
-        let (kernel_base, kernel_size) = kernel::ntos::find(&mut virt_mem, &start_block)?;
-        info!("kernel_base={} kernel_size={}", kernel_base, kernel_size);
+        let (base, size) = kernel::ntos::find(&mut virt_mem, &start_block)?;
+        info!("base={} size={}", base, size);
 
         // get ntoskrnl.exe guid
-        let kernel_guid = kernel::ntos::find_guid(&mut virt_mem, kernel_base).ok();
+        let kernel_guid = kernel::ntos::find_guid(&mut virt_mem, base).ok();
         info!("kernel_guid={:?}", kernel_guid);
 
-        let kernel_winver = kernel::ntos::find_winver(&mut virt_mem, kernel_base).ok();
+        let kernel_winver = kernel::ntos::find_winver(&mut virt_mem, base).ok();
 
         if kernel_winver.is_none() {
             warn!("Failed to retrieve kernel version! Some features may be disabled.");
@@ -105,7 +104,7 @@ impl<T: PhysicalMemory> KernelInfoScanner<T> {
         info!("kernel_winver={:?}", kernel_winver);
 
         // find eprocess base
-        let eprocess_base = kernel::sysproc::find(&mut virt_mem, &start_block, kernel_base)?;
+        let eprocess_base = kernel::sysproc::find(&mut virt_mem, &start_block, base)?;
         info!("eprocess_base={:x}", eprocess_base);
 
         // start_block only contains the winload's dtb which might
@@ -113,11 +112,15 @@ impl<T: PhysicalMemory> KernelInfoScanner<T> {
         // see Kernel::new() for more information.
         info!("start_block.dtb={:x}", start_block.dtb);
 
-        Ok(Win32KernelInfo {
-            start_block,
+        let StartBlock {
+            arch,
+            kernel_hint: _,
+            dtb,
+        } = start_block;
 
-            kernel_base,
-            kernel_size,
+        Ok(Win32KernelInfo {
+            base_info: KernelInfo { base, size, arch },
+            dtb,
 
             kernel_guid,
             kernel_winver,

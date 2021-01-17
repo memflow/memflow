@@ -314,7 +314,7 @@ impl Inventory {
         self.create_connector(name, &Args::default())
     }
 
-    pub fn create_os_default(&self, name: &str) -> Result<KernelInstance> {
+    pub fn create_os_default(&self, _name: &str) -> Result<KernelInstance> {
         Err("not implemented".into())
     }
 }

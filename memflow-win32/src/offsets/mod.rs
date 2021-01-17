@@ -20,7 +20,7 @@ use std::{fs::File, io::Read, path::Path};
 
 use crate::error::{Error, Result};
 use crate::kernel::Win32GUID;
-use memflow::architecture::{self, ArchitectureIdent};
+use memflow::architecture::ArchitectureIdent;
 
 #[derive(Debug, Copy, Clone)]
 #[repr(C)]

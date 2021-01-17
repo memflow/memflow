@@ -11,4 +11,4 @@ pub mod architecture;
 pub mod util;
 
 #[no_mangle]
-pub extern "C" fn gone(arch: &memflow::architecture::ArchitectureIdent) {}
+pub extern "C" fn gone(_arch: &memflow::architecture::ArchitectureIdent) {}

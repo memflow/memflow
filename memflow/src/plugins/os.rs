@@ -1,22 +1,23 @@
-use crate::error::*;
-use crate::mem::{VirtualMemory, VirtualReadData, VirtualWriteData};
+//use crate::error::*;
+use crate::mem::{/*VirtualMemory,*/ VirtualReadData, VirtualWriteData};
 use crate::os::*;
 use crate::types::Address;
 
 use super::util::*;
 use super::{
-    Args, LibInstance, Loadable, OpaquePhysicalMemoryFunctionTable, OptionVoid,
-    MEMFLOW_PLUGIN_VERSION,
+    /*Args, LibInstance, Loadable,*/ OpaquePhysicalMemoryFunctionTable,
+    OptionVoid,
+    //MEMFLOW_PLUGIN_VERSION,
 };
 
-use std::ffi::{c_void, CString};
+use std::ffi::c_void; //, CString};
 use std::os::raw::c_char;
-use std::path::Path;
+//use std::path::Path;
 use std::sync::Arc;
 
 use libloading::Library;
 
-use log::*;
+//use log::*;
 
 #[repr(C)]
 pub struct OSLayerDescriptor {
@@ -94,8 +95,8 @@ pub struct KernelFunctionTable<'a, T> {
     pub info: extern "C" fn(kernel: &T) -> &KernelInfo,
 }
 
-impl<'a, T: Kernel<'a>> KernelFunctionTable<'a, T> {
-    pub fn new() -> Self {
+impl<'a, T: Kernel<'a>> Default for KernelFunctionTable<'a, T> {
+    fn default() -> Self {
         Self {
             process_address_list_callback: c_process_address_list_callback,
             process_info_by_address: c_process_info_by_address,
@@ -105,8 +106,10 @@ impl<'a, T: Kernel<'a>> KernelFunctionTable<'a, T> {
             info: c_kernel_info,
         }
     }
+}
 
-    pub fn to_opaque(self) -> OpaqueKernelFunctionTable {
+impl<'a, T: Kernel<'a>> KernelFunctionTable<'a, T> {
+    pub fn into_opaque(self) -> OpaqueKernelFunctionTable {
         unsafe { std::mem::transmute(self) }
     }
 }

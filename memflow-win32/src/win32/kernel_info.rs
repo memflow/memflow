@@ -80,7 +80,7 @@ impl<T: PhysicalMemory> KernelInfoScanner<T> {
         // construct virtual memory object for start_block
         let mut virt_mem = VirtualDMA::with_vat(
             &mut self.mem,
-            start_block.arch.into(),
+            start_block.arch,
             Win32VirtualTranslate::new(start_block.arch, start_block.dtb),
             DirectTranslate::new(),
         );

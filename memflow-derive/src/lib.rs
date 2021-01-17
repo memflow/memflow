@@ -141,7 +141,7 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
         #[doc(hidden)]
         #[no_mangle]
         pub static MEMFLOW_CONNECTOR: ::memflow::plugins::ConnectorDescriptor = ::memflow::plugins::ConnectorDescriptor {
-            connector_version: ::memflow::plugins::MEMFLOW_CONNECTOR_VERSION,
+            connector_version: ::memflow::plugins::MEMFLOW_PLUGIN_VERSION,
             name: #connector_name,
             create_vtable: mf_create_vtable,
         };

@@ -45,8 +45,8 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
         let sysproc_dtb = {
             let mut reader = VirtualDMA::with_vat(
                 &mut phys_mem,
-                kernel_info.base_info.arch.into(),
-                Win32VirtualTranslate::new(kernel_info.base_info.arch.into(), kernel_info.dtb),
+                kernel_info.base_info.arch,
+                Win32VirtualTranslate::new(kernel_info.base_info.arch, kernel_info.dtb),
                 &mut vat,
             );
 
@@ -68,8 +68,8 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
         Self {
             virt_mem: VirtualDMA::with_vat(
                 phys_mem,
-                kernel_info.base_info.arch.into(),
-                Win32VirtualTranslate::new(kernel_info.base_info.arch.into(), kernel_info.dtb),
+                kernel_info.base_info.arch,
+                Win32VirtualTranslate::new(kernel_info.base_info.arch, kernel_info.dtb),
                 vat,
             ),
             offsets,
@@ -125,8 +125,8 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
                 address: self.kernel_info.base_info.base,
                 pid: 0,
                 name: "ntoskrnl.exe".into(),
-                sys_arch: self.kernel_info.base_info.arch.into(),
-                proc_arch: self.kernel_info.base_info.arch.into(),
+                sys_arch: self.kernel_info.base_info.arch,
+                proc_arch: self.kernel_info.base_info.arch,
             },
             dtb: self.sysproc_dtb,
             section_base: Address::NULL, // TODO: see below
@@ -233,8 +233,8 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
         let (phys_mem, vat) = self.virt_mem.borrow_both();
         let mut proc_reader = VirtualDMA::with_vat(
             phys_mem,
-            base.proc_arch.into(),
-            Win32VirtualTranslate::new(self.kernel_info.base_info.arch.into(), dtb),
+            base.proc_arch,
+            Win32VirtualTranslate::new(self.kernel_info.base_info.arch, dtb),
             vat,
         );
 
@@ -472,7 +472,7 @@ impl<'a, T: PhysicalMemory + 'a, V: VirtualTranslate + 'a> Kernel<'a> for Win32K
         self.kernel_modules()?
             .module_entry_list_callback::<Self, VirtualDMA<T, V, Win32VirtualTranslate>>(
                 self,
-                self.kernel_info.base_info.arch.into(),
+                self.kernel_info.base_info.arch,
                 callback,
             )
             .map_err(From::from)
@@ -488,7 +488,7 @@ impl<'a, T: PhysicalMemory + 'a, V: VirtualTranslate + 'a> Kernel<'a> for Win32K
                 address,
                 self.kernel_info.eprocess_base,
                 &mut self.virt_mem,
-                self.kernel_info.base_info.arch.into(),
+                self.kernel_info.base_info.arch,
             )
             .map_err(From::from)
     }

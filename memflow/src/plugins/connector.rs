@@ -47,7 +47,7 @@ impl ConnectorFunctionTable {
     ) -> Self {
         Self {
             base: ConnectorBaseTable::new::<T>(create),
-            phys: PhysicalMemoryFunctionTable::<T>::new().to_opaque(),
+            phys: PhysicalMemoryFunctionTable::<T>::default().into_opaque(),
         }
     }
 }
@@ -97,16 +97,18 @@ pub struct PhysicalMemoryFunctionTable<T> {
     pub metadata: extern "C" fn(phys_mem: &T) -> PhysicalMemoryMetadata,
 }
 
-impl<T: PhysicalMemory> PhysicalMemoryFunctionTable<T> {
-    pub fn new() -> Self {
+impl<T: PhysicalMemory> Default for PhysicalMemoryFunctionTable<T> {
+    fn default() -> Self {
         Self {
             phys_write_raw_list: phys_write_raw_list_internal::<T>,
             phys_read_raw_list: phys_read_raw_list_internal::<T>,
             metadata: metadata_internal::<T>,
         }
     }
+}
 
-    pub fn to_opaque(self) -> OpaquePhysicalMemoryFunctionTable {
+impl<T: PhysicalMemory> PhysicalMemoryFunctionTable<T> {
+    pub fn into_opaque(self) -> OpaquePhysicalMemoryFunctionTable {
         unsafe { std::mem::transmute(self) }
     }
 }

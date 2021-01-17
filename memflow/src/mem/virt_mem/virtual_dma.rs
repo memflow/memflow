@@ -58,11 +58,11 @@ impl<T: PhysicalMemory, D: ScopedVirtualTranslate> VirtualDMA<T, DirectTranslate
     /// # let mut vat = DirectTranslate::new();
     /// # read(&mut mem, &mut vat, dtb, virt_base);
     /// ```
-    pub fn new(phys_mem: T, proc_arch: ArchitectureObj, translator: D) -> Self {
+    pub fn new(phys_mem: T, arch: impl Into<ArchitectureObj>, translator: D) -> Self {
         Self {
             phys_mem,
             vat: DirectTranslate::new(),
-            proc_arch,
+            proc_arch: arch.into(),
             translator,
             arena: Bump::new(),
         }
@@ -99,11 +99,11 @@ impl<T: PhysicalMemory, V: VirtualTranslate, D: ScopedVirtualTranslate> VirtualD
     /// # let mut vat = DirectTranslate::new();
     /// # read(&mut mem, &mut vat, dtb, virt_base);
     /// ```
-    pub fn with_vat(phys_mem: T, proc_arch: ArchitectureObj, translator: D, vat: V) -> Self {
+    pub fn with_vat(phys_mem: T, arch: impl Into<ArchitectureObj>, translator: D, vat: V) -> Self {
         Self {
             phys_mem,
             vat,
-            proc_arch,
+            proc_arch: arch.into(),
             translator,
             arena: Bump::new(),
         }

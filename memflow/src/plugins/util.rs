@@ -2,32 +2,8 @@ use super::OptionVoid;
 use log::error;
 use std::ffi::c_void;
 
-pub fn to_heap<T>(a: T) -> &'static mut T {
-    Box::leak(Box::new(a))
-}
-
-pub unsafe fn extend_lifetime<T>(a: &T) -> &'static T {
-    std::mem::transmute(a)
-}
-
-pub unsafe fn extend_lifetime_mut<T>(a: &mut T) -> &'static mut T {
-    std::mem::transmute(a)
-}
-
 pub unsafe fn to_static_heap<T: Sized>(a: T) -> &'static mut c_void {
-    std::mem::transmute(Box::leak(Box::new(a)))
-}
-
-pub fn to_void<T: Sized>(from: &'static mut T) -> &'static mut c_void {
-    unsafe { std::mem::transmute(from) }
-}
-
-pub unsafe fn reinterpret_mut<T: Sized>(from: &mut c_void) -> &mut T {
-    &mut *(from as *mut c_void as *mut T)
-}
-
-pub unsafe fn reinterpret<T: Sized>(from: &c_void) -> &T {
-    &*(from as *const c_void as *const T)
+    &mut *(Box::leak(Box::new(a)) as *mut T as *mut std::ffi::c_void)
 }
 
 pub extern "C" fn c_clone<T: Clone>(obj: &c_void) -> OptionVoid {

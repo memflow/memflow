@@ -35,6 +35,11 @@ impl<'a, S: ?Sized, T> OpaqueCallback<'a, S, T> {
 }
 
 impl<'a, T> OpaqueCallback<'a, c_void, T> {
+    /// Cast an opaque self type to a concrete one
+    ///
+    /// # Safety
+    /// `S` type parameter must be the correct type. Failure to ensure this before use
+    /// will result in undefined behaviour.
     pub unsafe fn cast_self<S>(self) -> OpaqueCallback<'a, S, T> {
         std::mem::transmute(self)
     }

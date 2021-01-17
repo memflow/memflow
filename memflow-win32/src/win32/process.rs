@@ -230,7 +230,7 @@ impl<'a, T: PhysicalMemory, V: VirtualTranslate>
         let (phys_mem, vat) = kernel.virt_mem.destroy();
         let virt_mem = VirtualDMA::with_vat(
             phys_mem,
-            proc_info.base.proc_arch.into(),
+            proc_info.base.proc_arch,
             proc_info.translator(),
             vat,
         );
@@ -263,7 +263,7 @@ impl<'a, T: PhysicalMemory, V: VirtualTranslate>
         let (phys_mem, vat) = kernel.virt_mem.borrow_both();
         let virt_mem = VirtualDMA::with_vat(
             phys_mem,
-            proc_info.base.proc_arch.into(),
+            proc_info.base.proc_arch,
             proc_info.translator(),
             vat,
         );

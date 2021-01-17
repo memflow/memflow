@@ -203,6 +203,9 @@ pub trait Architecture: Send + Sync + 'static {
     ///
     /// ```
     fn address_space_bits(&self) -> u8;
+
+    /// Returns a FFI-safe identifier
+    fn ident(&self) -> ArchitectureIdent;
 }
 
 impl std::fmt::Debug for ArchitectureObj {
@@ -229,7 +232,7 @@ impl std::cmp::PartialEq<ArchitectureObj> for ArchitectureObj {
 }
 
 #[repr(C)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 pub enum ArchitectureIdent {
     /// Unknown architecture. Could be third-party implemented. memflow knows how to work on them,
@@ -240,7 +243,7 @@ pub enum ArchitectureIdent {
     /// First argument - `bitness` controls whether it's 32, or 64 bit variant.
     /// Second argument - `address_extensions` control whether address extensions are
     /// enabled (PAE on x32, or LA57 on x64). Warning: LA57 is currently unsupported.
-    X86(usize, bool),
+    X86(u8, bool),
     /// ARM 64-bit architecture with specified page size
     ///
     /// Valid page sizes are 4kb, 16kb, 64kb. Only 4kb is supported at the moment

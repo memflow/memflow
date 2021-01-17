@@ -29,7 +29,7 @@ pub fn find(mem: &[u8]) -> Result<StartBlock> {
     mem.page_chunks(Address::from(0), x32::ARCH.page_size())
         .find(|(a, c)| check_page(*a, c))
         .map(|(a, _)| StartBlock {
-            arch: x32::ARCH,
+            arch: x32::ARCH.ident(),
             kernel_hint: 0.into(),
             dtb: a,
         })

@@ -2,7 +2,7 @@ use crate::prelude::v1::*;
 
 #[repr(C)]
 #[derive(Clone, Debug)]
-#[cfg_attr(feature = "serde", derive(::serde::Serialize))]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 pub struct ModuleInfo {
     /// Returns the address of the module header.
     ///
@@ -37,7 +37,7 @@ pub struct ModuleInfo {
     /// context (e.g. all 32-bit modules in a WoW64 process), and the other for all native modules
     /// needed to support the process emulation. This should be equal to either
     /// `ProcessInfo::proc_arch`, or `ProcessInfo::sys_arch` of the parent process.
-    pub arch: ArchitectureObj,
+    pub arch: ArchitectureIdent,
 }
 
 pub type ModuleInfoCallback<'a, T> = OpaqueCallback<'a, T, ModuleInfo>;
@@ -46,7 +46,7 @@ pub type ModuleInfoCallback<'a, T> = OpaqueCallback<'a, T, ModuleInfo>;
 #[derive(Clone, Debug)]
 pub struct ModuleAddressInfo {
     pub address: Address,
-    pub arch: ArchitectureObj,
+    pub arch: ArchitectureIdent,
 }
 
 pub type ModuleAddressCallback<'a, T> = OpaqueCallback<'a, T, ModuleAddressInfo>;

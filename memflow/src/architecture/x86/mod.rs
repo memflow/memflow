@@ -2,7 +2,10 @@ pub mod x32;
 pub mod x32_pae;
 pub mod x64;
 
-use super::{mmu::ArchMMUSpec, Architecture, ArchitectureObj, Endianess, ScopedVirtualTranslate};
+use super::{
+    mmu::ArchMMUSpec, Architecture, ArchitectureIdent, ArchitectureObj, Endianess,
+    ScopedVirtualTranslate,
+};
 
 use crate::error::{Error, Result};
 use crate::iter::SplitAtIndex;
@@ -35,6 +38,13 @@ impl Architecture for X86Architecture {
 
     fn address_space_bits(&self) -> u8 {
         self.mmu.def.address_space_bits
+    }
+
+    fn ident(&self) -> ArchitectureIdent {
+        ArchitectureIdent::X86(
+            self.bits,
+            self as *const _ == &x32_pae::ARCH_SPEC as *const _,
+        )
     }
 }
 

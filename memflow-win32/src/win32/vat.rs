@@ -1,5 +1,5 @@
 use memflow::{
-    architecture::{arm, x86, ArchitectureObj, ScopedVirtualTranslate},
+    architecture::{arm, x86, ArchitectureIdent, ArchitectureObj, ScopedVirtualTranslate},
     error::Error,
     iter::SplitAtIndex,
     mem::{PhysicalMemory, VirtualDMA, VirtualMemory, VirtualTranslate},
@@ -13,8 +13,11 @@ pub struct Win32VirtualTranslate {
 }
 
 impl Win32VirtualTranslate {
-    pub fn new(sys_arch: ArchitectureObj, dtb: Address) -> Self {
-        Self { sys_arch, dtb }
+    pub fn new(arch: ArchitectureIdent, dtb: Address) -> Self {
+        Self {
+            sys_arch: arch.into(),
+            dtb,
+        }
     }
 
     pub fn virt_mem<T: PhysicalMemory, V: VirtualTranslate>(

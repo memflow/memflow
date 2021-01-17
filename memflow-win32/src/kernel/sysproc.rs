@@ -8,6 +8,7 @@ use std::convert::TryInto;
 
 use log::{debug, info, warn};
 
+use memflow::architecture::ArchitectureObj;
 use memflow::mem::VirtualMemory;
 use memflow::types::{size, Address};
 
@@ -56,9 +57,11 @@ pub fn find_exported<T: VirtualMemory>(
     };
     info!("PsInitialSystemProcess found at 0x{:x}", sys_proc);
 
+    let arch_obj: ArchitectureObj = start_block.arch.into();
+
     // read containing value
-    let mut buf = vec![0u8; start_block.arch.size_addr()];
-    let sys_proc_addr: Address = match start_block.arch.bits() {
+    let mut buf = vec![0u8; arch_obj.size_addr()];
+    let sys_proc_addr: Address = match arch_obj.bits() {
         64 => {
             // TODO: replace by virt_read_into with ByteSwap
             virt_mem.virt_read_raw_into(sys_proc, &mut buf)?;

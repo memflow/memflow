@@ -268,8 +268,8 @@ impl<V: VirtualTranslate, Q: CacheValidator> CachedVirtualTranslateBuilder<V, Q>
         self
     }
 
-    pub fn arch(mut self, arch: ArchitectureObj) -> Self {
-        self.arch = Some(arch);
+    pub fn arch(mut self, arch: impl Into<ArchitectureObj>) -> Self {
+        self.arch = Some(arch.into());
         self
     }
 }

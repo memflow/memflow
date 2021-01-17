@@ -100,7 +100,7 @@ impl DummyProcess {
             size: (thread_rng().gen_range(min_size, self.map_size) / 2),
             name: "dummy.so".into(),
             path: "/".into(),
-            arch: x64::ARCH,
+            arch: x64::ARCH.ident(),
         }
     }
 
@@ -296,8 +296,8 @@ impl DummyMemory {
                 address,
                 pid: self.last_pid,
                 name: "Dummy".into(),
-                sys_arch: x64::ARCH,
-                proc_arch: x64::ARCH,
+                sys_arch: x64::ARCH.ident(),
+                proc_arch: x64::ARCH.ident(),
             },
             dtb,
             map_size,

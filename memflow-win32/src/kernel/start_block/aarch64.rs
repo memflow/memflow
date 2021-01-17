@@ -42,7 +42,7 @@ pub fn find(mem: &[u8]) -> Result<StartBlock> {
         .enumerate()
         .filter_map(|(i, c)| find_pt(PHYS_BASE + (i * aarch64::ARCH.page_size()), c))
         .map(|addr| StartBlock {
-            arch: aarch64::ARCH,
+            arch: aarch64::ARCH.ident(),
             kernel_hint: 0.into(),
             dtb: addr,
         })

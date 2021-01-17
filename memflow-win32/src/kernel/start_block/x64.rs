@@ -23,7 +23,7 @@ pub fn find_lowstub(stub: &[u8]) -> Result<StartBlock> {
             (0xffff_ff00_0000_0fff & u64::from_le_bytes(c[0xa0..0xa0 + 8].try_into().unwrap())) == 0
         }) // pml4
         .map(|c| StartBlock {
-            arch: x64::ARCH,
+            arch: x64::ARCH.ident(),
             kernel_hint: u64::from_le_bytes(c[0x70..0x70 + 8].try_into().unwrap()).into(),
             dtb: u64::from_le_bytes(c[0xa0..0xa0 + 8].try_into().unwrap()).into(),
         })
@@ -65,7 +65,7 @@ pub fn find(mem: &[u8]) -> Result<StartBlock> {
         .enumerate()
         .filter_map(|(i, c)| find_pt((i * x64::ARCH.page_size()).into(), c))
         .map(|addr| StartBlock {
-            arch: x64::ARCH,
+            arch: x64::ARCH.ident(),
             kernel_hint: 0.into(),
             dtb: addr,
         })

@@ -5,7 +5,7 @@ use super::{
         translate_data::{TranslateDataVec, TranslationChunk},
         ArchMMUSpec, MMUTranslationBase,
     },
-    Architecture, ArchitectureObj, Endianess, ScopedVirtualTranslate,
+    Architecture, ArchitectureIdent, ArchitectureObj, Endianess, ScopedVirtualTranslate,
 };
 
 use crate::error::{Error, Result};
@@ -39,6 +39,10 @@ impl Architecture for ARMArchitecture {
 
     fn address_space_bits(&self) -> u8 {
         self.mmu.def.address_space_bits
+    }
+
+    fn ident(&self) -> ArchitectureIdent {
+        ArchitectureIdent::AArch64(size::kb(4))
     }
 }
 

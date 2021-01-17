@@ -11,6 +11,7 @@ use std::prelude::v1::*;
 
 use log::{info, warn};
 
+use memflow::architecture::ArchitectureObj;
 use memflow::mem::VirtualMemory;
 use memflow::types::Address;
 
@@ -20,7 +21,8 @@ pub fn find<T: VirtualMemory>(
     virt_mem: &mut T,
     start_block: &StartBlock,
 ) -> Result<(Address, usize)> {
-    if start_block.arch.bits() == 64 {
+    let arch_obj = ArchitectureObj::from(start_block.arch);
+    if arch_obj.bits() == 64 {
         if !start_block.kernel_hint.is_null() {
             match x64::find_with_va_hint(virt_mem, start_block) {
                 Ok(b) => return Ok(b),
@@ -32,7 +34,7 @@ pub fn find<T: VirtualMemory>(
             Ok(b) => return Ok(b),
             Err(e) => warn!("x64::find() error: {}", e),
         }
-    } else if start_block.arch.bits() == 32 {
+    } else if arch_obj.bits() == 32 {
         match x86::find(virt_mem, start_block) {
             Ok(b) => return Ok(b),
             Err(e) => warn!("x86::find() error: {}", e),

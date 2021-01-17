@@ -4,7 +4,7 @@ use crate::kernel::{Win32GUID, Win32Version};
 
 use log::{info, warn};
 
-use memflow::architecture::ArchitectureObj;
+use memflow::architecture::ArchitectureIdent;
 use memflow::mem::{DirectTranslate, PhysicalMemory, VirtualDMA};
 use memflow::os::KernelInfo;
 use memflow::types::Address;
@@ -31,7 +31,7 @@ impl Win32KernelInfo {
 
 pub struct KernelInfoScanner<T> {
     mem: T,
-    arch: Option<ArchitectureObj>,
+    arch: Option<ArchitectureIdent>,
     kernel_hint: Option<Address>,
     dtb: Option<Address>,
 }
@@ -80,7 +80,7 @@ impl<T: PhysicalMemory> KernelInfoScanner<T> {
         // construct virtual memory object for start_block
         let mut virt_mem = VirtualDMA::with_vat(
             &mut self.mem,
-            start_block.arch,
+            start_block.arch.into(),
             Win32VirtualTranslate::new(start_block.arch, start_block.dtb),
             DirectTranslate::new(),
         );
@@ -129,7 +129,7 @@ impl<T: PhysicalMemory> KernelInfoScanner<T> {
         })
     }
 
-    pub fn arch(mut self, arch: ArchitectureObj) -> Self {
+    pub fn arch(mut self, arch: ArchitectureIdent) -> Self {
         self.arch = Some(arch);
         self
     }

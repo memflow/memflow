@@ -23,7 +23,7 @@ pub trait Process: Send {
     /// * `callback` - where to pass each matching module to. This is an opaque callback.
     fn module_address_list_callback(
         &mut self,
-        target_arch: Option<ArchitectureObj>,
+        target_arch: Option<ArchitectureIdent>,
         callback: ModuleAddressCallback<Self>,
     ) -> Result<()>;
 
@@ -35,7 +35,7 @@ pub trait Process: Send {
     /// * `callback` - where to pass each matching module to. This is an opaque callback.
     fn module_list_callback(
         &mut self,
-        target_arch: Option<ArchitectureObj>,
+        target_arch: Option<ArchitectureIdent>,
         mut callback: ModuleInfoCallback<Self>,
     ) -> Result<()> {
         let inner_callback = &mut |s: &mut Self, ModuleAddressInfo { address, arch }| match s
@@ -58,7 +58,7 @@ pub trait Process: Send {
     fn module_by_address(
         &mut self,
         address: Address,
-        architecture: ArchitectureObj,
+        architecture: ArchitectureIdent,
     ) -> Result<ModuleInfo>;
 
     /// Finds a process module by its name under specified architecture
@@ -71,7 +71,7 @@ pub trait Process: Send {
     fn module_by_name_arch(
         &mut self,
         name: &str,
-        architecture: Option<ArchitectureObj>,
+        architecture: Option<ArchitectureIdent>,
     ) -> Result<ModuleInfo> {
         let mut ret = Err("No module found".into());
         let callback = &mut |_: &mut Self, data: ModuleInfo| {
@@ -103,7 +103,7 @@ pub trait Process: Send {
     /// between `Some(ProcessInfo::sys_arch())`, and `Some(ProcessInfo::proc_arch())`. `None` for all.
     fn module_list_arch(
         &mut self,
-        target_arch: Option<ArchitectureObj>,
+        target_arch: Option<ArchitectureIdent>,
     ) -> Result<Vec<ModuleInfo>> {
         let mut ret = vec![];
         self.module_list_callback(target_arch, (&mut ret).into())?;
@@ -136,7 +136,7 @@ pub trait Process: Send {
 
 #[repr(C)]
 #[derive(Clone, Debug)]
-#[cfg_attr(feature = "serde", derive(::serde::Serialize))]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 pub struct ProcessInfo {
     /// The base address of this process.
     ///
@@ -149,7 +149,7 @@ pub struct ProcessInfo {
     /// Name of the process.
     pub name: ReprCStr,
     /// System architecture of the target system.
-    pub sys_arch: ArchitectureObj,
+    pub sys_arch: ArchitectureIdent,
     /// Process architecture
     ///
     /// # Remarks
@@ -158,7 +158,7 @@ pub struct ProcessInfo {
     /// to the `sys_arch` in case the process is an emulated 32-bit process.
     ///
     /// On windows this technique is called [`WOW64`](https://docs.microsoft.com/en-us/windows/win32/winprog64/wow64-implementation-details).
-    pub proc_arch: ArchitectureObj,
+    pub proc_arch: ArchitectureIdent,
 }
 
 pub type ProcessInfoCallback<'a, T> = OpaqueCallback<'a, T, ProcessInfo>;

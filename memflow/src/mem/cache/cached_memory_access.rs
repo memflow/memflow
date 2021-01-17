@@ -357,8 +357,8 @@ impl<T: PhysicalMemory, Q: CacheValidator> CachedMemoryAccessBuilder<T, Q> {
     /// # let mut mem = DummyMemory::new(size::mb(4));
     /// # build(mem);
     /// ```
-    pub fn arch(mut self, arch: ArchitectureObj) -> Self {
-        self.page_size = Some(arch.page_size());
+    pub fn arch(mut self, arch: impl Into<ArchitectureObj>) -> Self {
+        self.page_size = Some(arch.into().page_size());
         self
     }
 

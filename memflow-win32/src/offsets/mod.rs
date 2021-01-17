@@ -20,7 +20,7 @@ use std::{fs::File, io::Read, path::Path};
 
 use crate::error::{Error, Result};
 use crate::kernel::Win32GUID;
-use memflow::architecture::{self, ArchitectureObj};
+use memflow::architecture::{self, ArchitectureIdent};
 
 #[derive(Debug, Copy, Clone)]
 #[repr(C)]
@@ -72,8 +72,8 @@ impl Win32OffsetsArchitecture {
     }
 }
 
-impl From<ArchitectureObj> for Win32ArchOffsets {
-    fn from(arch: ArchitectureObj) -> Win32ArchOffsets {
+impl From<ArchitectureIdent> for Win32ArchOffsets {
+    fn from(arch: ArchitectureIdent) -> Win32ArchOffsets {
         *Win32OffsetsArchitecture::from(arch).offsets()
     }
 }
@@ -95,16 +95,13 @@ impl From<Win32Offsets> for Win32OffsetTable {
     }
 }
 
-impl From<ArchitectureObj> for Win32OffsetsArchitecture {
-    fn from(arch: ArchitectureObj) -> Win32OffsetsArchitecture {
-        if arch == architecture::x86::x32::ARCH || arch == architecture::x86::x32_pae::ARCH {
-            Self::X86
-        } else if arch == architecture::x86::x64::ARCH {
-            Self::X64
-        } else if arch == architecture::arm::aarch64::ARCH {
-            Self::AArch64
-        } else {
-            panic!("Invalid architecture specified")
+impl From<ArchitectureIdent> for Win32OffsetsArchitecture {
+    fn from(arch: ArchitectureIdent) -> Win32OffsetsArchitecture {
+        match arch {
+            ArchitectureIdent::X86(32, _) => Self::X86,
+            ArchitectureIdent::X86(64, _) => Self::X64,
+            ArchitectureIdent::AArch64(_) => Self::AArch64,
+            _ => panic!("Invalid architecture specified"),
         }
     }
 }

@@ -5,7 +5,7 @@ use crate::error::{Error, Result};
 
 use std::fmt;
 
-use memflow::architecture::ArchitectureObj;
+use memflow::architecture::ArchitectureIdent;
 use memflow::mem::{PhysicalMemory, VirtualDMA, VirtualMemory, VirtualTranslate};
 use memflow::os::{ModuleAddressCallback, ModuleAddressInfo, ModuleInfo, Process, ProcessInfo};
 use memflow::types::Address;
@@ -128,7 +128,7 @@ impl<T: VirtualMemory> Process for Win32Process<T> {
     /// Walks the process' module list and calls the provided callback for each module
     fn module_address_list_callback(
         &mut self,
-        target_arch: Option<ArchitectureObj>,
+        target_arch: Option<ArchitectureIdent>,
         mut callback: ModuleAddressCallback<Self>,
     ) -> memflow::error::Result<()> {
         let infos = [
@@ -167,7 +167,7 @@ impl<T: VirtualMemory> Process for Win32Process<T> {
     fn module_by_address(
         &mut self,
         address: Address,
-        architecture: ArchitectureObj,
+        architecture: ArchitectureIdent,
     ) -> memflow::error::Result<ModuleInfo> {
         let info = if architecture == self.proc_info.base.sys_arch {
             self.proc_info.module_info_native.as_mut()
@@ -230,7 +230,7 @@ impl<'a, T: PhysicalMemory, V: VirtualTranslate>
         let (phys_mem, vat) = kernel.virt_mem.destroy();
         let virt_mem = VirtualDMA::with_vat(
             phys_mem,
-            proc_info.base.proc_arch,
+            proc_info.base.proc_arch.into(),
             proc_info.translator(),
             vat,
         );
@@ -263,7 +263,7 @@ impl<'a, T: PhysicalMemory, V: VirtualTranslate>
         let (phys_mem, vat) = kernel.virt_mem.borrow_both();
         let virt_mem = VirtualDMA::with_vat(
             phys_mem,
-            proc_info.base.proc_arch,
+            proc_info.base.proc_arch.into(),
             proc_info.translator(),
             vat,
         );
@@ -278,7 +278,7 @@ impl<'a, T: PhysicalMemory, V: VirtualTranslate>
 impl<T: VirtualMemory> Win32Process<T> {
     fn module_address_list_with_infos_callback(
         &mut self,
-        module_infos: impl Iterator<Item = (Win32ModuleListInfo, ArchitectureObj)>,
+        module_infos: impl Iterator<Item = (Win32ModuleListInfo, ArchitectureIdent)>,
         out: &mut ModuleAddressCallback<Self>,
     ) -> Result<()> {
         for (info, arch) in module_infos {

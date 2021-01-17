@@ -6,7 +6,7 @@ use crate::kernel::StartBlock;
 
 use log::{debug, trace};
 
-use memflow::architecture::x86::x64;
+use memflow::architecture::{x86::x64, ArchitectureObj};
 use memflow::error::PartialResultExt;
 use memflow::iter::PageChunks;
 use memflow::mem::VirtualMemory;
@@ -83,7 +83,8 @@ pub fn find<T: VirtualMemory>(
 
     let page_map = virt_mem.virt_page_map_range(
         size::mb(2),
-        (!0u64 - (1u64 << (start_block.arch.address_space_bits() - 1))).into(),
+        (!0u64 - (1u64 << (ArchitectureObj::from(start_block.arch).address_space_bits() - 1)))
+            .into(),
         (!0u64).into(),
     );
 

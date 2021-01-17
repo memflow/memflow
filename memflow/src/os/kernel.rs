@@ -229,5 +229,5 @@ pub struct KernelInfo {
     /// Size of the kernel
     pub size: usize,
     /// System architecture
-    pub arch: ArchitectureObj,
+    pub arch: ArchitectureIdent,
 }

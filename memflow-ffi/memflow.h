@@ -70,7 +70,7 @@ typedef enum ArchitectureIdent_Tag {
 } ArchitectureIdent_Tag;
 
 typedef struct X86_Body {
-    uintptr_t _0;
+    uint8_t _0;
     bool _1;
 } X86_Body;
 
@@ -153,11 +153,15 @@ typedef struct PhysicalAddress {
 
 typedef void *pvoid;
 
-typedef struct ConnectorBaseTable {
-    pvoid (*create)(const char *args, int32_t log_level);
-    pvoid (*clone)(const void *phys_mem);
-    void (*drop)(void *phys_mem);
-} ConnectorBaseTable;
+typedef struct GenericBaseTable_c_void__OptionMut_c_void {
+    pvoid (*create)(const char *args, pvoid obj, int32_t log_level);
+    pvoid (*clone)(const void *this);
+    void (*drop)(void *this);
+} GenericBaseTable_c_void__OptionMut_c_void;
+
+typedef struct GenericBaseTable_c_void__OptionMut_c_void OpaqueBaseTable_OptionMut_c_void;
+
+typedef OpaqueBaseTable_OptionMut_c_void ConnectorBaseTable;
 
 typedef struct PhysicalMemoryMetadata {
     uintptr_t size;
@@ -176,7 +180,7 @@ typedef struct ConnectorFunctionTable {
     /**
      * The vtable for object creation and cloning
      */
-    struct ConnectorBaseTable base;
+    ConnectorBaseTable base;
     /**
      * The vtable for all physical memory function calls to the connector.
      */
@@ -204,11 +208,7 @@ typedef struct ConnectorInstance {
     Arc_Library library;
 } ConnectorInstance;
 
-typedef struct KernelBaseTable {
-    pvoid (*create)(const char *args, int32_t log_level);
-    pvoid (*clone)(const void *kernel);
-    void (*drop)(void *kernel);
-} KernelBaseTable;
+typedef OpaqueBaseTable_OptionMut_c_void OSBaseTable;
 
 typedef struct Callback_c_void__c_void__Address {
     void *context;
@@ -243,7 +243,7 @@ typedef struct ProcessInfo {
     /**
      * System architecture of the target system.
      */
-    struct ArchitectureObj sys_arch;
+    struct ArchitectureIdent sys_arch;
     /**
      * Process architecture
      *
@@ -254,7 +254,7 @@ typedef struct ProcessInfo {
      *
      * On windows this technique is called [`WOW64`](https://docs.microsoft.com/en-us/windows/win32/winprog64/wow64-implementation-details).
      */
-    struct ArchitectureObj proc_arch;
+    struct ArchitectureIdent proc_arch;
 } ProcessInfo;
 
 typedef struct PluginProcessRef {
@@ -309,7 +309,7 @@ typedef struct ModuleInfo {
      * needed to support the process emulation. This should be equal to either
      * `ProcessInfo::proc_arch`, or `ProcessInfo::sys_arch` of the parent process.
      */
-    struct ArchitectureObj arch;
+    struct ArchitectureIdent arch;
 } ModuleInfo;
 
 typedef struct KernelInfo {
@@ -324,7 +324,7 @@ typedef struct KernelInfo {
     /**
      * System architecture
      */
-    struct ArchitectureObj arch;
+    struct ArchitectureIdent arch;
 } KernelInfo;
 
 typedef struct KernelFunctionTable_c_void {
@@ -347,7 +347,7 @@ typedef struct OSLayerFunctionTable {
     /**
      * The vtable for object creation and cloning
      */
-    struct KernelBaseTable base;
+    OSBaseTable base;
     /**
      * The vtable for all kernel functions
      */
@@ -393,7 +393,7 @@ extern const struct ArchitectureObj *X86_32_PAE;
 
 extern const struct ArchitectureObj *X86_64;
 
-void gone(const struct ArchitectureIdent *arch);
+void gone(const struct ArchitectureIdent *_arch);
 
 void log_init(int32_t level_num);
 
@@ -440,10 +440,9 @@ int32_t inventory_add_dir(struct Inventory *inv, const char *dir);
 /**
  * Create a connector with given arguments
  *
- * This creates an instance of a `CloneablePhysicalMemory`. To use it for physical memory
- * operations, please call `downcast_cloneable` to create a instance of `PhysicalMemory`.
+ * This creates an instance of `ConnectorInstance`.
  *
- * Regardless, this instance needs to be freed using `connector_free`.
+ * This instance needs to be freed using `connector_free`.
  *
  * # Arguments
  *
@@ -461,7 +460,28 @@ struct ConnectorInstance *inventory_create_connector(struct Inventory *inv,
                                                      const char *name,
                                                      const char *args);
 
-struct KernelInstance *inventory_create_os(struct Inventory *inv, const char *name);
+/**
+ * Create a OS instance with given arguments
+ *
+ * This creates an instance of `KernelInstance`.
+ *
+ * This instance needs to be freed using `os_free`.
+ *
+ * # Arguments
+ *
+ * * `name` - name of the OS to use
+ * * `args` - arguments to be passed to the connector upon its creation
+ *
+ * # Safety
+ *
+ * Both `name`, and `args` must be valid null terminated strings.
+ *
+ * Any error strings returned by the connector must not be outputed after the connector gets
+ * freed, because that operation could cause the underlying shared library to get unloaded.
+ */
+struct KernelInstance *inventory_create_os(struct Inventory *inv,
+                                           const char *name,
+                                           const char *args);
 
 /**
  * Clone a connector

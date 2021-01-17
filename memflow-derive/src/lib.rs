@@ -76,8 +76,9 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
             #[doc(hidden)]
             extern "C" fn mf_create(
                 args: *const ::std::os::raw::c_char,
+                obj: Option<&mut ::std::os::raw::c_void>,
                 log_level: i32,
-            ) -> std::option::Option<&'static mut ::std::ffi::c_void> {
+            ) -> std::option::Option<&'static mut #connector_type> {
                 let level = match log_level {
                     0 => ::log::Level::Error,
                     1 => ::log::Level::Warn,
@@ -106,7 +107,7 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
                         Err(e)
                     })
                     .ok()?);
-                Some(unsafe { &mut *(Box::into_raw(conn) as *mut ::std::ffi::c_void) })
+                Some(Box::leak(conn))
             }
         }
     } else {

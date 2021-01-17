@@ -17,7 +17,7 @@ pub type OptionVoid = Option<&'static mut std::ffi::c_void>;
 
 pub mod connector;
 pub use connector::{
-    ConnectorBaseTable, ConnectorDescriptor, ConnectorFunctionTable, ConnectorInstance,
+    ConnectorDescriptor, ConnectorFunctionTable, ConnectorInstance,
     OpaquePhysicalMemoryFunctionTable,
 };
 
@@ -28,7 +28,9 @@ pub(crate) mod util;
 use crate::error::{Result, *};
 
 use log::*;
+use std::ffi::c_void;
 use std::fs::read_dir;
+use std::os::raw::c_char;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -36,6 +38,39 @@ use libloading::Library;
 
 /// Exported memflow plugins version
 pub const MEMFLOW_PLUGIN_VERSION: i32 = 8;
+
+pub type OptionMut<T> = Option<&'static mut T>;
+
+pub type OpaqueBaseTable<I> = GenericBaseTable<c_void, I>;
+
+impl<I> Copy for OpaqueBaseTable<I> {}
+
+impl<I> Clone for OpaqueBaseTable<I> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+#[repr(C)]
+pub struct GenericBaseTable<T: 'static, I> {
+    pub create: extern "C" fn(args: *const c_char, obj: I, log_level: i32) -> OptionMut<T>,
+    pub clone: extern "C" fn(this: &T) -> OptionMut<T>,
+    pub drop: unsafe extern "C" fn(this: &mut T),
+}
+
+impl<T: Clone, I> GenericBaseTable<T, I> {
+    pub fn new(create: extern "C" fn(*const c_char, obj: I, i32) -> OptionMut<T>) -> Self {
+        Self {
+            create,
+            clone: util::c_clone::<T>,
+            drop: util::c_drop::<T>,
+        }
+    }
+
+    pub fn into_opaque(self) -> OpaqueBaseTable<I> {
+        unsafe { std::mem::transmute(self) }
+    }
+}
 
 /// Defines a common interface for loadable plugins
 pub trait Loadable: Sized {

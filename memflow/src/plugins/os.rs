@@ -5,14 +5,14 @@ use crate::types::Address;
 
 use super::util::*;
 use super::{
+    OpaqueBaseTable,
     /*Args, LibInstance, Loadable,*/ OpaquePhysicalMemoryFunctionTable,
-    OptionVoid,
+    OptionMut,
     //MEMFLOW_PLUGIN_VERSION,
 };
 
 use std::ffi::c_void; //, CString};
-use std::os::raw::c_char;
-//use std::path::Path;
+                      //use std::path::Path;
 use std::sync::Arc;
 
 use libloading::Library;
@@ -35,37 +35,19 @@ pub struct OSLayerDescriptor {
     pub create_vtable: extern "C" fn() -> OSLayerFunctionTable,
 }
 
+pub type OSBaseTable = OpaqueBaseTable<OptionMut<c_void>>;
+
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct OSLayerFunctionTable {
     /// The vtable for object creation and cloning
-    pub base: KernelBaseTable,
+    pub base: OSBaseTable,
     /// The vtable for all kernel functions
     pub kernel: OpaqueKernelFunctionTable,
     /// The vtable for all physical memory access if available
     pub phys: Option<&'static OpaquePhysicalMemoryFunctionTable>,
     /// The vtable for all virtual memory access if available
     pub virt: Option<&'static VirtualMemoryFunctionTable>,
-}
-
-#[repr(C)]
-#[derive(Clone, Copy)]
-pub struct KernelBaseTable {
-    pub create: extern "C" fn(args: *const c_char, log_level: i32) -> OptionVoid,
-    pub clone: extern "C" fn(kernel: &c_void) -> OptionVoid,
-    pub drop: extern "C" fn(kernel: &mut c_void),
-}
-
-impl KernelBaseTable {
-    pub fn new<'a, T: Kernel<'a> + Clone>(
-        create: extern "C" fn(*const c_char, i32) -> OptionVoid,
-    ) -> Self {
-        Self {
-            create,
-            clone: c_clone::<T>,
-            drop: c_drop::<T>,
-        }
-    }
 }
 
 pub type PluginAddressCallback<'a> = AddressCallback<'a, c_void>;

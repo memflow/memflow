@@ -2,7 +2,10 @@ use crate::error::*;
 use crate::mem::{PhysicalMemory, PhysicalMemoryMetadata, PhysicalReadData, PhysicalWriteData};
 
 use super::util::*;
-use super::{Args, LibInstance, Loadable, OptionVoid, MEMFLOW_PLUGIN_VERSION};
+use super::{
+    Args, GenericBaseTable, LibInstance, Loadable, OpaqueBaseTable, OptionMut,
+    MEMFLOW_PLUGIN_VERSION,
+};
 
 use std::ffi::{c_void, CString};
 use std::os::raw::c_char;
@@ -30,6 +33,8 @@ pub struct ConnectorDescriptor {
     pub create_vtable: extern "C" fn() -> ConnectorFunctionTable,
 }
 
+pub type ConnectorBaseTable = OpaqueBaseTable<OptionMut<c_void>>;
+
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct ConnectorFunctionTable {
@@ -43,31 +48,11 @@ pub struct ConnectorFunctionTable {
 
 impl ConnectorFunctionTable {
     pub fn create_vtable<T: PhysicalMemory + Clone>(
-        create: extern "C" fn(*const c_char, i32) -> OptionVoid,
+        create: extern "C" fn(*const c_char, Option<&mut c_void>, i32) -> OptionMut<T>,
     ) -> Self {
         Self {
-            base: ConnectorBaseTable::new::<T>(create),
+            base: GenericBaseTable::new(create).into_opaque(),
             phys: PhysicalMemoryFunctionTable::<T>::default().into_opaque(),
-        }
-    }
-}
-
-#[repr(C)]
-#[derive(Clone, Copy)]
-pub struct ConnectorBaseTable {
-    pub create: extern "C" fn(args: *const c_char, log_level: i32) -> OptionVoid,
-    pub clone: extern "C" fn(phys_mem: &c_void) -> OptionVoid,
-    pub drop: extern "C" fn(phys_mem: &mut c_void),
-}
-
-impl ConnectorBaseTable {
-    pub fn new<T: PhysicalMemory + Clone>(
-        create: extern "C" fn(*const c_char, i32) -> OptionVoid,
-    ) -> Self {
-        Self {
-            create,
-            clone: c_clone::<T>,
-            drop: c_drop::<T>,
         }
     }
 }
@@ -187,7 +172,9 @@ impl Clone for ConnectorInstance {
 
 impl Drop for ConnectorInstance {
     fn drop(&mut self) {
-        (self.vtable.base.drop)(self.instance);
+        unsafe {
+            (self.vtable.base.drop)(self.instance);
+        }
     }
 }
 
@@ -235,7 +222,7 @@ impl Loadable for LoadableConnector {
 
         // We do not want to return error with data from the shared library
         // that may get unloaded before it gets displayed
-        let instance = (vtable.base.create)(cstr.as_ptr(), log::max_level() as i32)
+        let instance = (vtable.base.create)(cstr.as_ptr(), None, log::max_level() as i32)
             .ok_or(Error::Connector("create() failed"))?;
 
         Ok(ConnectorInstance {

@@ -24,4 +24,4 @@ sort_by = "None"
 exclude = ["Arc_Library"]
 
 [export.rename]
-"OptionVoid" = "pvoid"
+"OptionMut_c_void" = "pvoid"

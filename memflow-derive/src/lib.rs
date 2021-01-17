@@ -1,49 +1,13 @@
 use darling::FromMeta;
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{parse_macro_input, AttributeArgs, Data, DeriveInput, Fields, ItemFn, ReturnType, Type};
+use syn::{parse_macro_input, AttributeArgs, Data, DeriveInput, Fields, ItemFn};
 
 #[derive(Debug, FromMeta)]
 struct ConnectorFactoryArgs {
     name: String,
     #[darling(default)]
     version: Option<String>,
-}
-
-fn parse_resulting_type(output: &ReturnType) -> Option<syn::Type> {
-    // There is a return type
-    let ty = if let ReturnType::Type(_, ty) = output {
-        ty
-    } else {
-        return None;
-    };
-
-    // Return type is a specific type
-    let ty = if let Type::Path(ty) = &**ty {
-        ty
-    } else {
-        return None;
-    };
-
-    // Take the first segment
-    let first = &ty.path.segments.first()?;
-
-    // It is a bracketed segment (for generic type)
-    let args = if let syn::PathArguments::AngleBracketed(args) = &first.arguments {
-        args
-    } else {
-        return None;
-    };
-
-    // There is an argument (Result<T, ...>)
-    let first_arg = args.args.first()?;
-
-    // It is a type
-    if let syn::GenericArgument::Type(arg) = &first_arg {
-        Some(arg.clone())
-    } else {
-        None
-    }
 }
 
 // We should add conditional compilation for the crate-type here
@@ -69,45 +33,15 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
     let func = parse_macro_input!(input as ItemFn);
     let func_name = &func.sig.ident;
 
-    let connector_type = parse_resulting_type(&func.sig.output).expect("invalid return type");
-
     let create_gen = if func.sig.inputs.len() > 1 {
         quote! {
             #[doc(hidden)]
             extern "C" fn mf_create(
                 args: *const ::std::os::raw::c_char,
-                obj: Option<&mut ::std::os::raw::c_void>,
+                _: Option<&mut ::std::os::raw::c_void>,
                 log_level: i32,
-            ) -> std::option::Option<&'static mut #connector_type> {
-                let level = match log_level {
-                    0 => ::log::Level::Error,
-                    1 => ::log::Level::Warn,
-                    2 => ::log::Level::Info,
-                    3 => ::log::Level::Debug,
-                    4 => ::log::Level::Trace,
-                    _ => ::log::Level::Trace,
-                };
-
-                let argsstr = unsafe { ::std::ffi::CStr::from_ptr(args) }.to_str()
-                    .or_else(|e| {
-                        ::log::error!("error converting connector args: {}", e);
-                        Err(e)
-                    })
-                    .ok()?;
-                let conn_args = ::memflow::plugins::Args::parse(argsstr)
-                    .or_else(|e| {
-                        ::log::error!("error parsing connector args: {}", e);
-                        Err(e)
-                    })
-                    .ok()?;
-
-                let conn = Box::new(#func_name(&conn_args, level)
-                    .or_else(|e| {
-                        ::log::error!("{}", e);
-                        Err(e)
-                    })
-                    .ok()?);
-                Some(Box::leak(conn))
+            ) -> std::option::Option<&'static mut (impl ::memflow::mem::PhysicalMemory + Clone)> {
+                ::memflow::plugins::create_with_logging(args, log_level, #func_name)
             }
         }
     } else {
@@ -115,25 +49,10 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
             #[doc(hidden)]
             extern "C" fn mf_create(
                 args: *const ::std::os::raw::c_char,
+                _: Option<&mut ::std::os::raw::c_void>,
                 _: i32,
-            ) -> std::option::Option<&'static mut ::std::ffi::c_void> {
-                let argsstr = unsafe { ::std::ffi::CStr::from_ptr(args) }.to_str()
-                    .or_else(|e| {
-                        Err(e)
-                    })
-                    .ok()?;
-                let conn_args = ::memflow::plugins::Args::parse(argsstr)
-                    .or_else(|e| {
-                        Err(e)
-                    })
-                    .ok()?;
-
-                let conn = Box::new(#func_name(&conn_args)
-                    .or_else(|e| {
-                        Err(e)
-                    })
-                    .ok()?);
-                Some(unsafe { &mut *(Box::into_raw(conn) as *mut ::std::ffi::c_void) })
+            ) -> std::option::Option<&'static mut (impl ::memflow::mem::PhysicalMemory + Clone)> {
+                ::memflow::plugins::create_without_logging(args, #func_name)
             }
         }
     };
@@ -148,7 +67,7 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
         };
 
         extern "C" fn mf_create_vtable() -> ::memflow::plugins::ConnectorFunctionTable {
-            ::memflow::plugins::ConnectorFunctionTable::create_vtable::<#connector_type>(mf_create)
+            ::memflow::plugins::ConnectorFunctionTable::create_vtable(mf_create)
         }
 
         #func

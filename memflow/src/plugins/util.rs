@@ -1,6 +1,8 @@
-use super::OptionMut;
+use super::{Args, OptionMut};
+use crate::error::Error;
 use log::error;
-use std::ffi::c_void;
+use std::ffi::{c_void, CStr};
+use std::os::raw::c_char;
 
 pub unsafe fn to_static_heap<T: Sized>(a: T) -> &'static mut c_void {
     &mut *(Box::leak(Box::new(a)) as *mut T as *mut std::ffi::c_void)
@@ -14,6 +16,59 @@ pub extern "C" fn c_clone<T: Clone>(obj: &T) -> OptionMut<T> {
 pub unsafe extern "C" fn c_drop<T>(obj: &mut T) {
     let _: Box<T> = Box::from_raw(obj);
     // drop box
+}
+
+pub fn create_with_logging<T>(
+    args: *const c_char,
+    log_level: i32,
+    create_fn: fn(&Args, log::Level) -> Result<T, Error>,
+) -> std::option::Option<&'static mut T> {
+    let level = match log_level {
+        0 => ::log::Level::Error,
+        1 => ::log::Level::Warn,
+        2 => ::log::Level::Info,
+        3 => ::log::Level::Debug,
+        4 => ::log::Level::Trace,
+        _ => ::log::Level::Trace,
+    };
+
+    let argsstr = unsafe { CStr::from_ptr(args) }
+        .to_str()
+        .or_else(|e| {
+            ::log::error!("error converting connector args: {}", e);
+            Err(e)
+        })
+        .ok()?;
+    let conn_args = Args::parse(argsstr)
+        .or_else(|e| {
+            ::log::error!("error parsing connector args: {}", e);
+            Err(e)
+        })
+        .ok()?;
+
+    let conn = Box::new(
+        create_fn(&conn_args, level)
+            .or_else(|e| {
+                ::log::error!("{}", e);
+                Err(e)
+            })
+            .ok()?,
+    );
+    Some(Box::leak(conn))
+}
+
+pub fn create_without_logging<T: 'static>(
+    args: *const c_char,
+    create_fn: impl Fn(&super::Args) -> Result<T, Error>,
+) -> std::option::Option<&'static mut T> {
+    let argsstr = unsafe { CStr::from_ptr(args) }
+        .to_str()
+        .or_else(|e| Err(e))
+        .ok()?;
+    let conn_args = Args::parse(argsstr).or_else(|e| Err(e)).ok()?;
+
+    let conn = Box::new(create_fn(&conn_args).or_else(|e| Err(e)).ok()?);
+    Some(Box::leak(conn))
 }
 
 pub trait ToIntResult<T> {

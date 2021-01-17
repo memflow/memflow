@@ -24,6 +24,7 @@ pub use connector::{
 pub mod os;
 pub use os::{KernelInstance, OpaqueKernelFunctionTable};
 pub(crate) mod util;
+pub use util::{create_with_logging, create_without_logging};
 
 use crate::error::{Result, *};
 

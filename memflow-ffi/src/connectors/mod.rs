@@ -2,7 +2,7 @@ use std::ffi::CStr;
 use std::os::raw::c_char;
 use std::path::PathBuf;
 
-use memflow::plugins::{Args, ConnectorInstance, Inventory};
+use memflow::plugins::{Args, ConnectorInstance, Inventory, KernelInstance};
 
 use crate::util::*;
 
@@ -93,6 +93,18 @@ pub unsafe extern "C" fn inventory_create_connector(
             .ok()
             .map(to_heap)
     }
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn inventory_create_os(
+    inv: &mut Inventory,
+    name: *const c_char,
+) -> Option<&'static mut KernelInstance> {
+    let rname = CStr::from_ptr(name).to_string_lossy();
+    inv.create_os_default(&rname)
+        .map_err(inspect_err)
+        .ok()
+        .map(to_heap)
 }
 
 /// Clone a connector

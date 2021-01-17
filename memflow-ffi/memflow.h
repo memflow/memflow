@@ -47,6 +47,43 @@ typedef struct VirtualReadData VirtualReadData;
 
 typedef struct VirtualWriteData VirtualWriteData;
 
+typedef enum ArchitectureIdent_Tag {
+    /**
+     * Unknown architecture. Could be third-party implemented. memflow knows how to work on them,
+     * but is unable to instantiate them.
+     */
+    Unknown,
+    /**
+     * X86 with specified bitness and address extensions
+     *
+     * First argument - `bitness` controls whether it's 32, or 64 bit variant.
+     * Second argument - `address_extensions` control whether address extensions are
+     * enabled (PAE on x32, or LA57 on x64). Warning: LA57 is currently unsupported.
+     */
+    X86,
+    /**
+     * ARM 64-bit architecture with specified page size
+     *
+     * Valid page sizes are 4kb, 16kb, 64kb. Only 4kb is supported at the moment
+     */
+    AArch64,
+} ArchitectureIdent_Tag;
+
+typedef struct X86_Body {
+    uintptr_t _0;
+    bool _1;
+} X86_Body;
+
+typedef struct ArchitectureIdent {
+    ArchitectureIdent_Tag tag;
+    union {
+        X86_Body x86;
+        struct {
+            uintptr_t a_arch64;
+        };
+    };
+} ArchitectureIdent;
+
 /**
  * This type represents a address on the target system.
  * It internally holds a `u64` value but can also be used
@@ -127,11 +164,13 @@ typedef struct PhysicalMemoryMetadata {
     bool readonly;
 } PhysicalMemoryMetadata;
 
-typedef struct PhysicalMemoryFunctionTable {
+typedef struct PhysicalMemoryFunctionTable_c_void {
     int32_t (*phys_read_raw_list)(void *phys_mem, struct PhysicalReadData *read_data, uintptr_t read_data_count);
     int32_t (*phys_write_raw_list)(void *phys_mem, const struct PhysicalWriteData *write_data, uintptr_t write_data_count);
     struct PhysicalMemoryMetadata (*metadata)(const void *phys_mem);
-} PhysicalMemoryFunctionTable;
+} PhysicalMemoryFunctionTable_c_void;
+
+typedef struct PhysicalMemoryFunctionTable_c_void OpaquePhysicalMemoryFunctionTable;
 
 typedef struct ConnectorFunctionTable {
     /**
@@ -139,9 +178,9 @@ typedef struct ConnectorFunctionTable {
      */
     struct ConnectorBaseTable base;
     /**
-     * The vtable for all physical memory funmction calls to the connector.
+     * The vtable for all physical memory function calls to the connector.
      */
-    struct PhysicalMemoryFunctionTable phys;
+    OpaquePhysicalMemoryFunctionTable phys;
 } ConnectorFunctionTable;
 
 /**
@@ -165,6 +204,185 @@ typedef struct ConnectorInstance {
     Arc_Library library;
 } ConnectorInstance;
 
+typedef struct KernelBaseTable {
+    pvoid (*create)(const char *args, int32_t log_level);
+    pvoid (*clone)(const void *kernel);
+    void (*drop)(void *kernel);
+} KernelBaseTable;
+
+typedef struct Callback_c_void__c_void__Address {
+    void *context;
+    bool (*func)(void*, void*, Address);
+} Callback_c_void__c_void__Address;
+
+typedef struct Callback_c_void__c_void__Address OpaqueCallback_c_void__Address;
+
+typedef OpaqueCallback_c_void__Address AddressCallback_c_void;
+
+typedef uint32_t PID;
+
+typedef int8_t *ReprCStr;
+
+typedef struct ProcessInfo {
+    /**
+     * The base address of this process.
+     *
+     * # Remarks
+     *
+     * On Windows this will be the address of the [`_EPROCESS`](https://www.nirsoft.net/kernel_struct/vista/EPROCESS.html) structure.
+     */
+    Address address;
+    /**
+     * ID of this process.
+     */
+    PID pid;
+    /**
+     * Name of the process.
+     */
+    ReprCStr name;
+    /**
+     * System architecture of the target system.
+     */
+    struct ArchitectureObj sys_arch;
+    /**
+     * Process architecture
+     *
+     * # Remarks
+     *
+     * Specifically on 64-bit systems this could be different
+     * to the `sys_arch` in case the process is an emulated 32-bit process.
+     *
+     * On windows this technique is called [`WOW64`](https://docs.microsoft.com/en-us/windows/win32/winprog64/wow64-implementation-details).
+     */
+    struct ArchitectureObj proc_arch;
+} ProcessInfo;
+
+typedef struct PluginProcessRef {
+    void *instance;
+} PluginProcessRef;
+
+typedef struct ModuleInfo {
+    /**
+     * Returns the address of the module header.
+     *
+     * # Remarks
+     *
+     * On Windows this will be the address where the [`PEB`](https://docs.microsoft.com/en-us/windows/win32/api/winternl/ns-winternl-peb) entry is stored.
+     */
+    Address address;
+    /**
+     * The base address of the parent process.
+     *
+     * # Remarks
+     *
+     * This field is analog to the `ProcessInfo::address` field.
+     */
+    Address parent_process;
+    /**
+     * The actual base address of this module.
+     *
+     * # Remarks
+     *
+     * The base address is contained in the virtual address range of the process
+     * this module belongs to.
+     */
+    Address base;
+    /**
+     * Size of the module
+     */
+    uintptr_t size;
+    /**
+     * Name of the module
+     */
+    ReprCStr name;
+    /**
+     * Path of the module
+     */
+    ReprCStr path;
+    /**
+     * Architecture of the module
+     *
+     * # Remarks
+     *
+     * Emulated processes often have 2 separate lists of modules, one visible to the emulated
+     * context (e.g. all 32-bit modules in a WoW64 process), and the other for all native modules
+     * needed to support the process emulation. This should be equal to either
+     * `ProcessInfo::proc_arch`, or `ProcessInfo::sys_arch` of the parent process.
+     */
+    struct ArchitectureObj arch;
+} ModuleInfo;
+
+typedef struct KernelInfo {
+    /**
+     * Base address of the kernel
+     */
+    Address base;
+    /**
+     * Size of the kernel
+     */
+    uintptr_t size;
+    /**
+     * System architecture
+     */
+    struct ArchitectureObj arch;
+} KernelInfo;
+
+typedef struct KernelFunctionTable_c_void {
+    int32_t (*process_address_list_callback)(void *kernel, AddressCallback_c_void callback);
+    int32_t (*process_info_by_address)(void *kernel, Address address, struct ProcessInfo *out);
+    int32_t (*process_by_info)(void *kernel, struct ProcessInfo info, struct PluginProcessRef *out);
+    int32_t (*module_address_list_callback)(void *kernel, AddressCallback_c_void callback);
+    int32_t (*module_by_address)(void *kernel, Address address, struct ModuleInfo *out);
+    const struct KernelInfo *(*info)(const void *kernel);
+} KernelFunctionTable_c_void;
+
+typedef struct KernelFunctionTable_c_void OpaqueKernelFunctionTable;
+
+typedef struct VirtualMemoryFunctionTable {
+    int32_t (*virt_read_raw_list)(void *virt_mem, struct VirtualReadData *read_data, uintptr_t read_data_count);
+    int32_t (*virt_write_raw_list)(void *virt_mem, const struct VirtualWriteData *write_data, uintptr_t write_data_count);
+} VirtualMemoryFunctionTable;
+
+typedef struct OSLayerFunctionTable {
+    /**
+     * The vtable for object creation and cloning
+     */
+    struct KernelBaseTable base;
+    /**
+     * The vtable for all kernel functions
+     */
+    OpaqueKernelFunctionTable kernel;
+    /**
+     * The vtable for all physical memory access if available
+     */
+    const OpaquePhysicalMemoryFunctionTable *phys;
+    /**
+     * The vtable for all virtual memory access if available
+     */
+    const struct VirtualMemoryFunctionTable *virt;
+} OSLayerFunctionTable;
+
+/**
+ * Describes initialized kernel instance
+ *
+ * This structure is returned by `Kernel`. It is needed to maintain reference
+ * counts to the loaded connector library.
+ */
+typedef struct KernelInstance {
+    void *instance;
+    struct OSLayerFunctionTable vtable;
+    /**
+     * Internal library arc.
+     *
+     * This will keep the library loaded in memory as long as the kernel instance is alive.
+     * This has to be the last member of the struct so the library will be unloaded _after_
+     * the instance is destroyed.
+     *
+     * If the library is unloaded prior to the instance this will lead to a SIGSEGV.
+     */
+    Arc_Library library;
+} KernelInstance;
+
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
@@ -174,6 +392,8 @@ extern const struct ArchitectureObj *X86_32;
 extern const struct ArchitectureObj *X86_32_PAE;
 
 extern const struct ArchitectureObj *X86_64;
+
+void gone(const struct ArchitectureIdent *arch);
 
 void log_init(int32_t level_num);
 
@@ -240,6 +460,8 @@ int32_t inventory_add_dir(struct Inventory *inv, const char *dir);
 struct ConnectorInstance *inventory_create_connector(struct Inventory *inv,
                                                      const char *name,
                                                      const char *args);
+
+struct KernelInstance *inventory_create_os(struct Inventory *inv, const char *name);
 
 /**
  * Clone a connector

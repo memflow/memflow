@@ -34,6 +34,12 @@ impl<'a, S: ?Sized, T> OpaqueCallback<'a, S, T> {
     }
 }
 
+impl<'a, T> OpaqueCallback<'a, c_void, T> {
+    pub unsafe fn cast_self<S>(self) -> OpaqueCallback<'a, S, T> {
+        std::mem::transmute(self)
+    }
+}
+
 #[repr(C)]
 pub struct Callback<'a, S: ?Sized, T, F> {
     context: &'a mut T,

@@ -18,8 +18,12 @@ pub type OptionVoid = Option<&'static mut std::ffi::c_void>;
 pub mod connector;
 pub use connector::{
     ConnectorBaseTable, ConnectorDescriptor, ConnectorFunctionTable, ConnectorInstance,
-    PhysicalMemoryFunctionTable, MEMFLOW_CONNECTOR_VERSION,
+    OpaquePhysicalMemoryFunctionTable,
 };
+
+pub mod os;
+pub use os::{KernelInstance, OpaqueKernelFunctionTable};
+pub(crate) mod util;
 
 use crate::error::{Result, *};
 
@@ -29,6 +33,9 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use libloading::Library;
+
+/// Exported memflow plugins version
+pub const MEMFLOW_PLUGIN_VERSION: i32 = 8;
 
 /// Defines a common interface for loadable plugins
 pub trait Loadable: Sized {
@@ -305,6 +312,10 @@ impl Inventory {
     /// ```
     pub fn create_connector_default(&self, name: &str) -> Result<ConnectorInstance> {
         self.create_connector(name, &Args::default())
+    }
+
+    pub fn create_os_default(&self, name: &str) -> Result<KernelInstance> {
+        Err("not implemented".into())
     }
 }
 

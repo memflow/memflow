@@ -23,6 +23,7 @@ pub(crate) use mmu::ArchMMUDef;
 use crate::error::{Error, Result};
 use crate::iter::{FnExtend, SplitAtIndex};
 use crate::mem::PhysicalMemory;
+use crate::types::size;
 
 use crate::types::{Address, PhysicalAddress};
 
@@ -224,6 +225,38 @@ impl std::cmp::PartialEq<ArchitectureObj> for ArchitectureObj {
     #[allow(clippy::vtable_address_comparisons)]
     fn eq(&self, other: &ArchitectureObj) -> bool {
         std::ptr::eq(*self, *other)
+    }
+}
+
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+pub enum ArchitectureIdent {
+    /// Unknown architecture. Could be third-party implemented. memflow knows how to work on them,
+    /// but is unable to instantiate them.
+    Unknown,
+    /// X86 with specified bitness and address extensions
+    ///
+    /// First argument - `bitness` controls whether it's 32, or 64 bit variant.
+    /// Second argument - `address_extensions` control whether address extensions are
+    /// enabled (PAE on x32, or LA57 on x64). Warning: LA57 is currently unsupported.
+    X86(usize, bool),
+    /// ARM 64-bit architecture with specified page size
+    ///
+    /// Valid page sizes are 4kb, 16kb, 64kb. Only 4kb is supported at the moment
+    AArch64(usize),
+}
+
+impl From<ArchitectureIdent> for ArchitectureObj {
+    fn from(arch: ArchitectureIdent) -> ArchitectureObj {
+        const KB4: usize = size::kb(4);
+        match arch {
+            ArchitectureIdent::X86(32, false) => x86::x32::ARCH,
+            ArchitectureIdent::X86(32, true) => x86::x32_pae::ARCH,
+            ArchitectureIdent::X86(64, false) => x86::x64::ARCH,
+            ArchitectureIdent::AArch64(KB4) => arm::aarch64::ARCH,
+            _ => panic!("unsupported architecture! {:?}", arch),
+        }
     }
 }
 

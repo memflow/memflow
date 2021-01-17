@@ -1,3 +1,5 @@
+use std::prelude::v1::*;
+
 use crate::error::Result;
 use crate::offsets::Win32ArchOffsets;
 use crate::win32::VirtualReadUnicodeString;

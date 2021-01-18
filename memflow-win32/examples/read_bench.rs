@@ -11,13 +11,13 @@ use memflow::types::*;
 
 use memflow_win32::error::Result;
 use memflow_win32::offsets::Win32Offsets;
-use memflow_win32::win32::{Win32Kernel, Win32KernelInfo, Win32Process};
+use memflow_win32::win32::{Win32Kernel, Win32KernelInfo};
 
 use rand::{Rng, SeedableRng};
 use rand_xorshift::XorShiftRng as CurRng;
 
-fn rwtest<T: VirtualMemory>(
-    proc: &mut Win32Process<T>,
+fn rwtest(
+    proc: &mut impl Process,
     module: &ModuleInfo,
     chunk_sizes: &[usize],
     chunk_counts: &[usize],
@@ -61,7 +61,7 @@ fn rwtest<T: VirtualMemory>(
 
                 let now = Instant::now();
                 {
-                    let mut batcher = proc.virt_mem.virt_batcher();
+                    let mut batcher = proc.virt_mem().virt_batcher();
 
                     for (buf, addr) in bufs.iter_mut() {
                         batcher.read_raw_into(Address::from(*addr), buf);
@@ -93,13 +93,15 @@ fn rwtest<T: VirtualMemory>(
     );
 }
 
-fn read_bench<T: PhysicalMemory + ?Sized, V: VirtualTranslate>(
-    phys_mem: &mut T,
-    vat: &mut V,
+fn read_bench<T: PhysicalMemory + Clone + 'static, V: VirtualTranslate + Clone + 'static>(
+    phys_mem: T,
+    vat: V,
     kernel_info: Win32KernelInfo,
 ) -> Result<()> {
     let offsets = Win32Offsets::builder().kernel_info(&kernel_info).build()?;
     let mut kernel = Win32Kernel::new(phys_mem, vat, offsets, kernel_info);
+
+    let mut kernel = KernelInstance::new(Box::leak(kernel.into()), None);
 
     let proc_list = kernel.process_info_list()?;
     let mut rng = CurRng::seed_from_u64(rand::thread_rng().gen_range(0, !0u64));
@@ -122,7 +124,7 @@ fn read_bench<T: PhysicalMemory + ?Sized, V: VirtualTranslate>(
                 prc.info().name,
             );
 
-            let mem_map = prc.virt_mem.virt_page_map(size::gb(1));
+            let mem_map = prc.virt_mem().virt_page_map(size::gb(1));
 
             println!("Memory map (with up to 1GB gaps):");
 
@@ -195,11 +197,11 @@ fn main() -> Result<()> {
     let mut vat = DirectTranslate::new();
 
     println!("Benchmarking uncached reads:");
-    read_bench(&mut connector, &mut vat, kernel_info.clone()).unwrap();
+    read_bench(connector, vat, kernel_info.clone()).unwrap();
 
     println!();
     println!("Benchmarking cached reads:");
-    let mut mem_cached = CachedMemoryAccess::builder(&mut connector)
+    /*let mut mem_cached = CachedMemoryAccess::builder(&mut connector)
         .arch(kernel_info.base_info.arch)
         .build()
         .unwrap();
@@ -207,11 +209,11 @@ fn main() -> Result<()> {
     let mut vat_cached = CachedVirtualTranslate::builder(vat)
         .arch(kernel_info.base_info.arch)
         .build()
-        .unwrap();
+        .unwrap();*/
 
-    read_bench(&mut mem_cached, &mut vat_cached, kernel_info).unwrap();
+    //read_bench(&mut mem_cached, &mut vat_cached, kernel_info).unwrap();
 
-    println!("TLB Hits {}\nTLB Miss {}", vat_cached.hitc, vat_cached.misc);
+    //println!("TLB Hits {}\nTLB Miss {}", vat_cached.hitc, vat_cached.misc);
 
     Ok(())
 }

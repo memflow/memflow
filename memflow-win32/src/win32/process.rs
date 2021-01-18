@@ -128,7 +128,7 @@ impl<T: VirtualMemory> Process for Win32Process<T> {
     /// Walks the process' module list and calls the provided callback for each module
     fn module_address_list_callback(
         &mut self,
-        target_arch: Option<ArchitectureIdent>,
+        target_arch: Option<&ArchitectureIdent>,
         mut callback: ModuleAddressCallback<Self>,
     ) -> memflow::error::Result<()> {
         let infos = [
@@ -147,7 +147,7 @@ impl<T: VirtualMemory> Process for Win32Process<T> {
             .iter()
             .filter(|(_, a)| {
                 if let Some(ta) = target_arch {
-                    *a == ta
+                    a == ta
                 } else {
                     true
                 }
@@ -211,7 +211,8 @@ impl<T: VirtualMemory> Process for Win32Process<T> {
                 true
             }
         };
-        self.module_address_list_callback(Some(self.proc_info.base.proc_arch), callback.into())?;
+        let proc_arch = self.proc_info.base.proc_arch;
+        self.module_address_list_callback(Some(&proc_arch), callback.into())?;
         ret
     }
 

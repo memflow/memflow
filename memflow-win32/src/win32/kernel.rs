@@ -294,7 +294,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
         };
         let sys_arch = info.base.sys_arch;
         let mut process = self.process_by_info(cloned_base)?;
-        process.module_list_callback(Some(sys_arch), callback.into())?;
+        process.module_list_callback(Some(&sys_arch), callback.into())?;
         Ok(Win32ProcessInfo {
             base: ProcessInfo { name, ..info.base },
             ..info

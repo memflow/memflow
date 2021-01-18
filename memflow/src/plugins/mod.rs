@@ -25,6 +25,10 @@ pub mod os;
 pub use os::{KernelInstance, OpaqueKernelFunctionTable};
 pub(crate) mod util;
 pub use util::{create_with_logging, create_without_logging};
+pub mod virt_mem;
+pub use virt_mem::{
+    OpaqueVirtualMemoryFunctionTable, VirtualMemoryFunctionTable, VirtualMemoryInstance,
+};
 
 use crate::error::{Result, *};
 

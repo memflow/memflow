@@ -146,11 +146,7 @@ impl PhysicalMemory for ConnectorInstance {
     }
 
     fn phys_write_raw_list(&mut self, data: &[PhysicalWriteData]) -> Result<()> {
-        (self.vtable.phys.phys_write_raw_list)(
-            self.instance,
-            data.as_ptr() as *mut PhysicalWriteData,
-            data.len(),
-        );
+        (self.vtable.phys.phys_write_raw_list)(self.instance, data.as_ptr(), data.len());
         Ok(())
     }
 

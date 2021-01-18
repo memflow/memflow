@@ -23,7 +23,7 @@ pub trait Process: Send {
     /// * `callback` - where to pass each matching module to. This is an opaque callback.
     fn module_address_list_callback(
         &mut self,
-        target_arch: Option<ArchitectureIdent>,
+        target_arch: Option<&ArchitectureIdent>,
         callback: ModuleAddressCallback<Self>,
     ) -> Result<()>;
 
@@ -35,7 +35,7 @@ pub trait Process: Send {
     /// * `callback` - where to pass each matching module to. This is an opaque callback.
     fn module_list_callback(
         &mut self,
-        target_arch: Option<ArchitectureIdent>,
+        target_arch: Option<&ArchitectureIdent>,
         mut callback: ModuleInfoCallback<Self>,
     ) -> Result<()> {
         let inner_callback = &mut |s: &mut Self, ModuleAddressInfo { address, arch }| match s
@@ -71,7 +71,7 @@ pub trait Process: Send {
     fn module_by_name_arch(
         &mut self,
         name: &str,
-        architecture: Option<ArchitectureIdent>,
+        architecture: Option<&ArchitectureIdent>,
     ) -> Result<ModuleInfo> {
         let mut ret = Err("No module found".into());
         let callback = &mut |_: &mut Self, data: ModuleInfo| {
@@ -103,7 +103,7 @@ pub trait Process: Send {
     /// between `Some(ProcessInfo::sys_arch())`, and `Some(ProcessInfo::proc_arch())`. `None` for all.
     fn module_list_arch(
         &mut self,
-        target_arch: Option<ArchitectureIdent>,
+        target_arch: Option<&ArchitectureIdent>,
     ) -> Result<Vec<ModuleInfo>> {
         let mut ret = vec![];
         self.module_list_callback(target_arch, (&mut ret).into())?;

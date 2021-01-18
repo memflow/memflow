@@ -2,6 +2,7 @@ use super::{Args, OptionMut};
 use crate::error::Error;
 use log::error;
 use std::ffi::{c_void, CStr};
+use std::mem::MaybeUninit;
 use std::os::raw::c_char;
 
 pub unsafe fn to_static_heap<T: Sized>(a: T) -> &'static mut c_void {
@@ -21,7 +22,7 @@ pub unsafe extern "C" fn c_drop<T>(obj: &mut T) {
 pub fn create_with_logging<T>(
     args: *const c_char,
     log_level: i32,
-    create_fn: fn(&Args, log::Level) -> Result<T, Error>,
+    create_fn: impl Fn(&Args, log::Level) -> Result<T, Error>,
 ) -> std::option::Option<&'static mut T> {
     let level = match log_level {
         0 => ::log::Level::Error,
@@ -57,7 +58,7 @@ pub fn create_with_logging<T>(
     Some(Box::leak(conn))
 }
 
-pub fn create_without_logging<T: 'static>(
+pub fn create_without_logging<T>(
     args: *const c_char,
     create_fn: impl Fn(&super::Args) -> Result<T, Error>,
 ) -> std::option::Option<&'static mut T> {
@@ -73,7 +74,7 @@ pub fn create_without_logging<T: 'static>(
 
 pub trait ToIntResult<T> {
     fn int_result(self) -> i32;
-    fn int_out_result(self, out: &mut T) -> i32;
+    fn int_out_result(self, out: &mut MaybeUninit<T>) -> i32;
 
     fn int_result_logged(self) -> i32
     where
@@ -87,6 +88,32 @@ pub trait ToIntResult<T> {
     }
 }
 
+pub fn result_from_int_void(res: i32) -> Result<(), crate::error::Error> {
+    if res == 0 {
+        Ok(())
+    } else {
+        Err(Error::Other("C FFI Error"))
+    }
+}
+
+pub fn part_result_from_int_void(res: i32) -> crate::error::PartialResult<()> {
+    if res == 0 {
+        Ok(())
+    } else {
+        Err(crate::error::PartialError::Error(
+            crate::error::Error::Other("C FFI Error"),
+        ))
+    }
+}
+
+pub fn result_from_int<T>(res: i32, out: MaybeUninit<T>) -> Result<T, crate::error::Error> {
+    if res == 0 {
+        Ok(unsafe { out.assume_init() })
+    } else {
+        Err(Error::Other("C FFI Error"))
+    }
+}
+
 impl<T, E: std::fmt::Display> ToIntResult<T> for Result<T, E> {
     fn int_result(self) -> i32 {
         if self.is_ok() {
@@ -96,9 +123,9 @@ impl<T, E: std::fmt::Display> ToIntResult<T> for Result<T, E> {
         }
     }
 
-    fn int_out_result(self, out: &mut T) -> i32 {
+    fn int_out_result(self, out: &mut MaybeUninit<T>) -> i32 {
         if let Ok(ret) = self {
-            *out = ret;
+            unsafe { out.as_mut_ptr().write(ret) };
             0
         } else {
             -1

@@ -34,6 +34,12 @@ impl<'a, S: ?Sized, T> OpaqueCallback<'a, S, T> {
     }
 }
 
+impl<'a, S: Sized, T> OpaqueCallback<'a, S, T> {
+    pub fn self_into_opaque(self) -> OpaqueCallback<'a, c_void, T> {
+        unsafe { std::mem::transmute(self) }
+    }
+}
+
 impl<'a, T> OpaqueCallback<'a, c_void, T> {
     /// Cast an opaque self type to a concrete one
     ///

@@ -17,10 +17,10 @@ use super::{
 
 use std::ffi::c_void; //, CString};
                       //use std::path::Path;
-use std::mem::MaybeUninit;
+                      //use std::mem::MaybeUninit;
 
-use libloading::Library;
-use std::sync::Arc;
+//use libloading::Library;
+//use std::sync::Arc;
 
 //use log::*;
 
@@ -70,5 +70,3 @@ impl OSLayerFunctionTable {
         }
     }
 }
-
-pub type PluginAddressCallback<'a> = AddressCallback<'a, c_void>;

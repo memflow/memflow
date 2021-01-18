@@ -9,7 +9,7 @@ pub trait Kernel<'a>: Send {
     /// Walks a process list and calls a callback for each process structure address
     ///
     /// The callback is fully opaque. We need this style so that C FFI can work seamlessly.
-    fn process_address_list_callback(&mut self, callback: AddressCallback<Self>) -> Result<()>;
+    fn process_address_list_callback(&mut self, callback: AddressCallback) -> Result<()>;
 
     /// Retrieves a process address list
     ///
@@ -23,18 +23,16 @@ pub trait Kernel<'a>: Send {
     /// Walks a process list and calls a callback for each process
     ///
     /// The callback is fully opaque. We need this style so that C FFI can work seamlessly.
-    fn process_info_list_callback(
-        &mut self,
-        mut callback: ProcessInfoCallback<Self>,
-    ) -> Result<()> {
-        let inner_callback = &mut |s: &mut Self, addr| match s.process_info_by_address(addr) {
-            Ok(info) => callback.call(s, info),
+    fn process_info_list_callback(&mut self, mut callback: ProcessInfoCallback) -> Result<()> {
+        let (s1, s2) = unsafe { super::clone_self(self) };
+        let inner_callback = &mut |addr| match s2.process_info_by_address(addr) {
+            Ok(info) => callback.call(info),
             Err(e) => {
                 log::trace!("Failed to read process {:x} {:?}", addr, e);
                 false
             }
         };
-        self.process_address_list_callback(inner_callback.into())
+        s1.process_address_list_callback(inner_callback.into())
     }
 
     /// Retrieves a process list
@@ -50,7 +48,7 @@ pub trait Kernel<'a>: Send {
     /// Find process information by its name
     fn process_info_by_name(&mut self, name: &str) -> Result<ProcessInfo> {
         let mut ret = Err("No process found".into());
-        let callback = &mut |_: &mut Self, data: ProcessInfo| {
+        let callback = &mut |data: ProcessInfo| {
             if data.name.as_ref() == name {
                 ret = Ok(data);
                 false
@@ -65,7 +63,7 @@ pub trait Kernel<'a>: Send {
     /// Find process information by its ID
     fn process_info_by_pid(&mut self, pid: PID) -> Result<ProcessInfo> {
         let mut ret = Err("No process found".into());
-        let callback = &mut |_: &mut Self, data: ProcessInfo| {
+        let callback = &mut |data: ProcessInfo| {
             if data.pid == pid {
                 ret = Ok(data);
                 false
@@ -168,22 +166,22 @@ pub trait Kernel<'a>: Send {
     ///
     /// # Arguments
     /// * `callback` - where to pass each matching module to. This is an opaque callback.
-    fn module_address_list_callback(&mut self, callback: AddressCallback<Self>) -> Result<()>;
+    fn module_address_list_callback(&mut self, callback: AddressCallback) -> Result<()>;
 
     /// Walks the kernel module list and calls the provided callback for each module
     ///
     /// # Arguments
     /// * `callback` - where to pass each matching module to. This is an opaque callback.
-    fn module_list_callback(&mut self, mut callback: ModuleInfoCallback<Self>) -> Result<()> {
-        let inner_callback =
-            &mut |s: &mut Self, address: Address| match s.module_by_address(address) {
-                Ok(info) => callback.call(s, info),
-                Err(e) => {
-                    log::trace!("Error loading module {:x} {:?}", address, e);
-                    false
-                }
-            };
-        self.module_address_list_callback(inner_callback.into())
+    fn module_list_callback(&mut self, mut callback: ModuleInfoCallback) -> Result<()> {
+        let (s1, s2) = unsafe { super::clone_self(self) };
+        let inner_callback = &mut |address: Address| match s2.module_by_address(address) {
+            Ok(info) => callback.call(info),
+            Err(e) => {
+                log::trace!("Error loading module {:x} {:?}", address, e);
+                false
+            }
+        };
+        s1.module_address_list_callback(inner_callback.into())
     }
 
     /// Retrieves a module list for the kernel
@@ -204,7 +202,7 @@ pub trait Kernel<'a>: Send {
     /// This function can be useful for quickly accessing a specific module
     fn module_by_name(&mut self, name: &str) -> Result<ModuleInfo> {
         let mut ret = Err("No module found".into());
-        let callback = &mut |_: &mut Self, data: ModuleInfo| {
+        let callback = &mut |data: ModuleInfo| {
             if data.name.as_ref() == name {
                 ret = Ok(data);
                 false

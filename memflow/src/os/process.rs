@@ -24,7 +24,7 @@ pub trait Process: Send {
     fn module_address_list_callback(
         &mut self,
         target_arch: Option<&ArchitectureIdent>,
-        callback: ModuleAddressCallback<Self>,
+        callback: ModuleAddressCallback,
     ) -> Result<()>;
 
     /// Walks the process' module list and calls the provided callback for each module
@@ -36,18 +36,18 @@ pub trait Process: Send {
     fn module_list_callback(
         &mut self,
         target_arch: Option<&ArchitectureIdent>,
-        mut callback: ModuleInfoCallback<Self>,
+        mut callback: ModuleInfoCallback,
     ) -> Result<()> {
-        let inner_callback = &mut |s: &mut Self, ModuleAddressInfo { address, arch }| match s
-            .module_by_address(address, arch)
-        {
-            Ok(info) => callback.call(s, info),
-            Err(e) => {
-                log::trace!("Error loading module {:x} {:?}", address, e);
-                false
-            }
-        };
-        self.module_address_list_callback(target_arch, inner_callback.into())
+        let (s1, s2) = unsafe { super::clone_self(self) };
+        let inner_callback =
+            &mut |ModuleAddressInfo { address, arch }| match s2.module_by_address(address, arch) {
+                Ok(info) => callback.call(info),
+                Err(e) => {
+                    log::trace!("Error loading module {:x} {:?}", address, e);
+                    false
+                }
+            };
+        s1.module_address_list_callback(target_arch, inner_callback.into())
     }
 
     /// Retreives a module by its structure address and architecture
@@ -74,7 +74,7 @@ pub trait Process: Send {
         architecture: Option<&ArchitectureIdent>,
     ) -> Result<ModuleInfo> {
         let mut ret = Err("No module found".into());
-        let callback = &mut |_: &mut Self, data: ModuleInfo| {
+        let callback = &mut |data: ModuleInfo| {
             if data.name.as_ref() == name {
                 ret = Ok(data);
                 false
@@ -161,4 +161,4 @@ pub struct ProcessInfo {
     pub proc_arch: ArchitectureIdent,
 }
 
-pub type ProcessInfoCallback<'a, T> = OpaqueCallback<'a, T, ProcessInfo>;
+pub type ProcessInfoCallback<'a> = OpaqueCallback<'a, ProcessInfo>;

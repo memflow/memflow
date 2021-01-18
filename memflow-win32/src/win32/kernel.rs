@@ -284,7 +284,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
     fn process_info_fullname(&mut self, info: Win32ProcessInfo) -> Result<Win32ProcessInfo> {
         let cloned_base = info.base.clone();
         let mut name = info.base.name;
-        let callback = &mut |_: &mut _, m: ModuleInfo| {
+        let callback = &mut |m: ModuleInfo| {
             if m.name.as_ref().starts_with(name.as_ref()) {
                 name = m.name;
                 false
@@ -383,7 +383,7 @@ impl<'a, T: PhysicalMemory + 'a, V: VirtualTranslate + 'a> Kernel<'a> for Win32K
     /// The callback is fully opaque. We need this style so that C FFI can work seamlessly.
     fn process_address_list_callback(
         &mut self,
-        mut callback: AddressCallback<Self>,
+        mut callback: AddressCallback,
     ) -> memflow::error::Result<()> {
         let list_start = self.kernel_info.eprocess_base + self.offsets.eproc_link();
         let mut list_entry = list_start;
@@ -412,7 +412,7 @@ impl<'a, T: PhysicalMemory + 'a, V: VirtualTranslate + 'a> Kernel<'a> for Win32K
             }
 
             trace!("found eprocess {:x}", eprocess);
-            if !callback.call(self, eprocess) {
+            if !callback.call(eprocess) {
                 break;
             }
             trace!("Continuing {:x} -> {:x}", list_entry, flink_entry);
@@ -467,7 +467,7 @@ impl<'a, T: PhysicalMemory + 'a, V: VirtualTranslate + 'a> Kernel<'a> for Win32K
     /// * `callback` - where to pass each matching module to. This is an opaque callback.
     fn module_address_list_callback(
         &mut self,
-        callback: AddressCallback<Self>,
+        callback: AddressCallback,
     ) -> memflow::error::Result<()> {
         self.kernel_modules()?
             .module_entry_list_callback::<Self, VirtualDMA<T, V, Win32VirtualTranslate>>(

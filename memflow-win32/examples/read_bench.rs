@@ -99,7 +99,7 @@ fn read_bench<T: PhysicalMemory + Clone + 'static, V: VirtualTranslate + Clone +
     kernel_info: Win32KernelInfo,
 ) -> Result<()> {
     let offsets = Win32Offsets::builder().kernel_info(&kernel_info).build()?;
-    let mut kernel = Win32Kernel::new(phys_mem, vat, offsets, kernel_info);
+    let /*mut*/ kernel = Win32Kernel::new(phys_mem, vat, offsets, kernel_info);
 
     let mut kernel = KernelInstance::new(Box::leak(kernel.into()), None);
 
@@ -194,10 +194,10 @@ fn main() -> Result<()> {
     // scan for win32 kernel
     let kernel_info = Win32KernelInfo::scanner(&mut connector).scan()?;
 
-    let mut vat = DirectTranslate::new();
+    let /*mut */vat = DirectTranslate::new();
 
     println!("Benchmarking uncached reads:");
-    read_bench(connector, vat, kernel_info.clone()).unwrap();
+    read_bench(connector, vat, kernel_info).unwrap();
 
     println!();
     println!("Benchmarking cached reads:");

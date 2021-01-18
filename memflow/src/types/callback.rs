@@ -1,10 +1,7 @@
 //! FFI compatible callbacks
 //!
 //! The essence of them is to be simple, reliable, and flexible. Thus, every callback accepts a C
-//! function that takes 3 arguments: `self`, `context`, and `argument`.
-//!
-//! `self` argument is needed to pass back control of mutable self to the callback handler. This
-//! allows safe nesting of functions that use callbacks.
+//! function that takes 2 arguments: `context`, and `argument`.
 //!
 //! `context` is any type of context. We take a sized pointer to it. It can hold anything like a
 //! closure that we then wrap for callback functionality.
@@ -21,50 +18,29 @@ use std::prelude::v1::*;
 
 // C style callbacks that are needed so that C code can easily use callback like functions
 #[repr(transparent)]
-pub struct OpaqueCallback<'a, S: ?Sized, T>(Callback<'a, S, c_void, T>);
+pub struct OpaqueCallback<'a, T>(Callback<'a, c_void, T>);
 
-impl<'a, S: ?Sized, T> OpaqueCallback<'a, S, T> {
+impl<'a, T> OpaqueCallback<'a, T> {
     #[must_use = "this value is the stopping condition"]
-    pub fn call(&mut self, s: &mut S, arg: T) -> bool {
-        (self.0.func)(s, self.0.context, arg)
-    }
-
-    pub fn extendable(&'a mut self, s: &'a mut S) -> ExtendCallback<'a, S, T> {
-        ExtendCallback(s, self)
-    }
-}
-
-impl<'a, S: Sized, T> OpaqueCallback<'a, S, T> {
-    pub fn self_into_opaque(self) -> OpaqueCallback<'a, c_void, T> {
-        unsafe { std::mem::transmute(self) }
-    }
-}
-
-impl<'a, T> OpaqueCallback<'a, c_void, T> {
-    /// Cast an opaque self type to a concrete one
-    ///
-    /// # Safety
-    /// `S` type parameter must be the correct type. Failure to ensure this before use
-    /// will result in undefined behaviour.
-    pub unsafe fn cast_self<S>(self) -> OpaqueCallback<'a, S, T> {
-        std::mem::transmute(self)
+    pub fn call(&mut self, arg: T) -> bool {
+        (self.0.func)(self.0.context, arg)
     }
 }
 
 #[repr(C)]
-pub struct Callback<'a, S: ?Sized, T, F> {
+pub struct Callback<'a, T, F> {
     context: &'a mut T,
-    func: extern "C" fn(&mut S, &mut T, F) -> bool,
+    func: extern "C" fn(&mut T, F) -> bool,
 }
 
-impl<'a, S: ?Sized, T, F> From<Callback<'a, S, T, F>> for OpaqueCallback<'a, S, F> {
-    fn from(callback: Callback<'a, S, T, F>) -> Self {
+impl<'a, T, F> From<Callback<'a, T, F>> for OpaqueCallback<'a, F> {
+    fn from(callback: Callback<'a, T, F>) -> Self {
         Self(callback.into_opaque())
     }
 }
 
-impl<'a, S: ?Sized, T, F> Callback<'a, S, T, F> {
-    pub fn into_opaque(self) -> Callback<'a, S, c_void, F> {
+impl<'a, T, F> Callback<'a, T, F> {
+    pub fn into_opaque(self) -> Callback<'a, c_void, F> {
         unsafe {
             Callback {
                 context: &mut *(self.context as *mut T as *mut std::ffi::c_void),
@@ -73,50 +49,44 @@ impl<'a, S: ?Sized, T, F> Callback<'a, S, T, F> {
         }
     }
 
-    pub fn new(context: &'a mut T, func: extern "C" fn(&mut S, &mut T, F) -> bool) -> Self {
+    pub fn new(context: &'a mut T, func: extern "C" fn(&mut T, F) -> bool) -> Self {
         Self { context, func }
     }
 }
 
-impl<'a, T: FnMut(&mut S, F) -> bool, S: ?Sized, F> From<&'a mut T> for OpaqueCallback<'a, S, F> {
+impl<'a, T: FnMut(F) -> bool, F> From<&'a mut T> for OpaqueCallback<'a, F> {
     fn from(func: &'a mut T) -> Self {
-        extern "C" fn callback<S: ?Sized, T: FnMut(&mut S, F) -> bool, F>(
-            s: &mut S,
-            func: &mut T,
-            context: F,
-        ) -> bool {
-            func(s, context)
+        extern "C" fn callback<T: FnMut(F) -> bool, F>(func: &mut T, context: F) -> bool {
+            func(context)
         }
 
         Callback {
             context: func,
-            func: callback::<S, T, F>,
+            func: callback::<T, F>,
         }
         .into()
     }
 }
 
-impl<'a, S: ?Sized, T> From<&'a mut Vec<T>> for OpaqueCallback<'a, S, T> {
+impl<'a, T> From<&'a mut Vec<T>> for OpaqueCallback<'a, T> {
     fn from(vec: &'a mut Vec<T>) -> Self {
-        extern "C" fn callback<S: ?Sized, T>(_: &mut S, v: &mut Vec<T>, context: T) -> bool {
+        extern "C" fn callback<T>(v: &mut Vec<T>, context: T) -> bool {
             v.push(context);
             true
         }
 
         Callback {
             context: vec,
-            func: callback::<S, T>,
+            func: callback::<T>,
         }
         .into()
     }
 }
 
-pub struct ExtendCallback<'a, S: ?Sized, T>(&'a mut S, &'a mut OpaqueCallback<'a, S, T>);
-
-impl<'a, S, T> std::iter::Extend<T> for ExtendCallback<'a, S, T> {
+impl<'a, T> std::iter::Extend<T> for OpaqueCallback<'a, T> {
     fn extend<F: IntoIterator<Item = T>>(&mut self, iter: F) {
         for item in iter {
-            if self.1.call(self.0, item) {
+            if self.call(item) {
                 break;
             }
         }

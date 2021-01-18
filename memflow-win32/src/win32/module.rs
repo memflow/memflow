@@ -71,13 +71,13 @@ impl Win32ModuleListInfo {
         &self,
         mem: &mut M,
         arch: ArchitectureIdent,
-        mut callback: AddressCallback<M>,
+        mut callback: AddressCallback,
     ) -> Result<()> {
         let list_start = self.module_base;
         let mut list_entry = list_start;
         let arch_obj = arch.into();
         for _ in 0..MAX_ITER_COUNT {
-            if !callback.call(mem, list_entry) {
+            if !callback.call(list_entry) {
                 break;
             }
             list_entry = mem.as_mut().virt_read_addr_arch(arch_obj, list_entry)?;

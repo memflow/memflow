@@ -5,8 +5,6 @@ use crate::types::Address;
 use crate::types::{Page, PhysicalAddress};
 use std::ffi::c_void;
 
-use super::util::result_from_int_void;
-
 pub type OpaqueVirtualMemoryFunctionTable = VirtualMemoryFunctionTable<c_void>;
 
 #[repr(C)]
@@ -71,17 +69,14 @@ impl<'a> VirtualMemoryInstance<'a> {
         }
     }
 
+    /// # Safety
+    ///
+    /// The type of `instance` has to match T
     pub unsafe fn unsafe_new<T: VirtualMemory>(instance: &'a mut c_void) -> Self {
         Self {
             instance,
             vtable: VirtualMemoryFunctionTable::<T>::default().into_opaque(),
         }
-    }
-}
-
-impl VirtualMemoryInstance<'static> {
-    fn leak_new<T: VirtualMemory + 'static>(mem: T) -> Self {
-        Self::new(Box::leak(mem.into()))
     }
 }
 
@@ -96,23 +91,23 @@ impl VirtualMemory for VirtualMemoryInstance<'_> {
         part_result_from_int_void(res)
     }
 
-    fn virt_page_info(&mut self, addr: Address) -> Result<Page> {
+    fn virt_page_info(&mut self, _addr: Address) -> Result<Page> {
         Err(Error::Other("unimplemented"))
     }
 
     fn virt_translation_map_range(
         &mut self,
-        start: Address,
-        end: Address,
+        _start: Address,
+        _end: Address,
     ) -> Vec<(Address, usize, PhysicalAddress)> {
         vec![]
     }
 
     fn virt_page_map_range(
         &mut self,
-        gap_size: usize,
-        start: Address,
-        end: Address,
+        _gap_size: usize,
+        _start: Address,
+        _end: Address,
     ) -> Vec<(Address, usize)> {
         vec![]
     }

@@ -129,7 +129,7 @@ impl<T: VirtualMemory> Process for Win32Process<T> {
     fn module_address_list_callback(
         &mut self,
         target_arch: Option<&ArchitectureIdent>,
-        mut callback: ModuleAddressCallback<Self>,
+        mut callback: ModuleAddressCallback,
     ) -> memflow::error::Result<()> {
         let infos = [
             (
@@ -193,7 +193,9 @@ impl<T: VirtualMemory> Process for Win32Process<T> {
     /// _EPROCESS::IMAGE_FILE_NAME
     fn primary_module_address(&mut self) -> memflow::error::Result<Address> {
         let mut ret = Err("No module found".into());
-        let callback = &mut |s: &mut Self, ModuleAddressInfo { address, arch }| {
+        let sptr = self as *mut Self;
+        let callback = &mut |ModuleAddressInfo { address, arch }| {
+            let s = unsafe { sptr.as_mut() }.unwrap();
             let info = if arch == s.proc_info.base.sys_arch {
                 s.proc_info.module_info_native.as_mut()
             } else {
@@ -280,11 +282,10 @@ impl<T: VirtualMemory> Win32Process<T> {
     fn module_address_list_with_infos_callback(
         &mut self,
         module_infos: impl Iterator<Item = (Win32ModuleListInfo, ArchitectureIdent)>,
-        out: &mut ModuleAddressCallback<Self>,
+        out: &mut ModuleAddressCallback,
     ) -> Result<()> {
         for (info, arch) in module_infos {
-            let callback =
-                &mut |s: &mut _, address| out.call(s, ModuleAddressInfo { address, arch });
+            let callback = &mut |address| out.call(ModuleAddressInfo { address, arch });
             info.module_entry_list_callback(self, arch, callback.into())?;
         }
         Ok(())

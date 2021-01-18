@@ -40,7 +40,7 @@ pub struct ModuleInfo {
     pub arch: ArchitectureIdent,
 }
 
-pub type ModuleInfoCallback<'a, T> = OpaqueCallback<'a, T, ModuleInfo>;
+pub type ModuleInfoCallback<'a> = OpaqueCallback<'a, ModuleInfo>;
 
 #[repr(C)]
 #[derive(Clone, Debug)]
@@ -49,6 +49,6 @@ pub struct ModuleAddressInfo {
     pub arch: ArchitectureIdent,
 }
 
-pub type ModuleAddressCallback<'a, T> = OpaqueCallback<'a, T, ModuleAddressInfo>;
+pub type ModuleAddressCallback<'a> = OpaqueCallback<'a, ModuleAddressInfo>;
 
 // TODO: Exports / Sections / etc

@@ -23,7 +23,7 @@ impl Clone for OpaqueKernelFunctionTable {
 #[repr(C)]
 pub struct KernelFunctionTable<'a, T> {
     pub process_address_list_callback:
-        extern "C" fn(kernel: &mut T, callback: AddressCallback<T>) -> i32,
+        extern "C" fn(kernel: &mut T, callback: AddressCallback) -> i32,
     pub process_info_by_address:
         extern "C" fn(kernel: &mut T, address: Address, out: &mut MaybeUninit<ProcessInfo>) -> i32,
     pub process_by_info: extern "C" fn(
@@ -32,7 +32,7 @@ pub struct KernelFunctionTable<'a, T> {
         out: &mut MaybeUninit<PluginProcess<'a>>,
     ) -> i32,
     pub module_address_list_callback:
-        extern "C" fn(kernel: &mut T, callback: AddressCallback<T>) -> i32,
+        extern "C" fn(kernel: &mut T, callback: AddressCallback) -> i32,
     pub module_by_address:
         extern "C" fn(kernel: &mut T, address: Address, out: &mut MaybeUninit<ModuleInfo>) -> i32,
     pub info: extern "C" fn(kernel: &T) -> &KernelInfo,
@@ -59,7 +59,7 @@ impl<'a, T: Kernel<'a>> KernelFunctionTable<'a, T> {
 
 extern "C" fn c_process_address_list_callback<'a, T: Kernel<'a>>(
     kernel: &mut T,
-    callback: AddressCallback<T>,
+    callback: AddressCallback,
 ) -> i32 {
     kernel.process_address_list_callback(callback).int_result()
 }
@@ -79,13 +79,13 @@ extern "C" fn c_process_by_info<'a, T: 'a + Kernel<'a>>(
 ) -> i32 {
     kernel
         .process_by_info(info)
-        .map(|p| unsafe { PluginProcess::new(p) })
+        .map(PluginProcess::new)
         .int_out_result(out)
 }
 
 extern "C" fn c_module_address_list_callback<'a, T: Kernel<'a>>(
     kernel: &mut T,
-    callback: AddressCallback<T>,
+    callback: AddressCallback,
 ) -> i32 {
     kernel.module_address_list_callback(callback).int_result()
 }
@@ -141,10 +141,10 @@ impl<'a> Kernel<'a> for KernelInstance {
     /// Walks a process list and calls a callback for each process structure address
     ///
     /// The callback is fully opaque. We need this style so that C FFI can work seamlessly.
-    fn process_address_list_callback(&mut self, callback: AddressCallback<Self>) -> Result<()> {
+    fn process_address_list_callback(&mut self, callback: AddressCallback) -> Result<()> {
         result_from_int_void((self.vtable.kernel.process_address_list_callback)(
             self.instance,
-            callback.self_into_opaque(),
+            callback,
         ))
     }
 
@@ -168,8 +168,8 @@ impl<'a> Kernel<'a> for KernelInstance {
     /// Construct a process by its info, consuming the kernel
     ///
     /// This function will consume the Kernel instance and move its resources into the process
-    fn into_process_by_info(self, info: ProcessInfo) -> Result<Self::IntoProcessType> {
-        Err(crate::error::Error::Other("Unimplemented"))
+    fn into_process_by_info(self, _info: ProcessInfo) -> Result<Self::IntoProcessType> {
+        Err(crate::error::Error::Other("unimplemented"))
     }
 
     /// Walks the kernel module list and calls the provided callback for each module structure
@@ -177,10 +177,10 @@ impl<'a> Kernel<'a> for KernelInstance {
     ///
     /// # Arguments
     /// * `callback` - where to pass each matching module to. This is an opaque callback.
-    fn module_address_list_callback(&mut self, callback: AddressCallback<Self>) -> Result<()> {
+    fn module_address_list_callback(&mut self, callback: AddressCallback) -> Result<()> {
         result_from_int_void((self.vtable.kernel.module_address_list_callback)(
             self.instance,
-            callback.self_into_opaque(),
+            callback,
         ))
     }
 

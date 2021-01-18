@@ -24,7 +24,7 @@ pub struct ProcessFunctionTable<T> {
     pub module_address_list_callback: extern "C" fn(
         process: &mut T,
         target_arch: Option<&ArchitectureIdent>,
-        callback: ModuleAddressCallback<T>,
+        callback: ModuleAddressCallback,
     ) -> i32,
     pub module_by_address: extern "C" fn(
         process: &mut T,
@@ -54,7 +54,7 @@ impl<T: Process> ProcessFunctionTable<T> {
     }
 }
 
-extern "C" fn c_virt_mem<'a, T: Process>(process: &'a mut T) -> &'a mut c_void {
+extern "C" fn c_virt_mem<T: Process>(process: &mut T) -> &mut c_void {
     unsafe {
         (process.virt_mem() as *mut _ as *mut c_void)
             .as_mut()
@@ -62,17 +62,17 @@ extern "C" fn c_virt_mem<'a, T: Process>(process: &'a mut T) -> &'a mut c_void {
     }
 }
 
-extern "C" fn c_module_address_list_callback<'a, T: Process>(
+extern "C" fn c_module_address_list_callback<T: Process>(
     process: &mut T,
     target_arch: Option<&ArchitectureIdent>,
-    callback: ModuleAddressCallback<T>,
+    callback: ModuleAddressCallback,
 ) -> i32 {
     process
         .module_address_list_callback(target_arch, callback)
         .int_result()
 }
 
-extern "C" fn c_module_by_address<'a, T: Process>(
+extern "C" fn c_module_by_address<T: Process>(
     process: &mut T,
     address: Address,
     target_arch: ArchitectureIdent,
@@ -83,14 +83,14 @@ extern "C" fn c_module_by_address<'a, T: Process>(
         .int_out_result(out)
 }
 
-extern "C" fn c_primary_module_address<'a, T: Process>(
+extern "C" fn c_primary_module_address<T: Process>(
     process: &mut T,
     out: &mut MaybeUninit<Address>,
 ) -> i32 {
     process.primary_module_address().int_out_result(out)
 }
 
-extern "C" fn c_info<'a, T: Process>(process: &T) -> &ProcessInfo {
+extern "C" fn c_info<T: Process>(process: &T) -> &ProcessInfo {
     process.info()
 }
 
@@ -102,14 +102,15 @@ pub struct PluginProcess<'a> {
 }
 
 impl<'a> PluginProcess<'a> {
-    pub unsafe fn new<T: 'a + Process>(proc: T) -> Self {
-        let mut instance = to_static_heap(proc);
+    pub fn new<T: 'a + Process>(proc: T) -> Self {
+        let instance = Box::leak(Box::new(proc));
+        let instance_void = unsafe { (instance as *mut T as *mut c_void).as_mut() }.unwrap();
         let vtable = ProcessFunctionTable::<T>::default().into_opaque();
-        let virt_mem = VirtualMemoryInstance::unsafe_new::<T::VirtualMemoryType>(c_virt_mem(
-            &mut *(instance as *mut c_void as *mut T),
-        ));
+        let virt_mem = unsafe {
+            VirtualMemoryInstance::unsafe_new::<T::VirtualMemoryType>(c_virt_mem(instance))
+        };
         Self {
-            instance,
+            instance: instance_void,
             vtable,
             virt_mem,
         }
@@ -126,13 +127,9 @@ impl<'a> Process for PluginProcess<'a> {
     fn module_address_list_callback(
         &mut self,
         target_arch: Option<&ArchitectureIdent>,
-        callback: ModuleAddressCallback<Self>,
+        callback: ModuleAddressCallback,
     ) -> Result<()> {
-        let res = (self.vtable.module_address_list_callback)(
-            self.instance,
-            target_arch,
-            callback.self_into_opaque(),
-        );
+        let res = (self.vtable.module_address_list_callback)(self.instance, target_arch, callback);
         result_from_int_void(res)
     }
 
@@ -164,7 +161,7 @@ pub struct ArcPluginProcess {
 }
 
 impl ArcPluginProcess {
-    unsafe fn from<T: 'static + Process>(proc: T, lib: &Arc<Library>) -> Self {
+    pub fn from<T: 'static + Process>(proc: T, lib: &Arc<Library>) -> Self {
         Self {
             inner: PluginProcess::new(proc),
             library: lib.clone(),
@@ -182,12 +179,10 @@ impl Process for ArcPluginProcess {
     fn module_address_list_callback(
         &mut self,
         target_arch: Option<&ArchitectureIdent>,
-        callback: ModuleAddressCallback<Self>,
+        callback: ModuleAddressCallback,
     ) -> Result<()> {
         self.inner
-            .module_address_list_callback(target_arch, unsafe {
-                callback.self_into_opaque().cast_self()
-            })
+            .module_address_list_callback(target_arch, callback)
     }
 
     fn module_by_address(

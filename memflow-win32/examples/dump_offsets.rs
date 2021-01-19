@@ -50,7 +50,7 @@ pub fn main() {
         .unwrap();
 
     // create inventory + connector
-    let inventory = unsafe { Inventory::scan() };
+    let inventory = Inventory::scan();
     let connector = inventory
         .create_connector(
             matches.value_of("connector").unwrap(),

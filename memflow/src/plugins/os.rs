@@ -31,7 +31,16 @@ pub type MUKernelInstance = MaybeUninit<KernelInstance>;
 
 pub type OptionArchitectureIdent<'a> = Option<&'a crate::architecture::ArchitectureIdent>;
 
-pub fn create_with_logging<T: 'static + Kernel + Clone>(
+pub trait PluginKernel<T: Process + Clone>:
+    'static + Clone + for<'a> KernelInner<'a, IntoProcessType = T>
+{
+}
+impl<T: Process + Clone, K: 'static + Clone + for<'a> KernelInner<'a, IntoProcessType = T>>
+    PluginKernel<T> for K
+{
+}
+
+pub fn create_with_logging<P: 'static + Process + Clone, T: PluginKernel<P>>(
     args: ReprCStr,
     conn: ConnectorInstance,
     log_level: i32,
@@ -43,7 +52,7 @@ pub fn create_with_logging<T: 'static + Kernel + Clone>(
     })
 }
 
-pub fn create_without_logging<T: 'static + Kernel + Clone>(
+pub fn create_without_logging<P: 'static + Process + Clone, T: PluginKernel<P>>(
     args: ReprCStr,
     conn: ConnectorInstance,
     out: &mut MUKernelInstance,
@@ -82,10 +91,10 @@ pub struct OSLayerFunctionTable {
 }
 
 impl OSLayerFunctionTable {
-    pub fn new<T: 'static + Kernel + Clone>() -> Self {
+    pub fn new<P: 'static + Process + Clone, T: PluginKernel<P>>() -> Self {
         OSLayerFunctionTable {
             base: GenericBaseTable::<T>::default().into_opaque(),
-            kernel: KernelFunctionTable::<T>::default().into_opaque(),
+            kernel: KernelFunctionTable::<P, T>::default().into_opaque(),
             phys: None,
             virt: None,
         }

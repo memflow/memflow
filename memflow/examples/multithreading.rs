@@ -38,7 +38,7 @@ pub fn parallel_kernels(kernel: KernelInstance) {
         .for_each(|t| t.join().unwrap());
 }
 
-pub fn parallel_processes(kernel: impl Kernel + 'static) {
+pub fn parallel_processes(kernel: KernelInstance) {
     let process = kernel.into_process_by_name("wininit.exe").unwrap();
 
     (0..8)

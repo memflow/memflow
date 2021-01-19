@@ -12,8 +12,8 @@ use rand::prelude::*;
 use rand::{Rng, SeedableRng};
 use rand_xorshift::XorShiftRng as CurRng;
 
-fn create_connector(args: &Args) -> Result<impl PhysicalMemory> {
-    unsafe { Inventory::scan().create_connector("qemu_procfs", None, args) }
+fn create_connector(args: &Args) -> Result<impl PhysicalMemory + Clone> {
+    Inventory::scan().create_connector("qemu_procfs", None, args)
 }
 
 fn initialize_virt_ctx() -> Result<(
@@ -28,13 +28,13 @@ fn initialize_virt_ctx() -> Result<(
     let kernel_info = Win32KernelInfo::scanner(&mut phys_mem)
         .scan()
         .map_err(|_| Error::Other("unable to find kernel"))?;
-    let mut vat = DirectTranslate::new();
+    let vat = DirectTranslate::new();
     let offsets = Win32Offsets::builder()
         .kernel_info(&kernel_info)
         .build()
         .map_err(|_| Error::Other("unable to initialize win32 offsets with guid"))?;
 
-    let mut kernel = Win32Kernel::new(&mut phys_mem, &mut vat, offsets, kernel_info);
+    let mut kernel = Win32Kernel::new(phys_mem.clone(), vat.clone(), offsets, kernel_info);
 
     let mut rng = CurRng::from_rng(thread_rng()).unwrap();
 

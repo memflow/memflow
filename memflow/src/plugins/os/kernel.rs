@@ -1,16 +1,17 @@
 use crate::error::*;
 
 use super::{ArcPluginProcess, OSLayerFunctionTable, PluginProcess};
-use crate::os::{AddressCallback, Kernel, KernelInfo, KernelInner, ModuleInfo, ProcessInfo};
+use crate::os::{AddressCallback, KernelInfo, KernelInner, ModuleInfo, Process, ProcessInfo};
 use crate::types::Address;
 use std::ffi::c_void;
 
 use super::super::COptArc;
+use super::PluginKernel;
 use super::{MUArcPluginProcess, MUModuleInfo, MUPluginProcess, MUProcessInfo};
 
 use libloading::Library;
 
-pub type OpaqueKernelFunctionTable = KernelFunctionTable<'static, c_void>;
+pub type OpaqueKernelFunctionTable = KernelFunctionTable<'static, c_void, c_void>;
 
 impl Copy for OpaqueKernelFunctionTable {}
 
@@ -21,7 +22,7 @@ impl Clone for OpaqueKernelFunctionTable {
 }
 
 #[repr(C)]
-pub struct KernelFunctionTable<'a, T> {
+pub struct KernelFunctionTable<'a, P, T> {
     pub process_address_list_callback:
         extern "C" fn(kernel: &mut T, callback: AddressCallback) -> i32,
     pub process_info_by_address:
@@ -39,9 +40,12 @@ pub struct KernelFunctionTable<'a, T> {
     pub module_by_address:
         extern "C" fn(kernel: &mut T, address: Address, out: &mut MUModuleInfo) -> i32,
     pub info: extern "C" fn(kernel: &T) -> &KernelInfo,
+    phantom: std::marker::PhantomData<P>,
 }
 
-impl<'a, T: 'static + Kernel> Default for KernelFunctionTable<'a, T> {
+impl<'a, P: 'static + Process + Clone, T: PluginKernel<P>> Default
+    for KernelFunctionTable<'a, P, T>
+{
     fn default() -> Self {
         Self {
             process_address_list_callback: c_process_address_list_callback,
@@ -51,11 +55,12 @@ impl<'a, T: 'static + Kernel> Default for KernelFunctionTable<'a, T> {
             module_address_list_callback: c_module_address_list_callback,
             module_by_address: c_module_by_address,
             info: c_kernel_info,
+            phantom: Default::default(),
         }
     }
 }
 
-impl<'a, T: KernelInner<'a>> KernelFunctionTable<'a, T> {
+impl<'a, P: Process + Clone, T: PluginKernel<P>> KernelFunctionTable<'a, P, T> {
     pub fn into_opaque(self) -> OpaqueKernelFunctionTable {
         unsafe { std::mem::transmute(self) }
     }
@@ -87,7 +92,7 @@ extern "C" fn c_process_by_info<'a, T: 'a + KernelInner<'a>>(
         .int_out_result(out)
 }
 
-extern "C" fn c_into_process_by_info<T: 'static + Kernel>(
+extern "C" fn c_into_process_by_info<P: 'static + Process + Clone, T: 'static + PluginKernel<P>>(
     kernel: &mut T,
     info: ProcessInfo,
     lib: COptArc<Library>,
@@ -139,11 +144,11 @@ pub struct KernelInstance {
 }
 
 impl KernelInstance {
-    pub fn new<T: 'static + Kernel + Clone>(instance: T) -> Self {
+    pub fn new<P: 'static + Process + Clone, T: PluginKernel<P>>(instance: T) -> Self {
         Self {
             instance: unsafe { Box::into_raw(Box::new(instance)).cast::<c_void>().as_mut() }
                 .unwrap(),
-            vtable: OSLayerFunctionTable::new::<T>(),
+            vtable: OSLayerFunctionTable::new::<P, T>(),
             library: None.into(),
         }
     }

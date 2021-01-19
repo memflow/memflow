@@ -4,14 +4,11 @@ use std::time::{Duration, Instant};
 use clap::*;
 use log::Level;
 
+use memflow::error::Result;
 use memflow::mem::*;
 use memflow::os::{Kernel, ModuleInfo, Process};
 use memflow::plugins::*;
 use memflow::types::*;
-
-use memflow_win32::error::Result;
-use memflow_win32::offsets::Win32Offsets;
-use memflow_win32::win32::{Win32Kernel, Win32KernelInfo};
 
 use rand::{Rng, SeedableRng};
 use rand_xorshift::XorShiftRng as CurRng;
@@ -93,15 +90,19 @@ fn rwtest(
     );
 }
 
-fn read_bench<T: PhysicalMemory + Clone + 'static, V: VirtualTranslate + Clone + 'static>(
-    phys_mem: T,
-    vat: V,
-    kernel_info: Win32KernelInfo,
-) -> Result<()> {
-    let offsets = Win32Offsets::builder().kernel_info(&kernel_info).build()?;
+pub trait KernelSuper: for<'a> Kernel<'a> {}
+impl<T: for<'a> Kernel<'a>> KernelSuper for T {}
+
+//fn read_bench<T: PhysicalMemory + Clone + 'static, V: VirtualTranslate + Clone + 'static>(
+//    phys_mem: T,
+//    vat: V,
+//    kernel_info: Win32KernelInfo,
+//) -> Result<()> {
+fn read_bench(kernel: &mut impl KernelSuper) -> Result<()> {
+    /*let offsets = Win32Offsets::builder().kernel_info(&kernel_info).build()?;
     let /*mut*/ kernel = Win32Kernel::new(phys_mem, vat, offsets, kernel_info);
 
-    let mut kernel = KernelInstance::new(kernel);
+    let mut kernel = KernelInstance::new(kernel);*/
 
     let proc_list = kernel.process_info_list()?;
     let mut rng = CurRng::seed_from_u64(rand::thread_rng().gen_range(0, !0u64));
@@ -184,7 +185,7 @@ fn main() -> Result<()> {
 
     // create inventory + connector
     let inventory = unsafe { Inventory::scan() };
-    let mut connector = inventory
+    let connector = inventory
         .create_connector(
             matches.value_of("connector").unwrap(),
             None,
@@ -192,13 +193,13 @@ fn main() -> Result<()> {
         )
         .unwrap();
 
-    // scan for win32 kernel
-    let kernel_info = Win32KernelInfo::scanner(&mut connector).scan()?;
-
-    let /*mut */vat = DirectTranslate::new();
+    let mut kernel = inventory
+        .create_os("win32", connector, &Args::default())
+        .unwrap();
 
     println!("Benchmarking uncached reads:");
-    read_bench(connector, vat, kernel_info).unwrap();
+    read_bench(&mut kernel).unwrap();
+    //read_bench(connector, vat, kernel_info).unwrap();
 
     println!();
     println!("Benchmarking cached reads:");

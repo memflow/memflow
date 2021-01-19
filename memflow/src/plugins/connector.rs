@@ -215,6 +215,7 @@ impl Loadable for LoadableConnector {
 
     unsafe fn load(library: &CArc<Library>, path: impl AsRef<Path>) -> Result<LibInstance<Self>> {
         let descriptor = library
+            .as_ref()
             .get::<*mut ConnectorDescriptor>(b"MEMFLOW_CONNECTOR\0")
             .map_err(|_| Error::Connector("connector descriptor not found"))?
             .read();

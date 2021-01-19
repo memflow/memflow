@@ -105,6 +105,7 @@ impl Loadable for LoadableOS {
 
     unsafe fn load(library: &CArc<Library>, path: impl AsRef<Path>) -> Result<LibInstance<Self>> {
         let descriptor = library
+            .as_ref()
             .get::<*mut OSLayerDescriptor>(b"MEMFLOW_OS\0")
             .map_err(|_| Error::Connector("OS descriptor not found"))?
             .read();

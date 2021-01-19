@@ -23,7 +23,7 @@ pub use connector::{
 pub type ConnectorInputArg = <LoadableConnector as Loadable>::InputArg;
 
 pub mod os;
-pub use os::{KernelInstance, LoadableOS, OpaqueKernelFunctionTable};
+pub use os::{KernelInstance, LoadableOS, OSLayerDescriptor, OpaqueKernelFunctionTable};
 pub type OSInputArg = <LoadableOS as Loadable>::InputArg;
 
 pub(crate) mod util;
@@ -358,6 +358,13 @@ impl Inventory {
                 );
                 Error::Connector("plugin not found")
             })?;
+
+        info!(
+            "attempting to load `{}` type plugin {}",
+            std::any::type_name::<T>(),
+            lib.loader.ident()
+        );
+
         lib.loader
             .instantiate(Some(lib.library.clone()), input, args)
     }

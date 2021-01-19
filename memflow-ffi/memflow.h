@@ -38,6 +38,8 @@ typedef struct Inventory Inventory;
 
 typedef struct Option_CArc_Library Option_CArc_Library;
 
+typedef struct Option______Library Option______Library;
+
 typedef struct PhysicalReadData PhysicalReadData;
 
 typedef struct PhysicalWriteData PhysicalWriteData;
@@ -149,9 +151,9 @@ typedef struct ConnectorFunctionTable {
 } ConnectorFunctionTable;
 
 typedef struct COptArc_Library {
-    const Library *const *inner;
-    const Library *const *(*clone_fn)(const Library*const *const *);
-    void (*drop_fn)(const Library*const **);
+    const Library *inner;
+    struct Option______Library (*clone_fn)(struct Option______Library);
+    void (*drop_fn)(struct Option______Library*);
 } COptArc_Library;
 
 /**

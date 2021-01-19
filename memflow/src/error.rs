@@ -5,6 +5,9 @@ Specialized `Error` and `Result` types for memflow.
 use std::prelude::v1::*;
 use std::{convert, fmt, result, str};
 
+use log::error;
+use std::mem::MaybeUninit;
+
 #[cfg(feature = "std")]
 use std::error;
 
@@ -230,6 +233,76 @@ impl<T> PartialResultExt<T> for PartialResult<T> {
             Err(PartialError::Error(e)) => Err(PartialError::Error(e)),
             Err(PartialError::PartialVirtualRead(data)) => Ok(func(data)),
             Err(PartialError::PartialVirtualWrite) => Err(PartialError::PartialVirtualWrite),
+        }
+    }
+}
+
+pub trait ToIntResult<T> {
+    fn int_result(self) -> i32;
+    fn int_out_result(self, out: &mut MaybeUninit<T>) -> i32;
+
+    fn int_result_logged(self) -> i32
+    where
+        Self: Sized,
+    {
+        let res = self.int_result();
+        if res != 0 {
+            error!("err value: {}", res);
+        }
+        res
+    }
+}
+
+pub fn result_from_int_void(res: i32) -> Result<()> {
+    if res == 0 {
+        Ok(())
+    } else {
+        Err(Error::Other("C FFI Error"))
+    }
+}
+
+pub fn part_result_from_int_void(res: i32) -> crate::error::PartialResult<()> {
+    if res == 0 {
+        Ok(())
+    } else {
+        Err(crate::error::PartialError::Error(
+            crate::error::Error::Other("C FFI Error"),
+        ))
+    }
+}
+
+pub fn result_from_int<T>(res: i32, out: MaybeUninit<T>) -> Result<T> {
+    if res == 0 {
+        Ok(unsafe { out.assume_init() })
+    } else {
+        Err(Error::Other("C FFI Error"))
+    }
+}
+
+impl<T, E: std::fmt::Display> ToIntResult<T> for std::result::Result<T, E> {
+    fn int_result(self) -> i32 {
+        if self.is_ok() {
+            0
+        } else {
+            -1
+        }
+    }
+
+    fn int_out_result(self, out: &mut MaybeUninit<T>) -> i32 {
+        if let Ok(ret) = self {
+            unsafe { out.as_mut_ptr().write(ret) };
+            0
+        } else {
+            -1
+        }
+    }
+
+    fn int_result_logged(self) -> i32 {
+        if let Err(e) = self {
+            error!("{}", e);
+            -1
+        } else {
+            0
         }
     }
 }

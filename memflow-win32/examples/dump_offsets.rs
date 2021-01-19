@@ -54,6 +54,7 @@ pub fn main() {
     let connector = inventory
         .create_connector(
             matches.value_of("connector").unwrap(),
+            None,
             &Args::parse(matches.value_of("args").unwrap()).unwrap(),
         )
         .unwrap();

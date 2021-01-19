@@ -17,17 +17,22 @@ pub type OptionVoid = Option<&'static mut std::ffi::c_void>;
 
 pub mod connector;
 pub use connector::{
-    ConnectorDescriptor, ConnectorFunctionTable, ConnectorInstance,
+    ConnectorDescriptor, ConnectorFunctionTable, ConnectorInstance, LoadableConnector,
     OpaquePhysicalMemoryFunctionTable,
 };
+pub type ConnectorInputArg = <LoadableConnector as Loadable>::InputArg;
 
 pub mod os;
-pub use os::{KernelInstance, OpaqueKernelFunctionTable};
+pub use os::{KernelInstance, LoadableOS, OpaqueKernelFunctionTable};
+pub type OSInputArg = <LoadableOS as Loadable>::InputArg;
+
 pub(crate) mod util;
 pub mod virt_mem;
 pub use virt_mem::{
     OpaqueVirtualMemoryFunctionTable, VirtualMemoryFunctionTable, VirtualMemoryInstance,
 };
+pub(crate) mod arc;
+pub(crate) use arc::{CArc, COptArc};
 
 use crate::error::{Result, *};
 
@@ -35,7 +40,6 @@ use log::*;
 use std::ffi::c_void;
 use std::fs::read_dir;
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
 
 use libloading::Library;
 
@@ -60,14 +64,16 @@ pub struct GenericBaseTable<T: 'static> {
     pub drop: unsafe extern "C" fn(this: &mut T),
 }
 
-impl<T: Clone> GenericBaseTable<T> {
-    pub fn new() -> Self {
+impl<T: Clone> Default for GenericBaseTable<T> {
+    fn default() -> Self {
         Self {
             clone: util::c_clone::<T>,
             drop: util::c_drop::<T>,
         }
     }
+}
 
+impl<T: Clone> GenericBaseTable<T> {
     pub fn into_opaque(self) -> OpaqueBaseTable {
         unsafe { std::mem::transmute(self) }
     }
@@ -76,6 +82,7 @@ impl<T: Clone> GenericBaseTable<T> {
 /// Defines a common interface for loadable plugins
 pub trait Loadable: Sized {
     type Instance;
+    type InputArg;
 
     fn exists(&self, instances: &[LibInstance<Self>]) -> bool {
         instances.iter().any(|i| i.loader.ident() == self.ident())
@@ -91,7 +98,7 @@ pub trait Loadable: Sized {
     /// the loaded library implements the necessary interface manually.
     ///
     /// It is adviced to use a provided proc macro to define a valid library.
-    unsafe fn load(library: &Arc<Library>, path: impl AsRef<Path>) -> Result<LibInstance<Self>>;
+    unsafe fn load(library: &CArc<Library>, path: impl AsRef<Path>) -> Result<LibInstance<Self>>;
 
     /// # Safety
     ///
@@ -99,7 +106,7 @@ pub trait Loadable: Sized {
     /// cannot guarantee that the implementation of the library matches the one
     /// specified here.
     unsafe fn load_into(
-        lib: &Arc<Library>,
+        lib: &CArc<Library>,
         path: impl AsRef<Path>,
         out: &mut Vec<LibInstance<Self>>,
     ) {
@@ -125,11 +132,17 @@ pub trait Loadable: Sized {
     ///
     /// This function assumes that `load` performed necessary safety checks
     /// for validity of the library.
-    fn instantiate(&self, lib: Option<Arc<Library>>, args: &Args) -> Result<Self::Instance>;
+    fn instantiate(
+        &self,
+        lib: Option<CArc<Library>>,
+        input: Self::InputArg,
+        args: &Args,
+    ) -> Result<Self::Instance>;
 }
 
 pub struct Inventory {
     connectors: Vec<LibInstance<connector::LoadableConnector>>,
+    os_layers: Vec<LibInstance<os::LoadableOS>>,
 }
 
 impl Inventory {
@@ -157,7 +170,10 @@ impl Inventory {
         let mut dir = PathBuf::default();
         dir.push(path);
 
-        let mut ret = Self { connectors: vec![] };
+        let mut ret = Self {
+            connectors: vec![],
+            os_layers: vec![],
+        };
         ret.add_dir(dir)?;
         Ok(ret)
     }
@@ -219,7 +235,10 @@ impl Inventory {
                 .into_iter(),
         );
 
-        let mut ret = Self { connectors: vec![] };
+        let mut ret = Self {
+            connectors: vec![],
+            os_layers: vec![],
+        };
 
         for mut path in path_iter {
             path.push("memflow");
@@ -250,9 +269,10 @@ impl Inventory {
             let entry = entry.map_err(|_| Error::IO("unable to read directory entry"))?;
             if let Ok(lib) = Library::new(entry.path())
                 .map_err(|_| Error::Connector("unable to load library"))
-                .map(Arc::new)
+                .map(CArc::from)
             {
                 Loadable::load_into(&lib, entry.path(), &mut self.connectors);
+                Loadable::load_into(&lib, entry.path(), &mut self.os_layers);
             }
         }
 
@@ -289,7 +309,7 @@ impl Inventory {
     ///     Inventory::scan_path("./")
     /// }.unwrap();
     /// let connector = unsafe {
-    ///     inventory.create_connector("coredump", &Args::new())
+    ///     inventory.create_connector("coredump", None, &Args::new())
     /// }.unwrap();
     /// ```
     ///
@@ -308,24 +328,38 @@ impl Inventory {
     ///     Ok(DummyMemory::new(size::mb(16)))
     /// }
     /// ```
-    pub fn create_connector(&self, name: &str, args: &Args) -> Result<ConnectorInstance> {
-        let lib = self
-            .connectors
+    pub fn create_connector(
+        &self,
+        name: &str,
+        input: ConnectorInputArg,
+        args: &Args,
+    ) -> Result<ConnectorInstance> {
+        Self::create_internal(&self.connectors, name, input, args)
+    }
+
+    fn create_internal<T: Loadable>(
+        libs: &[LibInstance<T>],
+        name: &str,
+        input: T::InputArg,
+        args: &Args,
+    ) -> Result<T::Instance> {
+        let lib = libs
             .iter()
             .find(|c| c.loader.ident() == name)
             .ok_or_else(|| {
                 error!(
-                    "unable to find connector with name '{}'. available connectors are: {}",
+                    "unable to find plugin with name '{}'. available `{}` plugins are: {}",
                     name,
-                    self.connectors
-                        .iter()
+                    std::any::type_name::<T>(),
+                    libs.iter()
                         .map(|c| c.loader.ident().to_string())
                         .collect::<Vec<_>>()
                         .join(", ")
                 );
-                Error::Connector("connector not found")
+                Error::Connector("plugin not found")
             })?;
-        lib.loader.instantiate(Some(lib.library.clone()), args)
+        lib.loader
+            .instantiate(Some(lib.library.clone()), input, args)
     }
 
     /// Creates an instance in the same way `instantiate` does but without any arguments provided.
@@ -349,17 +383,17 @@ impl Inventory {
     /// }.unwrap();
     /// ```
     pub fn create_connector_default(&self, name: &str) -> Result<ConnectorInstance> {
-        self.create_connector(name, &Args::default())
+        self.create_connector(name, None, &Args::default())
     }
 
-    pub fn create_os_default(&self, _name: &str) -> Result<KernelInstance> {
-        Err("not implemented".into())
+    pub fn create_os(&self, name: &str, input: OSInputArg, args: &Args) -> Result<KernelInstance> {
+        Self::create_internal(&self.os_layers, name, input, args)
     }
 }
 
 #[repr(C)]
 #[derive(Clone)]
 pub struct LibInstance<T> {
-    library: Arc<Library>,
+    library: CArc<Library>,
     loader: T,
 }

@@ -2,7 +2,10 @@ use std::ffi::CStr;
 use std::os::raw::c_char;
 use std::path::PathBuf;
 
-use memflow::plugins::{Args, ConnectorInstance, Inventory, KernelInstance};
+use memflow::error::ToIntResult;
+use memflow::plugins::{
+    connector::MUConnectorInstance, os::MUKernelInstance, Args, ConnectorInstance, Inventory,
+};
 
 use crate::util::*;
 
@@ -75,22 +78,21 @@ pub unsafe extern "C" fn inventory_create_connector(
     inv: &mut Inventory,
     name: *const c_char,
     args: *const c_char,
-) -> Option<&'static mut ConnectorInstance> {
+    out: &mut MUConnectorInstance,
+) -> i32 {
     let rname = CStr::from_ptr(name).to_string_lossy();
 
     if args.is_null() {
         inv.create_connector_default(&rname)
             .map_err(inspect_err)
-            .ok()
-            .map(to_heap)
+            .int_out_result(out)
     } else {
         let rargs = CStr::from_ptr(args).to_string_lossy();
-        let conn_args = Args::parse(&rargs).map_err(inspect_err).ok()?;
-
-        inv.create_connector(&rname, &conn_args)
+        Args::parse(&rargs)
             .map_err(inspect_err)
-            .ok()
-            .map(to_heap)
+            .and_then(|args| inv.create_connector(&rname, None, &args))
+            .map_err(inspect_err)
+            .int_out_result(out)
     }
 }
 
@@ -116,13 +118,22 @@ pub unsafe extern "C" fn inventory_create_os(
     inv: &mut Inventory,
     name: *const c_char,
     args: *const c_char,
-) -> Option<&'static mut KernelInstance> {
+    mem: ConnectorInstance,
+    out: &mut MUKernelInstance,
+) -> i32 {
     let rname = CStr::from_ptr(name).to_string_lossy();
     let _args = CStr::from_ptr(args).to_string_lossy();
-    inv.create_os_default(&rname)
-        .map_err(inspect_err)
-        .ok()
-        .map(to_heap)
+
+    if args.is_null() {
+        -1
+    } else {
+        let rargs = CStr::from_ptr(args).to_string_lossy();
+        Args::parse(&rargs)
+            .map_err(inspect_err)
+            .and_then(|args| inv.create_os(&rname, mem, &args))
+            .map_err(inspect_err)
+            .int_out_result(out)
+    }
 }
 
 /// Clone a connector

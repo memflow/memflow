@@ -1,8 +1,6 @@
-use memflow::error::PartialResultExt;
+use memflow::error::{PartialResultExt, ToIntResult};
 use memflow::mem::virt_mem::*;
 use memflow::types::Address;
-
-use crate::util::*;
 
 use std::slice::{from_raw_parts, from_raw_parts_mut};
 

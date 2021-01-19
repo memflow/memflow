@@ -1,8 +1,8 @@
-use super::super::{util::*, VirtualMemoryInstance};
+use super::super::VirtualMemoryInstance;
 use super::OptionArchitectureIdent;
 use super::{MUAddress, MUModuleInfo};
 use crate::architecture::ArchitectureIdent;
-use crate::error::Result;
+use crate::error::*;
 use crate::os::{ModuleAddressCallback, ModuleInfo, Process, ProcessInfo};
 use crate::types::Address;
 use std::ffi::c_void;

@@ -101,7 +101,7 @@ fn read_bench<T: PhysicalMemory + Clone + 'static, V: VirtualTranslate + Clone +
     let offsets = Win32Offsets::builder().kernel_info(&kernel_info).build()?;
     let /*mut*/ kernel = Win32Kernel::new(phys_mem, vat, offsets, kernel_info);
 
-    let mut kernel = KernelInstance::new(Box::leak(kernel.into()), None);
+    let mut kernel = KernelInstance::new(kernel);
 
     let proc_list = kernel.process_info_list()?;
     let mut rng = CurRng::seed_from_u64(rand::thread_rng().gen_range(0, !0u64));
@@ -187,6 +187,7 @@ fn main() -> Result<()> {
     let mut connector = inventory
         .create_connector(
             matches.value_of("connector").unwrap(),
+            None,
             &Args::parse(matches.value_of("args").unwrap()).unwrap(),
         )
         .unwrap();

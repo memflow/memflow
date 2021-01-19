@@ -1,9 +1,9 @@
 use crate::error::*;
 use crate::mem::{PhysicalMemory, PhysicalMemoryMetadata, PhysicalReadData, PhysicalWriteData};
 
-use super::util::*;
 use super::{
-    Args, GenericBaseTable, LibInstance, Loadable, OpaqueBaseTable, MEMFLOW_PLUGIN_VERSION,
+    Args, CArc, COptArc, GenericBaseTable, LibInstance, Loadable, OpaqueBaseTable,
+    MEMFLOW_PLUGIN_VERSION,
 };
 
 use crate::types::ReprCStr;
@@ -11,7 +11,6 @@ use crate::types::ReprCStr;
 use std::ffi::c_void;
 use std::mem::MaybeUninit;
 use std::path::Path;
-use std::sync::Arc;
 
 use libloading::Library;
 
@@ -69,7 +68,7 @@ pub struct ConnectorFunctionTable {
 impl ConnectorFunctionTable {
     pub fn create_vtable<T: 'static + PhysicalMemory + Clone>() -> Self {
         Self {
-            base: GenericBaseTable::<T>::new().into_opaque(),
+            base: GenericBaseTable::<T>::default().into_opaque(),
             phys: PhysicalMemoryFunctionTable::<T>::default().into_opaque(),
         }
     }
@@ -138,10 +137,6 @@ extern "C" fn metadata_internal<T: PhysicalMemory>(phys_mem: &T) -> PhysicalMemo
     phys_mem.metadata()
 }
 
-// FFI depends on library option arc being null pointer optimizable
-const _: [(); std::mem::size_of::<Option<Arc<Library>>>()] =
-    [(); std::mem::size_of::<*mut c_void>()];
-
 /// Describes initialized connector instance
 ///
 /// This structure is returned by `Connector`. It is needed to maintain reference
@@ -158,7 +153,7 @@ pub struct ConnectorInstance {
     /// the instance is destroyed.
     ///
     /// If the library is unloaded prior to the instance this will lead to a SIGSEGV.
-    library: Option<Arc<Library>>,
+    library: COptArc<Library>,
 }
 
 impl ConnectorInstance {
@@ -166,7 +161,7 @@ impl ConnectorInstance {
         Self {
             instance: unsafe { Box::into_raw(Box::new(mem)).cast::<c_void>().as_mut() }.unwrap(),
             vtable: ConnectorFunctionTable::create_vtable::<T>(),
-            library: None,
+            library: None.into(),
         }
     }
 }
@@ -212,12 +207,13 @@ pub struct LoadableConnector {
 
 impl Loadable for LoadableConnector {
     type Instance = ConnectorInstance;
+    type InputArg = Option<&'static mut c_void>;
 
     fn ident(&self) -> &str {
         self.descriptor.name
     }
 
-    unsafe fn load(library: &Arc<Library>, path: impl AsRef<Path>) -> Result<LibInstance<Self>> {
+    unsafe fn load(library: &CArc<Library>, path: impl AsRef<Path>) -> Result<LibInstance<Self>> {
         let descriptor = library
             .get::<*mut ConnectorDescriptor>(b"MEMFLOW_CONNECTOR\0")
             .map_err(|_| Error::Connector("connector descriptor not found"))?
@@ -242,12 +238,17 @@ impl Loadable for LoadableConnector {
     /// Creates a new connector instance from this library.
     ///
     /// The connector is initialized with the arguments provided to this function.
-    fn instantiate(&self, library: Option<Arc<Library>>, args: &Args) -> Result<ConnectorInstance> {
+    fn instantiate(
+        &self,
+        library: Option<CArc<Library>>,
+        input: Self::InputArg,
+        args: &Args,
+    ) -> Result<ConnectorInstance> {
         let cstr = ReprCStr::from(args.to_string());
         let mut out = MUConnectorInstance::uninit();
-        let res = (self.descriptor.create)(cstr, None, log::max_level() as i32, &mut out);
+        let res = (self.descriptor.create)(cstr, input, log::max_level() as i32, &mut out);
         result_from_int(res, out).map(|mut c| {
-            c.library = library;
+            c.library = library.into();
             c
         })
     }

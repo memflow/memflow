@@ -1,15 +1,14 @@
-use crate::error::Result;
+use crate::error::*;
 
-use super::super::util::*;
 use super::{ArcPluginProcess, OSLayerFunctionTable, PluginProcess};
 use crate::os::{AddressCallback, Kernel, KernelInfo, ModuleInfo, ProcessInfo};
 use crate::types::Address;
 use std::ffi::c_void;
 
+use super::super::CArc;
 use super::{MUModuleInfo, MUPluginProcess, MUProcessInfo};
 
 use libloading::Library;
-use std::sync::Arc;
 
 pub type OpaqueKernelFunctionTable = KernelFunctionTable<'static, c_void>;
 
@@ -116,18 +115,16 @@ pub struct KernelInstance {
     /// the instance is destroyed.
     ///
     /// If the library is unloaded prior to the instance this will lead to a SIGSEGV.
-    library: Option<Arc<Library>>,
+    pub(super) library: Option<CArc<Library>>,
 }
 
 impl KernelInstance {
-    pub fn new<'a, T: 'static + Kernel<'a> + Clone>(
-        instance: &'a mut T,
-        library: Option<Arc<Library>>,
-    ) -> Self {
+    pub fn new<'a, T: 'static + Kernel<'a> + Clone>(instance: T) -> Self {
         Self {
-            instance: unsafe { (instance as *mut T as *mut c_void).as_mut() }.unwrap(),
+            instance: unsafe { Box::into_raw(Box::new(instance)).cast::<c_void>().as_mut() }
+                .unwrap(),
             vtable: OSLayerFunctionTable::new::<T>(),
-            library,
+            library: None,
         }
     }
 }

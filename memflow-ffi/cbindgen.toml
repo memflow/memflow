@@ -7,8 +7,6 @@ style = "both"
 #no_includes = true
 cpp_compat = true
 
-after_includes = "typedef void *Option_Arc_Library;"
-
 [parse]
 parse_deps = true
 
@@ -21,7 +19,6 @@ bitflags = true
 sort_by = "None"
 
 [export]
-exclude = ["Option_Arc_Library"]
 
 [export.rename]
 "OptionMut_c_void" = "pvoid"

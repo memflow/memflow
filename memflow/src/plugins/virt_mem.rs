@@ -1,5 +1,4 @@
-use super::util::*;
-use crate::error::{Error, PartialResult, Result};
+use crate::error::*;
 use crate::mem::{VirtualMemory, VirtualReadData, VirtualWriteData};
 use crate::types::Address;
 use crate::types::{Page, PhysicalAddress};

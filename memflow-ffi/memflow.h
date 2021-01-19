@@ -5,7 +5,6 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
-typedef void *Option_Arc_Library;
 
 /**
  * Identifies the byte order of a architecture
@@ -36,6 +35,8 @@ typedef uint8_t Endianess;
 typedef struct ArchitectureObj ArchitectureObj;
 
 typedef struct Inventory Inventory;
+
+typedef struct Option_CArc_Library Option_CArc_Library;
 
 typedef struct PhysicalReadData PhysicalReadData;
 
@@ -147,6 +148,12 @@ typedef struct ConnectorFunctionTable {
     OpaquePhysicalMemoryFunctionTable phys;
 } ConnectorFunctionTable;
 
+typedef struct COptArc_Library {
+    const Library *const *inner;
+    const Library *const *(*clone_fn)(const Library*const *const *);
+    void (*drop_fn)(const Library*const **);
+} COptArc_Library;
+
 /**
  * Describes initialized connector instance
  *
@@ -165,8 +172,10 @@ typedef struct ConnectorInstance {
      *
      * If the library is unloaded prior to the instance this will lead to a SIGSEGV.
      */
-    Option_Arc_Library library;
+    struct COptArc_Library library;
 } ConnectorInstance;
+
+typedef struct ConnectorInstance MUConnectorInstance;
 
 typedef struct Callback_c_void__Address {
     void *context;
@@ -417,8 +426,10 @@ typedef struct KernelInstance {
      *
      * If the library is unloaded prior to the instance this will lead to a SIGSEGV.
      */
-    Option_Arc_Library library;
+    struct Option_CArc_Library library;
 } KernelInstance;
+
+typedef struct KernelInstance MUKernelInstance;
 
 #ifdef __cplusplus
 extern "C" {
@@ -491,9 +502,10 @@ int32_t inventory_add_dir(struct Inventory *inv, const char *dir);
  * Any error strings returned by the connector must not be outputed after the connector gets
  * freed, because that operation could cause the underlying shared library to get unloaded.
  */
-struct ConnectorInstance *inventory_create_connector(struct Inventory *inv,
-                                                     const char *name,
-                                                     const char *args);
+int32_t inventory_create_connector(struct Inventory *inv,
+                                   const char *name,
+                                   const char *args,
+                                   MUConnectorInstance *out);
 
 /**
  * Create a OS instance with given arguments
@@ -514,9 +526,11 @@ struct ConnectorInstance *inventory_create_connector(struct Inventory *inv,
  * Any error strings returned by the connector must not be outputed after the connector gets
  * freed, because that operation could cause the underlying shared library to get unloaded.
  */
-struct KernelInstance *inventory_create_os(struct Inventory *inv,
-                                           const char *name,
-                                           const char *args);
+int32_t inventory_create_os(struct Inventory *inv,
+                            const char *name,
+                            const char *args,
+                            struct ConnectorInstance mem,
+                            MUKernelInstance *out);
 
 /**
  * Clone a connector

@@ -13,7 +13,7 @@ use rand::{Rng, SeedableRng};
 use rand_xorshift::XorShiftRng as CurRng;
 
 fn create_connector(args: &Args) -> Result<impl PhysicalMemory> {
-    unsafe { Inventory::scan().create_connector("qemu_procfs", args) }
+    unsafe { Inventory::scan().create_connector("qemu_procfs", None, args) }
 }
 
 fn initialize_virt_ctx() -> Result<(

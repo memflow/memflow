@@ -1,10 +1,9 @@
+use memflow::error::ToIntResult;
 use memflow::mem::phys_mem::*;
 use memflow::plugins::ConnectorInstance;
 use memflow::types::PhysicalAddress;
 
 use std::slice::{from_raw_parts, from_raw_parts_mut};
-
-use crate::util::*;
 
 /// Read a list of values
 ///

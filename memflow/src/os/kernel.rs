@@ -2,7 +2,11 @@ use super::{AddressCallback, Process, ProcessInfo, ProcessInfoCallback};
 use crate::prelude::v1::{Result, *};
 use std::prelude::v1::*;
 
-pub trait Kernel<'a>: Send {
+/// Kernel supertrait for all possible lifetimes
+pub trait Kernel: for<'a> KernelInner<'a> {}
+impl<T: for<'a> KernelInner<'a>> Kernel for T {}
+
+pub trait KernelInner<'a>: Send {
     type ProcessType: Process + 'a;
     type IntoProcessType: Process;
 

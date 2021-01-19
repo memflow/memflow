@@ -31,11 +31,11 @@ mod plugin {
     use memflow::plugins::{Args, ConnectorInstance};
 
     #[os_layer(name = "win32")]
-    pub fn build_kernel<'a>(
+    pub fn build_kernel(
         _args: &Args,
         mem: ConnectorInstance,
         log_level: log::Level,
-    ) -> memflow::error::Result<impl Kernel<'a> + Clone> {
+    ) -> memflow::error::Result<impl Kernel + Clone> {
         simple_logger::SimpleLogger::new()
             .with_level(log_level.to_level_filter())
             .init()

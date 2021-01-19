@@ -1,7 +1,7 @@
 use crate::error::*;
 
 use super::{ArcPluginProcess, OSLayerFunctionTable, PluginProcess};
-use crate::os::{AddressCallback, Kernel, KernelInfo, ModuleInfo, ProcessInfo};
+use crate::os::{AddressCallback, Kernel, KernelInfo, KernelInner, ModuleInfo, ProcessInfo};
 use crate::types::Address;
 use std::ffi::c_void;
 
@@ -35,7 +35,7 @@ pub struct KernelFunctionTable<'a, T> {
     pub info: extern "C" fn(kernel: &T) -> &KernelInfo,
 }
 
-impl<'a, T: Kernel<'a>> Default for KernelFunctionTable<'a, T> {
+impl<'a, T: KernelInner<'a>> Default for KernelFunctionTable<'a, T> {
     fn default() -> Self {
         Self {
             process_address_list_callback: c_process_address_list_callback,
@@ -48,20 +48,20 @@ impl<'a, T: Kernel<'a>> Default for KernelFunctionTable<'a, T> {
     }
 }
 
-impl<'a, T: Kernel<'a>> KernelFunctionTable<'a, T> {
+impl<'a, T: KernelInner<'a>> KernelFunctionTable<'a, T> {
     pub fn into_opaque(self) -> OpaqueKernelFunctionTable {
         unsafe { std::mem::transmute(self) }
     }
 }
 
-extern "C" fn c_process_address_list_callback<'a, T: Kernel<'a>>(
+extern "C" fn c_process_address_list_callback<'a, T: KernelInner<'a>>(
     kernel: &mut T,
     callback: AddressCallback,
 ) -> i32 {
     kernel.process_address_list_callback(callback).int_result()
 }
 
-extern "C" fn c_process_info_by_address<'a, T: Kernel<'a>>(
+extern "C" fn c_process_info_by_address<'a, T: KernelInner<'a>>(
     kernel: &mut T,
     address: Address,
     out: &mut MUProcessInfo,
@@ -69,7 +69,7 @@ extern "C" fn c_process_info_by_address<'a, T: Kernel<'a>>(
     kernel.process_info_by_address(address).int_out_result(out)
 }
 
-extern "C" fn c_process_by_info<'a, T: 'a + Kernel<'a>>(
+extern "C" fn c_process_by_info<'a, T: 'a + KernelInner<'a>>(
     kernel: &'a mut T,
     info: ProcessInfo,
     out: &mut MUPluginProcess<'a>,
@@ -80,14 +80,14 @@ extern "C" fn c_process_by_info<'a, T: 'a + Kernel<'a>>(
         .int_out_result(out)
 }
 
-extern "C" fn c_module_address_list_callback<'a, T: Kernel<'a>>(
+extern "C" fn c_module_address_list_callback<'a, T: KernelInner<'a>>(
     kernel: &mut T,
     callback: AddressCallback,
 ) -> i32 {
     kernel.module_address_list_callback(callback).int_result()
 }
 
-extern "C" fn c_module_by_address<'a, T: Kernel<'a>>(
+extern "C" fn c_module_by_address<'a, T: KernelInner<'a>>(
     kernel: &mut T,
     address: Address,
     out: &mut MUModuleInfo,
@@ -95,7 +95,7 @@ extern "C" fn c_module_by_address<'a, T: Kernel<'a>>(
     kernel.module_by_address(address).int_out_result(out)
 }
 
-extern "C" fn c_kernel_info<'a, T: Kernel<'a>>(kernel: &T) -> &KernelInfo {
+extern "C" fn c_kernel_info<'a, T: KernelInner<'a>>(kernel: &T) -> &KernelInfo {
     kernel.info()
 }
 
@@ -119,7 +119,7 @@ pub struct KernelInstance {
 }
 
 impl KernelInstance {
-    pub fn new<'a, T: 'static + Kernel<'a> + Clone>(instance: T) -> Self {
+    pub fn new<T: 'static + Kernel + Clone>(instance: T) -> Self {
         Self {
             instance: unsafe { Box::into_raw(Box::new(instance)).cast::<c_void>().as_mut() }
                 .unwrap(),
@@ -129,7 +129,7 @@ impl KernelInstance {
     }
 }
 
-impl<'a> Kernel<'a> for KernelInstance {
+impl<'a> KernelInner<'a> for KernelInstance {
     type ProcessType = PluginProcess<'a>;
     type IntoProcessType = ArcPluginProcess;
 

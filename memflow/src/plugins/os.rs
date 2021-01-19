@@ -30,7 +30,7 @@ pub type MUKernelInstance = MaybeUninit<KernelInstance>;
 
 pub type OptionArchitectureIdent<'a> = Option<&'a crate::architecture::ArchitectureIdent>;
 
-pub fn create_with_logging<T: 'static + Kernel<'static> + Clone>(
+pub fn create_with_logging<T: 'static + Kernel + Clone>(
     args: ReprCStr,
     conn: ConnectorInstance,
     log_level: i32,
@@ -42,7 +42,7 @@ pub fn create_with_logging<T: 'static + Kernel<'static> + Clone>(
     })
 }
 
-pub fn create_without_logging<T: 'static + Kernel<'static> + Clone>(
+pub fn create_without_logging<T: 'static + Kernel + Clone>(
     args: ReprCStr,
     conn: ConnectorInstance,
     out: &mut MUKernelInstance,
@@ -81,7 +81,7 @@ pub struct OSLayerFunctionTable {
 }
 
 impl OSLayerFunctionTable {
-    pub fn new<'a, T: 'static + Kernel<'a> + Clone>() -> Self {
+    pub fn new<T: 'static + Kernel + Clone>() -> Self {
         OSLayerFunctionTable {
             base: GenericBaseTable::<T>::default().into_opaque(),
             kernel: KernelFunctionTable::<T>::default().into_opaque(),

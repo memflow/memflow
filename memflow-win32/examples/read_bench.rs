@@ -90,15 +90,12 @@ fn rwtest(
     );
 }
 
-pub trait KernelSuper: for<'a> Kernel<'a> {}
-impl<T: for<'a> Kernel<'a>> KernelSuper for T {}
-
 //fn read_bench<T: PhysicalMemory + Clone + 'static, V: VirtualTranslate + Clone + 'static>(
 //    phys_mem: T,
 //    vat: V,
 //    kernel_info: Win32KernelInfo,
 //) -> Result<()> {
-fn read_bench(kernel: &mut impl KernelSuper) -> Result<()> {
+fn read_bench(kernel: &mut impl Kernel) -> Result<()> {
     /*let offsets = Win32Offsets::builder().kernel_info(&kernel_info).build()?;
     let /*mut*/ kernel = Win32Kernel::new(phys_mem, vat, offsets, kernel_info);
 

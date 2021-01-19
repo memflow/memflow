@@ -43,6 +43,8 @@ rand = { version = "0.7" }
 rand_xorshift = "0.2"
 clap = "2.33"
 simple_logger = "1.0"
+rayon = "1.3.1"
+colored = "2.0"
 
 [features]
 default = ["std", "serde_derive", "plugins", "filemap", "memmapfiles"]
@@ -59,3 +61,19 @@ filemap = ["memmap"]
 [[example]]
 name = "read_bench"
 path = "examples/read_bench.rs"
+
+[[example]]
+name = "multithreading"
+path = "examples/multithreading.rs"
+
+[[example]]
+name = "integration"
+path = "examples/integration.rs"
+
+[[example]]
+name = "ps"
+path = "examples/process_list.rs"
+
+[[example]]
+name = "lsmod"
+path = "examples/kernel_modules.rs"

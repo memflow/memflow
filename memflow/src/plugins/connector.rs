@@ -184,7 +184,8 @@ impl PhysicalMemory for ConnectorInstance {
 
 impl Clone for ConnectorInstance {
     fn clone(&self) -> Self {
-        let instance = (self.vtable.base.clone)(self.instance).expect("Unable to clone Connector");
+        let instance =
+            (self.vtable.base.clone.clone)(self.instance).expect("Unable to clone Connector");
         Self {
             instance,
             vtable: self.vtable,

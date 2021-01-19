@@ -6,8 +6,15 @@ use std::ffi::c_void;
 
 pub type OpaqueVirtualMemoryFunctionTable = VirtualMemoryFunctionTable<c_void>;
 
+impl Copy for OpaqueVirtualMemoryFunctionTable {}
+
+impl Clone for OpaqueVirtualMemoryFunctionTable {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
 #[repr(C)]
-#[derive(Clone, Copy)]
 pub struct VirtualMemoryFunctionTable<T> {
     pub virt_read_raw_list: extern "C" fn(
         virt_mem: &mut T,
@@ -56,8 +63,8 @@ extern "C" fn c_virt_write_raw_list<T: VirtualMemory>(
 
 #[repr(C)]
 pub struct VirtualMemoryInstance<'a> {
-    instance: &'a mut c_void,
-    vtable: OpaqueVirtualMemoryFunctionTable,
+    pub(crate) instance: &'a mut c_void,
+    pub(crate) vtable: OpaqueVirtualMemoryFunctionTable,
 }
 
 impl<'a> VirtualMemoryInstance<'a> {

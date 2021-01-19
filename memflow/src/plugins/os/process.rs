@@ -1,4 +1,5 @@
 use super::super::VirtualMemoryInstance;
+use super::super::{util::*, COptArc, GenericCloneTable, OpaqueCloneTable};
 use super::OptionArchitectureIdent;
 use super::{MUAddress, MUModuleInfo};
 use crate::architecture::ArchitectureIdent;
@@ -8,7 +9,6 @@ use crate::types::Address;
 use std::ffi::c_void;
 
 use libloading::Library;
-use std::sync::Arc;
 
 pub type OpaqueProcessFunctionTable = ProcessFunctionTable<c_void>;
 
@@ -35,6 +35,8 @@ pub struct ProcessFunctionTable<T> {
     ) -> i32,
     pub primary_module_address: extern "C" fn(process: &mut T, out: &mut MUAddress) -> i32,
     pub info: extern "C" fn(process: &T) -> &ProcessInfo,
+    pub virt_mem: extern "C" fn(process: &mut T) -> &mut c_void,
+    pub drop: unsafe extern "C" fn(this: &mut T),
 }
 
 impl<T: Process> Default for ProcessFunctionTable<T> {
@@ -44,6 +46,8 @@ impl<T: Process> Default for ProcessFunctionTable<T> {
             module_by_address: c_module_by_address,
             primary_module_address: c_primary_module_address,
             info: c_info,
+            virt_mem: c_virt_mem,
+            drop: c_drop::<T>,
         }
     }
 }
@@ -114,6 +118,12 @@ impl<'a> PluginProcess<'a> {
     }
 }
 
+impl<'a> Drop for PluginProcess<'a> {
+    fn drop(&mut self) {
+        unsafe { (self.vtable.drop)(self.instance) };
+    }
+}
+
 impl<'a> Process for PluginProcess<'a> {
     type VirtualMemoryType = VirtualMemoryInstance<'a>;
 
@@ -154,14 +164,36 @@ impl<'a> Process for PluginProcess<'a> {
 #[repr(C)]
 pub struct ArcPluginProcess {
     inner: PluginProcess<'static>,
-    library: Arc<Library>,
+    clone: OpaqueCloneTable,
+    library: COptArc<Library>,
 }
 
 impl ArcPluginProcess {
-    pub fn from<T: 'static + Process>(proc: T, lib: &Arc<Library>) -> Self {
+    pub fn new<T: 'static + Process + Clone>(proc: T, lib: COptArc<Library>) -> Self {
         Self {
             inner: PluginProcess::new(proc),
-            library: lib.clone(),
+            clone: GenericCloneTable::<T>::default().into_opaque(),
+            library: lib,
+        }
+    }
+}
+
+impl Clone for ArcPluginProcess {
+    fn clone(&self) -> Self {
+        let instance = (self.clone.clone)(self.inner.instance).expect("Unable to clone Connector");
+        let vmem_ref =
+            (self.inner.vtable.virt_mem)(unsafe { (instance as *mut c_void).as_mut() }.unwrap());
+        Self {
+            inner: PluginProcess {
+                instance,
+                vtable: self.inner.vtable,
+                virt_mem: VirtualMemoryInstance {
+                    instance: vmem_ref,
+                    vtable: self.inner.virt_mem.vtable,
+                },
+            },
+            clone: self.clone,
+            library: self.library.clone(),
         }
     }
 }

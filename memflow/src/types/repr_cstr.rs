@@ -65,7 +65,7 @@ impl Clone for ReprCStr {
 
 impl std::fmt::Display for ReprCStr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.as_ref())
+        f.pad(self.as_ref())
     }
 }
 

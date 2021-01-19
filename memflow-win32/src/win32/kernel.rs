@@ -34,7 +34,7 @@ pub struct Win32Kernel<T, V> {
     pub kernel_modules: Option<Win32ModuleListInfo>,
 }
 
-impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
+impl<T: PhysicalMemory + Clone, V: VirtualTranslate + Clone> Win32Kernel<T, V> {
     pub fn new(
         mut phys_mem: T,
         mut vat: V,
@@ -376,7 +376,9 @@ impl<T: PhysicalMemory, V: VirtualTranslate> AsMut<VirtualDMA<T, V, Win32Virtual
     }
 }
 
-impl<'a, T: PhysicalMemory + 'a, V: VirtualTranslate + 'a> KernelInner<'a> for Win32Kernel<T, V> {
+impl<'a, T: PhysicalMemory + 'a + Clone, V: VirtualTranslate + 'a + Clone> KernelInner<'a>
+    for Win32Kernel<T, V>
+{
     type ProcessType = Win32Process<VirtualDMA<&'a mut T, &'a mut V, Win32VirtualTranslate>>;
     type IntoProcessType = Win32Process<VirtualDMA<T, V, Win32VirtualTranslate>>;
 

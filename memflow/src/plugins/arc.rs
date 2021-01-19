@@ -94,6 +94,16 @@ impl<T> Drop for COptArc<T> {
     }
 }
 
+impl<T> COptArc<T> {
+    pub fn take(&mut self) -> COptArc<T> {
+        Self {
+            inner: self.inner.take(),
+            clone_fn: self.clone_fn.take(),
+            drop_fn: self.drop_fn.take(),
+        }
+    }
+}
+
 impl<T> From<Option<CArc<T>>> for COptArc<T> {
     fn from(opt: Option<CArc<T>>) -> Self {
         match opt {

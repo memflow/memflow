@@ -25,6 +25,7 @@ use std::mem::MaybeUninit;
 pub type MUProcessInfo = MaybeUninit<ProcessInfo>;
 pub type MUModuleInfo = MaybeUninit<ModuleInfo>;
 pub type MUPluginProcess<'a> = MaybeUninit<PluginProcess<'a>>;
+pub type MUArcPluginProcess = MaybeUninit<ArcPluginProcess>;
 pub type MUAddress = MaybeUninit<Address>;
 pub type MUKernelInstance = MaybeUninit<KernelInstance>;
 
@@ -141,7 +142,7 @@ impl Loadable for LoadableOS {
         let mut out = MUKernelInstance::uninit();
         let res = (self.descriptor.create)(cstr, input, log::max_level() as i32, &mut out);
         result_from_int(res, out).map(|mut c| {
-            c.library = library;
+            c.library = library.into();
             c
         })
     }

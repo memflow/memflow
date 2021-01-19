@@ -5,8 +5,8 @@ use crate::os::{AddressCallback, Kernel, KernelInfo, KernelInner, ModuleInfo, Pr
 use crate::types::Address;
 use std::ffi::c_void;
 
-use super::super::CArc;
-use super::{MUModuleInfo, MUPluginProcess, MUProcessInfo};
+use super::super::COptArc;
+use super::{MUArcPluginProcess, MUModuleInfo, MUPluginProcess, MUProcessInfo};
 
 use libloading::Library;
 
@@ -28,6 +28,12 @@ pub struct KernelFunctionTable<'a, T> {
         extern "C" fn(kernel: &mut T, address: Address, out: &mut MUProcessInfo) -> i32,
     pub process_by_info:
         extern "C" fn(kernel: &'a mut T, info: ProcessInfo, out: &mut MUPluginProcess<'a>) -> i32,
+    pub into_process_by_info: extern "C" fn(
+        kernel: &mut T,
+        info: ProcessInfo,
+        lib: COptArc<Library>,
+        out: &mut MUArcPluginProcess,
+    ) -> i32,
     pub module_address_list_callback:
         extern "C" fn(kernel: &mut T, callback: AddressCallback) -> i32,
     pub module_by_address:
@@ -35,12 +41,13 @@ pub struct KernelFunctionTable<'a, T> {
     pub info: extern "C" fn(kernel: &T) -> &KernelInfo,
 }
 
-impl<'a, T: KernelInner<'a>> Default for KernelFunctionTable<'a, T> {
+impl<'a, T: 'static + Kernel> Default for KernelFunctionTable<'a, T> {
     fn default() -> Self {
         Self {
             process_address_list_callback: c_process_address_list_callback,
             process_info_by_address: c_process_info_by_address,
             process_by_info: c_process_by_info,
+            into_process_by_info: c_into_process_by_info,
             module_address_list_callback: c_module_address_list_callback,
             module_by_address: c_module_by_address,
             info: c_kernel_info,
@@ -80,6 +87,19 @@ extern "C" fn c_process_by_info<'a, T: 'a + KernelInner<'a>>(
         .int_out_result(out)
 }
 
+extern "C" fn c_into_process_by_info<T: 'static + Kernel>(
+    kernel: &mut T,
+    info: ProcessInfo,
+    lib: COptArc<Library>,
+    out: &mut MUArcPluginProcess,
+) -> i32 {
+    let kernel = unsafe { Box::from_raw(kernel) };
+    kernel
+        .into_process_by_info(info)
+        .map(|p| ArcPluginProcess::new(p, lib))
+        .int_out_result(out)
+}
+
 extern "C" fn c_module_address_list_callback<'a, T: KernelInner<'a>>(
     kernel: &mut T,
     callback: AddressCallback,
@@ -115,7 +135,7 @@ pub struct KernelInstance {
     /// the instance is destroyed.
     ///
     /// If the library is unloaded prior to the instance this will lead to a SIGSEGV.
-    pub(super) library: Option<CArc<Library>>,
+    pub(super) library: COptArc<Library>,
 }
 
 impl KernelInstance {
@@ -124,7 +144,7 @@ impl KernelInstance {
             instance: unsafe { Box::into_raw(Box::new(instance)).cast::<c_void>().as_mut() }
                 .unwrap(),
             vtable: OSLayerFunctionTable::new::<T>(),
-            library: None,
+            library: None.into(),
         }
     }
 }
@@ -163,8 +183,16 @@ impl<'a> KernelInner<'a> for KernelInstance {
     /// Construct a process by its info, consuming the kernel
     ///
     /// This function will consume the Kernel instance and move its resources into the process
-    fn into_process_by_info(self, _info: ProcessInfo) -> Result<Self::IntoProcessType> {
-        Err(crate::error::Error::Other("unimplemented"))
+    fn into_process_by_info(mut self, info: ProcessInfo) -> Result<Self::IntoProcessType> {
+        let mut out = MUArcPluginProcess::uninit();
+        let res = (self.vtable.kernel.into_process_by_info)(
+            self.instance,
+            info,
+            self.library.take(),
+            &mut out,
+        );
+        std::mem::forget(self);
+        result_from_int(res, out)
     }
 
     /// Walks the kernel module list and calls the provided callback for each module structure
@@ -197,7 +225,8 @@ impl<'a> KernelInner<'a> for KernelInstance {
 
 impl Clone for KernelInstance {
     fn clone(&self) -> Self {
-        let instance = (self.vtable.base.clone)(self.instance).expect("Unable to clone Connector");
+        let instance =
+            (self.vtable.base.clone.clone)(self.instance).expect("Unable to clone Connector");
         Self {
             instance,
             vtable: self.vtable,

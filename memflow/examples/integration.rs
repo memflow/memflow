@@ -1,33 +1,32 @@
-use memflow::mem::*;
 use memflow::os::*;
 use memflow::plugins::*;
 
-use memflow_win32::error::{Error, Result};
-use memflow_win32::win32::Win32Kernel;
-
 use clap::*;
 use log::Level;
+
+use memflow::error::{Error, Result};
 
 use colored::*;
 
 static mut HAD_ERROR: bool = false;
 
 fn main() -> Result<()> {
-    let (connector, args_str) = parse_args();
+    let (connector, args_str, os_name, os_args_str, sysproc, kernel_mods) = parse_args();
 
     let args = Args::parse(&args_str)?;
+    let os_args = Args::parse(&os_args_str)?;
 
     // create inventory + connector
-    let inventory = unsafe { Inventory::scan() };
+    let inventory = Inventory::scan();
     let connector = inventory.create_connector(&connector, None, &args)?;
 
-    let mut kernel = build_kernel(connector)?;
+    let mut kernel = build_kernel(connector, &inventory, &os_name, &os_args)?;
 
     {
         println!("Kernel info:");
-        let info = &kernel.kernel_info;
-        let base_info = &info.base_info;
-        println!("dtb {:x} ... {}", info.dtb, some_str(&info.dtb.non_null()));
+        //let info = &kernel.kernel_info;
+        let base_info = kernel.info();
+        //println!("dtb {:x} ... {}", info.dtb, some_str(&info.dtb.non_null()));
         println!(
             "base: {:x} ... {}",
             base_info.base,
@@ -38,7 +37,7 @@ fn main() -> Result<()> {
             base_info.size,
             bool_str(base_info.size != 0)
         );
-        println!(
+        /*println!(
             "kernel_guid: {:?} ... {}",
             info.kernel_guid,
             some_str(&info.kernel_guid)
@@ -52,24 +51,19 @@ fn main() -> Result<()> {
             "eprocess_base: {:x} ... {}",
             info.eprocess_base,
             some_str(&info.eprocess_base.non_null())
-        );
+        );*/
         println!();
     }
 
     {
         if let Ok(modules) = kernel_modules(&mut kernel) {
-            println!(
-                "ntoskrnl.exe ... {}",
-                some_str(
-                    &modules
-                        .iter()
-                        .find(|e| e.name.to_lowercase() == "ntoskrnl.exe")
-                )
-            );
-            println!(
-                "hal.dll ... {}",
-                some_str(&modules.iter().find(|e| e.name.to_lowercase() == "hal.dll"))
-            );
+            for k in kernel_mods.split(",") {
+                println!(
+                    "{} ... {}",
+                    k,
+                    some_str(&modules.iter().find(|e| e.name.to_lowercase() == k))
+                );
+            }
         }
         println!();
     }
@@ -79,14 +73,14 @@ fn main() -> Result<()> {
         let proc_list = kernel.process_info_list()?;
         let lsass = proc_list
             .iter()
-            .find(|p| p.name.to_string().to_lowercase() == "lsass.exe");
-        println!("lsass.exe ... {}", some_str(&lsass));
+            .find(|p| p.name.to_string().to_lowercase() == sysproc);
+        println!("{} ... {}", &sysproc, some_str(&lsass));
         println!();
 
         if let Some(proc) = lsass {
             println!("{} info:", proc.name);
             println!("pid: {} ... {}", proc.pid, bool_str(proc.pid < 10000));
-            let win32_proc = kernel.process_info_from_base(proc.clone())?;
+            /*let win32_proc = kernel.process_info_from_base(proc.clone())?;
             println!(
                 "dtb: {} ... {}",
                 win32_proc.dtb,
@@ -121,7 +115,7 @@ fn main() -> Result<()> {
                 "peb_wow64: {:?} ... {}",
                 win32_proc.teb_wow64,
                 bool_str(win32_proc.peb_wow64.is_none())
-            );
+            );*/
         }
     }
 
@@ -159,17 +153,20 @@ fn kernel_modules(kernel: &mut impl Kernel) -> Result<Vec<ModuleInfo>> {
     modules
 }
 
-fn build_kernel<T: PhysicalMemory>(
-    mem: T,
-) -> Result<Win32Kernel<impl PhysicalMemory, impl VirtualTranslate>> {
-    let kernel = Win32Kernel::builder(mem).build_default_caches().build();
+fn build_kernel(
+    mem: ConnectorInstance,
+    inventory: &Inventory,
+    name: &str,
+    args: &Args,
+) -> Result<KernelInstance> {
+    let kernel = inventory.create_os(name, mem, args);
     println!("Kernel::build ... {}", ok_str(&kernel));
     println!();
     kernel
 }
 
-fn parse_args() -> (String, String) {
-    let matches = App::new("read_keys example")
+fn parse_args() -> (String, String, String, String, String, String) {
+    let matches = App::new("multithreading example")
         .version(crate_version!())
         .author(crate_authors!())
         .arg(Arg::with_name("verbose").short("v").multiple(true))
@@ -181,11 +178,39 @@ fn parse_args() -> (String, String) {
                 .required(true),
         )
         .arg(
-            Arg::with_name("args")
-                .long("args")
-                .short("a")
+            Arg::with_name("conn-args")
+                .long("conn-args")
+                .short("x")
                 .takes_value(true)
                 .default_value(""),
+        )
+        .arg(
+            Arg::with_name("os")
+                .long("os")
+                .short("o")
+                .takes_value(true)
+                .required(true),
+        )
+        .arg(
+            Arg::with_name("os-args")
+                .long("os-args")
+                .short("y")
+                .takes_value(true)
+                .default_value(""),
+        )
+        .arg(
+            Arg::with_name("system-proc")
+                .long("system-proc")
+                .short("p")
+                .takes_value(true)
+                .default_value("lsass.exe"),
+        )
+        .arg(
+            Arg::with_name("kernel-mods")
+                .long("kernel-mods")
+                .short("k")
+                .takes_value(true)
+                .default_value("ntoskrnl.exe,hal.dll"),
         )
         .get_matches();
 
@@ -205,6 +230,10 @@ fn parse_args() -> (String, String) {
 
     (
         matches.value_of("connector").unwrap().into(),
-        matches.value_of("args").unwrap().into(),
+        matches.value_of("conn-args").unwrap().into(),
+        matches.value_of("os").unwrap().into(),
+        matches.value_of("os-args").unwrap().into(),
+        matches.value_of("system-proc").unwrap().into(),
+        matches.value_of("kernel-mods").unwrap().into(),
     )
 }

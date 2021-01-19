@@ -51,6 +51,34 @@ pub const MEMFLOW_PLUGIN_VERSION: i32 = 8;
 pub type OptionMut<T> = Option<&'static mut T>;
 
 pub type OpaqueBaseTable = GenericBaseTable<c_void>;
+pub type OpaqueCloneTable = GenericCloneTable<c_void>;
+
+impl Copy for OpaqueCloneTable {}
+
+impl Clone for OpaqueCloneTable {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+#[repr(C)]
+pub struct GenericCloneTable<T: 'static> {
+    pub clone: extern "C" fn(this: &T) -> OptionMut<T>,
+}
+
+impl<T: Clone> Default for GenericCloneTable<T> {
+    fn default() -> Self {
+        Self {
+            clone: util::c_clone::<T>,
+        }
+    }
+}
+
+impl<T: Clone> GenericCloneTable<T> {
+    pub fn into_opaque(self) -> OpaqueCloneTable {
+        unsafe { std::mem::transmute(self) }
+    }
+}
 
 impl Copy for OpaqueBaseTable {}
 
@@ -62,14 +90,14 @@ impl Clone for OpaqueBaseTable {
 
 #[repr(C)]
 pub struct GenericBaseTable<T: 'static> {
-    pub clone: extern "C" fn(this: &T) -> OptionMut<T>,
+    clone: GenericCloneTable<T>,
     pub drop: unsafe extern "C" fn(this: &mut T),
 }
 
 impl<T: Clone> Default for GenericBaseTable<T> {
     fn default() -> Self {
         Self {
-            clone: util::c_clone::<T>,
+            clone: GenericCloneTable::<T>::default(),
             drop: util::c_drop::<T>,
         }
     }

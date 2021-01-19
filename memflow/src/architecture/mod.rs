@@ -250,6 +250,20 @@ pub enum ArchitectureIdent {
     AArch64(usize),
 }
 
+impl std::fmt::Display for ArchitectureIdent {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ArchitectureIdent::X86(32, false) => f.pad("x86_32"),
+            ArchitectureIdent::X86(32, true) => f.pad("x86_32 PAE"),
+            ArchitectureIdent::X86(64, false) => f.pad("x86_64"),
+            ArchitectureIdent::X86(64, true) => f.pad("x86_64 LA57"),
+            ArchitectureIdent::X86(_, _) => f.pad("x86"),
+            ArchitectureIdent::AArch64(_) => f.pad("AArch64"),
+            ArchitectureIdent::Unknown => f.pad("Unknown"),
+        }
+    }
+}
+
 impl From<ArchitectureIdent> for ArchitectureObj {
     fn from(arch: ArchitectureIdent) -> ArchitectureObj {
         const KB4: usize = size::kb(4);

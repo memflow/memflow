@@ -8,7 +8,7 @@ impl<T: for<'a> KernelInner<'a>> Kernel for T {}
 
 pub trait KernelInner<'a>: Send {
     type ProcessType: Process + 'a;
-    type IntoProcessType: Process;
+    type IntoProcessType: Process + Clone;
 
     /// Walks a process list and calls a callback for each process structure address
     ///

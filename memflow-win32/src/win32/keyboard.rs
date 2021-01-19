@@ -56,7 +56,7 @@ pub struct KeyboardState {
 }
 
 impl Keyboard {
-    pub fn try_with<T: PhysicalMemory, V: VirtualTranslate>(
+    pub fn try_with<T: PhysicalMemory + Clone, V: VirtualTranslate + Clone>(
         kernel: &mut Win32Kernel<T, V>,
     ) -> Result<Self> {
         let win32kbase_module_info = kernel.module_by_name("win32kbase.sys")?;
@@ -96,7 +96,7 @@ impl Keyboard {
     /// Fetches the kernel's gafAsyncKeyState state with the kernel context.
     /// This will use the winlogon.exe or wininit.exe process as a proxy for reading
     /// the gafAsyncKeyState from the win32kbase.sys kernel module.
-    pub fn state_with_kernel<T: PhysicalMemory, V: VirtualTranslate>(
+    pub fn state_with_kernel<T: PhysicalMemory + Clone, V: VirtualTranslate + Clone>(
         &self,
         kernel: &mut Win32Kernel<T, V>,
     ) -> Result<KeyboardState> {

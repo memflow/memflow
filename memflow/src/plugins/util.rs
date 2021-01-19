@@ -24,11 +24,11 @@ pub fn create_with_logging<T>(
     create_fn: impl FnOnce(Args, log::Level) -> Result<T, Error>,
 ) -> i32 {
     let level = match log_level {
-        0 => ::log::Level::Error,
-        1 => ::log::Level::Warn,
-        2 => ::log::Level::Info,
-        3 => ::log::Level::Debug,
-        4 => ::log::Level::Trace,
+        1 => ::log::Level::Error,
+        2 => ::log::Level::Warn,
+        3 => ::log::Level::Info,
+        4 => ::log::Level::Debug,
+        5 => ::log::Level::Trace,
         _ => ::log::Level::Trace,
     };
 
@@ -54,11 +54,11 @@ pub fn create_bare<T, I>(
     create_fn: impl FnOnce(&Args, I, log::Level) -> Result<T, Error>,
 ) -> i32 {
     let level = match log_level {
-        0 => ::log::Level::Error,
-        1 => ::log::Level::Warn,
-        2 => ::log::Level::Info,
-        3 => ::log::Level::Debug,
-        4 => ::log::Level::Trace,
+        1 => ::log::Level::Error,
+        2 => ::log::Level::Warn,
+        3 => ::log::Level::Info,
+        4 => ::log::Level::Debug,
+        5 => ::log::Level::Trace,
         _ => ::log::Level::Trace,
     };
 

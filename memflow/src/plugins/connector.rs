@@ -3,18 +3,40 @@ use crate::mem::{PhysicalMemory, PhysicalMemoryMetadata, PhysicalReadData, Physi
 
 use super::util::*;
 use super::{
-    Args, GenericBaseTable, LibInstance, Loadable, OpaqueBaseTable, OptionMut,
-    MEMFLOW_PLUGIN_VERSION,
+    Args, GenericBaseTable, LibInstance, Loadable, OpaqueBaseTable, MEMFLOW_PLUGIN_VERSION,
 };
 
-use std::ffi::{c_void, CString};
-use std::os::raw::c_char;
+use crate::types::ReprCStr;
+
+use std::ffi::c_void;
+use std::mem::MaybeUninit;
 use std::path::Path;
 use std::sync::Arc;
 
 use libloading::Library;
 
 use log::*;
+
+pub type MUConnectorInstance = MaybeUninit<ConnectorInstance>;
+
+pub fn create_with_logging<T: 'static + PhysicalMemory + Clone>(
+    args: ReprCStr,
+    log_level: i32,
+    out: &mut MUConnectorInstance,
+    create_fn: impl Fn(&Args, log::Level) -> Result<T>,
+) -> i32 {
+    super::util::create_with_logging(args, log_level, out, |a, l| {
+        create_fn(&a, l).map(ConnectorInstance::new)
+    })
+}
+
+pub fn create_without_logging<T: 'static + PhysicalMemory + Clone>(
+    args: ReprCStr,
+    out: &mut MUConnectorInstance,
+    create_fn: impl Fn(&Args) -> Result<T>,
+) -> i32 {
+    super::util::create_without_logging(args, out, |a| create_fn(&a).map(ConnectorInstance::new))
+}
 
 /// Describes a connector
 #[repr(C)]
@@ -29,17 +51,15 @@ pub struct ConnectorDescriptor {
     /// This name will be used when loading a connector from a connector inventory.
     pub name: &'static str,
 
-    /// The vtable for all opaque function calls to the connector.
-    pub create_vtable: extern "C" fn() -> ConnectorFunctionTable,
+    /// Create instance of the connector
+    pub create: extern "C" fn(ReprCStr, Option<&mut c_void>, i32, &mut MUConnectorInstance) -> i32,
 }
-
-pub type ConnectorBaseTable = OpaqueBaseTable<OptionMut<c_void>>;
 
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct ConnectorFunctionTable {
     /// The vtable for object creation and cloning
-    pub base: ConnectorBaseTable,
+    pub base: OpaqueBaseTable,
     /// The vtable for all physical memory function calls to the connector.
     pub phys: OpaquePhysicalMemoryFunctionTable,
     // further optional table expansion with Option<&'static SomeFunctionTable>
@@ -47,11 +67,9 @@ pub struct ConnectorFunctionTable {
 }
 
 impl ConnectorFunctionTable {
-    pub fn create_vtable<T: PhysicalMemory + Clone>(
-        create: extern "C" fn(*const c_char, Option<&mut c_void>, i32) -> OptionMut<T>,
-    ) -> Self {
+    pub fn create_vtable<T: 'static + PhysicalMemory + Clone>() -> Self {
         Self {
-            base: GenericBaseTable::new(create).into_opaque(),
+            base: GenericBaseTable::<T>::new().into_opaque(),
             phys: PhysicalMemoryFunctionTable::<T>::default().into_opaque(),
         }
     }
@@ -120,6 +138,10 @@ extern "C" fn metadata_internal<T: PhysicalMemory>(phys_mem: &T) -> PhysicalMemo
     phys_mem.metadata()
 }
 
+// FFI depends on library option arc being null pointer optimizable
+const _: [(); std::mem::size_of::<Option<Arc<Library>>>()] =
+    [(); std::mem::size_of::<*mut c_void>()];
+
 /// Describes initialized connector instance
 ///
 /// This structure is returned by `Connector`. It is needed to maintain reference
@@ -136,7 +158,17 @@ pub struct ConnectorInstance {
     /// the instance is destroyed.
     ///
     /// If the library is unloaded prior to the instance this will lead to a SIGSEGV.
-    library: Arc<Library>,
+    library: Option<Arc<Library>>,
+}
+
+impl ConnectorInstance {
+    pub fn new<T: 'static + PhysicalMemory + Clone>(mem: T) -> Self {
+        Self {
+            instance: unsafe { Box::into_raw(Box::new(mem)).cast::<c_void>().as_mut() }.unwrap(),
+            vtable: ConnectorFunctionTable::create_vtable::<T>(),
+            library: None,
+        }
+    }
 }
 
 impl PhysicalMemory for ConnectorInstance {
@@ -210,21 +242,13 @@ impl Loadable for LoadableConnector {
     /// Creates a new connector instance from this library.
     ///
     /// The connector is initialized with the arguments provided to this function.
-    fn instantiate(&self, lib: Arc<Library>, args: &Args) -> Result<ConnectorInstance> {
-        let cstr = CString::new(args.to_string())
-            .map_err(|_| Error::Connector("args could not be parsed"))?;
-
-        let vtable = (self.descriptor.create_vtable)();
-
-        // We do not want to return error with data from the shared library
-        // that may get unloaded before it gets displayed
-        let instance = (vtable.base.create)(cstr.as_ptr(), None, log::max_level() as i32)
-            .ok_or(Error::Connector("create() failed"))?;
-
-        Ok(ConnectorInstance {
-            instance,
-            vtable,
-            library: lib,
+    fn instantiate(&self, library: Option<Arc<Library>>, args: &Args) -> Result<ConnectorInstance> {
+        let cstr = ReprCStr::from(args.to_string());
+        let mut out = MUConnectorInstance::uninit();
+        let res = (self.descriptor.create)(cstr, None, log::max_level() as i32, &mut out);
+        result_from_int(res, out).map(|mut c| {
+            c.library = library;
+            c
         })
     }
 }

@@ -5,7 +5,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
-typedef void *Arc_Library;
+typedef void *Option_Arc_Library;
 
 /**
  * Identifies the byte order of a architecture
@@ -46,43 +46,6 @@ typedef struct VirtualMemoryObj VirtualMemoryObj;
 typedef struct VirtualReadData VirtualReadData;
 
 typedef struct VirtualWriteData VirtualWriteData;
-
-typedef enum ArchitectureIdent_Tag {
-    /**
-     * Unknown architecture. Could be third-party implemented. memflow knows how to work on them,
-     * but is unable to instantiate them.
-     */
-    Unknown,
-    /**
-     * X86 with specified bitness and address extensions
-     *
-     * First argument - `bitness` controls whether it's 32, or 64 bit variant.
-     * Second argument - `address_extensions` control whether address extensions are
-     * enabled (PAE on x32, or LA57 on x64). Warning: LA57 is currently unsupported.
-     */
-    X86,
-    /**
-     * ARM 64-bit architecture with specified page size
-     *
-     * Valid page sizes are 4kb, 16kb, 64kb. Only 4kb is supported at the moment
-     */
-    AArch64,
-} ArchitectureIdent_Tag;
-
-typedef struct X86_Body {
-    uint8_t _0;
-    bool _1;
-} X86_Body;
-
-typedef struct ArchitectureIdent {
-    ArchitectureIdent_Tag tag;
-    union {
-        X86_Body x86;
-        struct {
-            uintptr_t a_arch64;
-        };
-    };
-} ArchitectureIdent;
 
 /**
  * This type represents a address on the target system.
@@ -153,15 +116,12 @@ typedef struct PhysicalAddress {
 
 typedef void *pvoid;
 
-typedef struct GenericBaseTable_c_void__OptionMut_c_void {
-    pvoid (*create)(const char *args, pvoid obj, int32_t log_level);
+typedef struct GenericBaseTable_c_void {
     pvoid (*clone)(const void *this);
     void (*drop)(void *this);
-} GenericBaseTable_c_void__OptionMut_c_void;
+} GenericBaseTable_c_void;
 
-typedef struct GenericBaseTable_c_void__OptionMut_c_void OpaqueBaseTable_OptionMut_c_void;
-
-typedef OpaqueBaseTable_OptionMut_c_void ConnectorBaseTable;
+typedef struct GenericBaseTable_c_void OpaqueBaseTable;
 
 typedef struct PhysicalMemoryMetadata {
     uintptr_t size;
@@ -180,7 +140,7 @@ typedef struct ConnectorFunctionTable {
     /**
      * The vtable for object creation and cloning
      */
-    ConnectorBaseTable base;
+    OpaqueBaseTable base;
     /**
      * The vtable for all physical memory function calls to the connector.
      */
@@ -205,23 +165,58 @@ typedef struct ConnectorInstance {
      *
      * If the library is unloaded prior to the instance this will lead to a SIGSEGV.
      */
-    Arc_Library library;
+    Option_Arc_Library library;
 } ConnectorInstance;
 
-typedef OpaqueBaseTable_OptionMut_c_void OSBaseTable;
-
-typedef struct Callback_c_void__c_void__Address {
+typedef struct Callback_c_void__Address {
     void *context;
-    bool (*func)(void*, void*, Address);
-} Callback_c_void__c_void__Address;
+    bool (*func)(void*, Address);
+} Callback_c_void__Address;
 
-typedef struct Callback_c_void__c_void__Address OpaqueCallback_c_void__Address;
+typedef struct Callback_c_void__Address OpaqueCallback_Address;
 
-typedef OpaqueCallback_c_void__Address AddressCallback_c_void;
+typedef OpaqueCallback_Address AddressCallback;
 
 typedef uint32_t PID;
 
 typedef int8_t *ReprCStr;
+
+typedef enum ArchitectureIdent_Tag {
+    /**
+     * Unknown architecture. Could be third-party implemented. memflow knows how to work on them,
+     * but is unable to instantiate them.
+     */
+    Unknown,
+    /**
+     * X86 with specified bitness and address extensions
+     *
+     * First argument - `bitness` controls whether it's 32, or 64 bit variant.
+     * Second argument - `address_extensions` control whether address extensions are
+     * enabled (PAE on x32, or LA57 on x64). Warning: LA57 is currently unsupported.
+     */
+    X86,
+    /**
+     * ARM 64-bit architecture with specified page size
+     *
+     * Valid page sizes are 4kb, 16kb, 64kb. Only 4kb is supported at the moment
+     */
+    AArch64,
+} ArchitectureIdent_Tag;
+
+typedef struct X86_Body {
+    uint8_t _0;
+    bool _1;
+} X86_Body;
+
+typedef struct ArchitectureIdent {
+    ArchitectureIdent_Tag tag;
+    union {
+        X86_Body x86;
+        struct {
+            uintptr_t a_arch64;
+        };
+    };
+} ArchitectureIdent;
 
 typedef struct ProcessInfo {
     /**
@@ -257,9 +252,23 @@ typedef struct ProcessInfo {
     struct ArchitectureIdent proc_arch;
 } ProcessInfo;
 
-typedef struct PluginProcessRef {
-    void *instance;
-} PluginProcessRef;
+typedef struct ProcessInfo MUProcessInfo;
+
+typedef const struct ArchitectureIdent *OptionArchitectureIdent;
+
+typedef struct ModuleAddressInfo {
+    Address address;
+    struct ArchitectureIdent arch;
+} ModuleAddressInfo;
+
+typedef struct Callback_c_void__ModuleAddressInfo {
+    void *context;
+    bool (*func)(void*, struct ModuleAddressInfo);
+} Callback_c_void__ModuleAddressInfo;
+
+typedef struct Callback_c_void__ModuleAddressInfo OpaqueCallback_ModuleAddressInfo;
+
+typedef OpaqueCallback_ModuleAddressInfo ModuleAddressCallback;
 
 typedef struct ModuleInfo {
     /**
@@ -312,6 +321,39 @@ typedef struct ModuleInfo {
     struct ArchitectureIdent arch;
 } ModuleInfo;
 
+typedef struct ModuleInfo MUModuleInfo;
+
+typedef Address MUAddress;
+
+typedef struct ProcessFunctionTable_c_void {
+    int32_t (*module_address_list_callback)(void *process, OptionArchitectureIdent target_arch, ModuleAddressCallback callback);
+    int32_t (*module_by_address)(void *process, Address address, struct ArchitectureIdent architecture, MUModuleInfo *out);
+    int32_t (*primary_module_address)(void *process, MUAddress *out);
+    const struct ProcessInfo *(*info)(const void *process);
+} ProcessFunctionTable_c_void;
+
+typedef struct ProcessFunctionTable_c_void OpaqueProcessFunctionTable;
+
+typedef struct VirtualMemoryFunctionTable_c_void {
+    int32_t (*virt_read_raw_list)(void *virt_mem, struct VirtualReadData *read_data, uintptr_t read_data_count);
+    int32_t (*virt_write_raw_list)(void *virt_mem, const struct VirtualWriteData *write_data, uintptr_t write_data_count);
+} VirtualMemoryFunctionTable_c_void;
+
+typedef struct VirtualMemoryFunctionTable_c_void OpaqueVirtualMemoryFunctionTable;
+
+typedef struct VirtualMemoryInstance {
+    void *instance;
+    OpaqueVirtualMemoryFunctionTable vtable;
+} VirtualMemoryInstance;
+
+typedef struct PluginProcess {
+    void *instance;
+    OpaqueProcessFunctionTable vtable;
+    struct VirtualMemoryInstance virt_mem;
+} PluginProcess;
+
+typedef struct PluginProcess MUPluginProcess;
+
 typedef struct KernelInfo {
     /**
      * Base address of the kernel
@@ -328,26 +370,21 @@ typedef struct KernelInfo {
 } KernelInfo;
 
 typedef struct KernelFunctionTable_c_void {
-    int32_t (*process_address_list_callback)(void *kernel, AddressCallback_c_void callback);
-    int32_t (*process_info_by_address)(void *kernel, Address address, struct ProcessInfo *out);
-    int32_t (*process_by_info)(void *kernel, struct ProcessInfo info, struct PluginProcessRef *out);
-    int32_t (*module_address_list_callback)(void *kernel, AddressCallback_c_void callback);
-    int32_t (*module_by_address)(void *kernel, Address address, struct ModuleInfo *out);
+    int32_t (*process_address_list_callback)(void *kernel, AddressCallback callback);
+    int32_t (*process_info_by_address)(void *kernel, Address address, MUProcessInfo *out);
+    int32_t (*process_by_info)(void *kernel, struct ProcessInfo info, MUPluginProcess *out);
+    int32_t (*module_address_list_callback)(void *kernel, AddressCallback callback);
+    int32_t (*module_by_address)(void *kernel, Address address, MUModuleInfo *out);
     const struct KernelInfo *(*info)(const void *kernel);
 } KernelFunctionTable_c_void;
 
 typedef struct KernelFunctionTable_c_void OpaqueKernelFunctionTable;
 
-typedef struct VirtualMemoryFunctionTable {
-    int32_t (*virt_read_raw_list)(void *virt_mem, struct VirtualReadData *read_data, uintptr_t read_data_count);
-    int32_t (*virt_write_raw_list)(void *virt_mem, const struct VirtualWriteData *write_data, uintptr_t write_data_count);
-} VirtualMemoryFunctionTable;
-
 typedef struct OSLayerFunctionTable {
     /**
      * The vtable for object creation and cloning
      */
-    OSBaseTable base;
+    OpaqueBaseTable base;
     /**
      * The vtable for all kernel functions
      */
@@ -359,7 +396,7 @@ typedef struct OSLayerFunctionTable {
     /**
      * The vtable for all virtual memory access if available
      */
-    const struct VirtualMemoryFunctionTable *virt;
+    const OpaqueVirtualMemoryFunctionTable *virt;
 } OSLayerFunctionTable;
 
 /**
@@ -380,7 +417,7 @@ typedef struct KernelInstance {
      *
      * If the library is unloaded prior to the instance this will lead to a SIGSEGV.
      */
-    Arc_Library library;
+    Option_Arc_Library library;
 } KernelInstance;
 
 #ifdef __cplusplus
@@ -392,8 +429,6 @@ extern const struct ArchitectureObj *X86_32;
 extern const struct ArchitectureObj *X86_32_PAE;
 
 extern const struct ArchitectureObj *X86_64;
-
-void gone(const struct ArchitectureIdent *_arch);
 
 void log_init(int32_t level_num);
 

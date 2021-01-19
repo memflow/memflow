@@ -1,9 +1,8 @@
 use super::{Args, OptionMut};
 use crate::error::Error;
+use crate::types::ReprCStr;
 use log::error;
-use std::ffi::CStr;
 use std::mem::MaybeUninit;
-use std::os::raw::c_char;
 
 pub extern "C" fn c_clone<T: Clone>(obj: &T) -> OptionMut<T> {
     let cloned_conn = Box::new(obj.clone());
@@ -19,15 +18,12 @@ pub unsafe extern "C" fn c_drop<T>(obj: &mut T) {
 ///
 /// This function will parse args into `Args`, log_level into `log::Level`,
 /// and call the create_fn
-///
-/// # Safety
-///
-/// args must be a valid null terminated string
-pub unsafe fn create_with_logging<T>(
-    args: *const c_char,
+pub fn create_with_logging<T>(
+    args: ReprCStr,
     log_level: i32,
-    create_fn: impl Fn(&Args, log::Level) -> Result<T, Error>,
-) -> std::option::Option<&'static mut T> {
+    out: &mut MaybeUninit<T>,
+    create_fn: impl Fn(Args, log::Level) -> Result<T, Error>,
+) -> i32 {
     let level = match log_level {
         0 => ::log::Level::Error,
         1 => ::log::Level::Warn,
@@ -37,47 +33,31 @@ pub unsafe fn create_with_logging<T>(
         _ => ::log::Level::Trace,
     };
 
-    let argsstr = CStr::from_ptr(args)
-        .to_str()
+    Args::parse(&args)
         .map_err(|e| {
-            ::log::error!("error converting connector args: {}", e);
+            ::log::error!("error parsing args: {}", e);
             e
         })
-        .ok()?;
-    let conn_args = Args::parse(argsstr)
-        .map_err(|e| {
-            ::log::error!("error parsing connector args: {}", e);
-            e
-        })
-        .ok()?;
-
-    let conn = Box::new(
-        create_fn(&conn_args, level)
-            .map_err(|e| {
+        .and_then(|args| {
+            create_fn(args, level).map_err(|e| {
                 ::log::error!("{}", e);
                 e
             })
-            .ok()?,
-    );
-    Some(Box::leak(conn))
+        })
+        .int_out_result(out)
 }
 
 /// Wrapper for instantiating object without logging
 ///
 /// This function will parse args into `Args`, and call the create_fn
-///
-/// # Safety
-///
-/// args must be a valid null terminated string
-pub unsafe fn create_without_logging<T>(
-    args: *const c_char,
-    create_fn: impl Fn(&super::Args) -> Result<T, Error>,
-) -> std::option::Option<&'static mut T> {
-    let argsstr = CStr::from_ptr(args).to_str().ok()?;
-    let conn_args = Args::parse(argsstr).ok()?;
-
-    let conn = Box::new(create_fn(&conn_args).ok()?);
-    Some(Box::leak(conn))
+pub fn create_without_logging<T>(
+    args: ReprCStr,
+    out: &mut MaybeUninit<T>,
+    create_fn: impl Fn(super::Args) -> Result<T, Error>,
+) -> i32 {
+    Args::parse(&args)
+        .and_then(|args| create_fn(args))
+        .int_out_result(out)
 }
 
 pub trait ToIntResult<T> {

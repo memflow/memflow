@@ -37,11 +37,12 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
         quote! {
             #[doc(hidden)]
             extern "C" fn mf_create(
-                args: *const ::std::os::raw::c_char,
+                args: ::memflow::types::ReprCStr,
                 _: Option<&mut ::std::os::raw::c_void>,
                 log_level: i32,
-            ) -> std::option::Option<&'static mut (impl ::memflow::mem::PhysicalMemory + Clone)> {
-                ::memflow::plugins::create_with_logging(args, log_level, #func_name)
+                out: &mut ::memflow::plugins::connector::MUConnectorInstance
+            ) -> i32 {
+                ::memflow::plugins::connector::create_with_logging(args, log_level, out, #func_name)
             }
         }
     } else {
@@ -51,29 +52,26 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
                 args: *const ::std::os::raw::c_char,
                 _: Option<&mut ::std::os::raw::c_void>,
                 _: i32,
-            ) -> std::option::Option<&'static mut (impl ::memflow::mem::PhysicalMemory + Clone)> {
-                ::memflow::plugins::create_without_logging(args, #func_name)
+                out: &mut ::memflow::plugins::connector::MUConnectorInstance
+            ) -> i32 {
+                ::memflow::plugins::connector::create_without_logging(args, out, #func_name)
             }
         }
     };
 
-    let mut gen = quote! {
+    let gen = quote! {
         #[doc(hidden)]
         #[no_mangle]
         pub static MEMFLOW_CONNECTOR: ::memflow::plugins::ConnectorDescriptor = ::memflow::plugins::ConnectorDescriptor {
             connector_version: ::memflow::plugins::MEMFLOW_PLUGIN_VERSION,
             name: #connector_name,
-            create_vtable: mf_create_vtable,
+            create: mf_create,
         };
 
-        extern "C" fn mf_create_vtable() -> ::memflow::plugins::ConnectorFunctionTable {
-            ::memflow::plugins::ConnectorFunctionTable::create_vtable(mf_create)
-        }
+        #create_gen
 
         #func
     };
-
-    gen.extend(create_gen);
 
     gen.into()
 }

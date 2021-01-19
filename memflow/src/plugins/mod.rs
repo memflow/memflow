@@ -24,7 +24,6 @@ pub use connector::{
 pub mod os;
 pub use os::{KernelInstance, OpaqueKernelFunctionTable};
 pub(crate) mod util;
-pub use util::{create_with_logging, create_without_logging};
 pub mod virt_mem;
 pub use virt_mem::{
     OpaqueVirtualMemoryFunctionTable, VirtualMemoryFunctionTable, VirtualMemoryInstance,
@@ -35,7 +34,6 @@ use crate::error::{Result, *};
 use log::*;
 use std::ffi::c_void;
 use std::fs::read_dir;
-use std::os::raw::c_char;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -46,33 +44,31 @@ pub const MEMFLOW_PLUGIN_VERSION: i32 = 8;
 
 pub type OptionMut<T> = Option<&'static mut T>;
 
-pub type OpaqueBaseTable<I> = GenericBaseTable<c_void, I>;
+pub type OpaqueBaseTable = GenericBaseTable<c_void>;
 
-impl<I> Copy for OpaqueBaseTable<I> {}
+impl Copy for OpaqueBaseTable {}
 
-impl<I> Clone for OpaqueBaseTable<I> {
+impl Clone for OpaqueBaseTable {
     fn clone(&self) -> Self {
         *self
     }
 }
 
 #[repr(C)]
-pub struct GenericBaseTable<T: 'static, I> {
-    pub create: extern "C" fn(args: *const c_char, obj: I, log_level: i32) -> OptionMut<T>,
+pub struct GenericBaseTable<T: 'static> {
     pub clone: extern "C" fn(this: &T) -> OptionMut<T>,
     pub drop: unsafe extern "C" fn(this: &mut T),
 }
 
-impl<T: Clone, I> GenericBaseTable<T, I> {
-    pub fn new(create: extern "C" fn(*const c_char, obj: I, i32) -> OptionMut<T>) -> Self {
+impl<T: Clone> GenericBaseTable<T> {
+    pub fn new() -> Self {
         Self {
-            create,
             clone: util::c_clone::<T>,
             drop: util::c_drop::<T>,
         }
     }
 
-    pub fn into_opaque(self) -> OpaqueBaseTable<I> {
+    pub fn into_opaque(self) -> OpaqueBaseTable {
         unsafe { std::mem::transmute(self) }
     }
 }
@@ -129,7 +125,7 @@ pub trait Loadable: Sized {
     ///
     /// This function assumes that `load` performed necessary safety checks
     /// for validity of the library.
-    fn instantiate(&self, lib: Arc<Library>, args: &Args) -> Result<Self::Instance>;
+    fn instantiate(&self, lib: Option<Arc<Library>>, args: &Args) -> Result<Self::Instance>;
 }
 
 pub struct Inventory {
@@ -304,9 +300,11 @@ impl Inventory {
     /// use memflow::mem::dummy::DummyMemory;
     /// use memflow::plugins::Args;
     /// use memflow::derive::connector;
+    /// use memflow::mem::PhysicalMemory;
     ///
     /// #[connector(name = "dummy")]
-    /// pub fn create_connector(_args: &Args, _log_level: log::Level) -> Result<DummyMemory> {
+    /// pub fn create_connector(_args: &Args, _log_level: log::Level) ->
+    ///     Result<impl PhysicalMemory + Clone> {
     ///     Ok(DummyMemory::new(size::mb(16)))
     /// }
     /// ```
@@ -327,7 +325,7 @@ impl Inventory {
                 );
                 Error::Connector("connector not found")
             })?;
-        lib.loader.instantiate(lib.library.clone(), args)
+        lib.loader.instantiate(Some(lib.library.clone()), args)
     }
 
     /// Creates an instance in the same way `instantiate` does but without any arguments provided.

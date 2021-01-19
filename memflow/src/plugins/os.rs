@@ -1,5 +1,6 @@
 //use crate::error::*;
 use crate::os::*;
+use crate::types::Address;
 
 pub mod kernel;
 pub use kernel::{KernelFunctionTable, KernelInstance, OpaqueKernelFunctionTable};
@@ -12,17 +13,22 @@ use super::{
     OpaqueBaseTable,
     /*Args, LibInstance, Loadable,*/ OpaquePhysicalMemoryFunctionTable,
     OpaqueVirtualMemoryFunctionTable,
-    OptionMut,
 };
-
-use std::ffi::c_void; //, CString};
-                      //use std::path::Path;
-                      //use std::mem::MaybeUninit;
 
 //use libloading::Library;
 //use std::sync::Arc;
 
 //use log::*;
+
+use std::mem::MaybeUninit;
+
+// Type aliases needed for &mut MaybeUninit<T> to work with bindgen
+pub type MUProcessInfo = MaybeUninit<ProcessInfo>;
+pub type MUModuleInfo = MaybeUninit<ModuleInfo>;
+pub type MUPluginProcess<'a> = MaybeUninit<PluginProcess<'a>>;
+pub type MUAddress = MaybeUninit<Address>;
+
+pub type OptionArchitectureIdent<'a> = Option<&'a crate::architecture::ArchitectureIdent>;
 
 #[repr(C)]
 pub struct OSLayerDescriptor {
@@ -40,13 +46,11 @@ pub struct OSLayerDescriptor {
     pub create_vtable: extern "C" fn() -> OSLayerFunctionTable,
 }
 
-pub type OSBaseTable = OpaqueBaseTable<OptionMut<c_void>>;
-
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct OSLayerFunctionTable {
     /// The vtable for object creation and cloning
-    pub base: OSBaseTable,
+    pub base: OpaqueBaseTable,
     /// The vtable for all kernel functions
     pub kernel: OpaqueKernelFunctionTable,
     /// The vtable for all physical memory access if available
@@ -55,15 +59,10 @@ pub struct OSLayerFunctionTable {
     pub virt: Option<&'static OpaqueVirtualMemoryFunctionTable>,
 }
 
-extern "C" fn none_create<T, I>(_: *const i8, _: Option<&mut I>, _: i32) -> Option<&'static mut T> {
-    None
-}
-
 impl OSLayerFunctionTable {
     pub fn new<'a, T: 'static + Kernel<'a> + Clone>() -> Self {
         OSLayerFunctionTable {
-            base: GenericBaseTable::<T, Option<&'static mut c_void>>::new(none_create)
-                .into_opaque(),
+            base: GenericBaseTable::<T>::new().into_opaque(),
             kernel: KernelFunctionTable::<T>::default().into_opaque(),
             phys: None,
             virt: None,

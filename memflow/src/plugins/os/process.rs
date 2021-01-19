@@ -1,10 +1,11 @@
 use super::super::{util::*, VirtualMemoryInstance};
+use super::OptionArchitectureIdent;
+use super::{MUAddress, MUModuleInfo};
 use crate::architecture::ArchitectureIdent;
 use crate::error::Result;
 use crate::os::{ModuleAddressCallback, ModuleInfo, Process, ProcessInfo};
 use crate::types::Address;
 use std::ffi::c_void;
-use std::mem::MaybeUninit;
 
 use libloading::Library;
 use std::sync::Arc;
@@ -23,17 +24,16 @@ impl Clone for OpaqueProcessFunctionTable {
 pub struct ProcessFunctionTable<T> {
     pub module_address_list_callback: extern "C" fn(
         process: &mut T,
-        target_arch: Option<&ArchitectureIdent>,
+        target_arch: OptionArchitectureIdent,
         callback: ModuleAddressCallback,
     ) -> i32,
     pub module_by_address: extern "C" fn(
         process: &mut T,
         address: Address,
         architecture: ArchitectureIdent,
-        out: &mut MaybeUninit<ModuleInfo>,
+        out: &mut MUModuleInfo,
     ) -> i32,
-    pub primary_module_address:
-        extern "C" fn(process: &mut T, out: &mut MaybeUninit<Address>) -> i32,
+    pub primary_module_address: extern "C" fn(process: &mut T, out: &mut MUAddress) -> i32,
     pub info: extern "C" fn(process: &T) -> &ProcessInfo,
 }
 
@@ -64,7 +64,7 @@ extern "C" fn c_virt_mem<T: Process>(process: &mut T) -> &mut c_void {
 
 extern "C" fn c_module_address_list_callback<T: Process>(
     process: &mut T,
-    target_arch: Option<&ArchitectureIdent>,
+    target_arch: OptionArchitectureIdent,
     callback: ModuleAddressCallback,
 ) -> i32 {
     process
@@ -76,17 +76,14 @@ extern "C" fn c_module_by_address<T: Process>(
     process: &mut T,
     address: Address,
     target_arch: ArchitectureIdent,
-    out: &mut MaybeUninit<ModuleInfo>,
+    out: &mut MUModuleInfo,
 ) -> i32 {
     process
         .module_by_address(address, target_arch)
         .int_out_result(out)
 }
 
-extern "C" fn c_primary_module_address<T: Process>(
-    process: &mut T,
-    out: &mut MaybeUninit<Address>,
-) -> i32 {
+extern "C" fn c_primary_module_address<T: Process>(process: &mut T, out: &mut MUAddress) -> i32 {
     process.primary_module_address().int_out_result(out)
 }
 
@@ -126,7 +123,7 @@ impl<'a> Process for PluginProcess<'a> {
 
     fn module_address_list_callback(
         &mut self,
-        target_arch: Option<&ArchitectureIdent>,
+        target_arch: OptionArchitectureIdent,
         callback: ModuleAddressCallback,
     ) -> Result<()> {
         let res = (self.vtable.module_address_list_callback)(self.instance, target_arch, callback);
@@ -138,13 +135,13 @@ impl<'a> Process for PluginProcess<'a> {
         address: Address,
         architecture: ArchitectureIdent,
     ) -> Result<ModuleInfo> {
-        let mut out = MaybeUninit::uninit();
+        let mut out = MUModuleInfo::uninit();
         let res = (self.vtable.module_by_address)(self.instance, address, architecture, &mut out);
         result_from_int(res, out)
     }
 
     fn primary_module_address(&mut self) -> Result<Address> {
-        let mut out = MaybeUninit::uninit();
+        let mut out = MUAddress::uninit();
         let res = (self.vtable.primary_module_address)(self.instance, &mut out);
         result_from_int(res, out)
     }
@@ -178,7 +175,7 @@ impl Process for ArcPluginProcess {
 
     fn module_address_list_callback(
         &mut self,
-        target_arch: Option<&ArchitectureIdent>,
+        target_arch: OptionArchitectureIdent,
         callback: ModuleAddressCallback,
     ) -> Result<()> {
         self.inner

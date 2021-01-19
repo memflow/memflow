@@ -5,7 +5,8 @@ use super::{ArcPluginProcess, OSLayerFunctionTable, PluginProcess};
 use crate::os::{AddressCallback, Kernel, KernelInfo, ModuleInfo, ProcessInfo};
 use crate::types::Address;
 use std::ffi::c_void;
-use std::mem::MaybeUninit;
+
+use super::{MUModuleInfo, MUPluginProcess, MUProcessInfo};
 
 use libloading::Library;
 use std::sync::Arc;
@@ -25,16 +26,13 @@ pub struct KernelFunctionTable<'a, T> {
     pub process_address_list_callback:
         extern "C" fn(kernel: &mut T, callback: AddressCallback) -> i32,
     pub process_info_by_address:
-        extern "C" fn(kernel: &mut T, address: Address, out: &mut MaybeUninit<ProcessInfo>) -> i32,
-    pub process_by_info: extern "C" fn(
-        kernel: &'a mut T,
-        info: ProcessInfo,
-        out: &mut MaybeUninit<PluginProcess<'a>>,
-    ) -> i32,
+        extern "C" fn(kernel: &mut T, address: Address, out: &mut MUProcessInfo) -> i32,
+    pub process_by_info:
+        extern "C" fn(kernel: &'a mut T, info: ProcessInfo, out: &mut MUPluginProcess<'a>) -> i32,
     pub module_address_list_callback:
         extern "C" fn(kernel: &mut T, callback: AddressCallback) -> i32,
     pub module_by_address:
-        extern "C" fn(kernel: &mut T, address: Address, out: &mut MaybeUninit<ModuleInfo>) -> i32,
+        extern "C" fn(kernel: &mut T, address: Address, out: &mut MUModuleInfo) -> i32,
     pub info: extern "C" fn(kernel: &T) -> &KernelInfo,
 }
 
@@ -67,7 +65,7 @@ extern "C" fn c_process_address_list_callback<'a, T: Kernel<'a>>(
 extern "C" fn c_process_info_by_address<'a, T: Kernel<'a>>(
     kernel: &mut T,
     address: Address,
-    out: &mut MaybeUninit<ProcessInfo>,
+    out: &mut MUProcessInfo,
 ) -> i32 {
     kernel.process_info_by_address(address).int_out_result(out)
 }
@@ -75,7 +73,7 @@ extern "C" fn c_process_info_by_address<'a, T: Kernel<'a>>(
 extern "C" fn c_process_by_info<'a, T: 'a + Kernel<'a>>(
     kernel: &'a mut T,
     info: ProcessInfo,
-    out: &mut MaybeUninit<PluginProcess<'a>>,
+    out: &mut MUPluginProcess<'a>,
 ) -> i32 {
     kernel
         .process_by_info(info)
@@ -93,7 +91,7 @@ extern "C" fn c_module_address_list_callback<'a, T: Kernel<'a>>(
 extern "C" fn c_module_by_address<'a, T: Kernel<'a>>(
     kernel: &mut T,
     address: Address,
-    out: &mut MaybeUninit<ModuleInfo>,
+    out: &mut MUModuleInfo,
 ) -> i32 {
     kernel.module_by_address(address).int_out_result(out)
 }
@@ -150,7 +148,7 @@ impl<'a> Kernel<'a> for KernelInstance {
 
     /// Find process information by its internal address
     fn process_info_by_address(&mut self, address: Address) -> Result<ProcessInfo> {
-        let mut out = MaybeUninit::uninit();
+        let mut out = MUProcessInfo::uninit();
         let res = (self.vtable.kernel.process_info_by_address)(self.instance, address, &mut out);
         result_from_int(res, out)
     }
@@ -159,7 +157,7 @@ impl<'a> Kernel<'a> for KernelInstance {
     ///
     /// It will share the underlying memory resources
     fn process_by_info(&'a mut self, info: ProcessInfo) -> Result<Self::ProcessType> {
-        let mut out = MaybeUninit::uninit();
+        let mut out = MUPluginProcess::uninit();
         // Shorten the lifetime of instance
         let instance = unsafe { (self.instance as *mut c_void).as_mut() }.unwrap();
         let res = (self.vtable.kernel.process_by_info)(instance, info, &mut out);
@@ -189,7 +187,7 @@ impl<'a> Kernel<'a> for KernelInstance {
     /// # Arguments
     /// * `address` - address where module's information resides in
     fn module_by_address(&mut self, address: Address) -> Result<ModuleInfo> {
-        let mut out = MaybeUninit::uninit();
+        let mut out = MUModuleInfo::uninit();
         let res = (self.vtable.kernel.module_by_address)(self.instance, address, &mut out);
         result_from_int(res, out)
     }

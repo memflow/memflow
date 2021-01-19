@@ -4,7 +4,7 @@ use std::time::{Duration, Instant};
 use clap::*;
 use log::Level;
 
-use memflow::error::Result;
+use memflow::error::{Error, Result};
 use memflow::mem::*;
 use memflow::os::{Kernel, ModuleInfo, Process};
 use memflow::plugins::*;
@@ -90,17 +90,7 @@ fn rwtest(
     );
 }
 
-//fn read_bench<T: PhysicalMemory + Clone + 'static, V: VirtualTranslate + Clone + 'static>(
-//    phys_mem: T,
-//    vat: V,
-//    kernel_info: Win32KernelInfo,
-//) -> Result<()> {
-fn read_bench(kernel: &mut impl Kernel) -> Result<()> {
-    /*let offsets = Win32Offsets::builder().kernel_info(&kernel_info).build()?;
-    let /*mut*/ kernel = Win32Kernel::new(phys_mem, vat, offsets, kernel_info);
-
-    let mut kernel = KernelInstance::new(kernel);*/
-
+fn read_bench(mut kernel: impl Kernel) -> Result<()> {
     let proc_list = kernel.process_info_list()?;
     let mut rng = CurRng::seed_from_u64(rand::thread_rng().gen_range(0, !0u64));
     loop {
@@ -146,7 +136,21 @@ fn read_bench(kernel: &mut impl Kernel) -> Result<()> {
 }
 
 fn main() -> Result<()> {
-    let matches = App::new("read_keys example")
+    let (connector, conn_args, os, os_args, log_level) = parse_args()?;
+
+    simple_logger::SimpleLogger::new()
+        .with_level(log_level.to_level_filter())
+        .init()
+        .unwrap();
+
+    // create connector + os
+    let kernel = Inventory::build_simple_os(&connector, &conn_args, &os, &os_args)?;
+
+    read_bench(kernel)
+}
+
+fn parse_args() -> Result<(String, Args, String, Args, log::Level)> {
+    let matches = App::new("read_bench example")
         .version(crate_version!())
         .author(crate_authors!())
         .arg(Arg::with_name("verbose").short("v").multiple(true))
@@ -158,9 +162,23 @@ fn main() -> Result<()> {
                 .required(true),
         )
         .arg(
-            Arg::with_name("args")
-                .long("args")
-                .short("a")
+            Arg::with_name("conn-args")
+                .long("conn-args")
+                .short("x")
+                .takes_value(true)
+                .default_value(""),
+        )
+        .arg(
+            Arg::with_name("os")
+                .long("os")
+                .short("o")
+                .takes_value(true)
+                .required(true),
+        )
+        .arg(
+            Arg::with_name("os-args")
+                .long("os-args")
+                .short("y")
                 .takes_value(true)
                 .default_value(""),
         )
@@ -175,44 +193,26 @@ fn main() -> Result<()> {
         4 => Level::Trace,
         _ => Level::Trace,
     };
-    simple_logger::SimpleLogger::new()
-        .with_level(level.to_level_filter())
-        .init()
-        .unwrap();
 
-    // create inventory + connector
-    let inventory = unsafe { Inventory::scan() };
-    let connector = inventory
-        .create_connector(
-            matches.value_of("connector").unwrap(),
-            None,
-            &Args::parse(matches.value_of("args").unwrap()).unwrap(),
-        )
-        .unwrap();
-
-    let mut kernel = inventory
-        .create_os("win32", connector, &Args::default())
-        .unwrap();
-
-    println!("Benchmarking uncached reads:");
-    read_bench(&mut kernel).unwrap();
-    //read_bench(connector, vat, kernel_info).unwrap();
-
-    println!();
-    println!("Benchmarking cached reads:");
-    /*let mut mem_cached = CachedMemoryAccess::builder(&mut connector)
-        .arch(kernel_info.base_info.arch)
-        .build()
-        .unwrap();
-
-    let mut vat_cached = CachedVirtualTranslate::builder(vat)
-        .arch(kernel_info.base_info.arch)
-        .build()
-        .unwrap();*/
-
-    //read_bench(&mut mem_cached, &mut vat_cached, kernel_info).unwrap();
-
-    //println!("TLB Hits {}\nTLB Miss {}", vat_cached.hitc, vat_cached.misc);
-
-    Ok(())
+    Ok((
+        matches
+            .value_of("connector")
+            .ok_or(Error::Other("failed to parse connector"))?
+            .into(),
+        Args::parse(
+            matches
+                .value_of("conn-args")
+                .ok_or(Error::Other("failed to parse connector args"))?,
+        )?,
+        matches
+            .value_of("os")
+            .ok_or(Error::Other("failed to parse os"))?
+            .into(),
+        Args::parse(
+            matches
+                .value_of("os-args")
+                .ok_or(Error::Other("failed to parse os args"))?,
+        )?,
+        level,
+    ))
 }

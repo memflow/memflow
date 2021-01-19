@@ -98,18 +98,14 @@ pub trait Loadable: Sized {
     /// the loaded library implements the necessary interface manually.
     ///
     /// It is adviced to use a provided proc macro to define a valid library.
-    unsafe fn load(library: &CArc<Library>, path: impl AsRef<Path>) -> Result<LibInstance<Self>>;
+    fn load(library: &CArc<Library>, path: impl AsRef<Path>) -> Result<LibInstance<Self>>;
 
     /// # Safety
     ///
     /// Loading third party libraries is inherently unsafe and the compiler
     /// cannot guarantee that the implementation of the library matches the one
     /// specified here.
-    unsafe fn load_into(
-        lib: &CArc<Library>,
-        path: impl AsRef<Path>,
-        out: &mut Vec<LibInstance<Self>>,
-    ) {
+    fn load_into(lib: &CArc<Library>, path: impl AsRef<Path>, out: &mut Vec<LibInstance<Self>>) {
         if let Ok(lib) = Self::load(lib, &path) {
             if !lib.loader.exists(out) {
                 info!(
@@ -149,24 +145,16 @@ impl Inventory {
     /// Creates a new inventory of plugins from the provided path.
     /// The path has to be a valid directory or the function will fail with an `Error::IO` error.
     ///
-    /// # Safety
-    ///
-    /// Loading third party libraries is inherently unsafe and the compiler
-    /// cannot guarantee that the implementation of the library
-    /// matches the one specified here. This is especially true if
-    /// the loaded library implements the necessary interface manually.
-    ///
     /// # Examples
     ///
     /// Creating a inventory:
     /// ```
     /// use memflow::plugins::Inventory;
     ///
-    /// let inventory = unsafe {
-    ///     Inventory::scan_path("./")
-    /// }.unwrap();
+    /// let inventory = Inventory::scan_path("./")
+    ///     .unwrap();
     /// ```
-    pub unsafe fn scan_path<P: AsRef<Path>>(path: P) -> Result<Self> {
+    pub fn scan_path<P: AsRef<Path>>(path: P) -> Result<Self> {
         let mut dir = PathBuf::default();
         dir.push(path);
 
@@ -184,24 +172,15 @@ impl Inventory {
     /// and "HOME/.local/lib" on all OSes) for "memflow" directory, and if there is one, then
     /// search for libraries in there.
     ///
-    /// # Safety
-    ///
-    /// Loading third party libraries is inherently unsafe and the compiler
-    /// cannot guarantee that the implementation of the library
-    /// matches the one specified here. This is especially true if
-    /// the loaded library implements the necessary interface manually.
-    ///
     /// # Examples
     ///
     /// Creating an inventory:
     /// ```
     /// use memflow::plugins::Inventory;
     ///
-    /// let inventory = unsafe {
-    ///     Inventory::scan()
-    /// };
+    /// let inventory = Inventory::scan();
     /// ```
-    pub unsafe fn scan() -> Self {
+    pub fn scan() -> Self {
         #[cfg(unix)]
         let extra_paths: Vec<&str> = vec![
             "/opt",
@@ -258,7 +237,7 @@ impl Inventory {
     ///
     /// Same as previous functions - compiler can not guarantee the safety of
     /// third party library implementations.
-    pub unsafe fn add_dir(&mut self, dir: PathBuf) -> Result<&mut Self> {
+    pub fn add_dir(&mut self, dir: PathBuf) -> Result<&mut Self> {
         if !dir.is_dir() {
             return Err(Error::IO("invalid path argument"));
         }
@@ -305,12 +284,10 @@ impl Inventory {
     /// ```no_run
     /// use memflow::plugins::{Inventory, Args};
     ///
-    /// let inventory = unsafe {
-    ///     Inventory::scan_path("./")
-    /// }.unwrap();
-    /// let connector = unsafe {
-    ///     inventory.create_connector("coredump", None, &Args::new())
-    /// }.unwrap();
+    /// let inventory = Inventory::scan_path("./").unwrap();
+    /// let connector = inventory
+    ///     .create_connector("coredump", None, &Args::new())
+    ///     .unwrap();
     /// ```
     ///
     /// Defining a dynamically loaded connector:
@@ -382,12 +359,10 @@ impl Inventory {
     /// ```no_run
     /// use memflow::plugins::{Inventory, Args};
     ///
-    /// let inventory = unsafe {
-    ///     Inventory::scan_path("./")
-    /// }.unwrap();
-    /// let connector = unsafe {
-    ///     inventory.create_connector_default("coredump")
-    /// }.unwrap();
+    /// let inventory =
+    ///     Inventory::scan_path("./").unwrap();
+    /// let connector = inventory.create_connector_default("coredump")
+    ///     .unwrap();
     /// ```
     pub fn create_connector_default(&self, name: &str) -> Result<ConnectorInstance> {
         self.create_connector(name, None, &Args::default())
@@ -395,6 +370,27 @@ impl Inventory {
 
     pub fn create_os(&self, name: &str, input: OSInputArg, args: &Args) -> Result<KernelInstance> {
         Self::create_internal(&self.os_layers, name, input, args)
+    }
+
+    pub fn create_simple_os(
+        &self,
+        conn_name: &str,
+        conn_args: &Args,
+        os_name: &str,
+        os_args: &Args,
+    ) -> Result<KernelInstance> {
+        let conn = self.create_connector(conn_name, None, conn_args)?;
+        self.create_os(os_name, conn, os_args)
+    }
+
+    pub fn build_simple_os(
+        conn_name: &str,
+        conn_args: &Args,
+        os_name: &str,
+        os_args: &Args,
+    ) -> Result<KernelInstance> {
+        let inv = Self::scan();
+        inv.create_simple_os(conn_name, conn_args, os_name, os_args)
     }
 }
 

@@ -27,6 +27,8 @@ pub use os::{KernelInstance, LoadableOS, OSLayerDescriptor, OpaqueKernelFunction
 pub type OSInputArg = <LoadableOS as Loadable>::InputArg;
 
 pub(crate) mod util;
+pub use util::create_bare;
+
 pub mod virt_mem;
 pub use virt_mem::{
     OpaqueVirtualMemoryFunctionTable, VirtualMemoryFunctionTable, VirtualMemoryInstance,

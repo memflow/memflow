@@ -46,6 +46,36 @@ pub fn create_with_logging<T>(
         .int_out_result(out)
 }
 
+pub fn create_bare<T, I>(
+    args: ReprCStr,
+    input: I,
+    log_level: i32,
+    out: &mut MaybeUninit<T>,
+    create_fn: impl FnOnce(&Args, I, log::Level) -> Result<T, Error>,
+) -> i32 {
+    let level = match log_level {
+        0 => ::log::Level::Error,
+        1 => ::log::Level::Warn,
+        2 => ::log::Level::Info,
+        3 => ::log::Level::Debug,
+        4 => ::log::Level::Trace,
+        _ => ::log::Level::Trace,
+    };
+
+    Args::parse(&args)
+        .map_err(|e| {
+            ::log::error!("error parsing args: {}", e);
+            e
+        })
+        .and_then(|args| {
+            create_fn(&args, input, level).map_err(|e| {
+                ::log::error!("{}", e);
+                e
+            })
+        })
+        .int_out_result(out)
+}
+
 /// Wrapper for instantiating object without logging
 ///
 /// This function will parse args into `Args`, and call the create_fn

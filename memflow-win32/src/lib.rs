@@ -25,24 +25,4 @@ pub mod prelude {
 }
 
 #[cfg(feature = "plugins")]
-mod plugin {
-    use memflow::derive::os_layer;
-    use memflow::os::Kernel;
-    use memflow::plugins::{Args, ConnectorInstance};
-
-    #[os_layer(name = "win32")]
-    pub fn build_kernel(
-        _args: &Args,
-        mem: ConnectorInstance,
-        log_level: log::Level,
-    ) -> memflow::error::Result<impl Kernel + Clone> {
-        simple_logger::SimpleLogger::new()
-            .with_level(log_level.to_level_filter())
-            .init()
-            .ok();
-        crate::win32::Win32Kernel::builder(mem)
-            .build_default_caches()
-            .build()
-            .map_err(From::from)
-    }
-}
+pub mod plugins;

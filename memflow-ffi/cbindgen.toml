@@ -7,6 +7,8 @@ style = "both"
 #no_includes = true
 cpp_compat = true
 
+after_includes = "typedef void *Library;"
+
 [parse]
 parse_deps = true
 

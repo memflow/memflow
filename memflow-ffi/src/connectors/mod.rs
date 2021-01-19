@@ -60,7 +60,7 @@ pub unsafe extern "C" fn inventory_add_dir(inv: &mut Inventory, dir: *const c_ch
 ///
 /// This creates an instance of `ConnectorInstance`.
 ///
-/// This instance needs to be freed using `connector_free`.
+/// This instance needs to be dropped using `connector_drop`.
 ///
 /// # Arguments
 ///
@@ -139,19 +139,17 @@ pub unsafe extern "C" fn inventory_create_os(
 /// Clone a connector
 ///
 /// This method is useful when needing to perform multithreaded operations, as a connector is not
-/// guaranteed to be thread safe. Every single cloned instance also needs to be freed using
-/// `connector_free`.
+/// guaranteed to be thread safe. Every single cloned instance also needs to be dropped using
+/// `connector_drop`.
 ///
 /// # Safety
 ///
 /// `conn` has to point to a a valid `CloneablePhysicalMemory` created by one of the provided
 /// functions.
 #[no_mangle]
-pub unsafe extern "C" fn connector_clone(
-    conn: &ConnectorInstance,
-) -> &'static mut ConnectorInstance {
+pub unsafe extern "C" fn connector_clone(conn: &ConnectorInstance, out: &mut MUConnectorInstance) {
     trace!("connector_clone: {:?}", conn as *const _);
-    Box::leak(Box::new(conn.clone()))
+    *out.as_mut_ptr() = conn.clone();
 }
 
 /// Free a connector instance
@@ -164,9 +162,9 @@ pub unsafe extern "C" fn connector_clone(
 /// There has to be no instance of `PhysicalMemory` created from the input `conn`, because they
 /// will become invalid.
 #[no_mangle]
-pub unsafe extern "C" fn connector_free(conn: &'static mut ConnectorInstance) {
-    trace!("connector_free: {:?}", conn as *mut _);
-    let _ = Box::from_raw(conn);
+pub unsafe extern "C" fn connector_drop(conn: &mut ConnectorInstance) {
+    trace!("connector_drop: {:?}", conn as *mut _);
+    std::ptr::drop_in_place(conn)
 }
 
 /// Free a connector inventory

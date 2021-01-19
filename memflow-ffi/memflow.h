@@ -5,6 +5,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
+typedef void *Library;
 
 /**
  * Identifies the byte order of a architecture
@@ -35,8 +36,6 @@ typedef uint8_t Endianess;
 typedef struct ArchitectureObj ArchitectureObj;
 
 typedef struct Inventory Inventory;
-
-typedef struct Option_CArc_Library Option_CArc_Library;
 
 typedef struct Option______Library Option______Library;
 
@@ -119,8 +118,12 @@ typedef struct PhysicalAddress {
 
 typedef void *pvoid;
 
-typedef struct GenericBaseTable_c_void {
+typedef struct GenericCloneTable_c_void {
     pvoid (*clone)(const void *this);
+} GenericCloneTable_c_void;
+
+typedef struct GenericBaseTable_c_void {
+    struct GenericCloneTable_c_void clone;
     void (*drop)(void *this);
 } GenericBaseTable_c_void;
 
@@ -341,6 +344,8 @@ typedef struct ProcessFunctionTable_c_void {
     int32_t (*module_by_address)(void *process, Address address, struct ArchitectureIdent architecture, MUModuleInfo *out);
     int32_t (*primary_module_address)(void *process, MUAddress *out);
     const struct ProcessInfo *(*info)(const void *process);
+    void *(*virt_mem)(void *process);
+    void (*drop)(void *this);
 } ProcessFunctionTable_c_void;
 
 typedef struct ProcessFunctionTable_c_void OpaqueProcessFunctionTable;
@@ -365,6 +370,16 @@ typedef struct PluginProcess {
 
 typedef struct PluginProcess MUPluginProcess;
 
+typedef struct GenericCloneTable_c_void OpaqueCloneTable;
+
+typedef struct ArcPluginProcess {
+    struct PluginProcess inner;
+    OpaqueCloneTable clone;
+    struct COptArc_Library library;
+} ArcPluginProcess;
+
+typedef struct ArcPluginProcess MUArcPluginProcess;
+
 typedef struct KernelInfo {
     /**
      * Base address of the kernel
@@ -380,16 +395,17 @@ typedef struct KernelInfo {
     struct ArchitectureIdent arch;
 } KernelInfo;
 
-typedef struct KernelFunctionTable_c_void {
+typedef struct KernelFunctionTable_c_void__c_void {
     int32_t (*process_address_list_callback)(void *kernel, AddressCallback callback);
     int32_t (*process_info_by_address)(void *kernel, Address address, MUProcessInfo *out);
     int32_t (*process_by_info)(void *kernel, struct ProcessInfo info, MUPluginProcess *out);
+    int32_t (*into_process_by_info)(void *kernel, struct ProcessInfo info, struct COptArc_Library lib, MUArcPluginProcess *out);
     int32_t (*module_address_list_callback)(void *kernel, AddressCallback callback);
     int32_t (*module_by_address)(void *kernel, Address address, MUModuleInfo *out);
     const struct KernelInfo *(*info)(const void *kernel);
-} KernelFunctionTable_c_void;
+} KernelFunctionTable_c_void__c_void;
 
-typedef struct KernelFunctionTable_c_void OpaqueKernelFunctionTable;
+typedef struct KernelFunctionTable_c_void__c_void OpaqueKernelFunctionTable;
 
 typedef struct OSLayerFunctionTable {
     /**
@@ -428,7 +444,7 @@ typedef struct KernelInstance {
      *
      * If the library is unloaded prior to the instance this will lead to a SIGSEGV.
      */
-    struct Option_CArc_Library library;
+    struct COptArc_Library library;
 } KernelInstance;
 
 typedef struct KernelInstance MUKernelInstance;
@@ -490,7 +506,7 @@ int32_t inventory_add_dir(struct Inventory *inv, const char *dir);
  *
  * This creates an instance of `ConnectorInstance`.
  *
- * This instance needs to be freed using `connector_free`.
+ * This instance needs to be dropped using `connector_drop`.
  *
  * # Arguments
  *
@@ -538,15 +554,15 @@ int32_t inventory_create_os(struct Inventory *inv,
  * Clone a connector
  *
  * This method is useful when needing to perform multithreaded operations, as a connector is not
- * guaranteed to be thread safe. Every single cloned instance also needs to be freed using
- * `connector_free`.
+ * guaranteed to be thread safe. Every single cloned instance also needs to be dropped using
+ * `connector_drop`.
  *
  * # Safety
  *
  * `conn` has to point to a a valid `CloneablePhysicalMemory` created by one of the provided
  * functions.
  */
-struct ConnectorInstance *connector_clone(const struct ConnectorInstance *conn);
+void connector_clone(const struct ConnectorInstance *conn, MUConnectorInstance *out);
 
 /**
  * Free a connector instance
@@ -559,7 +575,7 @@ struct ConnectorInstance *connector_clone(const struct ConnectorInstance *conn);
  * There has to be no instance of `PhysicalMemory` created from the input `conn`, because they
  * will become invalid.
  */
-void connector_free(struct ConnectorInstance *conn);
+void connector_drop(struct ConnectorInstance *conn);
 
 /**
  * Free a connector inventory

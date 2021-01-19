@@ -350,9 +350,63 @@ typedef struct ProcessFunctionTable_c_void {
 
 typedef struct ProcessFunctionTable_c_void OpaqueProcessFunctionTable;
 
+/**
+ * A `Page` holds information about a memory page.
+ *
+ * More information about paging can be found [here](https://en.wikipedia.org/wiki/Paging).
+ */
+typedef struct Page {
+    /**
+     * Contains the page type (see above).
+     */
+    PageType page_type;
+    /**
+     * Contains the base address of this page.
+     */
+    Address page_base;
+    /**
+     * Contains the size of this page.
+     */
+    uintptr_t page_size;
+} Page;
+
+typedef struct Page MUPage;
+
+typedef struct TranslationChunk {
+    Address _0;
+    uintptr_t _1;
+    struct PhysicalAddress _2;
+} TranslationChunk;
+
+typedef struct Callback_c_void__TranslationChunk {
+    void *context;
+    bool (*func)(void*, struct TranslationChunk);
+} Callback_c_void__TranslationChunk;
+
+typedef struct Callback_c_void__TranslationChunk OpaqueCallback_TranslationChunk;
+
+typedef OpaqueCallback_TranslationChunk TranslationMapCallback;
+
+typedef struct PageMapChunk {
+    Address _0;
+    uintptr_t _1;
+} PageMapChunk;
+
+typedef struct Callback_c_void__PageMapChunk {
+    void *context;
+    bool (*func)(void*, struct PageMapChunk);
+} Callback_c_void__PageMapChunk;
+
+typedef struct Callback_c_void__PageMapChunk OpaqueCallback_PageMapChunk;
+
+typedef OpaqueCallback_PageMapChunk PageMapCallback;
+
 typedef struct VirtualMemoryFunctionTable_c_void {
     int32_t (*virt_read_raw_list)(void *virt_mem, struct VirtualReadData *read_data, uintptr_t read_data_count);
     int32_t (*virt_write_raw_list)(void *virt_mem, const struct VirtualWriteData *write_data, uintptr_t write_data_count);
+    int32_t (*virt_page_info)(void *virt_mem, Address addr, MUPage *out);
+    void (*virt_translation_map_range)(void *virt_mem, Address start, Address end, TranslationMapCallback out);
+    void (*virt_page_map_range)(void *virt_mem, uintptr_t gap_size, Address start, Address end, PageMapCallback out);
 } VirtualMemoryFunctionTable_c_void;
 
 typedef struct VirtualMemoryFunctionTable_c_void OpaqueVirtualMemoryFunctionTable;

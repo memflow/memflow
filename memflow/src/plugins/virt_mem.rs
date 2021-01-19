@@ -1,10 +1,11 @@
 use crate::error::*;
 use crate::mem::{VirtualMemory, VirtualReadData, VirtualWriteData};
 use crate::types::Address;
-use crate::types::{Page, PhysicalAddress};
+use crate::types::{OpaqueCallback, Page, PhysicalAddress};
 use std::ffi::c_void;
 
 pub type OpaqueVirtualMemoryFunctionTable = VirtualMemoryFunctionTable<c_void>;
+pub type MUPage = std::mem::MaybeUninit<Page>;
 
 impl Copy for OpaqueVirtualMemoryFunctionTable {}
 
@@ -13,6 +14,16 @@ impl Clone for OpaqueVirtualMemoryFunctionTable {
         *self
     }
 }
+
+#[repr(C)]
+pub struct TranslationChunk(pub Address, pub usize, pub PhysicalAddress);
+
+pub type TranslationMapCallback<'a> = OpaqueCallback<'a, TranslationChunk>;
+
+#[repr(C)]
+pub struct PageMapChunk(pub Address, pub usize);
+
+pub type PageMapCallback<'a> = OpaqueCallback<'a, PageMapChunk>;
 
 #[repr(C)]
 pub struct VirtualMemoryFunctionTable<T> {
@@ -26,6 +37,16 @@ pub struct VirtualMemoryFunctionTable<T> {
         write_data: *const VirtualWriteData,
         write_data_count: usize,
     ) -> i32,
+    pub virt_page_info: extern "C" fn(virt_mem: &mut T, addr: Address, out: &mut MUPage) -> i32,
+    pub virt_translation_map_range:
+        extern "C" fn(virt_mem: &mut T, start: Address, end: Address, out: TranslationMapCallback),
+    pub virt_page_map_range: extern "C" fn(
+        virt_mem: &mut T,
+        gap_size: usize,
+        start: Address,
+        end: Address,
+        out: PageMapCallback,
+    ),
 }
 
 impl<T: VirtualMemory + Sized> VirtualMemoryFunctionTable<T> {
@@ -39,6 +60,9 @@ impl<T: VirtualMemory> Default for VirtualMemoryFunctionTable<T> {
         Self {
             virt_read_raw_list: c_virt_read_raw_list,
             virt_write_raw_list: c_virt_write_raw_list,
+            virt_page_info: c_virt_page_info,
+            virt_translation_map_range: c_virt_translation_map_range,
+            virt_page_map_range: c_virt_page_map_range,
         }
     }
 }
@@ -59,6 +83,43 @@ extern "C" fn c_virt_write_raw_list<T: VirtualMemory>(
 ) -> i32 {
     let write_data_slice = unsafe { std::slice::from_raw_parts(write_data, write_data_count) };
     virt_mem.virt_write_raw_list(write_data_slice).int_result()
+}
+
+extern "C" fn c_virt_page_info<T: VirtualMemory>(
+    virt_mem: &mut T,
+    addr: Address,
+    out: &mut MUPage,
+) -> i32 {
+    virt_mem.virt_page_info(addr).int_out_result(out)
+}
+
+extern "C" fn c_virt_translation_map_range<T: VirtualMemory>(
+    virt_mem: &mut T,
+    start: Address,
+    end: Address,
+    mut out: TranslationMapCallback,
+) {
+    let vec = virt_mem.virt_translation_map_range(start, end);
+    for (a, b, c) in vec {
+        if !out.call(TranslationChunk(a, b, c)) {
+            break;
+        }
+    }
+}
+
+extern "C" fn c_virt_page_map_range<T: VirtualMemory>(
+    virt_mem: &mut T,
+    gap_size: usize,
+    start: Address,
+    end: Address,
+    mut out: PageMapCallback,
+) {
+    let vec = virt_mem.virt_page_map_range(gap_size, start, end);
+    for (a, b) in vec {
+        if !out.call(PageMapChunk(a, b)) {
+            break;
+        }
+    }
 }
 
 #[repr(C)]
@@ -97,24 +158,38 @@ impl VirtualMemory for VirtualMemoryInstance<'_> {
         part_result_from_int_void(res)
     }
 
-    fn virt_page_info(&mut self, _addr: Address) -> Result<Page> {
-        Err(Error::Other("unimplemented"))
+    fn virt_page_info(&mut self, addr: Address) -> Result<Page> {
+        let mut out = MUPage::uninit();
+        let res = (self.vtable.virt_page_info)(self.instance, addr, &mut out);
+        result_from_int(res, out)
     }
 
     fn virt_translation_map_range(
         &mut self,
-        _start: Address,
-        _end: Address,
+        start: Address,
+        end: Address,
     ) -> Vec<(Address, usize, PhysicalAddress)> {
-        vec![]
+        let mut ret = vec![];
+        let f = &mut |TranslationChunk(a, b, c)| {
+            ret.push((a, b, c));
+            true
+        };
+        (self.vtable.virt_translation_map_range)(self.instance, start, end, f.into());
+        ret
     }
 
     fn virt_page_map_range(
         &mut self,
-        _gap_size: usize,
-        _start: Address,
-        _end: Address,
+        gap_size: usize,
+        start: Address,
+        end: Address,
     ) -> Vec<(Address, usize)> {
-        vec![]
+        let mut ret = vec![];
+        let f = &mut |PageMapChunk(a, b)| {
+            ret.push((a, b));
+            true
+        };
+        (self.vtable.virt_page_map_range)(self.instance, gap_size, start, end, f.into());
+        ret
     }
 }

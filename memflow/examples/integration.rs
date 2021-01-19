@@ -57,7 +57,7 @@ fn main() -> Result<()> {
 
     {
         if let Ok(modules) = kernel_modules(&mut kernel) {
-            for k in kernel_mods.split(",") {
+            for k in kernel_mods.split(',') {
                 println!(
                     "{} ... {}",
                     k,

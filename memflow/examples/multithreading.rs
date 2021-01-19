@@ -14,15 +14,11 @@ pub fn parallel_init(
     os_args: &Args,
 ) {
     rayon::scope(|s| {
-        (0..8)
-            .map(|_| connector.clone())
-            .into_iter()
-            .map(|c| {
-                s.spawn(move |_| {
-                    inventory.create_os(os_name, c, os_args).unwrap();
-                })
+        (0..8).map(|_| connector.clone()).into_iter().for_each(|c| {
+            s.spawn(move |_| {
+                inventory.create_os(os_name, c, os_args).unwrap();
             })
-            .count()
+        })
     });
 }
 

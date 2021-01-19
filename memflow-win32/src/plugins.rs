@@ -49,12 +49,7 @@ fn build_arch<
     builder: Win32KernelBuilder<A, B, C>,
     args: &Args,
 ) -> Result<KernelInstance> {
-    match args
-        .get("arch")
-        .map(|a| a.to_lowercase())
-        .as_ref()
-        .map(|s| s.as_str())
-    {
+    match args.get("arch").map(|a| a.to_lowercase()).as_deref() {
         Some("x64") => build_final(builder.arch(ArchitectureIdent::X86(64, false)), args),
         Some("x32") => build_final(builder.arch(ArchitectureIdent::X86(32, false)), args),
         Some("x32_pae") => build_final(builder.arch(ArchitectureIdent::X86(32, true)), args),
@@ -104,10 +99,10 @@ fn build_page_cache<
     mode: &str,
     args: &Args,
 ) -> Result<KernelInstance> {
-    match mode.split("&").find(|s| s.contains("page")) {
-        Some(page) => match page.split(":").skip(1).next() {
+    match mode.split('&').find(|s| s.contains("page")) {
+        Some(page) => match page.split(':').nth(1) {
             Some(vargs) => {
-                let mut sp = vargs.splitn(2, ";");
+                let mut sp = vargs.splitn(2, ';');
                 let (size, time) = (
                     sp.next()
                         .ok_or(Error::Other("Failed to parse Page Cache size"))?,
@@ -183,10 +178,10 @@ fn build_vat<
     mode: &str,
     args: &Args,
 ) -> Result<KernelInstance> {
-    match mode.split("&").find(|s| s.contains("vat")) {
-        Some(vat) => match vat.split(":").skip(1).next() {
+    match mode.split('&').find(|s| s.contains("vat")) {
+        Some(vat) => match vat.split(':').nth(1) {
             Some(vargs) => {
-                let mut sp = vargs.splitn(2, ";");
+                let mut sp = vargs.splitn(2, ';');
                 let (size, time) = (
                     sp.next().ok_or(Error::Other("Failed to parse VAT size"))?,
                     sp.next()

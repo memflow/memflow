@@ -13,7 +13,7 @@ fn main() -> Result<()> {
 
     // Print process list, formatted
     println!(
-        "{:>5} {:>10} {:>10} {}",
+        "{:>5} {:>10} {:>10} {:<}",
         "PID", "SYS ARCH", "PROC ARCH", "NAME"
     );
 

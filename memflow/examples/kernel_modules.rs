@@ -13,7 +13,7 @@ fn main() -> Result<()> {
 
     // Print process list, formatted
     println!(
-        "{:>16} {:>16} {:>8} {:>24} {}",
+        "{:>16} {:>16} {:>8} {:>24} {:<}",
         "INTERNAL ADDR", "BASE", "SIZE", "NAME", "PATH"
     );
 

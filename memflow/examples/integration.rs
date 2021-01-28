@@ -159,7 +159,7 @@ fn build_kernel(
     name: &str,
     args: &Args,
 ) -> Result<OSInstance> {
-    let kernel = inventory.create_os(name, mem, args);
+    let kernel = inventory.create_os(name, Some(mem), args);
     println!("Kernel::build ... {}", ok_str(&kernel));
     println!();
     kernel

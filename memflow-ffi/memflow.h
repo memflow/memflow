@@ -35,6 +35,41 @@ typedef uint8_t Endianess;
 
 typedef struct ArchitectureObj ArchitectureObj;
 
+/**
+ * The core of the plugin system
+ *
+ * It scans system directories and collects valid memflow plugins. They can then be instantiated
+ * easily. The reason the libraries are collected is to allow for reuse, and save performance
+ *
+ * # Examples
+ *
+ * Creating a OS instance, the fastest way:
+ *
+ * ```
+ * use memflow::plugins::Inventory;
+ * # use memflow::error::Result;
+ * # use memflow::plugins::OSInstance;
+ * # fn test() -> Result<OSInstance> {
+ * Inventory::build_os_simple("qemu-procfs", "win32")
+ * # }
+ * # test().ok();
+ * ```
+ *
+ * Creating 2 OS instances:
+ * ```
+ * use memflow::plugins::{Inventory, Args};
+ * # use memflow::error::Result;
+ * # fn test() -> Result<()> {
+ *
+ * let inventory = Inventory::scan();
+ *
+ * let windows = inventory.create_os_simple("qemu-procfs", "win32")?;
+ * let system = inventory.create_os("pseudo-system", None, &Args::default())?;
+ * # Ok(())
+ * # }
+ * # test().ok();
+ * ```
+ */
 typedef struct Inventory Inventory;
 
 typedef struct Option______Library Option______Library;
@@ -116,17 +151,31 @@ typedef struct PhysicalAddress {
     uint8_t page_size_log2;
 } PhysicalAddress;
 
+/**
+ * Utility typedef for better cbindgen
+ *
+ * TODO: remove when fixed in cbindgen
+ */
 typedef void *pvoid;
 
+/**
+ * Generic function for cloning past FFI boundary
+ */
 typedef struct GenericCloneTable_c_void {
     pvoid (*clone)(const void *this);
 } GenericCloneTable_c_void;
 
+/**
+ * Base table for most objects that are cloneable and droppable.
+ */
 typedef struct GenericBaseTable_c_void {
     struct GenericCloneTable_c_void clone;
     void (*drop)(void *this);
 } GenericBaseTable_c_void;
 
+/**
+ * Opaque version of `GenericBaseTable` for FFI purposes
+ */
 typedef struct GenericBaseTable_c_void OpaqueBaseTable;
 
 typedef struct PhysicalMemoryMetadata {
@@ -191,6 +240,12 @@ typedef struct Callback_c_void__Address OpaqueCallback_Address;
 
 typedef OpaqueCallback_Address AddressCallback;
 
+/**
+ * Type meant for process IDs
+ *
+ * If there is a case where PID can be over 32-bit limit, or negative, please open an issue, we
+ * would love to see that.
+ */
 typedef uint32_t PID;
 
 typedef int8_t *ReprCStr;
@@ -232,6 +287,12 @@ typedef struct ArchitectureIdent {
     };
 } ArchitectureIdent;
 
+/**
+ * Process information structure
+ *
+ * This structure implements basic process information. Architectures are provided both of the
+ * system, and of the process.
+ */
 typedef struct ProcessInfo {
     /**
      * The base address of this process.
@@ -270,6 +331,9 @@ typedef struct ProcessInfo MUProcessInfo;
 
 typedef const struct ArchitectureIdent *OptionArchitectureIdent;
 
+/**
+ * Pair of address and architecture used for callbacks
+ */
 typedef struct ModuleAddressInfo {
     Address address;
     struct ArchitectureIdent arch;
@@ -284,6 +348,9 @@ typedef struct Callback_c_void__ModuleAddressInfo OpaqueCallback_ModuleAddressIn
 
 typedef OpaqueCallback_ModuleAddressInfo ModuleAddressCallback;
 
+/**
+ * Module information structure
+ */
 typedef struct ModuleInfo {
     /**
      * Returns the address of the module header.
@@ -424,6 +491,9 @@ typedef struct PluginProcess {
 
 typedef struct PluginProcess MUPluginProcess;
 
+/**
+ * Opaque version of `GenericCloneTable` for FFI purposes
+ */
 typedef struct GenericCloneTable_c_void OpaqueCloneTable;
 
 typedef struct ArcPluginProcess {
@@ -434,32 +504,39 @@ typedef struct ArcPluginProcess {
 
 typedef struct ArcPluginProcess MUArcPluginProcess;
 
-typedef struct KernelInfo {
+/**
+ * Information block about OS
+ *
+ * This provides some basic information about the OS in question. `base`, and `size` may be
+ * omitted in some circumstances (lack of kernel, or privileges). But architecture should always
+ * be correct.
+ */
+typedef struct OSInfo {
     /**
-     * Base address of the kernel
+     * Base address of the OS kernel
      */
     Address base;
     /**
-     * Size of the kernel
+     * Size of the OS kernel
      */
     uintptr_t size;
     /**
      * System architecture
      */
     struct ArchitectureIdent arch;
-} KernelInfo;
+} OSInfo;
 
-typedef struct KernelFunctionTable_c_void__c_void {
-    int32_t (*process_address_list_callback)(void *kernel, AddressCallback callback);
-    int32_t (*process_info_by_address)(void *kernel, Address address, MUProcessInfo *out);
-    int32_t (*process_by_info)(void *kernel, struct ProcessInfo info, MUPluginProcess *out);
-    int32_t (*into_process_by_info)(void *kernel, struct ProcessInfo info, struct COptArc_Library lib, MUArcPluginProcess *out);
-    int32_t (*module_address_list_callback)(void *kernel, AddressCallback callback);
-    int32_t (*module_by_address)(void *kernel, Address address, MUModuleInfo *out);
-    const struct KernelInfo *(*info)(const void *kernel);
-} KernelFunctionTable_c_void__c_void;
+typedef struct OSFunctionTable_c_void__c_void {
+    int32_t (*process_address_list_callback)(void *os, AddressCallback callback);
+    int32_t (*process_info_by_address)(void *os, Address address, MUProcessInfo *out);
+    int32_t (*process_by_info)(void *os, struct ProcessInfo info, MUPluginProcess *out);
+    int32_t (*into_process_by_info)(void *os, struct ProcessInfo info, struct COptArc_Library lib, MUArcPluginProcess *out);
+    int32_t (*module_address_list_callback)(void *os, AddressCallback callback);
+    int32_t (*module_by_address)(void *os, Address address, MUModuleInfo *out);
+    const struct OSInfo *(*info)(const void *os);
+} OSFunctionTable_c_void__c_void;
 
-typedef struct KernelFunctionTable_c_void__c_void OpaqueKernelFunctionTable;
+typedef struct OSFunctionTable_c_void__c_void OpaqueOSFunctionTable;
 
 typedef struct OSLayerFunctionTable {
     /**
@@ -467,9 +544,9 @@ typedef struct OSLayerFunctionTable {
      */
     OpaqueBaseTable base;
     /**
-     * The vtable for all kernel functions
+     * The vtable for all os functions
      */
-    OpaqueKernelFunctionTable kernel;
+    OpaqueOSFunctionTable os;
     /**
      * The vtable for all physical memory access if available
      */
@@ -481,27 +558,27 @@ typedef struct OSLayerFunctionTable {
 } OSLayerFunctionTable;
 
 /**
- * Describes initialized kernel instance
+ * Describes initialized os instance
  *
- * This structure is returned by `Kernel`. It is needed to maintain reference
- * counts to the loaded connector library.
+ * This structure is returned by `OS`. It is needed to maintain reference
+ * counts to the loaded plugin library.
  */
-typedef struct KernelInstance {
+typedef struct OSInstance {
     void *instance;
     struct OSLayerFunctionTable vtable;
     /**
      * Internal library arc.
      *
-     * This will keep the library loaded in memory as long as the kernel instance is alive.
+     * This will keep the library loaded in memory as long as the os instance is alive.
      * This has to be the last member of the struct so the library will be unloaded _after_
      * the instance is destroyed.
      *
      * If the library is unloaded prior to the instance this will lead to a SIGSEGV.
      */
     struct COptArc_Library library;
-} KernelInstance;
+} OSInstance;
 
-typedef struct KernelInstance MUKernelInstance;
+typedef struct OSInstance MUOSInstance;
 
 #ifdef __cplusplus
 extern "C" {
@@ -602,7 +679,7 @@ int32_t inventory_create_os(struct Inventory *inv,
                             const char *name,
                             const char *args,
                             struct ConnectorInstance mem,
-                            MUKernelInstance *out);
+                            MUOSInstance *out);
 
 /**
  * Clone a connector

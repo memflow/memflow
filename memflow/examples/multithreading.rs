@@ -16,7 +16,7 @@ pub fn parallel_init(
     rayon::scope(|s| {
         (0..8).map(|_| connector.clone()).into_iter().for_each(|c| {
             s.spawn(move |_| {
-                inventory.create_os(os_name, c, os_args).unwrap();
+                inventory.create_os(os_name, Some(c), os_args).unwrap();
             })
         })
     });
@@ -68,7 +68,9 @@ pub fn main() {
 
     parallel_init(connector.clone(), &inventory, &os_name, &os_args);
 
-    let kernel = inventory.create_os(&os_name, connector, &os_args).unwrap();
+    let kernel = inventory
+        .create_os(&os_name, Some(connector), &os_args)
+        .unwrap();
 
     parallel_kernels(kernel.clone());
 

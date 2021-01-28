@@ -13,9 +13,11 @@ use std::time::Duration;
 #[os_layer_bare(name = "win32")]
 pub fn build_kernel(
     args: &Args,
-    mem: ConnectorInstance,
+    mem: Option<ConnectorInstance>,
     log_level: log::Level,
 ) -> Result<OSInstance> {
+    let mem = mem.ok_or(Error::Other("Must provide memory!"))?;
+
     simple_logger::SimpleLogger::new()
         .with_level(log_level.to_level_filter())
         .init()

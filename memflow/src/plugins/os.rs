@@ -10,8 +10,9 @@ pub mod process;
 pub use process::{ArcPluginProcess, PluginProcess};
 
 use super::{
-    Args, CArc, ConnectorInstance, GenericBaseTable, LibInstance, Loadable, OpaqueBaseTable,
-    OpaquePhysicalMemoryFunctionTable, OpaqueVirtualMemoryFunctionTable, MEMFLOW_PLUGIN_VERSION,
+    Args, CArc, COption, ConnectorInstance, GenericBaseTable, LibInstance, Loadable,
+    OpaqueBaseTable, OpaquePhysicalMemoryFunctionTable, OpaqueVirtualMemoryFunctionTable,
+    MEMFLOW_PLUGIN_VERSION,
 };
 
 use libloading::Library;
@@ -31,6 +32,7 @@ pub type MUOSInstance = MaybeUninit<OSInstance>;
 
 pub type OptionArchitectureIdent<'a> = Option<&'a crate::architecture::ArchitectureIdent>;
 
+/// Subtrait of Plugin where `Self`, and `OS::IntoProcessType` are `Clone`
 pub trait PluginOS<T: Process + Clone>:
     'static + Clone + for<'a> OSInner<'a, IntoProcessType = T>
 {
@@ -74,7 +76,7 @@ pub struct OSLayerDescriptor {
     pub name: &'static str,
 
     /// Create instance of the OS
-    pub create: extern "C" fn(ReprCStr, ConnectorInstance, i32, &mut MUOSInstance) -> i32,
+    pub create: extern "C" fn(ReprCStr, COption<ConnectorInstance>, i32, &mut MUOSInstance) -> i32,
 }
 
 #[repr(C)]
@@ -107,7 +109,7 @@ pub struct LoadableOS {
 
 impl Loadable for LoadableOS {
     type Instance = OSInstance;
-    type InputArg = ConnectorInstance;
+    type InputArg = Option<ConnectorInstance>;
 
     fn ident(&self) -> &str {
         self.descriptor.name
@@ -144,12 +146,12 @@ impl Loadable for LoadableOS {
     fn instantiate(
         &self,
         library: Option<CArc<Library>>,
-        input: ConnectorInstance,
+        input: Option<ConnectorInstance>,
         args: &Args,
     ) -> Result<OSInstance> {
         let cstr = ReprCStr::from(args.to_string());
         let mut out = MUOSInstance::uninit();
-        let res = (self.descriptor.create)(cstr, input, log::max_level() as i32, &mut out);
+        let res = (self.descriptor.create)(cstr, input.into(), log::max_level() as i32, &mut out);
         result_from_int(res, out).map(|mut c| {
             c.library = library.into();
             c

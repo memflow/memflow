@@ -130,7 +130,7 @@ pub unsafe extern "C" fn inventory_create_os(
         let rargs = CStr::from_ptr(args).to_string_lossy();
         Args::parse(&rargs)
             .map_err(inspect_err)
-            .and_then(|args| inv.create_os(&rname, mem, &args))
+            .and_then(|args| inv.create_os(&rname, Some(mem), &args))
             .map_err(inspect_err)
             .int_out_result(out)
     }

@@ -7,7 +7,7 @@ fn main() -> Result<()> {
     let (connector, conn_args, os, os_args) = parse_args()?;
 
     // create connector + os
-    let mut os = Inventory::build_simple_os(&connector, &conn_args, &os, &os_args)?;
+    let mut os = Inventory::build_conn_os_combo(&connector, &conn_args, &os, &os_args)?;
 
     let module_list = os.module_list()?;
 

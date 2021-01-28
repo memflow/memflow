@@ -144,7 +144,7 @@ fn main() -> Result<()> {
         .unwrap();
 
     // create connector + os
-    let kernel = Inventory::build_simple_os(&connector, &conn_args, &os, &os_args)?;
+    let kernel = Inventory::build_conn_os_combo(&connector, &conn_args, &os, &os_args)?;
 
     read_bench(kernel)
 }

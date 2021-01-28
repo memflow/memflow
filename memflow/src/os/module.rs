@@ -1,5 +1,8 @@
+//! Describes modules
+
 use crate::prelude::v1::*;
 
+/// Module information structure
 #[repr(C)]
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
@@ -42,6 +45,7 @@ pub struct ModuleInfo {
 
 pub type ModuleInfoCallback<'a> = OpaqueCallback<'a, ModuleInfo>;
 
+/// Pair of address and architecture used for callbacks
 #[repr(C)]
 #[derive(Clone, Debug)]
 pub struct ModuleAddressInfo {

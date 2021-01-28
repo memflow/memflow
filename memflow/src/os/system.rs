@@ -1,11 +1,23 @@
+//! Describes the root of the Operating System
+
 use super::{AddressCallback, Process, ProcessInfo, ProcessInfoCallback};
 use crate::prelude::v1::{Result, *};
 use std::prelude::v1::*;
 
 /// OS supertrait for all possible lifetimes
+///
+/// Use this for convenience. Chances are, once GAT are implemented, only `OS` will be kept.
+///
+/// It naturally provides all `OSInner` functions.
 pub trait OS: for<'a> OSInner<'a> {}
 impl<T: for<'a> OSInner<'a>> OS for T {}
 
+/// High level OS trait implemented by OS layers.
+///
+/// This trait provides all necessary functions for handling an OS, retrieving processes, and
+/// moving resources into processes.
+///
+/// There are also methods for accessing system level modules.
 pub trait OSInner<'a>: Send {
     type ProcessType: Process + 'a;
     type IntoProcessType: Process;
@@ -222,6 +234,11 @@ pub trait OSInner<'a>: Send {
     fn info(&self) -> &OSInfo;
 }
 
+/// Information block about OS
+///
+/// This provides some basic information about the OS in question. `base`, and `size` may be
+/// omitted in some circumstances (lack of kernel, or privileges). But architecture should always
+/// be correct.
 #[repr(C)]
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]

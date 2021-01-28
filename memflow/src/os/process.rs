@@ -1,9 +1,20 @@
+//! Describes process context
+
 use super::{ModuleAddressInfo, ModuleInfo, ModuleInfoCallback};
 use crate::prelude::v1::{Result, *};
 use std::prelude::v1::*;
 
+/// Type meant for process IDs
+///
+/// If there is a case where PID can be over 32-bit limit, or negative, please open an issue, we
+/// would love to see that.
 pub type PID = u32;
 
+/// Provides all actions on processes
+///
+/// This trait provides a lot of typical functionality for processes, such as memory access, module lists, and basic information.
+///
+/// Future expansions could include threads, keyboard input, and more.
 pub trait Process: Send {
     type VirtualMemoryType: VirtualMemory;
     //type VirtualTranslateType: VirtualTranslate;
@@ -134,6 +145,10 @@ pub trait Process: Send {
     fn info(&self) -> &ProcessInfo;
 }
 
+/// Process information structure
+///
+/// This structure implements basic process information. Architectures are provided both of the
+/// system, and of the process.
 #[repr(C)]
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]

@@ -101,11 +101,11 @@ pub fn os_layer(args: TokenStream, input: TokenStream) -> TokenStream {
             #[doc(hidden)]
             extern "C" fn mf_create(
                 args: ::memflow::types::ReprCStr,
-                mem: ::memflow::plugins::ConnectorInstance,
+                mem: ::memflow::plugins::COption<::memflow::plugins::ConnectorInstance>,
                 log_level: i32,
                 out: &mut ::memflow::plugins::os::MUOSInstance
             ) -> i32 {
-                ::memflow::plugins::os::create_with_logging(args, mem, log_level, out, #func_name)
+                ::memflow::plugins::os::create_with_logging(args, mem.into(), log_level, out, #func_name)
             }
         }
     } else {
@@ -113,11 +113,11 @@ pub fn os_layer(args: TokenStream, input: TokenStream) -> TokenStream {
             #[doc(hidden)]
             extern "C" fn mf_create(
                 args: ::memflow::types::ReprCStr,
-                mem: ::memflow::plugins::ConnectorInstance,
+                mem: ::memflow::plugins::COption<::memflow::plugins::ConnectorInstance>,
                 _: i32,
                 out: &mut ::memflow::plugins::os::MUOSInstance
             ) -> i32 {
-                ::memflow::plugins::os::create_without_logging(args, mem, out, #func_name)
+                ::memflow::plugins::os::create_without_logging(args, mem.into(), out, #func_name)
             }
         }
     };
@@ -155,11 +155,11 @@ pub fn os_layer_bare(args: TokenStream, input: TokenStream) -> TokenStream {
         #[doc(hidden)]
         extern "C" fn mf_create(
             args: ::memflow::types::ReprCStr,
-            mem: ::memflow::plugins::ConnectorInstance,
+            mem: ::memflow::plugins::COption<::memflow::plugins::ConnectorInstance>,
             log_level: i32,
             out: &mut ::memflow::plugins::os::MUOSInstance
         ) -> i32 {
-            ::memflow::plugins::create_bare(args, mem, log_level, out, #func_name)
+            ::memflow::plugins::create_bare(args, mem.into(), log_level, out, #func_name)
         }
     };
 

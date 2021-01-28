@@ -48,9 +48,14 @@ use libloading::Library;
 /// Exported memflow plugins version
 pub const MEMFLOW_PLUGIN_VERSION: i32 = 8;
 
+/// Utility typedef for better cbindgen
+///
+/// TODO: remove when fixed in cbindgen
 pub type OptionMut<T> = Option<&'static mut T>;
 
+/// Opaque version of `GenericBaseTable` for FFI purposes
 pub type OpaqueBaseTable = GenericBaseTable<c_void>;
+/// Opaque version of `GenericCloneTable` for FFI purposes
 pub type OpaqueCloneTable = GenericCloneTable<c_void>;
 
 impl Copy for OpaqueCloneTable {}
@@ -61,6 +66,7 @@ impl Clone for OpaqueCloneTable {
     }
 }
 
+/// Generic function for cloning past FFI boundary
 #[repr(C)]
 pub struct GenericCloneTable<T: 'static> {
     pub clone: extern "C" fn(this: &T) -> OptionMut<T>,
@@ -88,6 +94,7 @@ impl Clone for OpaqueBaseTable {
     }
 }
 
+/// Base table for most objects that are cloneable and droppable.
 #[repr(C)]
 pub struct GenericBaseTable<T: 'static> {
     clone: GenericCloneTable<T>,
@@ -109,17 +116,50 @@ impl<T: Clone> GenericBaseTable<T> {
     }
 }
 
+/// Describes a FFI safe option
+#[repr(C)]
+pub enum COption<T> {
+    None,
+    Some(T),
+}
+
+impl<T> From<Option<T>> for COption<T> {
+    fn from(opt: Option<T>) -> Self {
+        match opt {
+            None => Self::None,
+            Some(t) => Self::Some(t),
+        }
+    }
+}
+
+impl<T> From<COption<T>> for Option<T> {
+    fn from(opt: COption<T>) -> Self {
+        match opt {
+            COption::None => None,
+            COption::Some(t) => Some(t),
+        }
+    }
+}
+
 /// Defines a common interface for loadable plugins
 pub trait Loadable: Sized {
     type Instance;
     type InputArg;
 
+    /// Checks if plugin with the same `ident` already exists in input list
     fn exists(&self, instances: &[LibInstance<Self>]) -> bool {
         instances.iter().any(|i| i.loader.ident() == self.ident())
     }
 
+    /// Identifier string of the plugin
     fn ident(&self) -> &str;
 
+    /// Try to load a plugin library
+    ///
+    /// This function will access `library` and try to find corresponding entry for the plugin. If
+    /// a valid plugin is found, `Ok(LibInstance<Self>)` is returned. Otherwise, `Err(Error)` is
+    /// returned, with appropriate error.
+    ///
     /// # Safety
     ///
     /// Loading third party libraries is inherently unsafe and the compiler
@@ -130,27 +170,37 @@ pub trait Loadable: Sized {
     /// It is adviced to use a provided proc macro to define a valid library.
     fn load(library: &CArc<Library>, path: impl AsRef<Path>) -> Result<LibInstance<Self>>;
 
+    /// Helper function to load a plugin into a list of library instances
+    ///
+    /// This function will try finding appropriate plugin entry, and add it into the list if there
+    /// isn't a duplicate entry.
+    ///
     /// # Safety
     ///
     /// Loading third party libraries is inherently unsafe and the compiler
     /// cannot guarantee that the implementation of the library matches the one
     /// specified here.
-    fn load_into(lib: &CArc<Library>, path: impl AsRef<Path>, out: &mut Vec<LibInstance<Self>>) {
-        if let Ok(lib) = Self::load(lib, &path) {
-            if !lib.loader.exists(out) {
-                info!(
-                    "adding library '{}': {:?}",
-                    lib.loader.ident(),
-                    path.as_ref()
-                );
-                out.push(lib);
-            } else {
-                debug!(
-                    "skipping library '{}' because it was added already: {:?}",
-                    lib.loader.ident(),
-                    path.as_ref()
-                );
-            }
+    fn load_into(
+        lib: &CArc<Library>,
+        path: impl AsRef<Path>,
+        out: &mut Vec<LibInstance<Self>>,
+    ) -> Result<()> {
+        let lib = Self::load(lib, &path)?;
+        if !lib.loader.exists(out) {
+            info!(
+                "adding library '{}': {:?}",
+                lib.loader.ident(),
+                path.as_ref()
+            );
+            out.push(lib);
+            Ok(())
+        } else {
+            debug!(
+                "skipping library '{}' because it was added already: {:?}",
+                lib.loader.ident(),
+                path.as_ref()
+            );
+            Err(Error::Other("Already Exists"))
         }
     }
 
@@ -166,6 +216,39 @@ pub trait Loadable: Sized {
     ) -> Result<Self::Instance>;
 }
 
+/// The core of the plugin system
+///
+/// It scans system directories and collects valid memflow plugins. They can then be instantiated
+/// easily. The reason the libraries are collected is to allow for reuse, and save performance
+///
+/// # Examples
+///
+/// Creating a OS instance, the fastest way:
+///
+/// ```
+/// use memflow::plugins::Inventory;
+/// # use memflow::error::Result;
+/// # use memflow::plugins::OSInstance;
+/// # fn test() -> Result<OSInstance> {
+/// Inventory::build_os_simple("qemu-procfs", "win32")
+/// # }
+/// # test().ok();
+/// ```
+///
+/// Creating 2 OS instances:
+/// ```
+/// use memflow::plugins::{Inventory, Args};
+/// # use memflow::error::Result;
+/// # fn test() -> Result<()> {
+///
+/// let inventory = Inventory::scan();
+///
+/// let windows = inventory.create_os_simple("qemu-procfs", "win32")?;
+/// let system = inventory.create_os("pseudo-system", None, &Args::default())?;
+/// # Ok(())
+/// # }
+/// # test().ok();
+/// ```
 pub struct Inventory {
     connectors: Vec<LibInstance<connector::LoadableConnector>>,
     os_layers: Vec<LibInstance<os::LoadableOS>>,
@@ -280,8 +363,8 @@ impl Inventory {
                 .map_err(|_| Error::Connector("unable to load library"))
                 .map(CArc::from)
             {
-                Loadable::load_into(&lib, entry.path(), &mut self.connectors);
-                Loadable::load_into(&lib, entry.path(), &mut self.os_layers);
+                Loadable::load_into(&lib, entry.path(), &mut self.connectors).ok();
+                Loadable::load_into(&lib, entry.path(), &mut self.os_layers).ok();
             }
         }
 
@@ -398,11 +481,23 @@ impl Inventory {
         self.create_connector(name, None, &Args::default())
     }
 
+    /// Create OS instance
+    ///
+    /// This is the primary way of building a OS instance.
+    ///
+    /// # Arguments
+    ///
+    /// * `name` - name of the target OS
+    /// * `input` - connector to be passed to the OS
+    /// * `args` - arguments to be passed to the OS
     pub fn create_os(&self, name: &str, input: OSInputArg, args: &Args) -> Result<OSInstance> {
         Self::create_internal(&self.os_layers, name, input, args)
     }
 
-    pub fn create_simple_os(
+    /// Create a connector and OS in one go
+    ///
+    /// This will build a connector, and then feed it to `create_os` function
+    pub fn create_conn_os_combo(
         &self,
         conn_name: &str,
         conn_args: &Args,
@@ -410,20 +505,47 @@ impl Inventory {
         os_args: &Args,
     ) -> Result<OSInstance> {
         let conn = self.create_connector(conn_name, None, conn_args)?;
-        self.create_os(os_name, conn, os_args)
+        self.create_os(os_name, Some(conn), os_args)
     }
 
-    pub fn build_simple_os(
+    /// Simple way of creating a OS in one go
+    ///
+    /// This function accepts no arguments for the sake of simplicity. It is advised to use
+    /// `create_conn_os_combo` if passing arguments is necessary.
+    pub fn create_os_simple(&self, conn_name: &str, os_name: &str) -> Result<OSInstance> {
+        let conn = self.create_connector_default(conn_name)?;
+        self.create_os(os_name, Some(conn), &Args::default())
+    }
+
+    /// Create a connector and OS in one go, statically
+    ///
+    /// This is essentially the same as `create_conn_os_combo`, but does not require access to the
+    /// inventory. Instead, it finds the libraries on its own. This is less efficient, if creating
+    /// multiple connector instances
+    pub fn build_conn_os_combo(
         conn_name: &str,
         conn_args: &Args,
         os_name: &str,
         os_args: &Args,
     ) -> Result<OSInstance> {
         let inv = Self::scan();
-        inv.create_simple_os(conn_name, conn_args, os_name, os_args)
+        inv.create_conn_os_combo(conn_name, conn_args, os_name, os_args)
+    }
+
+    /// Create a OS instance in the most simple way, statically
+    ///
+    /// This is the same as `creat_os_simple`, but does not require inventory. This is the
+    /// shortest, although least flexible, way of building a OS.
+    pub fn build_os_simple(conn_name: &str, os_name: &str) -> Result<OSInstance> {
+        let inv = Self::scan();
+        inv.create_os_simple(conn_name, os_name)
     }
 }
 
+/// Reference counted library instance
+///
+/// This stores the necessary reference counted library instance, in order to prevent the library
+/// from unloading unexpectedly. This is the required safety guarantee.
 #[repr(C)]
 #[derive(Clone)]
 pub struct LibInstance<T> {

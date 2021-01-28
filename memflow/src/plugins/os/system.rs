@@ -1,51 +1,47 @@
 use crate::error::*;
 
 use super::{ArcPluginProcess, OSLayerFunctionTable, PluginProcess};
-use crate::os::{AddressCallback, KernelInfo, KernelInner, ModuleInfo, Process, ProcessInfo};
+use crate::os::{AddressCallback, ModuleInfo, OSInfo, OSInner, Process, ProcessInfo};
 use crate::types::Address;
 use std::ffi::c_void;
 
 use super::super::COptArc;
-use super::PluginKernel;
+use super::PluginOS;
 use super::{MUArcPluginProcess, MUModuleInfo, MUPluginProcess, MUProcessInfo};
 
 use libloading::Library;
 
-pub type OpaqueKernelFunctionTable = KernelFunctionTable<'static, c_void, c_void>;
+pub type OpaqueOSFunctionTable = OSFunctionTable<'static, c_void, c_void>;
 
-impl Copy for OpaqueKernelFunctionTable {}
+impl Copy for OpaqueOSFunctionTable {}
 
-impl Clone for OpaqueKernelFunctionTable {
+impl Clone for OpaqueOSFunctionTable {
     fn clone(&self) -> Self {
         *self
     }
 }
 
 #[repr(C)]
-pub struct KernelFunctionTable<'a, P, T> {
-    pub process_address_list_callback:
-        extern "C" fn(kernel: &mut T, callback: AddressCallback) -> i32,
+pub struct OSFunctionTable<'a, P, T> {
+    pub process_address_list_callback: extern "C" fn(os: &mut T, callback: AddressCallback) -> i32,
     pub process_info_by_address:
-        extern "C" fn(kernel: &mut T, address: Address, out: &mut MUProcessInfo) -> i32,
+        extern "C" fn(os: &mut T, address: Address, out: &mut MUProcessInfo) -> i32,
     pub process_by_info:
-        extern "C" fn(kernel: &'a mut T, info: ProcessInfo, out: &mut MUPluginProcess<'a>) -> i32,
+        extern "C" fn(os: &'a mut T, info: ProcessInfo, out: &mut MUPluginProcess<'a>) -> i32,
     pub into_process_by_info: extern "C" fn(
-        kernel: &mut T,
+        os: &mut T,
         info: ProcessInfo,
         lib: COptArc<Library>,
         out: &mut MUArcPluginProcess,
     ) -> i32,
-    pub module_address_list_callback:
-        extern "C" fn(kernel: &mut T, callback: AddressCallback) -> i32,
+    pub module_address_list_callback: extern "C" fn(os: &mut T, callback: AddressCallback) -> i32,
     pub module_by_address:
-        extern "C" fn(kernel: &mut T, address: Address, out: &mut MUModuleInfo) -> i32,
-    pub info: extern "C" fn(kernel: &T) -> &KernelInfo,
+        extern "C" fn(os: &mut T, address: Address, out: &mut MUModuleInfo) -> i32,
+    pub info: extern "C" fn(os: &T) -> &OSInfo,
     phantom: std::marker::PhantomData<P>,
 }
 
-impl<'a, P: 'static + Process + Clone, T: PluginKernel<P>> Default
-    for KernelFunctionTable<'a, P, T>
-{
+impl<'a, P: 'static + Process + Clone, T: PluginOS<P>> Default for OSFunctionTable<'a, P, T> {
     fn default() -> Self {
         Self {
             process_address_list_callback: c_process_address_list_callback,
@@ -54,88 +50,86 @@ impl<'a, P: 'static + Process + Clone, T: PluginKernel<P>> Default
             into_process_by_info: c_into_process_by_info,
             module_address_list_callback: c_module_address_list_callback,
             module_by_address: c_module_by_address,
-            info: c_kernel_info,
+            info: c_os_info,
             phantom: Default::default(),
         }
     }
 }
 
-impl<'a, P: Process + Clone, T: PluginKernel<P>> KernelFunctionTable<'a, P, T> {
-    pub fn into_opaque(self) -> OpaqueKernelFunctionTable {
+impl<'a, P: Process + Clone, T: PluginOS<P>> OSFunctionTable<'a, P, T> {
+    pub fn into_opaque(self) -> OpaqueOSFunctionTable {
         unsafe { std::mem::transmute(self) }
     }
 }
 
-extern "C" fn c_process_address_list_callback<'a, T: KernelInner<'a>>(
-    kernel: &mut T,
+extern "C" fn c_process_address_list_callback<'a, T: OSInner<'a>>(
+    os: &mut T,
     callback: AddressCallback,
 ) -> i32 {
-    kernel.process_address_list_callback(callback).int_result()
+    os.process_address_list_callback(callback).int_result()
 }
 
-extern "C" fn c_process_info_by_address<'a, T: KernelInner<'a>>(
-    kernel: &mut T,
+extern "C" fn c_process_info_by_address<'a, T: OSInner<'a>>(
+    os: &mut T,
     address: Address,
     out: &mut MUProcessInfo,
 ) -> i32 {
-    kernel.process_info_by_address(address).int_out_result(out)
+    os.process_info_by_address(address).int_out_result(out)
 }
 
-extern "C" fn c_process_by_info<'a, T: 'a + KernelInner<'a>>(
-    kernel: &'a mut T,
+extern "C" fn c_process_by_info<'a, T: 'a + OSInner<'a>>(
+    os: &'a mut T,
     info: ProcessInfo,
     out: &mut MUPluginProcess<'a>,
 ) -> i32 {
-    kernel
-        .process_by_info(info)
+    os.process_by_info(info)
         .map(PluginProcess::new)
         .int_out_result(out)
 }
 
-extern "C" fn c_into_process_by_info<P: 'static + Process + Clone, T: 'static + PluginKernel<P>>(
-    kernel: &mut T,
+extern "C" fn c_into_process_by_info<P: 'static + Process + Clone, T: 'static + PluginOS<P>>(
+    os: &mut T,
     info: ProcessInfo,
     lib: COptArc<Library>,
     out: &mut MUArcPluginProcess,
 ) -> i32 {
-    let kernel = unsafe { Box::from_raw(kernel) };
-    kernel
-        .into_process_by_info(info)
+    let os = unsafe { Box::from_raw(os) };
+    os.into_process_by_info(info)
         .map(|p| ArcPluginProcess::new(p, lib))
         .int_out_result(out)
 }
 
-extern "C" fn c_module_address_list_callback<'a, T: KernelInner<'a>>(
-    kernel: &mut T,
+extern "C" fn c_module_address_list_callback<'a, T: OSInner<'a>>(
+    os: &mut T,
     callback: AddressCallback,
 ) -> i32 {
-    kernel.module_address_list_callback(callback).int_result()
+    os.module_address_list_callback(callback).int_result()
 }
 
-extern "C" fn c_module_by_address<'a, T: KernelInner<'a>>(
-    kernel: &mut T,
+extern "C" fn c_module_by_address<'a, T: OSInner<'a>>(
+    os: &mut T,
     address: Address,
     out: &mut MUModuleInfo,
 ) -> i32 {
-    kernel.module_by_address(address).int_out_result(out)
+    os.module_by_address(address).int_out_result(out)
 }
 
-extern "C" fn c_kernel_info<'a, T: KernelInner<'a>>(kernel: &T) -> &KernelInfo {
-    kernel.info()
+extern "C" fn c_os_info<'a, T: OSInner<'a>>(os: &T) -> &OSInfo {
+    os.info()
 }
 
-/// Describes initialized kernel instance
+/// Describes initialized os instance
 ///
-/// This structure is returned by `Kernel`. It is needed to maintain reference
-/// counts to the loaded connector library.
+/// This structure is returned by `OS`. It is needed to maintain reference
+/// counts to the loaded plugin library.
 #[repr(C)]
-pub struct KernelInstance {
+pub struct OSInstance {
     instance: &'static mut c_void,
     vtable: OSLayerFunctionTable,
 
     /// Internal library arc.
     ///
-    /// This will keep the library loaded in memory as long as the kernel instance is alive.
+    /// This will keep the library loaded in memory as long as the os instance is alive.
     /// This has to be the last member of the struct so the library will be unloaded _after_
     /// the instance is destroyed.
     ///
@@ -143,8 +137,8 @@ pub struct KernelInstance {
     pub(super) library: COptArc<Library>,
 }
 
-impl KernelInstance {
-    pub fn new<P: 'static + Process + Clone, T: PluginKernel<P>>(instance: T) -> Self {
+impl OSInstance {
+    pub fn new<P: 'static + Process + Clone, T: PluginOS<P>>(instance: T) -> Self {
         Self {
             instance: unsafe { Box::into_raw(Box::new(instance)).cast::<c_void>().as_mut() }
                 .unwrap(),
@@ -154,7 +148,7 @@ impl KernelInstance {
     }
 }
 
-impl<'a> KernelInner<'a> for KernelInstance {
+impl<'a> OSInner<'a> for OSInstance {
     type ProcessType = PluginProcess<'a>;
     type IntoProcessType = ArcPluginProcess;
 
@@ -162,7 +156,7 @@ impl<'a> KernelInner<'a> for KernelInstance {
     ///
     /// The callback is fully opaque. We need this style so that C FFI can work seamlessly.
     fn process_address_list_callback(&mut self, callback: AddressCallback) -> Result<()> {
-        result_from_int_void((self.vtable.kernel.process_address_list_callback)(
+        result_from_int_void((self.vtable.os.process_address_list_callback)(
             self.instance,
             callback,
         ))
@@ -171,26 +165,26 @@ impl<'a> KernelInner<'a> for KernelInstance {
     /// Find process information by its internal address
     fn process_info_by_address(&mut self, address: Address) -> Result<ProcessInfo> {
         let mut out = MUProcessInfo::uninit();
-        let res = (self.vtable.kernel.process_info_by_address)(self.instance, address, &mut out);
+        let res = (self.vtable.os.process_info_by_address)(self.instance, address, &mut out);
         result_from_int(res, out)
     }
 
-    /// Construct a process by its info, borrowing the kernel
+    /// Construct a process by its info, borrowing the os
     ///
     /// It will share the underlying memory resources
     fn process_by_info(&'a mut self, info: ProcessInfo) -> Result<Self::ProcessType> {
         let mut out = MUPluginProcess::uninit();
         // Shorten the lifetime of instance
         let instance = unsafe { (self.instance as *mut c_void).as_mut() }.unwrap();
-        let res = (self.vtable.kernel.process_by_info)(instance, info, &mut out);
+        let res = (self.vtable.os.process_by_info)(instance, info, &mut out);
         result_from_int(res, out)
     }
-    /// Construct a process by its info, consuming the kernel
+    /// Construct a process by its info, consuming the os
     ///
-    /// This function will consume the Kernel instance and move its resources into the process
+    /// This function will consume the OS instance and move its resources into the process
     fn into_process_by_info(mut self, info: ProcessInfo) -> Result<Self::IntoProcessType> {
         let mut out = MUArcPluginProcess::uninit();
-        let res = (self.vtable.kernel.into_process_by_info)(
+        let res = (self.vtable.os.into_process_by_info)(
             self.instance,
             info,
             self.library.take(),
@@ -200,13 +194,13 @@ impl<'a> KernelInner<'a> for KernelInstance {
         result_from_int(res, out)
     }
 
-    /// Walks the kernel module list and calls the provided callback for each module structure
+    /// Walks the os module list and calls the provided callback for each module structure
     /// address
     ///
     /// # Arguments
     /// * `callback` - where to pass each matching module to. This is an opaque callback.
     fn module_address_list_callback(&mut self, callback: AddressCallback) -> Result<()> {
-        result_from_int_void((self.vtable.kernel.module_address_list_callback)(
+        result_from_int_void((self.vtable.os.module_address_list_callback)(
             self.instance,
             callback,
         ))
@@ -218,17 +212,17 @@ impl<'a> KernelInner<'a> for KernelInstance {
     /// * `address` - address where module's information resides in
     fn module_by_address(&mut self, address: Address) -> Result<ModuleInfo> {
         let mut out = MUModuleInfo::uninit();
-        let res = (self.vtable.kernel.module_by_address)(self.instance, address, &mut out);
+        let res = (self.vtable.os.module_by_address)(self.instance, address, &mut out);
         result_from_int(res, out)
     }
 
-    /// Retreives the kernel info
-    fn info(&self) -> &KernelInfo {
-        (self.vtable.kernel.info)(self.instance)
+    /// Retreives the os info
+    fn info(&self) -> &OSInfo {
+        (self.vtable.os.info)(self.instance)
     }
 }
 
-impl Clone for KernelInstance {
+impl Clone for OSInstance {
     fn clone(&self) -> Self {
         let instance =
             (self.vtable.base.clone.clone)(self.instance).expect("Unable to clone Connector");
@@ -240,7 +234,7 @@ impl Clone for KernelInstance {
     }
 }
 
-impl Drop for KernelInstance {
+impl Drop for OSInstance {
     fn drop(&mut self) {
         unsafe {
             (self.vtable.base.drop)(self.instance);

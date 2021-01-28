@@ -4,7 +4,7 @@ use std::path::PathBuf;
 
 use memflow::error::ToIntResult;
 use memflow::plugins::{
-    connector::MUConnectorInstance, os::MUKernelInstance, Args, ConnectorInstance, Inventory,
+    connector::MUConnectorInstance, os::MUOSInstance, Args, ConnectorInstance, Inventory,
 };
 
 use crate::util::*;
@@ -119,7 +119,7 @@ pub unsafe extern "C" fn inventory_create_os(
     name: *const c_char,
     args: *const c_char,
     mem: ConnectorInstance,
-    out: &mut MUKernelInstance,
+    out: &mut MUOSInstance,
 ) -> i32 {
     let rname = CStr::from_ptr(name).to_string_lossy();
     let _args = CStr::from_ptr(args).to_string_lossy();

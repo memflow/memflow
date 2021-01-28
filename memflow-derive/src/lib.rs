@@ -103,7 +103,7 @@ pub fn os_layer(args: TokenStream, input: TokenStream) -> TokenStream {
                 args: ::memflow::types::ReprCStr,
                 mem: ::memflow::plugins::ConnectorInstance,
                 log_level: i32,
-                out: &mut ::memflow::plugins::os::MUKernelInstance
+                out: &mut ::memflow::plugins::os::MUOSInstance
             ) -> i32 {
                 ::memflow::plugins::os::create_with_logging(args, mem, log_level, out, #func_name)
             }
@@ -115,7 +115,7 @@ pub fn os_layer(args: TokenStream, input: TokenStream) -> TokenStream {
                 args: ::memflow::types::ReprCStr,
                 mem: ::memflow::plugins::ConnectorInstance,
                 _: i32,
-                out: &mut ::memflow::plugins::os::MUKernelInstance
+                out: &mut ::memflow::plugins::os::MUOSInstance
             ) -> i32 {
                 ::memflow::plugins::os::create_without_logging(args, mem, out, #func_name)
             }
@@ -157,7 +157,7 @@ pub fn os_layer_bare(args: TokenStream, input: TokenStream) -> TokenStream {
             args: ::memflow::types::ReprCStr,
             mem: ::memflow::plugins::ConnectorInstance,
             log_level: i32,
-            out: &mut ::memflow::plugins::os::MUKernelInstance
+            out: &mut ::memflow::plugins::os::MUOSInstance
         ) -> i32 {
             ::memflow::plugins::create_bare(args, mem, log_level, out, #func_name)
         }

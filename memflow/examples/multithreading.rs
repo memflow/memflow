@@ -22,7 +22,7 @@ pub fn parallel_init(
     });
 }
 
-pub fn parallel_kernels(kernel: KernelInstance) {
+pub fn parallel_kernels(kernel: OSInstance) {
     (0..8)
         .map(|_| kernel.clone())
         .into_iter()
@@ -34,7 +34,7 @@ pub fn parallel_kernels(kernel: KernelInstance) {
         .for_each(|t| t.join().unwrap());
 }
 
-pub fn parallel_processes(kernel: KernelInstance) {
+pub fn parallel_processes(kernel: OSInstance) {
     let process = kernel.into_process_by_name("wininit.exe").unwrap();
 
     (0..8)

@@ -147,7 +147,7 @@ fn bool_str(b: bool) -> ColoredString {
     }
 }
 
-fn kernel_modules(kernel: &mut impl Kernel) -> Result<Vec<ModuleInfo>> {
+fn kernel_modules(kernel: &mut impl OS) -> Result<Vec<ModuleInfo>> {
     let modules = kernel.module_list().map_err(From::from);
     println!("kernel modules ... {}", ok_str(&modules));
     modules
@@ -158,7 +158,7 @@ fn build_kernel(
     inventory: &Inventory,
     name: &str,
     args: &Args,
-) -> Result<KernelInstance> {
+) -> Result<OSInstance> {
     let kernel = inventory.create_os(name, mem, args);
     println!("Kernel::build ... {}", ok_str(&kernel));
     println!();

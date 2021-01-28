@@ -3,8 +3,8 @@ use crate::os::*;
 use crate::types::Address;
 use crate::types::ReprCStr;
 
-pub mod kernel;
-pub use kernel::{KernelFunctionTable, KernelInstance, OpaqueKernelFunctionTable};
+pub mod system;
+pub use system::{OSFunctionTable, OSInstance, OpaqueOSFunctionTable};
 
 pub mod process;
 pub use process::{ArcPluginProcess, PluginProcess};
@@ -27,38 +27,38 @@ pub type MUModuleInfo = MaybeUninit<ModuleInfo>;
 pub type MUPluginProcess<'a> = MaybeUninit<PluginProcess<'a>>;
 pub type MUArcPluginProcess = MaybeUninit<ArcPluginProcess>;
 pub type MUAddress = MaybeUninit<Address>;
-pub type MUKernelInstance = MaybeUninit<KernelInstance>;
+pub type MUOSInstance = MaybeUninit<OSInstance>;
 
 pub type OptionArchitectureIdent<'a> = Option<&'a crate::architecture::ArchitectureIdent>;
 
-pub trait PluginKernel<T: Process + Clone>:
-    'static + Clone + for<'a> KernelInner<'a, IntoProcessType = T>
+pub trait PluginOS<T: Process + Clone>:
+    'static + Clone + for<'a> OSInner<'a, IntoProcessType = T>
 {
 }
-impl<T: Process + Clone, K: 'static + Clone + for<'a> KernelInner<'a, IntoProcessType = T>>
-    PluginKernel<T> for K
+impl<T: Process + Clone, K: 'static + Clone + for<'a> OSInner<'a, IntoProcessType = T>> PluginOS<T>
+    for K
 {
 }
 
-pub fn create_with_logging<P: 'static + Process + Clone, T: PluginKernel<P>>(
+pub fn create_with_logging<P: 'static + Process + Clone, T: PluginOS<P>>(
     args: ReprCStr,
     conn: ConnectorInstance,
     log_level: i32,
-    out: &mut MUKernelInstance,
+    out: &mut MUOSInstance,
     create_fn: impl Fn(&Args, ConnectorInstance, log::Level) -> Result<T>,
 ) -> i32 {
     super::util::create_with_logging(args, log_level, out, move |a, l| {
-        create_fn(&a, conn, l).map(KernelInstance::new)
+        create_fn(&a, conn, l).map(OSInstance::new)
     })
 }
 
-pub fn create_without_logging<P: 'static + Process + Clone, T: PluginKernel<P>>(
+pub fn create_without_logging<P: 'static + Process + Clone, T: PluginOS<P>>(
     args: ReprCStr,
     conn: ConnectorInstance,
-    out: &mut MUKernelInstance,
+    out: &mut MUOSInstance,
     create_fn: impl Fn(&Args, ConnectorInstance) -> Result<T>,
 ) -> i32 {
-    super::util::create_without_logging(args, out, |a| create_fn(&a, conn).map(KernelInstance::new))
+    super::util::create_without_logging(args, out, |a| create_fn(&a, conn).map(OSInstance::new))
 }
 
 #[repr(C)]
@@ -74,7 +74,7 @@ pub struct OSLayerDescriptor {
     pub name: &'static str,
 
     /// Create instance of the OS
-    pub create: extern "C" fn(ReprCStr, ConnectorInstance, i32, &mut MUKernelInstance) -> i32,
+    pub create: extern "C" fn(ReprCStr, ConnectorInstance, i32, &mut MUOSInstance) -> i32,
 }
 
 #[repr(C)]
@@ -82,8 +82,8 @@ pub struct OSLayerDescriptor {
 pub struct OSLayerFunctionTable {
     /// The vtable for object creation and cloning
     pub base: OpaqueBaseTable,
-    /// The vtable for all kernel functions
-    pub kernel: OpaqueKernelFunctionTable,
+    /// The vtable for all os functions
+    pub os: OpaqueOSFunctionTable,
     /// The vtable for all physical memory access if available
     pub phys: Option<&'static OpaquePhysicalMemoryFunctionTable>,
     /// The vtable for all virtual memory access if available
@@ -91,10 +91,10 @@ pub struct OSLayerFunctionTable {
 }
 
 impl OSLayerFunctionTable {
-    pub fn new<P: 'static + Process + Clone, T: PluginKernel<P>>() -> Self {
+    pub fn new<P: 'static + Process + Clone, T: PluginOS<P>>() -> Self {
         OSLayerFunctionTable {
             base: GenericBaseTable::<T>::default().into_opaque(),
-            kernel: KernelFunctionTable::<P, T>::default().into_opaque(),
+            os: OSFunctionTable::<P, T>::default().into_opaque(),
             phys: None,
             virt: None,
         }
@@ -106,7 +106,7 @@ pub struct LoadableOS {
 }
 
 impl Loadable for LoadableOS {
-    type Instance = KernelInstance;
+    type Instance = OSInstance;
     type InputArg = ConnectorInstance;
 
     fn ident(&self) -> &str {
@@ -146,9 +146,9 @@ impl Loadable for LoadableOS {
         library: Option<CArc<Library>>,
         input: ConnectorInstance,
         args: &Args,
-    ) -> Result<KernelInstance> {
+    ) -> Result<OSInstance> {
         let cstr = ReprCStr::from(args.to_string());
-        let mut out = MUKernelInstance::uninit();
+        let mut out = MUOSInstance::uninit();
         let res = (self.descriptor.create)(cstr, input, log::max_level() as i32, &mut out);
         result_from_int(res, out).map(|mut c| {
             c.library = library.into();

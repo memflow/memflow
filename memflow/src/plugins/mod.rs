@@ -23,7 +23,7 @@ pub use connector::{
 pub type ConnectorInputArg = <LoadableConnector as Loadable>::InputArg;
 
 pub mod os;
-pub use os::{KernelInstance, LoadableOS, OSLayerDescriptor, OpaqueKernelFunctionTable};
+pub use os::{LoadableOS, OSInstance, OSLayerDescriptor, OpaqueOSFunctionTable};
 pub type OSInputArg = <LoadableOS as Loadable>::InputArg;
 
 pub(crate) mod util;
@@ -398,7 +398,7 @@ impl Inventory {
         self.create_connector(name, None, &Args::default())
     }
 
-    pub fn create_os(&self, name: &str, input: OSInputArg, args: &Args) -> Result<KernelInstance> {
+    pub fn create_os(&self, name: &str, input: OSInputArg, args: &Args) -> Result<OSInstance> {
         Self::create_internal(&self.os_layers, name, input, args)
     }
 
@@ -408,7 +408,7 @@ impl Inventory {
         conn_args: &Args,
         os_name: &str,
         os_args: &Args,
-    ) -> Result<KernelInstance> {
+    ) -> Result<OSInstance> {
         let conn = self.create_connector(conn_name, None, conn_args)?;
         self.create_os(os_name, conn, os_args)
     }
@@ -418,7 +418,7 @@ impl Inventory {
         conn_args: &Args,
         os_name: &str,
         os_args: &Args,
-    ) -> Result<KernelInstance> {
+    ) -> Result<OSInstance> {
         let inv = Self::scan();
         inv.create_simple_os(conn_name, conn_args, os_name, os_args)
     }

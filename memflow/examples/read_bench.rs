@@ -6,7 +6,7 @@ use log::Level;
 
 use memflow::error::{Error, Result};
 use memflow::mem::*;
-use memflow::os::{Kernel, ModuleInfo, Process};
+use memflow::os::{ModuleInfo, Process, OS};
 use memflow::plugins::*;
 use memflow::types::*;
 
@@ -90,7 +90,7 @@ fn rwtest(
     );
 }
 
-fn read_bench(mut kernel: impl Kernel) -> Result<()> {
+fn read_bench(mut kernel: impl OS) -> Result<()> {
     let proc_list = kernel.process_info_list()?;
     let mut rng = CurRng::seed_from_u64(rand::thread_rng().gen_range(0, !0u64));
     loop {

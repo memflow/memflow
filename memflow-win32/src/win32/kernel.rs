@@ -14,9 +14,7 @@ use std::fmt;
 
 use memflow::architecture::{ArchitectureIdent, ArchitectureObj};
 use memflow::mem::{DirectTranslate, PhysicalMemory, VirtualDMA, VirtualMemory, VirtualTranslate};
-use memflow::os::{
-    AddressCallback, KernelInfo, KernelInner, ModuleInfo, Process, ProcessInfo, PID,
-};
+use memflow::os::{AddressCallback, ModuleInfo, OSInfo, OSInner, Process, ProcessInfo, PID};
 use memflow::types::{Address, ReprCStr};
 
 use pelite::{self, pe64::exports::Export, PeView};
@@ -376,7 +374,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> AsMut<VirtualDMA<T, V, Win32Virtual
     }
 }
 
-impl<'a, T: PhysicalMemory + 'a, V: VirtualTranslate + 'a> KernelInner<'a> for Win32Kernel<T, V> {
+impl<'a, T: PhysicalMemory + 'a, V: VirtualTranslate + 'a> OSInner<'a> for Win32Kernel<T, V> {
     type ProcessType = Win32Process<VirtualDMA<&'a mut T, &'a mut V, Win32VirtualTranslate>>;
     type IntoProcessType = Win32Process<VirtualDMA<T, V, Win32VirtualTranslate>>;
 
@@ -496,7 +494,7 @@ impl<'a, T: PhysicalMemory + 'a, V: VirtualTranslate + 'a> KernelInner<'a> for W
     }
 
     /// Retreives the kernel info
-    fn info(&self) -> &KernelInfo {
+    fn info(&self) -> &OSInfo {
         &self.kernel_info.base_info
     }
 }

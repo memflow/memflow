@@ -2,11 +2,11 @@ use super::{AddressCallback, Process, ProcessInfo, ProcessInfoCallback};
 use crate::prelude::v1::{Result, *};
 use std::prelude::v1::*;
 
-/// Kernel supertrait for all possible lifetimes
-pub trait Kernel: for<'a> KernelInner<'a> {}
-impl<T: for<'a> KernelInner<'a>> Kernel for T {}
+/// OS supertrait for all possible lifetimes
+pub trait OS: for<'a> OSInner<'a> {}
+impl<T: for<'a> OSInner<'a>> OS for T {}
 
-pub trait KernelInner<'a>: Send {
+pub trait OSInner<'a>: Send {
     type ProcessType: Process + 'a;
     type IntoProcessType: Process;
 
@@ -79,16 +79,16 @@ pub trait KernelInner<'a>: Send {
         ret
     }
 
-    /// Construct a process by its info, borrowing the kernel
+    /// Construct a process by its info, borrowing the OS
     ///
     /// It will share the underlying memory resources
     fn process_by_info(&'a mut self, info: ProcessInfo) -> Result<Self::ProcessType>;
-    /// Construct a process by its info, consuming the kernel
+    /// Construct a process by its info, consuming the OS
     ///
     /// This function will consume the Kernel instance and move its resources into the process
     fn into_process_by_info(self, info: ProcessInfo) -> Result<Self::IntoProcessType>;
 
-    /// Creates a process by its internal address, borrowing the kernel
+    /// Creates a process by its internal address, borrowing the OS
     ///
     /// It will share the underlying memory resources
     ///
@@ -99,7 +99,7 @@ pub trait KernelInner<'a>: Send {
         self.process_info_by_address(addr)
             .and_then(move |i| self.process_by_info(i))
     }
-    /// Creates a process by its name, borrowing the kernel
+    /// Creates a process by its name, borrowing the OS
     ///
     /// It will share the underlying memory resources
     ///
@@ -110,7 +110,7 @@ pub trait KernelInner<'a>: Send {
         self.process_info_by_name(name)
             .and_then(move |i| self.process_by_info(i))
     }
-    /// Creates a process by its ID, borrowing the kernel
+    /// Creates a process by its ID, borrowing the OS
     ///
     /// It will share the underlying memory resources
     ///
@@ -122,9 +122,9 @@ pub trait KernelInner<'a>: Send {
             .and_then(move |i| self.process_by_info(i))
     }
 
-    /// Creates a process by its internal address, consuming the kernel
+    /// Creates a process by its internal address, consuming the OS
     ///
-    /// It will consume the kernel and not affect memory usage
+    /// It will consume the OS and not affect memory usage
     ///
     /// If no process with the specified address can be found this function will return an Error.
     ///
@@ -136,9 +136,9 @@ pub trait KernelInner<'a>: Send {
         self.process_info_by_address(addr)
             .and_then(|i| self.into_process_by_info(i))
     }
-    /// Creates a process by its name, consuming the kernel
+    /// Creates a process by its name, consuming the OS
     ///
-    /// It will consume the kernel and not affect memory usage
+    /// It will consume the OS and not affect memory usage
     ///
     /// If no process with the specified name can be found this function will return an Error.
     ///
@@ -150,9 +150,9 @@ pub trait KernelInner<'a>: Send {
         self.process_info_by_name(name)
             .and_then(|i| self.into_process_by_info(i))
     }
-    /// Creates a process by its ID, consuming the kernel
+    /// Creates a process by its ID, consuming the OS
     ///
-    /// It will consume the kernel and not affect memory usage
+    /// It will consume the OS and not affect memory usage
     ///
     /// If no process with the specified ID can be found this function will return an Error.
     ///
@@ -165,14 +165,14 @@ pub trait KernelInner<'a>: Send {
             .and_then(|i| self.into_process_by_info(i))
     }
 
-    /// Walks the kernel module list and calls the provided callback for each module structure
+    /// Walks the OS module list and calls the provided callback for each module structure
     /// address
     ///
     /// # Arguments
     /// * `callback` - where to pass each matching module to. This is an opaque callback.
     fn module_address_list_callback(&mut self, callback: AddressCallback) -> Result<()>;
 
-    /// Walks the kernel module list and calls the provided callback for each module
+    /// Walks the OS module list and calls the provided callback for each module
     ///
     /// # Arguments
     /// * `callback` - where to pass each matching module to. This is an opaque callback.
@@ -188,7 +188,7 @@ pub trait KernelInner<'a>: Send {
         s1.module_address_list_callback(inner_callback.into())
     }
 
-    /// Retrieves a module list for the kernel
+    /// Retrieves a module list for the OS
     fn module_list(&mut self) -> Result<Vec<ModuleInfo>> {
         let mut ret = vec![];
         self.module_list_callback((&mut ret).into())?;
@@ -201,7 +201,7 @@ pub trait KernelInner<'a>: Send {
     /// * `address` - address where module's information resides in
     fn module_by_address(&mut self, address: Address) -> Result<ModuleInfo>;
 
-    /// Finds a kernel module by its name
+    /// Finds a OS module by its name
     ///
     /// This function can be useful for quickly accessing a specific module
     fn module_by_name(&mut self, name: &str) -> Result<ModuleInfo> {
@@ -218,17 +218,17 @@ pub trait KernelInner<'a>: Send {
         ret
     }
 
-    /// Retreives the kernel info
-    fn info(&self) -> &KernelInfo;
+    /// Retreives the OS info
+    fn info(&self) -> &OSInfo;
 }
 
 #[repr(C)]
 #[derive(Clone, Debug)]
-#[cfg_attr(feature = "serde", derive(::serde::Serialize))]
-pub struct KernelInfo {
-    /// Base address of the kernel
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+pub struct OSInfo {
+    /// Base address of the OS kernel
     pub base: Address,
-    /// Size of the kernel
+    /// Size of the OS kernel
     pub size: usize,
     /// System architecture
     pub arch: ArchitectureIdent,

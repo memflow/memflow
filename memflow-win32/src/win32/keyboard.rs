@@ -28,7 +28,7 @@ fn test<T: PhysicalMemory, V: VirtualTranslate>(kernel: &mut Win32Kernel<T, V>) 
 */
 use super::{Win32Kernel, Win32Process};
 use crate::error::{Error, Result};
-use memflow::os::{KernelInner, Process, ProcessInfo};
+use memflow::os::{OSInner, Process, ProcessInfo};
 
 use std::convert::TryInto;
 

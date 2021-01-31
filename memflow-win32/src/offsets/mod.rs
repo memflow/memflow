@@ -306,6 +306,8 @@ impl Win32Offsets {
 mod tests {
     use super::*;
 
+    // this test is not ideal for the CI so it's disabled for now.
+    /*
     #[test]
     fn download_pdb() {
         let guid = Win32GUID {
@@ -334,4 +336,5 @@ mod tests {
         assert_eq!(offsets.0.teb_peb, 96);
         assert_eq!(offsets.0.teb_peb_x86, 48);
     }
+    */
 }

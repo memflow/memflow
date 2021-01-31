@@ -45,14 +45,14 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
         let sysproc_dtb = {
             let mut reader = VirtualDMA::with_vat(
                 &mut phys_mem,
-                kernel_info.base_info.arch,
-                Win32VirtualTranslate::new(kernel_info.base_info.arch, kernel_info.dtb),
+                kernel_info.os_info.arch,
+                Win32VirtualTranslate::new(kernel_info.os_info.arch, kernel_info.dtb),
                 &mut vat,
             );
 
             if let Some(Some(dtb)) = reader
                 .virt_read_addr_arch(
-                    kernel_info.base_info.arch.into(),
+                    kernel_info.os_info.arch.into(),
                     kernel_info.eprocess_base + offsets.kproc_dtb(),
                 )
                 .ok()
@@ -68,8 +68,8 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
         Self {
             virt_mem: VirtualDMA::with_vat(
                 phys_mem,
-                kernel_info.base_info.arch,
-                Win32VirtualTranslate::new(kernel_info.base_info.arch, kernel_info.dtb),
+                kernel_info.os_info.arch,
+                Win32VirtualTranslate::new(kernel_info.os_info.arch, kernel_info.dtb),
                 vat,
             ),
             offsets,
@@ -84,16 +84,15 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
         if let Some(info) = self.kernel_modules {
             Ok(info)
         } else {
-            let image = self.virt_mem.virt_read_raw(
-                self.kernel_info.base_info.base,
-                self.kernel_info.base_info.size,
-            )?;
+            let image = self
+                .virt_mem
+                .virt_read_raw(self.kernel_info.os_info.base, self.kernel_info.os_info.size)?;
             let pe = PeView::from_bytes(&image).map_err(Error::PE)?;
             let addr = match pe
                 .get_export_by_name("PsLoadedModuleList")
                 .map_err(Error::PE)?
             {
-                Export::Symbol(s) => self.kernel_info.base_info.base + *s as usize,
+                Export::Symbol(s) => self.kernel_info.os_info.base + *s as usize,
                 Export::Forward(_) => {
                     return Err(Error::Other(
                         "PsLoadedModuleList found but it was a forwarded export",
@@ -103,9 +102,9 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
 
             let addr = self
                 .virt_mem
-                .virt_read_addr_arch(self.kernel_info.base_info.arch.into(), addr)?;
+                .virt_read_addr_arch(self.kernel_info.os_info.arch.into(), addr)?;
 
-            let info = Win32ModuleListInfo::with_base(addr, self.kernel_info.base_info.arch)?;
+            let info = Win32ModuleListInfo::with_base(addr, self.kernel_info.os_info.arch)?;
 
             self.kernel_modules = Some(info);
             Ok(info)
@@ -122,11 +121,11 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
 
         Ok(Win32ProcessInfo {
             base: ProcessInfo {
-                address: self.kernel_info.base_info.base,
+                address: self.kernel_info.os_info.base,
                 pid: 0,
                 name: "ntoskrnl.exe".into(),
-                sys_arch: self.kernel_info.base_info.arch,
-                proc_arch: self.kernel_info.base_info.arch,
+                sys_arch: self.kernel_info.os_info.arch,
+                proc_arch: self.kernel_info.os_info.arch,
             },
             dtb: self.sysproc_dtb,
             section_base: Address::NULL, // TODO: see below
@@ -147,20 +146,20 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
 
     pub fn process_info_from_base(&mut self, base: ProcessInfo) -> Result<Win32ProcessInfo> {
         let dtb = self.virt_mem.virt_read_addr_arch(
-            self.kernel_info.base_info.arch.into(),
+            self.kernel_info.os_info.arch.into(),
             base.address + self.offsets.kproc_dtb(),
         )?;
         trace!("dtb={:x}", dtb);
 
         // read native_peb (either the process peb or the peb containing the wow64 helpers)
         let native_peb = self.virt_mem.virt_read_addr_arch(
-            self.kernel_info.base_info.arch.into(),
+            self.kernel_info.os_info.arch.into(),
             base.address + self.offsets.eproc_peb(),
         )?;
         trace!("native_peb={:x}", native_peb);
 
         let section_base = self.virt_mem.virt_read_addr_arch(
-            self.kernel_info.base_info.arch.into(),
+            self.kernel_info.os_info.arch.into(),
             base.address + self.offsets.eproc_section_base(),
         )?;
         trace!("section_base={:x}", section_base);
@@ -172,7 +171,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
 
         // find first ethread
         let ethread = self.virt_mem.virt_read_addr_arch(
-            self.kernel_info.base_info.arch.into(),
+            self.kernel_info.os_info.arch.into(),
             base.address + self.offsets.eproc_thread_list(),
         )? - self.offsets.ethread_list_entry();
         trace!("ethread={:x}", ethread);
@@ -180,7 +179,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
         let peb_native = self
             .virt_mem
             .virt_read_addr_arch(
-                self.kernel_info.base_info.arch.into(),
+                self.kernel_info.os_info.arch.into(),
                 base.address + self.offsets.eproc_peb(),
             )?
             .non_null();
@@ -195,7 +194,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
                 self.offsets.eproc_wow64()
             );
             self.virt_mem.virt_read_addr_arch(
-                self.kernel_info.base_info.arch.into(),
+                self.kernel_info.os_info.arch.into(),
                 base.address + self.offsets.eproc_wow64(),
             )?
         };
@@ -206,7 +205,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
         // TODO: does this need to be read with the process ctx?
         let (teb, teb_wow64) = if self.kernel_info.kernel_winver >= (6, 2).into() {
             let teb = self.virt_mem.virt_read_addr_arch(
-                self.kernel_info.base_info.arch.into(),
+                self.kernel_info.os_info.arch.into(),
                 ethread + self.offsets.kthread_teb(),
             )?;
 
@@ -234,7 +233,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
         let mut proc_reader = VirtualDMA::with_vat(
             phys_mem,
             base.proc_arch,
-            Win32VirtualTranslate::new(self.kernel_info.base_info.arch, dtb),
+            Win32VirtualTranslate::new(self.kernel_info.os_info.arch, dtb),
             vat,
         );
 
@@ -243,7 +242,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
             // we will be using the process type architecture now
             peb_wow64 = proc_reader
                 .virt_read_addr_arch(
-                    self.kernel_info.base_info.arch.into(),
+                    self.kernel_info.os_info.arch.into(),
                     teb + self.offsets.teb_peb_x86(),
                 )?
                 .non_null();
@@ -322,14 +321,14 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
                 self.offsets.eproc_wow64()
             );
             self.virt_mem.virt_read_addr_arch(
-                self.kernel_info.base_info.arch.into(),
+                self.kernel_info.os_info.arch.into(),
                 address + self.offsets.eproc_wow64(),
             )?
         };
         trace!("wow64={:x}", wow64);
 
         // determine process architecture
-        let sys_arch = self.kernel_info.base_info.arch;
+        let sys_arch = self.kernel_info.os_info.arch;
         trace!("sys_arch={:?}", sys_arch);
         let proc_arch = match ArchitectureObj::from(sys_arch).bits() {
             64 => {
@@ -395,10 +394,10 @@ impl<'a, T: PhysicalMemory + 'a, V: VirtualTranslate + 'a> OSInner<'a> for Win32
             // test flink + blink before adding the process
             let flink_entry = self
                 .virt_mem
-                .virt_read_addr_arch(self.kernel_info.base_info.arch.into(), list_entry)?;
+                .virt_read_addr_arch(self.kernel_info.os_info.arch.into(), list_entry)?;
             trace!("flink_entry={}", flink_entry);
             let blink_entry = self.virt_mem.virt_read_addr_arch(
-                self.kernel_info.base_info.arch.into(),
+                self.kernel_info.os_info.arch.into(),
                 list_entry + self.offsets.list_blink(),
             )?;
             trace!("blink_entry={}", blink_entry);
@@ -472,7 +471,7 @@ impl<'a, T: PhysicalMemory + 'a, V: VirtualTranslate + 'a> OSInner<'a> for Win32
         self.kernel_modules()?
             .module_entry_list_callback::<Self, VirtualDMA<T, V, Win32VirtualTranslate>>(
                 self,
-                self.kernel_info.base_info.arch,
+                self.kernel_info.os_info.arch,
                 callback,
             )
             .map_err(From::from)
@@ -488,14 +487,14 @@ impl<'a, T: PhysicalMemory + 'a, V: VirtualTranslate + 'a> OSInner<'a> for Win32
                 address,
                 self.kernel_info.eprocess_base,
                 &mut self.virt_mem,
-                self.kernel_info.base_info.arch,
+                self.kernel_info.os_info.arch,
             )
             .map_err(From::from)
     }
 
     /// Retreives the kernel info
     fn info(&self) -> &OSInfo {
-        &self.kernel_info.base_info
+        &self.kernel_info.os_info
     }
 }
 

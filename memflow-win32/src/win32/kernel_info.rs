@@ -14,7 +14,7 @@ use super::Win32VirtualTranslate;
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize))]
 pub struct Win32KernelInfo {
-    pub base_info: OSInfo,
+    pub os_info: OSInfo,
     pub dtb: Address,
 
     pub kernel_guid: Option<Win32GUID>,
@@ -119,7 +119,7 @@ impl<T: PhysicalMemory> KernelInfoScanner<T> {
         } = start_block;
 
         Ok(Win32KernelInfo {
-            base_info: OSInfo { base, size, arch },
+            os_info: OSInfo { base, size, arch },
             dtb,
 
             kernel_guid,

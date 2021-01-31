@@ -95,13 +95,13 @@ use memflow::types::Address;
 ///
 ///     // Create a Page Cache layer with default values
 ///     let mut connector_cached = CachedMemoryAccess::builder(connector)
-///         .arch(kernel_info.base_info.arch)
+///         .arch(kernel_info.os_info.arch)
 ///         .build()
 ///         .unwrap();
 ///
 ///     // Create a TLB Cache layer with default values
 ///     let vat_cached = CachedVirtualTranslate::builder(vat)
-///         .arch(kernel_info.base_info.arch)
+///         .arch(kernel_info.os_info.arch)
 ///         .build()
 ///         .unwrap();
 ///
@@ -171,8 +171,8 @@ where
         let vat = DirectTranslate::new();
 
         // create caches
-        let kernel_connector = (self.build_page_cache)(self.connector, kernel_info.base_info.arch);
-        let kernel_vat = (self.build_vat_cache)(vat, kernel_info.base_info.arch);
+        let kernel_connector = (self.build_page_cache)(self.connector, kernel_info.os_info.arch);
+        let kernel_vat = (self.build_vat_cache)(vat, kernel_info.os_info.arch);
 
         // create the final kernel object
         Ok(Win32Kernel::new(

@@ -20,13 +20,13 @@ fn main() -> Result<()> {
     let inventory = Inventory::scan();
     let connector = inventory.create_connector(&connector, None, &args)?;
 
-    let mut kernel = build_kernel(connector, &inventory, &os_name, &os_args)?;
+    let kernel_result = inventory.create_os(&os_name, Some(connector), &os_args);
+    println!("Kernel::build ... {}", ok_str(&kernel_result));
+    let mut kernel = kernel_result?;
 
     {
         println!("Kernel info:");
-        //let info = &kernel.kernel_info;
         let base_info = kernel.info();
-        //println!("dtb {:x} ... {}", info.dtb, some_str(&info.dtb.non_null()));
         println!(
             "base: {:x} ... {}",
             base_info.base,
@@ -37,21 +37,6 @@ fn main() -> Result<()> {
             base_info.size,
             bool_str(base_info.size != 0)
         );
-        /*println!(
-            "kernel_guid: {:?} ... {}",
-            info.kernel_guid,
-            some_str(&info.kernel_guid)
-        );
-        println!(
-            "kernel_winver: {:?} ... {}",
-            info.kernel_winver.as_tuple(),
-            bool_str(info.kernel_winver != (0, 0).into())
-        );
-        println!(
-            "eprocess_base: {:x} ... {}",
-            info.eprocess_base,
-            some_str(&info.eprocess_base.non_null())
-        );*/
         println!();
     }
 
@@ -80,42 +65,6 @@ fn main() -> Result<()> {
         if let Some(proc) = lsass {
             println!("{} info:", proc.name);
             println!("pid: {} ... {}", proc.pid, bool_str(proc.pid < 10000));
-            /*let win32_proc = kernel.process_info_from_base(proc.clone())?;
-            println!(
-                "dtb: {} ... {}",
-                win32_proc.dtb,
-                some_str(&win32_proc.dtb.non_null())
-            );
-            println!(
-                "section_base: {} ... {}",
-                win32_proc.section_base,
-                some_str(&win32_proc.section_base.non_null())
-            );
-            println!(
-                "ethread: {} ... {}",
-                win32_proc.ethread,
-                some_str(&win32_proc.ethread.non_null())
-            );
-            println!(
-                "teb: {:?} ... {}",
-                win32_proc.teb,
-                bool_str(win32_proc.teb.is_none())
-            );
-            println!(
-                "teb_wow64: {:?} ... {}",
-                win32_proc.teb_wow64,
-                bool_str(win32_proc.teb_wow64.is_none())
-            );
-            println!(
-                "peb_native: {:?} ... {}",
-                win32_proc.peb_native,
-                some_str(&win32_proc.peb_native)
-            );
-            println!(
-                "peb_wow64: {:?} ... {}",
-                win32_proc.teb_wow64,
-                bool_str(win32_proc.peb_wow64.is_none())
-            );*/
         }
     }
 
@@ -151,18 +100,6 @@ fn kernel_modules(kernel: &mut impl OS) -> Result<Vec<ModuleInfo>> {
     let modules = kernel.module_list().map_err(From::from);
     println!("kernel modules ... {}", ok_str(&modules));
     modules
-}
-
-fn build_kernel(
-    mem: ConnectorInstance,
-    inventory: &Inventory,
-    name: &str,
-    args: &Args,
-) -> Result<OSInstance> {
-    let kernel = inventory.create_os(name, Some(mem), args);
-    println!("Kernel::build ... {}", ok_str(&kernel));
-    println!();
-    kernel
 }
 
 fn parse_args() -> (String, String, String, String, String, String) {

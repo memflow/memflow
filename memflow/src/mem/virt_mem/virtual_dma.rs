@@ -133,12 +133,12 @@ impl<T: PhysicalMemory, V: VirtualTranslate, D: ScopedVirtualTranslate> VirtualD
         }
     }
 
-    /// Consume the self object and returns the containing memory connection
+    /// Consume the self object and return the underlying owned memory and vat objects
     pub fn destroy(self) -> (T, V) {
         (self.phys_mem, self.vat)
     }
 
-    pub fn borrow_both(&mut self) -> (&mut T, &mut V) {
+    pub fn mem_vat_pair(&mut self) -> (&mut T, &mut V) {
         (&mut self.phys_mem, &mut self.vat)
     }
 

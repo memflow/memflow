@@ -194,7 +194,7 @@ impl KeyboardState {
     ///
     /// In case of supplying a invalid key this function will just return false cleanly.
     pub fn is_down(&self, vk: i32) -> bool {
-        if vk < 0 || vk > 256 {
+        if !(0..=256).contains(&vk) {
             false
         } else {
             is_key_down!(self.buffer, vk)

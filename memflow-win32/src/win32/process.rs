@@ -24,7 +24,7 @@ pub const IMAGE_FILE_NAME_LENGTH: usize = 15;
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize))]
 pub struct Win32ProcessInfo {
-    pub base: ProcessInfo,
+    pub base_info: ProcessInfo,
 
     // general information from eprocess
     pub dtb: Address,
@@ -88,7 +88,7 @@ impl Win32ProcessInfo {
     }
 
     pub fn translator(&self) -> Win32VirtualTranslate {
-        Win32VirtualTranslate::new(self.base.sys_arch, self.dtb)
+        Win32VirtualTranslate::new(self.base_info.sys_arch, self.dtb)
     }
 }
 
@@ -134,11 +134,11 @@ impl<T: VirtualMemory> Process for Win32Process<T> {
         let infos = [
             (
                 self.proc_info.module_info_native,
-                self.proc_info.base.sys_arch,
+                self.proc_info.base_info.sys_arch,
             ),
             (
                 self.proc_info.module_info_wow64,
-                self.proc_info.base.proc_arch,
+                self.proc_info.base_info.proc_arch,
             ),
         ];
 
@@ -169,9 +169,9 @@ impl<T: VirtualMemory> Process for Win32Process<T> {
         address: Address,
         architecture: ArchitectureIdent,
     ) -> memflow::error::Result<ModuleInfo> {
-        let info = if architecture == self.proc_info.base.sys_arch {
+        let info = if architecture == self.proc_info.base_info.sys_arch {
             self.proc_info.module_info_native.as_mut()
-        } else if architecture == self.proc_info.base.proc_arch {
+        } else if architecture == self.proc_info.base_info.proc_arch {
             self.proc_info.module_info_wow64.as_mut()
         } else {
             None
@@ -180,7 +180,7 @@ impl<T: VirtualMemory> Process for Win32Process<T> {
 
         info.module_info_from_entry(
             address,
-            self.proc_info.base.address,
+            self.proc_info.base_info.address,
             &mut self.virt_mem,
             architecture,
         )
@@ -196,7 +196,7 @@ impl<T: VirtualMemory> Process for Win32Process<T> {
         let sptr = self as *mut Self;
         let callback = &mut |ModuleAddressInfo { address, arch }| {
             let s = unsafe { sptr.as_mut() }.unwrap();
-            let info = if arch == s.proc_info.base.sys_arch {
+            let info = if arch == s.proc_info.base_info.sys_arch {
                 s.proc_info.module_info_native.as_mut()
             } else {
                 s.proc_info.module_info_wow64.as_mut()
@@ -213,14 +213,14 @@ impl<T: VirtualMemory> Process for Win32Process<T> {
                 true
             }
         };
-        let proc_arch = self.proc_info.base.proc_arch;
+        let proc_arch = self.proc_info.base_info.proc_arch;
         self.module_address_list_callback(Some(&proc_arch), callback.into())?;
         ret
     }
 
     /// Retreives the process info
     fn info(&self) -> &ProcessInfo {
-        &self.proc_info.base
+        &self.proc_info.base_info
     }
 }
 
@@ -233,7 +233,7 @@ impl<'a, T: PhysicalMemory, V: VirtualTranslate>
         let (phys_mem, vat) = kernel.virt_mem.destroy();
         let virt_mem = VirtualDMA::with_vat(
             phys_mem,
-            proc_info.base.proc_arch,
+            proc_info.base_info.proc_arch,
             proc_info.translator(),
             vat,
         );
@@ -244,7 +244,7 @@ impl<'a, T: PhysicalMemory, V: VirtualTranslate>
         }
     }
 
-    /// Consume the self object and returns the containing memory connection
+    /// Consume the self object and return the underlying owned memory and vat objects
     pub fn destroy(self) -> (T, V) {
         self.virt_mem.destroy()
     }
@@ -263,10 +263,10 @@ impl<'a, T: PhysicalMemory, V: VirtualTranslate>
     /// When u need a cloneable Process u have to use the `::with_kernel` function
     /// which will move the kernel object.
     pub fn with_kernel_ref(kernel: &'a mut Win32Kernel<T, V>, proc_info: Win32ProcessInfo) -> Self {
-        let (phys_mem, vat) = kernel.virt_mem.borrow_both();
+        let (phys_mem, vat) = kernel.virt_mem.mem_vat_pair();
         let virt_mem = VirtualDMA::with_vat(
             phys_mem,
-            proc_info.base.proc_arch,
+            proc_info.base_info.proc_arch,
             proc_info.translator(),
             vat,
         );

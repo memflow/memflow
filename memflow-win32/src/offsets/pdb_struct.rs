@@ -106,7 +106,7 @@ impl<'a, 's> Source<'s> for PdbSourceBuffer<'a> {
         &mut self,
         slices: &[SourceSlice],
     ) -> result::Result<Box<dyn SourceView<'s>>, io::Error> {
-        let len = slices.iter().fold(0 as usize, |acc, s| acc + s.size);
+        let len = slices.iter().fold(0_usize, |acc, s| acc + s.size);
 
         let mut v = PdbSourceBufferView {
             bytes: Vec::with_capacity(len),

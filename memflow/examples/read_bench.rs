@@ -40,7 +40,7 @@ fn rwtest(
             let mut done_size = 0_usize;
             let mut total_dur = Duration::new(0, 0);
             let mut calls = 0;
-            let mut bufs = vec![(vec![0 as u8; *i], 0); *o];
+            let mut bufs = vec![(vec![0_u8; *i], 0); *o];
 
             let base_addr = rng.gen_range(
                 module.base.as_u64(),

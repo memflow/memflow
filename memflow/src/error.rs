@@ -237,15 +237,15 @@ impl<T> PartialResultExt<T> for PartialResult<T> {
     }
 }
 
-pub trait ToIntResult<T> {
-    fn int_result(self) -> i32;
-    fn int_out_result(self, out: &mut MaybeUninit<T>) -> i32;
+pub trait AsIntResult<T> {
+    fn as_int_result(self) -> i32;
+    fn as_int_out_result(self, out: &mut MaybeUninit<T>) -> i32;
 
-    fn int_result_logged(self) -> i32
+    fn as_int_result_logged(self) -> i32
     where
         Self: Sized,
     {
-        let res = self.int_result();
+        let res = self.as_int_result();
         if res != 0 {
             error!("err value: {}", res);
         }
@@ -279,8 +279,8 @@ pub fn result_from_int<T>(res: i32, out: MaybeUninit<T>) -> Result<T> {
     }
 }
 
-impl<T, E: std::fmt::Display> ToIntResult<T> for std::result::Result<T, E> {
-    fn int_result(self) -> i32 {
+impl<T, E: std::fmt::Display> AsIntResult<T> for std::result::Result<T, E> {
+    fn as_int_result(self) -> i32 {
         if self.is_ok() {
             0
         } else {
@@ -288,7 +288,7 @@ impl<T, E: std::fmt::Display> ToIntResult<T> for std::result::Result<T, E> {
         }
     }
 
-    fn int_out_result(self, out: &mut MaybeUninit<T>) -> i32 {
+    fn as_int_out_result(self, out: &mut MaybeUninit<T>) -> i32 {
         if let Ok(ret) = self {
             unsafe { out.as_mut_ptr().write(ret) };
             0
@@ -297,7 +297,7 @@ impl<T, E: std::fmt::Display> ToIntResult<T> for std::result::Result<T, E> {
         }
     }
 
-    fn int_result_logged(self) -> i32 {
+    fn as_int_result_logged(self) -> i32 {
         if let Err(e) = self {
             error!("{}", e);
             -1

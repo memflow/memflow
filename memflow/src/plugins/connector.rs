@@ -121,7 +121,9 @@ extern "C" fn phys_write_raw_list_internal<T: PhysicalMemory>(
     write_data_count: usize,
 ) -> i32 {
     let write_data_slice = unsafe { std::slice::from_raw_parts(write_data, write_data_count) };
-    phys_mem.phys_write_raw_list(write_data_slice).int_result()
+    phys_mem
+        .phys_write_raw_list(write_data_slice)
+        .as_int_result()
 }
 
 extern "C" fn phys_read_raw_list_internal<T: PhysicalMemory>(
@@ -130,7 +132,7 @@ extern "C" fn phys_read_raw_list_internal<T: PhysicalMemory>(
     read_data_count: usize,
 ) -> i32 {
     let read_data_slice = unsafe { std::slice::from_raw_parts_mut(read_data, read_data_count) };
-    phys_mem.phys_read_raw_list(read_data_slice).int_result()
+    phys_mem.phys_read_raw_list(read_data_slice).as_int_result()
 }
 
 extern "C" fn metadata_internal<T: PhysicalMemory>(phys_mem: &T) -> PhysicalMemoryMetadata {

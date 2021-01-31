@@ -28,7 +28,7 @@ fn rwtest<T: VirtualMemory>(
 
     for i in chunk_sizes {
         for o in chunk_counts {
-            let mut vbufs = vec![vec![0 as u8; *i]; *o];
+            let mut vbufs = vec![vec![0_u8; *i]; *o];
             let mut done_size = 0;
 
             while done_size < read_size {

@@ -55,16 +55,16 @@ fn main() -> Result<()> {
 
     {
         println!("Process List:");
-        let proc_list = kernel.process_info_list()?;
-        let lsass = proc_list
+        let prc_list = kernel.process_info_list()?;
+        let lsass = prc_list
             .iter()
             .find(|p| p.name.to_string().to_lowercase() == sysproc);
         println!("{} ... {}", &sysproc, some_str(&lsass));
         println!();
 
-        if let Some(proc) = lsass {
-            println!("{} info:", proc.name);
-            println!("pid: {} ... {}", proc.pid, bool_str(proc.pid < 10000));
+        if let Some(prc) = lsass {
+            println!("{} info:", prc.name);
+            println!("pid: {} ... {}", prc.pid, bool_str(prc.pid < 10000));
         }
     }
 

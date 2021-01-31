@@ -1,4 +1,4 @@
-use memflow::error::ToIntResult;
+use memflow::error::AsIntResult;
 use memflow::mem::phys_mem::*;
 use memflow::plugins::ConnectorInstance;
 use memflow::types::PhysicalAddress;
@@ -20,7 +20,7 @@ pub unsafe extern "C" fn phys_read_raw_list(
     len: usize,
 ) -> i32 {
     let data = from_raw_parts_mut(data, len);
-    mem.phys_read_raw_list(data).int_result()
+    mem.phys_read_raw_list(data).as_int_result()
 }
 
 /// Write a list of values
@@ -38,7 +38,7 @@ pub unsafe extern "C" fn phys_write_raw_list(
     len: usize,
 ) -> i32 {
     let data = from_raw_parts(data, len);
-    mem.phys_write_raw_list(data).int_result()
+    mem.phys_write_raw_list(data).as_int_result()
 }
 
 /// Retrieve metadata about the physical memory object
@@ -60,7 +60,7 @@ pub unsafe extern "C" fn phys_read_raw(
     len: usize,
 ) -> i32 {
     mem.phys_read_raw_into(addr, from_raw_parts_mut(out, len))
-        .int_result()
+        .as_int_result()
 }
 
 /// Read a single 32-bit value from a provided `PhysicalAddress`
@@ -88,7 +88,7 @@ pub unsafe extern "C" fn phys_write_raw(
     len: usize,
 ) -> i32 {
     mem.phys_write_raw(addr, from_raw_parts(input, len))
-        .int_result()
+        .as_int_result()
 }
 
 /// Write a single 32-bit value into a provided `PhysicalAddress`
@@ -98,7 +98,7 @@ pub extern "C" fn phys_write_u32(
     addr: PhysicalAddress,
     val: u32,
 ) -> i32 {
-    mem.phys_write(addr, &val).int_result()
+    mem.phys_write(addr, &val).as_int_result()
 }
 
 /// Write a single 64-bit value into a provided `PhysicalAddress`
@@ -108,5 +108,5 @@ pub extern "C" fn phys_write_u64(
     addr: PhysicalAddress,
     val: u64,
 ) -> i32 {
-    mem.phys_write(addr, &val).int_result()
+    mem.phys_write(addr, &val).as_int_result()
 }

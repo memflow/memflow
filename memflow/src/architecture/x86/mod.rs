@@ -12,6 +12,8 @@ use crate::iter::SplitAtIndex;
 use crate::mem::PhysicalMemory;
 use crate::types::{Address, PhysicalAddress};
 
+use std::ptr;
+
 pub struct X86Architecture {
     /// Defines how many bits does the native word size have
     bits: u8,
@@ -43,7 +45,7 @@ impl Architecture for X86Architecture {
     fn ident(&self) -> ArchitectureIdent {
         ArchitectureIdent::X86(
             self.bits,
-            self as *const _ == &x32_pae::ARCH_SPEC as *const _,
+            ptr::eq(self as *const _, &x32_pae::ARCH_SPEC as *const _),
         )
     }
 }

@@ -17,10 +17,10 @@ fn initialize_virt_ctx() -> Result<(
 
     let vat = DirectTranslate::new();
 
-    let proc = mem.alloc_process(size::mb(60), &[]);
-    let module = proc.get_module(size::mb(4));
-    let translator = proc.translator();
-    Ok((mem, vat, proc.base, translator, module))
+    let prc = mem.alloc_process(size::mb(60), &[]);
+    let module = prc.get_module(size::mb(4));
+    let translator = prc.translator();
+    Ok((mem, vat, prc.info, translator, module))
 }
 
 fn dummy_read_group(c: &mut Criterion) {

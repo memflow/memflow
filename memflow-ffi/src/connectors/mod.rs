@@ -2,7 +2,7 @@ use std::ffi::CStr;
 use std::os::raw::c_char;
 use std::path::PathBuf;
 
-use memflow::error::ToIntResult;
+use memflow::error::AsIntResult;
 use memflow::plugins::{
     connector::MUConnectorInstance, os::MUOSInstance, Args, ConnectorInstance, Inventory,
 };
@@ -53,7 +53,7 @@ pub unsafe extern "C" fn inventory_add_dir(inv: &mut Inventory, dir: *const c_ch
     let rdir = CStr::from_ptr(dir).to_string_lossy();
 
     inv.add_dir(PathBuf::from(rdir.to_string()))
-        .int_result_logged()
+        .as_int_result_logged()
 }
 
 /// Create a connector with given arguments
@@ -85,14 +85,14 @@ pub unsafe extern "C" fn inventory_create_connector(
     if args.is_null() {
         inv.create_connector_default(&rname)
             .map_err(inspect_err)
-            .int_out_result(out)
+            .as_int_out_result(out)
     } else {
         let rargs = CStr::from_ptr(args).to_string_lossy();
         Args::parse(&rargs)
             .map_err(inspect_err)
             .and_then(|args| inv.create_connector(&rname, None, &args))
             .map_err(inspect_err)
-            .int_out_result(out)
+            .as_int_out_result(out)
     }
 }
 
@@ -132,7 +132,7 @@ pub unsafe extern "C" fn inventory_create_os(
             .map_err(inspect_err)
             .and_then(|args| inv.create_os(&rname, Some(mem), &args))
             .map_err(inspect_err)
-            .int_out_result(out)
+            .as_int_out_result(out)
     }
 }
 

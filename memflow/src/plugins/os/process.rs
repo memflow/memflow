@@ -73,7 +73,7 @@ extern "C" fn c_module_address_list_callback<T: Process>(
 ) -> i32 {
     process
         .module_address_list_callback(target_arch, callback)
-        .int_result()
+        .as_int_result()
 }
 
 extern "C" fn c_module_by_address<T: Process>(
@@ -84,11 +84,11 @@ extern "C" fn c_module_by_address<T: Process>(
 ) -> i32 {
     process
         .module_by_address(address, target_arch)
-        .int_out_result(out)
+        .as_int_out_result(out)
 }
 
 extern "C" fn c_primary_module_address<T: Process>(process: &mut T, out: &mut MUAddress) -> i32 {
-    process.primary_module_address().int_out_result(out)
+    process.primary_module_address().as_int_out_result(out)
 }
 
 extern "C" fn c_info<T: Process>(process: &T) -> &ProcessInfo {

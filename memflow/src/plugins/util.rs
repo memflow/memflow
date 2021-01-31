@@ -1,5 +1,5 @@
 use super::{Args, OptionMut};
-use crate::error::{Error, ToIntResult};
+use crate::error::{AsIntResult, Error};
 use crate::types::ReprCStr;
 use std::mem::MaybeUninit;
 
@@ -43,7 +43,7 @@ pub fn create_with_logging<T>(
                 e
             })
         })
-        .int_out_result(out)
+        .as_int_out_result(out)
 }
 
 pub fn create_bare<T, I>(
@@ -73,7 +73,7 @@ pub fn create_bare<T, I>(
                 e
             })
         })
-        .int_out_result(out)
+        .as_int_out_result(out)
 }
 
 /// Wrapper for instantiating object without logging
@@ -86,5 +86,5 @@ pub fn create_without_logging<T>(
 ) -> i32 {
     Args::parse(&args)
         .and_then(|args| create_fn(args))
-        .int_out_result(out)
+        .as_int_out_result(out)
 }

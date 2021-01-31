@@ -60,7 +60,9 @@ fn initialize_virt_ctx() -> Result<(
         if !mod_list.is_empty() {
             let tmod = &mod_list[rng.gen_range(0, mod_list.len())];
             let proc = proc_list[idx].clone();
-            let translator = kernel.process_info_from_base(proc.clone())?.translator();
+            let translator = kernel
+                .process_info_from_base_info(proc.clone())?
+                .translator();
             return Ok((phys_mem, vat, proc, translator, tmod.clone())); // TODO: remove clone of mem + vat
         }
     }

@@ -111,7 +111,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
         }
     }
 
-    /// Consume the self object and return the containing memory connection
+    /// Consume the self object and return the underlying owned memory and vat objects
     pub fn destroy(self) -> (T, V) {
         self.virt_mem.destroy()
     }
@@ -120,7 +120,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
         let kernel_modules = self.kernel_modules()?;
 
         Ok(Win32ProcessInfo {
-            base: ProcessInfo {
+            base_info: ProcessInfo {
                 address: self.kernel_info.os_info.base,
                 pid: 0,
                 name: "ntoskrnl.exe".into(),
@@ -144,35 +144,38 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
         })
     }
 
-    pub fn process_info_from_base(&mut self, base: ProcessInfo) -> Result<Win32ProcessInfo> {
+    pub fn process_info_from_base_info(
+        &mut self,
+        base_info: ProcessInfo,
+    ) -> Result<Win32ProcessInfo> {
         let dtb = self.virt_mem.virt_read_addr_arch(
             self.kernel_info.os_info.arch.into(),
-            base.address + self.offsets.kproc_dtb(),
+            base_info.address + self.offsets.kproc_dtb(),
         )?;
         trace!("dtb={:x}", dtb);
 
         // read native_peb (either the process peb or the peb containing the wow64 helpers)
         let native_peb = self.virt_mem.virt_read_addr_arch(
             self.kernel_info.os_info.arch.into(),
-            base.address + self.offsets.eproc_peb(),
+            base_info.address + self.offsets.eproc_peb(),
         )?;
         trace!("native_peb={:x}", native_peb);
 
         let section_base = self.virt_mem.virt_read_addr_arch(
             self.kernel_info.os_info.arch.into(),
-            base.address + self.offsets.eproc_section_base(),
+            base_info.address + self.offsets.eproc_section_base(),
         )?;
         trace!("section_base={:x}", section_base);
 
         let exit_status: Win32ExitStatus = self
             .virt_mem
-            .virt_read(base.address + self.offsets.eproc_exit_status())?;
+            .virt_read(base_info.address + self.offsets.eproc_exit_status())?;
         trace!("exit_status={}", exit_status);
 
         // find first ethread
         let ethread = self.virt_mem.virt_read_addr_arch(
             self.kernel_info.os_info.arch.into(),
-            base.address + self.offsets.eproc_thread_list(),
+            base_info.address + self.offsets.eproc_thread_list(),
         )? - self.offsets.ethread_list_entry();
         trace!("ethread={:x}", ethread);
 
@@ -180,7 +183,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
             .virt_mem
             .virt_read_addr_arch(
                 self.kernel_info.os_info.arch.into(),
-                base.address + self.offsets.eproc_peb(),
+                base_info.address + self.offsets.eproc_peb(),
             )?
             .non_null();
 
@@ -195,7 +198,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
             );
             self.virt_mem.virt_read_addr_arch(
                 self.kernel_info.os_info.arch.into(),
-                base.address + self.offsets.eproc_wow64(),
+                base_info.address + self.offsets.eproc_wow64(),
             )?
         };
         trace!("wow64={:x}", wow64);
@@ -214,7 +217,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
             if !teb.is_null() {
                 (
                     Some(teb),
-                    if base.proc_arch == base.sys_arch {
+                    if base_info.proc_arch == base_info.sys_arch {
                         None
                     } else {
                         Some(teb + 0x2000)
@@ -229,10 +232,10 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
 
         // construct reader with process dtb
         // TODO: can tlb be used here already?
-        let (phys_mem, vat) = self.virt_mem.borrow_both();
+        let (phys_mem, vat) = self.virt_mem.mem_vat_pair();
         let mut proc_reader = VirtualDMA::with_vat(
             phys_mem,
-            base.proc_arch,
+            base_info.proc_arch,
             Win32VirtualTranslate::new(self.kernel_info.os_info.arch, dtb),
             vat,
         );
@@ -253,15 +256,15 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
         trace!("peb_native={:?}", peb_native);
 
         let module_info_native = peb_native
-            .map(|peb| Win32ModuleListInfo::with_peb(&mut proc_reader, peb, base.sys_arch))
+            .map(|peb| Win32ModuleListInfo::with_peb(&mut proc_reader, peb, base_info.sys_arch))
             .transpose()?;
 
         let module_info_wow64 = peb_wow64
-            .map(|peb| Win32ModuleListInfo::with_peb(&mut proc_reader, peb, base.proc_arch))
+            .map(|peb| Win32ModuleListInfo::with_peb(&mut proc_reader, peb, base_info.proc_arch))
             .transpose()?;
 
         Ok(Win32ProcessInfo {
-            base,
+            base_info,
 
             dtb,
             section_base,
@@ -281,8 +284,8 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
     }
 
     fn process_info_fullname(&mut self, info: Win32ProcessInfo) -> Result<Win32ProcessInfo> {
-        let cloned_base = info.base.clone();
-        let mut name = info.base.name;
+        let cloned_base = info.base_info.clone();
+        let mut name = info.base_info.name;
         let callback = &mut |m: ModuleInfo| {
             if m.name.as_ref().starts_with(name.as_ref()) {
                 name = m.name;
@@ -291,11 +294,14 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
                 true
             }
         };
-        let sys_arch = info.base.sys_arch;
+        let sys_arch = info.base_info.sys_arch;
         let mut process = self.process_by_info(cloned_base)?;
         process.module_list_callback(Some(&sys_arch), callback.into())?;
         Ok(Win32ProcessInfo {
-            base: ProcessInfo { name, ..info.base },
+            base_info: ProcessInfo {
+                name,
+                ..info.base_info
+            },
             ..info
         })
     }
@@ -425,11 +431,11 @@ impl<'a, T: PhysicalMemory + 'a, V: VirtualTranslate + 'a> OSInner<'a> for Win32
 
     /// Find process information by its internal address
     fn process_info_by_address(&mut self, address: Address) -> memflow::error::Result<ProcessInfo> {
-        let base = self.process_info_base_by_address(address)?;
-        if let Ok(info) = self.process_info_from_base(base.clone()) {
-            Ok(self.process_info_fullname(info)?.base)
+        let base_info = self.process_info_base_by_address(address)?;
+        if let Ok(info) = self.process_info_from_base_info(base_info.clone()) {
+            Ok(self.process_info_fullname(info)?.base_info)
         } else {
-            Ok(base)
+            Ok(base_info)
         }
     }
 
@@ -440,7 +446,7 @@ impl<'a, T: PhysicalMemory + 'a, V: VirtualTranslate + 'a> OSInner<'a> for Win32
         &'a mut self,
         info: ProcessInfo,
     ) -> memflow::error::Result<Self::ProcessType> {
-        let proc_info = self.process_info_from_base(info)?;
+        let proc_info = self.process_info_from_base_info(info)?;
         Ok(Win32Process::with_kernel_ref(self, proc_info))
     }
 
@@ -455,7 +461,7 @@ impl<'a, T: PhysicalMemory + 'a, V: VirtualTranslate + 'a> OSInner<'a> for Win32
         mut self,
         info: ProcessInfo,
     ) -> memflow::error::Result<Self::IntoProcessType> {
-        let proc_info = self.process_info_from_base(info)?;
+        let proc_info = self.process_info_from_base_info(info)?;
         Ok(Win32Process::with_kernel(self, proc_info))
     }
 

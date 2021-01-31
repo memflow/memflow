@@ -86,7 +86,7 @@ impl PageInfo {
 
 #[derive(Clone)]
 pub struct DummyProcess {
-    pub base: ProcessInfo,
+    pub info: ProcessInfo,
     map_size: usize,
     dtb: Address,
 }
@@ -96,7 +96,7 @@ impl DummyProcess {
         ModuleInfo {
             address: Address::INVALID,
             parent_process: Address::INVALID,
-            base: self.base.address + thread_rng().gen_range(0, self.map_size / 2),
+            base: self.info.address + thread_rng().gen_range(0, self.map_size / 2),
             size: (thread_rng().gen_range(min_size, self.map_size) / 2),
             name: "dummy.so".into(),
             path: "/".into(),
@@ -292,7 +292,7 @@ impl DummyMemory {
         self.last_pid += 1;
 
         let ret = DummyProcess {
-            base: ProcessInfo {
+            info: ProcessInfo {
                 address,
                 pid: self.last_pid,
                 name: "Dummy".into(),

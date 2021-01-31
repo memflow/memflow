@@ -98,7 +98,7 @@ impl Args {
             let kvsplit = kv.split('=').collect::<Vec<_>>();
             if kvsplit.len() == 2 {
                 map.insert(kvsplit[0].to_string(), kvsplit[1].to_string());
-            } else if i == 0 && kv != "" {
+            } else if i == 0 && !kv.is_empty() {
                 map.insert("default".to_string(), kv.to_string());
             }
         }

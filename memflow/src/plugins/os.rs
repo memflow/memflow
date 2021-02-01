@@ -3,8 +3,8 @@ use crate::os::*;
 use crate::types::Address;
 use crate::types::ReprCStr;
 
-pub mod system;
-pub use system::{OSFunctionTable, OSInstance, OpaqueOSFunctionTable};
+pub mod os;
+pub use os::{OSFunctionTable, OSInstance, OpaqueOSFunctionTable};
 
 pub mod process;
 pub use process::{ArcPluginProcess, PluginProcess};

@@ -114,25 +114,17 @@ fn build_page_cache<
 
                 let (size, size_mul) = {
                     let mul_arr = &[
-                        (size::kb(1), "kb"),
-                        (size::kb(1), "KB"),
-                        (size::kb(1), "k"),
-                        (size::kb(1), "K"),
-                        (size::mb(1), "mb"),
-                        (size::mb(1), "MB"),
-                        (size::mb(1), "m"),
-                        (size::mb(1), "M"),
-                        (size::gb(1), "gb"),
-                        (size::gb(1), "GB"),
-                        (size::gb(1), "m"),
-                        (size::gb(1), "G"),
+                        (size::kb(1), ["kb", "k"]),
+                        (size::mb(1), ["mb", "m"]),
+                        (size::gb(1), ["gb", "g"]),
                     ];
 
                     mul_arr
                         .iter()
+                        .flat_map(|(m, e)| e.iter().map(move |e| (*m, e)))
                         .filter_map(|(m, e)| {
-                            if size.ends_with(e) {
-                                Some((size.trim_end_matches(e), *m))
+                            if size.to_lowercase().ends_with(e) {
+                                Some((size.trim_end_matches(e), m))
                             } else {
                                 None
                             }

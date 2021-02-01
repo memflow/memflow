@@ -53,7 +53,7 @@ dataview = "0.1"
 serde = { version = "1.0", default-features = false, features = ["derive", "alloc"] }
 
 [features]
-default = ["std", "plugins", "serde_derive", "embed_offsets", "symstore", "download_progress", "regex"]
+default = ["std", "serde_derive", "embed_offsets", "symstore", "download_progress", "regex"]
 std = ["no-std-compat/std", "memflow/std"]
 plugins = ["memflow/plugins", "simple_logger"]
 embed_offsets = ["serde", "memflow/serde_derive"]

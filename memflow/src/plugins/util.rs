@@ -17,6 +17,8 @@ pub unsafe extern "C" fn c_drop<T>(obj: &mut T) {
 ///
 /// This function will parse args into `Args`, log_level into `log::Level`,
 /// and call the create_fn
+///
+/// This function is used by the proc macros
 pub fn create_with_logging<T>(
     args: ReprCStr,
     log_level: i32,
@@ -46,6 +48,12 @@ pub fn create_with_logging<T>(
         .as_int_out_result(out)
 }
 
+/// Wrapper for instantiating object with all needed parameters
+///
+/// This function will parse args into `Args`, log_level into `log::Level`,
+/// and call the create_fn with `input` forwarded.
+///
+/// This function is used by the proc macros
 pub fn create_bare<T, I>(
     args: ReprCStr,
     input: I,
@@ -79,6 +87,8 @@ pub fn create_bare<T, I>(
 /// Wrapper for instantiating object without logging
 ///
 /// This function will parse args into `Args`, and call the create_fn
+///
+/// This function is used by the proc macros
 pub fn create_without_logging<T>(
     args: ReprCStr,
     out: &mut MaybeUninit<T>,

@@ -17,13 +17,9 @@ pub type PID = u32;
 /// Future expansions could include threads, keyboard input, and more.
 pub trait Process: Send {
     type VirtualMemoryType: VirtualMemory;
-    //type VirtualTranslateType: VirtualTranslate;
 
     /// Retrieves virtual memory object for the process
     fn virt_mem(&mut self) -> &mut Self::VirtualMemoryType;
-
-    /// Retrieves virtual address translator for the process (if applicable)
-    //fn vat(&mut self) -> Option<&mut Self::VirtualTranslateType>;
 
     /// Walks the process' module list and calls the provided callback for each module structure
     /// address

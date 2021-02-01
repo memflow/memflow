@@ -43,10 +43,14 @@ pub fn find_export_by_prefix(
 }
 
 #[cfg(target_os = "windows")]
-pub fn find_export_by_prefix(path: impl AsRef<Path>) -> crate::error::Result<Vec<String>> {}
+pub fn find_export_by_prefix(path: impl AsRef<Path>) -> crate::error::Result<Vec<String>> {
+    Err(Error::Connector("find_export_by_prefix not implemented on windows yet"))
+}
 
 #[cfg(target_os = "macos")]
-pub fn find_export_by_prefix(path: impl AsRef<Path>) -> crate::error::Result<Vec<String>> {}
+pub fn find_export_by_prefix(path: impl AsRef<Path>) -> crate::error::Result<Vec<String>> {
+    Err(Error::Connector("find_export_by_prefix not implemented on mac yet"))
+}
 
 /// Wrapper for instantiating object with log level
 ///

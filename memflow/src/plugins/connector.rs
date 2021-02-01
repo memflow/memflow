@@ -216,29 +216,48 @@ impl Loadable for LoadableConnector {
         self.descriptor.name
     }
 
-    fn load(library: &CArc<Library>, path: impl AsRef<Path>) -> Result<LibInstance<Self>> {
-        let descriptor = unsafe {
-            library
-                .as_ref()
-                .get::<*mut ConnectorDescriptor>(b"MEMFLOW_CONNECTOR\0")
-                .map_err(|_| Error::Connector("connector descriptor not found"))?
-                .read()
-        };
-
-        if descriptor.connector_version != MEMFLOW_PLUGIN_VERSION {
-            warn!(
-                "connector {:?} has a different version. version {} required, found {}.",
-                path.as_ref(),
-                MEMFLOW_PLUGIN_VERSION,
-                descriptor.connector_version
-            );
-            return Err(Error::Connector("connector version mismatch"));
+    fn load_all(path: impl AsRef<Path>) -> Result<Vec<LibInstance<Self>>> {
+        let exports = super::util::find_export_by_prefix(path.as_ref(), "MEMFLOW_CONNECTOR")?;
+        if exports.is_empty() {
+            return Err(Error::Connector(
+                "file does not contain any memflow exports",
+            ));
         }
 
-        Ok(LibInstance {
-            library: library.clone(),
-            loader: LoadableConnector { descriptor },
-        })
+        // load library
+        let library = Library::new(path.as_ref())
+            .map_err(|_| Error::Connector("unable to load library"))
+            .map(CArc::from)?;
+
+        // find connector descriptor
+        let mut libs = Vec::new();
+        for export in exports.iter() {
+            let descriptor = unsafe {
+                library
+                    .as_ref()
+                    .get::<*mut ConnectorDescriptor>(format!("{}\0", export).as_bytes())
+                    .map_err(|_| Error::Connector("connector descriptor not found"))?
+                    .read()
+            };
+
+            // check version
+            if descriptor.connector_version != MEMFLOW_PLUGIN_VERSION {
+                warn!(
+                    "connector {:?} has a different version. version {} required, found {}.",
+                    path.as_ref(),
+                    MEMFLOW_PLUGIN_VERSION,
+                    descriptor.connector_version
+                );
+                return Err(Error::Connector("connector version mismatch"));
+            }
+
+            libs.push(LibInstance {
+                library: library.clone(),
+                loader: LoadableConnector { descriptor },
+            });
+        }
+
+        Ok(libs)
     }
 
     /// Creates a new connector instance from this library.

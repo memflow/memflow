@@ -17,11 +17,11 @@
 
 pub mod module;
 pub mod process;
-pub mod os;
+pub mod root;
 
 pub use module::{ModuleAddressCallback, ModuleAddressInfo, ModuleInfo, ModuleInfoCallback};
 pub use process::{Process, ProcessInfo, ProcessInfoCallback, PID};
-pub use os::{OSInfo, OSInner, OS};
+pub use root::{OSInfo, OSInner, OS};
 
 use crate::types::{Address, OpaqueCallback};
 pub type AddressCallback<'a> = OpaqueCallback<'a, Address>;

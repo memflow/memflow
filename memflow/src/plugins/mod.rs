@@ -157,7 +157,7 @@ pub trait Loadable: Sized {
     /// Try to load a plugin library
     ///
     /// This function will access `library` and try to find corresponding entry for the plugin. If
-    /// a valid plugin is found, `Ok(LibInstance<Self>)` is returned. Otherwise, `Err(Error)` is
+    /// a valid plugins are found, `Ok(LibInstance<Self>)` is returned. Otherwise, `Err(Error)` is
     /// returned, with appropriate error.
     ///
     /// # Safety
@@ -168,7 +168,7 @@ pub trait Loadable: Sized {
     /// the loaded library implements the necessary interface manually.
     ///
     /// It is adviced to use a provided proc macro to define a valid library.
-    fn load(library: &CArc<Library>, path: impl AsRef<Path>) -> Result<LibInstance<Self>>;
+    fn load_all(path: impl AsRef<Path>) -> Result<Vec<LibInstance<Self>>>;
 
     /// Helper function to load a plugin into a list of library instances
     ///
@@ -180,28 +180,27 @@ pub trait Loadable: Sized {
     /// Loading third party libraries is inherently unsafe and the compiler
     /// cannot guarantee that the implementation of the library matches the one
     /// specified here.
-    fn load_into(
-        lib: &CArc<Library>,
-        path: impl AsRef<Path>,
-        out: &mut Vec<LibInstance<Self>>,
-    ) -> Result<()> {
-        let lib = Self::load(lib, &path)?;
-        if !lib.loader.exists(out) {
-            info!(
-                "adding library '{}': {:?}",
-                lib.loader.ident(),
-                path.as_ref()
-            );
-            out.push(lib);
-            Ok(())
-        } else {
-            debug!(
-                "skipping library '{}' because it was added already: {:?}",
-                lib.loader.ident(),
-                path.as_ref()
-            );
-            Err(Error::Other("Already Exists"))
+    fn load_append(path: impl AsRef<Path>, out: &mut Vec<LibInstance<Self>>) -> Result<()> {
+        let libs = Self::load_all(path.as_ref())?;
+        for lib in libs.into_iter() {
+            if !lib.loader.exists(out) {
+                info!(
+                    "adding library '{}': {:?}",
+                    lib.loader.ident(),
+                    path.as_ref()
+                );
+                out.push(lib);
+            } else {
+                debug!(
+                    "skipping library '{}' because it was added already: {:?}",
+                    lib.loader.ident(),
+                    path.as_ref()
+                );
+                return Err(Error::Other("Already Exists"));
+            }
         }
+
+        Ok(())
     }
 
     /// Creates an `Instance` of the library
@@ -359,13 +358,8 @@ impl Inventory {
 
         for entry in read_dir(dir).map_err(|_| Error::IO("unable to read directory"))? {
             let entry = entry.map_err(|_| Error::IO("unable to read directory entry"))?;
-            if let Ok(lib) = Library::new(entry.path())
-                .map_err(|_| Error::Connector("unable to load library"))
-                .map(CArc::from)
-            {
-                Loadable::load_into(&lib, entry.path(), &mut self.connectors).ok();
-                Loadable::load_into(&lib, entry.path(), &mut self.os_layers).ok();
-            }
+            Loadable::load_append(entry.path(), &mut self.connectors).ok();
+            Loadable::load_append(entry.path(), &mut self.os_layers).ok();
         }
 
         Ok(self)

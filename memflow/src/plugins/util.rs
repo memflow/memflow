@@ -1,7 +1,11 @@
 use super::{Args, OptionMut};
 use crate::error::{AsIntResult, Error};
 use crate::types::ReprCStr;
+
 use std::mem::MaybeUninit;
+use std::path::Path;
+
+use goblin::elf::Elf;
 
 pub extern "C" fn c_clone<T: Clone>(obj: &T) -> OptionMut<T> {
     let cloned_conn = Box::new(obj.clone());
@@ -12,6 +16,37 @@ pub unsafe extern "C" fn c_drop<T>(obj: &mut T) {
     let _: Box<T> = Box::from_raw(obj);
     // drop box
 }
+
+#[cfg(target_os = "linux")]
+pub fn find_export_by_prefix(
+    path: impl AsRef<Path>,
+    prefix: &str,
+) -> crate::error::Result<Vec<String>> {
+    let buffer =
+        std::fs::read(path.as_ref()).map_err(|_| Error::Connector("file could not be read"))?;
+    let elf = Elf::parse(buffer.as_slice())
+        .map_err(|_| Error::Connector("file is not a valid elf file"))?;
+    Ok(elf
+        .syms
+        .iter()
+        .filter_map(|s| {
+            if let Some(Ok(name)) = elf.strtab.get(s.st_name) {
+                match name.starts_with(prefix) {
+                    true => Some(name.to_owned()),
+                    false => None,
+                }
+            } else {
+                None
+            }
+        })
+        .collect::<Vec<_>>())
+}
+
+#[cfg(target_os = "windows")]
+pub fn find_export_by_prefix(path: impl AsRef<Path>) -> crate::error::Result<Vec<String>> {}
+
+#[cfg(target_os = "macos")]
+pub fn find_export_by_prefix(path: impl AsRef<Path>) -> crate::error::Result<Vec<String>> {}
 
 /// Wrapper for instantiating object with log level
 ///

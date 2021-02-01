@@ -29,11 +29,14 @@ rand_xorshift = { version = "0.2", optional = true }
 bumpalo = { version = "3.4", features = ["collections"] }
 no-std-compat = { version = "0.4", features = ["alloc"] }
 itertools = { version = "0.9", default-features = false }
-libloading = { version = "0.6", optional = true }
 memmap = { version = "0.7", optional = true }
-dirs = { version = "3.0", optional = true }
 hashbrown = "0.8"
 fixed-slice-vec = "0.7.1"
+
+# plugins
+libloading = { version = "0.6", optional = true }
+dirs = { version = "3.0", optional = true }
+goblin = { version = "0.3.4", optional = true }
 
 serde = { version = "1.0", optional = true, default-features = false, features = ["derive", "alloc"] }
 toml = { version = "0.5", optional = true }
@@ -55,7 +58,7 @@ collections = []
 alloc = []
 serde_derive = ["serde"]
 memmapfiles = ["toml", "serde_derive"]
-plugins = ["libloading", "dirs"]
+plugins = ["libloading", "dirs", "goblin"]
 filemap = ["memmap"]
 
 [[example]]

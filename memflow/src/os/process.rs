@@ -49,16 +49,19 @@ pub trait Process: Send {
         target_arch: Option<&ArchitectureIdent>,
         mut callback: ModuleInfoCallback,
     ) -> Result<()> {
-        let (s1, s2) = unsafe { super::clone_self(self) };
-        let inner_callback =
-            &mut |ModuleAddressInfo { address, arch }| match s2.module_by_address(address, arch) {
-                Ok(info) => callback.call(info),
-                Err(e) => {
-                    log::trace!("Error loading module {:x} {:?}", address, e);
-                    false
-                }
-            };
-        s1.module_address_list_callback(target_arch, inner_callback.into())
+        // This is safe, because control will flow back to the callback.
+        let sptr = self as *mut Self;
+        let inner_callback = &mut |ModuleAddressInfo { address, arch }| match unsafe { &mut *sptr }
+            .module_by_address(address, arch)
+        {
+            Ok(info) => callback.call(info),
+            Err(e) => {
+                log::trace!("Error loading module {:x} {:?}", address, e);
+                false
+            }
+        };
+        unsafe { sptr.as_mut().unwrap() }
+            .module_address_list_callback(target_arch, inner_callback.into())
     }
 
     /// Retreives a module by its structure address and architecture

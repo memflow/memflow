@@ -40,15 +40,16 @@ pub trait OSInner<'a>: Send {
     ///
     /// The callback is fully opaque. We need this style so that C FFI can work seamlessly.
     fn process_info_list_callback(&mut self, mut callback: ProcessInfoCallback) -> Result<()> {
-        let (s1, s2) = unsafe { super::clone_self(self) };
-        let inner_callback = &mut |addr| match s2.process_info_by_address(addr) {
+        // This is safe, because control will flow back to the callback.
+        let sptr = self as *mut Self;
+        let inner_callback = &mut |addr| match unsafe { &mut *sptr }.process_info_by_address(addr) {
             Ok(info) => callback.call(info),
             Err(e) => {
                 log::trace!("Failed to read process {:x} {:?}", addr, e);
                 false
             }
         };
-        s1.process_address_list_callback(inner_callback.into())
+        unsafe { sptr.as_mut().unwrap() }.process_address_list_callback(inner_callback.into())
     }
 
     /// Retrieves a process list
@@ -189,15 +190,17 @@ pub trait OSInner<'a>: Send {
     /// # Arguments
     /// * `callback` - where to pass each matching module to. This is an opaque callback.
     fn module_list_callback(&mut self, mut callback: ModuleInfoCallback) -> Result<()> {
-        let (s1, s2) = unsafe { super::clone_self(self) };
-        let inner_callback = &mut |address: Address| match s2.module_by_address(address) {
-            Ok(info) => callback.call(info),
-            Err(e) => {
-                log::trace!("Error loading module {:x} {:?}", address, e);
-                false
-            }
-        };
-        s1.module_address_list_callback(inner_callback.into())
+        // This is safe, because control will flow back to the callback.
+        let sptr = self as *mut Self;
+        let inner_callback =
+            &mut |address: Address| match unsafe { &mut *sptr }.module_by_address(address) {
+                Ok(info) => callback.call(info),
+                Err(e) => {
+                    log::trace!("Error loading module {:x} {:?}", address, e);
+                    false
+                }
+            };
+        unsafe { sptr.as_mut().unwrap() }.module_address_list_callback(inner_callback.into())
     }
 
     /// Retrieves a module list for the OS

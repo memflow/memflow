@@ -53,6 +53,9 @@ pub mod derive {
     pub use memflow_derive::*;
 }
 
+#[cfg(any(feature = "dummy_mem", test))]
+pub mod dummy;
+
 pub mod prelude {
     pub mod v1 {
         pub use crate::architecture::*;

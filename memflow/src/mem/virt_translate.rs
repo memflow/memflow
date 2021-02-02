@@ -32,7 +32,7 @@ where
     /// ```
     /// # use memflow::error::Result;
     /// # use memflow::types::{PhysicalAddress, Address};
-    /// # use memflow::mem::dummy::DummyMemory;
+    /// # use memflow::dummy::DummyMemory;
     /// use memflow::mem::{VirtualTranslate, DirectTranslate};
     /// use memflow::types::size;
     /// use memflow::architecture::x86::x64;
@@ -100,7 +100,7 @@ where
     /// ```
     /// # use memflow::error::Result;
     /// # use memflow::types::{PhysicalAddress, Address};
-    /// # use memflow::mem::dummy::DummyMemory;
+    /// # use memflow::dummy::DummyMemory;
     /// # use memflow::types::size;
     /// # use memflow::architecture::ScopedVirtualTranslate;
     /// use memflow::mem::{VirtualTranslate, DirectTranslate};

@@ -86,7 +86,7 @@ use dataview::Pod;
 ///     println!("addr: {:x}", addr);
 /// }
 ///
-/// # use memflow::mem::dummy::DummyMemory;
+/// # use memflow::dummy::DummyMemory;
 /// # use memflow::types::size;
 /// # read(&mut DummyMemory::new(size::mb(4)));
 /// ```
@@ -107,7 +107,7 @@ where
     /// ```
     /// use memflow::types::size;
     /// use memflow::mem::PhysicalMemory;
-    /// # let mem = memflow::mem::dummy::DummyMemory::new(size::mb(16));
+    /// # let mem = memflow::dummy::DummyMemory::new(size::mb(16));
     ///
     /// let metadata = mem.metadata();
     ///

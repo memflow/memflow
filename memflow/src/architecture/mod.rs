@@ -55,7 +55,7 @@ pub trait ScopedVirtualTranslate: Clone + Copy + Send {
     /// ```
     /// # use memflow::error::Result;
     /// # use memflow::types::{PhysicalAddress, Address};
-    /// # use memflow::mem::dummy::DummyMemory;
+    /// # use memflow::dummy::DummyMemory;
     /// use memflow::architecture::ScopedVirtualTranslate;
     /// use memflow::architecture::x86::x64;
     /// use memflow::types::size;

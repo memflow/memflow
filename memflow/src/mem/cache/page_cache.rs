@@ -336,7 +336,8 @@ impl<'a, T> Drop for PageCache<'a, T> {
 mod tests {
     use super::*;
     use crate::architecture::x86;
-    use crate::mem::{dummy::DummyMemory, CachedMemoryAccess, TimedCacheValidator};
+    use crate::dummy::DummyMemory;
+    use crate::mem::{CachedMemoryAccess, TimedCacheValidator};
     use crate::mem::{VirtualDMA, VirtualMemory};
     use crate::types::{size, Address, PhysicalAddress};
 

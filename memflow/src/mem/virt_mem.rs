@@ -35,7 +35,7 @@ use dataview::Pod;
 ///     println!("addr: {:x}", addr);
 ///     # assert_eq!(addr, 0x00ff_00ff_00ff_00ff);
 /// }
-/// # use memflow::mem::dummy::DummyMemory;
+/// # use memflow::dummy::DummyMemory;
 /// # use memflow::types::size;
 /// # let (mut mem, virt_base) = DummyMemory::new_virt(size::mb(4), size::mb(2), &[255, 0, 255, 0, 255, 0, 255, 0]);
 /// # read(&mut mem, virt_base);

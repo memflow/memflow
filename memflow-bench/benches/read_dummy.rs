@@ -3,7 +3,7 @@ use memflow_bench::*;
 
 use criterion::*;
 
-use memflow::mem::dummy::DummyMemory as Memory;
+use memflow::dummy::DummyMemory as Memory;
 use memflow::prelude::v1::*;
 
 fn initialize_virt_ctx() -> Result<(

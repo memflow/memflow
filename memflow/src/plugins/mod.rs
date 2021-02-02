@@ -401,7 +401,7 @@ impl Inventory {
     /// ```
     /// use memflow::error::Result;
     /// use memflow::types::size;
-    /// use memflow::mem::dummy::DummyMemory;
+    /// use memflow::dummy::DummyMemory;
     /// use memflow::plugins::Args;
     /// use memflow::derive::connector;
     /// use memflow::mem::PhysicalMemory;

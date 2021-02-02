@@ -103,18 +103,20 @@ pub struct GenericBaseTable<T: 'static> {
     pub drop: unsafe extern "C" fn(this: &mut T),
 }
 
-impl<T: Clone> Default for GenericBaseTable<T> {
+impl<T: Clone> Default for &'static GenericBaseTable<T> {
     fn default() -> Self {
-        Self {
-            clone: GenericCloneTable::<T>::default(),
+        &GenericBaseTable {
+            clone: GenericCloneTable {
+                clone: util::c_clone::<T>,
+            },
             drop: util::c_drop::<T>,
         }
     }
 }
 
 impl<T: Clone> GenericBaseTable<T> {
-    pub fn into_opaque(self) -> OpaqueBaseTable {
-        unsafe { std::mem::transmute(self) }
+    pub fn as_opaque(&self) -> &OpaqueBaseTable {
+        unsafe { &*(self as *const Self as *const OpaqueBaseTable) }
     }
 }
 
@@ -236,8 +238,6 @@ pub trait Loadable: Sized {
         let library = Library::new(path.as_ref())
             .map_err(|_| Error::Connector("unable to load library"))
             .map(CArc::from)?;
-
-        let library = CArc::from(library);
 
         Ok(exports
             .into_iter()
@@ -509,7 +509,7 @@ impl Inventory {
                 error!(
                     "unable to find plugin with name '{}'. available `{}` plugins are: {}",
                     name,
-                    std::any::type_name::<T>(),
+                    T::plugin_type(),
                     libs.iter()
                         .map(|c| c.loader.ident().to_string())
                         .collect::<Vec<_>>()
@@ -520,7 +520,7 @@ impl Inventory {
 
         info!(
             "attempting to load `{}` type plugin {}",
-            std::any::type_name::<T>(),
+            T::plugin_type(),
             lib.loader.ident()
         );
 

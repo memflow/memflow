@@ -63,9 +63,9 @@ pub fn create_without_logging<P: 'static + Process + Clone, T: PluginOS<P>>(
 #[derive(Clone, Copy)]
 pub struct OSLayerFunctionTable {
     /// The vtable for object creation and cloning
-    pub base: OpaqueBaseTable,
+    pub base: &'static OpaqueBaseTable,
     /// The vtable for all os functions
-    pub os: OpaqueOSFunctionTable,
+    pub os: &'static OpaqueOSFunctionTable,
     /// The vtable for all physical memory access if available
     pub phys: Option<&'static OpaquePhysicalMemoryFunctionTable>,
     /// The vtable for all virtual memory access if available
@@ -75,8 +75,8 @@ pub struct OSLayerFunctionTable {
 impl OSLayerFunctionTable {
     pub fn new<P: 'static + Process + Clone, T: PluginOS<P>>() -> Self {
         OSLayerFunctionTable {
-            base: GenericBaseTable::<T>::default().into_opaque(),
-            os: OSFunctionTable::<P, T>::default().into_opaque(),
+            base: <&GenericBaseTable<T>>::default().as_opaque(),
+            os: <&OSFunctionTable<P, T>>::default().as_opaque(),
             phys: None,
             virt: None,
         }

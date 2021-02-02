@@ -195,11 +195,11 @@ typedef struct ConnectorFunctionTable {
     /**
      * The vtable for object creation and cloning
      */
-    OpaqueBaseTable base;
+    const OpaqueBaseTable *base;
     /**
      * The vtable for all physical memory function calls to the connector.
      */
-    OpaquePhysicalMemoryFunctionTable phys;
+    const OpaquePhysicalMemoryFunctionTable *phys;
 } ConnectorFunctionTable;
 
 typedef struct COptArc_Library {
@@ -480,7 +480,7 @@ typedef struct VirtualMemoryFunctionTable_c_void OpaqueVirtualMemoryFunctionTabl
 
 typedef struct VirtualMemoryInstance {
     void *instance;
-    OpaqueVirtualMemoryFunctionTable vtable;
+    const OpaqueVirtualMemoryFunctionTable *vtable;
 } VirtualMemoryInstance;
 
 typedef struct PluginProcess {
@@ -542,11 +542,11 @@ typedef struct OSLayerFunctionTable {
     /**
      * The vtable for object creation and cloning
      */
-    OpaqueBaseTable base;
+    const OpaqueBaseTable *base;
     /**
      * The vtable for all os functions
      */
-    OpaqueOSFunctionTable os;
+    const OpaqueOSFunctionTable *os;
     /**
      * The vtable for all physical memory access if available
      */

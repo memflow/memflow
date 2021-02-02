@@ -35,9 +35,9 @@ pub fn create_without_logging<T: 'static + PhysicalMemory + Clone>(
 #[derive(Clone, Copy)]
 pub struct ConnectorFunctionTable {
     /// The vtable for object creation and cloning
-    pub base: OpaqueBaseTable,
+    pub base: &'static OpaqueBaseTable,
     /// The vtable for all physical memory function calls to the connector.
-    pub phys: OpaquePhysicalMemoryFunctionTable,
+    pub phys: &'static OpaquePhysicalMemoryFunctionTable,
     // further optional table expansion with Option<&'static SomeFunctionTable>
     // ...
 }
@@ -45,8 +45,8 @@ pub struct ConnectorFunctionTable {
 impl ConnectorFunctionTable {
     pub fn create_vtable<T: 'static + PhysicalMemory + Clone>() -> Self {
         Self {
-            base: GenericBaseTable::<T>::default().into_opaque(),
-            phys: PhysicalMemoryFunctionTable::<T>::default().into_opaque(),
+            base: <&GenericBaseTable<T>>::default().as_opaque(),
+            phys: <&PhysicalMemoryFunctionTable<T>>::default().as_opaque(),
         }
     }
 }
@@ -76,9 +76,9 @@ pub struct PhysicalMemoryFunctionTable<T> {
     pub metadata: extern "C" fn(phys_mem: &T) -> PhysicalMemoryMetadata,
 }
 
-impl<T: PhysicalMemory> Default for PhysicalMemoryFunctionTable<T> {
+impl<T: PhysicalMemory> Default for &'static PhysicalMemoryFunctionTable<T> {
     fn default() -> Self {
-        Self {
+        &PhysicalMemoryFunctionTable {
             phys_write_raw_list: phys_write_raw_list_internal::<T>,
             phys_read_raw_list: phys_read_raw_list_internal::<T>,
             metadata: metadata_internal::<T>,
@@ -87,8 +87,8 @@ impl<T: PhysicalMemory> Default for PhysicalMemoryFunctionTable<T> {
 }
 
 impl<T: PhysicalMemory> PhysicalMemoryFunctionTable<T> {
-    pub fn into_opaque(self) -> OpaquePhysicalMemoryFunctionTable {
-        unsafe { std::mem::transmute(self) }
+    pub fn as_opaque(&'static self) -> &'static OpaquePhysicalMemoryFunctionTable {
+        unsafe { &*(self as *const Self as *const OpaquePhysicalMemoryFunctionTable) }
     }
 }
 

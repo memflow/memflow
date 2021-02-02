@@ -50,14 +50,14 @@ pub struct VirtualMemoryFunctionTable<T> {
 }
 
 impl<T: VirtualMemory + Sized> VirtualMemoryFunctionTable<T> {
-    pub fn into_opaque(self) -> OpaqueVirtualMemoryFunctionTable {
-        unsafe { std::mem::transmute(self) }
+    pub fn as_opaque(&self) -> &OpaqueVirtualMemoryFunctionTable {
+        unsafe { &*(self as *const Self as *const OpaqueVirtualMemoryFunctionTable) }
     }
 }
 
-impl<T: VirtualMemory> Default for VirtualMemoryFunctionTable<T> {
+impl<'a, T: VirtualMemory> Default for &'a VirtualMemoryFunctionTable<T> {
     fn default() -> Self {
-        Self {
+        &VirtualMemoryFunctionTable {
             virt_read_raw_list: c_virt_read_raw_list,
             virt_write_raw_list: c_virt_write_raw_list,
             virt_page_info: c_virt_page_info,
@@ -127,24 +127,24 @@ extern "C" fn c_virt_page_map_range<T: VirtualMemory>(
 #[repr(C)]
 pub struct VirtualMemoryInstance<'a> {
     pub(crate) instance: &'a mut c_void,
-    pub(crate) vtable: OpaqueVirtualMemoryFunctionTable,
+    pub(crate) vtable: &'a OpaqueVirtualMemoryFunctionTable,
 }
 
 impl<'a> VirtualMemoryInstance<'a> {
-    pub fn new<T: VirtualMemory>(instance: &'a mut T) -> Self {
+    pub fn new<T: 'a + VirtualMemory>(instance: &'a mut T) -> Self {
         Self {
             instance: unsafe { (instance as *mut T as *mut c_void).as_mut() }.unwrap(),
-            vtable: VirtualMemoryFunctionTable::<T>::default().into_opaque(),
+            vtable: <&VirtualMemoryFunctionTable<T>>::default().as_opaque(),
         }
     }
 
     /// # Safety
     ///
     /// The type of `instance` has to match T
-    pub unsafe fn unsafe_new<T: VirtualMemory>(instance: &'a mut c_void) -> Self {
+    pub unsafe fn unsafe_new<T: 'a + VirtualMemory>(instance: &'a mut c_void) -> Self {
         Self {
             instance,
-            vtable: VirtualMemoryFunctionTable::<T>::default().into_opaque(),
+            vtable: <&VirtualMemoryFunctionTable<T>>::default().as_opaque(),
         }
     }
 }

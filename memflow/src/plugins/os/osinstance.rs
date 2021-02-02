@@ -41,9 +41,9 @@ pub struct OSFunctionTable<'a, P, T> {
     phantom: std::marker::PhantomData<P>,
 }
 
-impl<'a, P: 'static + Process + Clone, T: PluginOS<P>> Default for OSFunctionTable<'a, P, T> {
+impl<'a, P: 'static + Process + Clone, T: PluginOS<P>> Default for &'a OSFunctionTable<'a, P, T> {
     fn default() -> Self {
-        Self {
+        &OSFunctionTable {
             process_address_list_callback: c_process_address_list_callback,
             process_info_by_address: c_process_info_by_address,
             process_by_info: c_process_by_info,
@@ -51,14 +51,14 @@ impl<'a, P: 'static + Process + Clone, T: PluginOS<P>> Default for OSFunctionTab
             module_address_list_callback: c_module_address_list_callback,
             module_by_address: c_module_by_address,
             info: c_os_info,
-            phantom: Default::default(),
+            phantom: std::marker::PhantomData {},
         }
     }
 }
 
 impl<'a, P: Process + Clone, T: PluginOS<P>> OSFunctionTable<'a, P, T> {
-    pub fn into_opaque(self) -> OpaqueOSFunctionTable {
-        unsafe { std::mem::transmute(self) }
+    pub fn as_opaque(&self) -> &OpaqueOSFunctionTable {
+        unsafe { &*(self as *const Self as *const OpaqueOSFunctionTable) }
     }
 }
 

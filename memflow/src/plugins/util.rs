@@ -5,8 +5,6 @@ use crate::types::ReprCStr;
 use std::mem::MaybeUninit;
 use std::path::Path;
 
-use goblin::elf::Elf;
-
 pub extern "C" fn c_clone<T: Clone>(obj: &T) -> OptionMut<T> {
     let cloned_conn = Box::new(obj.clone());
     Some(Box::leak(cloned_conn))
@@ -17,11 +15,13 @@ pub unsafe extern "C" fn c_drop<T>(obj: &mut T) {
     // drop box
 }
 
-#[cfg(target_os = "linux")]
+#[cfg(not(any(target_os = "windows", target_os = "macos")))]
 pub fn find_export_by_prefix(
     path: impl AsRef<Path>,
     prefix: &str,
 ) -> crate::error::Result<Vec<String>> {
+    use goblin::elf::Elf;
+
     let buffer =
         std::fs::read(path.as_ref()).map_err(|_| Error::Connector("file could not be read"))?;
     let elf = Elf::parse(buffer.as_slice())
@@ -47,9 +47,24 @@ pub fn find_export_by_prefix(
     path: impl AsRef<Path>,
     prefix: &str,
 ) -> crate::error::Result<Vec<String>> {
-    Err(Error::Connector(
-        "find_export_by_prefix not implemented on windows yet",
-    ))
+    use goblin::pe::PE;
+
+    let buffer =
+        std::fs::read(path.as_ref()).map_err(|_| Error::Connector("file could not be read"))?;
+    let pe = PE::parse(buffer.as_slice())
+        .map_err(|_| Error::Connector("file is not a valid PE file"))?;
+    Ok(pe
+        .exports
+        .iter()
+        .filter_map(|s| s.name)
+        .filter_map(|name| {
+            if name.starts_with(prefix) {
+                Some(name.to_owned())
+            } else {
+                None
+            }
+        })
+        .collect::<Vec<_>>())
 }
 
 #[cfg(target_os = "macos")]
@@ -57,9 +72,33 @@ pub fn find_export_by_prefix(
     path: impl AsRef<Path>,
     prefix: &str,
 ) -> crate::error::Result<Vec<String>> {
-    Err(Error::Connector(
-        "find_export_by_prefix not implemented on mac yet",
-    ))
+    use goblin::mach::Mach;
+
+    let buffer =
+        std::fs::read(path.as_ref()).map_err(|_| Error::Connector("file could not be read"))?;
+    let mach = Mach::parse(buffer.as_slice())
+        .map_err(|_| Error::Connector("file is not a valid Mach file"))?;
+    let macho = match mach {
+        Mach::Binary(mach) => mach,
+        Mach::Fat(mach) => (0..mach.narches)
+            .filter_map(|i| mach.get(i).ok())
+            .next()
+            .ok_or(Error::Other("Failed to find valid MachO header!"))?,
+    };
+
+    Ok(macho
+        .symbols
+        .ok_or(Error::Other("Failed to parse MachO symbols!"))?
+        .iter()
+        .filter_map(|s| s.ok())
+        .filter_map(|(name, _)| {
+            if name.starts_with(prefix) {
+                Some(name.to_owned())
+            } else {
+                None
+            }
+        })
+        .collect::<Vec<_>>())
 }
 
 /// Wrapper for instantiating object with log level
@@ -69,7 +108,7 @@ pub fn find_export_by_prefix(
 ///
 /// This function is used by the proc macros
 pub fn create_with_logging<T>(
-    args: ReprCStr,
+    args: &ReprCStr,
     log_level: i32,
     out: &mut MaybeUninit<T>,
     create_fn: impl FnOnce(Args, log::Level) -> Result<T, Error>,
@@ -104,7 +143,7 @@ pub fn create_with_logging<T>(
 ///
 /// This function is used by the proc macros
 pub fn create_bare<T, I>(
-    args: ReprCStr,
+    args: &ReprCStr,
     input: I,
     log_level: i32,
     out: &mut MaybeUninit<T>,
@@ -139,7 +178,7 @@ pub fn create_bare<T, I>(
 ///
 /// This function is used by the proc macros
 pub fn create_without_logging<T>(
-    args: ReprCStr,
+    args: &ReprCStr,
     out: &mut MaybeUninit<T>,
     create_fn: impl FnOnce(super::Args) -> Result<T, Error>,
 ) -> i32 {

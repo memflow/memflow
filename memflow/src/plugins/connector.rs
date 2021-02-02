@@ -1,25 +1,19 @@
 use crate::error::*;
 use crate::mem::{PhysicalMemory, PhysicalMemoryMetadata, PhysicalReadData, PhysicalWriteData};
 
-use super::{
-    Args, CArc, COptArc, GenericBaseTable, LibInstance, Loadable, OpaqueBaseTable,
-    MEMFLOW_PLUGIN_VERSION,
-};
+use super::{Args, CArc, COptArc, GenericBaseTable, Loadable, OpaqueBaseTable, PluginDescriptor};
 
 use crate::types::ReprCStr;
 
 use std::ffi::c_void;
 use std::mem::MaybeUninit;
-use std::path::Path;
 
 use libloading::Library;
-
-use log::*;
 
 pub type MUConnectorInstance = MaybeUninit<ConnectorInstance>;
 
 pub fn create_with_logging<T: 'static + PhysicalMemory + Clone>(
-    args: ReprCStr,
+    args: &ReprCStr,
     log_level: i32,
     out: &mut MUConnectorInstance,
     create_fn: impl Fn(&Args, log::Level) -> Result<T>,
@@ -30,28 +24,11 @@ pub fn create_with_logging<T: 'static + PhysicalMemory + Clone>(
 }
 
 pub fn create_without_logging<T: 'static + PhysicalMemory + Clone>(
-    args: ReprCStr,
+    args: &ReprCStr,
     out: &mut MUConnectorInstance,
     create_fn: impl Fn(&Args) -> Result<T>,
 ) -> i32 {
     super::util::create_without_logging(args, out, |a| create_fn(&a).map(ConnectorInstance::new))
-}
-
-/// Describes a connector
-#[repr(C)]
-pub struct ConnectorDescriptor {
-    /// The connector inventory api version for when the connector was built.
-    /// This has to be set to `MEMFLOW_PLUGIN_VERSION` of memflow.
-    ///
-    /// If the versions mismatch the inventory will refuse to load.
-    pub connector_version: i32,
-
-    /// The name of the connector.
-    /// This name will be used when loading a connector from a connector inventory.
-    pub name: &'static str,
-
-    /// Create instance of the connector
-    pub create: extern "C" fn(ReprCStr, Option<&mut c_void>, i32, &mut MUConnectorInstance) -> i32,
 }
 
 #[repr(C)]
@@ -204,60 +181,31 @@ impl Drop for ConnectorInstance {
     }
 }
 
+pub type ConnectorDescriptor = PluginDescriptor<LoadableConnector>;
+
 pub struct LoadableConnector {
-    descriptor: ConnectorDescriptor,
+    descriptor: PluginDescriptor<Self>,
 }
 
 impl Loadable for LoadableConnector {
     type Instance = ConnectorInstance;
     type InputArg = Option<&'static mut c_void>;
+    type CInputArg = Option<&'static mut c_void>;
 
     fn ident(&self) -> &str {
         self.descriptor.name
     }
 
-    fn load_all(path: impl AsRef<Path>) -> Result<Vec<LibInstance<Self>>> {
-        let exports = super::util::find_export_by_prefix(path.as_ref(), "MEMFLOW_CONNECTOR")?;
-        if exports.is_empty() {
-            return Err(Error::Connector(
-                "file does not contain any memflow exports",
-            ));
-        }
+    fn export_prefix() -> &'static str {
+        "MEMFLOW_CONNECTOR_"
+    }
 
-        // load library
-        let library = Library::new(path.as_ref())
-            .map_err(|_| Error::Connector("unable to load library"))
-            .map(CArc::from)?;
+    fn plugin_type() -> &'static str {
+        "Connector"
+    }
 
-        // find connector descriptor
-        let mut libs = Vec::new();
-        for export in exports.iter() {
-            let descriptor = unsafe {
-                library
-                    .as_ref()
-                    .get::<*mut ConnectorDescriptor>(format!("{}\0", export).as_bytes())
-                    .map_err(|_| Error::Connector("connector descriptor not found"))?
-                    .read()
-            };
-
-            // check version
-            if descriptor.connector_version != MEMFLOW_PLUGIN_VERSION {
-                warn!(
-                    "connector {:?} has a different version. version {} required, found {}.",
-                    path.as_ref(),
-                    MEMFLOW_PLUGIN_VERSION,
-                    descriptor.connector_version
-                );
-                return Err(Error::Connector("connector version mismatch"));
-            }
-
-            libs.push(LibInstance {
-                library: library.clone(),
-                loader: LoadableConnector { descriptor },
-            });
-        }
-
-        Ok(libs)
+    fn new(descriptor: PluginDescriptor<Self>) -> Self {
+        Self { descriptor }
     }
 
     /// Creates a new connector instance from this library.
@@ -271,7 +219,7 @@ impl Loadable for LoadableConnector {
     ) -> Result<ConnectorInstance> {
         let cstr = ReprCStr::from(args.to_string());
         let mut out = MUConnectorInstance::uninit();
-        let res = (self.descriptor.create)(cstr, input, log::max_level() as i32, &mut out);
+        let res = (self.descriptor.create)(&cstr, input, log::max_level() as i32, &mut out);
         result_from_int(res, out).map(|mut c| {
             c.library = library.into();
             c

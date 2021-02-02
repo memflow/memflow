@@ -10,15 +10,11 @@ pub mod process;
 pub use process::{ArcPluginProcess, PluginProcess};
 
 use super::{
-    Args, CArc, COption, ConnectorInstance, GenericBaseTable, LibInstance, Loadable,
-    OpaqueBaseTable, OpaquePhysicalMemoryFunctionTable, OpaqueVirtualMemoryFunctionTable,
-    MEMFLOW_PLUGIN_VERSION,
+    Args, CArc, COption, ConnectorInstance, GenericBaseTable, Loadable, OpaqueBaseTable,
+    OpaquePhysicalMemoryFunctionTable, OpaqueVirtualMemoryFunctionTable, PluginDescriptor,
 };
 
 use libloading::Library;
-use std::path::Path;
-
-use log::*;
 
 use std::mem::MaybeUninit;
 
@@ -43,7 +39,7 @@ impl<T: Process + Clone, K: 'static + Clone + for<'a> OSInner<'a, IntoProcessTyp
 }
 
 pub fn create_with_logging<P: 'static + Process + Clone, T: PluginOS<P>>(
-    args: ReprCStr,
+    args: &ReprCStr,
     conn: ConnectorInstance,
     log_level: i32,
     out: &mut MUOSInstance,
@@ -55,28 +51,12 @@ pub fn create_with_logging<P: 'static + Process + Clone, T: PluginOS<P>>(
 }
 
 pub fn create_without_logging<P: 'static + Process + Clone, T: PluginOS<P>>(
-    args: ReprCStr,
+    args: &ReprCStr,
     conn: ConnectorInstance,
     out: &mut MUOSInstance,
     create_fn: impl Fn(&Args, ConnectorInstance) -> Result<T>,
 ) -> i32 {
     super::util::create_without_logging(args, out, |a| create_fn(&a, conn).map(OSInstance::new))
-}
-
-#[repr(C)]
-pub struct OSLayerDescriptor {
-    /// The connector inventory api version for when the connector was built.
-    /// This has to be set to `MEMFLOW_PLUGIN_VERSION` of memflow.
-    ///
-    /// If the versions mismatch the inventory will refuse to load.
-    pub os_version: i32,
-
-    /// The name of the connector.
-    /// This name will be used when loading a connector from a connector inventory.
-    pub name: &'static str,
-
-    /// Create instance of the OS
-    pub create: extern "C" fn(ReprCStr, COption<ConnectorInstance>, i32, &mut MUOSInstance) -> i32,
 }
 
 #[repr(C)]
@@ -103,60 +83,31 @@ impl OSLayerFunctionTable {
     }
 }
 
+pub type OSDescriptor = PluginDescriptor<LoadableOS>;
+
 pub struct LoadableOS {
-    descriptor: OSLayerDescriptor,
+    descriptor: PluginDescriptor<Self>,
 }
 
 impl Loadable for LoadableOS {
     type Instance = OSInstance;
     type InputArg = Option<ConnectorInstance>;
+    type CInputArg = COption<ConnectorInstance>;
+
+    fn export_prefix() -> &'static str {
+        "MEMFLOW_OS_"
+    }
 
     fn ident(&self) -> &str {
         self.descriptor.name
     }
 
-    fn load_all(path: impl AsRef<Path>) -> Result<Vec<LibInstance<Self>>> {
-        let exports = super::util::find_export_by_prefix(path.as_ref(), "MEMFLOW_OS")?;
-        if exports.is_empty() {
-            return Err(Error::Connector(
-                "file does not contain any memflow exports",
-            ));
-        }
+    fn plugin_type() -> &'static str {
+        "OS"
+    }
 
-        // load library
-        let library = Library::new(path.as_ref())
-            .map_err(|_| Error::Connector("unable to load library"))
-            .map(CArc::from)?;
-
-        let mut libs = Vec::new();
-        for export in exports.iter() {
-            // find os descriptor
-            let descriptor = unsafe {
-                library
-                    .as_ref()
-                    .get::<*mut OSLayerDescriptor>(format!("{}\0", export).as_bytes())
-                    .map_err(|_| Error::Connector("OS descriptor not found"))?
-                    .read()
-            };
-
-            // check version
-            if descriptor.os_version != MEMFLOW_PLUGIN_VERSION {
-                warn!(
-                    "OS {:?} has a different version. version {} required, found {}.",
-                    path.as_ref(),
-                    MEMFLOW_PLUGIN_VERSION,
-                    descriptor.os_version
-                );
-                return Err(Error::Connector("connector version mismatch"));
-            }
-
-            libs.push(LibInstance {
-                library: library.clone(),
-                loader: LoadableOS { descriptor },
-            });
-        }
-
-        Ok(libs)
+    fn new(descriptor: PluginDescriptor<Self>) -> Self {
+        Self { descriptor }
     }
 
     /// Creates a new OS instance from this library.
@@ -170,7 +121,7 @@ impl Loadable for LoadableOS {
     ) -> Result<OSInstance> {
         let cstr = ReprCStr::from(args.to_string());
         let mut out = MUOSInstance::uninit();
-        let res = (self.descriptor.create)(cstr, input.into(), log::max_level() as i32, &mut out);
+        let res = (self.descriptor.create)(&cstr, input.into(), log::max_level() as i32, &mut out);
         result_from_int(res, out).map(|mut c| {
             c.library = library.into();
             c

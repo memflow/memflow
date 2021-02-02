@@ -23,7 +23,7 @@ pub use connector::{
 pub type ConnectorInputArg = <LoadableConnector as Loadable>::InputArg;
 
 pub mod os;
-pub use os::{LoadableOS, OSInstance, OSLayerDescriptor, OpaqueOSFunctionTable};
+pub use os::{LoadableOS, OSInstance, OpaqueOSFunctionTable};
 pub type OSInputArg = <LoadableOS as Loadable>::InputArg;
 
 pub(crate) mod util;
@@ -37,16 +37,18 @@ pub(crate) mod arc;
 pub(crate) use arc::{CArc, COptArc};
 
 use crate::error::{Result, *};
+use crate::types::ReprCStr;
 
 use log::*;
 use std::ffi::c_void;
 use std::fs::read_dir;
+use std::mem::MaybeUninit;
 use std::path::{Path, PathBuf};
 
 use libloading::Library;
 
 /// Exported memflow plugins version
-pub const MEMFLOW_PLUGIN_VERSION: i32 = 8;
+pub const MEMFLOW_PLUGIN_VERSION: i32 = 1;
 
 /// Utility typedef for better cbindgen
 ///
@@ -141,10 +143,29 @@ impl<T> From<COption<T>> for Option<T> {
     }
 }
 
+#[repr(C)]
+pub struct PluginDescriptor<T: Loadable> {
+    /// The plugin api version for when the plugin was built.
+    /// This has to be set to `MEMFLOW_PLUGIN_VERSION` of memflow.
+    ///
+    /// If the versions mismatch the inventory will refuse to load.
+    pub plugin_version: i32,
+
+    /// The name of the plugin.
+    /// This name will be used when loading a plugin from the inventory.
+    ///
+    /// During plugin discovery, the export suffix has to match this name being capitalized
+    pub name: &'static str,
+
+    /// Create instance of the plugin
+    pub create: extern "C" fn(&ReprCStr, T::CInputArg, i32, &mut MaybeUninit<T::Instance>) -> i32,
+}
+
 /// Defines a common interface for loadable plugins
 pub trait Loadable: Sized {
     type Instance;
     type InputArg;
+    type CInputArg;
 
     /// Checks if plugin with the same `ident` already exists in input list
     fn exists(&self, instances: &[LibInstance<Self>]) -> bool {
@@ -153,6 +174,41 @@ pub trait Loadable: Sized {
 
     /// Identifier string of the plugin
     fn ident(&self) -> &str;
+
+    fn plugin_type() -> &'static str;
+
+    /// Constant prefix for the plugin type
+    fn export_prefix() -> &'static str;
+
+    fn new(descriptor: PluginDescriptor<Self>) -> Self;
+
+    fn load(library: &CArc<Library>, export: &str) -> Result<LibInstance<Self>> {
+        // find os descriptor
+        let descriptor = unsafe {
+            library
+                .as_ref()
+                .get::<*mut PluginDescriptor<Self>>(format!("{}\0", export).as_bytes())
+                .map_err(|_| Error::Connector("OS descriptor not found"))?
+                .read()
+        };
+
+        // check version
+        if descriptor.plugin_version != MEMFLOW_PLUGIN_VERSION {
+            warn!(
+                "{} {} has a different version. version {} required, found {}.",
+                Self::plugin_type(),
+                descriptor.name,
+                MEMFLOW_PLUGIN_VERSION,
+                descriptor.plugin_version
+            );
+            Err(Error::Connector("connector version mismatch"))
+        } else {
+            Ok(LibInstance {
+                library: library.clone(),
+                loader: Self::new(descriptor),
+            })
+        }
+    }
 
     /// Try to load a plugin library
     ///
@@ -168,7 +224,26 @@ pub trait Loadable: Sized {
     /// the loaded library implements the necessary interface manually.
     ///
     /// It is adviced to use a provided proc macro to define a valid library.
-    fn load_all(path: impl AsRef<Path>) -> Result<Vec<LibInstance<Self>>>;
+    fn load_all(path: impl AsRef<Path>) -> Result<Vec<LibInstance<Self>>> {
+        let exports = util::find_export_by_prefix(path.as_ref(), Self::export_prefix())?;
+        if exports.is_empty() {
+            return Err(Error::Connector(
+                "file does not contain any memflow exports",
+            ));
+        }
+
+        // load library
+        let library = Library::new(path.as_ref())
+            .map_err(|_| Error::Connector("unable to load library"))
+            .map(CArc::from)?;
+
+        let library = CArc::from(library);
+
+        Ok(exports
+            .into_iter()
+            .filter_map(|e| Self::load(&library, &e).ok())
+            .collect())
+    }
 
     /// Helper function to load a plugin into a list of library instances
     ///

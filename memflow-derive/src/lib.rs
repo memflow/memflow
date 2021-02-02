@@ -36,6 +36,11 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
     };
 
     let connector_name = args.name;
+    let connector_descriptor: proc_macro2::TokenStream =
+        ["MEMFLOW_CONNECTOR_", &(&connector_name).to_uppercase()]
+            .concat()
+            .parse()
+            .unwrap();
 
     let func = parse_macro_input!(input as ItemFn);
     let func_name = &func.sig.ident;
@@ -44,7 +49,7 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
         quote! {
             #[doc(hidden)]
             extern "C" fn mf_create(
-                args: ::memflow::types::ReprCStr,
+                args: &::memflow::types::ReprCStr,
                 _: Option<&mut ::std::os::raw::c_void>,
                 log_level: i32,
                 out: &mut ::memflow::plugins::connector::MUConnectorInstance
@@ -56,7 +61,7 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
         quote! {
             #[doc(hidden)]
             extern "C" fn mf_create(
-                args: ::memflow::types::ReprCStr,
+                args: &::memflow::types::ReprCStr,
                 _: Option<&mut ::std::os::raw::c_void>,
                 _: i32,
                 out: &mut ::memflow::plugins::connector::MUConnectorInstance
@@ -69,8 +74,8 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
     let gen = quote! {
         #[doc(hidden)]
         #[no_mangle]
-        pub static MEMFLOW_CONNECTOR: ::memflow::plugins::ConnectorDescriptor = ::memflow::plugins::ConnectorDescriptor {
-            connector_version: ::memflow::plugins::MEMFLOW_PLUGIN_VERSION,
+        pub static #connector_descriptor: ::memflow::plugins::ConnectorDescriptor = ::memflow::plugins::ConnectorDescriptor {
+            plugin_version: ::memflow::plugins::MEMFLOW_PLUGIN_VERSION,
             name: #connector_name,
             create: mf_create,
         };
@@ -92,6 +97,10 @@ pub fn os_layer(args: TokenStream, input: TokenStream) -> TokenStream {
     };
 
     let os_name = args.name;
+    let os_descriptor: proc_macro2::TokenStream = ["MEMFLOW_OS_", &(&os_name).to_uppercase()]
+        .concat()
+        .parse()
+        .unwrap();
 
     let func = parse_macro_input!(input as ItemFn);
     let func_name = &func.sig.ident;
@@ -100,7 +109,7 @@ pub fn os_layer(args: TokenStream, input: TokenStream) -> TokenStream {
         quote! {
             #[doc(hidden)]
             extern "C" fn mf_create(
-                args: ::memflow::types::ReprCStr,
+                args: &::memflow::types::ReprCStr,
                 mem: ::memflow::plugins::COption<::memflow::plugins::ConnectorInstance>,
                 log_level: i32,
                 out: &mut ::memflow::plugins::os::MUOSInstance
@@ -112,7 +121,7 @@ pub fn os_layer(args: TokenStream, input: TokenStream) -> TokenStream {
         quote! {
             #[doc(hidden)]
             extern "C" fn mf_create(
-                args: ::memflow::types::ReprCStr,
+                args: &::memflow::types::ReprCStr,
                 mem: ::memflow::plugins::COption<::memflow::plugins::ConnectorInstance>,
                 _: i32,
                 out: &mut ::memflow::plugins::os::MUOSInstance
@@ -125,7 +134,7 @@ pub fn os_layer(args: TokenStream, input: TokenStream) -> TokenStream {
     let gen = quote! {
         #[doc(hidden)]
         #[no_mangle]
-        pub static MEMFLOW_OS: ::memflow::plugins::OSLayerDescriptor = ::memflow::plugins::OSLayerDescriptor {
+        pub static #os_descriptor: ::memflow::plugins::OSLayerDescriptor = ::memflow::plugins::OSLayerDescriptor {
             os_version: ::memflow::plugins::MEMFLOW_PLUGIN_VERSION,
             name: #os_name,
             create: mf_create,
@@ -148,13 +157,17 @@ pub fn os_layer_bare(args: TokenStream, input: TokenStream) -> TokenStream {
     };
 
     let os_name = args.name;
+    let os_descriptor: proc_macro2::TokenStream = ["MEMFLOW_OS_", &(&os_name).to_uppercase()]
+        .concat()
+        .parse()
+        .unwrap();
 
     let func = parse_macro_input!(input as ItemFn);
     let func_name = &func.sig.ident;
     let create_gen = quote! {
         #[doc(hidden)]
         extern "C" fn mf_create(
-            args: ::memflow::types::ReprCStr,
+            args: &::memflow::types::ReprCStr,
             mem: ::memflow::plugins::COption<::memflow::plugins::ConnectorInstance>,
             log_level: i32,
             out: &mut ::memflow::plugins::os::MUOSInstance
@@ -166,8 +179,8 @@ pub fn os_layer_bare(args: TokenStream, input: TokenStream) -> TokenStream {
     let gen = quote! {
         #[doc(hidden)]
         #[no_mangle]
-        pub static MEMFLOW_OS: ::memflow::plugins::OSLayerDescriptor = ::memflow::plugins::OSLayerDescriptor {
-            os_version: ::memflow::plugins::MEMFLOW_PLUGIN_VERSION,
+        pub static #os_descriptor: ::memflow::plugins::os::OSDescriptor = ::memflow::plugins::os::OSDescriptor {
+            plugin_version: ::memflow::plugins::MEMFLOW_PLUGIN_VERSION,
             name: #os_name,
             create: mf_create,
         };

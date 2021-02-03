@@ -159,6 +159,19 @@ pub struct PluginDescriptor<T: Loadable> {
     /// During plugin discovery, the export suffix has to match this name being capitalized
     pub name: &'static str,
 
+    /// The version of the connector.
+    /// If multiple connectors are installed the latest is picked.
+    pub version: &'static str,
+
+    /// The description of the connector.
+    pub description: &'static str,
+
+    /// Retrieve a help string from the connector.
+    // TODO:
+
+    /// Retrieve a list of available targets for this connector
+    // TODO:
+
     /// Create instance of the plugin
     pub create: extern "C" fn(&ReprCStr, T::CInputArg, i32, &mut MaybeUninit<T::Instance>) -> i32,
 }

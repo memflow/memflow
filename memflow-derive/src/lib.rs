@@ -8,6 +8,8 @@ struct ConnectorFactoryArgs {
     name: String,
     #[darling(default)]
     version: Option<String>,
+    #[darling(default)]
+    description: Option<String>,
 }
 
 #[derive(Debug, FromMeta)]
@@ -15,6 +17,8 @@ struct OSFactoryArgs {
     name: String,
     #[darling(default)]
     version: Option<String>,
+    #[darling(default)]
+    description: Option<String>,
 }
 
 // We should add conditional compilation for the crate-type here
@@ -36,6 +40,16 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
     };
 
     let connector_name = args.name;
+
+    let version_gen = args
+        .version
+        .map_or_else(|| quote! { env!("CARGO_PKG_VERSION") }, |v| quote! { #v });
+
+    let description_gen = args.description.map_or_else(
+        || quote! { env!("CARGO_PKG_DESCRIPTION") },
+        |d| quote! { #d },
+    );
+
     let connector_descriptor: proc_macro2::TokenStream =
         ["MEMFLOW_CONNECTOR_", &(&connector_name).to_uppercase()]
             .concat()
@@ -77,6 +91,8 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
         pub static #connector_descriptor: ::memflow::plugins::ConnectorDescriptor = ::memflow::plugins::ConnectorDescriptor {
             plugin_version: ::memflow::plugins::MEMFLOW_PLUGIN_VERSION,
             name: #connector_name,
+            version: #version_gen,
+            description: #description_gen,
             create: mf_create,
         };
 
@@ -97,6 +113,16 @@ pub fn os_layer(args: TokenStream, input: TokenStream) -> TokenStream {
     };
 
     let os_name = args.name;
+
+    let version_gen = args
+        .version
+        .map_or_else(|| quote! { env!("CARGO_PKG_VERSION") }, |v| quote! { #v });
+
+    let description_gen = args.description.map_or_else(
+        || quote! { env!("CARGO_PKG_DESCRIPTION") },
+        |d| quote! { #d },
+    );
+
     let os_descriptor: proc_macro2::TokenStream = ["MEMFLOW_OS_", &(&os_name).to_uppercase()]
         .concat()
         .parse()
@@ -137,6 +163,8 @@ pub fn os_layer(args: TokenStream, input: TokenStream) -> TokenStream {
         pub static #os_descriptor: ::memflow::plugins::OSLayerDescriptor = ::memflow::plugins::OSLayerDescriptor {
             os_version: ::memflow::plugins::MEMFLOW_PLUGIN_VERSION,
             name: #os_name,
+            version: #version_gen,
+            description: #description_gen,
             create: mf_create,
         };
 
@@ -157,6 +185,16 @@ pub fn os_layer_bare(args: TokenStream, input: TokenStream) -> TokenStream {
     };
 
     let os_name = args.name;
+
+    let version_gen = args
+        .version
+        .map_or_else(|| quote! { env!("CARGO_PKG_VERSION") }, |v| quote! { #v });
+
+    let description_gen = args.description.map_or_else(
+        || quote! { env!("CARGO_PKG_DESCRIPTION") },
+        |d| quote! { #d },
+    );
+
     let os_descriptor: proc_macro2::TokenStream = ["MEMFLOW_OS_", &(&os_name).to_uppercase()]
         .concat()
         .parse()
@@ -182,6 +220,8 @@ pub fn os_layer_bare(args: TokenStream, input: TokenStream) -> TokenStream {
         pub static #os_descriptor: ::memflow::plugins::os::OSDescriptor = ::memflow::plugins::os::OSDescriptor {
             plugin_version: ::memflow::plugins::MEMFLOW_PLUGIN_VERSION,
             name: #os_name,
+            version: #version_gen,
+            description: #description_gen,
             create: mf_create,
         };
 

@@ -180,7 +180,7 @@ impl ArcPluginProcess {
 
 impl Clone for ArcPluginProcess {
     fn clone(&self) -> Self {
-        let instance = (self.clone.clone)(self.inner.instance).expect("Unable to clone Connector");
+        let instance = (self.clone.clone)(self.inner.instance).expect("Unable to clone Process");
         let vmem_ref =
             (self.inner.vtable.virt_mem)(unsafe { (instance as *mut c_void).as_mut() }.unwrap());
         Self {

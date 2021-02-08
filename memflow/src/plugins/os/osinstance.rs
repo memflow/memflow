@@ -1,7 +1,12 @@
 use crate::error::*;
 
-use super::{ArcPluginProcess, OSLayerFunctionTable, PluginProcess};
-use crate::os::{AddressCallback, ModuleInfo, OSInfo, OSInner, Process, ProcessInfo};
+use super::{
+    ArcPluginKeyboard, ArcPluginProcess, MUArcPluginKeyboard, MUPluginKeyboard,
+    OSLayerFunctionTable, PluginKeyboard, PluginProcess,
+};
+use crate::os::{
+    AddressCallback, ModuleInfo, OSInfo, OSInner, OSKeyboardInner, Process, ProcessInfo,
+};
 use crate::types::Address;
 use std::ffi::c_void;
 
@@ -146,6 +151,18 @@ impl OSInstance {
             library: None.into(),
         }
     }
+
+    pub fn has_phys_mem(&self) -> bool {
+        self.vtable.phys.is_some()
+    }
+
+    pub fn has_virt_mem(&self) -> bool {
+        self.vtable.virt.is_some()
+    }
+
+    pub fn has_keyboard(&self) -> bool {
+        self.vtable.keyboard.is_some()
+    }
 }
 
 impl<'a> OSInner<'a> for OSInstance {
@@ -219,6 +236,34 @@ impl<'a> OSInner<'a> for OSInstance {
     /// Retreives the os info
     fn info(&self) -> &OSInfo {
         (self.vtable.os.info)(self.instance)
+    }
+}
+
+/// Optional Keyboard feature implementation
+impl<'a> OSKeyboardInner<'a> for OSInstance {
+    type KeyboardType = PluginKeyboard<'a>;
+    type IntoKeyboardType = ArcPluginKeyboard;
+
+    fn keyboard(&'a mut self) -> Result<Self::KeyboardType> {
+        let kbd = self
+            .vtable
+            .keyboard
+            .ok_or(Error::Connector("unsupported optional feature"))?;
+        let mut out = MUPluginKeyboard::uninit();
+        // Shorten the lifetime of instance
+        let instance = unsafe { (self.instance as *mut c_void).as_mut() }.unwrap();
+        let res = (kbd.keyboard)(instance, self.library.clone(), &mut out);
+        result_from_int(res, out)
+    }
+
+    fn into_keyboard(mut self) -> Result<Self::IntoKeyboardType> {
+        let kbd = self
+            .vtable
+            .keyboard
+            .ok_or(Error::Connector("unsupported optional feature"))?;
+        let mut out = MUArcPluginKeyboard::uninit();
+        let res = (kbd.into_keyboard)(self.instance, self.library.take(), &mut out);
+        result_from_int(res, out)
     }
 }
 

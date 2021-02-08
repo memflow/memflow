@@ -9,6 +9,12 @@ pub use osinstance::{OSFunctionTable, OSInstance, OpaqueOSFunctionTable};
 pub mod process;
 pub use process::{ArcPluginProcess, PluginProcess};
 
+pub mod oskeyboard;
+pub use oskeyboard::{
+    ArcPluginKeyboard, ArcPluginKeyboardState, OSKeyboardFunctionTable,
+    OpaqueOSKeyboardFunctionTable, PluginKeyboard,
+};
+
 use super::{
     Args, CArc, COption, ConnectorInstance, GenericBaseTable, Loadable, OpaqueBaseTable,
     OpaquePhysicalMemoryFunctionTable, OpaqueVirtualMemoryFunctionTable, PluginDescriptor,
@@ -23,6 +29,9 @@ pub type MUProcessInfo = MaybeUninit<ProcessInfo>;
 pub type MUModuleInfo = MaybeUninit<ModuleInfo>;
 pub type MUPluginProcess<'a> = MaybeUninit<PluginProcess<'a>>;
 pub type MUArcPluginProcess = MaybeUninit<ArcPluginProcess>;
+pub type MUPluginKeyboard<'a> = MaybeUninit<PluginKeyboard<'a>>;
+pub type MUArcPluginKeyboard = MaybeUninit<ArcPluginKeyboard>;
+pub type MUArcPluginKeyboardState = MaybeUninit<ArcPluginKeyboardState>;
 pub type MUAddress = MaybeUninit<Address>;
 pub type MUOSInstance = MaybeUninit<OSInstance>;
 
@@ -34,6 +43,16 @@ pub trait PluginOS<T: Process + Clone>:
 {
 }
 impl<T: Process + Clone, K: 'static + Clone + for<'a> OSInner<'a, IntoProcessType = T>> PluginOS<T>
+    for K
+{
+}
+
+/// Subtrait of Plugin where `Self`, and `OSKeyboard::IntoKeyboardType` are `Clone`
+pub trait PluginOSKeyboard<T: Keyboard + Clone>:
+    'static + Clone + for<'a> OSKeyboardInner<'a, IntoKeyboardType = T>
+{
+}
+impl<T: Keyboard + Clone, K: 'static + Clone + for<'a> OSKeyboardInner<'a, IntoKeyboardType = T>> PluginOSKeyboard<T>
     for K
 {
 }
@@ -70,6 +89,8 @@ pub struct OSLayerFunctionTable {
     pub phys: Option<&'static OpaquePhysicalMemoryFunctionTable>,
     /// The vtable for all virtual memory access if available
     pub virt: Option<&'static OpaqueVirtualMemoryFunctionTable>,
+    /// The vtable for the keyboard access if available
+    pub keyboard: Option<&'static OpaqueOSKeyboardFunctionTable>,
 }
 
 impl OSLayerFunctionTable {
@@ -79,6 +100,7 @@ impl OSLayerFunctionTable {
             os: <&OSFunctionTable<P, T>>::default().as_opaque(),
             phys: None,
             virt: None,
+            keyboard: None,
         }
     }
 }

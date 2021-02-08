@@ -15,10 +15,12 @@
 //! functions. It might be wise to implement helpers for exported functions, memory protection
 //! flags, and other things concerned with individual modules.
 
+pub mod keyboard;
 pub mod module;
 pub mod process;
 pub mod root;
 
+pub use keyboard::{Keyboard, KeyboardState, OSKeyboard, OSKeyboardInner};
 pub use module::{ModuleAddressCallback, ModuleAddressInfo, ModuleInfo, ModuleInfoCallback};
 pub use process::{Process, ProcessInfo, ProcessInfoCallback, PID};
 pub use root::{OSInfo, OSInner, OS};

@@ -13,13 +13,14 @@ Therefor the Keyboard will by default find the winlogon.exe or wininit.exe proce
 use std::{thread, time};
 
 use memflow::mem::{PhysicalMemory, VirtualTranslate};
-use memflow_win32::win32::{Win32Kernel, Keyboard};
+use memflow::os::{Keyboard, KeyboardState};
+use memflow_win32::win32::{Win32Kernel, Win32Keyboard};
 
 fn test<T: PhysicalMemory, V: VirtualTranslate>(kernel: &mut Win32Kernel<T, V>) {
-    let kbd = Keyboard::try_with(kernel).unwrap();
+    let mut kbd = Win32Keyboard::with_kernel_ref(kernel).unwrap();
 
     loop {
-        let kbs = kbd.state_with_kernel(kernel).unwrap();
+        let kbs = kbd.state().unwrap();
         println!("space down: {:?}", kbs.is_down(0x20)); // VK_SPACE
         thread::sleep(time::Duration::from_millis(1000));
     }

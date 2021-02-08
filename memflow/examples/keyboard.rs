@@ -1,6 +1,6 @@
 use clap::{crate_authors, crate_version, App, Arg};
 use log::Level;
-/// A simple process list example using memflow
+/// A simple keyboard example using memflow
 use memflow::prelude::v1::*;
 
 fn main() -> Result<()> {

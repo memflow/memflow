@@ -6,7 +6,7 @@ pub use keyboardstate::ArcPluginKeyboardState;
 
 use crate::error::*;
 
-use crate::os::{OSKeyboardInner, Keyboard};
+use crate::os::{Keyboard, OSKeyboardInner};
 use std::ffi::c_void;
 
 use super::super::COptArc;
@@ -26,15 +26,16 @@ impl Clone for OpaqueOSKeyboardFunctionTable {
 }
 
 #[repr(C)]
-pub struct OSKeyboardFunctionTable<'a, P, T> {
-    pub keyboard: extern "C" fn(os: &'a mut T, lib: COptArc<Library>, out: &mut MUPluginKeyboard<'a>) -> i32,
+pub struct OSKeyboardFunctionTable<'a, K, T> {
+    pub keyboard:
+        extern "C" fn(os: &'a mut T, lib: COptArc<Library>, out: &mut MUPluginKeyboard<'a>) -> i32,
     pub into_keyboard:
         extern "C" fn(os: &mut T, lib: COptArc<Library>, out: &mut MUArcPluginKeyboard) -> i32,
-    phantom: std::marker::PhantomData<P>,
+    phantom: std::marker::PhantomData<K>,
 }
 
-impl<'a, P: 'static + Keyboard + Clone, T: PluginOSKeyboard<P>> Default
-    for &'a OSKeyboardFunctionTable<'a, P, T>
+impl<'a, K: 'static + Keyboard + Clone, T: PluginOSKeyboard<K>> Default
+    for &'a OSKeyboardFunctionTable<'a, K, T>
 {
     fn default() -> Self {
         &OSKeyboardFunctionTable {

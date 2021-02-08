@@ -52,8 +52,10 @@ pub trait PluginOSKeyboard<T: Keyboard + Clone>:
     'static + Clone + for<'a> OSKeyboardInner<'a, IntoKeyboardType = T>
 {
 }
-impl<T: Keyboard + Clone, K: 'static + Clone + for<'a> OSKeyboardInner<'a, IntoKeyboardType = T>> PluginOSKeyboard<T>
-    for K
+impl<
+        T: Keyboard + Clone,
+        K: 'static + Clone + for<'a> OSKeyboardInner<'a, IntoKeyboardType = T>,
+    > PluginOSKeyboard<T> for K
 {
 }
 
@@ -65,7 +67,7 @@ pub fn create_with_logging<P: 'static + Process + Clone, T: PluginOS<P>>(
     create_fn: impl Fn(&Args, ConnectorInstance, log::Level) -> Result<T>,
 ) -> i32 {
     super::util::create_with_logging(args, log_level, out, move |a, l| {
-        create_fn(&a, conn, l).map(OSInstance::new)
+        Ok(create_fn(&a, conn, l).map(OSInstance::builder)?.build())
     })
 }
 
@@ -75,7 +77,9 @@ pub fn create_without_logging<P: 'static + Process + Clone, T: PluginOS<P>>(
     out: &mut MUOSInstance,
     create_fn: impl Fn(&Args, ConnectorInstance) -> Result<T>,
 ) -> i32 {
-    super::util::create_without_logging(args, out, |a| create_fn(&a, conn).map(OSInstance::new))
+    super::util::create_without_logging(args, out, |a| {
+        Ok(create_fn(&a, conn).map(OSInstance::builder)?.build())
+    })
 }
 
 #[repr(C)]

@@ -2,8 +2,8 @@ use std::prelude::v1::*;
 
 use super::{
     process::EXIT_STATUS_STILL_ACTIVE, process::IMAGE_FILE_NAME_LENGTH, Win32ExitStatus,
-    Win32KernelBuilder, Win32KernelInfo, Win32ModuleListInfo, Win32Process, Win32ProcessInfo,
-    Win32VirtualTranslate,
+    Win32KernelBuilder, Win32KernelInfo, Win32Keyboard, Win32ModuleListInfo, Win32Process,
+    Win32ProcessInfo, Win32VirtualTranslate,
 };
 
 use crate::error::{Error, Result};
@@ -14,7 +14,9 @@ use std::fmt;
 
 use memflow::architecture::{ArchitectureIdent, ArchitectureObj};
 use memflow::mem::{DirectTranslate, PhysicalMemory, VirtualDMA, VirtualMemory, VirtualTranslate};
-use memflow::os::{AddressCallback, ModuleInfo, OSInfo, OSInner, Process, ProcessInfo, PID};
+use memflow::os::{
+    AddressCallback, ModuleInfo, OSInfo, OSInner, OSKeyboardInner, Process, ProcessInfo, PID,
+};
 use memflow::types::{Address, ReprCStr};
 
 use pelite::{self, pe64::exports::Export, PeView};
@@ -483,7 +485,7 @@ impl<'a, T: PhysicalMemory + 'a, V: VirtualTranslate + 'a> OSInner<'a> for Win32
             .map_err(From::from)
     }
 
-    /// Retreives a module by its structure address
+    /// Retrieves a module by its structure address
     ///
     /// # Arguments
     /// * `address` - address where module's information resides in
@@ -498,9 +500,24 @@ impl<'a, T: PhysicalMemory + 'a, V: VirtualTranslate + 'a> OSInner<'a> for Win32
             .map_err(From::from)
     }
 
-    /// Retreives the kernel info
+    /// Retrieves the kernel info
     fn info(&self) -> &OSInfo {
         &self.kernel_info.os_info
+    }
+}
+
+impl<'a, T: PhysicalMemory + 'a, V: VirtualTranslate + 'a> OSKeyboardInner<'a>
+    for Win32Kernel<T, V>
+{
+    type KeyboardType = Win32Keyboard<VirtualDMA<&'a mut T, &'a mut V, Win32VirtualTranslate>>;
+    type IntoKeyboardType = Win32Keyboard<VirtualDMA<T, V, Win32VirtualTranslate>>;
+
+    fn keyboard(&'a mut self) -> memflow::error::Result<Self::KeyboardType> {
+        Ok(Win32Keyboard::with_kernel_ref(self)?)
+    }
+
+    fn into_keyboard(self) -> memflow::error::Result<Self::IntoKeyboardType> {
+        Ok(Win32Keyboard::with_kernel(self)?)
     }
 }
 

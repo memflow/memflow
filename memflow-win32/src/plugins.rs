@@ -33,14 +33,16 @@ fn build_final<
     B: 'static + PhysicalMemory + Clone,
     C: 'static + VirtualTranslate + Clone,
 >(
-    builder: Win32KernelBuilder<A, B, C>,
+    kernel_builder: Win32KernelBuilder<A, B, C>,
     _: &Args,
 ) -> Result<OSInstance> {
     log::info!(
         "Building kernel of type {}",
         std::any::type_name::<Win32KernelBuilder<A, B, C>>()
     );
-    builder.build().map_err(From::from).map(OSInstance::new)
+    let kernel = kernel_builder.build()?;
+    let instance = OSInstance::builder(kernel).enable_keyboard().build();
+    Ok(instance)
 }
 
 fn build_arch<

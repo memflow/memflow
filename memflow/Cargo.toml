@@ -80,3 +80,7 @@ path = "examples/process_list.rs"
 [[example]]
 name = "lsmod"
 path = "examples/kernel_modules.rs"
+
+[[example]]
+name = "keyboard"
+path = "examples/keyboard.rs"

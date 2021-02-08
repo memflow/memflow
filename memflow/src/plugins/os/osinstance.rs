@@ -1,8 +1,8 @@
 use crate::error::*;
 
 use super::{
-    ArcPluginKeyboard, ArcPluginProcess, MUArcPluginKeyboard, MUPluginKeyboard,
-    OSLayerFunctionTable, PluginKeyboard, PluginProcess,
+    ArcPluginKeyboard, ArcPluginProcess, Keyboard, MUArcPluginKeyboard, MUPluginKeyboard,
+    OSKeyboardFunctionTable, OSLayerFunctionTable, PluginKeyboard, PluginOSKeyboard, PluginProcess,
 };
 use crate::os::{
     AddressCallback, ModuleInfo, OSInfo, OSInner, OSKeyboardInner, Process, ProcessInfo,
@@ -143,15 +143,49 @@ pub struct OSInstance {
 }
 
 impl OSInstance {
-    pub fn new<P: 'static + Process + Clone, T: PluginOS<P>>(instance: T) -> Self {
-        Self {
-            instance: unsafe { Box::into_raw(Box::new(instance)).cast::<c_void>().as_mut() }
-                .unwrap(),
+    pub fn builder<P: 'static + Process + Clone, T: PluginOS<P>>(
+        instance: T,
+    ) -> OSInstanceBuilder<T> {
+        OSInstanceBuilder {
+            instance,
             vtable: OSLayerFunctionTable::new::<P, T>(),
+        }
+    }
+}
+
+/// Builder for the os instance structure.
+pub struct OSInstanceBuilder<T> {
+    instance: T,
+    vtable: OSLayerFunctionTable,
+}
+
+impl<T> OSInstanceBuilder<T> {
+    /// Enables the optional Keyboard feature for the OSInstance.
+    pub fn enable_keyboard<K>(mut self) -> Self
+    where
+        K: 'static + Keyboard + Clone,
+        T: PluginOSKeyboard<K>,
+    {
+        self.vtable.keyboard = Some(<&OSKeyboardFunctionTable<K, T>>::default().as_opaque());
+        self
+    }
+
+    /// Build the OSInstance
+    pub fn build(self) -> OSInstance {
+        OSInstance {
+            instance: unsafe {
+                Box::into_raw(Box::new(self.instance))
+                    .cast::<c_void>()
+                    .as_mut()
+            }
+            .unwrap(),
+            vtable: self.vtable,
             library: None.into(),
         }
     }
+}
 
+impl OSInstance {
     pub fn has_phys_mem(&self) -> bool {
         self.vtable.phys.is_some()
     }
@@ -223,7 +257,7 @@ impl<'a> OSInner<'a> for OSInstance {
         ))
     }
 
-    /// Retreives a module by its structure address
+    /// Retrieves a module by its structure address
     ///
     /// # Arguments
     /// * `address` - address where module's information resides in
@@ -233,7 +267,7 @@ impl<'a> OSInner<'a> for OSInstance {
         result_from_int(res, out)
     }
 
-    /// Retreives the os info
+    /// Retrieves the os info
     fn info(&self) -> &OSInfo {
         (self.vtable.os.info)(self.instance)
     }
@@ -263,6 +297,7 @@ impl<'a> OSKeyboardInner<'a> for OSInstance {
             .ok_or(Error::Connector("unsupported optional feature"))?;
         let mut out = MUArcPluginKeyboard::uninit();
         let res = (kbd.into_keyboard)(self.instance, self.library.take(), &mut out);
+        std::mem::forget(self);
         result_from_int(res, out)
     }
 }

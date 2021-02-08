@@ -60,7 +60,7 @@ pub trait Process: Send {
             .module_address_list_callback(target_arch, inner_callback.into())
     }
 
-    /// Retreives a module by its structure address and architecture
+    /// Retrieves a module by its structure address and architecture
     ///
     /// # Arguments
     /// * `address` - address where module's information resides in
@@ -140,7 +140,7 @@ pub trait Process: Send {
         self.module_by_address(addr, self.info().proc_arch)
     }
 
-    /// Retreives the process info
+    /// Retrieves the process info
     fn info(&self) -> &ProcessInfo;
 }
 

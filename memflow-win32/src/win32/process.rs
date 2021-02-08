@@ -159,7 +159,7 @@ impl<T: VirtualMemory> Process for Win32Process<T> {
             .map_err(From::from)
     }
 
-    /// Retreives a module by its structure address and architecture
+    /// Retrieves a module by its structure address and architecture
     ///
     /// # Arguments
     /// * `address` - address where module's information resides in
@@ -218,7 +218,7 @@ impl<T: VirtualMemory> Process for Win32Process<T> {
         ret
     }
 
-    /// Retreives the process info
+    /// Retrieves the process info
     fn info(&self) -> &ProcessInfo {
         &self.proc_info.base_info
     }

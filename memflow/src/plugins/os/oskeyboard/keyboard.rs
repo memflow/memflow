@@ -1,7 +1,7 @@
 use crate::error::*;
 
 use super::super::super::{util::*, COptArc, GenericCloneTable, OpaqueCloneTable};
-use super::{ArcPluginKeyboardState};
+use super::ArcPluginKeyboardState;
 use crate::os::Keyboard;
 
 use std::ffi::c_void;
@@ -60,11 +60,10 @@ extern "C" fn c_state<T: Keyboard>(
 
 /// # Safety
 /// This is just inherently unsafe. Only pass a state you got from the state() function into this.
-extern "C" fn c_set_state<T: Keyboard>(
-    keyboard: &mut T,
-    state: &ArcPluginKeyboardState,
-) -> i32 {
-    keyboard.set_state(unsafe { &*(state.instance as *const c_void as *const T::KeyboardStateType) }).as_int_result()
+extern "C" fn c_set_state<T: Keyboard>(keyboard: &mut T, state: &ArcPluginKeyboardState) -> i32 {
+    keyboard
+        .set_state(unsafe { &*(state.instance as *const c_void as *const T::KeyboardStateType) })
+        .as_int_result()
 }
 
 #[repr(C)]
@@ -75,10 +74,7 @@ pub struct PluginKeyboard<'a> {
 }
 
 impl<'a> PluginKeyboard<'a> {
-    pub fn new<T: 'a + Keyboard>(
-        keyboard: T,
-        lib: COptArc<Library>,
-    ) -> Self {
+    pub fn new<T: 'a + Keyboard>(keyboard: T, lib: COptArc<Library>) -> Self {
         let instance = Box::leak(Box::new(keyboard));
         let instance_void = unsafe { (instance as *mut T as *mut c_void).as_mut() }.unwrap();
         let vtable = KeyboardFunctionTable::<T>::default().into_opaque();
@@ -118,10 +114,7 @@ pub struct ArcPluginKeyboard {
 }
 
 impl ArcPluginKeyboard {
-    pub fn new<T: 'static + Keyboard + Clone>(
-        keyboard: T,
-        lib: COptArc<Library>,
-    ) -> Self {
+    pub fn new<T: 'static + Keyboard + Clone>(keyboard: T, lib: COptArc<Library>) -> Self {
         Self {
             inner: PluginKeyboard::new(keyboard, lib),
             clone: GenericCloneTable::<T>::default().into_opaque(),

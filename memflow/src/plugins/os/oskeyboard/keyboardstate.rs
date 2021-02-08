@@ -97,11 +97,7 @@ impl Clone for ArcPluginKeyboardState {
 
 impl KeyboardState for ArcPluginKeyboardState {
     fn is_down(&self, vk: i32) -> bool {
-        if (self.vtable.is_down)(self.instance, vk) != 0 {
-            true
-        } else {
-            false
-        }
+        (self.vtable.is_down)(self.instance, vk) != 0
     }
 
     fn set_down(&mut self, vk: i32, down: bool) {

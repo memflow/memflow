@@ -20,52 +20,107 @@ fn test<T: PhysicalMemory, V: VirtualTranslate>(kernel: &mut Win32Kernel<T, V>) 
 
     loop {
         let kbs = kbd.state_with_kernel(kernel).unwrap();
-        println!("space down: {:?}", kbs.is_down(win_key_codes::VK_SPACE));
+        println!("space down: {:?}", kbs.is_down(0x20)); // VK_SPACE
         thread::sleep(time::Duration::from_millis(1000));
     }
 }
 ```
 */
-use super::{Win32Kernel, Win32Process};
+use super::{Win32Kernel, Win32ProcessInfo, Win32VirtualTranslate};
 use crate::error::{Error, Result};
-use memflow::os::{OSInner, Process, ProcessInfo};
+use memflow::mem::{PhysicalMemory, VirtualDMA, VirtualMemory, VirtualTranslate};
+use memflow::os::{Keyboard, KeyboardState, Process};
+use memflow::prelude::OSInner;
 
 use std::convert::TryInto;
 
 use log::debug;
 
 use memflow::error::PartialResultExt;
-use memflow::mem::{PhysicalMemory, VirtualMemory, VirtualTranslate};
 use memflow::types::Address;
 
 use pelite::{self, pe64::exports::Export, PeView};
 
 /// Interface for accessing the target's keyboard state.
 #[derive(Clone, Debug)]
-pub struct Keyboard {
-    user_process_info: ProcessInfo,
+pub struct Win32Keyboard<T> {
+    pub virt_mem: T,
+    user_process_info: Win32ProcessInfo,
     key_state_addr: Address,
 }
 
-/// Represents the current Keyboardstate.
-///
-/// Internally this will hold a 256 * 2 / 8 byte long copy of the gafAsyncKeyState array from the target.
-#[derive(Clone)]
-pub struct KeyboardState {
-    buffer: [u8; 256 * 2 / 8],
+impl<'a, T: PhysicalMemory, V: VirtualTranslate>
+    Win32Keyboard<VirtualDMA<T, V, Win32VirtualTranslate>>
+{
+    pub fn with_kernel(mut kernel: Win32Kernel<T, V>) -> Result<Self> {
+        let (user_process_info, key_state_addr) = Self::find_keystate(&mut kernel)?;
+
+        let (phys_mem, vat) = kernel.virt_mem.destroy();
+        let virt_mem = VirtualDMA::with_vat(
+            phys_mem,
+            user_process_info.base_info.proc_arch,
+            user_process_info.translator(),
+            vat,
+        );
+
+        Ok(Self {
+            virt_mem,
+            user_process_info,
+            key_state_addr,
+        })
+    }
+
+    /// Consume the self object and return the underlying owned memory and vat objects
+    pub fn destroy(self) -> (T, V) {
+        self.virt_mem.destroy()
+    }
 }
 
-impl Keyboard {
-    pub fn try_with<T: PhysicalMemory, V: VirtualTranslate>(
-        kernel: &mut Win32Kernel<T, V>,
-    ) -> Result<Self> {
+impl<'a, T: PhysicalMemory, V: VirtualTranslate>
+    Win32Keyboard<VirtualDMA<&'a mut T, &'a mut V, Win32VirtualTranslate>>
+{
+    /// Constructs a new keyboard object by borrowing a kernel object.
+    ///
+    /// Internally this will create a `VirtualDMA` object that also
+    /// borrows the PhysicalMemory and Vat objects from the kernel.
+    ///
+    /// The resulting process object is NOT cloneable due to the mutable borrowing.
+    ///
+    /// When u need a cloneable Process u have to use the `::with_kernel` function
+    /// which will move the kernel object.
+    pub fn with_kernel_ref(kernel: &'a mut Win32Kernel<T, V>) -> Result<Self> {
+        let (user_process_info, key_state_addr) = Self::find_keystate(kernel)?;
+
+        let (phys_mem, vat) = kernel.virt_mem.mem_vat_pair();
+        let virt_mem = VirtualDMA::with_vat(
+            phys_mem,
+            user_process_info.base_info.proc_arch,
+            user_process_info.translator(),
+            vat,
+        );
+
+        Ok(Self {
+            virt_mem,
+            user_process_info,
+            key_state_addr,
+        })
+    }
+}
+
+impl<T> Win32Keyboard<T> {
+    fn find_keystate<P: PhysicalMemory, V: VirtualTranslate>(
+        kernel: &mut Win32Kernel<P, V>,
+    ) -> Result<(Win32ProcessInfo, Address)> {
         let win32kbase_module_info = kernel.module_by_name("win32kbase.sys")?;
         debug!("found win32kbase.sys: {:?}", win32kbase_module_info);
 
         let user_process_info = kernel
             .process_info_by_name("winlogon.exe")
-            .or_else(|_| kernel.process_info_by_name("wininit.exe"))?;
-        let mut user_process = kernel.process_by_info(user_process_info.clone())?;
+            .or_else(|_| kernel.process_info_by_name("wininit.exe"))
+            .or_else(|_| kernel.process_info_by_name("explorer.exe"))?;
+        let user_process_info_win32 =
+            kernel.process_info_from_base_info(user_process_info.clone())?;
+        let mut user_process = kernel.process_by_info(user_process_info)?;
         debug!("found user proxy process: {:?}", user_process);
 
         // read with user_process dtb
@@ -79,47 +134,18 @@ impl Keyboard {
         let export_addr =
             Self::find_gaf_pe(&module_buf).or_else(|_| Self::find_gaf_sig(&module_buf))?;
 
-        Ok(Self {
-            user_process_info,
-            key_state_addr: win32kbase_module_info.base + export_addr,
-        })
-    }
-
-    /// Fetches the gafAsyncKeyState from the given virtual reader.
-    /// This will use the given virtual memory reader to fetch
-    /// the gafAsyncKeyState from the win32kbase.sys kernel module.
-    pub fn state<T: VirtualMemory>(&self, virt_mem: &mut T) -> Result<KeyboardState> {
-        let buffer: [u8; 256 * 2 / 8] = virt_mem.virt_read(self.key_state_addr)?;
-        Ok(KeyboardState { buffer })
-    }
-
-    /// Fetches the kernel's gafAsyncKeyState state with the kernel context.
-    /// This will use the winlogon.exe or wininit.exe process as a proxy for reading
-    /// the gafAsyncKeyState from the win32kbase.sys kernel module.
-    pub fn state_with_kernel<T: PhysicalMemory, V: VirtualTranslate>(
-        &self,
-        kernel: &mut Win32Kernel<T, V>,
-    ) -> Result<KeyboardState> {
-        let mut user_process = kernel.process_by_info(self.user_process_info.clone())?;
-        self.state(&mut user_process.virt_mem())
-    }
-
-    /// Fetches the kernel's gafAsyncKeyState state with a processes context.
-    /// The win32kbase.sys kernel module is accessible with the DTB of a user process
-    /// so any usermode process can be used to read this memory region.
-    pub fn state_with_process<T: VirtualMemory>(
-        &self,
-        process: &mut Win32Process<T>,
-    ) -> Result<KeyboardState> {
-        self.state(&mut process.virt_mem)
+        Ok((
+            user_process_info_win32,
+            win32kbase_module_info.base + export_addr,
+        ))
     }
 
     fn find_gaf_pe(module_buf: &[u8]) -> Result<usize> {
-        let pe = PeView::from_bytes(module_buf).map_err(Error::from)?;
+        let pe = PeView::from_bytes(module_buf).map_err(crate::error::Error::from)?;
 
         match pe
             .get_export_by_name("gafAsyncKeyState")
-            .map_err(Error::from)?
+            .map_err(crate::error::Error::from)?
         {
             Export::Symbol(s) => {
                 debug!("gafAsyncKeyState export found at: {:x}", *s);
@@ -159,45 +185,85 @@ impl Keyboard {
     }
 }
 
-// #define GET_KS_BYTE(vk) ((vk)*2 / 8)
+impl<T> Keyboard for Win32Keyboard<T>
+where
+    T: VirtualMemory,
+{
+    type KeyboardStateType = Win32KeyboardState;
+
+    /// Reads the gafAsyncKeyState global from the win32kbase.sys kernel module.
+    fn state(&mut self) -> memflow::error::Result<Self::KeyboardStateType> {
+        let buffer: [u8; 256 * 2 / 8] = self.virt_mem.virt_read(self.key_state_addr)?;
+        Ok(Win32KeyboardState { buffer })
+    }
+
+    /// Writes the gafAsyncKeyState global to the win32kbase.sys kernel module.
+    ///
+    /// # Remarks:
+    ///
+    /// This will not enforce key presses in all applications on Windows.
+    /// It will only modify calls to GetKeyState / GetAsyncKeyState.
+    fn set_state(&mut self, state: &Self::KeyboardStateType) -> memflow::error::Result<()> {
+        self.virt_mem
+            .virt_write(self.key_state_addr, &state.buffer)
+            .data_part()
+    }
+}
+
+/// Represents the current Keyboardstate.
+///
+/// Internally this will hold a 256 * 2 / 8 byte long copy of the gafAsyncKeyState array from the target.
+#[derive(Clone)]
+pub struct Win32KeyboardState {
+    buffer: [u8; 256 * 2 / 8],
+}
+
 macro_rules! get_ks_byte {
     ($vk:expr) => {
         $vk * 2 / 8
     };
 }
 
-// #define GET_KS_DOWN_BIT(vk) (1 << (((vk) % 4) * 2))
 macro_rules! get_ks_down_bit {
     ($vk:expr) => {
         1 << (($vk % 4) * 2)
     };
 }
 
-// #define IS_KEY_DOWN(ks, vk) (((ks)[GET_KS_BYTE(vk)] & GET_KS_DOWN_BIT(vk)) ? true : false)
 macro_rules! is_key_down {
     ($ks:expr, $vk:expr) => {
         ($ks[get_ks_byte!($vk) as usize] & get_ks_down_bit!($vk)) != 0
     };
 }
 
-// #define IS_KEY_LOCKED(ks, vk) (((ks)[GET_KS_BYTE(vk)] & GET_KS_LOCK_BIT(vk)) ? TRUE : FALSE)
+macro_rules! set_key_down {
+    ($ks:expr, $vk:expr, $down:expr) => {
+        if $down {
+            ($ks[get_ks_byte!($vk) as usize] |= get_ks_down_bit!($vk))
+        } else {
+            ($ks[get_ks_byte!($vk) as usize] &= !get_ks_down_bit!($vk))
+        }
+    };
+}
 
-//#define SET_KEY_LOCKED(ks, vk, down) (ks)[GET_KS_BYTE(vk)] = ((down) ? \
-//                                                              ((ks)[GET_KS_BYTE(vk)] | GET_KS_LOCK_BIT(vk)) : \
-//                                                              ((ks)[GET_KS_BYTE(vk)] & ~GET_KS_LOCK_BIT(vk)))
-
-impl KeyboardState {
+impl KeyboardState for Win32KeyboardState {
     /// Returns true wether the given key was pressed.
     /// This function accepts a valid microsoft virtual keycode.
     ///
     /// A list of all Keycodes can be found on the [msdn](https://docs.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes).
     ///
     /// In case of supplying a invalid key this function will just return false cleanly.
-    pub fn is_down(&self, vk: i32) -> bool {
+    fn is_down(&self, vk: i32) -> bool {
         if !(0..=256).contains(&vk) {
             false
         } else {
             is_key_down!(self.buffer, vk)
+        }
+    }
+
+    fn set_down(&mut self, vk: i32, down: bool) {
+        if (0..=256).contains(&vk) {
+            set_key_down!(self.buffer, vk, down);
         }
     }
 }

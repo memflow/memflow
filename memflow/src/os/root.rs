@@ -210,7 +210,7 @@ pub trait OSInner<'a>: Send {
         Ok(ret)
     }
 
-    /// Retreives a module by its structure address
+    /// Retrieves a module by its structure address
     ///
     /// # Arguments
     /// * `address` - address where module's information resides in
@@ -233,7 +233,7 @@ pub trait OSInner<'a>: Send {
         ret
     }
 
-    /// Retreives the OS info
+    /// Retrieves the OS info
     fn info(&self) -> &OSInfo;
 }
 

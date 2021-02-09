@@ -1,12 +1,11 @@
 use std::prelude::v1::*;
 
 use super::PhysicalMemoryBatcher;
+use crate::dataview::Pod;
 use crate::error::Result;
 use crate::types::PhysicalAddress;
 
 use std::mem::MaybeUninit;
-
-use dataview::Pod;
 
 // TODO:
 // - check endianess here and return an error

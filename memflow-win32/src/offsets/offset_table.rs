@@ -1,8 +1,9 @@
 use std::prelude::v1::*;
 
-use dataview::Pod;
 use std::convert::TryFrom;
 use std::str;
+
+use memflow::dataview::Pod;
 
 /// Describes an offset file.
 /// At compile time this crate will create a binary blob of all

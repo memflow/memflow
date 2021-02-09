@@ -1,6 +1,6 @@
 [package]
 name = "nostd-test"
-version = "0.1.4"
+version = "0.1.5"
 authors = ["Aurimas Blažulionis <0x60@pm.me>"]
 edition = "2018"
 homepage = "https://memflow.github.io"

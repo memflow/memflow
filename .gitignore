@@ -1,7 +1,11 @@
 /target
 **/*.rs.bk
 *.swp
+*.so
+*.dll
+*.dylib
 .vscode
 Cargo.lock
 flow-bench/target
 nostd-test/target
+*.so

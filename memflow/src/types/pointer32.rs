@@ -2,15 +2,15 @@
 32-bit Pointer abstraction.
 */
 
+use crate::dataview::Pod;
 use crate::error::PartialResult;
 use crate::mem::VirtualMemory;
 use crate::types::{Address, ByteSwap};
 
+use std::convert::TryFrom;
 use std::marker::PhantomData;
 use std::mem::size_of;
 use std::{cmp, fmt, hash, ops};
-
-use dataview::Pod;
 
 /// This type can be used in structs that are being read from the target memory.
 /// It holds a phantom type that can be used to describe the proper type of the pointer
@@ -26,7 +26,7 @@ use dataview::Pod;
 /// ```
 /// use memflow::types::Pointer32;
 /// use memflow::mem::VirtualMemory;
-/// use dataview::Pod;
+/// use memflow::dataview::Pod;
 ///
 /// #[repr(C)]
 /// #[derive(Clone, Debug, Pod)]
@@ -55,7 +55,7 @@ use dataview::Pod;
 /// ```
 /// use memflow::types::Pointer32;
 /// use memflow::mem::VirtualMemory;
-/// use dataview::Pod;
+/// use memflow::dataview::Pod;
 ///
 /// #[repr(C)]
 /// #[derive(Clone, Debug, Pod)]
@@ -89,23 +89,118 @@ pub struct Pointer32<T: ?Sized = ()> {
 impl<T: ?Sized> Pointer32<T> {
     const PHANTOM_DATA: PhantomData<fn() -> T> = PhantomData;
 
-    /// A pointer with a value of zero.
+    /// A pointer32 with the value of zero.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use memflow::types::Pointer32;
+    ///
+    /// println!("pointer32: {}", Pointer32::<()>::NULL);
+    /// ```
     pub const NULL: Pointer32<T> = Pointer32 {
         address: 0,
         phantom_data: PhantomData,
     };
 
-    /// Returns a pointer with a value of zero.
-    pub fn null() -> Self {
+    /// Returns a pointer32 with a value of zero.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use memflow::types::Pointer32;
+    ///
+    /// println!("pointer32: {}", Pointer32::<()>::null());
+    /// ```
+    #[inline]
+    pub const fn null() -> Self {
         Pointer32::NULL
     }
 
-    /// Checks wether the containing value of this pointer is zero.
-    pub fn is_null(self) -> bool {
+    /// Checks wether the pointer32 is zero or not.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use memflow::types::Pointer32;
+    ///
+    /// assert_eq!(Pointer32::<()>::null().is_null(), true);
+    /// assert_eq!(Pointer32::<()>::from(0x1000u32).is_null(), false);
+    /// ```
+    #[inline]
+    pub const fn is_null(self) -> bool {
         self.address == 0
     }
 
+    /// Converts the pointer32 to an Option that is None when it is null
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use memflow::types::Pointer32;
+    ///
+    /// assert_eq!(Pointer32::<()>::null().non_null(), None);
+    /// assert_eq!(Pointer32::<()>::from(0x1000u32).non_null(), Some(Pointer32::from(0x1000)));
+    /// ```
+    #[inline]
+    pub fn non_null(self) -> Option<Pointer32<T>> {
+        if self.is_null() {
+            None
+        } else {
+            Some(self)
+        }
+    }
+
+    /// Converts the pointer32 into a `u32` value.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use memflow::types::Pointer32;
+    ///
+    /// let ptr = Pointer32::<()>::from(0x1000u32);
+    /// let ptr_u32: u32 = ptr.as_u32();
+    /// assert_eq!(ptr_u32, 0x1000);
+    /// ```
+    #[inline]
+    pub const fn as_u32(self) -> u32 {
+        self.address
+    }
+
+    /// Converts the pointer32 into a `u64` value.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use memflow::types::Pointer32;
+    ///
+    /// let ptr = Pointer32::<()>::from(0x1000u32);
+    /// let ptr_u64: u64 = ptr.as_u64();
+    /// assert_eq!(ptr_u64, 0x1000);
+    /// ```
+    #[inline]
+    pub const fn as_u64(self) -> u64 {
+        self.address as u64
+    }
+
+    /// Converts the pointer32 into a `usize` value.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use memflow::types::Pointer32;
+    ///
+    /// let ptr = Pointer32::<()>::from(0x1000u32);
+    /// let ptr_usize: usize = ptr.as_usize();
+    /// assert_eq!(ptr_usize, 0x1000);
+    /// ```
+    #[inline]
+    pub const fn as_usize(self) -> usize {
+        self.address as usize
+    }
+
     /// Returns the underlying raw u32 value of this pointer.
+    #[deprecated = "use as_u32() instead"]
     pub const fn into_raw(self) -> u32 {
         self.address
     }
@@ -193,6 +288,7 @@ impl<T: ?Sized> AsMut<u32> for Pointer32<T> {
     }
 }
 
+// From implementations
 impl<T: ?Sized> From<u32> for Pointer32<T> {
     #[inline(always)]
     fn from(address: u32) -> Pointer32<T> {
@@ -202,12 +298,49 @@ impl<T: ?Sized> From<u32> for Pointer32<T> {
         }
     }
 }
+
+/// Tries to converts an u64 into a Pointer32.
+/// The function will return an `Error::Bounds` error if the input value is greater than `u32::max_value()`.
+impl<T: ?Sized> TryFrom<u64> for Pointer32<T> {
+    type Error = crate::error::Error;
+
+    fn try_from(address: u64) -> Result<Pointer32<T>, Self::Error> {
+        if address <= (u32::max_value() as u64) {
+            Ok(Pointer32 {
+                address: address as u32,
+                phantom_data: PhantomData,
+            })
+        } else {
+            Err(crate::error::Error::Bounds)
+        }
+    }
+}
+
+/// Tries to converts an Address into a Pointer32.
+/// The function will return an Error::Bounds if the input value is greater than `u32::max_value()`.
+impl<T: ?Sized> TryFrom<Address> for Pointer32<T> {
+    type Error = crate::error::Error;
+
+    fn try_from(address: Address) -> Result<Pointer32<T>, Self::Error> {
+        if address.as_u64() <= (u32::max_value() as u64) {
+            Ok(Pointer32 {
+                address: address.as_u32(),
+                phantom_data: PhantomData,
+            })
+        } else {
+            Err(crate::error::Error::Bounds)
+        }
+    }
+}
+
+// Into implementations
 impl<T: ?Sized> From<Pointer32<T>> for Address {
     #[inline(always)]
     fn from(ptr: Pointer32<T>) -> Address {
         ptr.address.into()
     }
 }
+
 impl<T: ?Sized> From<Pointer32<T>> for u32 {
     #[inline(always)]
     fn from(ptr: Pointer32<T>) -> u32 {
@@ -215,6 +348,14 @@ impl<T: ?Sized> From<Pointer32<T>> for u32 {
     }
 }
 
+impl<T: ?Sized> From<Pointer32<T>> for u64 {
+    #[inline(always)]
+    fn from(ptr: Pointer32<T>) -> u64 {
+        ptr.address as u64
+    }
+}
+
+// Arithmetic operations
 impl<T> ops::Add<usize> for Pointer32<T> {
     type Output = Pointer32<T>;
     #[inline(always)]
@@ -262,6 +403,7 @@ impl<T: ?Sized> fmt::Display for Pointer32<T> {
 }
 
 unsafe impl<T: ?Sized + 'static> Pod for Pointer32<T> {}
+const _: [(); std::mem::size_of::<Pointer32<()>>()] = [(); std::mem::size_of::<u32>()];
 
 impl<T: ?Sized + 'static> ByteSwap for Pointer32<T> {
     fn byte_swap(&mut self) {

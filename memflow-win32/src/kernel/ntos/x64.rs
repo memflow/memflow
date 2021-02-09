@@ -7,12 +7,12 @@ use crate::kernel::StartBlock;
 use log::{debug, trace};
 
 use memflow::architecture::{x86::x64, ArchitectureObj};
+use memflow::dataview::Pod;
 use memflow::error::PartialResultExt;
 use memflow::iter::PageChunks;
 use memflow::mem::VirtualMemory;
 use memflow::types::{size, Address};
 
-use dataview::Pod;
 use pelite::image::IMAGE_DOS_HEADER;
 
 pub fn find_with_va_hint<T: VirtualMemory>(

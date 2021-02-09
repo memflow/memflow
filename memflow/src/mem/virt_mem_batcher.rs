@@ -1,12 +1,11 @@
 use std::prelude::v1::*;
 
+use crate::dataview::Pod;
 use crate::error::PartialResult;
 use crate::mem::virt_mem::{
     VirtualMemory, VirtualReadData, VirtualReadIterator, VirtualWriteData, VirtualWriteIterator,
 };
 use crate::types::Address;
-
-use dataview::Pod;
 
 pub struct VirtualMemoryBatcher<'a, T: VirtualMemory> {
     vmem: &'a mut T,

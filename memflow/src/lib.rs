@@ -73,6 +73,8 @@ pub mod prelude {
         pub use crate::mem::*;
         pub use crate::os::*;
         #[cfg(feature = "plugins")]
+        pub use crate::plugins::os::*;
+        #[cfg(feature = "plugins")]
         pub use crate::plugins::*;
         pub use crate::types::*;
     }

@@ -237,6 +237,12 @@ impl<T> PartialResultExt<T> for PartialResult<T> {
     }
 }
 
+// TODO: expose the exact error enum variant
+const RES_INT_SUCCESS: i32 = 0;
+const RES_INT_ERROR: i32 = -1;
+const RES_INT_PARTIAL_READ_ERROR: i32 = -2;
+const RES_INT_PARTIAL_WRITE_ERROR: i32 = -3;
+
 pub trait AsIntResult<T> {
     fn as_int_result(self) -> i32;
     fn as_int_out_result(self, out: &mut MaybeUninit<T>) -> i32;
@@ -246,7 +252,7 @@ pub trait AsIntResult<T> {
         Self: Sized,
     {
         let res = self.as_int_result();
-        if res != 0 {
+        if res != RES_INT_SUCCESS {
             error!("err value: {}", res);
         }
         res
@@ -254,55 +260,93 @@ pub trait AsIntResult<T> {
 }
 
 pub fn result_from_int_void(res: i32) -> Result<()> {
-    if res == 0 {
+    if res == RES_INT_SUCCESS {
         Ok(())
     } else {
         Err(Error::Other("C FFI Error"))
     }
 }
 
-pub fn part_result_from_int_void(res: i32) -> crate::error::PartialResult<()> {
-    if res == 0 {
-        Ok(())
-    } else {
-        Err(crate::error::PartialError::Error(
-            crate::error::Error::Other("C FFI Error"),
-        ))
-    }
-}
-
 pub fn result_from_int<T>(res: i32, out: MaybeUninit<T>) -> Result<T> {
-    if res == 0 {
+    if res == RES_INT_SUCCESS {
         Ok(unsafe { out.assume_init() })
     } else {
         Err(Error::Other("C FFI Error"))
     }
 }
 
-impl<T, E: std::fmt::Display> AsIntResult<T> for std::result::Result<T, E> {
+pub fn part_result_from_int_void(res: i32) -> PartialResult<()> {
+    match res {
+        RES_INT_SUCCESS => Ok(()),
+        RES_INT_ERROR => Err(PartialError::Error(Error::Other("C FFI Error"))),
+        RES_INT_PARTIAL_READ_ERROR => Err(PartialError::PartialVirtualRead(())),
+        RES_INT_PARTIAL_WRITE_ERROR => Err(PartialError::PartialVirtualWrite),
+        _ => Err(PartialError::Error(Error::Other("Unknown C FFI Error"))),
+    }
+}
+
+impl<T> AsIntResult<T> for result::Result<T, Error> {
     fn as_int_result(self) -> i32 {
         if self.is_ok() {
-            0
+            RES_INT_SUCCESS
         } else {
-            -1
+            RES_INT_ERROR
         }
     }
 
     fn as_int_out_result(self, out: &mut MaybeUninit<T>) -> i32 {
         if let Ok(ret) = self {
             unsafe { out.as_mut_ptr().write(ret) };
-            0
+            RES_INT_SUCCESS
         } else {
-            -1
+            RES_INT_ERROR
         }
     }
 
     fn as_int_result_logged(self) -> i32 {
         if let Err(e) = self {
             error!("{}", e);
-            -1
+            RES_INT_ERROR
         } else {
-            0
+            RES_INT_SUCCESS
+        }
+    }
+}
+
+impl<T> AsIntResult<T> for result::Result<T, PartialError<T>> {
+    fn as_int_result(self) -> i32 {
+        match self {
+            Ok(_) => RES_INT_SUCCESS,
+            Err(PartialError::Error(_)) => RES_INT_ERROR,
+            Err(PartialError::PartialVirtualRead(_)) => RES_INT_PARTIAL_READ_ERROR,
+            Err(PartialError::PartialVirtualWrite) => RES_INT_PARTIAL_WRITE_ERROR,
+        }
+    }
+
+    fn as_int_out_result(self, out: &mut MaybeUninit<T>) -> i32 {
+        match self {
+            Ok(ret) => {
+                unsafe { out.as_mut_ptr().write(ret) };
+                RES_INT_SUCCESS
+            }
+            Err(PartialError::Error(_)) => RES_INT_ERROR,
+            Err(PartialError::PartialVirtualRead(ret)) => {
+                unsafe { out.as_mut_ptr().write(ret) };
+                RES_INT_PARTIAL_READ_ERROR
+            }
+            Err(PartialError::PartialVirtualWrite) => RES_INT_PARTIAL_WRITE_ERROR,
+        }
+    }
+
+    fn as_int_result_logged(self) -> i32 {
+        match self {
+            Ok(_) => RES_INT_SUCCESS,
+            Err(PartialError::Error(e)) => {
+                error!("{}", e);
+                RES_INT_ERROR
+            }
+            Err(PartialError::PartialVirtualRead(_)) => RES_INT_PARTIAL_READ_ERROR,
+            Err(PartialError::PartialVirtualWrite) => RES_INT_PARTIAL_WRITE_ERROR,
         }
     }
 }

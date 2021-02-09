@@ -5,12 +5,11 @@ pub use virtual_dma::VirtualDMA;
 
 use super::VirtualMemoryBatcher;
 use crate::architecture::ArchitectureObj;
+use crate::dataview::Pod;
 use crate::error::{Error, PartialError, PartialResult, PartialResultExt, Result};
 use crate::types::{Address, Page, PhysicalAddress, Pointer32, Pointer64};
 
 use std::mem::MaybeUninit;
-
-use dataview::Pod;
 
 /// The `VirtualMemory` trait implements access to virtual memory for a specific process
 /// and provides a generic way to read and write from/to that processes virtual memory.

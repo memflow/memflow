@@ -165,11 +165,15 @@ impl Inventory {
                 .flatten(),
         );
 
+        #[cfg(unix)]
         let path_iter = path_iter.chain(
             dirs::home_dir()
                 .map(|dir| dir.join(".local").join("lib"))
                 .into_iter(),
         );
+
+        #[cfg(not(unix))]
+        let path_iter = path_iter.chain(dirs::document_dir().into_iter());
 
         let mut ret = Self { connectors: vec![] };
 

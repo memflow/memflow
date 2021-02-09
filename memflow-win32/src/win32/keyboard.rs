@@ -70,7 +70,8 @@ impl Keyboard {
 
         let user_process_info = kernel
             .process_info("winlogon.exe")
-            .or_else(|_| kernel.process_info("wininit.exe"))?;
+            .or_else(|_| kernel.process_info("wininit.exe"))
+            .or_else(|_| kernel.process_info("explorer.exe"))?;
         let mut user_process = Win32Process::with_kernel_ref(kernel, user_process_info.clone());
         debug!("found user proxy process: {:?}", user_process);
 

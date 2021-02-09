@@ -87,7 +87,7 @@ pub extern "C" fn phys_metadata(mem: &PhysicalMemoryObj) -> PhysicalMemoryMetada
 ///
 /// `out` must be a valid pointer to a data buffer of at least `len` size.
 #[no_mangle]
-pub unsafe extern "C" fn phys_read_raw(
+pub unsafe extern "C" fn phys_read_raw_into(
     mem: &mut PhysicalMemoryObj,
     addr: PhysicalAddress,
     out: *mut u8,

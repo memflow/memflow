@@ -1,13 +1,12 @@
 use std::prelude::v1::*;
 
+use crate::dataview::Pod;
 use crate::error::Result;
 use crate::mem::phys_mem::{
     PhysicalMemory, PhysicalReadData, PhysicalReadIterator, PhysicalWriteData,
     PhysicalWriteIterator,
 };
 use crate::types::PhysicalAddress;
-
-use dataview::Pod;
 
 pub struct PhysicalMemoryBatcher<'a, T: PhysicalMemory> {
     pmem: &'a mut T,

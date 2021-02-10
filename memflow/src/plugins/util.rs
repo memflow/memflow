@@ -83,17 +83,20 @@ pub fn find_export_by_prefix(
         Mach::Fat(mach) => (0..mach.narches)
             .filter_map(|i| mach.get(i).ok())
             .next()
-            .ok_or(Error::Other("Failed to find valid MachO header!"))?,
+            .ok_or(Error::Other("failed to find valid MachO header!"))?,
     };
 
+    // macho symbols are prefixed with `_` in the object file.
+    let macho_prefix = "_".to_owned() + prefix;
     Ok(macho
         .symbols
-        .ok_or(Error::Other("Failed to parse MachO symbols!"))?
+        .ok_or(Error::Other("failed to parse MachO symbols!"))?
         .iter()
         .filter_map(|s| s.ok())
         .filter_map(|(name, _)| {
-            if name.starts_with(prefix) {
-                Some(name.to_owned())
+            // symbols should only contain ascii characters
+            if name.starts_with(&macho_prefix) {
+                Some(name[1..].to_owned())
             } else {
                 None
             }

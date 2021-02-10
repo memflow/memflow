@@ -457,10 +457,17 @@ impl Inventory {
         Ok(self)
     }
 
-    /// Returns the names of all currently available connectors that can be used
-    /// when calling `instantiate` or `create_connector_default`.
+    /// Returns the names of all currently available connectors that can be used.
     pub fn available_connectors(&self) -> Vec<String> {
         self.connectors
+            .iter()
+            .map(|c| c.loader.ident().to_string())
+            .collect::<Vec<_>>()
+    }
+
+    /// Returns the names of all currently available os_layers that can be used.
+    pub fn available_os_layers(&self) -> Vec<String> {
+        self.os_layers
             .iter()
             .map(|c| c.loader.ident().to_string())
             .collect::<Vec<_>>()
@@ -637,4 +644,16 @@ impl Inventory {
 pub struct LibInstance<T> {
     library: CArc<Library>,
     loader: T,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // TODO: add dummy connector plugin test
+    #[test]
+    fn find_win32() {
+        let inventory = Inventory::scan_path("../target/debug").unwrap();
+        assert_eq!(inventory.available_os_layers()[0], "win32");
+    }
 }

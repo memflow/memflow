@@ -44,6 +44,9 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
+      - name: Pre-build binaries (for inventory integration tests)
+        run: cargo build --workspace --all-features --verbose
+
       - name: Run all tests
         run: cargo test --workspace --all-features --verbose
         if: runner.os == 'Linux'
@@ -61,7 +64,14 @@ jobs:
           toolchain: stable
           target: aarch64-unknown-linux-gnu
           override: true
-      - uses: actions-rs/cargo@v1
+      - name: Pre-build binaries (for inventory integration tests)
+        uses: actions-rs/cargo@v1
+        with:
+          use-cross: true
+          command: build
+          args: --target aarch64-unknown-linux-gnu --workspace --all-features --verbose
+      - name: Run all tests
+        uses: actions-rs/cargo@v1
         with:
           use-cross: true
           command: test

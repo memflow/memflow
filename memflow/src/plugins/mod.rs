@@ -376,10 +376,10 @@ impl Inventory {
     /// ```
     /// use memflow::plugins::Inventory;
     ///
-    /// let inventory = Inventory::scan_path_recursive("./")
+    /// let inventory = Inventory::scan_path_recursive("./", 2)
     ///     .unwrap();
     /// ```
-    pub fn scan_path_recursive<P: AsRef<Path>>(path: P) -> Result<Self> {
+    pub fn scan_path_recursive<P: AsRef<Path>>(path: P, depth: u32) -> Result<Self> {
         let mut dir = PathBuf::default();
         dir.push(path);
 
@@ -387,7 +387,7 @@ impl Inventory {
             connectors: vec![],
             os_layers: vec![],
         };
-        ret.add_dir_recursive(dir)?;
+        ret.add_dir_recursive(dir, depth)?;
         Ok(ret)
     }
 
@@ -489,7 +489,11 @@ impl Inventory {
     ///
     /// Same as previous functions - compiler can not guarantee the safety of
     /// third party library implementations.
-    pub fn add_dir_recursive(&mut self, dir: PathBuf) -> Result<&mut Self> {
+    pub fn add_dir_recursive(&mut self, dir: PathBuf, depth: u32) -> Result<&mut Self> {
+        if depth == 0 {
+            return Ok(self);
+        }
+
         if !dir.is_dir() {
             return Err(Error::IO("invalid path argument"));
         }
@@ -500,7 +504,7 @@ impl Inventory {
             let entry = entry.map_err(|_| Error::IO("unable to read directory entry"))?;
             let path = entry.path();
             if path.is_dir() {
-                self.add_dir_recursive(path)?;
+                self.add_dir_recursive(path, depth - 1)?;
             } else {
                 Loadable::load_append(path.clone(), &mut self.connectors).ok();
                 Loadable::load_append(path, &mut self.os_layers).ok();
@@ -706,7 +710,7 @@ mod tests {
     // TODO: add dummy connector plugin test
     #[test]
     fn find_win32() {
-        let inventory = Inventory::scan_path_recursive("../target").unwrap();
+        let inventory = Inventory::scan_path_recursive("../target", 2).unwrap();
         assert_eq!(inventory.available_os_layers()[0], "win32");
     }
 }

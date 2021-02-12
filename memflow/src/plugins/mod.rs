@@ -710,7 +710,7 @@ mod tests {
     // TODO: add dummy connector plugin test
     #[test]
     fn find_win32() {
-        let inventory = Inventory::scan_path_recursive("../target", 2).unwrap();
+        let inventory = Inventory::scan_path_recursive("../target", 3).unwrap();
         assert_eq!(inventory.available_os_layers()[0], "win32");
     }
 }

@@ -6,9 +6,10 @@ use super::symstore::SymbolStore;
 use super::offset_table::Win32OffsetFile;
 use super::{Win32Offsets, Win32OffsetsArchitecture};
 
-use crate::error::{Error, Result};
 use crate::kernel::{Win32GUID, Win32Version};
 use crate::win32::Win32KernelInfo;
+
+use memflow::error::{Error, Result};
 
 #[repr(align(16))]
 struct Align16<T>(pub T);

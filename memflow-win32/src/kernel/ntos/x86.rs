@@ -1,13 +1,12 @@
 use std::prelude::v1::*;
 
 use super::pehelper;
-use crate::error::{Error, Result};
 use crate::kernel::StartBlock;
 
 use log::{debug, info};
 
 use memflow::dataview::Pod;
-use memflow::error::PartialResultExt;
+use memflow::error::{Error, PartialResultExt, Result};
 use memflow::mem::VirtualMemory;
 use memflow::types::{size, Address};
 
@@ -58,7 +57,7 @@ pub fn find<T: VirtualMemory>(
         }
     }
 
-    Err(Error::Initialization(
+    Err(Error::OSLayer(
         "find_x86(): unable to locate ntoskrnl.exe in high mem",
     ))
 }

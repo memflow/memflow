@@ -1,12 +1,12 @@
 use std::prelude::v1::*;
 
-use crate::error::Result;
 use crate::offsets::Win32ArchOffsets;
 use crate::win32::VirtualReadUnicodeString;
 
 use log::trace;
 
 use memflow::architecture::ArchitectureIdent;
+use memflow::error::Result;
 use memflow::mem::VirtualMemory;
 use memflow::os::{AddressCallback, ModuleInfo};
 use memflow::types::Address;

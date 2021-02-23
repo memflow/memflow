@@ -14,7 +14,7 @@ use std::error;
 /// Specialized `Error` type for memflow errors.
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 pub enum Error {
-    /// Generic error type containing a string
+    /// Generic error type containing a static string reference
     Other(&'static str),
     /// Partial error.
     ///
@@ -37,6 +37,18 @@ pub enum Error {
     ///
     /// Catch-all for connector related errors
     Connector(&'static str),
+    /// OSLayer error
+    ///
+    /// Catch-all for os-layer related errors
+    OSLayer(&'static str),
+    /// OSOffset error
+    ///
+    /// Catch-all for os-layer offset related errors
+    OSOffset(&'static str),
+    /// OSExecutable error
+    ///
+    /// Catch-all for os-layer executable related errors
+    OSExecutable(&'static str),
     /// Physical Read Error
     ///
     /// A read/write from/to the physical memory has failed.
@@ -49,10 +61,18 @@ pub enum Error {
     ///
     /// A read/write from/to the virtual memory has failed.
     VirtualMemory(&'static str),
+    /// Unmapped Error
+    ///
+    /// A generic error due to unmapped memory.
+    Unmapped(&'static str),
     /// Encoding error.
     ///
     /// Catch-all for string related errors such as lacking a nul terminator.
     Encoding,
+    /// Unicode error when reading a string from windows.
+    ///
+    /// Encapsulates all unicode related reading errors.
+    Unicode(&'static str),
 }
 
 /// Convert from &str to error
@@ -76,9 +96,9 @@ impl<T> From<PartialError<T>> for Error {
     }
 }
 
-impl Error {
+impl<'a> Error {
     /// Returns a tuple representing the error description and its string value.
-    pub fn to_str_pair(self) -> (&'static str, Option<&'static str>) {
+    pub fn to_str_pair(&'a self) -> (&'static str, Option<&'a str>) {
         match self {
             Error::Other(e) => ("other error", Some(e)),
             Error::Partial => ("partial error", None),
@@ -86,15 +106,20 @@ impl Error {
             Error::IO(e) => ("io error", Some(e)),
             Error::InvalidArchitecture => ("invalid architecture", None),
             Error::Connector(e) => ("connector error", Some(e)),
+            Error::OSLayer(e) => ("os-layer error", Some(e)),
+            Error::OSOffset(e) => ("os-layer offset error", Some(e)),
+            Error::OSExecutable(e) => ("os-layer executable error", Some(e)),
             Error::PhysicalMemory(e) => ("physical memory error", Some(e)),
             Error::VirtualTranslate => ("virtual address translation failed", None),
             Error::VirtualMemory(e) => ("virtual memory error", Some(e)),
+            Error::Unmapped(e) => ("unmapped memory error", Some(e)),
             Error::Encoding => ("encoding error", None),
+            Error::Unicode(e) => ("unicode string error", Some(e)),
         }
     }
 
     /// Returns a simple string representation of the error.
-    pub fn to_str(self) -> &'static str {
+    pub fn to_str(&'a self) -> &'a str {
         self.to_str_pair().0
     }
 }
@@ -119,7 +144,7 @@ impl error::Error for Error {
 }
 
 /// Specialized `PartialError` type for recoverable memflow errors.
-#[derive(Copy, Clone, Eq, PartialEq, Hash)]
+#[derive(Clone, Eq, PartialEq, Hash)]
 pub enum PartialError<T> {
     /// Hard Error
     ///
@@ -146,7 +171,7 @@ impl<T> From<Error> for PartialError<T> {
 
 impl<T> PartialError<T> {
     /// Returns a tuple representing the error description and its string value.
-    pub fn to_str_pair(&self) -> (&'static str, Option<&'static str>) {
+    pub fn to_str_pair(&self) -> (&'static str, Option<&str>) {
         match self {
             PartialError::Error(e) => ("other error", Some(e.to_str_pair().0)),
             PartialError::PartialVirtualRead(_) => ("partial virtual read error", None),
@@ -155,7 +180,7 @@ impl<T> PartialError<T> {
     }
 
     /// Returns a simple string representation of the error.
-    pub fn to_str(&self) -> &'static str {
+    pub fn to_str(&self) -> &str {
         self.to_str_pair().0
     }
 }

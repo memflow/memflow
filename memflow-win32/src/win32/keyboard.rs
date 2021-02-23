@@ -28,7 +28,8 @@ fn test<T: PhysicalMemory, V: VirtualTranslate>(kernel: &mut Win32Kernel<T, V>) 
 ```
 */
 use super::{Win32Kernel, Win32ProcessInfo, Win32VirtualTranslate};
-use crate::error::{Error, Result};
+
+use memflow::error::{Error, Result};
 use memflow::mem::{PhysicalMemory, VirtualDMA, VirtualMemory, VirtualTranslate};
 use memflow::os::{Keyboard, KeyboardState, Process};
 use memflow::prelude::OSInner;
@@ -142,11 +143,11 @@ impl<T> Win32Keyboard<T> {
     }
 
     fn find_gaf_pe(module_buf: &[u8]) -> Result<usize> {
-        let pe = PeView::from_bytes(module_buf).map_err(crate::error::Error::from)?;
+        let pe = PeView::from_bytes(module_buf).map_err(|e| Error::OSExecutable(e.to_str()))?;
 
         match pe
             .get_export_by_name("gafAsyncKeyState")
-            .map_err(crate::error::Error::from)?
+            .map_err(|e| Error::OSExecutable(e.to_str()))?
         {
             Export::Symbol(s) => {
                 debug!("gafAsyncKeyState export found at: {:x}", *s);

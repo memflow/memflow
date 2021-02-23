@@ -1,10 +1,9 @@
 use std::prelude::v1::*;
 
-use crate::error::{Error, Result};
-
 use std::convert::TryInto;
 
 use memflow::architecture::{ArchitectureObj, Endianess};
+use memflow::error::{Error, Result};
 use memflow::mem::VirtualMemory;
 use memflow::types::Address;
 

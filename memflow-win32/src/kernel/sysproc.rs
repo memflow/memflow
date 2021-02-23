@@ -2,13 +2,13 @@ use std::prelude::v1::*;
 
 use super::ntos::pehelper;
 use super::StartBlock;
-use crate::error::{Error, Result};
 
 use std::convert::TryInto;
 
 use log::{debug, info, warn};
 
 use memflow::architecture::ArchitectureObj;
+use memflow::error::{Error, Result};
 use memflow::mem::VirtualMemory;
 use memflow::types::{size, Address};
 
@@ -31,7 +31,7 @@ pub fn find<T: VirtualMemory>(
         Err(e) => warn!("{}", e),
     }
 
-    Err(Error::Initialization("unable to find system eprocess"))
+    Err(Error::OSLayer("unable to find system eprocess"))
 }
 
 // find from exported symbol
@@ -42,11 +42,11 @@ pub fn find_exported<T: VirtualMemory>(
 ) -> Result<Address> {
     // PsInitialSystemProcess -> PsActiveProcessHead
     let image = pehelper::try_get_pe_image(virt_mem, kernel_base)?;
-    let pe = PeView::from_bytes(&image).map_err(Error::PE)?;
+    let pe = PeView::from_bytes(&image).map_err(|e| Error::OSExecutable(e.to_str()))?;
 
     let sys_proc = match pe
         .get_export_by_name("PsInitialSystemProcess")
-        .map_err(Error::PE)?
+        .map_err(|e| Error::OSExecutable(e.to_str()))?
     {
         Export::Symbol(s) => kernel_base + *s as usize,
         Export::Forward(_) => {

@@ -5,11 +5,10 @@ mod x86pae;
 
 use std::prelude::v1::*;
 
-use crate::error::{Error, Result};
-
 use log::warn;
 
 use memflow::architecture::ArchitectureIdent;
+use memflow::error::{Error, Result};
 use memflow::mem::PhysicalMemory;
 use memflow::types::{size, Address, PhysicalAddress};
 
@@ -43,7 +42,7 @@ pub fn find_fallback<T: PhysicalMemory>(
 
             aarch64::find(&low16m)
         }
-        _ => Err(Error::Initialization(
+        _ => Err(Error::OSLayer(
             "start_block: fallback not implemented for given arch",
         )),
     }
@@ -81,13 +80,13 @@ pub fn find<T: PhysicalMemory>(mem: &mut T, arch: Option<ArchitectureIdent>) -> 
                 x86::find(&low16m)
             }
             ArchitectureIdent::AArch64(_) => find_fallback(mem, arch),
-            _ => Err(Error::Initialization("Unsupported architecture")),
+            _ => Err(Error::OSLayer("Unsupported architecture")),
         }
     } else {
         find(mem, Some(ArchitectureIdent::X86(64, false)))
             .or_else(|_| find(mem, Some(ArchitectureIdent::X86(32, true))))
             .or_else(|_| find(mem, Some(ArchitectureIdent::X86(32, false))))
             .or_else(|_| find(mem, Some(ArchitectureIdent::AArch64(size::kb(4)))))
-            .map_err(|_| Error::Initialization("unable to find dtb"))
+            .map_err(|_| Error::OSLayer("unable to find dtb"))
     }
 }

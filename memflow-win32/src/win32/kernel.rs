@@ -6,13 +6,13 @@ use super::{
     Win32ProcessInfo, Win32VirtualTranslate,
 };
 
-use crate::error::{Error, Result};
 use crate::offsets::Win32Offsets;
 
 use log::{info, trace};
 use std::fmt;
 
 use memflow::architecture::{ArchitectureIdent, ArchitectureObj};
+use memflow::error::{Error, Result};
 use memflow::mem::{DirectTranslate, PhysicalMemory, VirtualDMA, VirtualMemory, VirtualTranslate};
 use memflow::os::{
     AddressCallback, ModuleInfo, OSInfo, OSInner, OSKeyboardInner, Process, ProcessInfo, PID,
@@ -89,10 +89,10 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
             let image = self
                 .virt_mem
                 .virt_read_raw(self.kernel_info.os_info.base, self.kernel_info.os_info.size)?;
-            let pe = PeView::from_bytes(&image).map_err(Error::PE)?;
+            let pe = PeView::from_bytes(&image).map_err(|e| Error::OSExecutable(e.to_str()))?;
             let addr = match pe
                 .get_export_by_name("PsLoadedModuleList")
-                .map_err(Error::PE)?
+                .map_err(|e| Error::OSExecutable(e.to_str()))?
             {
                 Export::Symbol(s) => self.kernel_info.os_info.base + *s as usize,
                 Export::Forward(_) => {

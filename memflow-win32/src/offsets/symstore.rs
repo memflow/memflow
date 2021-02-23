@@ -1,6 +1,5 @@
 use std::prelude::v1::*;
 
-use crate::error::{Error, Result};
 use crate::offsets::Win32GUID;
 
 use std::fs::{self, File};
@@ -9,6 +8,8 @@ use std::path::{Path, PathBuf};
 
 use dirs::home_dir;
 use log::info;
+
+use memflow::error::{Error, Result};
 
 #[cfg(feature = "download_progress")]
 use {
@@ -44,7 +45,7 @@ fn read_to_end<T: Read>(reader: &mut T, len: usize) -> Result<Vec<u8>> {
 
     reader
         .read_to_end(&mut buffer)
-        .map_err(|_| Error::SymbolStore("unable to read from http request"))?;
+        .map_err(|_| Error::OSLayer("unable to read from http request"))?;
     finished.store(true, Ordering::Relaxed);
     thread.join().unwrap();
 
@@ -90,10 +91,10 @@ impl SymbolStore {
                     cache_file.to_string_lossy()
                 );
                 let mut file = File::open(cache_file)
-                    .map_err(|_| Error::SymbolStore("unable to open pdb in local cache"))?;
+                    .map_err(|_| Error::OSLayer("unable to open pdb in local cache"))?;
                 let mut buffer = Vec::new();
                 file.read_to_end(&mut buffer)
-                    .map_err(|_| Error::SymbolStore("unable to read pdb from local cache"))?;
+                    .map_err(|_| Error::OSLayer("unable to read pdb from local cache"))?;
                 buffer
             } else {
                 let buffer = self.download(guid)?;
@@ -101,7 +102,7 @@ impl SymbolStore {
                 if !cache_dir.exists() {
                     info!("creating cache directory {:?}", cache_dir.to_str());
                     fs::create_dir_all(&cache_dir).map_err(|_| {
-                        Error::SymbolStore("unable to create folder in local pdb cache")
+                        Error::OSLayer("unable to create folder in local pdb cache")
                     })?;
                 }
 
@@ -110,9 +111,9 @@ impl SymbolStore {
                     cache_file.to_string_lossy()
                 );
                 let mut file = File::create(cache_file)
-                    .map_err(|_| Error::SymbolStore("unable to create file in local pdb cache"))?;
+                    .map_err(|_| Error::OSLayer("unable to create file in local pdb cache"))?;
                 file.write_all(&buffer[..])
-                    .map_err(|_| Error::SymbolStore("unable to write pdb to local cache"))?;
+                    .map_err(|_| Error::OSLayer("unable to write pdb to local cache"))?;
 
                 buffer
             };
@@ -134,7 +135,7 @@ impl SymbolStore {
         info!("downloading pdb from {}", url);
         let resp = ureq::get(url).call();
         if !resp.ok() {
-            return Err(Error::SymbolStore("unable to download pdb"));
+            return Err(Error::OSLayer("unable to download pdb"));
         }
 
         assert!(resp.has("Content-Length"));

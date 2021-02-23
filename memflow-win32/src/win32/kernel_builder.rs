@@ -1,13 +1,13 @@
 use std::prelude::v1::*;
 
 use super::{Win32Kernel, Win32KernelInfo};
-use crate::error::Result;
 use crate::offsets::Win32Offsets;
 
 #[cfg(feature = "symstore")]
 use crate::offsets::SymbolStore;
 
 use memflow::architecture::ArchitectureIdent;
+use memflow::error::Result;
 use memflow::mem::{
     CachedMemoryAccess, CachedVirtualTranslate, DefaultCacheValidator, DirectTranslate,
     PhysicalMemory, VirtualTranslate,

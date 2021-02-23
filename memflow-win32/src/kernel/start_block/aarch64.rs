@@ -1,9 +1,9 @@
-use crate::error::{Error, Result};
 use crate::kernel::StartBlock;
 
 use std::convert::TryInto;
 
 use memflow::architecture::arm::aarch64;
+use memflow::error::{Error, Result};
 use memflow::types::{size, Address};
 
 pub const PHYS_BASE: Address = Address::from_u64(size::gb(1) as u64);
@@ -47,7 +47,7 @@ pub fn find(mem: &[u8]) -> Result<StartBlock> {
             dtb: addr,
         })
         .next()
-        .ok_or(Error::Initialization(
+        .ok_or(Error::OSLayer(
             "unable to find aarch64 dtb in lowstub < 16M",
         ))
 }

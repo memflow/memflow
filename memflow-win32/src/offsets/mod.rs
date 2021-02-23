@@ -18,9 +18,10 @@ use std::prelude::v1::*;
 #[cfg(feature = "std")]
 use std::{fs::File, io::Read, path::Path};
 
-use crate::error::{Error, Result};
 use crate::kernel::Win32GUID;
+
 use memflow::architecture::ArchitectureIdent;
+use memflow::error::{Error, Result};
 
 #[derive(Debug, Copy, Clone)]
 #[repr(C)]
@@ -110,64 +111,65 @@ impl Win32Offsets {
     #[cfg(feature = "symstore")]
     pub fn from_pdb<P: AsRef<Path>>(pdb_path: P) -> Result<Self> {
         let mut file = File::open(pdb_path)
-            .map_err(|_| Error::PDB("unable to open user-supplied pdb file"))?;
+            .map_err(|_| Error::OSOffset("unable to open user-supplied pdb file"))?;
         let mut buffer = Vec::new();
         file.read_to_end(&mut buffer)
-            .map_err(|_| Error::PDB("unable to read user-supplied pdb file"))?;
+            .map_err(|_| Error::OSOffset("unable to read user-supplied pdb file"))?;
         Self::from_pdb_slice(&buffer[..])
     }
 
     #[cfg(feature = "symstore")]
     pub fn from_pdb_slice(pdb_slice: &[u8]) -> Result<Self> {
         let list = PdbStruct::with(pdb_slice, "_LIST_ENTRY")
-            .map_err(|_| Error::PDB("_LIST_ENTRY not found"))?;
+            .map_err(|_| Error::OSOffset("_LIST_ENTRY not found"))?;
         let kproc = PdbStruct::with(pdb_slice, "_KPROCESS")
-            .map_err(|_| Error::PDB("_KPROCESS not found"))?;
+            .map_err(|_| Error::OSOffset("_KPROCESS not found"))?;
         let eproc = PdbStruct::with(pdb_slice, "_EPROCESS")
-            .map_err(|_| Error::PDB("_EPROCESS not found"))?;
-        let ethread =
-            PdbStruct::with(pdb_slice, "_ETHREAD").map_err(|_| Error::PDB("_ETHREAD not found"))?;
-        let kthread =
-            PdbStruct::with(pdb_slice, "_KTHREAD").map_err(|_| Error::PDB("_KTHREAD not found"))?;
-        let teb = PdbStruct::with(pdb_slice, "_TEB").map_err(|_| Error::PDB("_TEB not found"))?;
+            .map_err(|_| Error::OSOffset("_EPROCESS not found"))?;
+        let ethread = PdbStruct::with(pdb_slice, "_ETHREAD")
+            .map_err(|_| Error::OSOffset("_ETHREAD not found"))?;
+        let kthread = PdbStruct::with(pdb_slice, "_KTHREAD")
+            .map_err(|_| Error::OSOffset("_KTHREAD not found"))?;
+        let teb =
+            PdbStruct::with(pdb_slice, "_TEB").map_err(|_| Error::OSOffset("_TEB not found"))?;
 
         let list_blink = list
             .find_field("Blink")
-            .ok_or(Error::PDB("_LIST_ENTRY::Blink not found"))?
+            .ok_or(Error::OSOffset("_LIST_ENTRY::Blink not found"))?
             .offset as _;
 
         let eproc_link = eproc
             .find_field("ActiveProcessLinks")
-            .ok_or(Error::PDB("_EPROCESS::ActiveProcessLinks not found"))?
+            .ok_or(Error::OSOffset("_EPROCESS::ActiveProcessLinks not found"))?
             .offset as _;
 
         let kproc_dtb = kproc
             .find_field("DirectoryTableBase")
-            .ok_or(Error::PDB("_KPROCESS::DirectoryTableBase not found"))?
+            .ok_or(Error::OSOffset("_KPROCESS::DirectoryTableBase not found"))?
             .offset as _;
         let eproc_pid = eproc
             .find_field("UniqueProcessId")
-            .ok_or(Error::PDB("_EPROCESS::UniqueProcessId not found"))?
+            .ok_or(Error::OSOffset("_EPROCESS::UniqueProcessId not found"))?
             .offset as _;
         let eproc_name = eproc
             .find_field("ImageFileName")
-            .ok_or(Error::PDB("_EPROCESS::ImageFileName not found"))?
+            .ok_or(Error::OSOffset("_EPROCESS::ImageFileName not found"))?
             .offset as _;
         let eproc_peb = eproc
             .find_field("Peb")
-            .ok_or(Error::PDB("_EPROCESS::Peb not found"))?
+            .ok_or(Error::OSOffset("_EPROCESS::Peb not found"))?
             .offset as _;
         let eproc_section_base = eproc
             .find_field("SectionBaseAddress")
-            .ok_or(Error::PDB("_EPROCESS::SectionBaseAddress not found"))?
+            .ok_or(Error::OSOffset("_EPROCESS::SectionBaseAddress not found"))?
             .offset as _;
         let eproc_exit_status = eproc
             .find_field("ExitStatus")
-            .ok_or(Error::PDB("_EPROCESS::ExitStatus not found"))?
+            .ok_or(Error::OSOffset("_EPROCESS::ExitStatus not found"))?
             .offset as _;
         let eproc_thread_list = eproc
             .find_field("ThreadListHead")
-            .ok_or(Error::PDB("_EPROCESS::ThreadListHead not found"))?
+            .ok_or(Error::OSOffset("_EPROCESS::ThreadListHead not found"))?
             .offset as _;
 
         // windows 10 uses an uppercase W whereas older windows versions (windows 7) uses a lowercase w
@@ -182,22 +184,22 @@ impl Win32Offsets {
         // threads
         let kthread_teb = kthread
             .find_field("Teb")
-            .ok_or(Error::PDB("_KTHREAD::Teb not found"))?
+            .ok_or(Error::OSOffset("_KTHREAD::Teb not found"))?
             .offset as _;
         let ethread_list_entry = ethread
             .find_field("ThreadListEntry")
-            .ok_or(Error::PDB("_ETHREAD::ThreadListEntry not found"))?
+            .ok_or(Error::OSOffset("_ETHREAD::ThreadListEntry not found"))?
             .offset as _;
         let teb_peb = teb
             .find_field("ProcessEnvironmentBlock")
-            .ok_or(Error::PDB("_TEB::ProcessEnvironmentBlock not found"))?
+            .ok_or(Error::OSOffset("_TEB::ProcessEnvironmentBlock not found"))?
             .offset as _;
         let teb_peb_x86 = if let Ok(teb32) =
-            PdbStruct::with(pdb_slice, "_TEB32").map_err(|_| Error::PDB("_TEB32 not found"))
+            PdbStruct::with(pdb_slice, "_TEB32").map_err(|_| Error::OSOffset("_TEB32 not found"))
         {
             teb32
                 .find_field("ProcessEnvironmentBlock")
-                .ok_or(Error::PDB("_TEB32::ProcessEnvironmentBlock not found"))?
+                .ok_or(Error::OSOffset("_TEB32::ProcessEnvironmentBlock not found"))?
                 .offset as _
         } else {
             0

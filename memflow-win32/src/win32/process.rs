@@ -1,11 +1,11 @@
 use std::prelude::v1::*;
 
 use super::{Win32Kernel, Win32ModuleListInfo};
-use crate::error::{Error, Result};
 
 use std::fmt;
 
 use memflow::architecture::ArchitectureIdent;
+use memflow::error::{Error, Result};
 use memflow::mem::{PhysicalMemory, VirtualDMA, VirtualMemory, VirtualTranslate};
 use memflow::os::{ModuleAddressCallback, ModuleAddressInfo, ModuleInfo, Process, ProcessInfo};
 use memflow::types::Address;

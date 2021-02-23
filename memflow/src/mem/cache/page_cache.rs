@@ -336,7 +336,7 @@ impl<'a, T> Drop for PageCache<'a, T> {
 mod tests {
     use super::*;
     use crate::architecture::x86;
-    use crate::dummy::DummyMemory;
+    use crate::dummy::{DummyMemory, DummyOS};
     use crate::mem::{CachedMemoryAccess, TimedCacheValidator};
     use crate::mem::{VirtualDMA, VirtualMemory};
     use crate::types::{size, Address, PhysicalAddress};
@@ -374,15 +374,19 @@ mod tests {
 
     #[test]
     fn cloned_validity() {
-        let mut mem = DummyMemory::with_seed(size::mb(32), 0);
+        let mem = DummyMemory::new(size::mb(32));
+        let mut dummy_os = DummyOS::with_seed(mem, 0);
 
         let cmp_buf = [143u8; 16];
         let write_addr = 0.into();
 
-        mem.phys_write_raw(write_addr, &cmp_buf).unwrap();
+        dummy_os
+            .as_mut()
+            .phys_write_raw(write_addr, &cmp_buf)
+            .unwrap();
         let arch = x86::x64::ARCH;
 
-        let mut mem = CachedMemoryAccess::builder(mem)
+        let mut mem = CachedMemoryAccess::builder(dummy_os.destroy())
             .validator(TimedCacheValidator::new(Duration::from_secs(100)))
             .page_type_mask(PageType::UNKNOWN)
             .arch(arch)
@@ -408,7 +412,8 @@ mod tests {
     #[test]
     fn big_virt_buf() {
         for &seed in &[0x3ffd_235c_5194_dedf, thread_rng().gen_range(0, !0u64)] {
-            let mut dummy_mem = DummyMemory::with_seed(size::mb(512), seed);
+            let dummy_mem = DummyMemory::new(size::mb(512));
+            let mut dummy_os = DummyOS::with_seed(dummy_mem, seed);
 
             let virt_size = size::mb(18);
             let mut test_buf = vec![0_u64; virt_size / 8];
@@ -420,14 +425,14 @@ mod tests {
             let test_buf =
                 unsafe { std::slice::from_raw_parts(test_buf.as_ptr() as *const u8, virt_size) };
 
-            let (dtb, virt_base) = dummy_mem.alloc_dtb(virt_size, &test_buf);
+            let (dtb, virt_base) = dummy_os.alloc_dtb(virt_size, &test_buf);
             let arch = x86::x64::ARCH;
             println!("dtb={:x} virt_base={:x} seed={:x}", dtb, virt_base, seed);
             let translator = x86::x64::new_translator(dtb);
 
             let mut buf_nocache = vec![0_u8; test_buf.len()];
             {
-                let mut virt_mem = VirtualDMA::new(&mut dummy_mem, arch, translator);
+                let mut virt_mem = VirtualDMA::new(dummy_os.as_mut(), arch, translator);
                 virt_mem
                     .virt_read_raw_into(virt_base, buf_nocache.as_mut_slice())
                     .unwrap();
@@ -448,7 +453,7 @@ mod tests {
                 PageType::PAGE_TABLE | PageType::READ_ONLY,
                 TimedCacheValidator::new(Duration::from_secs(100)),
             );
-            let mut mem_cache = CachedMemoryAccess::new(&mut dummy_mem, cache);
+            let mut mem_cache = CachedMemoryAccess::new(dummy_os.as_mut(), cache);
             let mut buf_cache = vec![0_u8; buf_nocache.len()];
             {
                 let mut virt_mem = VirtualDMA::new(&mut mem_cache, arch, translator);
@@ -471,14 +476,15 @@ mod tests {
 
     #[test]
     fn cache_invalidity_cached() {
-        let mut dummy_mem = DummyMemory::new(size::mb(64));
-        let mem_ptr = &mut dummy_mem as *mut DummyMemory;
+        let dummy_mem = DummyMemory::new(size::mb(64));
+        let mut dummy_os = DummyOS::new(dummy_mem);
+        let mem_ptr = dummy_os.as_mut() as *mut DummyMemory;
         let virt_size = size::mb(8);
         let mut buf_start = vec![0_u8; 64];
         for (i, item) in buf_start.iter_mut().enumerate() {
             *item = (i % 256) as u8;
         }
-        let (dtb, virt_base) = dummy_mem.alloc_dtb(virt_size, &buf_start);
+        let (dtb, virt_base) = dummy_os.alloc_dtb(virt_size, &buf_start);
         let arch = x86::x64::ARCH;
         let translator = x86::x64::new_translator(dtb);
 
@@ -489,7 +495,7 @@ mod tests {
             TimedCacheValidator::new(Duration::from_secs(100)),
         );
 
-        let mut mem_cache = CachedMemoryAccess::new(&mut dummy_mem, cache);
+        let mut mem_cache = CachedMemoryAccess::new(dummy_os.as_mut(), cache);
 
         //Modifying the memory from other channels should leave the cached page unchanged
         let mut cached_buf = vec![0_u8; 64];
@@ -524,14 +530,15 @@ mod tests {
 
     #[test]
     fn cache_invalidity_non_cached() {
-        let mut dummy_mem = DummyMemory::new(size::mb(64));
-        let mem_ptr = &mut dummy_mem as *mut DummyMemory;
+        let dummy_mem = DummyMemory::new(size::mb(64));
+        let mut dummy_os = DummyOS::new(dummy_mem);
+        let mem_ptr = dummy_os.as_mut() as *mut DummyMemory;
         let virt_size = size::mb(8);
         let mut buf_start = vec![0_u8; 64];
         for (i, item) in buf_start.iter_mut().enumerate() {
             *item = (i % 256) as u8;
         }
-        let (dtb, virt_base) = dummy_mem.alloc_dtb(virt_size, &buf_start);
+        let (dtb, virt_base) = dummy_os.alloc_dtb(virt_size, &buf_start);
         let arch = x86::x64::ARCH;
         let translator = x86::x64::new_translator(dtb);
 
@@ -543,7 +550,7 @@ mod tests {
             TimedCacheValidator::new(Duration::from_secs(100)),
         );
 
-        let mut mem_cache = CachedMemoryAccess::new(&mut dummy_mem, cache);
+        let mut mem_cache = CachedMemoryAccess::new(dummy_os.as_mut(), cache);
 
         //Modifying the memory from other channels should leave the cached page unchanged
         let mut cached_buf = vec![0_u8; 64];
@@ -582,7 +589,8 @@ mod tests {
     /// caches a different page in the entry before the said copy is operation is made.
     #[test]
     fn cache_phys_mem_overlap() {
-        let mut dummy_mem = DummyMemory::new(size::mb(16));
+        let dummy_mem = DummyMemory::new(size::mb(16));
+        let mut dummy_os = DummyOS::new(dummy_mem);
 
         let buf_size = size::kb(8);
         let mut buf_start = vec![0_u8; buf_size];
@@ -594,7 +602,8 @@ mod tests {
 
         let addr = PhysicalAddress::with_page(address, PageType::default().write(false), 0x1000);
 
-        dummy_mem
+        dummy_os
+            .as_mut()
             .phys_write_raw(addr, buf_start.as_slice())
             .unwrap();
 
@@ -607,7 +616,7 @@ mod tests {
             TimedCacheValidator::new(Duration::from_secs(100)),
         );
 
-        let mut mem_cache = CachedMemoryAccess::new(&mut dummy_mem, cache);
+        let mut mem_cache = CachedMemoryAccess::new(dummy_os.as_mut(), cache);
 
         let mut buf_1 = vec![0_u8; buf_size];
         mem_cache
@@ -640,7 +649,8 @@ mod tests {
 
     #[test]
     fn cache_phys_mem() {
-        let mut dummy_mem = DummyMemory::new(size::mb(16));
+        let dummy_mem = DummyMemory::new(size::mb(16));
+        let mut dummy_os = DummyOS::new(dummy_mem);
 
         let mut buf_start = vec![0_u8; 64];
         for (i, item) in buf_start.iter_mut().enumerate() {
@@ -651,7 +661,8 @@ mod tests {
 
         let addr = PhysicalAddress::with_page(address, PageType::default().write(false), 0x1000);
 
-        dummy_mem
+        dummy_os
+            .as_mut()
             .phys_write_raw(addr, buf_start.as_slice())
             .unwrap();
 
@@ -664,7 +675,7 @@ mod tests {
             TimedCacheValidator::new(Duration::from_secs(100)),
         );
 
-        let mut mem_cache = CachedMemoryAccess::new(&mut dummy_mem, cache);
+        let mut mem_cache = CachedMemoryAccess::new(dummy_os.as_mut(), cache);
 
         let mut buf_1 = vec![0_u8; 64];
         mem_cache
@@ -675,7 +686,8 @@ mod tests {
     }
     #[test]
     fn cache_phys_mem_diffpages() {
-        let mut dummy_mem = DummyMemory::new(size::mb(16));
+        let dummy_mem = DummyMemory::new(size::mb(16));
+        let mut dummy_os = DummyOS::new(dummy_mem);
 
         let mut buf_start = vec![0_u8; 64];
         for (i, item) in buf_start.iter_mut().enumerate() {
@@ -688,7 +700,8 @@ mod tests {
 
         let addr2 = PhysicalAddress::with_page(address, PageType::default().write(false), 0x100);
 
-        dummy_mem
+        dummy_os
+            .as_mut()
             .phys_write_raw(addr1, buf_start.as_slice())
             .unwrap();
 
@@ -699,7 +712,7 @@ mod tests {
             TimedCacheValidator::new(Duration::from_secs(100)),
         );
 
-        let mut mem_cache = CachedMemoryAccess::new(&mut dummy_mem, cache);
+        let mut mem_cache = CachedMemoryAccess::new(dummy_os.as_mut(), cache);
 
         let mut buf_1 = vec![0_u8; 64];
         mem_cache
@@ -725,13 +738,14 @@ mod tests {
 
     #[test]
     fn writeback() {
-        let mut dummy_mem = DummyMemory::new(size::mb(16));
+        let dummy_mem = DummyMemory::new(size::mb(16));
+        let mut dummy_os = DummyOS::new(dummy_mem);
         let virt_size = size::mb(8);
         let mut buf_start = vec![0_u8; 64];
         for (i, item) in buf_start.iter_mut().enumerate() {
             *item = (i % 256) as u8;
         }
-        let (dtb, virt_base) = dummy_mem.alloc_dtb(virt_size, &buf_start);
+        let (dtb, virt_base) = dummy_os.alloc_dtb(virt_size, &buf_start);
         let arch = x86::x64::ARCH;
         let translator = x86::x64::new_translator(dtb);
 
@@ -742,7 +756,7 @@ mod tests {
             TimedCacheValidator::new(Duration::from_secs(100)),
         );
 
-        let mut mem_cache = CachedMemoryAccess::new(&mut dummy_mem, cache);
+        let mut mem_cache = CachedMemoryAccess::new(dummy_os.as_mut(), cache);
         let mut virt_mem = VirtualDMA::new(&mut mem_cache, arch, translator);
 
         let mut buf_1 = vec![0_u8; 64];

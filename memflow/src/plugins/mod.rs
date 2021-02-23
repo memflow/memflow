@@ -709,8 +709,14 @@ mod tests {
 
     // TODO: add dummy connector plugin test
     #[test]
-    fn find_win32() {
-        let inventory = Inventory::scan_path_recursive("../target", 3).unwrap();
-        assert_eq!(inventory.available_os_layers()[0], "win32");
+    fn find_dummy() {
+        #[cfg(debug_assertions)]
+        const TARGET_STRING: &str = "../target/debug";
+        #[cfg(not(debug_assertions))]
+        const TARGET_STRING: &str = "../target/release";
+        let inventory = Inventory::scan_path_recursive(TARGET_STRING, 2).unwrap();
+        assert!(inventory
+            .available_os_layers()
+            .contains(&"dummy".to_string()));
     }
 }

@@ -40,7 +40,7 @@ impl<T: PhysicalMemory, D: ScopedVirtualTranslate> VirtualDMA<T, DirectTranslate
     /// use memflow::architecture::x86::x64;
     /// use memflow::mem::{PhysicalMemory, VirtualTranslate, VirtualMemory, VirtualDMA};
     ///
-    /// fn read<T: PhysicalMemory, V: VirtualTranslate>(phys_mem: &mut T, vat: &mut V, dtb: Address, read_addr: Address) {
+    /// fn read(phys_mem: &mut impl PhysicalMemory, vat: &mut impl VirtualTranslate, dtb: Address, read_addr: Address) {
     ///     let arch = x64::ARCH;
     ///     let translator = x64::new_translator(dtb);
     ///
@@ -51,12 +51,13 @@ impl<T: PhysicalMemory, D: ScopedVirtualTranslate> VirtualDMA<T, DirectTranslate
     ///     println!("addr: {:x}", addr);
     ///     # assert_eq!(addr, 0x00ff_00ff_00ff_00ff);
     /// }
-    /// # use memflow::dummy::DummyMemory;
+    /// # use memflow::dummy::{DummyMemory, DummyOS};
     /// # use memflow::types::size;
     /// # use memflow::mem::DirectTranslate;
-    /// # let (mut mem, dtb, virt_base) = DummyMemory::new_and_dtb(size::mb(4), size::mb(2), &[255, 0, 255, 0, 255, 0, 255, 0]);
+    /// # let mem = DummyMemory::new(size::mb(4));
+    /// # let (mut os, dtb, virt_base) = DummyOS::new_and_dtb(mem, size::mb(2), &[255, 0, 255, 0, 255, 0, 255, 0]);
     /// # let mut vat = DirectTranslate::new();
-    /// # read(&mut mem, &mut vat, dtb, virt_base);
+    /// # read(os.as_mut(), &mut vat, dtb, virt_base);
     /// ```
     pub fn new(phys_mem: T, arch: impl Into<ArchitectureObj>, translator: D) -> Self {
         Self {
@@ -81,7 +82,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate, D: ScopedVirtualTranslate> VirtualD
     /// use memflow::architecture::x86::x64;
     /// use memflow::mem::{PhysicalMemory, VirtualTranslate, VirtualMemory, VirtualDMA};
     ///
-    /// fn read<T: PhysicalMemory, V: VirtualTranslate>(phys_mem: &mut T, vat: V, dtb: Address, read_addr: Address) {
+    /// fn read(phys_mem: &mut impl PhysicalMemory, vat: impl VirtualTranslate, dtb: Address, read_addr: Address) {
     ///     let arch = x64::ARCH;
     ///     let translator = x64::new_translator(dtb);
     ///
@@ -92,12 +93,13 @@ impl<T: PhysicalMemory, V: VirtualTranslate, D: ScopedVirtualTranslate> VirtualD
     ///     println!("addr: {:x}", addr);
     ///     # assert_eq!(addr, 0x00ff_00ff_00ff_00ff);
     /// }
-    /// # use memflow::dummy::DummyMemory;
+    /// # use memflow::dummy::{DummyMemory, DummyOS};
     /// # use memflow::types::size;
     /// # use memflow::mem::DirectTranslate;
-    /// # let (mut mem, dtb, virt_base) = DummyMemory::new_and_dtb(size::mb(4), size::mb(2), &[255, 0, 255, 0, 255, 0, 255, 0]);
+    /// # let mem = DummyMemory::new(size::mb(4));
+    /// # let (mut os, dtb, virt_base) = DummyOS::new_and_dtb(mem, size::mb(2), &[255, 0, 255, 0, 255, 0, 255, 0]);
     /// # let mut vat = DirectTranslate::new();
-    /// # read(&mut mem, &mut vat, dtb, virt_base);
+    /// # read(os.as_mut(), &mut vat, dtb, virt_base);
     /// ```
     pub fn with_vat(phys_mem: T, arch: impl Into<ArchitectureObj>, translator: D, vat: V) -> Self {
         Self {

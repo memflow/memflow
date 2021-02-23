@@ -40,15 +40,16 @@ use std::{cmp, fmt, hash, ops};
 ///     pub foo_ptr: Pointer64<Foo>,
 /// }
 ///
-/// fn read_foo_bar<T: VirtualMemory>(virt_mem: &mut T) {
+/// fn read_foo_bar(virt_mem: &mut impl VirtualMemory) {
 ///     let bar: Bar = virt_mem.virt_read(0x1234.into()).unwrap();
 ///     let foo = bar.foo_ptr.deref(virt_mem).unwrap();
 ///     println!("value: {}", foo.some_value);
 /// }
 ///
-/// # use memflow::dummy::DummyMemory;
 /// # use memflow::types::size;
-/// # read_foo_bar(&mut DummyMemory::new_virt(size::mb(4), size::mb(2), &[]).0);
+/// # use memflow::dummy::DummyOS;
+/// # use memflow::os::Process;
+/// # read_foo_bar(DummyOS::quick_process(size::mb(2), &[]).virt_mem());
 /// ```
 ///
 /// ```
@@ -68,15 +69,16 @@ use std::{cmp, fmt, hash, ops};
 ///     pub foo_ptr: Pointer64<Foo>,
 /// }
 ///
-/// fn read_foo_bar<T: VirtualMemory>(virt_mem: &mut T) {
+/// fn read_foo_bar(virt_mem: &mut impl VirtualMemory) {
 ///     let bar: Bar = virt_mem.virt_read(0x1234.into()).unwrap();
 ///     let foo = virt_mem.virt_read_ptr64(bar.foo_ptr).unwrap();
 ///     println!("value: {}", foo.some_value);
 /// }
 ///
-/// # use memflow::dummy::DummyMemory;
+/// # use memflow::dummy::DummyOS;
+/// # use memflow::os::Process;
 /// # use memflow::types::size;
-/// # read_foo_bar(&mut DummyMemory::new_virt(size::mb(4), size::mb(2), &[]).0);
+/// # read_foo_bar(DummyOS::quick_process(size::mb(2), &[]).virt_mem());
 /// ```
 #[repr(transparent)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize))]

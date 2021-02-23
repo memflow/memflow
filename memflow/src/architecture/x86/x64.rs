@@ -1,5 +1,5 @@
 use super::{
-    super::{ArchMMUDef, ArchitectureObj, Endianess, ScopedVirtualTranslate},
+    super::{ArchMMUDef, ArchitectureObj, Endianess},
     X86Architecture, X86ScopedVirtualTranslate,
 };
 
@@ -24,7 +24,7 @@ pub(super) static ARCH_SPEC: X86Architecture = X86Architecture {
 
 pub static ARCH: ArchitectureObj = &ARCH_SPEC;
 
-pub fn new_translator(dtb: Address) -> impl ScopedVirtualTranslate {
+pub fn new_translator(dtb: Address) -> X86ScopedVirtualTranslate {
     X86ScopedVirtualTranslate::new(&ARCH_SPEC, dtb)
 }
 

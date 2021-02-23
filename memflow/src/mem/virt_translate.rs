@@ -32,7 +32,7 @@ where
     /// ```
     /// # use memflow::error::Result;
     /// # use memflow::types::{PhysicalAddress, Address};
-    /// # use memflow::dummy::DummyMemory;
+    /// # use memflow::dummy::{DummyMemory, DummyOS};
     /// use memflow::mem::{VirtualTranslate, DirectTranslate};
     /// use memflow::types::size;
     /// use memflow::architecture::x86::x64;
@@ -41,8 +41,10 @@ where
     /// # const VIRT_MEM_SIZE: usize = size::mb(8);
     /// # const CHUNK_SIZE: usize = 2;
     /// #
-    /// # let mut mem = DummyMemory::new(size::mb(16));
-    /// # let (dtb, virtual_base) = mem.alloc_dtb(VIRT_MEM_SIZE, &[]);
+    /// # let mem = DummyMemory::new(size::mb(16));
+    /// # let mut os = DummyOS::new(mem);
+    /// # let (dtb, virtual_base) = os.alloc_dtb(VIRT_MEM_SIZE, &[]);
+    /// # let mut mem = os.destroy();
     /// # let translator = x64::new_translator(dtb);
     /// let arch = x64::ARCH;
     ///
@@ -100,7 +102,7 @@ where
     /// ```
     /// # use memflow::error::Result;
     /// # use memflow::types::{PhysicalAddress, Address};
-    /// # use memflow::dummy::DummyMemory;
+    /// # use memflow::dummy::{DummyMemory, DummyOS};
     /// # use memflow::types::size;
     /// # use memflow::architecture::ScopedVirtualTranslate;
     /// use memflow::mem::{VirtualTranslate, DirectTranslate};
@@ -109,8 +111,10 @@ where
     /// # const VIRT_MEM_SIZE: usize = size::mb(8);
     /// # const CHUNK_SIZE: usize = 2;
     /// #
-    /// # let mut mem = DummyMemory::new(size::mb(16));
-    /// # let (dtb, virtual_base) = mem.alloc_dtb(VIRT_MEM_SIZE, &[]);
+    /// # let mem = DummyMemory::new(size::mb(16));
+    /// # let mut os = DummyOS::new(mem);
+    /// # let (dtb, virtual_base) = os.alloc_dtb(VIRT_MEM_SIZE, &[]);
+    /// # let mut mem = os.destroy();
     /// # let translator = x64::new_translator(dtb);
     /// let arch = x64::ARCH;
     ///

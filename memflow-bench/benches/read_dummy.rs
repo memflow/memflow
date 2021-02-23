@@ -4,6 +4,8 @@ use memflow_bench::*;
 use criterion::*;
 
 use memflow::dummy::DummyMemory as Memory;
+use memflow::dummy::DummyOS;
+use memflow::os::Process;
 use memflow::prelude::v1::*;
 
 fn initialize_virt_ctx() -> Result<(
@@ -13,14 +15,17 @@ fn initialize_virt_ctx() -> Result<(
     impl ScopedVirtualTranslate,
     ModuleInfo,
 )> {
-    let mut mem = Memory::new(size::mb(64));
+    let mem = Memory::new(size::mb(64));
+    let mut os = DummyOS::new(mem);
 
     let vat = DirectTranslate::new();
 
-    let prc = mem.alloc_process(size::mb(60), &[]);
-    let module = prc.get_module(size::mb(4));
-    let translator = prc.translator();
-    Ok((mem, vat, prc.info, translator, module))
+    let pid = os.alloc_process(size::mb(60), &[]);
+    let mut prc = os.process_by_pid(pid).unwrap();
+    let module = prc.primary_module().unwrap();
+    let translator = prc.proc.translator();
+    let info = prc.proc.info;
+    Ok((os.destroy(), vat, info, translator, module))
 }
 
 fn dummy_read_group(c: &mut Criterion) {

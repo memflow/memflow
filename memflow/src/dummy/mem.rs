@@ -1,8 +1,12 @@
 use crate::connector::MappedPhysicalMemory;
-use crate::error::Result;
+use crate::derive::connector;
+use crate::error::{Error, Result};
 use crate::mem::{
     MemoryMap, PhysicalMemory, PhysicalMemoryMetadata, PhysicalReadData, PhysicalWriteData,
 };
+
+use crate::plugins::Args;
+use crate::types::size;
 
 use std::sync::Arc;
 
@@ -54,4 +58,40 @@ impl PhysicalMemory for DummyMemory {
     fn metadata(&self) -> PhysicalMemoryMetadata {
         self.mem.metadata()
     }
+}
+
+pub fn parse_size(args: &Args) -> Result<usize> {
+    let (size, size_mul) = {
+        let size = args.get("size").unwrap_or("2m");
+
+        let mul_arr = &[
+            (size::kb(1), ["kb", "k"]),
+            (size::mb(1), ["mb", "m"]),
+            (size::gb(1), ["gb", "g"]),
+        ];
+
+        mul_arr
+            .iter()
+            .flat_map(|(m, e)| e.iter().map(move |e| (*m, e)))
+            .filter_map(|(m, e)| {
+                if size.to_lowercase().ends_with(e) {
+                    Some((size.trim_end_matches(e), m))
+                } else {
+                    None
+                }
+            })
+            .next()
+            .ok_or(Error::Other("Invalid memory size unit (or none)!"))?
+    };
+
+    let size =
+        usize::from_str_radix(size, 16).map_err(|_| Error::Other("Failed to parse memory size"))?;
+
+    Ok(size * size_mul)
+}
+
+#[connector(name = "dummy", import_prefix = "crate")]
+pub fn create_connector(args: &Args) -> Result<impl PhysicalMemory + Clone> {
+    let size = parse_size(args)?;
+    Ok(DummyMemory::new(size))
 }

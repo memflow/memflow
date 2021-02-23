@@ -10,6 +10,8 @@ struct ConnectorFactoryArgs {
     version: Option<String>,
     #[darling(default)]
     description: Option<String>,
+    #[darling(default)]
+    import_prefix: Option<String>,
 }
 
 #[derive(Debug, FromMeta)]
@@ -50,6 +52,11 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
         |d| quote! { #d },
     );
 
+    let prefix_gen = args.import_prefix.map(|v| v.parse().unwrap()).map_or_else(
+        || quote! { ::memflow },
+        |v: proc_macro2::TokenStream| quote! { #v },
+    );
+
     let connector_descriptor: proc_macro2::TokenStream =
         ["MEMFLOW_CONNECTOR_", &(&connector_name).to_uppercase()]
             .concat()
@@ -63,24 +70,24 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
         quote! {
             #[doc(hidden)]
             extern "C" fn mf_create(
-                args: &::memflow::types::ReprCStr,
+                args: &#prefix_gen::types::ReprCStr,
                 _: Option<&mut ::std::os::raw::c_void>,
                 log_level: i32,
-                out: &mut ::memflow::plugins::connector::MUConnectorInstance
+                out: &mut #prefix_gen::plugins::connector::MUConnectorInstance
             ) -> i32 {
-                ::memflow::plugins::connector::create_with_logging(args, log_level, out, #func_name)
+                #prefix_gen::plugins::connector::create_with_logging(args, log_level, out, #func_name)
             }
         }
     } else {
         quote! {
             #[doc(hidden)]
             extern "C" fn mf_create(
-                args: &::memflow::types::ReprCStr,
+                args: &#prefix_gen::types::ReprCStr,
                 _: Option<&mut ::std::os::raw::c_void>,
                 _: i32,
-                out: &mut ::memflow::plugins::connector::MUConnectorInstance
+                out: &mut #prefix_gen::plugins::connector::MUConnectorInstance
             ) -> i32 {
-                ::memflow::plugins::connector::create_without_logging(args, out, #func_name)
+                #prefix_gen::plugins::connector::create_without_logging(args, out, #func_name)
             }
         }
     };
@@ -88,8 +95,8 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
     let gen = quote! {
         #[doc(hidden)]
         #[no_mangle]
-        pub static #connector_descriptor: ::memflow::plugins::ConnectorDescriptor = ::memflow::plugins::ConnectorDescriptor {
-            plugin_version: ::memflow::plugins::MEMFLOW_PLUGIN_VERSION,
+        pub static #connector_descriptor: #prefix_gen::plugins::ConnectorDescriptor = #prefix_gen::plugins::ConnectorDescriptor {
+            plugin_version: #prefix_gen::plugins::MEMFLOW_PLUGIN_VERSION,
             name: #connector_name,
             version: #version_gen,
             description: #description_gen,

@@ -517,34 +517,7 @@ pub fn build_dummy(
     _mem: Option<ConnectorInstance>,
     _log_level: Level,
 ) -> Result<OSInstance> {
-    let (size, size_mul) = {
-        let size = args.get("size").unwrap_or("2m");
-
-        let mul_arr = &[
-            (size::kb(1), ["kb", "k"]),
-            (size::mb(1), ["mb", "m"]),
-            (size::gb(1), ["gb", "g"]),
-        ];
-
-        mul_arr
-            .iter()
-            .flat_map(|(m, e)| e.iter().map(move |e| (*m, e)))
-            .filter_map(|(m, e)| {
-                if size.to_lowercase().ends_with(e) {
-                    Some((size.trim_end_matches(e), m))
-                } else {
-                    None
-                }
-            })
-            .next()
-            .ok_or(Error::Other("Invalid Page Cache size unit (or none)!"))?
-    };
-
-    let size = usize::from_str_radix(size, 16)
-        .map_err(|_| Error::Other("Failed to parse Page Cache size"))?;
-
-    let size = size * size_mul;
-
+    let size = super::mem::parse_size(args)?;
     let mem = DummyMemory::new(size);
     let os = DummyOS::new(mem);
 

@@ -462,11 +462,13 @@ impl Inventory {
 
     /// Adds a library directory to the inventory
     ///
+    /// This function applies additional filter to only scan potentially wanted files
+    ///
     /// # Safety
     ///
     /// Same as previous functions - compiler can not guarantee the safety of
     /// third party library implementations.
-    pub fn add_dir(&mut self, dir: PathBuf) -> Result<&mut Self> {
+    pub fn add_dir_filtered(&mut self, dir: PathBuf, filter: &str) -> Result<&mut Self> {
         if !dir.is_dir() {
             return Err(Error::IO("invalid path argument"));
         }
@@ -475,11 +477,34 @@ impl Inventory {
 
         for entry in read_dir(dir).map_err(|_| Error::IO("unable to read directory"))? {
             let entry = entry.map_err(|_| Error::IO("unable to read directory entry"))?;
-            Loadable::load_append(entry.path(), &mut self.connectors).ok();
-            Loadable::load_append(entry.path(), &mut self.os_layers).ok();
+            if let Some(true) = entry.file_name().to_str().map(|n| n.contains(filter)) {
+                self.load(entry.path());
+            }
         }
 
         Ok(self)
+    }
+
+    /// Adds a library directory to the inventory
+    ///
+    /// # Safety
+    ///
+    /// Same as previous functions - compiler can not guarantee the safety of
+    /// third party library implementations.
+    pub fn add_dir(&mut self, dir: PathBuf) -> Result<&mut Self> {
+        self.add_dir_filtered(dir, "")
+    }
+
+    /// Adds a single library to the inventory
+    ///
+    /// # Safety
+    ///
+    /// Same as previous functions - compiler can not guarantee the safety of
+    /// third party library implementations.
+    pub fn load(&mut self, path: PathBuf) -> &mut Self {
+        Loadable::load_append(&path, &mut self.connectors).ok();
+        Loadable::load_append(&path, &mut self.os_layers).ok();
+        self
     }
 
     /// Adds a library directory to the inventory.
@@ -506,8 +531,7 @@ impl Inventory {
             if path.is_dir() {
                 self.add_dir_recursive(path, depth - 1)?;
             } else {
-                Loadable::load_append(path.clone(), &mut self.connectors).ok();
-                Loadable::load_append(path, &mut self.os_layers).ok();
+                self.load(path);
             }
         }
 
@@ -562,7 +586,7 @@ impl Inventory {
     /// use memflow::derive::connector;
     /// use memflow::mem::PhysicalMemory;
     ///
-    /// #[connector(name = "dummy")]
+    /// #[connector(name = "dummy_conn")]
     /// pub fn create_connector(_args: &Args, _log_level: log::Level) ->
     ///     Result<impl PhysicalMemory + Clone> {
     ///     Ok(DummyMemory::new(size::mb(16)))
@@ -619,12 +643,13 @@ impl Inventory {
     /// # Examples
     ///
     /// Creating a connector instance:
-    /// ```no_run
+    /// ```
     /// use memflow::plugins::{Inventory, Args};
     ///
-    /// let inventory =
-    ///     Inventory::scan_path("./").unwrap();
-    /// let connector = inventory.create_connector_default("coredump")
+    /// # let mut inventory = Inventory::scan();
+    /// # inventory.add_dir_filtered("../target/release/deps".into(), "ffi").unwrap();
+    /// # inventory.add_dir_filtered("../target/debug/deps".into(), "ffi").unwrap();
+    /// let connector = inventory.create_connector_default("dummy")
     ///     .unwrap();
     /// ```
     pub fn create_connector_default(&self, name: &str) -> Result<ConnectorInstance> {
@@ -640,6 +665,20 @@ impl Inventory {
     /// * `name` - name of the target OS
     /// * `input` - connector to be passed to the OS
     /// * `args` - arguments to be passed to the OS
+    ///
+    /// # Examples
+    ///
+    /// Creating a OS instance with custom arguments
+    /// ```
+    /// use memflow::plugins::{Inventory, Args};
+    ///
+    /// # let mut inventory = Inventory::scan();
+    /// # inventory.add_dir_filtered("../target/release/deps".into(), "ffi").unwrap();
+    /// # inventory.add_dir_filtered("../target/debug/deps".into(), "ffi").unwrap();
+    /// let args = Args::parse("4m").unwrap();
+    /// let connector = inventory.create_os("dummy", None, &args)
+    ///     .unwrap();
+    /// ```
     pub fn create_os(&self, name: &str, input: OSInputArg, args: &Args) -> Result<OSInstance> {
         Self::create_internal(&self.os_layers, name, input, args)
     }
@@ -710,11 +749,11 @@ mod tests {
     // TODO: add dummy connector plugin test
     #[test]
     fn find_dummy() {
-        #[cfg(debug_assertions)]
-        const TARGET_STRING: &str = "../target/debug";
-        #[cfg(not(debug_assertions))]
-        const TARGET_STRING: &str = "../target/release";
-        let inventory = Inventory::scan_path_recursive(TARGET_STRING, 2).unwrap();
+        let mut inventory = Inventory::scan_path_recursive("../target/release", 2).unwrap();
+        inventory
+            .add_dir_recursive("../target/debug".into(), 2)
+            .unwrap();
+
         assert!(inventory
             .available_os_layers()
             .contains(&"dummy".to_string()));

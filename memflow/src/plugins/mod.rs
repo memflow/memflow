@@ -366,31 +366,6 @@ impl Inventory {
         Ok(ret)
     }
 
-    /// Creates a new inventory of plugins from the provided path.
-    /// The path has to be a valid directory or the function will fail with an `Error::IO` error.
-    /// The path is scanned recursively
-    ///
-    /// # Examples
-    ///
-    /// Creating a inventory:
-    /// ```
-    /// use memflow::plugins::Inventory;
-    ///
-    /// let inventory = Inventory::scan_path_recursive("./", 2)
-    ///     .unwrap();
-    /// ```
-    pub fn scan_path_recursive<P: AsRef<Path>>(path: P, depth: u32) -> Result<Self> {
-        let mut dir = PathBuf::default();
-        dir.push(path);
-
-        let mut ret = Self {
-            connectors: vec![],
-            os_layers: vec![],
-        };
-        ret.add_dir_recursive(dir, depth)?;
-        Ok(ret)
-    }
-
     /// Creates a new inventory of plugins by searching various paths.
     ///
     /// It will query PATH, and an additional set of of directories (standard unix ones, if unix,
@@ -507,37 +482,6 @@ impl Inventory {
         self
     }
 
-    /// Adds a library directory to the inventory.
-    /// This function recurses through all subdirectories.
-    ///
-    /// # Safety
-    ///
-    /// Same as previous functions - compiler can not guarantee the safety of
-    /// third party library implementations.
-    pub fn add_dir_recursive(&mut self, dir: PathBuf, depth: u32) -> Result<&mut Self> {
-        if depth == 0 {
-            return Ok(self);
-        }
-
-        if !dir.is_dir() {
-            return Err(Error::IO("invalid path argument"));
-        }
-
-        info!("scanning {:?} for libraries", dir,);
-
-        for entry in read_dir(dir).map_err(|_| Error::IO("unable to read directory"))? {
-            let entry = entry.map_err(|_| Error::IO("unable to read directory entry"))?;
-            let path = entry.path();
-            if path.is_dir() {
-                self.add_dir_recursive(path, depth - 1)?;
-            } else {
-                self.load(path);
-            }
-        }
-
-        Ok(self)
-    }
-
     /// Returns the names of all currently available connectors that can be used.
     pub fn available_connectors(&self) -> Vec<String> {
         self.connectors
@@ -647,8 +591,8 @@ impl Inventory {
     /// use memflow::plugins::{Inventory, Args};
     ///
     /// # let mut inventory = Inventory::scan();
-    /// # inventory.add_dir_filtered("../target/release/deps".into(), "ffi").unwrap();
-    /// # inventory.add_dir_filtered("../target/debug/deps".into(), "ffi").unwrap();
+    /// # inventory.add_dir_filtered("../target/release/deps".into(), "ffi").ok();
+    /// # inventory.add_dir_filtered("../target/debug/deps".into(), "ffi").ok();
     /// let connector = inventory.create_connector_default("dummy")
     ///     .unwrap();
     /// ```
@@ -673,8 +617,8 @@ impl Inventory {
     /// use memflow::plugins::{Inventory, Args};
     ///
     /// # let mut inventory = Inventory::scan();
-    /// # inventory.add_dir_filtered("../target/release/deps".into(), "ffi").unwrap();
-    /// # inventory.add_dir_filtered("../target/debug/deps".into(), "ffi").unwrap();
+    /// # inventory.add_dir_filtered("../target/release/deps".into(), "ffi").ok();
+    /// # inventory.add_dir_filtered("../target/debug/deps".into(), "ffi").ok();
     /// let args = Args::parse("4m").unwrap();
     /// let connector = inventory.create_os("dummy", None, &args)
     ///     .unwrap();
@@ -740,22 +684,4 @@ impl Inventory {
 pub struct LibInstance<T> {
     library: CArc<Library>,
     loader: T,
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    // TODO: add dummy connector plugin test
-    #[test]
-    fn find_dummy() {
-        let mut inventory = Inventory::scan_path_recursive("../target/release", 2).unwrap();
-        inventory
-            .add_dir_recursive("../target/debug".into(), 2)
-            .unwrap();
-
-        assert!(inventory
-            .available_os_layers()
-            .contains(&"dummy".to_string()));
-    }
 }

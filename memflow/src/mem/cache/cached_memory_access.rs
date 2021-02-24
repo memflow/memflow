@@ -33,7 +33,7 @@ use super::{
     page_cache::PageCache, page_cache::PageValidity, CacheValidator, DefaultCacheValidator,
 };
 use crate::architecture::ArchitectureObj;
-use crate::error::Result;
+use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 use crate::iter::PageChunks;
 use crate::mem::phys_mem::{
     PhysicalMemory, PhysicalMemoryMetadata, PhysicalReadData, PhysicalWriteData,
@@ -258,7 +258,10 @@ impl<T: PhysicalMemory, Q: CacheValidator> CachedMemoryAccessBuilder<T, Q> {
         Ok(CachedMemoryAccess::new(
             self.mem,
             PageCache::with_page_size(
-                self.page_size.ok_or("page_size must be initialized")?,
+                self.page_size.ok_or_else(|| {
+                    Error(ErrorOrigin::Cache, ErrorKind::Uninitialized)
+                        .log_error("page_size must be initialized")
+                })?,
                 self.cache_size,
                 self.page_type_mask,
                 self.validator,

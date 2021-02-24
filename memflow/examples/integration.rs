@@ -4,7 +4,7 @@ use memflow::plugins::*;
 use clap::*;
 use log::Level;
 
-use memflow::error::{Error, Result};
+use memflow::error::{Error, ErrorKind, ErrorOrigin, Result};
 
 use colored::*;
 
@@ -70,9 +70,8 @@ fn main() -> Result<()> {
 
     unsafe {
         if HAD_ERROR {
-            Err(Error::Other(
-                "Some errors encountered, not all functionality may be present!",
-            ))
+            Err(Error(ErrorOrigin::Other, ErrorKind::Unknown)
+                .log_error("Some errors encountered, not all functionality may be present!"))
         } else {
             Ok(())
         }

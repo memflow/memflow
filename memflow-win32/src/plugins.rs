@@ -16,7 +16,9 @@ pub fn build_kernel(
     mem: Option<ConnectorInstance>,
     log_level: log::Level,
 ) -> Result<OSInstance> {
-    let mem = mem.ok_or(Error::Other("Must provide memory!"))?;
+    let mem = mem.ok_or_else(|| {
+        Error(ErrorOrigin::OSLayer, ErrorKind::Configuration).log_error("Must provide memory!")
+    })?;
 
     simple_logger::SimpleLogger::new()
         .with_level(log_level.to_level_filter())
@@ -108,10 +110,14 @@ fn build_page_cache<
             Some(vargs) => {
                 let mut sp = vargs.splitn(2, ';');
                 let (size, time) = (
-                    sp.next()
-                        .ok_or(Error::Other("Failed to parse Page Cache size"))?,
-                    sp.next()
-                        .ok_or(Error::Other("Failed to parse Page Cache validator time"))?,
+                    sp.next().ok_or_else(|| {
+                        Error(ErrorOrigin::OSLayer, ErrorKind::Configuration)
+                            .log_error("Failed to parse Page Cache size")
+                    })?,
+                    sp.next().ok_or_else(|| {
+                        Error(ErrorOrigin::OSLayer, ErrorKind::Configuration)
+                            .log_error("Failed to parse Page Cache validator time")
+                    })?,
                 );
 
                 let (size, size_mul) = {
@@ -132,16 +138,23 @@ fn build_page_cache<
                             }
                         })
                         .next()
-                        .ok_or(Error::Other("Invalid Page Cache size unit (or none)!"))?
+                        .ok_or_else(|| {
+                            Error(ErrorOrigin::OSLayer, ErrorKind::Configuration)
+                                .log_error("Invalid Page Cache size unit (or none)!")
+                        })?
                 };
 
-                let size = usize::from_str_radix(size, 16)
-                    .map_err(|_| Error::Other("Failed to parse Page Cache size"))?;
+                let size = usize::from_str_radix(size, 16).map_err(|_| {
+                    Error(ErrorOrigin::OSLayer, ErrorKind::Configuration)
+                        .log_error("Failed to parse Page Cache size")
+                })?;
 
                 let size = size * size_mul;
 
-                let time = u64::from_str_radix(time, 10)
-                    .map_err(|_| Error::Other("Failed to parse Page Cache validity time"))?;
+                let time = u64::from_str_radix(time, 10).map_err(|_| {
+                    Error(ErrorOrigin::OSLayer, ErrorKind::Configuration)
+                        .log_error("Failed to parse Page Cache validity time")
+                })?;
                 build_kernel_hint(
                     builder.build_page_cache(move |v, a| {
                         CachedMemoryAccess::builder(v)
@@ -179,14 +192,23 @@ fn build_vat<
             Some(vargs) => {
                 let mut sp = vargs.splitn(2, ';');
                 let (size, time) = (
-                    sp.next().ok_or(Error::Other("Failed to parse VAT size"))?,
-                    sp.next()
-                        .ok_or(Error::Other("Failed to parse VAT validator time"))?,
+                    sp.next().ok_or_else(|| {
+                        Error(ErrorOrigin::OSLayer, ErrorKind::Configuration)
+                            .log_error("Failed to parse VAT size")
+                    })?,
+                    sp.next().ok_or_else(|| {
+                        Error(ErrorOrigin::OSLayer, ErrorKind::Configuration)
+                            .log_error("Failed to parse VAT validator time")
+                    })?,
                 );
-                let size = usize::from_str_radix(size, 16)
-                    .map_err(|_| Error::Other("Failed to parse VAT size"))?;
-                let time = u64::from_str_radix(time, 10)
-                    .map_err(|_| Error::Other("Failed to parse VAT validity time"))?;
+                let size = usize::from_str_radix(size, 16).map_err(|_| {
+                    Error(ErrorOrigin::OSLayer, ErrorKind::Configuration)
+                        .log_error("Failed to parse VAT size")
+                })?;
+                let time = u64::from_str_radix(time, 10).map_err(|_| {
+                    Error(ErrorOrigin::OSLayer, ErrorKind::Configuration)
+                        .log_error("Failed to parse VAT validity time")
+                })?;
                 build_page_cache(
                     builder.build_vat_cache(move |v, a| {
                         CachedVirtualTranslate::builder(v)

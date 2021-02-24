@@ -1,6 +1,6 @@
 use crate::architecture::x86::x64;
 use crate::architecture::ScopedVirtualTranslate;
-use crate::error::{Error, Result};
+use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 
 use crate::architecture::ArchitectureIdent;
 use crate::mem::VirtualMemory;
@@ -91,12 +91,12 @@ impl<T: VirtualMemory> Process for DummyProcess<T> {
             .filter(|m| m.arch == architecture)
             .cloned()
             .next()
-            .ok_or(Error::Other("Could not find module"))
+            .ok_or(Error(ErrorOrigin::OSLayer, ErrorKind::ModuleNotFound))
     }
 
     /// Retrieves address of the primary module structure of the process
     fn primary_module_address(&mut self) -> Result<Address> {
-        let mut ret = Err("No module found".into());
+        let mut ret = Err(Error(ErrorOrigin::OSLayer, ErrorKind::ModuleNotFound));
         let callback = &mut |moduleinfo: ModuleAddressInfo| {
             ret = Ok(moduleinfo.address);
             false

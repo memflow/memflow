@@ -3,7 +3,7 @@
 */
 
 use crate::dataview::Pod;
-use crate::error::PartialResult;
+use crate::error::{Error, ErrorKind, ErrorOrigin, PartialResult};
 use crate::mem::VirtualMemory;
 use crate::types::{Address, ByteSwap};
 
@@ -353,7 +353,7 @@ impl<T: ?Sized> TryFrom<Pointer64<T>> for u32 {
         if ptr.address <= (u32::max_value() as u64) {
             Ok(ptr.address as u32)
         } else {
-            Err(crate::error::Error::Bounds)
+            Err(Error(ErrorOrigin::Pointer, ErrorKind::OutOfBounds))
         }
     }
 }

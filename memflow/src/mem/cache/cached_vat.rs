@@ -1,4 +1,4 @@
-use crate::error::{Error, Result};
+use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 
 use super::tlb_cache::TLBCache;
 use crate::architecture::{ArchitectureObj, ScopedVirtualTranslate};
@@ -248,10 +248,16 @@ impl<V: VirtualTranslate, Q: CacheValidator> CachedVirtualTranslateBuilder<V, Q>
         Ok(CachedVirtualTranslate::new(
             self.vat,
             TLBCache::new(
-                self.entries.ok_or("entries must be initialized")?,
+                self.entries.ok_or_else(|| {
+                    Error(ErrorOrigin::Cache, ErrorKind::Uninitialized)
+                        .log_error("entries must be initialized")
+                })?,
                 self.validator,
             ),
-            self.arch.ok_or("arch must be initialized")?,
+            self.arch.ok_or_else(|| {
+                Error(ErrorOrigin::Cache, ErrorKind::Uninitialized)
+                    .log_error("arch must be initialized")
+            })?,
         ))
     }
 

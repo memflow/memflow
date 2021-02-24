@@ -1,4 +1,4 @@
-use crate::error::{Error, Result};
+use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 use crate::iter::SplitAtIndex;
 use crate::types::{Address, PhysicalAddress};
 
@@ -204,10 +204,16 @@ impl MemoryMap<(Address, usize)> {
     /// The `real_base` parameter is optional. If it is not set there will be no re-mapping.
     #[cfg(feature = "memmapfiles")]
     pub fn open<P: AsRef<::std::path::Path>>(path: P) -> Result<Self> {
-        let contents = ::std::fs::read_to_string(path)
-            .map_err(|_| Error::Other("unable to open the memory mapping file"))?;
-        let mappings: MemoryMapFile = ::toml::from_str(&contents)
-            .map_err(|_| Error::Other("unable to parse the memory mapping toml file"))?;
+        let contents = ::std::fs::read_to_string(path).map_err(|err| {
+            Error(ErrorOrigin::MemoryMap, ErrorKind::UnableToReadFile)
+                .log_error(format!("unable to open the memory mapping file: {}", err))
+        })?;
+        let mappings: MemoryMapFile = ::toml::from_str(&contents).map_err(|err| {
+            Error(ErrorOrigin::MemoryMap, ErrorKind::UnableToReadFile).log_error(format!(
+                "unable to parse the memory mapping toml file: {}",
+                err
+            ))
+        })?;
 
         let mut result = MemoryMap::new();
         for range in mappings.ranges.iter() {

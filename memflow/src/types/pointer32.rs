@@ -3,7 +3,7 @@
 */
 
 use crate::dataview::Pod;
-use crate::error::PartialResult;
+use crate::error::{Error, ErrorKind, ErrorOrigin, PartialResult};
 use crate::mem::VirtualMemory;
 use crate::types::{Address, ByteSwap};
 
@@ -313,7 +313,7 @@ impl<T: ?Sized> TryFrom<u64> for Pointer32<T> {
                 phantom_data: PhantomData,
             })
         } else {
-            Err(crate::error::Error::Bounds)
+            Err(Error(ErrorOrigin::Pointer, ErrorKind::OutOfBounds))
         }
     }
 }
@@ -330,7 +330,7 @@ impl<T: ?Sized> TryFrom<Address> for Pointer32<T> {
                 phantom_data: PhantomData,
             })
         } else {
-            Err(crate::error::Error::Bounds)
+            Err(Error(ErrorOrigin::Pointer, ErrorKind::OutOfBounds))
         }
     }
 }

@@ -8,7 +8,7 @@ use super::{
     Architecture, ArchitectureIdent, ArchitectureObj, Endianess, ScopedVirtualTranslate,
 };
 
-use crate::error::{Error, Result};
+use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 use crate::iter::SplitAtIndex;
 use crate::mem::PhysicalMemory;
 use crate::types::{size, Address, PhysicalAddress};
@@ -149,7 +149,8 @@ pub fn new_translator(
     dtb2: Address,
     arch: ArchitectureObj,
 ) -> Result<impl ScopedVirtualTranslate> {
-    let arch = underlying_arch(arch).ok_or(Error::InvalidArchitecture)?;
+    let arch =
+        underlying_arch(arch).ok_or(Error(ErrorOrigin::MMU, ErrorKind::InvalidArchitecture))?;
     Ok(ARMScopedVirtualTranslate::new(arch, dtb1, dtb2))
 }
 

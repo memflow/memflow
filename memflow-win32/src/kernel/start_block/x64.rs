@@ -3,7 +3,7 @@ use crate::kernel::StartBlock;
 use std::convert::TryInto;
 
 use memflow::architecture::x86::x64;
-use memflow::error::{Error, Result};
+use memflow::error::{Error, ErrorKind, ErrorOrigin, Result};
 use memflow::types::{size, Address};
 
 // https://github.com/ufrisk/MemProcFS/blob/f2d15cf4fe4f19cfeea3dad52971fae2e491064b/vmm/vmmwininit.c#L560
@@ -27,7 +27,10 @@ pub fn find_lowstub(stub: &[u8]) -> Result<StartBlock> {
             kernel_hint: u64::from_le_bytes(c[0x70..0x70 + 8].try_into().unwrap()).into(),
             dtb: u64::from_le_bytes(c[0xa0..0xa0 + 8].try_into().unwrap()).into(),
         })
-        .ok_or(Error::OSLayer("unable to find x64 dtb in lowstub < 1M"))?)
+        .ok_or_else(|| {
+            Error(ErrorOrigin::OSLayer, ErrorKind::EntryNotFound)
+                .log_trace("unable to find x64 dtb in lowstub < 1M")
+        })?)
 }
 
 fn find_pt(addr: Address, mem: &[u8]) -> Option<Address> {
@@ -68,5 +71,8 @@ pub fn find(mem: &[u8]) -> Result<StartBlock> {
             dtb: addr,
         })
         .next()
-        .ok_or(Error::OSLayer("unable to find x64 dtb in lowstub < 16M"))
+        .ok_or_else(|| {
+            Error(ErrorOrigin::OSLayer, ErrorKind::EntryNotFound)
+                .log_trace("unable to find x64 dtb in lowstub < 16M")
+        })
 }

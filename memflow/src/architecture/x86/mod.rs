@@ -7,7 +7,7 @@ use super::{
     ScopedVirtualTranslate,
 };
 
-use crate::error::{Error, Result};
+use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 use crate::iter::SplitAtIndex;
 use crate::mem::PhysicalMemory;
 use crate::types::{Address, PhysicalAddress};
@@ -106,7 +106,8 @@ fn underlying_arch(arch: ArchitectureObj) -> Option<&'static X86Architecture> {
 }
 
 pub fn new_translator(dtb: Address, arch: ArchitectureObj) -> Result<X86ScopedVirtualTranslate> {
-    let arch = underlying_arch(arch).ok_or(Error::InvalidArchitecture)?;
+    let arch =
+        underlying_arch(arch).ok_or(Error(ErrorOrigin::MMU, ErrorKind::InvalidArchitecture))?;
     Ok(X86ScopedVirtualTranslate::new(arch, dtb))
 }
 

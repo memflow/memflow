@@ -8,7 +8,7 @@ use std::convert::TryInto;
 use log::{debug, info, warn};
 
 use memflow::architecture::ArchitectureObj;
-use memflow::error::{Error, Result};
+use memflow::error::{Error, ErrorKind, ErrorOrigin, Result};
 use memflow::mem::VirtualMemory;
 use memflow::types::{size, Address};
 
@@ -31,7 +31,8 @@ pub fn find<T: VirtualMemory>(
         Err(e) => warn!("{}", e),
     }
 
-    Err(Error::OSLayer("unable to find system eprocess"))
+    Err(Error(ErrorOrigin::OSLayer, ErrorKind::EntryNotFound)
+        .log_info("unable to find system eprocess"))
 }
 
 // find from exported symbol
@@ -42,17 +43,17 @@ pub fn find_exported<T: VirtualMemory>(
 ) -> Result<Address> {
     // PsInitialSystemProcess -> PsActiveProcessHead
     let image = pehelper::try_get_pe_image(virt_mem, kernel_base)?;
-    let pe = PeView::from_bytes(&image).map_err(|e| Error::OSExecutable(e.to_str()))?;
+    let pe = PeView::from_bytes(&image)
+        .map_err(|err| Error(ErrorOrigin::OSLayer, ErrorKind::InvalidPeFile).log_info(err))?;
 
     let sys_proc = match pe
         .get_export_by_name("PsInitialSystemProcess")
-        .map_err(|e| Error::OSExecutable(e.to_str()))?
+        .map_err(|err| Error(ErrorOrigin::OSLayer, ErrorKind::ExportNotFound).log_info(err))?
     {
         Export::Symbol(s) => kernel_base + *s as usize,
         Export::Forward(_) => {
-            return Err(Error::Other(
-                "PsInitialSystemProcess found but it was a forwarded export",
-            ))
+            return Err(Error(ErrorOrigin::OSLayer, ErrorKind::ExportNotFound)
+                .log_info("PsInitialSystemProcess found but it was a forwarded export"))
         }
     };
     info!("PsInitialSystemProcess found at 0x{:x}", sys_proc);
@@ -72,7 +73,7 @@ pub fn find_exported<T: VirtualMemory>(
             virt_mem.virt_read_raw_into(sys_proc, &mut buf)?;
             u32::from_le_bytes(buf[0..4].try_into().unwrap()).into()
         }
-        _ => return Err(Error::InvalidArchitecture),
+        _ => return Err(Error(ErrorOrigin::OSLayer, ErrorKind::InvalidArchitecture)),
     };
     Ok(sys_proc_addr)
 }
@@ -105,7 +106,6 @@ pub fn find_in_section<T: VirtualMemory>(
         .ok_or_else(|| Error::new("unable to find section ALMOSTRO"))?;
     */
 
-    Err(Error::Other(
-        "sysproc::find_in_section(): not implemented yet",
-    ))
+    Err(Error(ErrorOrigin::OSLayer, ErrorKind::NotImplemented)
+        .log_info("sysproc::find_in_section(): not implemented yet"))
 }

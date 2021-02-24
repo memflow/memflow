@@ -29,7 +29,7 @@ fn test<T: PhysicalMemory, V: VirtualTranslate>(kernel: &mut Win32Kernel<T, V>) 
 */
 use super::{Win32Kernel, Win32ProcessInfo, Win32VirtualTranslate};
 
-use memflow::error::{Error, Result};
+use memflow::error::{Error, ErrorKind, ErrorOrigin, Result};
 use memflow::mem::{PhysicalMemory, VirtualDMA, VirtualMemory, VirtualTranslate};
 use memflow::os::{Keyboard, KeyboardState, Process};
 use memflow::prelude::OSInner;
@@ -143,19 +143,19 @@ impl<T> Win32Keyboard<T> {
     }
 
     fn find_gaf_pe(module_buf: &[u8]) -> Result<usize> {
-        let pe = PeView::from_bytes(module_buf).map_err(|e| Error::OSExecutable(e.to_str()))?;
+        let pe = PeView::from_bytes(module_buf)
+            .map_err(|err| Error(ErrorOrigin::OSLayer, ErrorKind::InvalidPeFile).log_info(err))?;
 
-        match pe
-            .get_export_by_name("gafAsyncKeyState")
-            .map_err(|e| Error::OSExecutable(e.to_str()))?
-        {
+        match pe.get_export_by_name("gafAsyncKeyState").map_err(|err| {
+            Error(ErrorOrigin::OSLayer, ErrorKind::ExportNotFound)
+                .log_info(format!("unable to find gafAsyncKeyState: {}", err))
+        })? {
             Export::Symbol(s) => {
                 debug!("gafAsyncKeyState export found at: {:x}", *s);
                 Ok(*s as usize)
             }
-            Export::Forward(_) => Err(Error::Other(
-                "export gafAsyncKeyState found but it is forwarded",
-            )),
+            Export::Forward(_) => Err(Error(ErrorOrigin::OSLayer, ErrorKind::ExportNotFound)
+                .log_info("export gafAsyncKeyState found but it is forwarded")),
         }
     }
 
@@ -166,10 +166,13 @@ impl<T> Win32Keyboard<T> {
 
         // 48 8B 05 ? ? ? ? 48 89 81 ? ? 00 00 48 8B 8F + 0x3
         let re = Regex::new("(?-u)\\x48\\x8B\\x05(?s:.)(?s:.)(?s:.)(?s:.)\\x48\\x89\\x81(?s:.)(?s:.)\\x00\\x00\\x48\\x8B\\x8F")
-                    .map_err(|_| Error::Other("malformed gafAsyncKeyState signature"))?;
+                    .map_err(|_| Error(ErrorOrigin::OSLayer, ErrorKind::Encoding).log_info("malformed gafAsyncKeyState signature"))?;
         let buf_offs = re
             .find(&module_buf[..])
-            .ok_or(Error::Other("unable to find gafAsyncKeyState signature"))?
+            .ok_or_else(|| {
+                Error(ErrorOrigin::OSLayer, ErrorKind::EntryNotFound)
+                    .log_info("unable to find gafAsyncKeyState signature")
+            })?
             .start()
             + 0x3;
 

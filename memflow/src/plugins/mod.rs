@@ -203,7 +203,7 @@ pub trait Loadable: Sized {
             library
                 .as_ref()
                 .get::<*mut PluginDescriptor<Self>>(format!("{}\0", export).as_bytes())
-                .map_err(|_| Error::Connector("OS descriptor not found"))?
+                .map_err(|_| Error(ErrorOrigin::Inventory, ErrorKind::MemflowExportsNotFound))?
                 .read()
         };
 
@@ -216,7 +216,7 @@ pub trait Loadable: Sized {
                 MEMFLOW_PLUGIN_VERSION,
                 descriptor.plugin_version
             );
-            Err(Error::Connector("connector version mismatch"))
+            Err(Error(ErrorOrigin::Inventory, ErrorKind::VersionMismatch))
         } else {
             Ok(LibInstance {
                 library: library.clone(),
@@ -242,14 +242,15 @@ pub trait Loadable: Sized {
     fn load_all(path: impl AsRef<Path>) -> Result<Vec<LibInstance<Self>>> {
         let exports = util::find_export_by_prefix(path.as_ref(), Self::export_prefix())?;
         if exports.is_empty() {
-            return Err(Error::Connector(
-                "file does not contain any memflow exports",
+            return Err(Error(
+                ErrorOrigin::Inventory,
+                ErrorKind::MemflowExportsNotFound,
             ));
         }
 
         // load library
         let library = Library::new(path.as_ref())
-            .map_err(|_| Error::Connector("unable to load library"))
+            .map_err(|_| Error(ErrorOrigin::Inventory, ErrorKind::UnableToLoadLibrary))
             .map(CArc::from)?;
 
         Ok(exports
@@ -284,7 +285,7 @@ pub trait Loadable: Sized {
                     lib.loader.ident(),
                     path.as_ref()
                 );
-                return Err(Error::Other("Already Exists"));
+                return Err(Error(ErrorOrigin::Inventory, ErrorKind::AlreadyExists));
             }
         }
 
@@ -445,13 +446,16 @@ impl Inventory {
     /// third party library implementations.
     pub fn add_dir_filtered(&mut self, dir: PathBuf, filter: &str) -> Result<&mut Self> {
         if !dir.is_dir() {
-            return Err(Error::IO("invalid path argument"));
+            return Err(Error(ErrorOrigin::Inventory, ErrorKind::InvalidPath));
         }
 
         info!("scanning {:?} for libraries", dir,);
 
-        for entry in read_dir(dir).map_err(|_| Error::IO("unable to read directory"))? {
-            let entry = entry.map_err(|_| Error::IO("unable to read directory entry"))?;
+        for entry in
+            read_dir(dir).map_err(|_| Error(ErrorOrigin::Inventory, ErrorKind::UnableToReadDir))?
+        {
+            let entry = entry
+                .map_err(|_| Error(ErrorOrigin::Inventory, ErrorKind::UnableToReadDirEntry))?;
             if let Some(true) = entry.file_name().to_str().map(|n| n.contains(filter)) {
                 self.load(entry.path());
             }
@@ -564,7 +568,7 @@ impl Inventory {
                         .collect::<Vec<_>>()
                         .join(", ")
                 );
-                Error::Connector("plugin not found")
+                Error(ErrorOrigin::Inventory, ErrorKind::PluginNotFound)
             })?;
 
         info!(

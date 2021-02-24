@@ -1,6 +1,6 @@
 use super::{DummyMemory, DummyProcessInfo};
 use crate::architecture::ArchitectureIdent;
-use crate::error::{Error, Result};
+use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 use crate::mem::virt_mem::VirtualDMA;
 use crate::mem::PhysicalMemory;
 use crate::os::{ModuleInfo, OSInfo, ProcessInfo, PID};
@@ -429,7 +429,7 @@ impl<'a> OSInner<'a> for DummyOS {
         self.processes
             .iter()
             .find(|p| p.info.address == address)
-            .ok_or(Error::Other("Process does not exist!"))
+            .ok_or(Error(ErrorOrigin::OSLayer, ErrorKind::ProcessNotFound))
             .map(|p| p.info.clone())
     }
 
@@ -441,7 +441,7 @@ impl<'a> OSInner<'a> for DummyOS {
             .processes
             .iter()
             .find(|p| p.info.address == info.address)
-            .ok_or(Error::Other("Invalid process info!"))?
+            .ok_or(Error(ErrorOrigin::OSLayer, ErrorKind::InvalidProcessInfo))?
             .clone();
         Ok(DummyProcess {
             mem: VirtualDMA::new(&mut self.mem, x64::ARCH, x64::new_translator(proc.dtb)),
@@ -461,7 +461,7 @@ impl<'a> OSInner<'a> for DummyOS {
             .processes
             .iter()
             .find(|p| p.info.address == info.address)
-            .ok_or(Error::Other("Invalid process info!"))?
+            .ok_or(Error(ErrorOrigin::OSLayer, ErrorKind::InvalidProcessInfo))?
             .clone();
         Ok(DummyProcess {
             mem: VirtualDMA::new(self.mem, x64::ARCH, x64::new_translator(proc.dtb)),
@@ -483,7 +483,7 @@ impl<'a> OSInner<'a> for DummyOS {
     /// # Arguments
     /// * `address` - address where module's information resides in
     fn module_by_address(&mut self, _address: Address) -> Result<ModuleInfo> {
-        Err(Error::Other("No module found!"))
+        Err(Error(ErrorOrigin::OSLayer, ErrorKind::ModuleNotFound))
     }
 
     /// Retrieves the kernel info

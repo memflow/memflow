@@ -3,7 +3,7 @@ use std::thread;
 use clap::*;
 use log::{info, Level};
 
-use memflow::error::{Error, Result};
+use memflow::error::{Error, ErrorKind, ErrorOrigin, Result};
 use memflow::os::*;
 use memflow::plugins::*;
 
@@ -134,22 +134,24 @@ fn parse_args() -> Result<(String, Args, String, Args, log::Level)> {
     Ok((
         matches
             .value_of("connector")
-            .ok_or(Error::Other("failed to parse connector"))?
+            .ok_or_else(|| {
+                Error(ErrorOrigin::Other, ErrorKind::Configuration)
+                    .log_error("failed to parse connector")
+            })?
             .into(),
-        Args::parse(
-            matches
-                .value_of("conn-args")
-                .ok_or(Error::Other("failed to parse connector args"))?,
-        )?,
+        Args::parse(matches.value_of("conn-args").ok_or_else(|| {
+            Error(ErrorOrigin::Other, ErrorKind::Configuration)
+                .log_error("failed to parse connector args")
+        })?)?,
         matches
             .value_of("os")
-            .ok_or(Error::Other("failed to parse os"))?
+            .ok_or_else(|| {
+                Error(ErrorOrigin::Other, ErrorKind::Configuration).log_error("failed to parse os")
+            })?
             .into(),
-        Args::parse(
-            matches
-                .value_of("os-args")
-                .ok_or(Error::Other("failed to parse os args"))?,
-        )?,
+        Args::parse(matches.value_of("os-args").ok_or_else(|| {
+            Error(ErrorOrigin::Other, ErrorKind::Configuration).log_error("failed to parse os args")
+        })?)?,
         level,
     ))
 }

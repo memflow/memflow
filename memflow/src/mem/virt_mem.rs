@@ -6,7 +6,9 @@ pub use virtual_dma::VirtualDMA;
 use super::VirtualMemoryBatcher;
 use crate::architecture::ArchitectureObj;
 use crate::dataview::Pod;
-use crate::error::{Error, PartialError, PartialResult, PartialResultExt, Result};
+use crate::error::{
+    Error, ErrorKind, ErrorOrigin, PartialError, PartialResult, PartialResultExt, Result,
+};
 use crate::types::{Address, Page, PhysicalAddress, Pointer32, Pointer64};
 
 use std::mem::MaybeUninit;
@@ -141,7 +143,10 @@ where
         match arch.bits() {
             64 => self.virt_read_addr64(addr),
             32 => self.virt_read_addr32(addr),
-            _ => Err(PartialError::Error(Error::InvalidArchitecture)),
+            _ => Err(PartialError::Error(Error(
+                ErrorOrigin::VirtualMemory,
+                ErrorKind::InvalidArchitecture,
+            ))),
         }
     }
 

@@ -64,7 +64,7 @@ pub trait OSInner<'a>: Send {
 
     /// Find process information by its name
     fn process_info_by_name(&mut self, name: &str) -> Result<ProcessInfo> {
-        let mut ret = Err("No process found".into());
+        let mut ret = Err(Error(ErrorOrigin::OSLayer, ErrorKind::ProcessNotFound));
         let callback = &mut |data: ProcessInfo| {
             if data.name.as_ref() == name {
                 ret = Ok(data);
@@ -79,7 +79,7 @@ pub trait OSInner<'a>: Send {
 
     /// Find process information by its ID
     fn process_info_by_pid(&mut self, pid: PID) -> Result<ProcessInfo> {
-        let mut ret = Err("No process found".into());
+        let mut ret = Err(Error(ErrorOrigin::OSLayer, ErrorKind::ProcessNotFound));
         let callback = &mut |data: ProcessInfo| {
             if data.pid == pid {
                 ret = Ok(data);
@@ -220,7 +220,7 @@ pub trait OSInner<'a>: Send {
     ///
     /// This function can be useful for quickly accessing a specific module
     fn module_by_name(&mut self, name: &str) -> Result<ModuleInfo> {
-        let mut ret = Err("No module found".into());
+        let mut ret = Err(Error(ErrorOrigin::OSLayer, ErrorKind::ProcessNotFound));
         let callback = &mut |data: ModuleInfo| {
             if data.name.as_ref() == name {
                 ret = Ok(data);

@@ -2,7 +2,7 @@ use std::prelude::v1::*;
 
 use super::CacheValidator;
 use crate::architecture::{ArchitectureObj, ScopedVirtualTranslate};
-use crate::error::{Error, Result};
+use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 use crate::types::{Address, PhysicalAddress};
 
 #[derive(Clone, Copy)]
@@ -92,7 +92,7 @@ impl<T: CacheValidator> TLBCache<T> {
                     ),
                 }))
             } else {
-                Some(Err(Error::VirtualTranslate))
+                Some(Err(Error(ErrorOrigin::TLBCache, ErrorKind::EntryNotFound)))
             }
         } else {
             None

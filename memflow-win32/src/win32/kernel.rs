@@ -12,7 +12,7 @@ use log::{info, trace};
 use std::fmt;
 
 use memflow::architecture::{ArchitectureIdent, ArchitectureObj};
-use memflow::error::{Error, Result};
+use memflow::error::{Error, ErrorKind, ErrorOrigin, Result};
 use memflow::mem::{DirectTranslate, PhysicalMemory, VirtualDMA, VirtualMemory, VirtualTranslate};
 use memflow::os::{
     AddressCallback, ModuleInfo, OSInfo, OSInner, OSKeyboardInner, Process, ProcessInfo, PID,
@@ -89,16 +89,16 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
             let image = self
                 .virt_mem
                 .virt_read_raw(self.kernel_info.os_info.base, self.kernel_info.os_info.size)?;
-            let pe = PeView::from_bytes(&image).map_err(|e| Error::OSExecutable(e.to_str()))?;
-            let addr = match pe
-                .get_export_by_name("PsLoadedModuleList")
-                .map_err(|e| Error::OSExecutable(e.to_str()))?
-            {
+            let pe = PeView::from_bytes(&image).map_err(|err| {
+                Error(ErrorOrigin::OSLayer, ErrorKind::InvalidPeFile).log_info(err)
+            })?;
+            let addr = match pe.get_export_by_name("PsLoadedModuleList").map_err(|err| {
+                Error(ErrorOrigin::OSLayer, ErrorKind::ExportNotFound).log_info(err)
+            })? {
                 Export::Symbol(s) => self.kernel_info.os_info.base + *s as usize,
                 Export::Forward(_) => {
-                    return Err(Error::Other(
-                        "PsLoadedModuleList found but it was a forwarded export",
-                    ))
+                    return Err(Error(ErrorOrigin::OSLayer, ErrorKind::ExportNotFound)
+                        .log_info("PsLoadedModuleList found but it was a forwarded export"))
                 }
             };
 
@@ -347,7 +347,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
                 }
             }
             32 => sys_arch,
-            _ => return Err(Error::InvalidArchitecture),
+            _ => return Err(Error(ErrorOrigin::OSLayer, ErrorKind::InvalidArchitecture)),
         };
         trace!("proc_arch={:?}", proc_arch);
 

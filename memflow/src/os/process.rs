@@ -83,7 +83,7 @@ pub trait Process: Send {
         name: &str,
         architecture: Option<&ArchitectureIdent>,
     ) -> Result<ModuleInfo> {
-        let mut ret = Err("No module found".into());
+        let mut ret = Err(Error(ErrorOrigin::OSLayer, ErrorKind::ModuleNotFound));
         let callback = &mut |data: ModuleInfo| {
             if data.name.as_ref() == name {
                 ret = Ok(data);

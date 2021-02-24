@@ -5,7 +5,7 @@ use super::{Win32Kernel, Win32ModuleListInfo};
 use std::fmt;
 
 use memflow::architecture::ArchitectureIdent;
-use memflow::error::{Error, Result};
+use memflow::error::{Error, ErrorKind, ErrorOrigin, Result};
 use memflow::mem::{PhysicalMemory, VirtualDMA, VirtualMemory, VirtualTranslate};
 use memflow::os::{ModuleAddressCallback, ModuleAddressInfo, ModuleInfo, Process, ProcessInfo};
 use memflow::types::Address;
@@ -176,7 +176,7 @@ impl<T: VirtualMemory> Process for Win32Process<T> {
         } else {
             None
         }
-        .ok_or(Error::InvalidArchitecture)?;
+        .ok_or(Error(ErrorOrigin::OSLayer, ErrorKind::InvalidArchitecture))?;
 
         info.module_info_from_entry(
             address,
@@ -192,7 +192,7 @@ impl<T: VirtualMemory> Process for Win32Process<T> {
     /// This will be the module of the executable that is being run, and whose name is stored in
     /// _EPROCESS::IMAGE_FILE_NAME
     fn primary_module_address(&mut self) -> memflow::error::Result<Address> {
-        let mut ret = Err("No module found".into());
+        let mut ret = Err(Error(ErrorOrigin::OSLayer, ErrorKind::ModuleNotFound));
         let sptr = self as *mut Self;
         let callback = &mut |ModuleAddressInfo { address, arch }| {
             let s = unsafe { sptr.as_mut() }.unwrap();

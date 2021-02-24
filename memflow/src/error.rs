@@ -3,143 +3,229 @@ Specialized `Error` and `Result` types for memflow.
 */
 
 use std::prelude::v1::*;
-use std::{convert, fmt, result, str};
+use std::{fmt, result, str};
 
-use log::error;
+use log::{debug, error, info, warn};
 use std::mem::MaybeUninit;
 
 #[cfg(feature = "std")]
 use std::error;
 
-/// Specialized `Error` type for memflow errors.
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
-pub enum Error {
-    /// Generic error type containing a static string reference
-    Other(&'static str),
-    /// Partial error.
-    ///
-    /// Catch-all for partial errors which have been
-    /// converted into full errors.
-    Partial,
-    /// Out of bounds.
-    ///
-    /// Catch-all for bounds check errors.
-    Bounds,
-    /// IO error
-    ///
-    /// Catch-all for io related errors.
-    IO(&'static str),
-    /// Invalid Architecture error.
-    ///
-    /// The architecture provided is not a valid argument for the given function.
-    InvalidArchitecture,
-    /// Connector error
-    ///
-    /// Catch-all for connector related errors
-    Connector(&'static str),
-    /// OSLayer error
-    ///
-    /// Catch-all for os-layer related errors
-    OSLayer(&'static str),
-    /// OSOffset error
-    ///
-    /// Catch-all for os-layer offset related errors
-    OSOffset(&'static str),
-    /// OSExecutable error
-    ///
-    /// Catch-all for os-layer executable related errors
-    OSExecutable(&'static str),
-    /// Physical Read Error
-    ///
-    /// A read/write from/to the physical memory has failed.
-    PhysicalMemory(&'static str),
-    /// VirtualTranslate Error
-    ///
-    /// Error when trying to translate virtual to physical memory addresses.
-    VirtualTranslate,
-    /// Virtual Memory Error
-    ///
-    /// A read/write from/to the virtual memory has failed.
-    VirtualMemory(&'static str),
-    /// Unmapped Error
-    ///
-    /// A generic error due to unmapped memory.
-    Unmapped(&'static str),
-    /// Encoding error.
-    ///
-    /// Catch-all for string related errors such as lacking a nul terminator.
-    Encoding,
-    /// Unicode error when reading a string from windows.
-    ///
-    /// Encapsulates all unicode related reading errors.
-    Unicode(&'static str),
-}
+pub struct Error(pub ErrorOrigin, pub ErrorKind);
 
-/// Convert from &str to error
-impl convert::From<&'static str> for Error {
-    fn from(error: &'static str) -> Self {
-        Error::Other(error)
-    }
-}
-
-/// Convert from str::Utf8Error
-impl From<str::Utf8Error> for Error {
-    fn from(_err: str::Utf8Error) -> Self {
-        Error::Encoding
-    }
-}
-
-/// Convert from PartialError
-impl<T> From<PartialError<T>> for Error {
-    fn from(_err: PartialError<T>) -> Self {
-        Error::Partial
-    }
-}
-
-impl<'a> Error {
-    /// Returns a tuple representing the error description and its string value.
-    pub fn to_str_pair(&'a self) -> (&'static str, Option<&'a str>) {
-        match self {
-            Error::Other(e) => ("other error", Some(e)),
-            Error::Partial => ("partial error", None),
-            Error::Bounds => ("out of bounds", None),
-            Error::IO(e) => ("io error", Some(e)),
-            Error::InvalidArchitecture => ("invalid architecture", None),
-            Error::Connector(e) => ("connector error", Some(e)),
-            Error::OSLayer(e) => ("os-layer error", Some(e)),
-            Error::OSOffset(e) => ("os-layer offset error", Some(e)),
-            Error::OSExecutable(e) => ("os-layer executable error", Some(e)),
-            Error::PhysicalMemory(e) => ("physical memory error", Some(e)),
-            Error::VirtualTranslate => ("virtual address translation failed", None),
-            Error::VirtualMemory(e) => ("virtual memory error", Some(e)),
-            Error::Unmapped(e) => ("unmapped memory error", Some(e)),
-            Error::Encoding => ("encoding error", None),
-            Error::Unicode(e) => ("unicode string error", Some(e)),
-        }
+impl Error {
+    /// Returns a static string representing the type of error.
+    pub fn as_str(&self) -> &'static str {
+        self.1.to_str()
     }
 
-    /// Returns a simple string representation of the error.
-    pub fn to_str(&'a self) -> &'a str {
-        self.to_str_pair().0
+    /// Returns a static string representing the type of error.
+    pub fn into_str(self) -> &'static str {
+        self.as_str()
+    }
+
+    pub fn log_error(self, err: impl std::fmt::Display) -> Self {
+        error!("{}/{}: {}", self.0.to_str(), self.1.to_str(), err);
+        self
+    }
+
+    pub fn log_warn(self, err: impl std::fmt::Display) -> Self {
+        warn!("{}/{}: {}", self.0.to_str(), self.1.to_str(), err);
+        self
+    }
+
+    pub fn log_info(self, err: impl std::fmt::Display) -> Self {
+        info!("{}/{}: {}", self.0.to_str(), self.1.to_str(), err);
+        self
+    }
+
+    pub fn log_debug(self, err: impl std::fmt::Display) -> Self {
+        debug!("{}/{}: {}", self.0.to_str(), self.1.to_str(), err);
+        self
+    }
+
+    pub fn log_trace(self, err: impl std::fmt::Display) -> Self {
+        debug!("{}/{}: {}", self.0.to_str(), self.1.to_str(), err);
+        self
     }
 }
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let (desc, value) = self.to_str_pair();
-
-        if let Some(value) = value {
-            write!(f, "{}: {}", desc, value)
-        } else {
-            f.write_str(desc)
-        }
+        write!(f, "{}: {}", self.0.to_str(), self.1.to_str())
     }
 }
 
 #[cfg(feature = "std")]
 impl error::Error for Error {
     fn description(&self) -> &str {
-        self.to_str()
+        self.as_str()
+    }
+}
+
+/// Convert from PartialError
+impl<T> From<PartialError<T>> for Error {
+    fn from(_err: PartialError<T>) -> Self {
+        Error(ErrorOrigin::Memory, ErrorKind::PartialData)
+    }
+}
+
+#[repr(u8)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
+pub enum ErrorOrigin {
+    Pointer,
+
+    Memory,
+    MMU,
+    MemoryMap,
+
+    PhysicalMemory,
+    VirtualTranslate,
+    Cache,
+    TLBCache,
+    PageCache,
+    VirtualMemory,
+
+    Inventory,
+    Connector,
+    OSLayer,
+    FFI,
+
+    Other,
+}
+
+impl ErrorOrigin {
+    /// Returns a static string representing the type of error.
+    pub fn to_str(self) -> &'static str {
+        match self {
+            ErrorOrigin::Pointer => "pointer",
+
+            ErrorOrigin::Memory => "memory",
+            ErrorOrigin::MMU => "mmu",
+            ErrorOrigin::MemoryMap => "memory map",
+
+            ErrorOrigin::PhysicalMemory => "physical memory",
+            ErrorOrigin::VirtualTranslate => "virtual translate",
+            ErrorOrigin::Cache => "cache",
+            ErrorOrigin::TLBCache => "tlb cache",
+            ErrorOrigin::PageCache => "page cache",
+            ErrorOrigin::VirtualMemory => "virtual memory",
+
+            ErrorOrigin::Inventory => "inventory",
+            ErrorOrigin::Connector => "connector",
+            ErrorOrigin::OSLayer => "oslayer",
+            ErrorOrigin::FFI => "ffi",
+
+            ErrorOrigin::Other => "other",
+        }
+    }
+}
+
+#[repr(u8)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
+pub enum ErrorKind {
+    Unknown,
+    Uninitialized,
+    NotSupported,
+    NotImplemented,
+    Configuration,
+    Offset,
+    HTTP,
+
+    PartialData,
+
+    EntryNotFound,
+    OutOfBounds,
+    OutOfMemoryRange,
+    Encoding,
+
+    InvalidPath,
+    ReadOnly,
+    UnableToReadDir,
+    UnableToReadDirEntry,
+    UnableToReadFile,
+    UnableToCreateDirectory,
+    UnableToWriteFile,
+    UnableToSeekFile,
+
+    UnableToMapFile,
+    MemoryMapOutOfRange,
+
+    InvalidArchitecture,
+    InvalidMemorySize,
+    InvalidMemorySizeUnit,
+
+    UnableToLoadLibrary,
+    InvalidElfFile,
+    InvalidPeFile,
+    InvalidMachFile,
+    MemflowExportsNotFound,
+    VersionMismatch,
+    AlreadyExists,
+    PluginNotFound,
+    UnsupportedOptionalFeature,
+
+    ProcessNotFound,
+    InvalidProcessInfo,
+    ModuleNotFound,
+    ExportNotFound,
+    ImportNotFound,
+    SectionNotFound,
+}
+
+impl ErrorKind {
+    /// Returns a static string representing the type of error.
+    pub fn to_str(self) -> &'static str {
+        match self {
+            ErrorKind::Unknown => "unknown error",
+            ErrorKind::Uninitialized => "unitialized",
+            ErrorKind::NotSupported => "not supported",
+            ErrorKind::NotImplemented => "not implemented",
+            ErrorKind::Configuration => "configuration error",
+            ErrorKind::Offset => "offset error",
+            ErrorKind::HTTP => "http error",
+
+            ErrorKind::PartialData => "partial data",
+
+            ErrorKind::EntryNotFound => "entry not found",
+            ErrorKind::OutOfBounds => "out of bounds",
+            ErrorKind::OutOfMemoryRange => "out of memory range",
+            ErrorKind::Encoding => "encoding error",
+
+            ErrorKind::InvalidPath => "invalid path",
+            ErrorKind::ReadOnly => "trying to write to a read only resource",
+            ErrorKind::UnableToReadDir => "unable to read directory",
+            ErrorKind::UnableToReadDirEntry => "unable to read directory entry",
+            ErrorKind::UnableToReadFile => "unable to read file",
+            ErrorKind::UnableToCreateDirectory => "unable to create directory",
+            ErrorKind::UnableToWriteFile => "unable to write file",
+            ErrorKind::UnableToSeekFile => "unable to seek file",
+
+            ErrorKind::UnableToMapFile => "unable to map file",
+            ErrorKind::MemoryMapOutOfRange => "memory map is out of range",
+
+            ErrorKind::InvalidArchitecture => "invalid architecture",
+            ErrorKind::InvalidMemorySize => "invalid memory size",
+            ErrorKind::InvalidMemorySizeUnit => "invalid memory size units (or none)",
+
+            ErrorKind::UnableToLoadLibrary => "unable to load library",
+            ErrorKind::InvalidElfFile => "file is not a valid elf file",
+            ErrorKind::InvalidPeFile => "file is not a valid pe file",
+            ErrorKind::InvalidMachFile => "file is not a valid mach file",
+            ErrorKind::MemflowExportsNotFound => "file does not contain any memflow exports",
+            ErrorKind::VersionMismatch => "version mismatch",
+            ErrorKind::AlreadyExists => "already exists",
+            ErrorKind::PluginNotFound => "plugin not found",
+            ErrorKind::UnsupportedOptionalFeature => "unsupported optional feature",
+
+            ErrorKind::ProcessNotFound => "process not found",
+            ErrorKind::InvalidProcessInfo => "invalid process info",
+            ErrorKind::ModuleNotFound => "module not found",
+            ErrorKind::ExportNotFound => "export not found",
+            ErrorKind::ImportNotFound => "import not found",
+            ErrorKind::SectionNotFound => "section not found",
+        }
     }
 }
 
@@ -170,18 +256,18 @@ impl<T> From<Error> for PartialError<T> {
 }
 
 impl<T> PartialError<T> {
-    /// Returns a tuple representing the error description and its string value.
-    pub fn to_str_pair(&self) -> (&'static str, Option<&str>) {
+    /// Returns a static string representing the type of error.
+    pub fn as_str(&self) -> &'static str {
         match self {
-            PartialError::Error(e) => ("other error", Some(e.to_str_pair().0)),
-            PartialError::PartialVirtualRead(_) => ("partial virtual read error", None),
-            PartialError::PartialVirtualWrite => ("partial virtual write error", None),
+            PartialError::Error(e) => e.as_str(),
+            PartialError::PartialVirtualRead(_) => "partial virtual read",
+            PartialError::PartialVirtualWrite => "partial virtual write",
         }
     }
 
-    /// Returns a simple string representation of the error.
-    pub fn to_str(&self) -> &str {
-        self.to_str_pair().0
+    /// Returns a static string representing the type of error.
+    pub fn into_str(self) -> &'static str {
+        self.as_str()
     }
 }
 
@@ -195,12 +281,9 @@ impl<T> fmt::Debug for PartialError<T> {
 
 impl<T> fmt::Display for PartialError<T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let (desc, value) = self.to_str_pair();
-
-        if let Some(value) = value {
-            write!(f, "{}: {}", desc, value)
-        } else {
-            f.write_str(desc)
+        match self {
+            PartialError::Error(e) => f.write_str(e.as_str()),
+            _ => f.write_str(self.as_str()),
         }
     }
 }
@@ -208,7 +291,7 @@ impl<T> fmt::Display for PartialError<T> {
 #[cfg(feature = "std")]
 impl<T: fmt::Debug> error::Error for PartialError<T> {
     fn description(&self) -> &str {
-        self.to_str()
+        self.as_str()
     }
 }
 
@@ -239,7 +322,7 @@ impl<T> PartialResultExt<T> for PartialResult<T> {
     fn data(self) -> Result<T> {
         match self {
             Ok(data) => Ok(data),
-            Err(_) => Err(Error::Partial),
+            Err(_) => Err(Error(ErrorOrigin::Memory, ErrorKind::PartialData)),
         }
     }
 
@@ -248,7 +331,7 @@ impl<T> PartialResultExt<T> for PartialResult<T> {
             Ok(data) => Ok(data),
             Err(PartialError::PartialVirtualRead(data)) => Ok(data),
             //Err(Error::PartialVirtualWrite(data)) => Ok(data),
-            Err(_) => Err(Error::Partial),
+            Err(_) => Err(Error(ErrorOrigin::Memory, ErrorKind::PartialData)),
         }
     }
 
@@ -288,7 +371,7 @@ pub fn result_from_int_void(res: i32) -> Result<()> {
     if res == RES_INT_SUCCESS {
         Ok(())
     } else {
-        Err(Error::Other("C FFI Error"))
+        Err(Error(ErrorOrigin::FFI, ErrorKind::Unknown))
     }
 }
 
@@ -296,17 +379,23 @@ pub fn result_from_int<T>(res: i32, out: MaybeUninit<T>) -> Result<T> {
     if res == RES_INT_SUCCESS {
         Ok(unsafe { out.assume_init() })
     } else {
-        Err(Error::Other("C FFI Error"))
+        Err(Error(ErrorOrigin::FFI, ErrorKind::Unknown))
     }
 }
 
 pub fn part_result_from_int_void(res: i32) -> PartialResult<()> {
     match res {
         RES_INT_SUCCESS => Ok(()),
-        RES_INT_ERROR => Err(PartialError::Error(Error::Other("C FFI Error"))),
+        RES_INT_ERROR => Err(PartialError::Error(Error(
+            ErrorOrigin::FFI,
+            ErrorKind::Unknown,
+        ))),
         RES_INT_PARTIAL_READ_ERROR => Err(PartialError::PartialVirtualRead(())),
         RES_INT_PARTIAL_WRITE_ERROR => Err(PartialError::PartialVirtualWrite),
-        _ => Err(PartialError::Error(Error::Other("Unknown C FFI Error"))),
+        _ => Err(PartialError::Error(Error(
+            ErrorOrigin::FFI,
+            ErrorKind::Unknown,
+        ))),
     }
 }
 

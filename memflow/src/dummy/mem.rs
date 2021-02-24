@@ -1,6 +1,6 @@
 use crate::connector::MappedPhysicalMemory;
 use crate::derive::connector;
-use crate::error::{Error, Result};
+use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 use crate::mem::{
     MemoryMap, PhysicalMemory, PhysicalMemoryMetadata, PhysicalReadData, PhysicalWriteData,
 };
@@ -81,11 +81,14 @@ pub fn parse_size(args: &Args) -> Result<usize> {
                 }
             })
             .next()
-            .ok_or(Error::Other("Invalid memory size unit (or none)!"))?
+            .ok_or(Error(
+                ErrorOrigin::Connector,
+                ErrorKind::InvalidMemorySizeUnit,
+            ))?
     };
 
-    let size =
-        usize::from_str_radix(size, 16).map_err(|_| Error::Other("Failed to parse memory size"))?;
+    let size = usize::from_str_radix(size, 16)
+        .map_err(|_| Error(ErrorOrigin::Connector, ErrorKind::InvalidMemorySize))?;
 
     Ok(size * size_mul)
 }

@@ -2,7 +2,7 @@ use std::prelude::v1::*;
 
 use log::{debug, info};
 
-use memflow::error::{Error, PartialResultExt, Result};
+use memflow::error::{Error, ErrorKind, ErrorOrigin, PartialResultExt, Result};
 use memflow::mem::VirtualMemory;
 use memflow::types::{size, Address};
 
@@ -12,7 +12,8 @@ pub fn try_get_pe_size<T: VirtualMemory>(virt_mem: &mut T, probe_addr: Address) 
     let mut probe_buf = vec![0; size::kb(4)];
     virt_mem.virt_read_raw_into(probe_addr, &mut probe_buf)?;
 
-    let pe_probe = PeView::from_bytes(&probe_buf).map_err(|e| Error::OSExecutable(e.to_str()))?;
+    let pe_probe = PeView::from_bytes(&probe_buf)
+        .map_err(|err| Error(ErrorOrigin::OSLayer, ErrorKind::InvalidPeFile).log_trace(err))?;
 
     let opt_header = pe_probe.optional_header();
     let size_of_image = match opt_header {
@@ -26,7 +27,8 @@ pub fn try_get_pe_size<T: VirtualMemory>(virt_mem: &mut T, probe_addr: Address) 
         );
         Ok(size_of_image as usize)
     } else {
-        Err(Error::OSLayer("pe size_of_image is zero"))
+        Err(Error(ErrorOrigin::OSLayer, ErrorKind::InvalidPeFile)
+            .log_trace("pe size_of_image is zero"))
     }
 }
 
@@ -42,13 +44,23 @@ pub fn try_get_pe_image<T: VirtualMemory>(
 
 pub fn try_get_pe_name<T: VirtualMemory>(virt_mem: &mut T, probe_addr: Address) -> Result<String> {
     let image = try_get_pe_image(virt_mem, probe_addr)?;
-    let pe = PeView::from_bytes(&image).map_err(|e| Error::OSExecutable(e.to_str()))?;
+    let pe = PeView::from_bytes(&image)
+        .map_err(|err| Error(ErrorOrigin::OSLayer, ErrorKind::InvalidPeFile).log_trace(err))?;
     let name = pe
         .exports()
-        .map_err(|_| Error::OSLayer("unable to get exports"))?
+        .map_err(|_| {
+            Error(ErrorOrigin::OSLayer, ErrorKind::InvalidPeFile).log_trace("unable to get exports")
+        })?
         .dll_name()
-        .map_err(|_| Error::OSLayer("unable to get dll name"))?
-        .to_str()?;
+        .map_err(|_| {
+            Error(ErrorOrigin::OSLayer, ErrorKind::InvalidPeFile)
+                .log_trace("unable to get dll name")
+        })?
+        .to_str()
+        .map_err(|_| {
+            Error(ErrorOrigin::OSLayer, ErrorKind::Encoding)
+                .log_trace("unable to convert dll name string")
+        })?;
     info!("try_get_pe_name: found pe header for {}", name);
     Ok(name.to_string())
 }

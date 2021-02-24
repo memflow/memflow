@@ -3,7 +3,7 @@ use crate::kernel::StartBlock;
 use std::convert::TryInto;
 
 use memflow::architecture::x86::x32_pae;
-use memflow::error::{Error, Result};
+use memflow::error::{Error, ErrorKind, ErrorOrigin, Result};
 use memflow::iter::PageChunks;
 use memflow::types::Address;
 
@@ -27,7 +27,8 @@ pub fn find(mem: &[u8]) -> Result<StartBlock> {
             kernel_hint: 0.into(),
             dtb: a,
         })
-        .ok_or(Error::OSLayer(
-            "unable to find x86_pae dtb in lowstub < 16M",
-        ))
+        .ok_or_else(|| {
+            Error(ErrorOrigin::OSLayer, ErrorKind::EntryNotFound)
+                .log_trace("unable to find x86_pae dtb in lowstub < 16M")
+        })
 }

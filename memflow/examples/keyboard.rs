@@ -9,9 +9,10 @@ fn main() -> Result<()> {
     // create connector + os
     let os = Inventory::build_conn_os_combo(&connector, &conn_args, &os, &os_args)?;
     if !os.has_keyboard() {
-        return Err(Error::Other(
-            "keyboard feature is not implemented for the given os plugin",
-        ));
+        return Err(
+            Error(ErrorOrigin::Other, ErrorKind::UnsupportedOptionalFeature)
+                .log_error("keyboard feature is not implemented for the given os plugin"),
+        );
     }
 
     let mut keyboard = os.into_keyboard()?;
@@ -77,21 +78,23 @@ fn parse_args() -> Result<(String, Args, String, Args)> {
     Ok((
         matches
             .value_of("connector")
-            .ok_or(Error::Other("failed to parse connector"))?
+            .ok_or_else(|| {
+                Error(ErrorOrigin::Other, ErrorKind::Configuration)
+                    .log_error("failed to parse connector")
+            })?
             .into(),
-        Args::parse(
-            matches
-                .value_of("conn-args")
-                .ok_or(Error::Other("failed to parse connector args"))?,
-        )?,
+        Args::parse(matches.value_of("conn-args").ok_or_else(|| {
+            Error(ErrorOrigin::Other, ErrorKind::Configuration)
+                .log_error("failed to parse connector args")
+        })?)?,
         matches
             .value_of("os")
-            .ok_or(Error::Other("failed to parse os"))?
+            .ok_or_else(|| {
+                Error(ErrorOrigin::Other, ErrorKind::Configuration).log_error("failed to parse os")
+            })?
             .into(),
-        Args::parse(
-            matches
-                .value_of("os-args")
-                .ok_or(Error::Other("failed to parse os args"))?,
-        )?,
+        Args::parse(matches.value_of("os-args").ok_or_else(|| {
+            Error(ErrorOrigin::Other, ErrorKind::Configuration).log_error("failed to parse os args")
+        })?)?,
     ))
 }

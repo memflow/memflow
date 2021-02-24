@@ -6,7 +6,7 @@ use crate::kernel::StartBlock;
 use log::{debug, info};
 
 use memflow::dataview::Pod;
-use memflow::error::{Error, PartialResultExt, Result};
+use memflow::error::{Error, ErrorKind, ErrorOrigin, PartialResultExt, Result};
 use memflow::mem::VirtualMemory;
 use memflow::types::{size, Address};
 
@@ -57,7 +57,6 @@ pub fn find<T: VirtualMemory>(
         }
     }
 
-    Err(Error::OSLayer(
-        "find_x86(): unable to locate ntoskrnl.exe in high mem",
-    ))
+    Err(Error(ErrorOrigin::OSLayer, ErrorKind::ProcessNotFound)
+        .log_trace("find_x86(): unable to locate ntoskrnl.exe in high mem"))
 }

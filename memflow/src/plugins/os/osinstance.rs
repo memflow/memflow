@@ -279,10 +279,10 @@ impl<'a> OSKeyboardInner<'a> for OSInstance {
     type IntoKeyboardType = ArcPluginKeyboard;
 
     fn keyboard(&'a mut self) -> Result<Self::KeyboardType> {
-        let kbd = self
-            .vtable
-            .keyboard
-            .ok_or(Error::Connector("unsupported optional feature"))?;
+        let kbd = self.vtable.keyboard.ok_or(Error(
+            ErrorOrigin::OSLayer,
+            ErrorKind::UnsupportedOptionalFeature,
+        ))?;
         let mut out = MUPluginKeyboard::uninit();
         // Shorten the lifetime of instance
         let instance = unsafe { (self.instance as *mut c_void).as_mut() }.unwrap();
@@ -291,10 +291,10 @@ impl<'a> OSKeyboardInner<'a> for OSInstance {
     }
 
     fn into_keyboard(mut self) -> Result<Self::IntoKeyboardType> {
-        let kbd = self
-            .vtable
-            .keyboard
-            .ok_or(Error::Connector("unsupported optional feature"))?;
+        let kbd = self.vtable.keyboard.ok_or(Error(
+            ErrorOrigin::OSLayer,
+            ErrorKind::UnsupportedOptionalFeature,
+        ))?;
         let mut out = MUArcPluginKeyboard::uninit();
         let res = (kbd.into_keyboard)(self.instance, self.library.take(), &mut out);
         std::mem::forget(self);

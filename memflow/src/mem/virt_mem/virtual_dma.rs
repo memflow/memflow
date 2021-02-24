@@ -2,7 +2,7 @@ use std::prelude::v1::*;
 
 use super::{VirtualReadData, VirtualWriteData};
 use crate::architecture::{ArchitectureObj, ScopedVirtualTranslate};
-use crate::error::{Error, PartialError, PartialResult, Result};
+use crate::error::{Error, ErrorKind, ErrorOrigin, PartialError, PartialResult, Result};
 use crate::iter::FnExtend;
 use crate::mem::{
     virt_translate::{DirectTranslate, VirtualTranslate},
@@ -131,7 +131,10 @@ impl<T: PhysicalMemory, V: VirtualTranslate, D: ScopedVirtualTranslate> VirtualD
         match self.proc_arch.bits() {
             64 => self.virt_read_addr64(addr),
             32 => self.virt_read_addr32(addr),
-            _ => Err(PartialError::Error(Error::InvalidArchitecture)),
+            _ => Err(PartialError::Error(Error(
+                ErrorOrigin::VirtualMemory,
+                ErrorKind::InvalidArchitecture,
+            ))),
         }
     }
 

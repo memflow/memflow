@@ -1,5 +1,5 @@
 use super::{Args, OptionMut};
-use crate::error::{AsIntResult, Error};
+use crate::error::{AsIntResult, Error, ErrorKind, ErrorOrigin};
 use crate::types::ReprCStr;
 
 use std::mem::MaybeUninit;
@@ -22,10 +22,10 @@ pub fn find_export_by_prefix(
 ) -> crate::error::Result<Vec<String>> {
     use goblin::elf::Elf;
 
-    let buffer =
-        std::fs::read(path.as_ref()).map_err(|_| Error::Connector("file could not be read"))?;
+    let buffer = std::fs::read(path.as_ref())
+        .map_err(|err| Error(ErrorOrigin::Inventory, ErrorKind::UnableToReadFile).log_debug(err))?;
     let elf = Elf::parse(buffer.as_slice())
-        .map_err(|_| Error::Connector("file is not a valid elf file"))?;
+        .map_err(|err| Error(ErrorOrigin::Inventory, ErrorKind::InvalidElfFile).log_debug(err))?;
     Ok(elf
         .syms
         .iter()
@@ -49,10 +49,10 @@ pub fn find_export_by_prefix(
 ) -> crate::error::Result<Vec<String>> {
     use goblin::pe::PE;
 
-    let buffer =
-        std::fs::read(path.as_ref()).map_err(|_| Error::Connector("file could not be read"))?;
+    let buffer = std::fs::read(path.as_ref())
+        .map_err(|err| Error(ErrorOrigin::Inventory, ErrorKind::UnableToReadFile).log_debug(err))?;
     let pe = PE::parse(buffer.as_slice())
-        .map_err(|_| Error::Connector("file is not a valid PE file"))?;
+        .map_err(|err| Error(ErrorOrigin::Inventory, ErrorKind::InvalidPeFile).log_debug(err))?;
     Ok(pe
         .exports
         .iter()
@@ -74,23 +74,29 @@ pub fn find_export_by_prefix(
 ) -> crate::error::Result<Vec<String>> {
     use goblin::mach::Mach;
 
-    let buffer =
-        std::fs::read(path.as_ref()).map_err(|_| Error::Connector("file could not be read"))?;
+    let buffer = std::fs::read(path.as_ref())
+        .map_err(|err| Error(ErrorOrigin::Inventory, ErrorKind::UnableToReadFile).log_debug(err))?;
     let mach = Mach::parse(buffer.as_slice())
-        .map_err(|_| Error::Connector("file is not a valid Mach file"))?;
+        .map_err(|err| Error(ErrorOrigin::Inventory, ErrorKind::InvalidMachFile).log_debug(err))?;
     let macho = match mach {
         Mach::Binary(mach) => mach,
         Mach::Fat(mach) => (0..mach.narches)
             .filter_map(|i| mach.get(i).ok())
             .next()
-            .ok_or(Error::Other("failed to find valid MachO header!"))?,
+            .ok_or_else(|| {
+                Error(ErrorOrigin::Inventory, ErrorKind::InvalidMachFile)
+                    .log_debug("failed to find valid MachO header!")
+            })?,
     };
 
     // macho symbols are prefixed with `_` in the object file.
     let macho_prefix = "_".to_owned() + prefix;
     Ok(macho
         .symbols
-        .ok_or(Error::Other("failed to parse MachO symbols!"))?
+        .ok_or_else(|| {
+            Error(ErrorOrigin::Inventory, ErrorKind::InvalidMachFile)
+                .log_debug("failed to parse MachO symbols!")
+        })?
         .iter()
         .filter_map(|s| s.ok())
         .filter_map(|(name, _)| {

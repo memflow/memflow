@@ -6,7 +6,7 @@ use log::{error, Level};
 
 use memflow::plugins::*;
 
-use memflow_win32::prelude::{Kernel, Win32OffsetFile};
+use memflow_win32::prelude::{Win32Kernel, Win32OffsetFile};
 
 pub fn main() {
     let matches = App::new("dump offsets example")
@@ -50,15 +50,16 @@ pub fn main() {
         .unwrap();
 
     // create inventory + connector
-    let inventory = unsafe { Inventory::scan() };
+    let inventory = Inventory::scan();
     let connector = inventory
         .create_connector(
             matches.value_of("connector").unwrap(),
+            None,
             &Args::parse(matches.value_of("args").unwrap()).unwrap(),
         )
         .unwrap();
 
-    let kernel = Kernel::builder(connector)
+    let kernel = Win32Kernel::builder(connector)
         .build_default_caches()
         .build()
         .unwrap();
@@ -71,7 +72,7 @@ pub fn main() {
                 pdb_file_name: guid.file_name.as_str().into(),
                 pdb_guid: guid.guid.as_str().into(),
 
-                arch: kernel.kernel_info.start_block.arch.into(),
+                arch: kernel.kernel_info.os_info.arch.into(),
 
                 nt_major_version: winver.major_version(),
                 nt_minor_version: winver.minor_version(),
@@ -84,7 +85,7 @@ pub fn main() {
                 pdb_file_name: Default::default(),
                 pdb_guid: Default::default(),
 
-                arch: kernel.kernel_info.start_block.arch.into(),
+                arch: kernel.kernel_info.os_info.arch.into(),
 
                 nt_major_version: winver.major_version(),
                 nt_minor_version: winver.minor_version(),

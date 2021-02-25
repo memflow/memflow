@@ -6,9 +6,10 @@ use super::symstore::SymbolStore;
 use super::offset_table::Win32OffsetFile;
 use super::{Win32Offsets, Win32OffsetsArchitecture};
 
-use crate::error::{Error, Result};
 use crate::kernel::{Win32GUID, Win32Version};
-use crate::win32::KernelInfo;
+use crate::win32::Win32KernelInfo;
+
+use memflow::error::{Error, ErrorKind, ErrorOrigin, Result};
 
 #[repr(align(16))]
 struct Align16<T>(pub T);
@@ -50,9 +51,8 @@ impl Win32OffsetBuilder {
 
     pub fn build(self) -> Result<Win32Offsets> {
         if self.guid.is_none() && self.winver.is_none() {
-            return Err(Error::Other(
-                "building win32 offsets requires either a guid or winver",
-            ));
+            return Err(Error(ErrorOrigin::OSLayer, ErrorKind::Configuration)
+                .log_error("building win32 offsets requires either a guid or winver"));
         }
 
         // try to build via symbol store
@@ -65,7 +65,8 @@ impl Win32OffsetBuilder {
             return Ok(offs);
         }
 
-        Err(Error::Other("not found"))
+        Err(Error(ErrorOrigin::OSLayer, ErrorKind::Configuration)
+            .log_error("no valid offset configuration found while building win32"))
     }
 
     #[cfg(feature = "embed_offsets")]
@@ -120,14 +121,18 @@ impl Win32OffsetBuilder {
             }
         }
 
-        closest_match.ok_or(Error::Other("not found"))
+        closest_match.ok_or_else(|| {
+            Error(ErrorOrigin::OSLayer, ErrorKind::Configuration)
+                .log_error("no valid offset configuration found while building win32")
+        })
     }
 
     #[cfg(not(feature = "embed_offsets"))]
     fn build_with_offset_list(&self) -> Result<Win32Offsets> {
-        Err(Error::Other(
-            "embed offsets feature is deactivated on compilation",
-        ))
+        Err(
+            Error(ErrorOrigin::OSLayer, ErrorKind::UnsupportedOptionalFeature)
+                .log_error("embed offsets feature is deactivated on compilation"),
+        )
     }
 
     #[cfg(feature = "symstore")]
@@ -137,18 +142,21 @@ impl Win32OffsetBuilder {
                 let pdb = store.load(self.guid.as_ref().unwrap())?;
                 Win32Offsets::from_pdb_slice(&pdb[..])
             } else {
-                Err(Error::Other("symbol store can only be used with a guid"))
+                Err(Error(ErrorOrigin::OSLayer, ErrorKind::Configuration)
+                    .log_error("symbol store can only be used with a guid"))
             }
         } else {
-            Err(Error::Other("symbol store is disabled"))
+            Err(Error(ErrorOrigin::OSLayer, ErrorKind::Configuration)
+                .log_error("symbol store is disabled"))
         }
     }
 
     #[cfg(not(feature = "symstore"))]
     fn build_with_symbol_store(&self) -> Result<Win32Offsets> {
-        Err(Error::Other(
-            "symbol store is deactivated via a compilation feature",
-        ))
+        Err(
+            Error(ErrorOrigin::OSLayer, ErrorKind::UnsupportedOptionalFeature)
+                .log_error("symbol store is deactivated via a compilation feature"),
+        )
     }
 
     #[cfg(feature = "symstore")]
@@ -178,7 +186,7 @@ impl Win32OffsetBuilder {
         self
     }
 
-    pub fn kernel_info(mut self, kernel_info: &KernelInfo) -> Self {
+    pub fn kernel_info(mut self, kernel_info: &Win32KernelInfo) -> Self {
         if self.guid.is_none() {
             self.guid = kernel_info.kernel_guid.clone();
         }
@@ -186,7 +194,7 @@ impl Win32OffsetBuilder {
             self.winver = Some(kernel_info.kernel_winver);
         }
         if self.arch.is_none() {
-            self.arch = Some(kernel_info.start_block.arch.into());
+            self.arch = Some(kernel_info.os_info.arch.into());
         }
         self
     }

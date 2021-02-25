@@ -2,12 +2,17 @@ pub mod x32;
 pub mod x32_pae;
 pub mod x64;
 
-use super::{mmu::ArchMMUSpec, Architecture, ArchitectureObj, Endianess, ScopedVirtualTranslate};
+use super::{
+    mmu::ArchMMUSpec, Architecture, ArchitectureIdent, ArchitectureObj, Endianess,
+    ScopedVirtualTranslate,
+};
 
-use crate::error::{Error, Result};
+use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 use crate::iter::SplitAtIndex;
 use crate::mem::PhysicalMemory;
 use crate::types::{Address, PhysicalAddress};
+
+use std::ptr;
 
 pub struct X86Architecture {
     /// Defines how many bits does the native word size have
@@ -35,6 +40,13 @@ impl Architecture for X86Architecture {
 
     fn address_space_bits(&self) -> u8 {
         self.mmu.def.address_space_bits
+    }
+
+    fn ident(&self) -> ArchitectureIdent {
+        ArchitectureIdent::X86(
+            self.bits,
+            ptr::eq(self as *const _, &x32_pae::ARCH_SPEC as *const _),
+        )
     }
 }
 
@@ -93,8 +105,9 @@ fn underlying_arch(arch: ArchitectureObj) -> Option<&'static X86Architecture> {
     }
 }
 
-pub fn new_translator(dtb: Address, arch: ArchitectureObj) -> Result<impl ScopedVirtualTranslate> {
-    let arch = underlying_arch(arch).ok_or(Error::InvalidArchitecture)?;
+pub fn new_translator(dtb: Address, arch: ArchitectureObj) -> Result<X86ScopedVirtualTranslate> {
+    let arch =
+        underlying_arch(arch).ok_or(Error(ErrorOrigin::MMU, ErrorKind::InvalidArchitecture))?;
     Ok(X86ScopedVirtualTranslate::new(arch, dtb))
 }
 

@@ -1,10 +1,9 @@
 use std::prelude::v1::*;
 
-use crate::error::{Error, Result};
-
 use std::convert::TryInto;
 
 use memflow::architecture::{ArchitectureObj, Endianess};
+use memflow::error::{Error, ErrorKind, ErrorOrigin, Result};
 use memflow::mem::VirtualMemory;
 use memflow::types::Address;
 
@@ -44,7 +43,8 @@ impl<'a, T: VirtualMemory> VirtualReadUnicodeString for T {
         let mut length = 0u16;
         self.virt_read_into(addr, &mut length)?;
         if length == 0 {
-            return Err(Error::Unicode("unable to read unicode string length"));
+            return Err(Error(ErrorOrigin::OSLayer, ErrorKind::Encoding)
+                .log_debug("unable to read unicode string length (length is zero)"));
         }
 
         // TODO: chek if length exceeds limit
@@ -53,18 +53,18 @@ impl<'a, T: VirtualMemory> VirtualReadUnicodeString for T {
             64 => self.virt_read_addr64(addr + 8)?,
             32 => self.virt_read_addr32(addr + 4)?,
             _ => {
-                return Err(Error::InvalidArchitecture);
+                return Err(Error(ErrorOrigin::OSLayer, ErrorKind::InvalidArchitecture));
             }
         };
         if buffer.is_null() {
-            return Err(Error::Unicode("unable to read unicode string length"));
+            return Err(Error(ErrorOrigin::OSLayer, ErrorKind::Encoding)
+                .log_debug("unable to read unicode string buffer"));
         }
 
         // check if buffer length is mod 2 (utf-16)
         if length % 2 != 0 {
-            return Err(Error::Unicode(
-                "unicode string length is not a multiple of two",
-            ));
+            return Err(Error(ErrorOrigin::OSLayer, ErrorKind::Encoding)
+                .log_debug("unicode string length is not a multiple of two"));
         }
 
         // read buffer
@@ -77,7 +77,11 @@ impl<'a, T: VirtualMemory> VirtualReadUnicodeString for T {
 
         let content16 = content
             .chunks_exact(2)
-            .map(|b| b[0..2].try_into().map_err(|_| Error::Bounds))
+            .map(|b| {
+                b[0..2]
+                    .try_into()
+                    .map_err(|_| Error(ErrorOrigin::OSLayer, ErrorKind::Encoding))
+            })
             .filter_map(Result::ok)
             .map(|b| match proc_arch.endianess() {
                 Endianess::LittleEndian => u16::from_le_bytes(b),
@@ -85,7 +89,7 @@ impl<'a, T: VirtualMemory> VirtualReadUnicodeString for T {
             })
             .collect::<Vec<u16>>();
         Ok(U16CString::from_vec_with_nul(content16)
-            .map_err(|_| Error::Encoding)?
+            .map_err(|_| Error(ErrorOrigin::OSLayer, ErrorKind::Encoding))?
             .to_string_lossy())
     }
 }

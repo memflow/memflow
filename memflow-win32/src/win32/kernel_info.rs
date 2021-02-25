@@ -1,22 +1,21 @@
-use crate::error::Result;
 use crate::kernel::{self, StartBlock};
 use crate::kernel::{Win32GUID, Win32Version};
 
 use log::{info, warn};
 
-use memflow::architecture::ArchitectureObj;
+use memflow::architecture::ArchitectureIdent;
+use memflow::error::Result;
 use memflow::mem::{DirectTranslate, PhysicalMemory, VirtualDMA};
+use memflow::os::OSInfo;
 use memflow::types::Address;
 
 use super::Win32VirtualTranslate;
 
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize))]
-pub struct KernelInfo {
-    pub start_block: StartBlock,
-
-    pub kernel_base: Address,
-    pub kernel_size: usize,
+pub struct Win32KernelInfo {
+    pub os_info: OSInfo,
+    pub dtb: Address,
 
     pub kernel_guid: Option<Win32GUID>,
     pub kernel_winver: Win32Version,
@@ -24,7 +23,7 @@ pub struct KernelInfo {
     pub eprocess_base: Address,
 }
 
-impl KernelInfo {
+impl Win32KernelInfo {
     pub fn scanner<T: PhysicalMemory>(mem: T) -> KernelInfoScanner<T> {
         KernelInfoScanner::new(mem)
     }
@@ -32,7 +31,7 @@ impl KernelInfo {
 
 pub struct KernelInfoScanner<T> {
     mem: T,
-    arch: Option<ArchitectureObj>,
+    arch: Option<ArchitectureIdent>,
     kernel_hint: Option<Address>,
     dtb: Option<Address>,
 }
@@ -47,7 +46,7 @@ impl<T: PhysicalMemory> KernelInfoScanner<T> {
         }
     }
 
-    pub fn scan(mut self) -> Result<KernelInfo> {
+    pub fn scan(mut self) -> Result<Win32KernelInfo> {
         let start_block = if let (Some(arch), Some(dtb), Some(kernel_hint)) =
             (self.arch, self.dtb, self.kernel_hint)
         {
@@ -72,7 +71,7 @@ impl<T: PhysicalMemory> KernelInfoScanner<T> {
         })
     }
 
-    fn scan_block(&mut self, start_block: StartBlock) -> Result<KernelInfo> {
+    fn scan_block(&mut self, start_block: StartBlock) -> Result<Win32KernelInfo> {
         info!(
             "arch={:?} kernel_hint={:x} dtb={:x}",
             start_block.arch, start_block.kernel_hint, start_block.dtb
@@ -87,14 +86,14 @@ impl<T: PhysicalMemory> KernelInfoScanner<T> {
         );
 
         // find ntoskrnl.exe base
-        let (kernel_base, kernel_size) = kernel::ntos::find(&mut virt_mem, &start_block)?;
-        info!("kernel_base={} kernel_size={}", kernel_base, kernel_size);
+        let (base, size) = kernel::ntos::find(&mut virt_mem, &start_block)?;
+        info!("base={} size={}", base, size);
 
         // get ntoskrnl.exe guid
-        let kernel_guid = kernel::ntos::find_guid(&mut virt_mem, kernel_base).ok();
+        let kernel_guid = kernel::ntos::find_guid(&mut virt_mem, base).ok();
         info!("kernel_guid={:?}", kernel_guid);
 
-        let kernel_winver = kernel::ntos::find_winver(&mut virt_mem, kernel_base).ok();
+        let kernel_winver = kernel::ntos::find_winver(&mut virt_mem, base).ok();
 
         if kernel_winver.is_none() {
             warn!("Failed to retrieve kernel version! Some features may be disabled.");
@@ -105,7 +104,7 @@ impl<T: PhysicalMemory> KernelInfoScanner<T> {
         info!("kernel_winver={:?}", kernel_winver);
 
         // find eprocess base
-        let eprocess_base = kernel::sysproc::find(&mut virt_mem, &start_block, kernel_base)?;
+        let eprocess_base = kernel::sysproc::find(&mut virt_mem, &start_block, base)?;
         info!("eprocess_base={:x}", eprocess_base);
 
         // start_block only contains the winload's dtb which might
@@ -113,11 +112,15 @@ impl<T: PhysicalMemory> KernelInfoScanner<T> {
         // see Kernel::new() for more information.
         info!("start_block.dtb={:x}", start_block.dtb);
 
-        Ok(KernelInfo {
-            start_block,
+        let StartBlock {
+            arch,
+            kernel_hint: _,
+            dtb,
+        } = start_block;
 
-            kernel_base,
-            kernel_size,
+        Ok(Win32KernelInfo {
+            os_info: OSInfo { base, size, arch },
+            dtb,
 
             kernel_guid,
             kernel_winver,
@@ -126,7 +129,7 @@ impl<T: PhysicalMemory> KernelInfoScanner<T> {
         })
     }
 
-    pub fn arch(mut self, arch: ArchitectureObj) -> Self {
+    pub fn arch(mut self, arch: ArchitectureIdent) -> Self {
         self.arch = Some(arch);
         self
     }

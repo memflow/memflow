@@ -49,7 +49,7 @@ impl fmt::Display for Args {
         let mut result = Vec::new();
 
         if let Some(default) = self.get_default() {
-            result.push(default.clone());
+            result.push(default.to_string());
         }
 
         result.extend(
@@ -98,7 +98,7 @@ impl Args {
             let kvsplit = kv.split('=').collect::<Vec<_>>();
             if kvsplit.len() == 2 {
                 map.insert(kvsplit[0].to_string(), kvsplit[1].to_string());
-            } else if i == 0 && kv != "" {
+            } else if i == 0 && !kv.is_empty() {
                 map.insert("default".to_string(), kv.to_string());
             }
         }
@@ -128,15 +128,15 @@ impl Args {
 
     /// Tries to retrieve an entry from the options map.
     /// If the entry was not found this function returns a `None` value.
-    pub fn get(&self, key: &str) -> Option<&String> {
-        self.map.get(key)
+    pub fn get(&self, key: &str) -> Option<&str> {
+        self.map.get(key).map(|s| s.as_str())
     }
 
     /// Tries to retrieve the default entry from the options map.
     /// If the entry was not found this function returns a `None` value.
     ///
     /// This function is a convenience wrapper for `args.get("default")`.
-    pub fn get_default(&self) -> Option<&String> {
+    pub fn get_default(&self) -> Option<&str> {
         self.get("default")
     }
 }

@@ -110,7 +110,7 @@ impl Address {
     /// ```
     pub fn bit_mask<T: TryInto<u64>>(bits: ops::Range<T>) -> Address {
         ((0xffff_ffff_ffff_ffff >> (63 - bits.end.try_into().ok().unwrap()))
-            & !(((1 as u64) << bits.start.try_into().ok().unwrap()) - 1))
+            & !((1_u64 << bits.start.try_into().ok().unwrap()) - 1))
             .into()
     }
 
@@ -125,7 +125,7 @@ impl Address {
     /// println!("mask: {}", Address::bit_mask(0..11));
     /// ```
     pub const fn bit_mask_u8(bits: ops::Range<u8>) -> Address {
-        Address((0xffff_ffff_ffff_ffff >> (63 - bits.end)) & !(((1 as u64) << bits.start) - 1))
+        Address((0xffff_ffff_ffff_ffff >> (63 - bits.end)) & !(((1_u64) << bits.start) - 1))
     }
 
     /// Checks wether the address is zero or not.
@@ -281,7 +281,7 @@ impl Address {
     /// assert_eq!(bit, true);
     /// ```
     pub const fn bit_at(self, idx: u8) -> bool {
-        (self.0 & ((1 as u64) << idx)) != 0
+        (self.0 & (1_u64 << idx)) != 0
     }
 
     /// Extracts the given range of bits by applying a corresponding bitmask.

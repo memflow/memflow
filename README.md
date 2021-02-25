@@ -118,13 +118,8 @@ memflow-win32 is tested on the latest Windows 10 versions all the way down to Wi
 
 ## Connectors
 
-<<<<<<< HEAD
 All examples provided in this repository are using the `plugins` inventory to
 dynamically load a connector at runtime. When using the library programatically it is possible to just statically link a connector into the code.
-=======
-All examples provided in this repository are using the inventory to
-dynamically load a connector at runtime. When using the library programmatically it is possible to just statically link a connector into the code.
->>>>>>> dev
 
 Some connectors also require different permissions. Please refer to the individual connector repositories for more information.
 

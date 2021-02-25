@@ -33,7 +33,7 @@ use super::{
     page_cache::PageCache, page_cache::PageValidity, CacheValidator, DefaultCacheValidator,
 };
 use crate::architecture::ArchitectureObj;
-use crate::error::Result;
+use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 use crate::iter::PageChunks;
 use crate::mem::phys_mem::{
     PhysicalMemory, PhysicalMemoryMetadata, PhysicalReadData, PhysicalWriteData,
@@ -106,7 +106,7 @@ impl<'a, T: PhysicalMemory, Q: CacheValidator> CachedMemoryAccess<'a, T, Q> {
     ///     // retrieve ownership of mem and return it back
     ///     cache.destroy()
     /// }
-    /// # use memflow::mem::dummy::DummyMemory;
+    /// # use memflow::dummy::DummyMemory;
     /// # use memflow::types::size;
     /// # let mut mem = DummyMemory::new(size::mb(4));
     /// # mem.phys_write(0.into(), &MAGIC_VALUE).unwrap();
@@ -203,7 +203,7 @@ impl<T: PhysicalMemory> CachedMemoryAccessBuilder<T, DefaultCacheValidator> {
     ///     let value: u64 = mem.phys_read(0.into()).unwrap();
     ///     assert_eq!(value, MAGIC_VALUE);
     /// }
-    /// # use memflow::mem::dummy::DummyMemory;
+    /// # use memflow::dummy::DummyMemory;
     /// # use memflow::types::size;
     /// # let mut mem = DummyMemory::new(size::mb(4));
     /// # mem.phys_write(0.into(), &0xffaaffaau64).unwrap();
@@ -224,7 +224,7 @@ impl<T: PhysicalMemory> CachedMemoryAccessBuilder<T, DefaultCacheValidator> {
     ///         .unwrap()
     /// }
     ///
-    /// # use memflow::mem::dummy::DummyMemory;
+    /// # use memflow::dummy::DummyMemory;
     /// # use memflow::types::size;
     /// # let mut mem = DummyMemory::new(size::mb(4));
     /// # mem.phys_write(0.into(), &MAGIC_VALUE).unwrap();
@@ -258,7 +258,10 @@ impl<T: PhysicalMemory, Q: CacheValidator> CachedMemoryAccessBuilder<T, Q> {
         Ok(CachedMemoryAccess::new(
             self.mem,
             PageCache::with_page_size(
-                self.page_size.ok_or("page_size must be initialized")?,
+                self.page_size.ok_or_else(|| {
+                    Error(ErrorOrigin::Cache, ErrorKind::Uninitialized)
+                        .log_error("page_size must be initialized")
+                })?,
                 self.cache_size,
                 self.page_type_mask,
                 self.validator,
@@ -288,7 +291,7 @@ impl<T: PhysicalMemory, Q: CacheValidator> CachedMemoryAccessBuilder<T, Q> {
     ///         .build()
     ///         .unwrap();
     /// }
-    /// # use memflow::mem::dummy::DummyMemory;
+    /// # use memflow::dummy::DummyMemory;
     /// # use memflow::types::size;
     /// # let mut mem = DummyMemory::new(size::mb(4));
     /// # build(mem);
@@ -323,7 +326,7 @@ impl<T: PhysicalMemory, Q: CacheValidator> CachedMemoryAccessBuilder<T, Q> {
     ///         .build()
     ///         .unwrap();
     /// }
-    /// # use memflow::mem::dummy::DummyMemory;
+    /// # use memflow::dummy::DummyMemory;
     /// # let mut mem = DummyMemory::new(size::mb(4));
     /// # build(mem);
     /// ```
@@ -352,13 +355,13 @@ impl<T: PhysicalMemory, Q: CacheValidator> CachedMemoryAccessBuilder<T, Q> {
     ///         .build()
     ///         .unwrap();
     /// }
-    /// # use memflow::mem::dummy::DummyMemory;
+    /// # use memflow::dummy::DummyMemory;
     /// # use memflow::types::size;
     /// # let mut mem = DummyMemory::new(size::mb(4));
     /// # build(mem);
     /// ```
-    pub fn arch(mut self, arch: ArchitectureObj) -> Self {
-        self.page_size = Some(arch.page_size());
+    pub fn arch(mut self, arch: impl Into<ArchitectureObj>) -> Self {
+        self.page_size = Some(arch.into().page_size());
         self
     }
 
@@ -385,7 +388,7 @@ impl<T: PhysicalMemory, Q: CacheValidator> CachedMemoryAccessBuilder<T, Q> {
     ///         .build()
     ///         .unwrap();
     /// }
-    /// # use memflow::mem::dummy::DummyMemory;
+    /// # use memflow::dummy::DummyMemory;
     /// # let mut mem = DummyMemory::new(size::mb(4));
     /// # build(mem);
     /// ```
@@ -418,7 +421,7 @@ impl<T: PhysicalMemory, Q: CacheValidator> CachedMemoryAccessBuilder<T, Q> {
     ///         .build()
     ///         .unwrap();
     /// }
-    /// # use memflow::mem::dummy::DummyMemory;
+    /// # use memflow::dummy::DummyMemory;
     /// # use memflow::types::size;
     /// # let mut mem = DummyMemory::new(size::mb(4));
     /// # build(mem);

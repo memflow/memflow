@@ -1,4 +1,4 @@
-use crate::error::{Error, Result};
+use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 use crate::mem::MemoryMap;
 use crate::types::Address;
 use memmap::{Mmap, MmapMut, MmapOptions};
@@ -23,9 +23,9 @@ impl<'a> AsRef<MemoryMap<&'a [u8]>> for MMAPInfo<'a> {
 impl<'a> MMAPInfo<'a> {
     pub fn try_with_filemap(file: File, map: MemoryMap<(Address, usize)>) -> Result<Self> {
         let file_map = unsafe {
-            MmapOptions::new()
-                .map(&file)
-                .map_err(|_| Error::Connector("unable to map file"))?
+            MmapOptions::new().map(&file).map_err(|err| {
+                Error(ErrorOrigin::Connector, ErrorKind::UnableToMapFile).log_error(err)
+            })?
         };
 
         Self::try_with_bufmap(file_map, map)
@@ -39,7 +39,10 @@ impl<'a> MMAPInfo<'a> {
 
         for (base, (output_base, size)) in map.into_iter() {
             if output_base.as_usize() >= buf_len {
-                return Err(Error::Connector("Memory map is out of range"));
+                return Err(Error(
+                    ErrorOrigin::Connector,
+                    ErrorKind::MemoryMapOutOfRange,
+                ));
             }
 
             let output_end = std::cmp::min(output_base.as_usize() + size, buf_len);
@@ -79,9 +82,9 @@ impl<'a> AsRef<MemoryMap<&'a mut [u8]>> for MMAPInfoMut<'a> {
 impl<'a> MMAPInfoMut<'a> {
     pub fn try_with_filemap_mut(file: File, map: MemoryMap<(Address, usize)>) -> Result<Self> {
         let file_map = unsafe {
-            MmapOptions::new()
-                .map_mut(&file)
-                .map_err(|_| Error::Connector("unable to map file"))?
+            MmapOptions::new().map_mut(&file).map_err(|err| {
+                Error(ErrorOrigin::Connector, ErrorKind::UnableToMapFile).log_error(err)
+            })?
         };
 
         Self::try_with_bufmap_mut(file_map, map)
@@ -95,7 +98,10 @@ impl<'a> MMAPInfoMut<'a> {
 
         for (base, (output_base, size)) in map.into_iter() {
             if output_base.as_usize() >= buf_len {
-                return Err(Error::Connector("Memory map is out of range"));
+                return Err(Error(
+                    ErrorOrigin::Connector,
+                    ErrorKind::MemoryMapOutOfRange,
+                ));
             }
 
             let output_end = std::cmp::min(output_base.as_usize() + size, buf_len);

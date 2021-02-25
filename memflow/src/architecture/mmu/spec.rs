@@ -3,7 +3,7 @@ use crate::architecture::Endianess;
 
 use super::translate_data::{TranslateData, TranslateDataVec, TranslateVec, TranslationChunk};
 use super::MMUTranslationBase;
-use crate::error::{Error, Result};
+use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 use crate::iter::FlowIters;
 use crate::iter::SplitAtIndex;
 use crate::mem::{PhysicalMemory, PhysicalReadData};
@@ -132,7 +132,11 @@ impl ArchMMUSpec {
         let left = left.unwrap();
 
         if let Some(data) = reject {
-            fail_out.extend(Some((Error::VirtualTranslate, data.addr, data.buf)));
+            fail_out.extend(Some((
+                Error(ErrorOrigin::MMU, ErrorKind::OutOfMemoryRange),
+                data.addr,
+                data.buf,
+            )));
         }
 
         let virt_bit_range = self.virt_addr_bit_ranges[0].1;
@@ -147,7 +151,11 @@ impl ArchMMUSpec {
                 data.split_at_address_rev((arch_bit_range.wrapping_sub(virt_range)).into());
 
             if let Some(data) = reject {
-                fail_out.extend(Some((Error::VirtualTranslate, data.addr, data.buf)));
+                fail_out.extend(Some((
+                    Error(ErrorOrigin::MMU, ErrorKind::OutOfMemoryRange),
+                    data.addr,
+                    data.buf,
+                )));
             }
 
             if let Some(higher) = higher {
@@ -160,7 +168,11 @@ impl ArchMMUSpec {
                     vtop_trace!("higher {:x}+{:x}", higher.addr, higher.length());
                     chunks.push_data(higher, addrs_out);
                 } else {
-                    fail_out.extend(Some((Error::VirtualTranslate, higher.addr, higher.buf)));
+                    fail_out.extend(Some((
+                        Error(ErrorOrigin::MMU, ErrorKind::OutOfMemoryRange),
+                        higher.addr,
+                        higher.buf,
+                    )));
                 }
             }
         }
@@ -644,7 +656,11 @@ impl ArchMMUSpec {
             {
                 // Failure
                 while let Some(entry) = chunk.pop_data(working_addrs) {
-                    out_fail.extend(Some((Error::VirtualTranslate, entry.addr, entry.buf)));
+                    out_fail.extend(Some((
+                        Error(ErrorOrigin::MMU, ErrorKind::OutOfMemoryRange),
+                        entry.addr,
+                        entry.buf,
+                    )));
                 }
             } else if self.is_final_mapping(chunk.pt_addr, chunk.step) {
                 // Success!

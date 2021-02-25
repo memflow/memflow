@@ -1,4 +1,4 @@
-use crate::error::{Error, Result};
+use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 
 use super::tlb_cache::TLBCache;
 use crate::architecture::{ArchitectureObj, ScopedVirtualTranslate};
@@ -23,12 +23,14 @@ use bumpalo::{collections::Vec as BumpVec, Bump};
 /// ```
 /// use memflow::mem::cache::CachedVirtualTranslate;
 /// # use memflow::architecture::x86::x64;
-/// # use memflow::mem::dummy::DummyMemory;
+/// # use memflow::dummy::{DummyMemory, DummyOS};
 /// # use memflow::mem::{DirectTranslate, VirtualDMA, VirtualMemory, VirtualTranslate};
 /// # use memflow::types::size;
-/// # let mut mem = DummyMemory::new(size::mb(32));
+/// # let mem = DummyMemory::new(size::mb(32));
+/// # let mut os = DummyOS::new(mem);
 /// # let virt_size = size::mb(8);
-/// # let (dtb, virt_base) = mem.alloc_dtb(virt_size, &[]);
+/// # let (dtb, virt_base) = os.alloc_dtb(virt_size, &[]);
+/// # let mut mem = os.destroy();
 /// # let translator = x64::new_translator(dtb);
 /// # let mut vat = DirectTranslate::new();
 /// let mut cached_vat = CachedVirtualTranslate::builder(&mut vat)
@@ -43,12 +45,14 @@ use bumpalo::{collections::Vec as BumpVec, Bump};
 /// use std::time::{Duration, Instant};
 /// # use memflow::mem::cache::CachedVirtualTranslate;
 /// # use memflow::architecture::x86::x64;
-/// # use memflow::mem::dummy::DummyMemory;
+/// # use memflow::dummy::{DummyMemory, DummyOS};
 /// # use memflow::mem::{DirectTranslate, VirtualDMA, VirtualMemory, VirtualTranslate};
 /// # use memflow::types::size;
-/// # let mut mem = DummyMemory::new(size::mb(32));
+/// # let mem = DummyMemory::new(size::mb(32));
+/// # let mut os = DummyOS::new(mem);
 /// # let virt_size = size::mb(8);
-/// # let (dtb, virt_base) = mem.alloc_dtb(virt_size, &[]);
+/// # let (dtb, virt_base) = os.alloc_dtb(virt_size, &[]);
+/// # let mut mem = os.destroy();
 /// # let translator = x64::new_translator(dtb);
 /// # let mut vat = DirectTranslate::new();
 /// # let mut cached_vat = CachedVirtualTranslate::builder(&mut vat)
@@ -244,10 +248,16 @@ impl<V: VirtualTranslate, Q: CacheValidator> CachedVirtualTranslateBuilder<V, Q>
         Ok(CachedVirtualTranslate::new(
             self.vat,
             TLBCache::new(
-                self.entries.ok_or("entries must be initialized")?,
+                self.entries.ok_or_else(|| {
+                    Error(ErrorOrigin::Cache, ErrorKind::Uninitialized)
+                        .log_error("entries must be initialized")
+                })?,
                 self.validator,
             ),
-            self.arch.ok_or("arch must be initialized")?,
+            self.arch.ok_or_else(|| {
+                Error(ErrorOrigin::Cache, ErrorKind::Uninitialized)
+                    .log_error("arch must be initialized")
+            })?,
         ))
     }
 
@@ -268,8 +278,8 @@ impl<V: VirtualTranslate, Q: CacheValidator> CachedVirtualTranslateBuilder<V, Q>
         self
     }
 
-    pub fn arch(mut self, arch: ArchitectureObj) -> Self {
-        self.arch = Some(arch);
+    pub fn arch(mut self, arch: impl Into<ArchitectureObj>) -> Self {
+        self.arch = Some(arch.into());
         self
     }
 }
@@ -278,10 +288,11 @@ impl<V: VirtualTranslate, Q: CacheValidator> CachedVirtualTranslateBuilder<V, Q>
 mod tests {
     use crate::architecture::x86;
 
+    use crate::dummy::{DummyMemory, DummyOS};
     use crate::error::PartialResultExt;
     use crate::mem::cache::cached_vat::CachedVirtualTranslate;
     use crate::mem::cache::timed_validator::TimedCacheValidator;
-    use crate::mem::{dummy::DummyMemory, DirectTranslate, PhysicalMemory};
+    use crate::mem::{DirectTranslate, PhysicalMemory};
     use crate::mem::{VirtualDMA, VirtualMemory};
     use crate::types::{size, Address};
     use coarsetime::Duration;
@@ -294,8 +305,8 @@ mod tests {
         Address,
         Address,
     ) {
-        let (mem, dtb, virt_base) =
-            DummyMemory::new_and_dtb(buf.len() + size::mb(2), buf.len(), buf);
+        let mem = DummyMemory::new(buf.len() + size::mb(2));
+        let (os, dtb, virt_base) = DummyOS::new_and_dtb(mem, buf.len(), buf);
         let translator = x86::x64::new_translator(dtb);
 
         let vat = CachedVirtualTranslate::builder(DirectTranslate::new())
@@ -304,6 +315,9 @@ mod tests {
             .entries(2048)
             .build()
             .unwrap();
+
+        let mem = os.destroy();
+
         let vmem = VirtualDMA::with_vat(mem.clone(), x86::x64::ARCH, translator, vat);
 
         (mem, vmem, virt_base, dtb)

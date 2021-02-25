@@ -2,7 +2,7 @@ use std::prelude::v1::*;
 
 use super::{VirtualReadData, VirtualWriteData};
 use crate::architecture::{ArchitectureObj, ScopedVirtualTranslate};
-use crate::error::{Error, PartialError, PartialResult, Result};
+use crate::error::{Error, ErrorKind, ErrorOrigin, PartialError, PartialResult, Result};
 use crate::iter::FnExtend;
 use crate::mem::{
     virt_translate::{DirectTranslate, VirtualTranslate},
@@ -40,7 +40,7 @@ impl<T: PhysicalMemory, D: ScopedVirtualTranslate> VirtualDMA<T, DirectTranslate
     /// use memflow::architecture::x86::x64;
     /// use memflow::mem::{PhysicalMemory, VirtualTranslate, VirtualMemory, VirtualDMA};
     ///
-    /// fn read<T: PhysicalMemory, V: VirtualTranslate>(phys_mem: &mut T, vat: &mut V, dtb: Address, read_addr: Address) {
+    /// fn read(phys_mem: &mut impl PhysicalMemory, vat: &mut impl VirtualTranslate, dtb: Address, read_addr: Address) {
     ///     let arch = x64::ARCH;
     ///     let translator = x64::new_translator(dtb);
     ///
@@ -51,18 +51,19 @@ impl<T: PhysicalMemory, D: ScopedVirtualTranslate> VirtualDMA<T, DirectTranslate
     ///     println!("addr: {:x}", addr);
     ///     # assert_eq!(addr, 0x00ff_00ff_00ff_00ff);
     /// }
-    /// # use memflow::mem::dummy::DummyMemory;
+    /// # use memflow::dummy::{DummyMemory, DummyOS};
     /// # use memflow::types::size;
     /// # use memflow::mem::DirectTranslate;
-    /// # let (mut mem, dtb, virt_base) = DummyMemory::new_and_dtb(size::mb(4), size::mb(2), &[255, 0, 255, 0, 255, 0, 255, 0]);
+    /// # let mem = DummyMemory::new(size::mb(4));
+    /// # let (mut os, dtb, virt_base) = DummyOS::new_and_dtb(mem, size::mb(2), &[255, 0, 255, 0, 255, 0, 255, 0]);
     /// # let mut vat = DirectTranslate::new();
-    /// # read(&mut mem, &mut vat, dtb, virt_base);
+    /// # read(os.as_mut(), &mut vat, dtb, virt_base);
     /// ```
-    pub fn new(phys_mem: T, proc_arch: ArchitectureObj, translator: D) -> Self {
+    pub fn new(phys_mem: T, arch: impl Into<ArchitectureObj>, translator: D) -> Self {
         Self {
             phys_mem,
             vat: DirectTranslate::new(),
-            proc_arch,
+            proc_arch: arch.into(),
             translator,
             arena: Bump::new(),
         }
@@ -81,7 +82,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate, D: ScopedVirtualTranslate> VirtualD
     /// use memflow::architecture::x86::x64;
     /// use memflow::mem::{PhysicalMemory, VirtualTranslate, VirtualMemory, VirtualDMA};
     ///
-    /// fn read<T: PhysicalMemory, V: VirtualTranslate>(phys_mem: &mut T, vat: V, dtb: Address, read_addr: Address) {
+    /// fn read(phys_mem: &mut impl PhysicalMemory, vat: impl VirtualTranslate, dtb: Address, read_addr: Address) {
     ///     let arch = x64::ARCH;
     ///     let translator = x64::new_translator(dtb);
     ///
@@ -92,18 +93,19 @@ impl<T: PhysicalMemory, V: VirtualTranslate, D: ScopedVirtualTranslate> VirtualD
     ///     println!("addr: {:x}", addr);
     ///     # assert_eq!(addr, 0x00ff_00ff_00ff_00ff);
     /// }
-    /// # use memflow::mem::dummy::DummyMemory;
+    /// # use memflow::dummy::{DummyMemory, DummyOS};
     /// # use memflow::types::size;
     /// # use memflow::mem::DirectTranslate;
-    /// # let (mut mem, dtb, virt_base) = DummyMemory::new_and_dtb(size::mb(4), size::mb(2), &[255, 0, 255, 0, 255, 0, 255, 0]);
+    /// # let mem = DummyMemory::new(size::mb(4));
+    /// # let (mut os, dtb, virt_base) = DummyOS::new_and_dtb(mem, size::mb(2), &[255, 0, 255, 0, 255, 0, 255, 0]);
     /// # let mut vat = DirectTranslate::new();
-    /// # read(&mut mem, &mut vat, dtb, virt_base);
+    /// # read(os.as_mut(), &mut vat, dtb, virt_base);
     /// ```
-    pub fn with_vat(phys_mem: T, proc_arch: ArchitectureObj, translator: D, vat: V) -> Self {
+    pub fn with_vat(phys_mem: T, arch: impl Into<ArchitectureObj>, translator: D, vat: V) -> Self {
         Self {
             phys_mem,
             vat,
-            proc_arch,
+            proc_arch: arch.into(),
             translator,
             arena: Bump::new(),
         }
@@ -129,13 +131,28 @@ impl<T: PhysicalMemory, V: VirtualTranslate, D: ScopedVirtualTranslate> VirtualD
         match self.proc_arch.bits() {
             64 => self.virt_read_addr64(addr),
             32 => self.virt_read_addr32(addr),
-            _ => Err(PartialError::Error(Error::InvalidArchitecture)),
+            _ => Err(PartialError::Error(Error(
+                ErrorOrigin::VirtualMemory,
+                ErrorKind::InvalidArchitecture,
+            ))),
         }
     }
 
-    /// Consume the self object and returns the containing memory connection
-    pub fn destroy(self) -> T {
-        self.phys_mem
+    /// Consume the self object and return the underlying owned memory and vat objects
+    pub fn destroy(self) -> (T, V) {
+        (self.phys_mem, self.vat)
+    }
+
+    pub fn mem_vat_pair(&mut self) -> (&mut T, &mut V) {
+        (&mut self.phys_mem, &mut self.vat)
+    }
+
+    pub fn phys_mem(&mut self) -> &mut T {
+        &mut self.phys_mem
+    }
+
+    pub fn vat(&mut self) -> &mut V {
+        &mut self.vat
     }
 }
 

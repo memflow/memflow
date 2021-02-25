@@ -16,6 +16,9 @@ categories = [ "api-bindings", "memory-management", "os" ]
 maintenance = { status = "actively-developed" }
 codecov = { repository = "github", branch = "master", service = "github" }
 
+[lib]
+crate-type = ["lib", "cdylib"]
+
 [dependencies]
 memflow = { version = "0.1", path = "../memflow", default-features = false }
 log = { version = "0.4", default-features = false }
@@ -23,6 +26,7 @@ pelite = { version = "0.9", default-features = false }
 widestring = { version = "0.4", default-features = false, features = ["alloc"] }
 no-std-compat = { version = "0.4", features = ["alloc"] }
 serde = { version = "1.0", default-features = false, optional = true, features = ["derive"] }
+simple_logger = { version = "1.11.0", optional = true }
 
 # will be replaced by our own signature scanner
 regex = { version = "1", optional = true }
@@ -36,12 +40,10 @@ progress-streams = { version = "1.1", optional = true }
 
 [dev_dependencies]
 simple_logger = "1.0"
-win_key_codes = "0.1"
 rand = "0.7"
 rand_xorshift = "0.2"
 clap = "2.33"
 toml = "0.5"
-colored = "2.0"
 
 [build_dependencies]
 toml = "0.5"
@@ -51,6 +53,7 @@ memflow = { version = "0.1", path = "../memflow", default-features = false }
 [features]
 default = ["std", "serde_derive", "embed_offsets", "symstore", "download_progress", "regex"]
 std = ["no-std-compat/std", "memflow/std"]
+plugins = ["memflow/plugins", "simple_logger"]
 embed_offsets = ["serde", "memflow/serde_derive"]
 collections = []
 alloc = []
@@ -65,15 +68,3 @@ path = "examples/dump_offsets.rs"
 [[example]]
 name = "generate_offsets"
 path = "examples/generate_offsets.rs"
-
-[[example]]
-name = "read_keys"
-path = "examples/read_keys.rs"
-
-[[example]]
-name = "multithreading"
-path = "examples/multithreading.rs"
-
-[[example]]
-name = "read_bench"
-path = "examples/read_bench.rs"

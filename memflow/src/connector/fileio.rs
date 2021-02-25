@@ -2,7 +2,7 @@
 Basic connector which works on file i/o operations (`Seek`, `Read`, `Write`).
 */
 
-use crate::error::{Error, Result};
+use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 use crate::iter::FnExtend;
 use crate::mem::{
     MemoryMap, PhysicalMemory, PhysicalMemoryMetadata, PhysicalReadData, PhysicalWriteData,
@@ -49,10 +49,12 @@ impl<T: Seek + Read + Write + Send> PhysicalMemory for FileIOMemory<T> {
         ) {
             self.reader
                 .seek(SeekFrom::Start(file_off.as_u64()))
-                .map_err(|_| Error::Connector("Seek failed"))?;
-            self.reader
-                .read_exact(buf)
-                .map_err(|_| Error::Connector("Read failed"))?;
+                .map_err(|err| {
+                    Error(ErrorOrigin::Connector, ErrorKind::UnableToSeekFile).log_error(err)
+                })?;
+            self.reader.read_exact(buf).map_err(|err| {
+                Error(ErrorOrigin::Connector, ErrorKind::UnableToWriteFile).log_error(err)
+            })?;
         }
         Ok(())
     }
@@ -65,10 +67,12 @@ impl<T: Seek + Read + Write + Send> PhysicalMemory for FileIOMemory<T> {
         {
             self.reader
                 .seek(SeekFrom::Start(file_off.as_u64()))
-                .map_err(|_| Error::Connector("Seek failed"))?;
-            self.reader
-                .write(buf)
-                .map_err(|_| Error::Connector("Write failed"))?;
+                .map_err(|err| {
+                    Error(ErrorOrigin::Connector, ErrorKind::UnableToSeekFile).log_error(err)
+                })?;
+            self.reader.write(buf).map_err(|err| {
+                Error(ErrorOrigin::Connector, ErrorKind::UnableToWriteFile).log_error(err)
+            })?;
         }
         Ok(())
     }

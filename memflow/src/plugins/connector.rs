@@ -1,109 +1,84 @@
 use crate::error::*;
 use crate::mem::{PhysicalMemory, PhysicalMemoryMetadata, PhysicalReadData, PhysicalWriteData};
 
-use super::{Args, LibInstance, Loadable};
+use super::{Args, CArc, COptArc, GenericBaseTable, Loadable, OpaqueBaseTable, PluginDescriptor};
 
-use std::ffi::{c_void, CString};
-use std::os::raw::c_char;
-use std::path::Path;
-use std::sync::Arc;
+use crate::types::ReprCStr;
+
+use std::ffi::c_void;
+use std::mem::MaybeUninit;
 
 use libloading::Library;
 
-use log::*;
+pub type MUConnectorInstance = MaybeUninit<ConnectorInstance>;
 
-/// Exported memflow connector version
-pub const MEMFLOW_CONNECTOR_VERSION: i32 = 8;
+pub fn create_with_logging<T: 'static + PhysicalMemory + Clone>(
+    args: &ReprCStr,
+    log_level: i32,
+    out: &mut MUConnectorInstance,
+    create_fn: impl Fn(&Args, log::Level) -> Result<T>,
+) -> i32 {
+    super::util::create_with_logging(args, log_level, out, |a, l| {
+        create_fn(&a, l).map(ConnectorInstance::new)
+    })
+}
 
-/// Describes a connector
-#[repr(C)]
-pub struct ConnectorDescriptor {
-    /// The connector inventory api version for when the connector was built.
-    /// This has to be set to `MEMFLOW_CONNECTOR_VERSION` of memflow.
-    ///
-    /// If the versions mismatch the inventory will refuse to load.
-    pub connector_version: i32,
-
-    /// The name of the connector.
-    /// This name will be used when loading a connector from a connector inventory.
-    pub name: &'static str,
-
-    /// The vtable for all opaque function calls to the connector.
-    pub create_vtable: extern "C" fn() -> ConnectorFunctionTable,
+pub fn create_without_logging<T: 'static + PhysicalMemory + Clone>(
+    args: &ReprCStr,
+    out: &mut MUConnectorInstance,
+    create_fn: impl Fn(&Args) -> Result<T>,
+) -> i32 {
+    super::util::create_without_logging(args, out, |a| create_fn(&a).map(ConnectorInstance::new))
 }
 
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct ConnectorFunctionTable {
     /// The vtable for object creation and cloning
-    pub base: ConnectorBaseTable,
-    /// The vtable for all physical memory funmction calls to the connector.
-    pub phys: PhysicalMemoryFunctionTable,
+    pub base: &'static OpaqueBaseTable,
+    /// The vtable for all physical memory function calls to the connector.
+    pub phys: &'static OpaquePhysicalMemoryFunctionTable,
     // further optional table expansion with Option<&'static SomeFunctionTable>
     // ...
 }
 
 impl ConnectorFunctionTable {
-    pub fn create_vtable<T: PhysicalMemory + Clone>(
-        create: extern "C" fn(*const c_char, i32) -> Option<&'static mut c_void>,
-    ) -> Self {
+    pub fn create_vtable<T: 'static + PhysicalMemory + Clone>() -> Self {
         Self {
-            base: ConnectorBaseTable::new::<T>(create),
-            phys: PhysicalMemoryFunctionTable::new::<T>(),
+            base: <&GenericBaseTable<T>>::default().as_opaque(),
+            phys: <&PhysicalMemoryFunctionTable<T>>::default().as_opaque(),
         }
     }
 }
 
-#[repr(C)]
-#[derive(Clone, Copy)]
-pub struct ConnectorBaseTable {
-    pub create: extern "C" fn(args: *const c_char, log_level: i32) -> Option<&'static mut c_void>,
-    pub clone: extern "C" fn(phys_mem: &c_void) -> Option<&'static mut c_void>,
-    pub drop: extern "C" fn(phys_mem: &mut c_void),
-}
+pub type OpaquePhysicalMemoryFunctionTable = PhysicalMemoryFunctionTable<c_void>;
 
-impl ConnectorBaseTable {
-    pub fn new<T: PhysicalMemory + Clone>(
-        create: extern "C" fn(*const c_char, i32) -> Option<&'static mut c_void>,
-    ) -> Self {
-        Self {
-            create,
-            clone: clone_internal::<T>,
-            drop: drop_internal::<T>,
-        }
+impl Copy for OpaquePhysicalMemoryFunctionTable {}
+
+impl Clone for OpaquePhysicalMemoryFunctionTable {
+    fn clone(&self) -> Self {
+        *self
     }
 }
 
-extern "C" fn clone_internal<T: Clone>(phys_mem: &c_void) -> Option<&'static mut c_void> {
-    let conn = unsafe { &*(phys_mem as *const c_void as *const T) };
-    let cloned_conn = Box::new(conn.clone());
-    Some(unsafe { &mut *(Box::into_raw(cloned_conn) as *mut c_void) })
-}
-
-extern "C" fn drop_internal<T: PhysicalMemory>(phys_mem: &mut c_void) {
-    let _: Box<T> = unsafe { Box::from_raw(std::mem::transmute(phys_mem)) };
-    // drop box
-}
-
 #[repr(C)]
-#[derive(Clone, Copy)]
-pub struct PhysicalMemoryFunctionTable {
+pub struct PhysicalMemoryFunctionTable<T> {
     pub phys_read_raw_list: extern "C" fn(
-        phys_mem: &mut c_void,
+        phys_mem: &mut T,
         read_data: *mut PhysicalReadData,
         read_data_count: usize,
     ) -> i32,
     pub phys_write_raw_list: extern "C" fn(
-        phys_mem: &mut c_void,
+        phys_mem: &mut T,
         write_data: *const PhysicalWriteData,
         write_data_count: usize,
     ) -> i32,
-    pub metadata: extern "C" fn(phys_mem: &c_void) -> PhysicalMemoryMetadata,
+    pub metadata: extern "C" fn(phys_mem: &T) -> PhysicalMemoryMetadata,
 }
 
-impl PhysicalMemoryFunctionTable {
-    pub fn new<T: PhysicalMemory>() -> PhysicalMemoryFunctionTable {
-        PhysicalMemoryFunctionTable {
+impl<T: PhysicalMemory> Default for &'static PhysicalMemoryFunctionTable<T> {
+    fn default() -> Self {
+        &PhysicalMemoryFunctionTable {
             phys_write_raw_list: phys_write_raw_list_internal::<T>,
             phys_read_raw_list: phys_read_raw_list_internal::<T>,
             metadata: metadata_internal::<T>,
@@ -111,43 +86,41 @@ impl PhysicalMemoryFunctionTable {
     }
 }
 
+impl<T: PhysicalMemory> PhysicalMemoryFunctionTable<T> {
+    pub fn as_opaque(&'static self) -> &'static OpaquePhysicalMemoryFunctionTable {
+        unsafe { &*(self as *const Self as *const OpaquePhysicalMemoryFunctionTable) }
+    }
+}
+
 extern "C" fn phys_write_raw_list_internal<T: PhysicalMemory>(
-    phys_mem: &mut c_void,
+    phys_mem: &mut T,
     write_data: *const PhysicalWriteData,
     write_data_count: usize,
 ) -> i32 {
-    let conn = unsafe { &mut *(phys_mem as *mut c_void as *mut T) };
     let write_data_slice = unsafe { std::slice::from_raw_parts(write_data, write_data_count) };
-
-    match conn.phys_write_raw_list(write_data_slice) {
-        Ok(_) => 0,
-        Err(_) => -1,
-    }
+    phys_mem
+        .phys_write_raw_list(write_data_slice)
+        .as_int_result()
 }
 
 extern "C" fn phys_read_raw_list_internal<T: PhysicalMemory>(
-    phys_mem: &mut c_void,
+    phys_mem: &mut T,
     read_data: *mut PhysicalReadData,
     read_data_count: usize,
 ) -> i32 {
-    let conn = unsafe { &mut *(phys_mem as *mut c_void as *mut T) };
     let read_data_slice = unsafe { std::slice::from_raw_parts_mut(read_data, read_data_count) };
-
-    match conn.phys_read_raw_list(read_data_slice) {
-        Ok(_) => 0,
-        Err(_) => -1,
-    }
+    phys_mem.phys_read_raw_list(read_data_slice).as_int_result()
 }
 
-extern "C" fn metadata_internal<T: PhysicalMemory>(phys_mem: &c_void) -> PhysicalMemoryMetadata {
-    let conn = unsafe { &*(phys_mem as *const c_void as *const T) };
-    conn.metadata()
+extern "C" fn metadata_internal<T: PhysicalMemory>(phys_mem: &T) -> PhysicalMemoryMetadata {
+    phys_mem.metadata()
 }
 
 /// Describes initialized connector instance
 ///
 /// This structure is returned by `Connector`. It is needed to maintain reference
 /// counts to the loaded connector library.
+#[repr(C)]
 pub struct ConnectorInstance {
     instance: &'static mut c_void,
     vtable: ConnectorFunctionTable,
@@ -159,7 +132,17 @@ pub struct ConnectorInstance {
     /// the instance is destroyed.
     ///
     /// If the library is unloaded prior to the instance this will lead to a SIGSEGV.
-    library: Arc<Library>,
+    library: COptArc<Library>,
+}
+
+impl ConnectorInstance {
+    pub fn new<T: 'static + PhysicalMemory + Clone>(mem: T) -> Self {
+        Self {
+            instance: unsafe { Box::into_raw(Box::new(mem)).cast::<c_void>().as_mut() }.unwrap(),
+            vtable: ConnectorFunctionTable::create_vtable::<T>(),
+            library: None.into(),
+        }
+    }
 }
 
 impl PhysicalMemory for ConnectorInstance {
@@ -169,11 +152,7 @@ impl PhysicalMemory for ConnectorInstance {
     }
 
     fn phys_write_raw_list(&mut self, data: &[PhysicalWriteData]) -> Result<()> {
-        (self.vtable.phys.phys_write_raw_list)(
-            self.instance,
-            data.as_ptr() as *mut PhysicalWriteData,
-            data.len(),
-        );
+        (self.vtable.phys.phys_write_raw_list)(self.instance, data.as_ptr(), data.len());
         Ok(())
     }
 
@@ -184,7 +163,8 @@ impl PhysicalMemory for ConnectorInstance {
 
 impl Clone for ConnectorInstance {
     fn clone(&self) -> Self {
-        let instance = (self.vtable.base.clone)(self.instance).expect("Unable to clone Connector");
+        let instance =
+            (self.vtable.base.clone.clone)(self.instance).expect("Unable to clone Connector");
         Self {
             instance,
             vtable: self.vtable,
@@ -195,61 +175,54 @@ impl Clone for ConnectorInstance {
 
 impl Drop for ConnectorInstance {
     fn drop(&mut self) {
-        (self.vtable.base.drop)(self.instance);
+        unsafe {
+            (self.vtable.base.drop)(self.instance);
+        }
     }
 }
 
+pub type ConnectorDescriptor = PluginDescriptor<LoadableConnector>;
+
 pub struct LoadableConnector {
-    descriptor: ConnectorDescriptor,
+    descriptor: PluginDescriptor<Self>,
 }
 
 impl Loadable for LoadableConnector {
     type Instance = ConnectorInstance;
+    type InputArg = Option<&'static mut c_void>;
+    type CInputArg = Option<&'static mut c_void>;
 
     fn ident(&self) -> &str {
         self.descriptor.name
     }
 
-    unsafe fn load(library: &Arc<Library>, path: impl AsRef<Path>) -> Result<LibInstance<Self>> {
-        let descriptor = library
-            .get::<*mut ConnectorDescriptor>(b"MEMFLOW_CONNECTOR\0")
-            .map_err(|_| Error::Connector("connector descriptor not found"))?
-            .read();
+    fn export_prefix() -> &'static str {
+        "MEMFLOW_CONNECTOR_"
+    }
 
-        if descriptor.connector_version != MEMFLOW_CONNECTOR_VERSION {
-            warn!(
-                "connector {:?} has a different version. version {} required, found {}.",
-                path.as_ref(),
-                MEMFLOW_CONNECTOR_VERSION,
-                descriptor.connector_version
-            );
-            return Err(Error::Connector("connector version mismatch"));
-        }
+    fn plugin_type() -> &'static str {
+        "Connector"
+    }
 
-        Ok(LibInstance {
-            library: library.clone(),
-            loader: LoadableConnector { descriptor },
-        })
+    fn new(descriptor: PluginDescriptor<Self>) -> Self {
+        Self { descriptor }
     }
 
     /// Creates a new connector instance from this library.
     ///
     /// The connector is initialized with the arguments provided to this function.
-    fn instantiate(&self, lib: Arc<Library>, args: &Args) -> Result<ConnectorInstance> {
-        let cstr = CString::new(args.to_string())
-            .map_err(|_| Error::Connector("args could not be parsed"))?;
-
-        let vtable = (self.descriptor.create_vtable)();
-
-        // We do not want to return error with data from the shared library
-        // that may get unloaded before it gets displayed
-        let instance = (vtable.base.create)(cstr.as_ptr(), log::max_level() as i32)
-            .ok_or(Error::Connector("create() failed"))?;
-
-        Ok(ConnectorInstance {
-            instance,
-            vtable,
-            library: lib,
+    fn instantiate(
+        &self,
+        library: Option<CArc<Library>>,
+        input: Self::InputArg,
+        args: &Args,
+    ) -> Result<ConnectorInstance> {
+        let cstr = ReprCStr::from(args.to_string());
+        let mut out = MUConnectorInstance::uninit();
+        let res = (self.descriptor.create)(&cstr, input, log::max_level() as i32, &mut out);
+        result_from_int(res, out).map(|mut c| {
+            c.library = library.into();
+            c
         })
     }
 }

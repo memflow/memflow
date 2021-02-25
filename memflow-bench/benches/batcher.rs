@@ -2,7 +2,7 @@ use criterion::*;
 
 use memflow::prelude::v1::*;
 
-//use memflow::mem::dummy::DummyMemory as Memory;
+//use memflow::dummy::DummyMemory as Memory;
 
 struct NullMem {}
 

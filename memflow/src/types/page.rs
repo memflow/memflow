@@ -63,6 +63,7 @@ impl Default for PageType {
 ///
 /// More information about paging can be found [here](https://en.wikipedia.org/wiki/Paging).
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[repr(C)]
 pub struct Page {
     /// Contains the page type (see above).
     pub page_type: PageType,

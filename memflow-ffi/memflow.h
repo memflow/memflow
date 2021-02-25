@@ -5,6 +5,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
+typedef void *Library;
 
 /**
  * Identifies the byte order of a architecture
@@ -34,18 +35,44 @@ typedef uint8_t Endianess;
 
 typedef struct ArchitectureObj ArchitectureObj;
 
-typedef struct CloneablePhysicalMemoryObj CloneablePhysicalMemoryObj;
-
 /**
- * Holds an inventory of available connectors.
+ * The core of the plugin system
+ *
+ * It scans system directories and collects valid memflow plugins. They can then be instantiated
+ * easily. The reason the libraries are collected is to allow for reuse, and save performance
+ *
+ * # Examples
+ *
+ * Creating a OS instance, the fastest way:
+ *
+ * ```
+ * use memflow::plugins::Inventory;
+ * # use memflow::error::Result;
+ * # use memflow::plugins::OSInstance;
+ * # fn test() -> Result<OSInstance> {
+ * Inventory::build_os_simple("qemu-procfs", "win32")
+ * # }
+ * # test().ok();
+ * ```
+ *
+ * Creating 2 OS instances:
+ * ```
+ * use memflow::plugins::{Inventory, Args};
+ * # use memflow::error::Result;
+ * # fn test() -> Result<()> {
+ *
+ * let inventory = Inventory::scan();
+ *
+ * let windows = inventory.create_os_simple("qemu-procfs", "win32")?;
+ * let system = inventory.create_os("pseudo-system", None, &Args::default())?;
+ * # Ok(())
+ * # }
+ * # test().ok();
+ * ```
  */
-typedef struct ConnectorInventory ConnectorInventory;
+typedef struct Inventory Inventory;
 
-typedef struct OsProcessInfoObj OsProcessInfoObj;
-
-typedef struct OsProcessModuleInfoObj OsProcessModuleInfoObj;
-
-typedef struct PhysicalMemoryObj PhysicalMemoryObj;
+typedef struct Option______Library Option______Library;
 
 typedef struct PhysicalReadData PhysicalReadData;
 
@@ -85,27 +112,27 @@ typedef uint8_t PageType;
 /**
  * The page explicitly has no flags.
  */
-#define PageType_NONE (uint8_t)0
+#define PageType_NONE 0
 /**
  * The page type is not known.
  */
-#define PageType_UNKNOWN (uint8_t)1
+#define PageType_UNKNOWN 1
 /**
  * The page contains page table entries.
  */
-#define PageType_PAGE_TABLE (uint8_t)2
+#define PageType_PAGE_TABLE 2
 /**
  * The page is a writeable page.
  */
-#define PageType_WRITEABLE (uint8_t)4
+#define PageType_WRITEABLE 4
 /**
  * The page is read only.
  */
-#define PageType_READ_ONLY (uint8_t)8
+#define PageType_READ_ONLY 8
 /**
  * The page is not executable.
  */
-#define PageType_NOEXEC (uint8_t)16
+#define PageType_NOEXEC 16
 
 /**
  * This type represents a wrapper over a [address](address/index.html)
@@ -124,15 +151,487 @@ typedef struct PhysicalAddress {
     uint8_t page_size_log2;
 } PhysicalAddress;
 
+/**
+ * Utility typedef for better cbindgen
+ *
+ * TODO: remove when fixed in cbindgen
+ */
+typedef void *pvoid;
+
+/**
+ * Generic function for cloning past FFI boundary
+ */
+typedef struct GenericCloneTable_c_void {
+    pvoid (*clone)(const void *this);
+} GenericCloneTable_c_void;
+
+/**
+ * Base table for most objects that are cloneable and droppable.
+ */
+typedef struct GenericBaseTable_c_void {
+    GenericCloneTable_c_void clone;
+    void (*drop)(void *this);
+} GenericBaseTable_c_void;
+
+/**
+ * Opaque version of `GenericBaseTable` for FFI purposes
+ */
+typedef GenericBaseTable_c_void OpaqueBaseTable;
+
 typedef struct PhysicalMemoryMetadata {
     uintptr_t size;
     bool readonly;
 } PhysicalMemoryMetadata;
 
+typedef struct PhysicalMemoryFunctionTable_c_void {
+    int32_t (*phys_read_raw_list)(void *phys_mem, PhysicalReadData *read_data, uintptr_t read_data_count);
+    int32_t (*phys_write_raw_list)(void *phys_mem, const PhysicalWriteData *write_data, uintptr_t write_data_count);
+    PhysicalMemoryMetadata (*metadata)(const void *phys_mem);
+} PhysicalMemoryFunctionTable_c_void;
+
+typedef PhysicalMemoryFunctionTable_c_void OpaquePhysicalMemoryFunctionTable;
+
+typedef struct ConnectorFunctionTable {
+    /**
+     * The vtable for object creation and cloning
+     */
+    const OpaqueBaseTable *base;
+    /**
+     * The vtable for all physical memory function calls to the connector.
+     */
+    const OpaquePhysicalMemoryFunctionTable *phys;
+} ConnectorFunctionTable;
+
+typedef struct COptArc_Library {
+    const Library *inner;
+    Option______Library (*clone_fn)(Option______Library);
+    void (*drop_fn)(Option______Library*);
+} COptArc_Library;
+
 /**
- * Type alias for a PID.
+ * Describes initialized connector instance
+ *
+ * This structure is returned by `Connector`. It is needed to maintain reference
+ * counts to the loaded connector library.
+ */
+typedef struct ConnectorInstance {
+    void *instance;
+    ConnectorFunctionTable vtable;
+    /**
+     * Internal library arc.
+     *
+     * This will keep the library loaded in memory as long as the connector instance is alive.
+     * This has to be the last member of the struct so the library will be unloaded _after_
+     * the instance is destroyed.
+     *
+     * If the library is unloaded prior to the instance this will lead to a SIGSEGV.
+     */
+    COptArc_Library library;
+} ConnectorInstance;
+
+typedef MaybeUninit<ConnectorInstance> MUConnectorInstance;
+
+typedef struct Callback_c_void__Address {
+    void *context;
+    bool (*func)(void*, Address);
+} Callback_c_void__Address;
+
+typedef Callback_c_void__Address OpaqueCallback_Address;
+
+typedef OpaqueCallback_Address AddressCallback;
+
+/**
+ * Type meant for process IDs
+ *
+ * If there is a case where PID can be over 32-bit limit, or negative, please open an issue, we
+ * would love to see that.
  */
 typedef uint32_t PID;
+
+typedef int8_t *ReprCStr;
+
+typedef enum ArchitectureIdent_Tag {
+    /**
+     * Unknown architecture. Could be third-party implemented. memflow knows how to work on them,
+     * but is unable to instantiate them.
+     */
+    Unknown,
+    /**
+     * X86 with specified bitness and address extensions
+     *
+     * First argument - `bitness` controls whether it's 32, or 64 bit variant.
+     * Second argument - `address_extensions` control whether address extensions are
+     * enabled (PAE on x32, or LA57 on x64). Warning: LA57 is currently unsupported.
+     */
+    X86,
+    /**
+     * ARM 64-bit architecture with specified page size
+     *
+     * Valid page sizes are 4kb, 16kb, 64kb. Only 4kb is supported at the moment
+     */
+    AArch64,
+} ArchitectureIdent_Tag;
+
+typedef struct X86_Body {
+    uint8_t _0;
+    bool _1;
+} X86_Body;
+
+typedef struct AArch64_Body {
+    uintptr_t _0;
+} AArch64_Body;
+
+typedef struct ArchitectureIdent {
+    ArchitectureIdent_Tag tag;
+    union {
+        X86_Body x86;
+        AArch64_Body a_arch64;
+    };
+} ArchitectureIdent;
+
+/**
+ * Process information structure
+ *
+ * This structure implements basic process information. Architectures are provided both of the
+ * system, and of the process.
+ */
+typedef struct ProcessInfo {
+    /**
+     * The base address of this process.
+     *
+     * # Remarks
+     *
+     * On Windows this will be the address of the [`_EPROCESS`](https://www.nirsoft.net/kernel_struct/vista/EPROCESS.html) structure.
+     */
+    Address address;
+    /**
+     * ID of this process.
+     */
+    PID pid;
+    /**
+     * Name of the process.
+     */
+    ReprCStr name;
+    /**
+     * System architecture of the target system.
+     */
+    ArchitectureIdent sys_arch;
+    /**
+     * Process architecture
+     *
+     * # Remarks
+     *
+     * Specifically on 64-bit systems this could be different
+     * to the `sys_arch` in case the process is an emulated 32-bit process.
+     *
+     * On windows this technique is called [`WOW64`](https://docs.microsoft.com/en-us/windows/win32/winprog64/wow64-implementation-details).
+     */
+    ArchitectureIdent proc_arch;
+} ProcessInfo;
+
+typedef MaybeUninit<ProcessInfo> MUProcessInfo;
+
+typedef const ArchitectureIdent *OptionArchitectureIdent;
+
+/**
+ * Pair of address and architecture used for callbacks
+ */
+typedef struct ModuleAddressInfo {
+    Address address;
+    ArchitectureIdent arch;
+} ModuleAddressInfo;
+
+typedef struct Callback_c_void__ModuleAddressInfo {
+    void *context;
+    bool (*func)(void*, ModuleAddressInfo);
+} Callback_c_void__ModuleAddressInfo;
+
+typedef Callback_c_void__ModuleAddressInfo OpaqueCallback_ModuleAddressInfo;
+
+typedef OpaqueCallback_ModuleAddressInfo ModuleAddressCallback;
+
+/**
+ * Module information structure
+ */
+typedef struct ModuleInfo {
+    /**
+     * Returns the address of the module header.
+     *
+     * # Remarks
+     *
+     * On Windows this will be the address where the [`PEB`](https://docs.microsoft.com/en-us/windows/win32/api/winternl/ns-winternl-peb) entry is stored.
+     */
+    Address address;
+    /**
+     * The base address of the parent process.
+     *
+     * # Remarks
+     *
+     * This field is analog to the `ProcessInfo::address` field.
+     */
+    Address parent_process;
+    /**
+     * The actual base address of this module.
+     *
+     * # Remarks
+     *
+     * The base address is contained in the virtual address range of the process
+     * this module belongs to.
+     */
+    Address base;
+    /**
+     * Size of the module
+     */
+    uintptr_t size;
+    /**
+     * Name of the module
+     */
+    ReprCStr name;
+    /**
+     * Path of the module
+     */
+    ReprCStr path;
+    /**
+     * Architecture of the module
+     *
+     * # Remarks
+     *
+     * Emulated processes often have 2 separate lists of modules, one visible to the emulated
+     * context (e.g. all 32-bit modules in a WoW64 process), and the other for all native modules
+     * needed to support the process emulation. This should be equal to either
+     * `ProcessInfo::proc_arch`, or `ProcessInfo::sys_arch` of the parent process.
+     */
+    ArchitectureIdent arch;
+} ModuleInfo;
+
+typedef MaybeUninit<ModuleInfo> MUModuleInfo;
+
+typedef MaybeUninit<Address> MUAddress;
+
+typedef struct ProcessFunctionTable_c_void {
+    int32_t (*module_address_list_callback)(void *process, OptionArchitectureIdent target_arch, ModuleAddressCallback callback);
+    int32_t (*module_by_address)(void *process, Address address, ArchitectureIdent architecture, MUModuleInfo *out);
+    int32_t (*primary_module_address)(void *process, MUAddress *out);
+    const ProcessInfo *(*info)(const void *process);
+    void *(*virt_mem)(void *process);
+    void (*drop)(void *this);
+} ProcessFunctionTable_c_void;
+
+typedef ProcessFunctionTable_c_void OpaqueProcessFunctionTable;
+
+/**
+ * A `Page` holds information about a memory page.
+ *
+ * More information about paging can be found [here](https://en.wikipedia.org/wiki/Paging).
+ */
+typedef struct Page {
+    /**
+     * Contains the page type (see above).
+     */
+    PageType page_type;
+    /**
+     * Contains the base address of this page.
+     */
+    Address page_base;
+    /**
+     * Contains the size of this page.
+     */
+    uintptr_t page_size;
+} Page;
+
+typedef MaybeUninit<Page> MUPage;
+
+typedef struct TranslationChunk {
+    Address _0;
+    uintptr_t _1;
+    PhysicalAddress _2;
+} TranslationChunk;
+
+typedef struct Callback_c_void__TranslationChunk {
+    void *context;
+    bool (*func)(void*, TranslationChunk);
+} Callback_c_void__TranslationChunk;
+
+typedef Callback_c_void__TranslationChunk OpaqueCallback_TranslationChunk;
+
+typedef OpaqueCallback_TranslationChunk TranslationMapCallback;
+
+typedef struct PageMapChunk {
+    Address _0;
+    uintptr_t _1;
+} PageMapChunk;
+
+typedef struct Callback_c_void__PageMapChunk {
+    void *context;
+    bool (*func)(void*, PageMapChunk);
+} Callback_c_void__PageMapChunk;
+
+typedef Callback_c_void__PageMapChunk OpaqueCallback_PageMapChunk;
+
+typedef OpaqueCallback_PageMapChunk PageMapCallback;
+
+typedef struct VirtualMemoryFunctionTable_c_void {
+    int32_t (*virt_read_raw_list)(void *virt_mem, VirtualReadData *read_data, uintptr_t read_data_count);
+    int32_t (*virt_write_raw_list)(void *virt_mem, const VirtualWriteData *write_data, uintptr_t write_data_count);
+    int32_t (*virt_page_info)(void *virt_mem, Address addr, MUPage *out);
+    void (*virt_translation_map_range)(void *virt_mem, Address start, Address end, TranslationMapCallback out);
+    void (*virt_page_map_range)(void *virt_mem, uintptr_t gap_size, Address start, Address end, PageMapCallback out);
+} VirtualMemoryFunctionTable_c_void;
+
+typedef VirtualMemoryFunctionTable_c_void OpaqueVirtualMemoryFunctionTable;
+
+typedef struct VirtualMemoryInstance {
+    void *instance;
+    const OpaqueVirtualMemoryFunctionTable *vtable;
+} VirtualMemoryInstance;
+
+typedef struct PluginProcess {
+    void *instance;
+    OpaqueProcessFunctionTable vtable;
+    VirtualMemoryInstance virt_mem;
+} PluginProcess;
+
+typedef MaybeUninit<PluginProcess> MUPluginProcess;
+
+/**
+ * Opaque version of `GenericCloneTable` for FFI purposes
+ */
+typedef GenericCloneTable_c_void OpaqueCloneTable;
+
+typedef struct ArcPluginProcess {
+    PluginProcess inner;
+    OpaqueCloneTable clone;
+    COptArc_Library library;
+} ArcPluginProcess;
+
+typedef MaybeUninit<ArcPluginProcess> MUArcPluginProcess;
+
+/**
+ * Information block about OS
+ *
+ * This provides some basic information about the OS in question. `base`, and `size` may be
+ * omitted in some circumstances (lack of kernel, or privileges). But architecture should always
+ * be correct.
+ */
+typedef struct OSInfo {
+    /**
+     * Base address of the OS kernel
+     */
+    Address base;
+    /**
+     * Size of the OS kernel
+     */
+    uintptr_t size;
+    /**
+     * System architecture
+     */
+    ArchitectureIdent arch;
+} OSInfo;
+
+typedef struct OSFunctionTable_c_void__c_void {
+    int32_t (*process_address_list_callback)(void *os, AddressCallback callback);
+    int32_t (*process_info_by_address)(void *os, Address address, MUProcessInfo *out);
+    int32_t (*process_by_info)(void *os, ProcessInfo info, MUPluginProcess *out);
+    int32_t (*into_process_by_info)(void *os, ProcessInfo info, COptArc_Library lib, MUArcPluginProcess *out);
+    int32_t (*module_address_list_callback)(void *os, AddressCallback callback);
+    int32_t (*module_by_address)(void *os, Address address, MUModuleInfo *out);
+    const OSInfo *(*info)(const void *os);
+} OSFunctionTable_c_void__c_void;
+
+typedef OSFunctionTable_c_void__c_void OpaqueOSFunctionTable;
+
+typedef struct KeyboardStateFunctionTable_c_void {
+    int32_t (*is_down)(const void *keyboard_state, int32_t vk);
+    void (*set_down)(void *keyboard_state, int32_t vk, int32_t down);
+    void (*drop)(void *this);
+} KeyboardStateFunctionTable_c_void;
+
+typedef KeyboardStateFunctionTable_c_void OpaqueKeyboardStateFunctionTable;
+
+typedef struct ArcPluginKeyboardState {
+    void *instance;
+    OpaqueKeyboardStateFunctionTable vtable;
+    OpaqueCloneTable clone;
+    COptArc_Library library;
+} ArcPluginKeyboardState;
+
+typedef MaybeUninit<ArcPluginKeyboardState> MUArcPluginKeyboardState;
+
+typedef struct KeyboardFunctionTable_c_void {
+    int32_t (*state)(void *keyboard, COptArc_Library lib, MUArcPluginKeyboardState *out);
+    int32_t (*set_state)(void *keyboard, const ArcPluginKeyboardState *state);
+    void (*drop)(void *this);
+} KeyboardFunctionTable_c_void;
+
+typedef KeyboardFunctionTable_c_void OpaqueKeyboardFunctionTable;
+
+typedef struct PluginKeyboard {
+    void *instance;
+    OpaqueKeyboardFunctionTable vtable;
+    COptArc_Library library;
+} PluginKeyboard;
+
+typedef MaybeUninit<PluginKeyboard> MUPluginKeyboard;
+
+typedef struct ArcPluginKeyboard {
+    PluginKeyboard inner;
+    OpaqueCloneTable clone;
+} ArcPluginKeyboard;
+
+typedef MaybeUninit<ArcPluginKeyboard> MUArcPluginKeyboard;
+
+typedef struct OSKeyboardFunctionTable_c_void__c_void {
+    int32_t (*keyboard)(void *os, COptArc_Library lib, MUPluginKeyboard *out);
+    int32_t (*into_keyboard)(void *os, COptArc_Library lib, MUArcPluginKeyboard *out);
+} OSKeyboardFunctionTable_c_void__c_void;
+
+typedef OSKeyboardFunctionTable_c_void__c_void OpaqueOSKeyboardFunctionTable;
+
+typedef struct OSLayerFunctionTable {
+    /**
+     * The vtable for object creation and cloning
+     */
+    const OpaqueBaseTable *base;
+    /**
+     * The vtable for all os functions
+     */
+    const OpaqueOSFunctionTable *os;
+    /**
+     * The vtable for all physical memory access if available
+     */
+    const OpaquePhysicalMemoryFunctionTable *phys;
+    /**
+     * The vtable for all virtual memory access if available
+     */
+    const OpaqueVirtualMemoryFunctionTable *virt;
+    /**
+     * The vtable for the keyboard access if available
+     */
+    const OpaqueOSKeyboardFunctionTable *keyboard;
+} OSLayerFunctionTable;
+
+/**
+ * Describes initialized os instance
+ *
+ * This structure is returned by `OS`. It is needed to maintain reference
+ * counts to the loaded plugin library.
+ */
+typedef struct OSInstance {
+    void *instance;
+    OSLayerFunctionTable vtable;
+    /**
+     * Internal library arc.
+     *
+     * This will keep the library loaded in memory as long as the os instance is alive.
+     * This has to be the last member of the struct so the library will be unloaded _after_
+     * the instance is destroyed.
+     *
+     * If the library is unloaded prior to the instance this will lead to a SIGSEGV.
+     */
+    COptArc_Library library;
+} OSInstance;
+
+typedef MaybeUninit<OSInstance> MUOSInstance;
 
 #ifdef __cplusplus
 extern "C" {
@@ -163,10 +662,10 @@ PhysicalAddress addr_to_paddr(Address address);
  *
  * # Safety
  *
- * ConnectorInventory is inherently unsafe, because it loads shared libraries which can not be
+ * Inventory is inherently unsafe, because it loads shared libraries which can not be
  * guaranteed to be safe.
  */
-ConnectorInventory *inventory_scan(void);
+Inventory *inventory_scan(void);
 
 /**
  * Create a new inventory with custom path string
@@ -175,7 +674,7 @@ ConnectorInventory *inventory_scan(void);
  *
  * `path` must be a valid null terminated string
  */
-ConnectorInventory *inventory_scan_path(const char *path);
+Inventory *inventory_scan_path(const char *path);
 
 /**
  * Add a directory to an existing inventory
@@ -184,15 +683,14 @@ ConnectorInventory *inventory_scan_path(const char *path);
  *
  * `dir` must be a valid null terminated string
  */
-int32_t inventory_add_dir(ConnectorInventory *inv, const char *dir);
+int32_t inventory_add_dir(Inventory *inv, const char *dir);
 
 /**
  * Create a connector with given arguments
  *
- * This creates an instance of a `CloneablePhysicalMemory`. To use it for physical memory
- * operations, please call `downcast_cloneable` to create a instance of `PhysicalMemory`.
+ * This creates an instance of `ConnectorInstance`.
  *
- * Regardless, this instance needs to be freed using `connector_free`.
+ * This instance needs to be dropped using `connector_drop`.
  *
  * # Arguments
  *
@@ -206,70 +704,72 @@ int32_t inventory_add_dir(ConnectorInventory *inv, const char *dir);
  * Any error strings returned by the connector must not be outputed after the connector gets
  * freed, because that operation could cause the underlying shared library to get unloaded.
  */
-CloneablePhysicalMemoryObj *inventory_create_connector(ConnectorInventory *inv,
-                                                       const char *name,
-                                                       const char *args);
+int32_t inventory_create_connector(Inventory *inv,
+                                   const char *name,
+                                   const char *args,
+                                   MUConnectorInstance *out);
+
+/**
+ * Create a OS instance with given arguments
+ *
+ * This creates an instance of `KernelInstance`.
+ *
+ * This instance needs to be freed using `os_free`.
+ *
+ * # Arguments
+ *
+ * * `name` - name of the OS to use
+ * * `args` - arguments to be passed to the connector upon its creation
+ *
+ * # Safety
+ *
+ * Both `name`, and `args` must be valid null terminated strings.
+ *
+ * Any error strings returned by the connector must not be outputed after the connector gets
+ * freed, because that operation could cause the underlying shared library to get unloaded.
+ */
+int32_t inventory_create_os(Inventory *inv,
+                            const char *name,
+                            const char *args,
+                            ConnectorInstance mem,
+                            MUOSInstance *out);
 
 /**
  * Clone a connector
  *
  * This method is useful when needing to perform multithreaded operations, as a connector is not
- * guaranteed to be thread safe. Every single cloned instance also needs to be freed using
- * `connector_free`.
+ * guaranteed to be thread safe. Every single cloned instance also needs to be dropped using
+ * `connector_drop`.
  *
  * # Safety
  *
  * `conn` has to point to a a valid `CloneablePhysicalMemory` created by one of the provided
  * functions.
  */
-CloneablePhysicalMemoryObj *connector_clone(const CloneablePhysicalMemoryObj *conn);
+void connector_clone(const ConnectorInstance *conn, MUConnectorInstance *out);
 
 /**
  * Free a connector instance
  *
  * # Safety
  *
- * `conn` has to point to a valid `CloneablePhysicalMemoryObj` created by one of the provided
+ * `conn` has to point to a valid `ConnectorInstance` created by one of the provided
  * functions.
  *
  * There has to be no instance of `PhysicalMemory` created from the input `conn`, because they
  * will become invalid.
  */
-void connector_free(CloneablePhysicalMemoryObj *conn);
+void connector_drop(ConnectorInstance *conn);
 
 /**
  * Free a connector inventory
  *
  * # Safety
  *
- * `inv` must point to a valid `ConnectorInventory` that was created using one of the provided
+ * `inv` must point to a valid `Inventory` that was created using one of the provided
  * functions.
  */
-void inventory_free(ConnectorInventory *inv);
-
-/**
- * Downcast a cloneable physical memory into a physical memory object.
- *
- * This function will take a `cloneable` and turn it into a `PhysicalMemoryObj`, which then can be
- * used by physical memory functions.
- *
- * Please note that this does not free `cloneable`, and the reference is still valid for further
- * operations.
- */
-PhysicalMemoryObj *downcast_cloneable(CloneablePhysicalMemoryObj *cloneable);
-
-/**
- * Free a `PhysicalMemoryObj`
- *
- * This will free a reference to a `PhysicalMemoryObj`. If the physical memory object was created
- * using `downcast_cloneable`, this will NOT free the cloneable reference.
- *
- * # Safety
- *
- * `mem` must point to a valid `PhysicalMemoryObj` that was created using one of the provided
- * functions.
- */
-void phys_free(PhysicalMemoryObj *mem);
+void inventory_free(Inventory *inv);
 
 /**
  * Read a list of values
@@ -281,7 +781,7 @@ void phys_free(PhysicalMemoryObj *mem);
  *
  * `data` must be a valid array of `PhysicalReadData` with the length of at least `len`
  */
-int32_t phys_read_raw_list(PhysicalMemoryObj *mem, PhysicalReadData *data, uintptr_t len);
+int32_t phys_read_raw_list(ConnectorInstance *mem, PhysicalReadData *data, uintptr_t len);
 
 /**
  * Write a list of values
@@ -293,12 +793,12 @@ int32_t phys_read_raw_list(PhysicalMemoryObj *mem, PhysicalReadData *data, uintp
  *
  * `data` must be a valid array of `PhysicalWriteData` with the length of at least `len`
  */
-int32_t phys_write_raw_list(PhysicalMemoryObj *mem, const PhysicalWriteData *data, uintptr_t len);
+int32_t phys_write_raw_list(ConnectorInstance *mem, const PhysicalWriteData *data, uintptr_t len);
 
 /**
  * Retrieve metadata about the physical memory object
  */
-PhysicalMemoryMetadata phys_metadata(const PhysicalMemoryObj *mem);
+PhysicalMemoryMetadata phys_metadata(const ConnectorInstance *mem);
 
 /**
  * Read a single value into `out` from a provided `PhysicalAddress`
@@ -307,20 +807,17 @@ PhysicalMemoryMetadata phys_metadata(const PhysicalMemoryObj *mem);
  *
  * `out` must be a valid pointer to a data buffer of at least `len` size.
  */
-int32_t phys_read_raw_into(PhysicalMemoryObj *mem,
-                           PhysicalAddress addr,
-                           uint8_t *out,
-                           uintptr_t len);
+int32_t phys_read_raw(ConnectorInstance *mem, PhysicalAddress addr, uint8_t *out, uintptr_t len);
 
 /**
  * Read a single 32-bit value from a provided `PhysicalAddress`
  */
-uint32_t phys_read_u32(PhysicalMemoryObj *mem, PhysicalAddress addr);
+uint32_t phys_read_u32(ConnectorInstance *mem, PhysicalAddress addr);
 
 /**
  * Read a single 64-bit value from a provided `PhysicalAddress`
  */
-uint64_t phys_read_u64(PhysicalMemoryObj *mem, PhysicalAddress addr);
+uint64_t phys_read_u64(ConnectorInstance *mem, PhysicalAddress addr);
 
 /**
  * Write a single value from `input` into a provided `PhysicalAddress`
@@ -329,7 +826,7 @@ uint64_t phys_read_u64(PhysicalMemoryObj *mem, PhysicalAddress addr);
  *
  * `input` must be a valid pointer to a data buffer of at least `len` size.
  */
-int32_t phys_write_raw(PhysicalMemoryObj *mem,
+int32_t phys_write_raw(ConnectorInstance *mem,
                        PhysicalAddress addr,
                        const uint8_t *input,
                        uintptr_t len);
@@ -337,12 +834,12 @@ int32_t phys_write_raw(PhysicalMemoryObj *mem,
 /**
  * Write a single 32-bit value into a provided `PhysicalAddress`
  */
-int32_t phys_write_u32(PhysicalMemoryObj *mem, PhysicalAddress addr, uint32_t val);
+int32_t phys_write_u32(ConnectorInstance *mem, PhysicalAddress addr, uint32_t val);
 
 /**
  * Write a single 64-bit value into a provided `PhysicalAddress`
  */
-int32_t phys_write_u64(PhysicalMemoryObj *mem, PhysicalAddress addr, uint64_t val);
+int32_t phys_write_u64(ConnectorInstance *mem, PhysicalAddress addr, uint64_t val);
 
 /**
  * Free a virtual memory object reference
@@ -439,66 +936,6 @@ uint8_t arch_address_space_bits(const ArchitectureObj *arch);
 void arch_free(ArchitectureObj *arch);
 
 bool is_x86_arch(const ArchitectureObj *arch);
-
-Address os_process_info_address(const OsProcessInfoObj *obj);
-
-PID os_process_info_pid(const OsProcessInfoObj *obj);
-
-/**
- * Retreive name of the process
- *
- * This will copy at most `max_len` characters (including the null terminator) into `out` of the
- * name.
- *
- * # Safety
- *
- * `out` must be a buffer with at least `max_len` size
- */
-uintptr_t os_process_info_name(const OsProcessInfoObj *obj, char *out, uintptr_t max_len);
-
-const ArchitectureObj *os_process_info_sys_arch(const OsProcessInfoObj *obj);
-
-const ArchitectureObj *os_process_info_proc_arch(const OsProcessInfoObj *obj);
-
-/**
- * Free a OsProcessInfoObj reference
- *
- * # Safety
- *
- * `obj` must point to a valid `OsProcessInfoObj`, and was created using one of the API's
- * functions.
- */
-void os_process_info_free(OsProcessInfoObj *obj);
-
-Address os_process_module_address(const OsProcessModuleInfoObj *obj);
-
-Address os_process_module_parent_process(const OsProcessModuleInfoObj *obj);
-
-Address os_process_module_base(const OsProcessModuleInfoObj *obj);
-
-uintptr_t os_process_module_size(const OsProcessModuleInfoObj *obj);
-
-/**
- * Retreive name of the module
- *
- * This will copy at most `max_len` characters (including the null terminator) into `out` of the
- * name.
- *
- * # Safety
- *
- * `out` must be a buffer with at least `max_len` size
- */
-uintptr_t os_process_module_name(const OsProcessModuleInfoObj *obj, char *out, uintptr_t max_len);
-
-/**
- * Free a OsProcessModuleInfoObj reference
- *
- * # Safety
- *
- * `obj` must point to a valid `OsProcessModuleInfoObj`, and was created using one of the API's
- * functions.
- */
-void os_process_module_free(OsProcessModuleInfoObj *obj);
 
 #ifdef __cplusplus
 } // extern "C"

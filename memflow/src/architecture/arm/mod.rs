@@ -5,10 +5,10 @@ use super::{
         translate_data::{TranslateDataVec, TranslationChunk},
         ArchMMUSpec, MMUTranslationBase,
     },
-    Architecture, ArchitectureObj, Endianess, ScopedVirtualTranslate,
+    Architecture, ArchitectureIdent, ArchitectureObj, Endianess, ScopedVirtualTranslate,
 };
 
-use crate::error::{Error, Result};
+use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 use crate::iter::SplitAtIndex;
 use crate::mem::PhysicalMemory;
 use crate::types::{size, Address, PhysicalAddress};
@@ -39,6 +39,10 @@ impl Architecture for ARMArchitecture {
 
     fn address_space_bits(&self) -> u8 {
         self.mmu.def.address_space_bits
+    }
+
+    fn ident(&self) -> ArchitectureIdent {
+        ArchitectureIdent::AArch64(size::kb(4))
     }
 }
 
@@ -145,7 +149,8 @@ pub fn new_translator(
     dtb2: Address,
     arch: ArchitectureObj,
 ) -> Result<impl ScopedVirtualTranslate> {
-    let arch = underlying_arch(arch).ok_or(Error::InvalidArchitecture)?;
+    let arch =
+        underlying_arch(arch).ok_or(Error(ErrorOrigin::MMU, ErrorKind::InvalidArchitecture))?;
     Ok(ARMScopedVirtualTranslate::new(arch, dtb1, dtb2))
 }
 

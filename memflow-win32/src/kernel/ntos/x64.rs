@@ -1,14 +1,13 @@
 use std::prelude::v1::*;
 
 use super::pehelper;
-use crate::error::{Error, Result};
 use crate::kernel::StartBlock;
 
 use log::{debug, trace};
 
-use memflow::architecture::x86::x64;
+use memflow::architecture::{x86::x64, ArchitectureObj};
 use memflow::dataview::Pod;
-use memflow::error::PartialResultExt;
+use memflow::error::{Error, ErrorKind, ErrorOrigin, PartialResultExt, Result};
 use memflow::iter::PageChunks;
 use memflow::mem::VirtualMemory;
 use memflow::types::{size, Address};
@@ -41,9 +40,8 @@ pub fn find_with_va_hint<T: VirtualMemory>(
         va_base -= size::mb(2) as u64;
     }
 
-    Err(Error::Initialization(
-        "x64::find_with_va_hint: unable to locate ntoskrnl.exe via va hint",
-    ))
+    Err(Error(ErrorOrigin::OSLayer, ErrorKind::ProcessNotFound)
+        .log_trace("x64::find_with_va_hint: unable to locate ntoskrnl.exe via va hint"))
 }
 
 fn find_with_va<T: VirtualMemory>(virt_mem: &mut T, va_base: u64) -> Result<u64> {
@@ -72,7 +70,10 @@ fn find_with_va<T: VirtualMemory>(virt_mem: &mut T, va_base: u64) -> Result<u64>
             name == "ntoskrnl.exe"
         })
         .map(|(i, _, _)| va_base + i as u64 * x64::ARCH.page_size() as u64)
-        .ok_or(Error::Initialization("unable to locate ntoskrnl.exe"))
+        .ok_or_else(|| {
+            Error(ErrorOrigin::OSLayer, ErrorKind::ProcessNotFound)
+                .log_trace("unable to locate ntoskrnl.exe")
+        })
 }
 
 pub fn find<T: VirtualMemory>(
@@ -83,7 +84,8 @@ pub fn find<T: VirtualMemory>(
 
     let page_map = virt_mem.virt_page_map_range(
         size::mb(2),
-        (!0u64 - (1u64 << (start_block.arch.address_space_bits() - 1))).into(),
+        (!0u64 - (1u64 << (ArchitectureObj::from(start_block.arch).address_space_bits() - 1)))
+            .into(),
         (!0u64).into(),
     );
 
@@ -99,8 +101,7 @@ pub fn find<T: VirtualMemory>(
             let size_of_image = pehelper::try_get_pe_size(virt_mem, addr)?;
             Ok((addr, size_of_image))
         }
-        None => Err(Error::Initialization(
-            "x64::find: unable to locate ntoskrnl.exe with a page map",
-        )),
+        None => Err(Error(ErrorOrigin::OSLayer, ErrorKind::ProcessNotFound)
+            .log_trace("x64::find: unable to locate ntoskrnl.exe with a page map")),
     }
 }

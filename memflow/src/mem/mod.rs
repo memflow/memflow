@@ -17,9 +17,6 @@ pub mod virt_mem;
 pub mod virt_mem_batcher;
 pub mod virt_translate;
 
-#[cfg(any(feature = "dummy_mem", test))]
-pub mod dummy;
-
 #[doc(hidden)]
 pub use cache::*; // TODO: specify pub declarations
 #[doc(hidden)]

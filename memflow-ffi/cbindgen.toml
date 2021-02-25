@@ -7,6 +7,8 @@ style = "both"
 #no_includes = true
 cpp_compat = true
 
+after_includes = "typedef void *Library;"
+
 [parse]
 parse_deps = true
 
@@ -17,3 +19,8 @@ bitflags = true
 
 [fn]
 sort_by = "None"
+
+[export]
+
+[export.rename]
+"OptionMut_c_void" = "pvoid"

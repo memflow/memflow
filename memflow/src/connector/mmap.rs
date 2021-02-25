@@ -2,7 +2,7 @@
 Basic connector which works on mapped memory.
 */
 
-use crate::error::{Error, Result};
+use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 use crate::iter::FnExtend;
 use crate::mem::{
     MemoryMap, PhysicalMemory, PhysicalMemoryMetadata, PhysicalReadData, PhysicalWriteData,
@@ -142,7 +142,8 @@ impl<'a, F: AsRef<MemoryMap<&'a [u8]>> + Send> PhysicalMemory
     }
 
     fn phys_write_raw_list(&mut self, _data: &[PhysicalWriteData]) -> Result<()> {
-        Err(Error::Connector("Target mapping is not writeable"))
+        Err(Error(ErrorOrigin::Connector, ErrorKind::ReadOnly)
+            .log_error("target mapping is not writeable"))
     }
 
     fn metadata(&self) -> PhysicalMemoryMetadata {

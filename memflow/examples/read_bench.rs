@@ -4,21 +4,18 @@ use std::time::{Duration, Instant};
 use clap::*;
 use log::Level;
 
+use memflow::error::{Error, ErrorKind, ErrorOrigin, Result};
 use memflow::mem::*;
+use memflow::os::{ModuleInfo, Process, OS};
 use memflow::plugins::*;
-use memflow::process::*;
 use memflow::types::*;
-
-use memflow_win32::error::Result;
-use memflow_win32::offsets::Win32Offsets;
-use memflow_win32::win32::{Kernel, KernelInfo, Win32ModuleInfo, Win32Process};
 
 use rand::{Rng, SeedableRng};
 use rand_xorshift::XorShiftRng as CurRng;
 
-fn rwtest<T: VirtualMemory>(
-    proc: &mut Win32Process<T>,
-    module: &dyn OsProcessModuleInfo,
+fn rwtest(
+    proc: &mut impl Process,
+    module: &ModuleInfo,
     chunk_sizes: &[usize],
     chunk_counts: &[usize],
     read_size: usize,
@@ -43,11 +40,11 @@ fn rwtest<T: VirtualMemory>(
             let mut done_size = 0_usize;
             let mut total_dur = Duration::new(0, 0);
             let mut calls = 0;
-            let mut bufs = vec![(vec![0 as u8; *i], 0); *o];
+            let mut bufs = vec![(vec![0_u8; *i], 0); *o];
 
             let base_addr = rng.gen_range(
-                module.base().as_u64(),
-                module.base().as_u64() + module.size() as u64,
+                module.base.as_u64(),
+                module.base.as_u64() + module.size as u64,
             );
 
             // This code will increase the read size for higher number of chunks
@@ -61,7 +58,7 @@ fn rwtest<T: VirtualMemory>(
 
                 let now = Instant::now();
                 {
-                    let mut batcher = proc.virt_mem.virt_batcher();
+                    let mut batcher = proc.virt_mem().virt_batcher();
 
                     for (buf, addr) in bufs.iter_mut() {
                         batcher.read_raw_into(Address::from(*addr), buf);
@@ -93,38 +90,29 @@ fn rwtest<T: VirtualMemory>(
     );
 }
 
-fn read_bench<T: PhysicalMemory + ?Sized, V: VirtualTranslate>(
-    phys_mem: &mut T,
-    vat: &mut V,
-    kernel_info: KernelInfo,
-) -> Result<()> {
-    let offsets = Win32Offsets::builder().kernel_info(&kernel_info).build()?;
-    let mut kernel = Kernel::new(phys_mem, vat, offsets, kernel_info);
-
+fn read_bench(mut kernel: impl OS) -> Result<()> {
     let proc_list = kernel.process_info_list()?;
     let mut rng = CurRng::seed_from_u64(rand::thread_rng().gen_range(0, !0u64));
     loop {
-        let mut prc = Win32Process::with_kernel_ref(
-            &mut kernel,
-            proc_list[rng.gen_range(0, proc_list.len())].clone(),
-        );
+        let mut prc =
+            kernel.process_by_info(proc_list[rng.gen_range(0, proc_list.len())].clone())?;
 
-        let mod_list: Vec<Win32ModuleInfo> = prc
+        let mod_list: Vec<ModuleInfo> = prc
             .module_list()?
             .into_iter()
-            .filter(|module| module.size() > 0x1000)
+            .filter(|module| module.size > 0x1000)
             .collect();
 
         if !mod_list.is_empty() {
             let tmod = &mod_list[rng.gen_range(0, mod_list.len())];
             println!(
                 "Found test module {} ({:x}) in {}",
-                tmod.name(),
-                tmod.size(),
-                prc.proc_info.name(),
+                tmod.name,
+                tmod.size,
+                prc.info().name,
             );
 
-            let mem_map = prc.virt_mem.virt_page_map(size::gb(1));
+            let mem_map = prc.virt_mem().virt_page_map(size::gb(1));
 
             println!("Memory map (with up to 1GB gaps):");
 
@@ -148,7 +136,21 @@ fn read_bench<T: PhysicalMemory + ?Sized, V: VirtualTranslate>(
 }
 
 fn main() -> Result<()> {
-    let matches = App::new("read_keys example")
+    let (connector, conn_args, os, os_args, log_level) = parse_args()?;
+
+    simple_logger::SimpleLogger::new()
+        .with_level(log_level.to_level_filter())
+        .init()
+        .unwrap();
+
+    // create connector + os
+    let kernel = Inventory::build_conn_os_combo(&connector, &conn_args, &os, &os_args)?;
+
+    read_bench(kernel)
+}
+
+fn parse_args() -> Result<(String, Args, String, Args, log::Level)> {
+    let matches = App::new("read_bench example")
         .version(crate_version!())
         .author(crate_authors!())
         .arg(Arg::with_name("verbose").short("v").multiple(true))
@@ -160,9 +162,23 @@ fn main() -> Result<()> {
                 .required(true),
         )
         .arg(
-            Arg::with_name("args")
-                .long("args")
-                .short("a")
+            Arg::with_name("conn-args")
+                .long("conn-args")
+                .short("x")
+                .takes_value(true)
+                .default_value(""),
+        )
+        .arg(
+            Arg::with_name("os")
+                .long("os")
+                .short("o")
+                .takes_value(true)
+                .required(true),
+        )
+        .arg(
+            Arg::with_name("os-args")
+                .long("os-args")
+                .short("y")
                 .takes_value(true)
                 .default_value(""),
         )
@@ -177,43 +193,28 @@ fn main() -> Result<()> {
         4 => Level::Trace,
         _ => Level::Trace,
     };
-    simple_logger::SimpleLogger::new()
-        .with_level(level.to_level_filter())
-        .init()
-        .unwrap();
 
-    // create inventory + connector
-    let inventory = unsafe { Inventory::scan() };
-    let mut connector = inventory
-        .create_connector(
-            matches.value_of("connector").unwrap(),
-            &Args::parse(matches.value_of("args").unwrap()).unwrap(),
-        )
-        .unwrap();
-
-    // scan for win32 kernel
-    let kernel_info = KernelInfo::scanner(&mut connector).scan()?;
-
-    let mut vat = DirectTranslate::new();
-
-    println!("Benchmarking uncached reads:");
-    read_bench(&mut connector, &mut vat, kernel_info.clone()).unwrap();
-
-    println!();
-    println!("Benchmarking cached reads:");
-    let mut mem_cached = CachedMemoryAccess::builder(&mut connector)
-        .arch(kernel_info.start_block.arch)
-        .build()
-        .unwrap();
-
-    let mut vat_cached = CachedVirtualTranslate::builder(vat)
-        .arch(kernel_info.start_block.arch)
-        .build()
-        .unwrap();
-
-    read_bench(&mut mem_cached, &mut vat_cached, kernel_info).unwrap();
-
-    println!("TLB Hits {}\nTLB Miss {}", vat_cached.hitc, vat_cached.misc);
-
-    Ok(())
+    Ok((
+        matches
+            .value_of("connector")
+            .ok_or_else(|| {
+                Error(ErrorOrigin::Other, ErrorKind::Configuration)
+                    .log_error("failed to parse connector")
+            })?
+            .into(),
+        Args::parse(matches.value_of("conn-args").ok_or_else(|| {
+            Error(ErrorOrigin::Other, ErrorKind::Configuration)
+                .log_error("failed to parse connector args")
+        })?)?,
+        matches
+            .value_of("os")
+            .ok_or_else(|| {
+                Error(ErrorOrigin::Other, ErrorKind::Configuration).log_error("failed to parse os")
+            })?
+            .into(),
+        Args::parse(matches.value_of("os-args").ok_or_else(|| {
+            Error(ErrorOrigin::Other, ErrorKind::Configuration).log_error("failed to parse os args")
+        })?)?,
+        level,
+    ))
 }

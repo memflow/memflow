@@ -6,7 +6,9 @@ pub use virtual_dma::VirtualDMA;
 use super::VirtualMemoryBatcher;
 use crate::architecture::ArchitectureObj;
 use crate::dataview::Pod;
-use crate::error::{Error, PartialError, PartialResult, PartialResultExt, Result};
+use crate::error::{
+    Error, ErrorKind, ErrorOrigin, PartialError, PartialResult, PartialResultExt, Result,
+};
 use crate::types::{Address, Page, PhysicalAddress, Pointer32, Pointer64};
 
 use std::mem::MaybeUninit;
@@ -28,16 +30,18 @@ use std::mem::MaybeUninit;
 /// use memflow::types::Address;
 /// use memflow::mem::VirtualMemory;
 ///
-/// fn read<T: VirtualMemory>(virt_mem: &mut T, read_addr: Address) {
+/// fn read(virt_mem: &mut impl VirtualMemory, read_addr: Address) {
 ///     let mut addr = 0u64;
 ///     virt_mem.virt_read_into(read_addr, &mut addr).unwrap();
 ///     println!("addr: {:x}", addr);
 ///     # assert_eq!(addr, 0x00ff_00ff_00ff_00ff);
 /// }
-/// # use memflow::mem::dummy::DummyMemory;
+/// # use memflow::dummy::{DummyMemory, DummyOS};
+/// # use memflow::os::Process;
 /// # use memflow::types::size;
-/// # let (mut mem, virt_base) = DummyMemory::new_virt(size::mb(4), size::mb(2), &[255, 0, 255, 0, 255, 0, 255, 0]);
-/// # read(&mut mem, virt_base);
+/// # let mut proc = DummyOS::quick_process(size::mb(2), &[255, 0, 255, 0, 255, 0, 255, 0]);
+/// # let virt_base = proc.info().address;
+/// # read(proc.virt_mem(), virt_base);
 /// ```
 pub trait VirtualMemory
 where
@@ -139,7 +143,10 @@ where
         match arch.bits() {
             64 => self.virt_read_addr64(addr),
             32 => self.virt_read_addr32(addr),
-            _ => Err(PartialError::Error(Error::InvalidArchitecture)),
+            _ => Err(PartialError::Error(Error(
+                ErrorOrigin::VirtualMemory,
+                ErrorKind::InvalidArchitecture,
+            ))),
         }
     }
 

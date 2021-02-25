@@ -1,9 +1,9 @@
-use crate::error::{Error, Result};
 use crate::kernel::StartBlock;
 
 use std::convert::TryInto;
 
 use memflow::architecture::arm::aarch64;
+use memflow::error::{Error, ErrorKind, ErrorOrigin, Result};
 use memflow::types::{size, Address};
 
 pub const PHYS_BASE: Address = Address::from_u64(size::gb(1) as u64);
@@ -42,12 +42,13 @@ pub fn find(mem: &[u8]) -> Result<StartBlock> {
         .enumerate()
         .filter_map(|(i, c)| find_pt(PHYS_BASE + (i * aarch64::ARCH.page_size()), c))
         .map(|addr| StartBlock {
-            arch: aarch64::ARCH,
+            arch: aarch64::ARCH.ident(),
             kernel_hint: 0.into(),
             dtb: addr,
         })
         .next()
-        .ok_or(Error::Initialization(
-            "unable to find aarch64 dtb in lowstub < 16M",
-        ))
+        .ok_or_else(|| {
+            Error(ErrorOrigin::OSLayer, ErrorKind::NotFound)
+                .log_warn("unable to find aarch64 dtb in lowstub < 16M")
+        })
 }

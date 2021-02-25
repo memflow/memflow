@@ -8,6 +8,4 @@ pub mod mem;
 
 pub mod architecture;
 
-pub mod process;
-
 pub mod util;

@@ -3,24 +3,29 @@ use memflow_bench::*;
 
 use criterion::*;
 
-use memflow::mem::dummy::{DummyMemory as Memory, DummyModule, DummyProcess};
+use memflow::dummy::DummyMemory as Memory;
+use memflow::dummy::DummyOS;
+use memflow::os::Process;
 use memflow::prelude::v1::*;
 
 fn initialize_virt_ctx() -> Result<(
     Memory,
     DirectTranslate,
-    DummyProcess,
+    ProcessInfo,
     impl ScopedVirtualTranslate,
-    DummyModule,
+    ModuleInfo,
 )> {
-    let mut mem = Memory::new(size::mb(64));
+    let mem = Memory::new(size::mb(64));
+    let mut os = DummyOS::new(mem);
 
     let vat = DirectTranslate::new();
 
-    let proc = mem.alloc_process(size::mb(60), &[]);
-    let module = proc.get_module(size::mb(4));
-    let translator = proc.translator();
-    Ok((mem, vat, proc, translator, module))
+    let pid = os.alloc_process(size::mb(60), &[]);
+    let mut prc = os.process_by_pid(pid).unwrap();
+    let module = prc.primary_module().unwrap();
+    let translator = prc.proc.translator();
+    let info = prc.proc.info;
+    Ok((os.destroy(), vat, info, translator, module))
 }
 
 fn dummy_read_group(c: &mut Criterion) {

@@ -23,6 +23,7 @@ pub(crate) use mmu::ArchMMUDef;
 use crate::error::{Error, Result};
 use crate::iter::{FnExtend, SplitAtIndex};
 use crate::mem::PhysicalMemory;
+use crate::types::size;
 
 use crate::types::{Address, PhysicalAddress};
 
@@ -54,7 +55,7 @@ pub trait ScopedVirtualTranslate: Clone + Copy + Send {
     /// ```
     /// # use memflow::error::Result;
     /// # use memflow::types::{PhysicalAddress, Address};
-    /// # use memflow::mem::dummy::DummyMemory;
+    /// # use memflow::dummy::{DummyMemory, DummyOS};
     /// use memflow::architecture::ScopedVirtualTranslate;
     /// use memflow::architecture::x86::x64;
     /// use memflow::types::size;
@@ -62,8 +63,10 @@ pub trait ScopedVirtualTranslate: Clone + Copy + Send {
     /// # const VIRT_MEM_SIZE: usize = size::mb(8);
     /// # const CHUNK_SIZE: usize = 2;
     /// #
-    /// # let mut mem = DummyMemory::new(size::mb(16));
-    /// # let (dtb, virtual_base) = mem.alloc_dtb(VIRT_MEM_SIZE, &[]);
+    /// # let mem = DummyMemory::new(size::mb(16));
+    /// # let mut os = DummyOS::new(mem);
+    /// # let (dtb, virtual_base) = os.alloc_dtb(VIRT_MEM_SIZE, &[]);
+    /// # let mut mem = os.destroy();
     /// # let translator = x64::new_translator(dtb);
     /// let arch = x64::ARCH;
     ///
@@ -202,6 +205,9 @@ pub trait Architecture: Send + Sync + 'static {
     ///
     /// ```
     fn address_space_bits(&self) -> u8;
+
+    /// Returns a FFI-safe identifier
+    fn ident(&self) -> ArchitectureIdent;
 }
 
 impl std::fmt::Debug for ArchitectureObj {
@@ -224,6 +230,52 @@ impl std::cmp::PartialEq<ArchitectureObj> for ArchitectureObj {
     #[allow(clippy::vtable_address_comparisons)]
     fn eq(&self, other: &ArchitectureObj) -> bool {
         std::ptr::eq(*self, *other)
+    }
+}
+
+#[repr(C)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+pub enum ArchitectureIdent {
+    /// Unknown architecture. Could be third-party implemented. memflow knows how to work on them,
+    /// but is unable to instantiate them.
+    Unknown,
+    /// X86 with specified bitness and address extensions
+    ///
+    /// First argument - `bitness` controls whether it's 32, or 64 bit variant.
+    /// Second argument - `address_extensions` control whether address extensions are
+    /// enabled (PAE on x32, or LA57 on x64). Warning: LA57 is currently unsupported.
+    X86(u8, bool),
+    /// ARM 64-bit architecture with specified page size
+    ///
+    /// Valid page sizes are 4kb, 16kb, 64kb. Only 4kb is supported at the moment
+    AArch64(usize),
+}
+
+impl std::fmt::Display for ArchitectureIdent {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ArchitectureIdent::X86(32, false) => f.pad("x86_32"),
+            ArchitectureIdent::X86(32, true) => f.pad("x86_32 PAE"),
+            ArchitectureIdent::X86(64, false) => f.pad("x86_64"),
+            ArchitectureIdent::X86(64, true) => f.pad("x86_64 LA57"),
+            ArchitectureIdent::X86(_, _) => f.pad("x86"),
+            ArchitectureIdent::AArch64(_) => f.pad("AArch64"),
+            ArchitectureIdent::Unknown => f.pad("Unknown"),
+        }
+    }
+}
+
+impl From<ArchitectureIdent> for ArchitectureObj {
+    fn from(arch: ArchitectureIdent) -> ArchitectureObj {
+        const KB4: usize = size::kb(4);
+        match arch {
+            ArchitectureIdent::X86(32, false) => x86::x32::ARCH,
+            ArchitectureIdent::X86(32, true) => x86::x32_pae::ARCH,
+            ArchitectureIdent::X86(64, false) => x86::x64::ARCH,
+            ArchitectureIdent::AArch64(KB4) => arm::aarch64::ARCH,
+            _ => panic!("unsupported architecture! {:?}", arch),
+        }
     }
 }
 

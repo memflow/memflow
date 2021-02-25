@@ -45,7 +45,7 @@ pub mod connector;
 #[cfg(feature = "plugins")]
 pub mod plugins;
 
-pub mod process;
+pub mod os;
 
 pub mod iter;
 
@@ -59,6 +59,9 @@ pub mod dataview {
     pub use ::memflow_derive::Pod;
 }
 
+#[cfg(any(feature = "dummy_mem", test))]
+pub mod dummy;
+
 pub mod prelude {
     pub mod v1 {
         pub use crate::architecture::*;
@@ -68,9 +71,11 @@ pub mod prelude {
         pub use crate::error::*;
         pub use crate::iter::*;
         pub use crate::mem::*;
+        pub use crate::os::*;
+        #[cfg(feature = "plugins")]
+        pub use crate::plugins::os::*;
         #[cfg(feature = "plugins")]
         pub use crate::plugins::*;
-        pub use crate::process::*;
         pub use crate::types::*;
     }
     pub use v1::*;

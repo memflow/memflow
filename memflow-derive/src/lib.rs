@@ -1,49 +1,26 @@
 use darling::FromMeta;
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{parse_macro_input, AttributeArgs, Data, DeriveInput, Fields, ItemFn, ReturnType, Type};
+use syn::{parse_macro_input, AttributeArgs, Data, DeriveInput, Fields, ItemFn};
 
 #[derive(Debug, FromMeta)]
 struct ConnectorFactoryArgs {
     name: String,
     #[darling(default)]
     version: Option<String>,
+    #[darling(default)]
+    description: Option<String>,
+    #[darling(default)]
+    import_prefix: Option<String>,
 }
 
-fn parse_resulting_type(output: &ReturnType) -> Option<syn::Type> {
-    // There is a return type
-    let ty = if let ReturnType::Type(_, ty) = output {
-        ty
-    } else {
-        return None;
-    };
-
-    // Return type is a specific type
-    let ty = if let Type::Path(ty) = &**ty {
-        ty
-    } else {
-        return None;
-    };
-
-    // Take the first segment
-    let first = &ty.path.segments.first()?;
-
-    // It is a bracketed segment (for generic type)
-    let args = if let syn::PathArguments::AngleBracketed(args) = &first.arguments {
-        args
-    } else {
-        return None;
-    };
-
-    // There is an argument (Result<T, ...>)
-    let first_arg = args.args.first()?;
-
-    // It is a type
-    if let syn::GenericArgument::Type(arg) = &first_arg {
-        Some(arg.clone())
-    } else {
-        None
-    }
+#[derive(Debug, FromMeta)]
+struct OSFactoryArgs {
+    name: String,
+    #[darling(default)]
+    version: Option<String>,
+    #[darling(default)]
+    description: Option<String>,
 }
 
 // We should add conditional compilation for the crate-type here
@@ -66,94 +43,199 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
 
     let connector_name = args.name;
 
+    let version_gen = args
+        .version
+        .map_or_else(|| quote! { env!("CARGO_PKG_VERSION") }, |v| quote! { #v });
+
+    let description_gen = args.description.map_or_else(
+        || quote! { env!("CARGO_PKG_DESCRIPTION") },
+        |d| quote! { #d },
+    );
+
+    let prefix_gen = args.import_prefix.map(|v| v.parse().unwrap()).map_or_else(
+        || quote! { ::memflow },
+        |v: proc_macro2::TokenStream| quote! { #v },
+    );
+
+    let connector_descriptor: proc_macro2::TokenStream =
+        ["MEMFLOW_CONNECTOR_", &(&connector_name).to_uppercase()]
+            .concat()
+            .parse()
+            .unwrap();
+
     let func = parse_macro_input!(input as ItemFn);
     let func_name = &func.sig.ident;
-
-    let connector_type = parse_resulting_type(&func.sig.output).expect("invalid return type");
 
     let create_gen = if func.sig.inputs.len() > 1 {
         quote! {
             #[doc(hidden)]
             extern "C" fn mf_create(
-                args: *const ::std::os::raw::c_char,
+                args: &#prefix_gen::types::ReprCStr,
+                _: Option<&mut ::std::os::raw::c_void>,
                 log_level: i32,
-            ) -> std::option::Option<&'static mut ::std::ffi::c_void> {
-                let level = match log_level {
-                    0 => ::log::Level::Error,
-                    1 => ::log::Level::Warn,
-                    2 => ::log::Level::Info,
-                    3 => ::log::Level::Debug,
-                    4 => ::log::Level::Trace,
-                    _ => ::log::Level::Trace,
-                };
-
-                let argsstr = unsafe { ::std::ffi::CStr::from_ptr(args) }.to_str()
-                    .or_else(|e| {
-                        ::log::error!("error converting connector args: {}", e);
-                        Err(e)
-                    })
-                    .ok()?;
-                let conn_args = ::memflow::plugins::Args::parse(argsstr)
-                    .or_else(|e| {
-                        ::log::error!("error parsing connector args: {}", e);
-                        Err(e)
-                    })
-                    .ok()?;
-
-                let conn = Box::new(#func_name(&conn_args, level)
-                    .or_else(|e| {
-                        ::log::error!("{}", e);
-                        Err(e)
-                    })
-                    .ok()?);
-                Some(unsafe { &mut *(Box::into_raw(conn) as *mut ::std::ffi::c_void) })
+                out: &mut #prefix_gen::plugins::connector::MUConnectorInstance
+            ) -> i32 {
+                #prefix_gen::plugins::connector::create_with_logging(args, log_level, out, #func_name)
             }
         }
     } else {
         quote! {
             #[doc(hidden)]
             extern "C" fn mf_create(
-                args: *const ::std::os::raw::c_char,
+                args: &#prefix_gen::types::ReprCStr,
+                _: Option<&mut ::std::os::raw::c_void>,
                 _: i32,
-            ) -> std::option::Option<&'static mut ::std::ffi::c_void> {
-                let argsstr = unsafe { ::std::ffi::CStr::from_ptr(args) }.to_str()
-                    .or_else(|e| {
-                        Err(e)
-                    })
-                    .ok()?;
-                let conn_args = ::memflow::plugins::Args::parse(argsstr)
-                    .or_else(|e| {
-                        Err(e)
-                    })
-                    .ok()?;
-
-                let conn = Box::new(#func_name(&conn_args)
-                    .or_else(|e| {
-                        Err(e)
-                    })
-                    .ok()?);
-                Some(unsafe { &mut *(Box::into_raw(conn) as *mut ::std::ffi::c_void) })
+                out: &mut #prefix_gen::plugins::connector::MUConnectorInstance
+            ) -> i32 {
+                #prefix_gen::plugins::connector::create_without_logging(args, out, #func_name)
             }
         }
     };
 
-    let mut gen = quote! {
+    let gen = quote! {
         #[doc(hidden)]
         #[no_mangle]
-        pub static MEMFLOW_CONNECTOR: ::memflow::plugins::ConnectorDescriptor = ::memflow::plugins::ConnectorDescriptor {
-            connector_version: ::memflow::plugins::MEMFLOW_CONNECTOR_VERSION,
+        pub static #connector_descriptor: #prefix_gen::plugins::ConnectorDescriptor = #prefix_gen::plugins::ConnectorDescriptor {
+            plugin_version: #prefix_gen::plugins::MEMFLOW_PLUGIN_VERSION,
             name: #connector_name,
-            create_vtable: mf_create_vtable,
+            version: #version_gen,
+            description: #description_gen,
+            create: mf_create,
         };
 
-        extern "C" fn mf_create_vtable() -> ::memflow::plugins::ConnectorFunctionTable {
-            ::memflow::plugins::ConnectorFunctionTable::create_vtable::<#connector_type>(mf_create)
-        }
+        #create_gen
 
         #func
     };
 
-    gen.extend(create_gen);
+    gen.into()
+}
+
+#[proc_macro_attribute]
+pub fn os_layer(args: TokenStream, input: TokenStream) -> TokenStream {
+    let attr_args = parse_macro_input!(args as AttributeArgs);
+    let args = match OSFactoryArgs::from_list(&attr_args) {
+        Ok(v) => v,
+        Err(e) => return TokenStream::from(e.write_errors()),
+    };
+
+    let os_name = args.name;
+
+    let version_gen = args
+        .version
+        .map_or_else(|| quote! { env!("CARGO_PKG_VERSION") }, |v| quote! { #v });
+
+    let description_gen = args.description.map_or_else(
+        || quote! { env!("CARGO_PKG_DESCRIPTION") },
+        |d| quote! { #d },
+    );
+
+    let os_descriptor: proc_macro2::TokenStream = ["MEMFLOW_OS_", &(&os_name).to_uppercase()]
+        .concat()
+        .parse()
+        .unwrap();
+
+    let func = parse_macro_input!(input as ItemFn);
+    let func_name = &func.sig.ident;
+
+    let create_gen = if func.sig.inputs.len() > 2 {
+        quote! {
+            #[doc(hidden)]
+            extern "C" fn mf_create(
+                args: &::memflow::types::ReprCStr,
+                mem: ::memflow::plugins::COption<::memflow::plugins::ConnectorInstance>,
+                log_level: i32,
+                out: &mut ::memflow::plugins::os::MUOSInstance
+            ) -> i32 {
+                ::memflow::plugins::os::create_with_logging(args, mem.into(), log_level, out, #func_name)
+            }
+        }
+    } else {
+        quote! {
+            #[doc(hidden)]
+            extern "C" fn mf_create(
+                args: &::memflow::types::ReprCStr,
+                mem: ::memflow::plugins::COption<::memflow::plugins::ConnectorInstance>,
+                _: i32,
+                out: &mut ::memflow::plugins::os::MUOSInstance
+            ) -> i32 {
+                ::memflow::plugins::os::create_without_logging(args, mem.into(), out, #func_name)
+            }
+        }
+    };
+
+    let gen = quote! {
+        #[doc(hidden)]
+        #[no_mangle]
+        pub static #os_descriptor: ::memflow::plugins::OSLayerDescriptor = ::memflow::plugins::OSLayerDescriptor {
+            os_version: ::memflow::plugins::MEMFLOW_PLUGIN_VERSION,
+            name: #os_name,
+            version: #version_gen,
+            description: #description_gen,
+            create: mf_create,
+        };
+
+        #create_gen
+
+        #func
+    };
+
+    gen.into()
+}
+
+#[proc_macro_attribute]
+pub fn os_layer_bare(args: TokenStream, input: TokenStream) -> TokenStream {
+    let attr_args = parse_macro_input!(args as AttributeArgs);
+    let args = match OSFactoryArgs::from_list(&attr_args) {
+        Ok(v) => v,
+        Err(e) => return TokenStream::from(e.write_errors()),
+    };
+
+    let os_name = args.name;
+
+    let version_gen = args
+        .version
+        .map_or_else(|| quote! { env!("CARGO_PKG_VERSION") }, |v| quote! { #v });
+
+    let description_gen = args.description.map_or_else(
+        || quote! { env!("CARGO_PKG_DESCRIPTION") },
+        |d| quote! { #d },
+    );
+
+    let os_descriptor: proc_macro2::TokenStream = ["MEMFLOW_OS_", &(&os_name).to_uppercase()]
+        .concat()
+        .parse()
+        .unwrap();
+
+    let func = parse_macro_input!(input as ItemFn);
+    let func_name = &func.sig.ident;
+    let create_gen = quote! {
+        #[doc(hidden)]
+        extern "C" fn mf_create(
+            args: &::memflow::types::ReprCStr,
+            mem: ::memflow::plugins::COption<::memflow::plugins::ConnectorInstance>,
+            log_level: i32,
+            out: &mut ::memflow::plugins::os::MUOSInstance
+        ) -> i32 {
+            ::memflow::plugins::create_bare(args, mem.into(), log_level, out, #func_name)
+        }
+    };
+
+    let gen = quote! {
+        #[doc(hidden)]
+        #[no_mangle]
+        pub static #os_descriptor: ::memflow::plugins::os::OSDescriptor = ::memflow::plugins::os::OSDescriptor {
+            plugin_version: ::memflow::plugins::MEMFLOW_PLUGIN_VERSION,
+            name: #os_name,
+            version: #version_gen,
+            description: #description_gen,
+            create: mf_create,
+        };
+
+        #create_gen
+
+        #func
+    };
 
     gen.into()
 }

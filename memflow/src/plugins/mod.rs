@@ -274,7 +274,8 @@ pub trait Loadable: Sized {
         for lib in libs.into_iter() {
             if !lib.loader.exists(out) {
                 info!(
-                    "adding library '{}': {:?}",
+                    "adding plugin '{}/{}': {:?}",
+                    Self::plugin_type(),
                     lib.loader.ident(),
                     path.as_ref()
                 );

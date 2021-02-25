@@ -209,7 +209,7 @@ impl ArgsValidator {
         for arg in args.map.iter() {
             if self.args.iter().find(|a| a.name == *arg.0).is_none() {
                 return Err(Error(ErrorOrigin::ArgsValidator, ErrorKind::ArgNotExists)
-                    .log_error(format!("the given argument {} does not exist", arg.0)));
+                    .log_error(format!("argument {} does not exist", arg.0)));
             }
         }
 
@@ -219,7 +219,7 @@ impl ArgsValidator {
                 return Err(
                     Error(ErrorOrigin::ArgsValidator, ErrorKind::RequiredArgNotFound).log_error(
                         format!(
-                            "the argument {} is required but could not be found",
+                            "argument {} is required but could not be found",
                             arg.name
                         ),
                     ),
@@ -231,7 +231,7 @@ impl ArgsValidator {
                 if let Some(value) = args.get(&arg.name) {
                     if let Err(err) = validator(value) {
                         return Err(Error(ErrorOrigin::ArgsValidator, ErrorKind::ArgValidation)
-                            .log_error(format!("the argument {} is invalid: {}", arg.name, err)));
+                            .log_error(format!("argument {} is invalid: {}", arg.name, err)));
                     }
                 }
             }

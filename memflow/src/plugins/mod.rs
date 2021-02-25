@@ -167,7 +167,7 @@ pub struct PluginDescriptor<T: Loadable> {
     pub description: &'static str,
 
     /// Retrieve a help string from the connector.
-    // TODO:
+    //pub help: extern "C" fn(&ReprCStr) -> (),
 
     /// Retrieve a list of available targets for this connector
     // TODO:

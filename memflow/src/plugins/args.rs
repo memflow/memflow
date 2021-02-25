@@ -204,7 +204,7 @@ impl ArgsValidator {
         self
     }
 
-    pub fn validate(&self, args: Args) -> Result<()> {
+    pub fn validate(&self, args: &Args) -> Result<()> {
         // check if all given args exist
         for arg in args.map.iter() {
             if self.args.iter().find(|a| a.name == *arg.0).is_none() {
@@ -424,7 +424,7 @@ mod tests {
         let argstr = "test0,opt1=test1";
         let args = Args::parse(argstr).unwrap();
 
-        assert_eq!(validator.validate(args), Ok(()));
+        assert_eq!(validator.validate(&args), Ok(()));
     }
 
     #[test]
@@ -436,7 +436,7 @@ mod tests {
         let argstr = "test0";
         let args = Args::parse(argstr).unwrap();
 
-        assert_eq!(validator.validate(args), Ok(()));
+        assert_eq!(validator.validate(&args), Ok(()));
     }
 
     #[test]
@@ -449,7 +449,7 @@ mod tests {
         let args = Args::parse(argstr).unwrap();
 
         assert_eq!(
-            validator.validate(args),
+            validator.validate(&args),
             Err(Error(
                 ErrorOrigin::ArgsValidator,
                 ErrorKind::RequiredArgNotFound
@@ -467,7 +467,7 @@ mod tests {
         let args = Args::parse(argstr).unwrap();
 
         assert_eq!(
-            validator.validate(args),
+            validator.validate(&args),
             Err(Error(ErrorOrigin::ArgsValidator, ErrorKind::ArgNotExists))
         );
     }
@@ -485,7 +485,7 @@ mod tests {
         let argstr = "valid_option";
         let args = Args::parse(argstr).unwrap();
 
-        assert_eq!(validator.validate(args), Ok(()));
+        assert_eq!(validator.validate(&args), Ok(()));
     }
 
     #[test]
@@ -502,7 +502,7 @@ mod tests {
         let args = Args::parse(argstr).unwrap();
 
         assert_eq!(
-            validator.validate(args),
+            validator.validate(&args),
             Err(Error(ErrorOrigin::ArgsValidator, ErrorKind::ArgValidation))
         );
     }

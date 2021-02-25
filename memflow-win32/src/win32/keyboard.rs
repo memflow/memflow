@@ -146,9 +146,9 @@ impl<T> Win32Keyboard<T> {
         let pe = PeView::from_bytes(module_buf)
             .map_err(|err| Error(ErrorOrigin::OSLayer, ErrorKind::InvalidPeFile).log_info(err))?;
 
-        match pe.get_export_by_name("gafAsyncKeyState").map_err(|err| {
+        match pe.get_export_by_name("gafAsyncKeyState").map_err(|_| {
             Error(ErrorOrigin::OSLayer, ErrorKind::ExportNotFound)
-                .log_info(format!("unable to find gafAsyncKeyState: {}", err))
+                .log_info("unable to find gafAsyncKeyState: {}")
         })? {
             Export::Symbol(s) => {
                 debug!("gafAsyncKeyState export found at: {:x}", *s);

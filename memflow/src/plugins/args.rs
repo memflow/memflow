@@ -218,10 +218,7 @@ impl ArgsValidator {
             if arg.required && args.get(&arg.name).is_none() {
                 return Err(
                     Error(ErrorOrigin::ArgsValidator, ErrorKind::RequiredArgNotFound).log_error(
-                        format!(
-                            "argument {} is required but could not be found",
-                            arg.name
-                        ),
+                        format!("argument {} is required but could not be found", arg.name),
                     ),
                 );
             }

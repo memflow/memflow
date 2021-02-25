@@ -243,8 +243,12 @@ impl ArgsValidator {
 
 impl fmt::Display for ArgsValidator {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        for arg in self.args.iter() {
-            writeln!(f, "{}", arg).ok();
+        for (idx, arg) in self.args.iter().enumerate() {
+            if idx < self.args.len() - 1 {
+                writeln!(f, "{}", arg).ok();
+            } else {
+                write!(f, "{}", arg).ok();
+            }
         }
         Ok(())
     }

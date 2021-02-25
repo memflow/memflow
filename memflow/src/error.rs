@@ -101,6 +101,9 @@ impl<T> From<PartialError<T>> for Error {
 pub enum ErrorOrigin {
     Pointer,
 
+    Args,
+    ArgsValidator,
+
     Memory,
     MMU,
     MemoryMap,
@@ -125,6 +128,9 @@ impl ErrorOrigin {
     pub fn to_str(self) -> &'static str {
         match self {
             ErrorOrigin::Pointer => "pointer",
+
+            ErrorOrigin::Args => "args",
+            ErrorOrigin::ArgsValidator => "args validator",
 
             ErrorOrigin::Memory => "memory",
             ErrorOrigin::MMU => "mmu",
@@ -156,6 +162,10 @@ pub enum ErrorKind {
     Configuration,
     Offset,
     HTTP,
+
+    ArgNotExists,
+    ArgValidation,
+    RequiredArgNotFound,
 
     PartialData,
 
@@ -211,6 +221,10 @@ impl ErrorKind {
             ErrorKind::Configuration => "configuration error",
             ErrorKind::Offset => "offset error",
             ErrorKind::HTTP => "http error",
+
+            ErrorKind::ArgNotExists => "the given argument does not exist",
+            ErrorKind::ArgValidation => "the argument could not be validated",
+            ErrorKind::RequiredArgNotFound => "required argument is not set",
 
             ErrorKind::PartialData => "partial data",
 

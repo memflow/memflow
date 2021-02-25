@@ -5,7 +5,7 @@ Connector argument handler.
 use std::fmt;
 use std::prelude::v1::*;
 
-use crate::error::{Error, Result};
+use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 
 use core::convert::TryFrom;
 use hashbrown::HashMap;
@@ -169,6 +169,185 @@ impl Into<String> for Args {
     }
 }
 
+/// Validator for connector arguments
+///
+/// # Examples
+///
+/// Builder:
+/// ```
+/// use memflow::plugins::{ArgsValidator, ArgDescriptor};
+///
+/// let validator = ArgsValidator::new()
+///     .arg(ArgDescriptor::new("default"))
+///     .arg(ArgDescriptor::new("arg1"));
+/// ```
+#[derive(Debug)]
+pub struct ArgsValidator {
+    args: Vec<ArgDescriptor>,
+}
+
+impl Default for ArgsValidator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl ArgsValidator {
+    /// Creates an empty `ArgsValidator` struct.
+    pub fn new() -> Self {
+        Self { args: Vec::new() }
+    }
+
+    /// Adds an `ArgDescriptor` to the validator and returns itself.
+    pub fn arg(mut self, arg: ArgDescriptor) -> Self {
+        self.args.push(arg);
+        self
+    }
+
+    pub fn validate(&self, args: Args) -> Result<()> {
+        // check if all given args exist
+        for arg in args.map.iter() {
+            if self.args.iter().find(|a| a.name == *arg.0).is_none() {
+                return Err(Error(ErrorOrigin::ArgsValidator, ErrorKind::ArgNotExists)
+                    .log_error(format!("the given argument {} does not exist", arg.0)));
+            }
+        }
+
+        for arg in self.args.iter() {
+            // check if required args are set
+            if arg.required && args.get(&arg.name).is_none() {
+                return Err(
+                    Error(ErrorOrigin::ArgsValidator, ErrorKind::RequiredArgNotFound).log_error(
+                        format!(
+                            "the argument {} is required but could not be found",
+                            arg.name
+                        ),
+                    ),
+                );
+            }
+
+            // check if validate matches
+            if let Some(validator) = &arg.validator {
+                if let Some(value) = args.get(&arg.name) {
+                    if let Err(err) = validator(value) {
+                        return Err(Error(ErrorOrigin::ArgsValidator, ErrorKind::ArgValidation)
+                            .log_error(format!("the argument {} is invalid: {}", arg.name, err)));
+                    }
+                }
+            }
+        }
+
+        Ok(())
+    }
+}
+
+impl fmt::Display for ArgsValidator {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        for arg in self.args.iter() {
+            writeln!(f, "{}", arg).ok();
+        }
+        Ok(())
+    }
+}
+
+pub type ArgValidator = Box<dyn Fn(&str) -> ::std::result::Result<(), &'static str>>;
+
+/// Describes a single validator argument.
+///
+/// # Examples
+///
+/// Builder:
+/// ```
+/// use memflow::plugins::ArgDescriptor;
+///
+/// let desc = ArgDescriptor::new("default")
+///     .description("default argument description")
+///     .required(true);
+/// ```
+pub struct ArgDescriptor {
+    pub name: String,
+    pub description: Option<String>,
+    pub required: bool,
+    pub validator: Option<ArgValidator>,
+}
+
+impl ArgDescriptor {
+    /// Creates a new `ArgDescriptor` with the given argument name.
+    pub fn new(name: &str) -> Self {
+        Self {
+            name: name.to_owned(),
+            description: None,
+            required: false,
+            validator: None,
+        }
+    }
+
+    /// Set the description for this argument.
+    ///
+    /// By default the description is `None`.
+    pub fn description(mut self, description: &str) -> Self {
+        self.description = Some(description.to_owned());
+        self
+    }
+
+    /// Set the required state for this argument.
+    ///
+    /// By default arguments are optional.
+    pub fn required(mut self, required: bool) -> Self {
+        self.required = required;
+        self
+    }
+
+    /// Sets the validator function for this argument.
+    ///
+    /// By default no validator is set.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use memflow::plugins::ArgDescriptor;
+    ///
+    /// let desc = ArgDescriptor::new("default").validator(Box::new(|arg| {
+    ///     match arg == "valid_option" {
+    ///         true => Ok(()),
+    ///         false => Err("argument must be 'valid_option'"),
+    ///     }
+    /// }));
+    /// ```
+    pub fn validator(mut self, validator: ArgValidator) -> Self {
+        self.validator = Some(validator);
+        self
+    }
+}
+
+impl fmt::Display for ArgDescriptor {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "{}: {}{}",
+            self.name,
+            self.description
+                .as_ref()
+                .unwrap_or(&"no description available".to_owned()),
+            if self.required { " (required)" } else { "" },
+        )
+    }
+}
+
+impl fmt::Debug for ArgDescriptor {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "{}: {}{}",
+            self.name,
+            self.description
+                .as_ref()
+                .unwrap_or(&"no description available".to_owned()),
+            if self.required { " (required)" } else { "" },
+        )
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -234,5 +413,97 @@ mod tests {
         assert_eq!(args2.get("opt1").unwrap(), "test1");
         assert_eq!(args2.get("opt2").unwrap(), "test2");
         assert_eq!(args2.get("opt3").unwrap(), "test3");
+    }
+
+    #[test]
+    pub fn validator_success() {
+        let validator = ArgsValidator::new()
+            .arg(ArgDescriptor::new("default"))
+            .arg(ArgDescriptor::new("opt1"));
+
+        let argstr = "test0,opt1=test1";
+        let args = Args::parse(argstr).unwrap();
+
+        assert_eq!(validator.validate(args), Ok(()));
+    }
+
+    #[test]
+    pub fn validator_success_optional() {
+        let validator = ArgsValidator::new()
+            .arg(ArgDescriptor::new("default").required(true))
+            .arg(ArgDescriptor::new("opt1").required(false));
+
+        let argstr = "test0";
+        let args = Args::parse(argstr).unwrap();
+
+        assert_eq!(validator.validate(args), Ok(()));
+    }
+
+    #[test]
+    pub fn validator_error_required() {
+        let validator = ArgsValidator::new()
+            .arg(ArgDescriptor::new("default").required(true))
+            .arg(ArgDescriptor::new("opt1").required(true));
+
+        let argstr = "test0";
+        let args = Args::parse(argstr).unwrap();
+
+        assert_eq!(
+            validator.validate(args),
+            Err(Error(
+                ErrorOrigin::ArgsValidator,
+                ErrorKind::RequiredArgNotFound
+            ))
+        );
+    }
+
+    #[test]
+    pub fn validator_error_notexist() {
+        let validator = ArgsValidator::new()
+            .arg(ArgDescriptor::new("default"))
+            .arg(ArgDescriptor::new("opt1"));
+
+        let argstr = "test0,opt2=arg2";
+        let args = Args::parse(argstr).unwrap();
+
+        assert_eq!(
+            validator.validate(args),
+            Err(Error(ErrorOrigin::ArgsValidator, ErrorKind::ArgNotExists))
+        );
+    }
+
+    #[test]
+    pub fn validator_validate_success() {
+        let validator =
+            ArgsValidator::new().arg(ArgDescriptor::new("default").validator(Box::new(|arg| {
+                match arg == "valid_option" {
+                    true => Ok(()),
+                    false => Err("argument must be 'valid_option'"),
+                }
+            })));
+
+        let argstr = "valid_option";
+        let args = Args::parse(argstr).unwrap();
+
+        assert_eq!(validator.validate(args), Ok(()));
+    }
+
+    #[test]
+    pub fn validator_validate_fail() {
+        let validator =
+            ArgsValidator::new().arg(ArgDescriptor::new("default").validator(Box::new(|arg| {
+                match arg == "valid_option" {
+                    true => Ok(()),
+                    false => Err("argument must be 'valid_option'"),
+                }
+            })));
+
+        let argstr = "invalid_option";
+        let args = Args::parse(argstr).unwrap();
+
+        assert_eq!(
+            validator.validate(args),
+            Err(Error(ErrorOrigin::ArgsValidator, ErrorKind::ArgValidation))
+        );
     }
 }

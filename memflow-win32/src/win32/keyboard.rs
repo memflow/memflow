@@ -170,7 +170,7 @@ impl<T> Win32Keyboard<T> {
         let buf_offs = re
             .find(&module_buf[..])
             .ok_or_else(|| {
-                Error(ErrorOrigin::OSLayer, ErrorKind::EntryNotFound)
+                Error(ErrorOrigin::OSLayer, ErrorKind::NotFound)
                     .log_info("unable to find gafAsyncKeyState signature")
             })?
             .start()
@@ -186,7 +186,10 @@ impl<T> Win32Keyboard<T> {
 
     #[cfg(not(feature = "regex"))]
     fn find_gaf_sig(module_buf: &[u8]) -> Result<usize> {
-        Err(Error::Other("signature scanning requires std"))
+        Err(
+            Error(ErrorOrigin::OSLayer, ErrorKind::UnsupportedOptionalFeature)
+                .log_error("signature scanning requires std"),
+        )
     }
 }
 

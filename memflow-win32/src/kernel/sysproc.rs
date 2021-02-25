@@ -31,8 +31,7 @@ pub fn find<T: VirtualMemory>(
         Err(e) => warn!("{}", e),
     }
 
-    Err(Error(ErrorOrigin::OSLayer, ErrorKind::EntryNotFound)
-        .log_info("unable to find system eprocess"))
+    Err(Error(ErrorOrigin::OSLayer, ErrorKind::NotFound).log_info("unable to find system eprocess"))
 }
 
 // find from exported symbol

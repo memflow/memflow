@@ -5,7 +5,7 @@ Specialized `Error` and `Result` types for memflow.
 use std::prelude::v1::*;
 use std::{fmt, result, str};
 
-use log::{debug, error, info, warn};
+use log::{debug, error, info, trace, warn};
 use std::mem::MaybeUninit;
 
 #[cfg(feature = "std")]
@@ -25,28 +25,53 @@ impl Error {
         self.as_str()
     }
 
+    pub const fn into_i32(self) -> i32 {
+        let origin = ((self.0 as i32 + 1) & 0xFFFi32) << 4;
+        let kind = ((self.1 as i32 + 1) & 0xFFFi32) << 16;
+        -(1 + origin + kind)
+    }
+
+    pub fn from_i32(error: i32) -> Self {
+        let origin = ((-error - 1) >> 4i32) & 0xFFFi32;
+        let kind = ((-error - 1) >> 16i32) & 0xFFFi32;
+
+        let error_origin = if origin > 0 && origin <= ErrorOrigin::Other as i32 + 1 {
+            unsafe { std::mem::transmute(origin as u16 - 1) }
+        } else {
+            ErrorOrigin::Other
+        };
+
+        let error_kind = if kind > 0 && kind <= ErrorKind::Unknown as i32 + 1 {
+            unsafe { std::mem::transmute(kind as u16 - 1) }
+        } else {
+            ErrorKind::Unknown
+        };
+
+        Self(error_origin, error_kind)
+    }
+
     pub fn log_error(self, err: impl std::fmt::Display) -> Self {
-        error!("{}/{}: {}", self.0.to_str(), self.1.to_str(), err);
+        error!("{}: {} ({})", self.0.to_str(), self.1.to_str(), err);
         self
     }
 
     pub fn log_warn(self, err: impl std::fmt::Display) -> Self {
-        warn!("{}/{}: {}", self.0.to_str(), self.1.to_str(), err);
+        warn!("{}: {} ({})", self.0.to_str(), self.1.to_str(), err);
         self
     }
 
     pub fn log_info(self, err: impl std::fmt::Display) -> Self {
-        info!("{}/{}: {}", self.0.to_str(), self.1.to_str(), err);
+        info!("{}: {} ({})", self.0.to_str(), self.1.to_str(), err);
         self
     }
 
     pub fn log_debug(self, err: impl std::fmt::Display) -> Self {
-        debug!("{}/{}: {}", self.0.to_str(), self.1.to_str(), err);
+        debug!("{}: {} ({})", self.0.to_str(), self.1.to_str(), err);
         self
     }
 
     pub fn log_trace(self, err: impl std::fmt::Display) -> Self {
-        debug!("{}/{}: {}", self.0.to_str(), self.1.to_str(), err);
+        trace!("{}: {} ({})", self.0.to_str(), self.1.to_str(), err);
         self
     }
 }
@@ -71,7 +96,7 @@ impl<T> From<PartialError<T>> for Error {
     }
 }
 
-#[repr(u8)]
+#[repr(u16)]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 pub enum ErrorOrigin {
     Pointer,
@@ -122,10 +147,9 @@ impl ErrorOrigin {
     }
 }
 
-#[repr(u8)]
+#[repr(u16)]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 pub enum ErrorKind {
-    Unknown,
     Uninitialized,
     NotSupported,
     NotImplemented,
@@ -135,7 +159,7 @@ pub enum ErrorKind {
 
     PartialData,
 
-    EntryNotFound,
+    NotFound,
     OutOfBounds,
     OutOfMemoryRange,
     Encoding,
@@ -151,6 +175,7 @@ pub enum ErrorKind {
 
     UnableToMapFile,
     MemoryMapOutOfRange,
+    UnableToReadMemory,
 
     InvalidArchitecture,
     InvalidMemorySize,
@@ -172,13 +197,14 @@ pub enum ErrorKind {
     ExportNotFound,
     ImportNotFound,
     SectionNotFound,
+
+    Unknown,
 }
 
 impl ErrorKind {
     /// Returns a static string representing the type of error.
     pub fn to_str(self) -> &'static str {
         match self {
-            ErrorKind::Unknown => "unknown error",
             ErrorKind::Uninitialized => "unitialized",
             ErrorKind::NotSupported => "not supported",
             ErrorKind::NotImplemented => "not implemented",
@@ -188,7 +214,7 @@ impl ErrorKind {
 
             ErrorKind::PartialData => "partial data",
 
-            ErrorKind::EntryNotFound => "entry not found",
+            ErrorKind::NotFound => "not found",
             ErrorKind::OutOfBounds => "out of bounds",
             ErrorKind::OutOfMemoryRange => "out of memory range",
             ErrorKind::Encoding => "encoding error",
@@ -204,6 +230,7 @@ impl ErrorKind {
 
             ErrorKind::UnableToMapFile => "unable to map file",
             ErrorKind::MemoryMapOutOfRange => "memory map is out of range",
+            ErrorKind::UnableToReadMemory => "unable to read memory",
 
             ErrorKind::InvalidArchitecture => "invalid architecture",
             ErrorKind::InvalidMemorySize => "invalid memory size",
@@ -225,6 +252,8 @@ impl ErrorKind {
             ErrorKind::ExportNotFound => "export not found",
             ErrorKind::ImportNotFound => "import not found",
             ErrorKind::SectionNotFound => "section not found",
+
+            ErrorKind::Unknown => "unknown error",
         }
     }
 }
@@ -345,95 +374,68 @@ impl<T> PartialResultExt<T> for PartialResult<T> {
     }
 }
 
-// TODO: expose the exact error enum variant
-const RES_INT_SUCCESS: i32 = 0;
-const RES_INT_ERROR: i32 = -1;
-const RES_INT_PARTIAL_READ_ERROR: i32 = -2;
-const RES_INT_PARTIAL_WRITE_ERROR: i32 = -3;
-
 pub trait AsIntResult<T> {
     fn as_int_result(self) -> i32;
     fn as_int_out_result(self, out: &mut MaybeUninit<T>) -> i32;
-
-    fn as_int_result_logged(self) -> i32
-    where
-        Self: Sized,
-    {
-        let res = self.as_int_result();
-        if res != RES_INT_SUCCESS {
-            error!("err value: {}", res);
-        }
-        res
-    }
 }
 
 pub fn result_from_int_void(res: i32) -> Result<()> {
-    if res == RES_INT_SUCCESS {
+    if res == 0 {
         Ok(())
     } else {
-        Err(Error(ErrorOrigin::FFI, ErrorKind::Unknown))
+        Err(Error::from_i32(res))
     }
 }
 
 pub fn result_from_int<T>(res: i32, out: MaybeUninit<T>) -> Result<T> {
-    if res == RES_INT_SUCCESS {
+    if res == 0 {
         Ok(unsafe { out.assume_init() })
     } else {
-        Err(Error(ErrorOrigin::FFI, ErrorKind::Unknown))
+        Err(Error::from_i32(res))
     }
 }
 
 pub fn part_result_from_int_void(res: i32) -> PartialResult<()> {
-    match res {
-        RES_INT_SUCCESS => Ok(()),
-        RES_INT_ERROR => Err(PartialError::Error(Error(
-            ErrorOrigin::FFI,
-            ErrorKind::Unknown,
-        ))),
-        RES_INT_PARTIAL_READ_ERROR => Err(PartialError::PartialVirtualRead(())),
-        RES_INT_PARTIAL_WRITE_ERROR => Err(PartialError::PartialVirtualWrite),
-        _ => Err(PartialError::Error(Error(
-            ErrorOrigin::FFI,
-            ErrorKind::Unknown,
-        ))),
+    if res == 0 {
+        Ok(())
+    } else {
+        let err = (-res) & 0xFi32;
+        match err {
+            1 => Err(PartialError::Error(Error::from_i32(res))),
+            2 => Err(PartialError::PartialVirtualRead(())),
+            3 => Err(PartialError::PartialVirtualWrite),
+            _ => Err(PartialError::Error(Error(
+                ErrorOrigin::FFI,
+                ErrorKind::Unknown,
+            ))),
+        }
+    }
+}
+
+pub fn part_result_from_int<T>(res: i32, out: MaybeUninit<T>) -> PartialResult<T> {
+    if res == 0 {
+        Ok(unsafe { out.assume_init() })
+    } else {
+        let err = (-res) & 0xFi32;
+        match err {
+            1 => Err(PartialError::Error(Error::from_i32(res))),
+            2 => Err(PartialError::PartialVirtualRead(unsafe {
+                out.assume_init()
+            })),
+            3 => Err(PartialError::PartialVirtualWrite),
+            _ => Err(PartialError::Error(Error(
+                ErrorOrigin::FFI,
+                ErrorKind::Unknown,
+            ))),
+        }
     }
 }
 
 impl<T> AsIntResult<T> for result::Result<T, Error> {
     fn as_int_result(self) -> i32 {
-        if self.is_ok() {
-            RES_INT_SUCCESS
-        } else {
-            RES_INT_ERROR
-        }
-    }
-
-    fn as_int_out_result(self, out: &mut MaybeUninit<T>) -> i32 {
-        if let Ok(ret) = self {
-            unsafe { out.as_mut_ptr().write(ret) };
-            RES_INT_SUCCESS
-        } else {
-            RES_INT_ERROR
-        }
-    }
-
-    fn as_int_result_logged(self) -> i32 {
-        if let Err(e) = self {
-            error!("{}", e);
-            RES_INT_ERROR
-        } else {
-            RES_INT_SUCCESS
-        }
-    }
-}
-
-impl<T> AsIntResult<T> for result::Result<T, PartialError<T>> {
-    fn as_int_result(self) -> i32 {
         match self {
-            Ok(_) => RES_INT_SUCCESS,
-            Err(PartialError::Error(_)) => RES_INT_ERROR,
-            Err(PartialError::PartialVirtualRead(_)) => RES_INT_PARTIAL_READ_ERROR,
-            Err(PartialError::PartialVirtualWrite) => RES_INT_PARTIAL_WRITE_ERROR,
+            Ok(_) => 0,
+            Err(err) => err.into_i32(),
         }
     }
 
@@ -441,26 +443,195 @@ impl<T> AsIntResult<T> for result::Result<T, PartialError<T>> {
         match self {
             Ok(ret) => {
                 unsafe { out.as_mut_ptr().write(ret) };
-                RES_INT_SUCCESS
+                0
             }
-            Err(PartialError::Error(_)) => RES_INT_ERROR,
-            Err(PartialError::PartialVirtualRead(ret)) => {
-                unsafe { out.as_mut_ptr().write(ret) };
-                RES_INT_PARTIAL_READ_ERROR
-            }
-            Err(PartialError::PartialVirtualWrite) => RES_INT_PARTIAL_WRITE_ERROR,
+            Err(err) => err.into_i32(),
+        }
+    }
+}
+
+impl<T> AsIntResult<T> for result::Result<T, PartialError<T>> {
+    fn as_int_result(self) -> i32 {
+        match self {
+            Ok(_) => 0,
+            Err(PartialError::Error(err)) => err.into_i32(),
+            Err(PartialError::PartialVirtualRead(_)) => -2,
+            Err(PartialError::PartialVirtualWrite) => -3,
         }
     }
 
-    fn as_int_result_logged(self) -> i32 {
+    fn as_int_out_result(self, out: &mut MaybeUninit<T>) -> i32 {
         match self {
-            Ok(_) => RES_INT_SUCCESS,
-            Err(PartialError::Error(e)) => {
-                error!("{}", e);
-                RES_INT_ERROR
+            Ok(ret) => {
+                unsafe { out.as_mut_ptr().write(ret) };
+                0
             }
-            Err(PartialError::PartialVirtualRead(_)) => RES_INT_PARTIAL_READ_ERROR,
-            Err(PartialError::PartialVirtualWrite) => RES_INT_PARTIAL_WRITE_ERROR,
+            Err(PartialError::Error(err)) => err.into_i32(),
+            Err(PartialError::PartialVirtualRead(ret)) => {
+                unsafe { out.as_mut_ptr().write(ret) };
+                -2
+            }
+            Err(PartialError::PartialVirtualWrite) => -3,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        part_result_from_int, part_result_from_int_void, result_from_int, result_from_int_void,
+        AsIntResult, Error, ErrorKind, ErrorOrigin, PartialError, PartialResult, Result,
+    };
+    use std::mem::MaybeUninit;
+
+    #[test]
+    pub fn error_from_i32_invalid() {
+        let mut err = Error::from_i32(std::i32::MIN + 1);
+        assert_eq!(err.0, ErrorOrigin::Other);
+        assert_eq!(err.1, ErrorKind::Unknown);
+
+        err = Error::from_i32(-1);
+        assert_eq!(err.0, ErrorOrigin::Other);
+        assert_eq!(err.1, ErrorKind::Unknown);
+
+        err = Error::from_i32(-2);
+        assert_eq!(err.0, ErrorOrigin::Other);
+        assert_eq!(err.1, ErrorKind::Unknown);
+
+        err = Error::from_i32(-3);
+        assert_eq!(err.0, ErrorOrigin::Other);
+        assert_eq!(err.1, ErrorKind::Unknown);
+    }
+
+    #[test]
+    pub fn part_error_from_i32_invalid() {
+        let mut result = part_result_from_int_void(-1);
+        assert_eq!(result.is_ok(), false);
+        assert_eq!(
+            result.err().unwrap(),
+            PartialError::Error(Error(ErrorOrigin::Other, ErrorKind::Unknown))
+        );
+
+        result = part_result_from_int_void(-2);
+        assert_eq!(result.is_ok(), false);
+        assert_eq!(result.err().unwrap(), PartialError::PartialVirtualRead(()));
+
+        result = part_result_from_int_void(-3);
+        assert_eq!(result.is_ok(), false);
+        assert_eq!(result.err().unwrap(), PartialError::PartialVirtualWrite);
+
+        result = part_result_from_int_void(-4);
+        assert_eq!(result.is_ok(), false);
+        assert_eq!(
+            result.err().unwrap(),
+            PartialError::Error(Error(ErrorOrigin::FFI, ErrorKind::Unknown))
+        );
+    }
+
+    #[test]
+    pub fn error_to_from_i32() {
+        let err = Error::from_i32(Error(ErrorOrigin::Other, ErrorKind::InvalidPeFile).into_i32());
+        assert_eq!(err.0, ErrorOrigin::Other);
+        assert_eq!(err.1, ErrorKind::InvalidPeFile);
+    }
+
+    #[test]
+    pub fn result_ok_void_ffi() {
+        let r: Result<()> = Ok(());
+        let result = result_from_int_void(r.as_int_result());
+        assert_eq!(result.is_ok(), true);
+    }
+
+    #[test]
+    pub fn result_ok_value_ffi() {
+        let r: Result<i32> = Ok(1234i32);
+        let mut out = MaybeUninit::<i32>::uninit();
+        let result = result_from_int(r.as_int_out_result(&mut out), out);
+        assert_eq!(result.is_ok(), true);
+        assert_eq!(result.unwrap(), 1234i32);
+    }
+
+    #[test]
+    pub fn result_error_void_ffi() {
+        let r: Result<i32> = Err(Error(ErrorOrigin::Other, ErrorKind::InvalidPeFile));
+        let result = result_from_int_void(r.as_int_result());
+        assert_eq!(result.is_ok(), false);
+        assert_eq!(result.err().unwrap().0, ErrorOrigin::Other);
+        assert_eq!(result.err().unwrap().1, ErrorKind::InvalidPeFile);
+    }
+
+    #[test]
+    pub fn result_error_value_ffi() {
+        let r: Result<i32> = Err(Error(ErrorOrigin::Other, ErrorKind::InvalidPeFile));
+        let mut out = MaybeUninit::<i32>::uninit();
+        let result = result_from_int(r.as_int_out_result(&mut out), out);
+        assert_eq!(result.is_ok(), false);
+        assert_eq!(result.err().unwrap().0, ErrorOrigin::Other);
+        assert_eq!(result.err().unwrap().1, ErrorKind::InvalidPeFile);
+    }
+
+    #[test]
+    pub fn part_result_ok_void_ffi() {
+        let r: PartialResult<()> = Ok(());
+        let result = part_result_from_int_void(r.as_int_result());
+        assert_eq!(result.is_ok(), true);
+    }
+
+    #[test]
+    pub fn part_result_ok_value_ffi() {
+        let r: PartialResult<i32> = Ok(1234i32);
+        let mut out = MaybeUninit::<i32>::uninit();
+        let result = part_result_from_int(r.as_int_out_result(&mut out), out);
+        assert_eq!(result.is_ok(), true);
+        assert_eq!(result.unwrap(), 1234i32);
+    }
+
+    #[test]
+    pub fn part_result_error_void_ffi() {
+        let r: PartialResult<i32> = Err(PartialError::Error(Error(
+            ErrorOrigin::Other,
+            ErrorKind::InvalidPeFile,
+        )));
+        let result = part_result_from_int_void(r.as_int_result());
+        assert_eq!(result.is_ok(), false);
+        assert_eq!(
+            result.err().unwrap(),
+            PartialError::Error(Error(ErrorOrigin::Other, ErrorKind::InvalidPeFile))
+        );
+    }
+
+    #[test]
+    pub fn part_result_error_value_ffi() {
+        let r: PartialResult<i32> = Err(PartialError::Error(Error(
+            ErrorOrigin::Other,
+            ErrorKind::InvalidPeFile,
+        )));
+        let mut out = MaybeUninit::<i32>::uninit();
+        let result = part_result_from_int(r.as_int_out_result(&mut out), out);
+        assert_eq!(result.is_ok(), false);
+        assert_eq!(
+            result.err().unwrap(),
+            PartialError::Error(Error(ErrorOrigin::Other, ErrorKind::InvalidPeFile))
+        );
+    }
+
+    #[test]
+    pub fn part_result_part_error_write_ffi() {
+        let r: PartialResult<i32> = Err(PartialError::PartialVirtualWrite);
+        let result = part_result_from_int_void(r.as_int_result());
+        assert_eq!(result.is_ok(), false);
+        assert_eq!(result.err().unwrap(), PartialError::PartialVirtualWrite);
+    }
+
+    #[test]
+    pub fn part_result_part_error_read_ffi() {
+        let r: PartialResult<i32> = Err(PartialError::PartialVirtualRead(1234i32));
+        let mut out = MaybeUninit::<i32>::uninit();
+        let result = part_result_from_int(r.as_int_out_result(&mut out), out);
+        assert_eq!(result.is_ok(), false);
+        assert_eq!(
+            result.err().unwrap(),
+            PartialError::PartialVirtualRead(1234i32)
+        );
     }
 }

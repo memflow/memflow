@@ -52,8 +52,7 @@ pub unsafe extern "C" fn inventory_scan_path(
 pub unsafe extern "C" fn inventory_add_dir(inv: &mut Inventory, dir: *const c_char) -> i32 {
     let rdir = CStr::from_ptr(dir).to_string_lossy();
 
-    inv.add_dir(PathBuf::from(rdir.to_string()))
-        .as_int_result_logged()
+    inv.add_dir(PathBuf::from(rdir.to_string())).as_int_result()
 }
 
 /// Create a connector with given arguments

@@ -44,7 +44,7 @@ impl<'a, T: VirtualMemory> VirtualReadUnicodeString for T {
         self.virt_read_into(addr, &mut length)?;
         if length == 0 {
             return Err(Error(ErrorOrigin::OSLayer, ErrorKind::Encoding)
-                .log_error("unable to read unicode string length"));
+                .log_debug("unable to read unicode string length (length is zero)"));
         }
 
         // TODO: chek if length exceeds limit
@@ -58,13 +58,13 @@ impl<'a, T: VirtualMemory> VirtualReadUnicodeString for T {
         };
         if buffer.is_null() {
             return Err(Error(ErrorOrigin::OSLayer, ErrorKind::Encoding)
-                .log_error("unable to read unicode string length"));
+                .log_debug("unable to read unicode string buffer"));
         }
 
         // check if buffer length is mod 2 (utf-16)
         if length % 2 != 0 {
             return Err(Error(ErrorOrigin::OSLayer, ErrorKind::Encoding)
-                .log_error("unicode string length is not a multiple of two"));
+                .log_debug("unicode string length is not a multiple of two"));
         }
 
         // read buffer

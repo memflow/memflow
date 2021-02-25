@@ -28,14 +28,14 @@ fn initialize_virt_ctx() -> Result<(
     let kernel_info = Win32KernelInfo::scanner(&mut phys_mem)
         .scan()
         .map_err(|_| {
-            Error(ErrorOrigin::Other, ErrorKind::EntryNotFound).log_error("unable to find kernel")
+            Error(ErrorOrigin::Other, ErrorKind::NotFound).log_error("unable to find kernel")
         })?;
     let vat = DirectTranslate::new();
     let offsets = Win32Offsets::builder()
         .kernel_info(&kernel_info)
         .build()
         .map_err(|_| {
-            Error(ErrorOrigin::Other, ErrorKind::EntryNotFound)
+            Error(ErrorOrigin::Other, ErrorKind::NotFound)
                 .log_error("unable to initialize win32 offsets with guid")
         })?;
 
@@ -44,7 +44,7 @@ fn initialize_virt_ctx() -> Result<(
     let mut rng = CurRng::from_rng(thread_rng()).unwrap();
 
     let proc_list = kernel.process_info_list().map_err(|_| {
-        Error(ErrorOrigin::Other, ErrorKind::EntryNotFound).log_error("unable to read process list")
+        Error(ErrorOrigin::Other, ErrorKind::NotFound).log_error("unable to read process list")
     })?;
     for i in -100..(proc_list.len() as isize) {
         let idx = if i >= 0 {

@@ -88,8 +88,7 @@ pub fn find<T: PhysicalMemory>(mem: &mut T, arch: Option<ArchitectureIdent>) -> 
             .or_else(|_| find(mem, Some(ArchitectureIdent::X86(32, false))))
             .or_else(|_| find(mem, Some(ArchitectureIdent::AArch64(size::kb(4)))))
             .map_err(|_| {
-                Error(ErrorOrigin::OSLayer, ErrorKind::EntryNotFound)
-                    .log_error("unable to find dtb")
+                Error(ErrorOrigin::OSLayer, ErrorKind::NotFound).log_error("unable to find dtb")
             })
     }
 }

@@ -28,8 +28,8 @@ pub fn find_lowstub(stub: &[u8]) -> Result<StartBlock> {
             dtb: u64::from_le_bytes(c[0xa0..0xa0 + 8].try_into().unwrap()).into(),
         })
         .ok_or_else(|| {
-            Error(ErrorOrigin::OSLayer, ErrorKind::EntryNotFound)
-                .log_trace("unable to find x64 dtb in lowstub < 1M")
+            Error(ErrorOrigin::OSLayer, ErrorKind::NotFound)
+                .log_warn("unable to find x64 dtb in lowstub < 1M")
         })?)
 }
 
@@ -72,7 +72,7 @@ pub fn find(mem: &[u8]) -> Result<StartBlock> {
         })
         .next()
         .ok_or_else(|| {
-            Error(ErrorOrigin::OSLayer, ErrorKind::EntryNotFound)
-                .log_trace("unable to find x64 dtb in lowstub < 16M")
+            Error(ErrorOrigin::OSLayer, ErrorKind::NotFound)
+                .log_warn("unable to find x64 dtb in lowstub < 16M")
         })
 }

@@ -129,9 +129,10 @@ impl Win32OffsetBuilder {
 
     #[cfg(not(feature = "embed_offsets"))]
     fn build_with_offset_list(&self) -> Result<Win32Offsets> {
-        Err(Error::Other(
-            "embed offsets feature is deactivated on compilation",
-        ))
+        Err(
+            Error(ErrorOrigin::OSLayer, ErrorKind::UnsupportedOptionalFeature)
+                .log_error("embed offsets feature is deactivated on compilation"),
+        )
     }
 
     #[cfg(feature = "symstore")]
@@ -152,9 +153,10 @@ impl Win32OffsetBuilder {
 
     #[cfg(not(feature = "symstore"))]
     fn build_with_symbol_store(&self) -> Result<Win32Offsets> {
-        Err(Error::Other(
-            "symbol store is deactivated via a compilation feature",
-        ))
+        Err(
+            Error(ErrorOrigin::OSLayer, ErrorKind::UnsupportedOptionalFeature)
+                .log_error("symbol store is deactivated via a compilation feature"),
+        )
     }
 
     #[cfg(feature = "symstore")]

@@ -92,7 +92,7 @@ impl<T: CacheValidator> TLBCache<T> {
                     ),
                 }))
             } else {
-                Some(Err(Error(ErrorOrigin::TLBCache, ErrorKind::EntryNotFound)))
+                Some(Err(Error(ErrorOrigin::TLBCache, ErrorKind::NotFound)))
             }
         } else {
             None

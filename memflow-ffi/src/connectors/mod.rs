@@ -110,10 +110,10 @@ pub unsafe extern "C" fn inventory_create_connector(
 /// * `out` - a valid memory location that will contain the resulting os-instance
 ///
 /// # Remarks
-/// 
+///
 /// The `mem` connector instance is being _moved_ into the os layer.
 /// This means upon calling `os_drop` it is not unnecessary to call `connector_drop` anymore.
-/// 
+///
 /// # Safety
 ///
 /// Both `name`, and `args` must be valid null terminated strings.

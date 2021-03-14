@@ -53,7 +53,8 @@ pub unsafe extern "C" fn inventory_scan_path(
 pub unsafe extern "C" fn inventory_add_dir(inv: &mut Inventory, dir: *const c_char) -> i32 {
     let rdir = CStr::from_ptr(dir).to_string_lossy();
 
-    inv.add_dir(PathBuf::from(rdir.to_string())).as_int_result()
+    inv.add_dir(PathBuf::from(rdir.to_string()))
+        .into_int_result()
 }
 
 /// Create a connector with given arguments
@@ -85,14 +86,14 @@ pub unsafe extern "C" fn inventory_create_connector(
     if args.is_null() {
         inv.create_connector_default(&rname)
             .map_err(inspect_err)
-            .as_int_out_result(out)
+            .into_int_out_result(out)
     } else {
         let rargs = CStr::from_ptr(args).to_string_lossy();
         Args::parse(&rargs)
             .map_err(inspect_err)
             .and_then(|args| inv.create_connector(&rname, None, &args))
             .map_err(inspect_err)
-            .as_int_out_result(out)
+            .into_int_out_result(out)
     }
 }
 
@@ -135,14 +136,14 @@ pub unsafe extern "C" fn inventory_create_os(
         let args = Args::default();
         inv.create_os(&rname, Some(mem), &args)
             .map_err(inspect_err)
-            .as_int_out_result(out)
+            .into_int_out_result(out)
     } else {
         let rargs = CStr::from_ptr(args).to_string_lossy();
         Args::parse(&rargs)
             .map_err(inspect_err)
             .and_then(|args| inv.create_os(&rname, Some(mem), &args))
             .map_err(inspect_err)
-            .as_int_out_result(out)
+            .into_int_out_result(out)
     }
 }
 

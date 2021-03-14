@@ -389,8 +389,8 @@ impl<T> PartialResultExt<T> for PartialResult<T> {
 }
 
 pub trait AsIntResult<T> {
-    fn as_int_result(self) -> i32;
-    fn as_int_out_result(self, out: &mut MaybeUninit<T>) -> i32;
+    fn into_int_result(self) -> i32;
+    fn into_int_out_result(self, out: &mut MaybeUninit<T>) -> i32;
 }
 
 pub fn result_from_int_void(res: i32) -> Result<()> {
@@ -446,14 +446,14 @@ pub fn part_result_from_int<T>(res: i32, out: MaybeUninit<T>) -> PartialResult<T
 }
 
 impl<T> AsIntResult<T> for result::Result<T, Error> {
-    fn as_int_result(self) -> i32 {
+    fn into_int_result(self) -> i32 {
         match self {
             Ok(_) => 0,
             Err(err) => err.into_i32(),
         }
     }
 
-    fn as_int_out_result(self, out: &mut MaybeUninit<T>) -> i32 {
+    fn into_int_out_result(self, out: &mut MaybeUninit<T>) -> i32 {
         match self {
             Ok(ret) => {
                 unsafe { out.as_mut_ptr().write(ret) };
@@ -465,7 +465,7 @@ impl<T> AsIntResult<T> for result::Result<T, Error> {
 }
 
 impl<T> AsIntResult<T> for result::Result<T, PartialError<T>> {
-    fn as_int_result(self) -> i32 {
+    fn into_int_result(self) -> i32 {
         match self {
             Ok(_) => 0,
             Err(PartialError::Error(err)) => err.into_i32(),
@@ -474,7 +474,7 @@ impl<T> AsIntResult<T> for result::Result<T, PartialError<T>> {
         }
     }
 
-    fn as_int_out_result(self, out: &mut MaybeUninit<T>) -> i32 {
+    fn into_int_out_result(self, out: &mut MaybeUninit<T>) -> i32 {
         match self {
             Ok(ret) => {
                 unsafe { out.as_mut_ptr().write(ret) };
@@ -552,7 +552,7 @@ mod tests {
     #[test]
     pub fn result_ok_void_ffi() {
         let r: Result<()> = Ok(());
-        let result = result_from_int_void(r.as_int_result());
+        let result = result_from_int_void(r.into_int_result());
         assert_eq!(result.is_ok(), true);
     }
 
@@ -560,7 +560,7 @@ mod tests {
     pub fn result_ok_value_ffi() {
         let r: Result<i32> = Ok(1234i32);
         let mut out = MaybeUninit::<i32>::uninit();
-        let result = result_from_int(r.as_int_out_result(&mut out), out);
+        let result = result_from_int(r.into_int_out_result(&mut out), out);
         assert_eq!(result.is_ok(), true);
         assert_eq!(result.unwrap(), 1234i32);
     }
@@ -568,7 +568,7 @@ mod tests {
     #[test]
     pub fn result_error_void_ffi() {
         let r: Result<i32> = Err(Error(ErrorOrigin::Other, ErrorKind::InvalidPeFile));
-        let result = result_from_int_void(r.as_int_result());
+        let result = result_from_int_void(r.into_int_result());
         assert_eq!(result.is_ok(), false);
         assert_eq!(result.err().unwrap().0, ErrorOrigin::Other);
         assert_eq!(result.err().unwrap().1, ErrorKind::InvalidPeFile);
@@ -578,7 +578,7 @@ mod tests {
     pub fn result_error_value_ffi() {
         let r: Result<i32> = Err(Error(ErrorOrigin::Other, ErrorKind::InvalidPeFile));
         let mut out = MaybeUninit::<i32>::uninit();
-        let result = result_from_int(r.as_int_out_result(&mut out), out);
+        let result = result_from_int(r.into_int_out_result(&mut out), out);
         assert_eq!(result.is_ok(), false);
         assert_eq!(result.err().unwrap().0, ErrorOrigin::Other);
         assert_eq!(result.err().unwrap().1, ErrorKind::InvalidPeFile);
@@ -587,7 +587,7 @@ mod tests {
     #[test]
     pub fn part_result_ok_void_ffi() {
         let r: PartialResult<()> = Ok(());
-        let result = part_result_from_int_void(r.as_int_result());
+        let result = part_result_from_int_void(r.into_int_result());
         assert_eq!(result.is_ok(), true);
     }
 
@@ -595,7 +595,7 @@ mod tests {
     pub fn part_result_ok_value_ffi() {
         let r: PartialResult<i32> = Ok(1234i32);
         let mut out = MaybeUninit::<i32>::uninit();
-        let result = part_result_from_int(r.as_int_out_result(&mut out), out);
+        let result = part_result_from_int(r.into_int_out_result(&mut out), out);
         assert_eq!(result.is_ok(), true);
         assert_eq!(result.unwrap(), 1234i32);
     }
@@ -606,7 +606,7 @@ mod tests {
             ErrorOrigin::Other,
             ErrorKind::InvalidPeFile,
         )));
-        let result = part_result_from_int_void(r.as_int_result());
+        let result = part_result_from_int_void(r.into_int_result());
         assert_eq!(result.is_ok(), false);
         assert_eq!(
             result.err().unwrap(),
@@ -621,7 +621,7 @@ mod tests {
             ErrorKind::InvalidPeFile,
         )));
         let mut out = MaybeUninit::<i32>::uninit();
-        let result = part_result_from_int(r.as_int_out_result(&mut out), out);
+        let result = part_result_from_int(r.into_int_out_result(&mut out), out);
         assert_eq!(result.is_ok(), false);
         assert_eq!(
             result.err().unwrap(),
@@ -632,7 +632,7 @@ mod tests {
     #[test]
     pub fn part_result_part_error_write_ffi() {
         let r: PartialResult<i32> = Err(PartialError::PartialVirtualWrite);
-        let result = part_result_from_int_void(r.as_int_result());
+        let result = part_result_from_int_void(r.into_int_result());
         assert_eq!(result.is_ok(), false);
         assert_eq!(result.err().unwrap(), PartialError::PartialVirtualWrite);
     }
@@ -641,7 +641,7 @@ mod tests {
     pub fn part_result_part_error_read_ffi() {
         let r: PartialResult<i32> = Err(PartialError::PartialVirtualRead(1234i32));
         let mut out = MaybeUninit::<i32>::uninit();
-        let result = part_result_from_int(r.as_int_out_result(&mut out), out);
+        let result = part_result_from_int(r.into_int_out_result(&mut out), out);
         assert_eq!(result.is_ok(), false);
         assert_eq!(
             result.err().unwrap(),

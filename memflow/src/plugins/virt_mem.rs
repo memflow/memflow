@@ -73,7 +73,9 @@ extern "C" fn c_virt_read_raw_list<T: VirtualMemory>(
     read_data_count: usize,
 ) -> i32 {
     let read_data_slice = unsafe { std::slice::from_raw_parts_mut(read_data, read_data_count) };
-    virt_mem.virt_read_raw_list(read_data_slice).as_int_result()
+    virt_mem
+        .virt_read_raw_list(read_data_slice)
+        .into_int_result()
 }
 
 extern "C" fn c_virt_write_raw_list<T: VirtualMemory>(
@@ -84,7 +86,7 @@ extern "C" fn c_virt_write_raw_list<T: VirtualMemory>(
     let write_data_slice = unsafe { std::slice::from_raw_parts(write_data, write_data_count) };
     virt_mem
         .virt_write_raw_list(write_data_slice)
-        .as_int_result()
+        .into_int_result()
 }
 
 extern "C" fn c_virt_page_info<T: VirtualMemory>(
@@ -92,7 +94,7 @@ extern "C" fn c_virt_page_info<T: VirtualMemory>(
     addr: Address,
     out: &mut MUPage,
 ) -> i32 {
-    virt_mem.virt_page_info(addr).as_int_out_result(out)
+    virt_mem.virt_page_info(addr).into_int_out_result(out)
 }
 
 extern "C" fn c_virt_translation_map_range<T: VirtualMemory>(

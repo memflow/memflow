@@ -8,6 +8,7 @@ use memflow::dummy::DummyOS;
 use memflow::os::Process;
 use memflow::prelude::v1::*;
 
+#[allow(clippy::unnecessary_wraps)]
 fn initialize_virt_ctx() -> Result<(
     Memory,
     DirectTranslate,

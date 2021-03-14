@@ -55,7 +55,7 @@ extern "C" fn c_state<T: Keyboard>(
     keyboard
         .state()
         .map(|ks| ArcPluginKeyboardState::new(ks, lib))
-        .as_int_out_result(out)
+        .into_int_out_result(out)
 }
 
 /// # Safety
@@ -63,7 +63,7 @@ extern "C" fn c_state<T: Keyboard>(
 extern "C" fn c_set_state<T: Keyboard>(keyboard: &mut T, state: &ArcPluginKeyboardState) -> i32 {
     keyboard
         .set_state(unsafe { &*(state.instance as *const c_void as *const T::KeyboardStateType) })
-        .as_int_result()
+        .into_int_result()
 }
 
 #[repr(C)]

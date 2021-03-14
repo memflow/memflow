@@ -110,14 +110,8 @@ pub struct Class<'p> {
 }
 
 impl<'p> Class<'p> {
-    fn add_derived_from(
-        &mut self,
-        _: &pdb::TypeFinder<'p>,
-        _: pdb::TypeIndex,
-        _: &mut TypeSet,
-    ) -> pdb::Result<()> {
+    fn add_derived_from(&mut self, _: &pdb::TypeFinder<'p>, _: pdb::TypeIndex, _: &mut TypeSet) {
         // TODO
-        Ok(())
     }
 
     fn add_fields(
@@ -317,7 +311,7 @@ impl<'p> Enum<'p> {
         match type_finder.find(type_index)?.parse()? {
             pdb::TypeData::FieldList(data) => {
                 for field in &data.fields {
-                    self.add_field(type_finder, field, needed_types)?;
+                    self.add_field(type_finder, field, needed_types);
                 }
 
                 if let Some(continuation) = data.continuation {
@@ -337,12 +331,7 @@ impl<'p> Enum<'p> {
         Ok(())
     }
 
-    fn add_field(
-        &mut self,
-        _: &pdb::TypeFinder<'p>,
-        field: &pdb::TypeData<'p>,
-        _: &mut TypeSet,
-    ) -> pdb::Result<()> {
+    fn add_field(&mut self, _: &pdb::TypeFinder<'p>, field: &pdb::TypeData<'p>, _: &mut TypeSet) {
         // ignore everything else even though that's sad
         if let pdb::TypeData::Enumerate(ref data) = field {
             self.values.push(EnumValue {
@@ -350,8 +339,6 @@ impl<'p> Enum<'p> {
                 value: data.value,
             });
         }
-
-        Ok(())
     }
 }
 
@@ -410,7 +397,7 @@ impl<'p> Data<'p> {
                 };
 
                 if let Some(derived_from) = data.derived_from {
-                    class.add_derived_from(type_finder, derived_from, needed_types)?;
+                    class.add_derived_from(type_finder, derived_from, needed_types);
                 }
 
                 if let Some(fields) = data.fields {

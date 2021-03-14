@@ -59,7 +59,7 @@ extern "C" fn c_keyboard<'a, T: 'a + OSKeyboardInner<'a>>(
 ) -> i32 {
     os.keyboard()
         .map(|k| PluginKeyboard::new(k, lib))
-        .as_int_out_result(out)
+        .into_int_out_result(out)
 }
 
 extern "C" fn c_into_keyboard<P: 'static + Keyboard + Clone, T: 'static + PluginOSKeyboard<P>>(
@@ -70,5 +70,5 @@ extern "C" fn c_into_keyboard<P: 'static + Keyboard + Clone, T: 'static + Plugin
     let os = unsafe { Box::from_raw(os) };
     os.into_keyboard()
         .map(|k| ArcPluginKeyboard::new(k, lib))
-        .as_int_out_result(out)
+        .into_int_out_result(out)
 }

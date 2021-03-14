@@ -60,7 +60,7 @@ extern "C" fn c_cpu_state<'a, T: 'a + ConnectorCpuStateInner<'a>>(
     connector
         .cpu_state()
         .map(|k| PluginCpuState::new(k, lib))
-        .as_int_out_result(out)
+        .into_int_out_result(out)
 }
 
 extern "C" fn c_into_cpu_state<
@@ -75,5 +75,5 @@ extern "C" fn c_into_cpu_state<
     connector
         .into_cpu_state()
         .map(|k| ArcPluginCpuState::new(k, lib))
-        .as_int_out_result(out)
+        .into_int_out_result(out)
 }

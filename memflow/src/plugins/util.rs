@@ -142,7 +142,7 @@ pub fn create_with_logging<T>(
                 e
             })
         })
-        .as_int_out_result(out)
+        .into_int_out_result(out)
 }
 
 /// Wrapper for instantiating object with all needed parameters
@@ -178,7 +178,7 @@ pub fn create_bare<T, I>(
                 e
             })
         })
-        .as_int_out_result(out)
+        .into_int_out_result(out)
 }
 
 /// Wrapper for instantiating object without logging
@@ -193,5 +193,5 @@ pub fn create_without_logging<T>(
 ) -> i32 {
     Args::parse(&args)
         .and_then(|args| create_fn(args))
-        .as_int_out_result(out)
+        .into_int_out_result(out)
 }

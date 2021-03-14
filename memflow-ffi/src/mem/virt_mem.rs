@@ -34,7 +34,7 @@ pub unsafe extern "C" fn virt_read_raw_list(
     len: usize,
 ) -> i32 {
     let data = from_raw_parts_mut(data, len);
-    mem.virt_read_raw_list(data).data_part().as_int_result()
+    mem.virt_read_raw_list(data).data_part().into_int_result()
 }
 
 /// Write a list of values
@@ -53,7 +53,7 @@ pub unsafe extern "C" fn virt_write_raw_list(
     len: usize,
 ) -> i32 {
     let data = from_raw_parts(data, len);
-    mem.virt_write_raw_list(data).data_part().as_int_result()
+    mem.virt_write_raw_list(data).data_part().into_int_result()
 }
 
 /// Read a single value into `out` from a provided `Address`
@@ -70,7 +70,7 @@ pub unsafe extern "C" fn virt_read_raw_into(
 ) -> i32 {
     mem.virt_read_raw_into(addr, from_raw_parts_mut(out, len))
         .data_part()
-        .as_int_result()
+        .into_int_result()
 }
 
 /// Read a single 32-bit value from a provided `Address`
@@ -99,17 +99,17 @@ pub unsafe extern "C" fn virt_write_raw(
 ) -> i32 {
     mem.virt_write_raw(addr, from_raw_parts(input, len))
         .data_part()
-        .as_int_result()
+        .into_int_result()
 }
 
 /// Write a single 32-bit value into a provided `Address`
 #[no_mangle]
 pub extern "C" fn virt_write_u32(mem: &mut VirtualMemoryObj, addr: Address, val: u32) -> i32 {
-    mem.virt_write(addr, &val).data_part().as_int_result()
+    mem.virt_write(addr, &val).data_part().into_int_result()
 }
 
 /// Write a single 64-bit value into a provided `Address`
 #[no_mangle]
 pub extern "C" fn virt_write_u64(mem: &mut VirtualMemoryObj, addr: Address, val: u64) -> i32 {
-    mem.virt_write(addr, &val).data_part().as_int_result()
+    mem.virt_write(addr, &val).data_part().into_int_result()
 }

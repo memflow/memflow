@@ -71,7 +71,7 @@ extern "C" fn c_process_address_list_callback<'a, T: OSInner<'a>>(
     os: &mut T,
     callback: AddressCallback,
 ) -> i32 {
-    os.process_address_list_callback(callback).as_int_result()
+    os.process_address_list_callback(callback).into_int_result()
 }
 
 extern "C" fn c_process_info_by_address<'a, T: OSInner<'a>>(
@@ -79,7 +79,7 @@ extern "C" fn c_process_info_by_address<'a, T: OSInner<'a>>(
     address: Address,
     out: &mut MUProcessInfo,
 ) -> i32 {
-    os.process_info_by_address(address).as_int_out_result(out)
+    os.process_info_by_address(address).into_int_out_result(out)
 }
 
 extern "C" fn c_process_by_info<'a, T: 'a + OSInner<'a>>(
@@ -89,7 +89,7 @@ extern "C" fn c_process_by_info<'a, T: 'a + OSInner<'a>>(
 ) -> i32 {
     os.process_by_info(info)
         .map(PluginProcess::new)
-        .as_int_out_result(out)
+        .into_int_out_result(out)
 }
 
 extern "C" fn c_into_process_by_info<P: 'static + Process + Clone, T: 'static + PluginOS<P>>(
@@ -101,14 +101,14 @@ extern "C" fn c_into_process_by_info<P: 'static + Process + Clone, T: 'static + 
     let os = unsafe { Box::from_raw(os) };
     os.into_process_by_info(info)
         .map(|p| ArcPluginProcess::new(p, lib))
-        .as_int_out_result(out)
+        .into_int_out_result(out)
 }
 
 extern "C" fn c_module_address_list_callback<'a, T: OSInner<'a>>(
     os: &mut T,
     callback: AddressCallback,
 ) -> i32 {
-    os.module_address_list_callback(callback).as_int_result()
+    os.module_address_list_callback(callback).into_int_result()
 }
 
 extern "C" fn c_module_by_address<'a, T: OSInner<'a>>(
@@ -116,7 +116,7 @@ extern "C" fn c_module_by_address<'a, T: OSInner<'a>>(
     address: Address,
     out: &mut MUModuleInfo,
 ) -> i32 {
-    os.module_by_address(address).as_int_out_result(out)
+    os.module_by_address(address).into_int_out_result(out)
 }
 
 extern "C" fn c_os_info<'a, T: OSInner<'a>>(os: &T) -> &OSInfo {

@@ -74,11 +74,11 @@ name = "integration"
 path = "examples/integration.rs"
 
 [[example]]
-name = "ps"
+name = "process_list"
 path = "examples/process_list.rs"
 
 [[example]]
-name = "lsmod"
+name = "kernel_modules"
 path = "examples/kernel_modules.rs"
 
 [[example]]

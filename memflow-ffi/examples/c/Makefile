@@ -10,11 +10,11 @@ ODIR=./
 phys_mem.out: phys_mem.o
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
 
-plist.out: plist.o
+process_list.out: process_list.o
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
 
 .PHONY: all
-all: phys_mem.out plist.out
+all: phys_mem.out process_list.out
 
 .DEFAULT_GOAL := all
 

@@ -14,8 +14,8 @@ use crate::types::ReprCStr;
 use std::ffi::c_void;
 use std::mem::MaybeUninit;
 
-pub mod connectorcpustate;
-pub use connectorcpustate::{
+pub mod cpu_state;
+pub use cpu_state::{
     ArcPluginCpuState, ConnectorCpuStateFunctionTable, OpaqueConnectorCpuStateFunctionTable,
     PluginCpuState,
 };

@@ -1,5 +1,5 @@
-pub mod cpustate;
-pub use cpustate::{ArcPluginCpuState, PluginCpuState};
+pub mod plugin;
+pub use plugin::{ArcPluginCpuState, PluginCpuState};
 
 use crate::error::*;
 

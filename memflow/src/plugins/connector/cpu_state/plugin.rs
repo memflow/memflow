@@ -59,9 +59,7 @@ impl<'a> Drop for PluginCpuState<'a> {
     }
 }
 
-impl<'a> CpuState for PluginCpuState<'a> {
-    // TODO: stuff
-}
+impl<'a> CpuState for PluginCpuState<'a> {}
 
 #[repr(C)]
 pub struct ArcPluginCpuState {
@@ -92,6 +90,4 @@ impl Clone for ArcPluginCpuState {
     }
 }
 
-impl CpuState for ArcPluginCpuState {
-    // TODO: stuff
-}
+impl CpuState for ArcPluginCpuState {}

@@ -1,8 +1,8 @@
-pub mod keyboard;
-pub use keyboard::{ArcPluginKeyboard, PluginKeyboard};
+pub mod plugin;
+pub use plugin::{ArcPluginKeyboard, PluginKeyboard};
 
-pub mod keyboardstate;
-pub use keyboardstate::ArcPluginKeyboardState;
+pub mod state;
+pub use state::ArcPluginKeyboardState;
 
 use crate::error::*;
 

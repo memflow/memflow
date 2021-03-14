@@ -3,21 +3,22 @@ use crate::os::*;
 use crate::types::Address;
 use crate::types::ReprCStr;
 
-pub mod osinstance;
-pub use osinstance::{OSFunctionTable, OSInstance, OpaqueOSFunctionTable};
+pub mod instance;
+pub use instance::{OSFunctionTable, OSInstance, OpaqueOSFunctionTable};
 
 pub mod process;
 pub use process::{ArcPluginProcess, PluginProcess};
 
-pub mod oskeyboard;
-pub use oskeyboard::{
+pub mod keyboard;
+pub use keyboard::{
     ArcPluginKeyboard, ArcPluginKeyboardState, OSKeyboardFunctionTable,
     OpaqueOSKeyboardFunctionTable, PluginKeyboard,
 };
 
 use super::{
-    Args, CArc, COption, ConnectorInstance, GenericBaseTable, Loadable, OpaqueBaseTable,
-    OpaquePhysicalMemoryFunctionTable, OpaqueVirtualMemoryFunctionTable, PluginDescriptor,
+    connector::OpaquePhysicalMemoryFunctionTable, Args, CArc, COption, ConnectorInstance,
+    GenericBaseTable, Loadable, OpaqueBaseTable, OpaqueVirtualMemoryFunctionTable,
+    PluginDescriptor,
 };
 
 use libloading::Library;

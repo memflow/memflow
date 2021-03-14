@@ -9,6 +9,7 @@ This module also contains functions to interface with dynamically loaded connect
 The inventory system is feature gated behind the `inventory` feature.
 */
 
+// TODO: move all of this in a helper module and only keep the connector plugin stuff
 #[cfg(feature = "std")]
 pub mod fileio;
 #[doc(hidden)]
@@ -25,3 +26,7 @@ pub use filemap::{
 pub mod mmap;
 #[doc(hidden)]
 pub use mmap::MappedPhysicalMemory;
+
+pub mod cpu_state;
+#[doc(hidden)]
+pub use cpu_state::{ConnectorCpuState, ConnectorCpuStateInner, CpuState};

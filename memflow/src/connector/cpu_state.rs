@@ -21,6 +21,3 @@ pub trait ConnectorCpuStateInner<'a>: Send {
 pub trait CpuState {
     // TODO: stuff
 }
-
-// forward impls
-impl<T: CpuState + ?Sized, P: std::ops::DerefMut<Target = T> + Send> CpuState for P {}

@@ -71,7 +71,7 @@ impl Clone for OpaqueCloneTable {
 /// Generic function for cloning past FFI boundary
 #[repr(C)]
 pub struct GenericCloneTable<T: 'static> {
-    pub clone: extern "C" fn(this: &T) -> OptionMut<T>,
+    pub clone: extern "C" fn(thisptr: &T) -> OptionMut<T>,
 }
 
 impl<T: Clone> Default for GenericCloneTable<T> {
@@ -100,7 +100,7 @@ impl Clone for OpaqueBaseTable {
 #[repr(C)]
 pub struct GenericBaseTable<T: 'static> {
     clone: GenericCloneTable<T>,
-    pub drop: unsafe extern "C" fn(this: &mut T),
+    pub drop: unsafe extern "C" fn(thisptr: &mut T),
 }
 
 impl<T: Clone> Default for &'static GenericBaseTable<T> {

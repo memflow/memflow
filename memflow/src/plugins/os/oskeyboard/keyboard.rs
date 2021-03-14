@@ -28,7 +28,7 @@ pub struct KeyboardFunctionTable<T> {
         out: &mut MUArcPluginKeyboardState,
     ) -> i32,
     pub set_state: extern "C" fn(keyboard: &mut T, state: &ArcPluginKeyboardState) -> i32,
-    pub drop: unsafe extern "C" fn(this: &mut T),
+    pub drop: unsafe extern "C" fn(thisptr: &mut T),
 }
 
 impl<T: Keyboard> Default for KeyboardFunctionTable<T> {

@@ -36,7 +36,7 @@ pub struct ProcessFunctionTable<T> {
     pub primary_module_address: extern "C" fn(process: &mut T, out: &mut MUAddress) -> i32,
     pub info: extern "C" fn(process: &T) -> &ProcessInfo,
     pub virt_mem: extern "C" fn(process: &mut T) -> &mut c_void,
-    pub drop: unsafe extern "C" fn(this: &mut T),
+    pub drop: unsafe extern "C" fn(thisptr: &mut T),
 }
 
 impl<T: Process> Default for ProcessFunctionTable<T> {

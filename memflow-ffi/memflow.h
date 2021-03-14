@@ -162,7 +162,7 @@ typedef void *pvoid;
  * Generic function for cloning past FFI boundary
  */
 typedef struct GenericCloneTable_c_void {
-    pvoid (*clone)(const void *this);
+    pvoid (*clone)(const void *thisptr);
 } GenericCloneTable_c_void;
 
 /**
@@ -170,7 +170,7 @@ typedef struct GenericCloneTable_c_void {
  */
 typedef struct GenericBaseTable_c_void {
     struct GenericCloneTable_c_void clone;
-    void (*drop)(void *this);
+    void (*drop)(void *thisptr);
 } GenericBaseTable_c_void;
 
 /**
@@ -412,7 +412,7 @@ typedef struct ProcessFunctionTable_c_void {
     int32_t (*primary_module_address)(void *process, MUAddress *out);
     const struct ProcessInfo *(*info)(const void *process);
     void *(*virt_mem)(void *process);
-    void (*drop)(void *this);
+    void (*drop)(void *thisptr);
 } ProcessFunctionTable_c_void;
 
 typedef struct ProcessFunctionTable_c_void OpaqueProcessFunctionTable;
@@ -541,7 +541,7 @@ typedef struct OSFunctionTable_c_void__c_void OpaqueOSFunctionTable;
 typedef struct KeyboardStateFunctionTable_c_void {
     int32_t (*is_down)(const void *keyboard_state, int32_t vk);
     void (*set_down)(void *keyboard_state, int32_t vk, int32_t down);
-    void (*drop)(void *this);
+    void (*drop)(void *thisptr);
 } KeyboardStateFunctionTable_c_void;
 
 typedef struct KeyboardStateFunctionTable_c_void OpaqueKeyboardStateFunctionTable;
@@ -558,7 +558,7 @@ typedef struct ArcPluginKeyboardState MUArcPluginKeyboardState;
 typedef struct KeyboardFunctionTable_c_void {
     int32_t (*state)(void *keyboard, struct COptArc_Library lib, MUArcPluginKeyboardState *out);
     int32_t (*set_state)(void *keyboard, const struct ArcPluginKeyboardState *state);
-    void (*drop)(void *this);
+    void (*drop)(void *thisptr);
 } KeyboardFunctionTable_c_void;
 
 typedef struct KeyboardFunctionTable_c_void OpaqueKeyboardFunctionTable;
@@ -718,6 +718,13 @@ int32_t inventory_create_connector(struct Inventory *inv,
  *
  * * `name` - name of the OS to use
  * * `args` - arguments to be passed to the connector upon its creation
+ * * `mem` - a previously initialized connector instance
+ * * `out` - a valid memory location that will contain the resulting os-instance
+ *
+ * # Remarks
+ *
+ * The `mem` connector instance is being _moved_ into the os layer.
+ * This means upon calling `os_drop` it is not unnecessary to call `connector_drop` anymore.
  *
  * # Safety
  *

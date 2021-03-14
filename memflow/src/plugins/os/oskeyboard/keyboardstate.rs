@@ -18,7 +18,7 @@ impl Clone for OpaqueKeyboardStateFunctionTable {
 pub struct KeyboardStateFunctionTable<T> {
     pub is_down: extern "C" fn(keyboard_state: &T, vk: i32) -> i32,
     pub set_down: extern "C" fn(keyboard_state: &mut T, vk: i32, down: i32),
-    pub drop: unsafe extern "C" fn(this: &mut T),
+    pub drop: unsafe extern "C" fn(thisptr: &mut T),
 }
 
 impl<T: KeyboardState> Default for KeyboardStateFunctionTable<T> {

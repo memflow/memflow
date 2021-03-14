@@ -12,9 +12,9 @@
 #endif
 
 struct CConnectorInventory
-    : BindDestr<ConnectorInventory, inventory_free>
+    : BindDestr<Inventory, inventory_free>
 {
-    CConnectorInventory(ConnectorInventory *inv)
+    CConnectorInventory(Inventory *inv)
         : BindDestr(inv) {}
 
     CConnectorInventory()
@@ -25,13 +25,14 @@ struct CConnectorInventory
 
     WRAP_FN(inventory, add_dir);
     WRAP_FN(inventory, create_connector);
+    WRAP_FN(inventory, create_os);
 };
 
 struct CPhysicalMemory
-    : BindDestr<PhysicalMemoryObj, phys_free>
+    : BindDestr<ConnectorInstance, connector_drop>
 {
-    CPhysicalMemory(PhysicalMemoryObj *mem)
-        : BindDestr(mem) {}
+    CPhysicalMemory(ConnectorInstance *conn)
+        : BindDestr(conn) {}
 
     WRAP_FN_RAW(phys_read_raw_list);
     WRAP_FN_RAW(phys_write_raw_list);
@@ -56,6 +57,7 @@ struct CPhysicalMemory
     }
 };
 
+/*
 struct CCloneablePhysicalMemory
     : BindDestr<CloneablePhysicalMemoryObj, connector_free>
 {
@@ -173,5 +175,6 @@ struct COsProcessModuleInfo
     }
 #endif
 };
+*/
 
 #endif

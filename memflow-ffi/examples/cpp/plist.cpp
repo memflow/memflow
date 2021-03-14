@@ -1,19 +1,26 @@
-#include <stdio.h>
-
 #include "memflow.hpp"
+#include <stdio.h>
 
 int main(int argc, char *argv[]) {
 	log_init(1);
 
-	CConnectorInventory inv;
-	printf("inv: %p\n", inv.inner);
+	CConnectorInventory inventory;
+	printf("inventory initialized: %p\n", inventory.inner);
 
-	const char *conn_name = argc > 1? argv[1]: "kvm";
+	const char *conn_name = argc > 1? argv[1]: "qemu_procfs";
 	const char *conn_arg = argc > 2? argv[2]: "";
 
-	CCloneablePhysicalMemory conn = inv.create_connector(conn_name, conn_arg);
-	printf("conn: %p\n", conn.inner);
+	ConnectorInstance connector;
+	if (inventory.create_connector(conn_name, conn_arg, &connector) < 0) {
+		printf("unable to initialize connector\n");
+		return 1;
+	}
+	printf("connector initialized: %p\n", connector.instance);
 
+	uint64_t read = connector.phys_read_u64(addr_to_paddr(0x30000));
+
+
+/*
 	if (conn) {
 		CKernel kernel(conn);
 		printf("Kernel: %p\n", kernel.inner);
@@ -38,6 +45,7 @@ int main(int argc, char *argv[]) {
 			);
 		}
 	}
+*/
 
 	return 0;
 }

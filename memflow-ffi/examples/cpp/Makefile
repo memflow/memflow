@@ -1,10 +1,10 @@
 CC = g++
-CFLAGS = -g -O0 -I../../ -I../../../memflow-ffi/ -L../../../target/release
+CFLAGS = -g -O0 -I../../../memflow-ffi/ -L../../../target/release
 LIBS=-lm -ldl -lpthread -l:libmemflow_ffi.a
 
 ODIR=./
 
-%.o: %.c $(DEPS)
+%.o: %.cpp $(DEPS)
 	$(CC) -c -o $@ $< $(CFLAGS)
 
 plist.out: plist.o

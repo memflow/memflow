@@ -1,3 +1,4 @@
+use crate::connector::*;
 use crate::error::*;
 use crate::mem::{PhysicalMemory, PhysicalMemoryMetadata, PhysicalReadData, PhysicalWriteData};
 
@@ -8,9 +9,30 @@ use crate::types::ReprCStr;
 use std::ffi::c_void;
 use std::mem::MaybeUninit;
 
+pub mod connectorcpustate;
+pub use connectorcpustate::{
+    ArcPluginCpuState, ConnectorCpuStateFunctionTable, OpaqueConnectorCpuStateFunctionTable,
+    PluginCpuState,
+};
+
 use libloading::Library;
 
+// Type aliases needed for &mut MaybeUninit<T> to work with bindgen
+pub type MUPluginCpuState<'a> = MaybeUninit<PluginCpuState<'a>>;
+pub type MUArcPluginCpuState = MaybeUninit<ArcPluginCpuState>;
 pub type MUConnectorInstance = MaybeUninit<ConnectorInstance>;
+
+/// Subtrait of Plugin where `Self`, and `OSKeyboard::IntoKeyboardType` are `Clone`
+pub trait PluginConnectorCpuState<T: CpuState + Clone>:
+    'static + Clone + for<'a> ConnectorCpuStateInner<'a, IntoCpuStateType = T>
+{
+}
+impl<
+        T: CpuState + Clone,
+        K: 'static + Clone + for<'a> ConnectorCpuStateInner<'a, IntoCpuStateType = T>,
+    > PluginConnectorCpuState<T> for K
+{
+}
 
 pub fn create_with_logging<T: 'static + PhysicalMemory + Clone>(
     args: &ReprCStr,
@@ -19,7 +41,7 @@ pub fn create_with_logging<T: 'static + PhysicalMemory + Clone>(
     create_fn: impl Fn(&Args, log::Level) -> Result<T>,
 ) -> i32 {
     super::util::create_with_logging(args, log_level, out, |a, l| {
-        create_fn(&a, l).map(ConnectorInstance::new)
+        Ok(create_fn(&a, l).map(ConnectorInstance::builder)?.build())
     })
 }
 
@@ -28,7 +50,9 @@ pub fn create_without_logging<T: 'static + PhysicalMemory + Clone>(
     out: &mut MUConnectorInstance,
     create_fn: impl Fn(&Args) -> Result<T>,
 ) -> i32 {
-    super::util::create_without_logging(args, out, |a| create_fn(&a).map(ConnectorInstance::new))
+    super::util::create_without_logging(args, out, |a| {
+        Ok(create_fn(&a).map(ConnectorInstance::builder)?.build())
+    })
 }
 
 #[repr(C)]
@@ -38,8 +62,8 @@ pub struct ConnectorFunctionTable {
     pub base: &'static OpaqueBaseTable,
     /// The vtable for all physical memory function calls to the connector.
     pub phys: &'static OpaquePhysicalMemoryFunctionTable,
-    // further optional table expansion with Option<&'static SomeFunctionTable>
-    // ...
+    // The vtable for cpu state if available
+    pub cpu_state: Option<&'static OpaqueConnectorCpuStateFunctionTable>,
 }
 
 impl ConnectorFunctionTable {
@@ -47,6 +71,7 @@ impl ConnectorFunctionTable {
         Self {
             base: <&GenericBaseTable<T>>::default().as_opaque(),
             phys: <&PhysicalMemoryFunctionTable<T>>::default().as_opaque(),
+            cpu_state: None,
         }
     }
 }
@@ -79,9 +104,9 @@ pub struct PhysicalMemoryFunctionTable<T> {
 impl<T: PhysicalMemory> Default for &'static PhysicalMemoryFunctionTable<T> {
     fn default() -> Self {
         &PhysicalMemoryFunctionTable {
-            phys_write_raw_list: phys_write_raw_list_internal::<T>,
-            phys_read_raw_list: phys_read_raw_list_internal::<T>,
-            metadata: metadata_internal::<T>,
+            phys_write_raw_list: c_phys_write_raw_list::<T>,
+            phys_read_raw_list: c_phys_read_raw_list::<T>,
+            metadata: c_metadata::<T>,
         }
     }
 }
@@ -92,7 +117,7 @@ impl<T: PhysicalMemory> PhysicalMemoryFunctionTable<T> {
     }
 }
 
-extern "C" fn phys_write_raw_list_internal<T: PhysicalMemory>(
+extern "C" fn c_phys_write_raw_list<T: PhysicalMemory>(
     phys_mem: &mut T,
     write_data: *const PhysicalWriteData,
     write_data_count: usize,
@@ -103,7 +128,7 @@ extern "C" fn phys_write_raw_list_internal<T: PhysicalMemory>(
         .as_int_result()
 }
 
-extern "C" fn phys_read_raw_list_internal<T: PhysicalMemory>(
+extern "C" fn c_phys_read_raw_list<T: PhysicalMemory>(
     phys_mem: &mut T,
     read_data: *mut PhysicalReadData,
     read_data_count: usize,
@@ -112,7 +137,7 @@ extern "C" fn phys_read_raw_list_internal<T: PhysicalMemory>(
     phys_mem.phys_read_raw_list(read_data_slice).as_int_result()
 }
 
-extern "C" fn metadata_internal<T: PhysicalMemory>(phys_mem: &T) -> PhysicalMemoryMetadata {
+extern "C" fn c_metadata<T: PhysicalMemory>(phys_mem: &T) -> PhysicalMemoryMetadata {
     phys_mem.metadata()
 }
 
@@ -136,12 +161,52 @@ pub struct ConnectorInstance {
 }
 
 impl ConnectorInstance {
-    pub fn new<T: 'static + PhysicalMemory + Clone>(mem: T) -> Self {
-        Self {
-            instance: unsafe { Box::into_raw(Box::new(mem)).cast::<c_void>().as_mut() }.unwrap(),
+    pub fn builder<T: 'static + PhysicalMemory + Clone>(
+        instance: T,
+    ) -> ConnectorInstanceBuilder<T> {
+        ConnectorInstanceBuilder {
+            instance,
             vtable: ConnectorFunctionTable::create_vtable::<T>(),
+        }
+    }
+}
+
+/// Builder for the os instance structure.
+pub struct ConnectorInstanceBuilder<T> {
+    instance: T,
+    vtable: ConnectorFunctionTable,
+}
+
+impl<T> ConnectorInstanceBuilder<T> {
+    /// Enables the optional Keyboard feature for the OSInstance.
+    pub fn enable_cpu_state<C>(mut self) -> Self
+    where
+        C: 'static + CpuState + Clone,
+        T: PluginConnectorCpuState<C>,
+    {
+        self.vtable.cpu_state =
+            Some(<&ConnectorCpuStateFunctionTable<C, T>>::default().as_opaque());
+        self
+    }
+
+    /// Build the ConnectorInstance
+    pub fn build(self) -> ConnectorInstance {
+        ConnectorInstance {
+            instance: unsafe {
+                Box::into_raw(Box::new(self.instance))
+                    .cast::<c_void>()
+                    .as_mut()
+            }
+            .unwrap(),
+            vtable: self.vtable,
             library: None.into(),
         }
+    }
+}
+
+impl ConnectorInstance {
+    pub fn has_cpu_state(&self) -> bool {
+        self.vtable.cpu_state.is_some()
     }
 }
 

@@ -5,6 +5,7 @@ use std::path::PathBuf;
 use memflow::error::AsIntResult;
 use memflow::plugins::{
     connector::MUConnectorInstance, os::MUOSInstance, Args, ConnectorInstance, Inventory,
+    OSInstance,
 };
 
 use crate::util::*;
@@ -99,13 +100,20 @@ pub unsafe extern "C" fn inventory_create_connector(
 ///
 /// This creates an instance of `KernelInstance`.
 ///
-/// This instance needs to be freed using `os_free`.
+/// This instance needs to be freed using `os_drop`.
 ///
 /// # Arguments
 ///
 /// * `name` - name of the OS to use
 /// * `args` - arguments to be passed to the connector upon its creation
+/// * `mem` - a previously initialized connector instance
+/// * `out` - a valid memory location that will contain the resulting os-instance
 ///
+/// # Remarks
+/// 
+/// The `mem` connector instance is being _moved_ into the os layer.
+/// This means upon calling `os_drop` it is not unnecessary to call `connector_drop` anymore.
+/// 
 /// # Safety
 ///
 /// Both `name`, and `args` must be valid null terminated strings.
@@ -124,7 +132,10 @@ pub unsafe extern "C" fn inventory_create_os(
     let _args = CStr::from_ptr(args).to_string_lossy();
 
     if args.is_null() {
-        -1
+        let args = Args::default();
+        inv.create_os(&rname, Some(mem), &args)
+            .map_err(inspect_err)
+            .as_int_out_result(out)
     } else {
         let rargs = CStr::from_ptr(args).to_string_lossy();
         Args::parse(&rargs)
@@ -133,6 +144,18 @@ pub unsafe extern "C" fn inventory_create_os(
             .map_err(inspect_err)
             .as_int_out_result(out)
     }
+}
+
+/// Free a os plugin
+///
+/// # Safety
+///
+/// `os` must point to a valid `OSInstance` that was created using one of the provided
+/// functions.
+#[no_mangle]
+pub unsafe extern "C" fn os_drop(os: &mut OSInstance) {
+    trace!("connector_drop: {:?}", os as *mut _);
+    std::ptr::drop_in_place(os);
 }
 
 /// Clone a connector

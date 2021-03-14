@@ -112,27 +112,27 @@ typedef uint8_t PageType;
 /**
  * The page explicitly has no flags.
  */
-#define PageType_NONE 0
+#define PageType_NONE (uint8_t)0
 /**
  * The page type is not known.
  */
-#define PageType_UNKNOWN 1
+#define PageType_UNKNOWN (uint8_t)1
 /**
  * The page contains page table entries.
  */
-#define PageType_PAGE_TABLE 2
+#define PageType_PAGE_TABLE (uint8_t)2
 /**
  * The page is a writeable page.
  */
-#define PageType_WRITEABLE 4
+#define PageType_WRITEABLE (uint8_t)4
 /**
  * The page is read only.
  */
-#define PageType_READ_ONLY 8
+#define PageType_READ_ONLY (uint8_t)8
 /**
  * The page is not executable.
  */
-#define PageType_NOEXEC 16
+#define PageType_NOEXEC (uint8_t)16
 
 /**
  * This type represents a wrapper over a [address](address/index.html)
@@ -169,14 +169,14 @@ typedef struct GenericCloneTable_c_void {
  * Base table for most objects that are cloneable and droppable.
  */
 typedef struct GenericBaseTable_c_void {
-    GenericCloneTable_c_void clone;
+    struct GenericCloneTable_c_void clone;
     void (*drop)(void *this);
 } GenericBaseTable_c_void;
 
 /**
  * Opaque version of `GenericBaseTable` for FFI purposes
  */
-typedef GenericBaseTable_c_void OpaqueBaseTable;
+typedef struct GenericBaseTable_c_void OpaqueBaseTable;
 
 typedef struct PhysicalMemoryMetadata {
     uintptr_t size;
@@ -184,12 +184,12 @@ typedef struct PhysicalMemoryMetadata {
 } PhysicalMemoryMetadata;
 
 typedef struct PhysicalMemoryFunctionTable_c_void {
-    int32_t (*phys_read_raw_list)(void *phys_mem, PhysicalReadData *read_data, uintptr_t read_data_count);
-    int32_t (*phys_write_raw_list)(void *phys_mem, const PhysicalWriteData *write_data, uintptr_t write_data_count);
-    PhysicalMemoryMetadata (*metadata)(const void *phys_mem);
+    int32_t (*phys_read_raw_list)(void *phys_mem, struct PhysicalReadData *read_data, uintptr_t read_data_count);
+    int32_t (*phys_write_raw_list)(void *phys_mem, const struct PhysicalWriteData *write_data, uintptr_t write_data_count);
+    struct PhysicalMemoryMetadata (*metadata)(const void *phys_mem);
 } PhysicalMemoryFunctionTable_c_void;
 
-typedef PhysicalMemoryFunctionTable_c_void OpaquePhysicalMemoryFunctionTable;
+typedef struct PhysicalMemoryFunctionTable_c_void OpaquePhysicalMemoryFunctionTable;
 
 typedef struct ConnectorFunctionTable {
     /**
@@ -204,8 +204,8 @@ typedef struct ConnectorFunctionTable {
 
 typedef struct COptArc_Library {
     const Library *inner;
-    Option______Library (*clone_fn)(Option______Library);
-    void (*drop_fn)(Option______Library*);
+    struct Option______Library (*clone_fn)(struct Option______Library);
+    void (*drop_fn)(struct Option______Library*);
 } COptArc_Library;
 
 /**
@@ -216,7 +216,7 @@ typedef struct COptArc_Library {
  */
 typedef struct ConnectorInstance {
     void *instance;
-    ConnectorFunctionTable vtable;
+    struct ConnectorFunctionTable vtable;
     /**
      * Internal library arc.
      *
@@ -226,17 +226,17 @@ typedef struct ConnectorInstance {
      *
      * If the library is unloaded prior to the instance this will lead to a SIGSEGV.
      */
-    COptArc_Library library;
+    struct COptArc_Library library;
 } ConnectorInstance;
 
-typedef MaybeUninit<ConnectorInstance> MUConnectorInstance;
+typedef struct ConnectorInstance MUConnectorInstance;
 
 typedef struct Callback_c_void__Address {
     void *context;
     bool (*func)(void*, Address);
 } Callback_c_void__Address;
 
-typedef Callback_c_void__Address OpaqueCallback_Address;
+typedef struct Callback_c_void__Address OpaqueCallback_Address;
 
 typedef OpaqueCallback_Address AddressCallback;
 
@@ -277,15 +277,13 @@ typedef struct X86_Body {
     bool _1;
 } X86_Body;
 
-typedef struct AArch64_Body {
-    uintptr_t _0;
-} AArch64_Body;
-
 typedef struct ArchitectureIdent {
     ArchitectureIdent_Tag tag;
     union {
         X86_Body x86;
-        AArch64_Body a_arch64;
+        struct {
+            uintptr_t a_arch64;
+        };
     };
 } ArchitectureIdent;
 
@@ -315,7 +313,7 @@ typedef struct ProcessInfo {
     /**
      * System architecture of the target system.
      */
-    ArchitectureIdent sys_arch;
+    struct ArchitectureIdent sys_arch;
     /**
      * Process architecture
      *
@@ -326,27 +324,27 @@ typedef struct ProcessInfo {
      *
      * On windows this technique is called [`WOW64`](https://docs.microsoft.com/en-us/windows/win32/winprog64/wow64-implementation-details).
      */
-    ArchitectureIdent proc_arch;
+    struct ArchitectureIdent proc_arch;
 } ProcessInfo;
 
-typedef MaybeUninit<ProcessInfo> MUProcessInfo;
+typedef struct ProcessInfo MUProcessInfo;
 
-typedef const ArchitectureIdent *OptionArchitectureIdent;
+typedef const struct ArchitectureIdent *OptionArchitectureIdent;
 
 /**
  * Pair of address and architecture used for callbacks
  */
 typedef struct ModuleAddressInfo {
     Address address;
-    ArchitectureIdent arch;
+    struct ArchitectureIdent arch;
 } ModuleAddressInfo;
 
 typedef struct Callback_c_void__ModuleAddressInfo {
     void *context;
-    bool (*func)(void*, ModuleAddressInfo);
+    bool (*func)(void*, struct ModuleAddressInfo);
 } Callback_c_void__ModuleAddressInfo;
 
-typedef Callback_c_void__ModuleAddressInfo OpaqueCallback_ModuleAddressInfo;
+typedef struct Callback_c_void__ModuleAddressInfo OpaqueCallback_ModuleAddressInfo;
 
 typedef OpaqueCallback_ModuleAddressInfo ModuleAddressCallback;
 
@@ -401,23 +399,23 @@ typedef struct ModuleInfo {
      * needed to support the process emulation. This should be equal to either
      * `ProcessInfo::proc_arch`, or `ProcessInfo::sys_arch` of the parent process.
      */
-    ArchitectureIdent arch;
+    struct ArchitectureIdent arch;
 } ModuleInfo;
 
-typedef MaybeUninit<ModuleInfo> MUModuleInfo;
+typedef struct ModuleInfo MUModuleInfo;
 
-typedef MaybeUninit<Address> MUAddress;
+typedef Address MUAddress;
 
 typedef struct ProcessFunctionTable_c_void {
     int32_t (*module_address_list_callback)(void *process, OptionArchitectureIdent target_arch, ModuleAddressCallback callback);
-    int32_t (*module_by_address)(void *process, Address address, ArchitectureIdent architecture, MUModuleInfo *out);
+    int32_t (*module_by_address)(void *process, Address address, struct ArchitectureIdent architecture, MUModuleInfo *out);
     int32_t (*primary_module_address)(void *process, MUAddress *out);
-    const ProcessInfo *(*info)(const void *process);
+    const struct ProcessInfo *(*info)(const void *process);
     void *(*virt_mem)(void *process);
     void (*drop)(void *this);
 } ProcessFunctionTable_c_void;
 
-typedef ProcessFunctionTable_c_void OpaqueProcessFunctionTable;
+typedef struct ProcessFunctionTable_c_void OpaqueProcessFunctionTable;
 
 /**
  * A `Page` holds information about a memory page.
@@ -439,20 +437,20 @@ typedef struct Page {
     uintptr_t page_size;
 } Page;
 
-typedef MaybeUninit<Page> MUPage;
+typedef struct Page MUPage;
 
 typedef struct TranslationChunk {
     Address _0;
     uintptr_t _1;
-    PhysicalAddress _2;
+    struct PhysicalAddress _2;
 } TranslationChunk;
 
 typedef struct Callback_c_void__TranslationChunk {
     void *context;
-    bool (*func)(void*, TranslationChunk);
+    bool (*func)(void*, struct TranslationChunk);
 } Callback_c_void__TranslationChunk;
 
-typedef Callback_c_void__TranslationChunk OpaqueCallback_TranslationChunk;
+typedef struct Callback_c_void__TranslationChunk OpaqueCallback_TranslationChunk;
 
 typedef OpaqueCallback_TranslationChunk TranslationMapCallback;
 
@@ -463,22 +461,22 @@ typedef struct PageMapChunk {
 
 typedef struct Callback_c_void__PageMapChunk {
     void *context;
-    bool (*func)(void*, PageMapChunk);
+    bool (*func)(void*, struct PageMapChunk);
 } Callback_c_void__PageMapChunk;
 
-typedef Callback_c_void__PageMapChunk OpaqueCallback_PageMapChunk;
+typedef struct Callback_c_void__PageMapChunk OpaqueCallback_PageMapChunk;
 
 typedef OpaqueCallback_PageMapChunk PageMapCallback;
 
 typedef struct VirtualMemoryFunctionTable_c_void {
-    int32_t (*virt_read_raw_list)(void *virt_mem, VirtualReadData *read_data, uintptr_t read_data_count);
-    int32_t (*virt_write_raw_list)(void *virt_mem, const VirtualWriteData *write_data, uintptr_t write_data_count);
+    int32_t (*virt_read_raw_list)(void *virt_mem, struct VirtualReadData *read_data, uintptr_t read_data_count);
+    int32_t (*virt_write_raw_list)(void *virt_mem, const struct VirtualWriteData *write_data, uintptr_t write_data_count);
     int32_t (*virt_page_info)(void *virt_mem, Address addr, MUPage *out);
     void (*virt_translation_map_range)(void *virt_mem, Address start, Address end, TranslationMapCallback out);
     void (*virt_page_map_range)(void *virt_mem, uintptr_t gap_size, Address start, Address end, PageMapCallback out);
 } VirtualMemoryFunctionTable_c_void;
 
-typedef VirtualMemoryFunctionTable_c_void OpaqueVirtualMemoryFunctionTable;
+typedef struct VirtualMemoryFunctionTable_c_void OpaqueVirtualMemoryFunctionTable;
 
 typedef struct VirtualMemoryInstance {
     void *instance;
@@ -488,23 +486,23 @@ typedef struct VirtualMemoryInstance {
 typedef struct PluginProcess {
     void *instance;
     OpaqueProcessFunctionTable vtable;
-    VirtualMemoryInstance virt_mem;
+    struct VirtualMemoryInstance virt_mem;
 } PluginProcess;
 
-typedef MaybeUninit<PluginProcess> MUPluginProcess;
+typedef struct PluginProcess MUPluginProcess;
 
 /**
  * Opaque version of `GenericCloneTable` for FFI purposes
  */
-typedef GenericCloneTable_c_void OpaqueCloneTable;
+typedef struct GenericCloneTable_c_void OpaqueCloneTable;
 
 typedef struct ArcPluginProcess {
-    PluginProcess inner;
+    struct PluginProcess inner;
     OpaqueCloneTable clone;
-    COptArc_Library library;
+    struct COptArc_Library library;
 } ArcPluginProcess;
 
-typedef MaybeUninit<ArcPluginProcess> MUArcPluginProcess;
+typedef struct ArcPluginProcess MUArcPluginProcess;
 
 /**
  * Information block about OS
@@ -525,20 +523,20 @@ typedef struct OSInfo {
     /**
      * System architecture
      */
-    ArchitectureIdent arch;
+    struct ArchitectureIdent arch;
 } OSInfo;
 
 typedef struct OSFunctionTable_c_void__c_void {
     int32_t (*process_address_list_callback)(void *os, AddressCallback callback);
     int32_t (*process_info_by_address)(void *os, Address address, MUProcessInfo *out);
-    int32_t (*process_by_info)(void *os, ProcessInfo info, MUPluginProcess *out);
-    int32_t (*into_process_by_info)(void *os, ProcessInfo info, COptArc_Library lib, MUArcPluginProcess *out);
+    int32_t (*process_by_info)(void *os, struct ProcessInfo info, MUPluginProcess *out);
+    int32_t (*into_process_by_info)(void *os, struct ProcessInfo info, struct COptArc_Library lib, MUArcPluginProcess *out);
     int32_t (*module_address_list_callback)(void *os, AddressCallback callback);
     int32_t (*module_by_address)(void *os, Address address, MUModuleInfo *out);
-    const OSInfo *(*info)(const void *os);
+    const struct OSInfo *(*info)(const void *os);
 } OSFunctionTable_c_void__c_void;
 
-typedef OSFunctionTable_c_void__c_void OpaqueOSFunctionTable;
+typedef struct OSFunctionTable_c_void__c_void OpaqueOSFunctionTable;
 
 typedef struct KeyboardStateFunctionTable_c_void {
     int32_t (*is_down)(const void *keyboard_state, int32_t vk);
@@ -546,46 +544,46 @@ typedef struct KeyboardStateFunctionTable_c_void {
     void (*drop)(void *this);
 } KeyboardStateFunctionTable_c_void;
 
-typedef KeyboardStateFunctionTable_c_void OpaqueKeyboardStateFunctionTable;
+typedef struct KeyboardStateFunctionTable_c_void OpaqueKeyboardStateFunctionTable;
 
 typedef struct ArcPluginKeyboardState {
     void *instance;
     OpaqueKeyboardStateFunctionTable vtable;
     OpaqueCloneTable clone;
-    COptArc_Library library;
+    struct COptArc_Library library;
 } ArcPluginKeyboardState;
 
-typedef MaybeUninit<ArcPluginKeyboardState> MUArcPluginKeyboardState;
+typedef struct ArcPluginKeyboardState MUArcPluginKeyboardState;
 
 typedef struct KeyboardFunctionTable_c_void {
-    int32_t (*state)(void *keyboard, COptArc_Library lib, MUArcPluginKeyboardState *out);
-    int32_t (*set_state)(void *keyboard, const ArcPluginKeyboardState *state);
+    int32_t (*state)(void *keyboard, struct COptArc_Library lib, MUArcPluginKeyboardState *out);
+    int32_t (*set_state)(void *keyboard, const struct ArcPluginKeyboardState *state);
     void (*drop)(void *this);
 } KeyboardFunctionTable_c_void;
 
-typedef KeyboardFunctionTable_c_void OpaqueKeyboardFunctionTable;
+typedef struct KeyboardFunctionTable_c_void OpaqueKeyboardFunctionTable;
 
 typedef struct PluginKeyboard {
     void *instance;
     OpaqueKeyboardFunctionTable vtable;
-    COptArc_Library library;
+    struct COptArc_Library library;
 } PluginKeyboard;
 
-typedef MaybeUninit<PluginKeyboard> MUPluginKeyboard;
+typedef struct PluginKeyboard MUPluginKeyboard;
 
 typedef struct ArcPluginKeyboard {
-    PluginKeyboard inner;
+    struct PluginKeyboard inner;
     OpaqueCloneTable clone;
 } ArcPluginKeyboard;
 
-typedef MaybeUninit<ArcPluginKeyboard> MUArcPluginKeyboard;
+typedef struct ArcPluginKeyboard MUArcPluginKeyboard;
 
 typedef struct OSKeyboardFunctionTable_c_void__c_void {
-    int32_t (*keyboard)(void *os, COptArc_Library lib, MUPluginKeyboard *out);
-    int32_t (*into_keyboard)(void *os, COptArc_Library lib, MUArcPluginKeyboard *out);
+    int32_t (*keyboard)(void *os, struct COptArc_Library lib, MUPluginKeyboard *out);
+    int32_t (*into_keyboard)(void *os, struct COptArc_Library lib, MUArcPluginKeyboard *out);
 } OSKeyboardFunctionTable_c_void__c_void;
 
-typedef OSKeyboardFunctionTable_c_void__c_void OpaqueOSKeyboardFunctionTable;
+typedef struct OSKeyboardFunctionTable_c_void__c_void OpaqueOSKeyboardFunctionTable;
 
 typedef struct OSLayerFunctionTable {
     /**
@@ -618,7 +616,7 @@ typedef struct OSLayerFunctionTable {
  */
 typedef struct OSInstance {
     void *instance;
-    OSLayerFunctionTable vtable;
+    struct OSLayerFunctionTable vtable;
     /**
      * Internal library arc.
      *
@@ -628,20 +626,20 @@ typedef struct OSInstance {
      *
      * If the library is unloaded prior to the instance this will lead to a SIGSEGV.
      */
-    COptArc_Library library;
+    struct COptArc_Library library;
 } OSInstance;
 
-typedef MaybeUninit<OSInstance> MUOSInstance;
+typedef struct OSInstance MUOSInstance;
 
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
 
-extern const ArchitectureObj *X86_32;
+extern const struct ArchitectureObj *X86_32;
 
-extern const ArchitectureObj *X86_32_PAE;
+extern const struct ArchitectureObj *X86_32_PAE;
 
-extern const ArchitectureObj *X86_64;
+extern const struct ArchitectureObj *X86_64;
 
 void log_init(int32_t level_num);
 
@@ -650,7 +648,7 @@ void log_init(int32_t level_num);
  *
  * This will create a `PhysicalAddress` with `UNKNOWN` PageType.
  */
-PhysicalAddress addr_to_paddr(Address address);
+struct PhysicalAddress addr_to_paddr(Address address);
 
 /**
  * Create a new connector inventory
@@ -665,7 +663,7 @@ PhysicalAddress addr_to_paddr(Address address);
  * Inventory is inherently unsafe, because it loads shared libraries which can not be
  * guaranteed to be safe.
  */
-Inventory *inventory_scan(void);
+struct Inventory *inventory_scan(void);
 
 /**
  * Create a new inventory with custom path string
@@ -674,7 +672,7 @@ Inventory *inventory_scan(void);
  *
  * `path` must be a valid null terminated string
  */
-Inventory *inventory_scan_path(const char *path);
+struct Inventory *inventory_scan_path(const char *path);
 
 /**
  * Add a directory to an existing inventory
@@ -683,7 +681,7 @@ Inventory *inventory_scan_path(const char *path);
  *
  * `dir` must be a valid null terminated string
  */
-int32_t inventory_add_dir(Inventory *inv, const char *dir);
+int32_t inventory_add_dir(struct Inventory *inv, const char *dir);
 
 /**
  * Create a connector with given arguments
@@ -704,7 +702,7 @@ int32_t inventory_add_dir(Inventory *inv, const char *dir);
  * Any error strings returned by the connector must not be outputed after the connector gets
  * freed, because that operation could cause the underlying shared library to get unloaded.
  */
-int32_t inventory_create_connector(Inventory *inv,
+int32_t inventory_create_connector(struct Inventory *inv,
                                    const char *name,
                                    const char *args,
                                    MUConnectorInstance *out);
@@ -714,7 +712,7 @@ int32_t inventory_create_connector(Inventory *inv,
  *
  * This creates an instance of `KernelInstance`.
  *
- * This instance needs to be freed using `os_free`.
+ * This instance needs to be freed using `os_drop`.
  *
  * # Arguments
  *
@@ -728,11 +726,21 @@ int32_t inventory_create_connector(Inventory *inv,
  * Any error strings returned by the connector must not be outputed after the connector gets
  * freed, because that operation could cause the underlying shared library to get unloaded.
  */
-int32_t inventory_create_os(Inventory *inv,
+int32_t inventory_create_os(struct Inventory *inv,
                             const char *name,
                             const char *args,
-                            ConnectorInstance mem,
+                            struct ConnectorInstance mem,
                             MUOSInstance *out);
+
+/**
+ * Free a os plugin
+ *
+ * # Safety
+ *
+ * `os` must point to a valid `OSInstance` that was created using one of the provided
+ * functions.
+ */
+void os_drop(struct OSInstance *os);
 
 /**
  * Clone a connector
@@ -746,7 +754,7 @@ int32_t inventory_create_os(Inventory *inv,
  * `conn` has to point to a a valid `CloneablePhysicalMemory` created by one of the provided
  * functions.
  */
-void connector_clone(const ConnectorInstance *conn, MUConnectorInstance *out);
+void connector_clone(const struct ConnectorInstance *conn, MUConnectorInstance *out);
 
 /**
  * Free a connector instance
@@ -759,7 +767,7 @@ void connector_clone(const ConnectorInstance *conn, MUConnectorInstance *out);
  * There has to be no instance of `PhysicalMemory` created from the input `conn`, because they
  * will become invalid.
  */
-void connector_drop(ConnectorInstance *conn);
+void connector_drop(struct ConnectorInstance *conn);
 
 /**
  * Free a connector inventory
@@ -769,7 +777,7 @@ void connector_drop(ConnectorInstance *conn);
  * `inv` must point to a valid `Inventory` that was created using one of the provided
  * functions.
  */
-void inventory_free(Inventory *inv);
+void inventory_free(struct Inventory *inv);
 
 /**
  * Read a list of values
@@ -781,7 +789,9 @@ void inventory_free(Inventory *inv);
  *
  * `data` must be a valid array of `PhysicalReadData` with the length of at least `len`
  */
-int32_t phys_read_raw_list(ConnectorInstance *mem, PhysicalReadData *data, uintptr_t len);
+int32_t phys_read_raw_list(struct ConnectorInstance *mem,
+                           struct PhysicalReadData *data,
+                           uintptr_t len);
 
 /**
  * Write a list of values
@@ -793,12 +803,14 @@ int32_t phys_read_raw_list(ConnectorInstance *mem, PhysicalReadData *data, uintp
  *
  * `data` must be a valid array of `PhysicalWriteData` with the length of at least `len`
  */
-int32_t phys_write_raw_list(ConnectorInstance *mem, const PhysicalWriteData *data, uintptr_t len);
+int32_t phys_write_raw_list(struct ConnectorInstance *mem,
+                            const struct PhysicalWriteData *data,
+                            uintptr_t len);
 
 /**
  * Retrieve metadata about the physical memory object
  */
-PhysicalMemoryMetadata phys_metadata(const ConnectorInstance *mem);
+struct PhysicalMemoryMetadata phys_metadata(const struct ConnectorInstance *mem);
 
 /**
  * Read a single value into `out` from a provided `PhysicalAddress`
@@ -807,17 +819,20 @@ PhysicalMemoryMetadata phys_metadata(const ConnectorInstance *mem);
  *
  * `out` must be a valid pointer to a data buffer of at least `len` size.
  */
-int32_t phys_read_raw(ConnectorInstance *mem, PhysicalAddress addr, uint8_t *out, uintptr_t len);
+int32_t phys_read_raw(struct ConnectorInstance *mem,
+                      struct PhysicalAddress addr,
+                      uint8_t *out,
+                      uintptr_t len);
 
 /**
  * Read a single 32-bit value from a provided `PhysicalAddress`
  */
-uint32_t phys_read_u32(ConnectorInstance *mem, PhysicalAddress addr);
+uint32_t phys_read_u32(struct ConnectorInstance *mem, struct PhysicalAddress addr);
 
 /**
  * Read a single 64-bit value from a provided `PhysicalAddress`
  */
-uint64_t phys_read_u64(ConnectorInstance *mem, PhysicalAddress addr);
+uint64_t phys_read_u64(struct ConnectorInstance *mem, struct PhysicalAddress addr);
 
 /**
  * Write a single value from `input` into a provided `PhysicalAddress`
@@ -826,20 +841,20 @@ uint64_t phys_read_u64(ConnectorInstance *mem, PhysicalAddress addr);
  *
  * `input` must be a valid pointer to a data buffer of at least `len` size.
  */
-int32_t phys_write_raw(ConnectorInstance *mem,
-                       PhysicalAddress addr,
+int32_t phys_write_raw(struct ConnectorInstance *mem,
+                       struct PhysicalAddress addr,
                        const uint8_t *input,
                        uintptr_t len);
 
 /**
  * Write a single 32-bit value into a provided `PhysicalAddress`
  */
-int32_t phys_write_u32(ConnectorInstance *mem, PhysicalAddress addr, uint32_t val);
+int32_t phys_write_u32(struct ConnectorInstance *mem, struct PhysicalAddress addr, uint32_t val);
 
 /**
  * Write a single 64-bit value into a provided `PhysicalAddress`
  */
-int32_t phys_write_u64(ConnectorInstance *mem, PhysicalAddress addr, uint64_t val);
+int32_t phys_write_u64(struct ConnectorInstance *mem, struct PhysicalAddress addr, uint64_t val);
 
 /**
  * Free a virtual memory object reference
@@ -850,7 +865,7 @@ int32_t phys_write_u64(ConnectorInstance *mem, PhysicalAddress addr, uint64_t va
  *
  * `mem` must be a valid reference to a virtual memory object.
  */
-void virt_free(VirtualMemoryObj *mem);
+void virt_free(struct VirtualMemoryObj *mem);
 
 /**
  * Read a list of values
@@ -863,7 +878,9 @@ void virt_free(VirtualMemoryObj *mem);
  *
  * `data` must be a valid array of `VirtualReadData` with the length of at least `len`
  */
-int32_t virt_read_raw_list(VirtualMemoryObj *mem, VirtualReadData *data, uintptr_t len);
+int32_t virt_read_raw_list(struct VirtualMemoryObj *mem,
+                           struct VirtualReadData *data,
+                           uintptr_t len);
 
 /**
  * Write a list of values
@@ -876,7 +893,9 @@ int32_t virt_read_raw_list(VirtualMemoryObj *mem, VirtualReadData *data, uintptr
  *
  * `data` must be a valid array of `VirtualWriteData` with the length of at least `len`
  */
-int32_t virt_write_raw_list(VirtualMemoryObj *mem, const VirtualWriteData *data, uintptr_t len);
+int32_t virt_write_raw_list(struct VirtualMemoryObj *mem,
+                            const struct VirtualWriteData *data,
+                            uintptr_t len);
 
 /**
  * Read a single value into `out` from a provided `Address`
@@ -885,17 +904,17 @@ int32_t virt_write_raw_list(VirtualMemoryObj *mem, const VirtualWriteData *data,
  *
  * `out` must be a valid pointer to a data buffer of at least `len` size.
  */
-int32_t virt_read_raw_into(VirtualMemoryObj *mem, Address addr, uint8_t *out, uintptr_t len);
+int32_t virt_read_raw_into(struct VirtualMemoryObj *mem, Address addr, uint8_t *out, uintptr_t len);
 
 /**
  * Read a single 32-bit value from a provided `Address`
  */
-uint32_t virt_read_u32(VirtualMemoryObj *mem, Address addr);
+uint32_t virt_read_u32(struct VirtualMemoryObj *mem, Address addr);
 
 /**
  * Read a single 64-bit value from a provided `Address`
  */
-uint64_t virt_read_u64(VirtualMemoryObj *mem, Address addr);
+uint64_t virt_read_u64(struct VirtualMemoryObj *mem, Address addr);
 
 /**
  * Write a single value from `input` into a provided `Address`
@@ -904,27 +923,30 @@ uint64_t virt_read_u64(VirtualMemoryObj *mem, Address addr);
  *
  * `input` must be a valid pointer to a data buffer of at least `len` size.
  */
-int32_t virt_write_raw(VirtualMemoryObj *mem, Address addr, const uint8_t *input, uintptr_t len);
+int32_t virt_write_raw(struct VirtualMemoryObj *mem,
+                       Address addr,
+                       const uint8_t *input,
+                       uintptr_t len);
 
 /**
  * Write a single 32-bit value into a provided `Address`
  */
-int32_t virt_write_u32(VirtualMemoryObj *mem, Address addr, uint32_t val);
+int32_t virt_write_u32(struct VirtualMemoryObj *mem, Address addr, uint32_t val);
 
 /**
  * Write a single 64-bit value into a provided `Address`
  */
-int32_t virt_write_u64(VirtualMemoryObj *mem, Address addr, uint64_t val);
+int32_t virt_write_u64(struct VirtualMemoryObj *mem, Address addr, uint64_t val);
 
-uint8_t arch_bits(const ArchitectureObj *arch);
+uint8_t arch_bits(const struct ArchitectureObj *arch);
 
-Endianess arch_endianess(const ArchitectureObj *arch);
+Endianess arch_endianess(const struct ArchitectureObj *arch);
 
-uintptr_t arch_page_size(const ArchitectureObj *arch);
+uintptr_t arch_page_size(const struct ArchitectureObj *arch);
 
-uintptr_t arch_size_addr(const ArchitectureObj *arch);
+uintptr_t arch_size_addr(const struct ArchitectureObj *arch);
 
-uint8_t arch_address_space_bits(const ArchitectureObj *arch);
+uint8_t arch_address_space_bits(const struct ArchitectureObj *arch);
 
 /**
  * Free an architecture reference
@@ -933,9 +955,9 @@ uint8_t arch_address_space_bits(const ArchitectureObj *arch);
  *
  * `arch` must be a valid heap allocated reference created by one of the API's functions.
  */
-void arch_free(ArchitectureObj *arch);
+void arch_free(struct ArchitectureObj *arch);
 
-bool is_x86_arch(const ArchitectureObj *arch);
+bool is_x86_arch(const struct ArchitectureObj *arch);
 
 #ifdef __cplusplus
 } // extern "C"

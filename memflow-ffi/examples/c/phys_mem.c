@@ -2,7 +2,8 @@
 #include <stdio.h>
 
 int main(int argc, char *argv[]) {
-	log_init(4);
+	// enable debug level logging
+	log_init(3);
 
 	Inventory *inv = inventory_scan();
 	printf("inv: %p\n", inv);

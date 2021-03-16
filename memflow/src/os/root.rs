@@ -195,6 +195,13 @@ pub trait OSInner<'a>: Send {
         let inner_callback =
             &mut |address: Address| match unsafe { &mut *sptr }.module_by_address(address) {
                 Ok(info) => callback.call(info),
+                Err(Error(ErrorOrigin::Memory, ErrorKind::PartialData)) => {
+                    log::trace!(
+                        "Partial error when reading module {:x}, skipping entry",
+                        address
+                    );
+                    true
+                }
                 Err(e) => {
                     log::trace!("Error loading module {:x} {:?}", address, e);
                     false

@@ -59,7 +59,7 @@ pub trait Process: Send {
                 true
             }
             Err(e) => {
-                log::trace!("Error loading module {:x} {:?}", address, e);
+                log::trace!("Error when reading module {:x} {:?}", address, e);
                 false
             }
         };

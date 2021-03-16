@@ -200,12 +200,6 @@ impl<T: ?Sized> Pointer32<T> {
     pub const fn as_usize(self) -> usize {
         self.address as usize
     }
-
-    /// Returns the underlying raw u32 value of this pointer.
-    #[deprecated = "use as_u32() instead"]
-    pub const fn into_raw(self) -> u32 {
-        self.address
-    }
 }
 
 /// This function will deref the pointer directly into a Pod type.

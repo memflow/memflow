@@ -44,7 +44,7 @@ pub trait OSInner<'a>: Send {
         let sptr = self as *mut Self;
         let inner_callback = &mut |addr| match unsafe { &mut *sptr }.process_info_by_address(addr) {
             Ok(info) => callback.call(info),
-            Err(Error(ErrorOrigin::Memory, ErrorKind::PartialData)) => {
+            Err(Error(_, ErrorKind::PartialData)) => {
                 log::trace!("Partial error when reading process {:x}", addr);
                 true
             }
@@ -199,7 +199,7 @@ pub trait OSInner<'a>: Send {
         let inner_callback =
             &mut |address: Address| match unsafe { &mut *sptr }.module_by_address(address) {
                 Ok(info) => callback.call(info),
-                Err(Error(ErrorOrigin::Memory, ErrorKind::PartialData)) => {
+                Err(Error(_, ErrorKind::PartialData)) => {
                     log::trace!(
                         "Partial error when reading module {:x}, skipping entry",
                         address

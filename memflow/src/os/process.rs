@@ -51,7 +51,7 @@ pub trait Process: Send {
             .module_by_address(address, arch)
         {
             Ok(info) => callback.call(info),
-            Err(Error(ErrorOrigin::Memory, ErrorKind::PartialData)) => {
+            Err(Error(_, ErrorKind::PartialData)) => {
                 log::trace!(
                     "Partial error when reading module {:x}, skipping entry",
                     address

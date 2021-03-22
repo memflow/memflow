@@ -633,7 +633,7 @@ impl Inventory {
 
     /// Create a connector and OS in one go
     ///
-    /// This will build a connector, and then feed it to `create_os` function
+    /// This will build a connector if specified, and then feed it to `create_os` function
     pub fn create_conn_os_combo(
         &self,
         conn_name: &str,
@@ -641,8 +641,12 @@ impl Inventory {
         os_name: &str,
         os_args: &Args,
     ) -> Result<OSInstance> {
-        let conn = self.create_connector(conn_name, None, conn_args)?;
-        self.create_os(os_name, Some(conn), os_args)
+        let conn = if conn_name.is_empty() {
+            None
+        } else {
+            Some(self.create_connector(conn_name, None, conn_args)?)
+        };
+        self.create_os(os_name, conn, os_args)
     }
 
     /// Simple way of creating a OS in one go
@@ -650,8 +654,12 @@ impl Inventory {
     /// This function accepts no arguments for the sake of simplicity. It is advised to use
     /// `create_conn_os_combo` if passing arguments is necessary.
     pub fn create_os_simple(&self, conn_name: &str, os_name: &str) -> Result<OSInstance> {
-        let conn = self.create_connector_default(conn_name)?;
-        self.create_os(os_name, Some(conn), &Args::default())
+        let conn = if conn_name.is_empty() {
+            None
+        } else {
+            Some(self.create_connector_default(conn_name)?)
+        };
+        self.create_os(os_name, conn, &Args::default())
     }
 
     /// Create a connector and OS in one go, statically

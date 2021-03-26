@@ -510,11 +510,47 @@ impl Inventory {
             .collect::<Vec<_>>()
     }
 
-    pub fn builder<'a>(&'a self) -> ConnectorBuilder<'a> {
-        ConnectorBuilder {
-            inventory: self,
-            steps: Vec::new(),
-        }
+    /// Creates a new Connector / OS builder.
+    ///
+    /// # Examples
+    ///
+    /// Create a connector:
+    /// ```
+    /// use memflow::plugins::Inventory;
+    ///
+    /// let inventory = Inventory::scan();
+    /// let os = inventory
+    ///   .builder()
+    ///   .connector("qemu_procfs")
+    ///   .build();
+    /// ```
+    ///
+    /// Create a Connector with arguments:
+    /// ```
+    /// use memflow::plugins::{Inventory, Args};
+    ///
+    /// let inventory = Inventory::scan();
+    /// let os = inventory
+    ///   .builder()
+    ///   .connector("qemu_procfs")
+    ///   .args(Args::parse("vm-win10").unwrap())
+    ///   .build();
+    /// ```
+    ///
+    /// Create a Connector and OS with arguments:
+    /// ```
+    /// use memflow::plugins::{Inventory, Args};
+    ///
+    /// let inventory = Inventory::scan();
+    /// let os = inventory
+    ///   .builder()
+    ///   .connector("qemu_procfs")
+    ///   .args(Args::parse("vm-win10").unwrap())
+    ///   .os("win10")
+    ///   .build();
+    /// ```
+    pub fn builder<'a>(&'a self) -> ConnectorBuilderEmpty<'a> {
+        ConnectorBuilderEmpty { inventory: self }
     }
 
     /// Tries to create a new instance for the library with the given name.
@@ -629,7 +665,28 @@ enum BuildStep<'a> {
     OS { name: &'a str, args: Option<Args> },
 }
 
-/// ConnectorBuilder creates a new connector instance with the previous os step as an input
+/// ConnectorBuilderEmpty creates a new connector instance without any input.
+///
+/// This indirection exists to prevent the end user from calling `args()` or `build()` before adding a connector or os first.
+pub struct ConnectorBuilderEmpty<'a> {
+    inventory: &'a Inventory,
+}
+
+impl<'a> ConnectorBuilderEmpty<'a> {
+    /// Adds a Connector instance to the build chain
+    ///
+    /// # Arguments
+    ///
+    /// * `name` - name of the connector
+    pub fn connector(self, name: &'a str) -> OSBuilder<'a> {
+        OSBuilder {
+            inventory: self.inventory,
+            steps: vec![BuildStep::Connector { name, args: None }],
+        }
+    }
+}
+
+/// ConnectorBuilder creates a new connector instance with the previous os step as an input.
 pub struct ConnectorBuilder<'a> {
     inventory: &'a Inventory,
     steps: Vec<BuildStep<'a>>,
@@ -652,16 +709,12 @@ impl<'a> ConnectorBuilder<'a> {
 
     /// Appends arguments to the previously added OS.
     ///
-    /// This function must be called after a call to the `os` function.
-    ///
     /// # Arguments
     ///
     /// * `os_args` - the arguments to be passed to the previously added OS
     pub fn args(mut self, os_args: Args) -> ConnectorBuilder<'a> {
         if let Some(BuildStep::OS { name: _, args }) = self.steps.iter_mut().last() {
             *args = Some(os_args);
-        } else {
-            panic!("The `args` function on a builder can only be used after a call to `os`");
         }
         self
     }
@@ -720,16 +773,12 @@ impl<'a> OSBuilder<'a> {
 
     /// Appends arguments to the previously added Connector.
     ///
-    /// This function must be called after a call to the `connector` function.
-    ///
     /// # Arguments
     ///
     /// * `conn_args` - the arguments to be passed to the previously added Connector
     pub fn args(mut self, conn_args: Args) -> OSBuilder<'a> {
         if let Some(BuildStep::Connector { name: _, args }) = self.steps.iter_mut().last() {
             *args = Some(conn_args);
-        } else {
-            panic!("The `args` function on a builder can only be used after a call to `connector`");
         }
         self
     }

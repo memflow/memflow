@@ -321,8 +321,8 @@ pub trait Loadable: Sized {
 /// let inventory = Inventory::scan();
 /// inventory
 ///   .builder()
-///   .connector_default("qemu_procfs")
-///   .os_default("win32")
+///   .connector("qemu_procfs")
+///   .os("win32")
 ///   .build()
 /// # }
 /// # test().ok();
@@ -336,10 +336,10 @@ pub trait Loadable: Sized {
 /// let inventory = Inventory::scan();
 /// let os = inventory
 ///   .builder()
-///   .connector_default("qemu_procfs")
-///   .os_default("linux")
-///   .connector_default("qemu_procfs")
-///   .os_default("win32")
+///   .connector("qemu_procfs")
+///   .os("linux")
+///   .connector("qemu_procfs")
+///   .os("win32")
 ///   .build();
 /// # Ok(())
 /// # }
@@ -625,8 +625,8 @@ impl Inventory {
 }
 
 enum BuildStep<'a> {
-    Connector { name: &'a str, args: Args },
-    OS { name: &'a str, args: Args },
+    Connector { name: &'a str, args: Option<Args> },
+    OS { name: &'a str, args: Option<Args> },
 }
 
 /// ConnectorBuilder creates a new connector instance with the previous os step as an input
@@ -641,26 +641,32 @@ impl<'a> ConnectorBuilder<'a> {
     /// # Arguments
     ///
     /// * `name` - name of the connector
-    /// * `args` - arguments to be passed to the connector
-    pub fn connector(self, name: &'a str, args: Args) -> OSBuilder<'a> {
+    pub fn connector(self, name: &'a str) -> OSBuilder<'a> {
         let mut steps = self.steps;
-        steps.push(BuildStep::Connector { name, args });
+        steps.push(BuildStep::Connector { name, args: None });
         OSBuilder {
             inventory: self.inventory,
             steps,
         }
     }
 
-    /// Adds a Connector instance to the build chain with default (no) arguments
+    /// Appends arguments to the previously added OS.
+    ///
+    /// This function must be called after a call to the `os` function.
     ///
     /// # Arguments
     ///
-    /// * `name` - name of the connector
-    pub fn connector_default(self, name: &'a str) -> OSBuilder<'a> {
-        self.connector(name, Args::default())
+    /// * `os_args` - the arguments to be passed to the previously added OS
+    pub fn args(mut self, os_args: Args) -> ConnectorBuilder<'a> {
+        if let Some(BuildStep::OS { name: _, args }) = self.steps.iter_mut().last() {
+            *args = Some(os_args);
+        } else {
+            panic!("The `args` function on a builder can only be used after a call to `os`");
+        }
+        self
     }
 
-    /// Builds the final chain of Connectors and OS.
+    /// Builds the final chain of Connectors and OS and returns the last OS.
     ///
     /// Each created connector / os instance is fed into the next os / connector instance as an argument.
     /// If any build step fails the function returns an error.
@@ -670,11 +676,19 @@ impl<'a> ConnectorBuilder<'a> {
         for step in self.steps.iter() {
             match step {
                 BuildStep::Connector { name, args } => {
-                    connector = Some(self.inventory.create_connector(name, os, args)?);
+                    connector = Some(self.inventory.create_connector(
+                        name,
+                        os,
+                        args.as_ref().unwrap_or(&Args::default()),
+                    )?);
                     os = None;
                 }
                 BuildStep::OS { name, args } => {
-                    os = Some(self.inventory.create_os(name, connector, args)?);
+                    os = Some(self.inventory.create_os(
+                        name,
+                        connector,
+                        args.as_ref().unwrap_or(&Args::default()),
+                    )?);
                     connector = None;
                 }
             };
@@ -695,23 +709,59 @@ impl<'a> OSBuilder<'a> {
     /// # Arguments
     ///
     /// * `name` - name of the target OS
-    /// * `args` - arguments to be passed to the OS
-    pub fn os(self, name: &'a str, args: Args) -> ConnectorBuilder<'a> {
+    pub fn os(self, name: &'a str) -> ConnectorBuilder<'a> {
         let mut steps = self.steps;
-        steps.push(BuildStep::OS { name, args });
+        steps.push(BuildStep::OS { name, args: None });
         ConnectorBuilder {
             inventory: self.inventory,
             steps,
         }
     }
 
-    /// Adds an OS instance to the build chain with default (no) arguments
+    /// Appends arguments to the previously added Connector.
+    ///
+    /// This function must be called after a call to the `connector` function.
     ///
     /// # Arguments
     ///
-    /// * `name` - name of the target OS
-    pub fn os_default(self, name: &'a str) -> ConnectorBuilder<'a> {
-        self.os(name, Args::default())
+    /// * `conn_args` - the arguments to be passed to the previously added Connector
+    pub fn args(mut self, conn_args: Args) -> OSBuilder<'a> {
+        if let Some(BuildStep::Connector { name: _, args }) = self.steps.iter_mut().last() {
+            *args = Some(conn_args);
+        } else {
+            panic!("The `args` function on a builder can only be used after a call to `connector`");
+        }
+        self
+    }
+
+    /// Builds the final chain of Connectors and OS and returns the last Connector.
+    ///
+    /// Each created connector / os instance is fed into the next os / connector instance as an argument.
+    /// If any build step fails the function returns an error.
+    pub fn build(self) -> Result<ConnectorInstance> {
+        let mut connector: Option<ConnectorInstance> = None;
+        let mut os: Option<OSInstance> = None;
+        for step in self.steps.iter() {
+            match step {
+                BuildStep::Connector { name, args } => {
+                    connector = Some(self.inventory.create_connector(
+                        name,
+                        os,
+                        args.as_ref().unwrap_or(&Args::default()),
+                    )?);
+                    os = None;
+                }
+                BuildStep::OS { name, args } => {
+                    os = Some(self.inventory.create_os(
+                        name,
+                        connector,
+                        args.as_ref().unwrap_or(&Args::default()),
+                    )?);
+                    connector = None;
+                }
+            };
+        }
+        connector.ok_or(Error(ErrorOrigin::Inventory, ErrorKind::Configuration))
     }
 }
 

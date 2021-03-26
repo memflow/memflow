@@ -10,8 +10,10 @@ fn main() -> Result<()> {
     let inventory = Inventory::scan();
     let mut os = inventory
         .builder()
-        .connector(&conn_name, conn_args)
-        .os(&os_name, os_args)
+        .connector(&conn_name)
+        .args(conn_args)
+        .os(&os_name)
+        .args(os_args)
         .build()?;
 
     let process_list = os.process_info_list()?;

@@ -27,9 +27,9 @@ use memflow::dataview::Pod;
 pub struct Win32OffsetFile {
     // Win32GUID
     #[cfg_attr(feature = "serde", serde(default))]
-    pub pdb_file_name: BinaryString,
+    pub pdb_file_name: BinaryString<128>,
     #[cfg_attr(feature = "serde", serde(default))]
-    pub pdb_guid: BinaryString,
+    pub pdb_guid: BinaryString<128>,
 
     // Win32Version
     pub nt_major_version: u32,
@@ -62,19 +62,18 @@ impl std::fmt::Display for Win32OffsetsArchitecture {
 
 unsafe impl Pod for Win32OffsetsArchitecture {}
 
-// TODO: use const-generics here once they are fully stabilized
 #[derive(Clone)]
-pub struct BinaryString(pub [u8; 128]);
+pub struct BinaryString<const N: usize>(pub [u8; N]);
 
-impl Default for BinaryString {
+impl<const N: usize> Default for BinaryString<N> {
     fn default() -> Self {
         (&[][..]).into()
     }
 }
 
-impl<'a> From<&'a [u8]> for BinaryString {
+impl<'a, const N: usize> From<&'a [u8]> for BinaryString<N> {
     fn from(other: &'a [u8]) -> Self {
-        let mut arr = [0; 128];
+        let mut arr = [0; N];
 
         arr[..other.len()].copy_from_slice(other);
 
@@ -82,9 +81,9 @@ impl<'a> From<&'a [u8]> for BinaryString {
     }
 }
 
-impl<'a> TryFrom<&'a BinaryString> for &'a str {
+impl<'a, const N: usize> TryFrom<&'a BinaryString<N>> for &'a str {
     type Error = std::str::Utf8Error;
-    fn try_from(other: &'a BinaryString) -> Result<Self, Self::Error> {
+    fn try_from(other: &'a BinaryString<N>) -> Result<Self, Self::Error> {
         Ok(str::from_utf8(&other.0)?
             .split_terminator('\0')
             .next()
@@ -92,9 +91,9 @@ impl<'a> TryFrom<&'a BinaryString> for &'a str {
     }
 }
 
-impl<'a> From<&'a str> for BinaryString {
+impl<'a, const N: usize> From<&'a str> for BinaryString<N> {
     fn from(other: &'a str) -> Self {
-        let mut arr = [0; 128];
+        let mut arr = [0; N];
 
         arr[..other.len()].copy_from_slice(other.as_bytes());
 
@@ -102,16 +101,16 @@ impl<'a> From<&'a str> for BinaryString {
     }
 }
 
-impl From<String> for BinaryString {
+impl<const N: usize> From<String> for BinaryString<N> {
     fn from(other: String) -> Self {
         Self::from(other.as_str())
     }
 }
 
-unsafe impl Pod for BinaryString {}
+unsafe impl<const N: usize> Pod for BinaryString<N> {}
 
 #[cfg(feature = "serde")]
-impl ::serde::Serialize for BinaryString {
+impl<const N: usize> ::serde::Serialize for BinaryString<N> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: ::serde::Serializer,
@@ -124,15 +123,15 @@ impl ::serde::Serialize for BinaryString {
 }
 
 #[cfg(feature = "serde")]
-impl<'de> ::serde::de::Deserialize<'de> for BinaryString {
+impl<'de, const N: usize> ::serde::de::Deserialize<'de> for BinaryString<N> {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: ::serde::de::Deserializer<'de>,
     {
-        struct BinaryStringVisitor;
+        struct BinaryStringVisitor<const N: usize>;
 
-        impl<'de> ::serde::de::Visitor<'de> for BinaryStringVisitor {
-            type Value = [u8; 128];
+        impl<'de, const N: usize> ::serde::de::Visitor<'de> for BinaryStringVisitor<N> {
+            type Value = [u8; N];
 
             fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
                 formatter.write_str("a string containing json data")
@@ -144,7 +143,7 @@ impl<'de> ::serde::de::Deserialize<'de> for BinaryString {
             {
                 // unfortunately we lose some typed information
                 // from errors deserializing the json string
-                let mut result = [0u8; 128];
+                let mut result = [0u8; N];
 
                 result[..v.len()].copy_from_slice(v.as_bytes());
 
@@ -153,7 +152,7 @@ impl<'de> ::serde::de::Deserialize<'de> for BinaryString {
         }
 
         // use our visitor to deserialize an `ActualValue`
-        let inner: [u8; 128] = deserializer.deserialize_any(BinaryStringVisitor)?;
+        let inner: [u8; N] = deserializer.deserialize_any(BinaryStringVisitor)?;
         Ok(Self { 0: inner })
     }
 }

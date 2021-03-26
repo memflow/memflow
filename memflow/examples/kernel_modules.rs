@@ -42,7 +42,7 @@ fn parse_args() -> Result<(String, Args, String, Args)> {
                 .long("connector")
                 .short("c")
                 .takes_value(true)
-                .required(true),
+                .default_value(""),
         )
         .arg(
             Arg::with_name("conn-args")

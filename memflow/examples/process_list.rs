@@ -42,7 +42,7 @@ fn parse_args() -> Result<(String, Args, String, Args)> {
                 .long("connector")
                 .short("c")
                 .takes_value(true)
-                .required(true),
+                .required(false),
         )
         .arg(
             Arg::with_name("conn-args")
@@ -84,13 +84,7 @@ fn parse_args() -> Result<(String, Args, String, Args)> {
         .unwrap();
 
     Ok((
-        matches
-            .value_of("connector")
-            .ok_or_else(|| {
-                Error(ErrorOrigin::Other, ErrorKind::Configuration)
-                    .log_error("failed to parse connector")
-            })?
-            .into(),
+        matches.value_of("connector").unwrap_or("").into(),
         Args::parse(matches.value_of("conn-args").ok_or_else(|| {
             Error(ErrorOrigin::Other, ErrorKind::Configuration)
                 .log_error("failed to parse connector args")

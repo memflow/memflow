@@ -84,7 +84,7 @@ pub unsafe extern "C" fn inventory_create_connector(
     let rname = CStr::from_ptr(name).to_string_lossy();
 
     if args.is_null() {
-        inv.create_connector_default(&rname)
+        inv.create_connector(&rname, None, &Args::default())
             .map_err(inspect_err)
             .into_int_out_result(out)
     } else {

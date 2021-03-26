@@ -136,7 +136,7 @@ fn read_bench(mut kernel: impl OS) -> Result<()> {
 }
 
 fn main() -> Result<()> {
-    let (connector, conn_args, os, os_args, log_level) = parse_args()?;
+    let (conn_name, conn_args, os_name, os_args, log_level) = parse_args()?;
 
     simple_logger::SimpleLogger::new()
         .with_level(log_level.to_level_filter())
@@ -144,9 +144,14 @@ fn main() -> Result<()> {
         .unwrap();
 
     // create connector + os
-    let kernel = Inventory::build_conn_os_combo(&connector, &conn_args, &os, &os_args)?;
+    let inventory = Inventory::scan();
+    let os = inventory
+        .builder()
+        .connector(&conn_name, conn_args)
+        .os(&os_name, os_args)
+        .build()?;
 
-    read_bench(kernel)
+    read_bench(os)
 }
 
 fn parse_args() -> Result<(String, Args, String, Args, log::Level)> {

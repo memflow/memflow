@@ -4,10 +4,16 @@ use log::Level;
 use memflow::prelude::v1::*;
 
 fn main() -> Result<()> {
-    let (connector, conn_args, os, os_args) = parse_args()?;
+    let (conn_name, conn_args, os_name, os_args) = parse_args()?;
 
     // create connector + os
-    let os = Inventory::build_conn_os_combo(&connector, &conn_args, &os, &os_args)?;
+    let inventory = Inventory::scan();
+    let os = inventory
+        .builder()
+        .connector(&conn_name, conn_args)
+        .os(&os_name, os_args)
+        .build()?;
+
     if !os.has_keyboard() {
         return Err(
             Error(ErrorOrigin::Other, ErrorKind::UnsupportedOptionalFeature)

@@ -311,28 +311,36 @@ pub trait Loadable: Sized {
 ///
 /// # Examples
 ///
-/// Creating a OS instance, the fastest way:
+/// Creating a OS instance, the recommended way:
 ///
 /// ```
 /// use memflow::plugins::Inventory;
 /// # use memflow::error::Result;
 /// # use memflow::plugins::OSInstance;
 /// # fn test() -> Result<OSInstance> {
-/// Inventory::build_os_simple("qemu-procfs", "win32")
+/// let inventory = Inventory::scan();
+/// inventory
+///   .builder()
+///   .connector_default("qemu_procfs")
+///   .os_default("win32")
+///   .build()
 /// # }
 /// # test().ok();
 /// ```
 ///
-/// Creating 2 OS instances:
+/// Nesting connectors and os plugins:
 /// ```
 /// use memflow::plugins::{Inventory, Args};
 /// # use memflow::error::Result;
 /// # fn test() -> Result<()> {
-///
 /// let inventory = Inventory::scan();
-///
-/// let windows = inventory.create_os_simple("qemu-procfs", "win32")?;
-/// let system = inventory.create_os("pseudo-system", None, &Args::default())?;
+/// let os = inventory
+///   .builder()
+///   .connector_default("qemu_procfs")
+///   .os_default("linux")
+///   .connector_default("qemu_procfs")
+///   .os_default("win32")
+///   .build();
 /// # Ok(())
 /// # }
 /// # test().ok();
@@ -494,12 +502,19 @@ impl Inventory {
             .collect::<Vec<_>>()
     }
 
-    /// Returns the names of all currently available os_layers that can be used.
-    pub fn available_os_layers(&self) -> Vec<String> {
+    /// Returns the names of all currently available os plugins that can be used.
+    pub fn available_os(&self) -> Vec<String> {
         self.os_layers
             .iter()
             .map(|c| c.loader.ident().to_string())
             .collect::<Vec<_>>()
+    }
+
+    pub fn builder<'a>(&'a self) -> ConnectorBuilder<'a> {
+        ConnectorBuilder {
+            inventory: self,
+            steps: Vec::new(),
+        }
     }
 
     /// Tries to create a new instance for the library with the given name.
@@ -549,6 +564,33 @@ impl Inventory {
         Self::create_internal(&self.connectors, name, input, args)
     }
 
+    /// Create OS instance
+    ///
+    /// This is the primary way of building a OS instance.
+    ///
+    /// # Arguments
+    ///
+    /// * `name` - name of the target OS
+    /// * `input` - connector to be passed to the OS
+    /// * `args` - arguments to be passed to the OS
+    ///
+    /// # Examples
+    ///
+    /// Creating a OS instance with custom arguments
+    /// ```
+    /// use memflow::plugins::{Inventory, Args};
+    ///
+    /// # let mut inventory = Inventory::scan();
+    /// # inventory.add_dir_filtered("../target/release/deps".into(), "ffi").ok();
+    /// # inventory.add_dir_filtered("../target/debug/deps".into(), "ffi").ok();
+    /// let args = Args::parse("4m").unwrap();
+    /// let connector = inventory.create_os("dummy", None, &args)
+    ///     .unwrap();
+    /// ```
+    pub fn create_os(&self, name: &str, input: OSInputArg, args: &Args) -> Result<OSInstance> {
+        Self::create_internal(&self.os_layers, name, input, args)
+    }
+
     fn create_internal<T: Loadable>(
         libs: &[LibInstance<T>],
         name: &str,
@@ -580,102 +622,96 @@ impl Inventory {
         lib.loader
             .instantiate(Some(lib.library.clone()), input, args)
     }
+}
 
-    /// Creates an instance in the same way `instantiate` does but without any arguments provided.
+enum BuildStep<'a> {
+    Connector { name: &'a str, args: Args },
+    OS { name: &'a str, args: Args },
+}
+
+/// ConnectorBuilder creates a new connector instance with the previous os step as an input
+pub struct ConnectorBuilder<'a> {
+    inventory: &'a Inventory,
+    steps: Vec<BuildStep<'a>>,
+}
+
+impl<'a> ConnectorBuilder<'a> {
+    /// Adds a Connector instance to the build chain
     ///
-    /// # Safety
+    /// # Arguments
     ///
-    /// See the above safety section.
-    /// This function essentially just wraps the above function.
-    ///
-    /// # Examples
-    ///
-    /// Creating a connector instance:
-    /// ```
-    /// use memflow::plugins::{Inventory, Args};
-    ///
-    /// # let mut inventory = Inventory::scan();
-    /// # inventory.add_dir_filtered("../target/release/deps".into(), "ffi").ok();
-    /// # inventory.add_dir_filtered("../target/debug/deps".into(), "ffi").ok();
-    /// let connector = inventory.create_connector_default("dummy")
-    ///     .unwrap();
-    /// ```
-    pub fn create_connector_default(&self, name: &str) -> Result<ConnectorInstance> {
-        self.create_connector(name, None, &Args::default())
+    /// * `name` - name of the connector
+    /// * `args` - arguments to be passed to the connector
+    pub fn connector(self, name: &'a str, args: Args) -> OSBuilder<'a> {
+        let mut steps = self.steps;
+        steps.push(BuildStep::Connector { name, args });
+        OSBuilder {
+            inventory: self.inventory,
+            steps,
+        }
     }
 
-    /// Create OS instance
+    /// Adds a Connector instance to the build chain with default (no) arguments
     ///
-    /// This is the primary way of building a OS instance.
+    /// # Arguments
+    ///
+    /// * `name` - name of the connector
+    pub fn connector_default(self, name: &'a str) -> OSBuilder<'a> {
+        self.connector(name, Args::default())
+    }
+
+    /// Builds the final chain of Connectors and OS.
+    ///
+    /// Each created connector / os instance is fed into the next os / connector instance as an argument.
+    /// If any build step fails the function returns an error.
+    pub fn build(self) -> Result<OSInstance> {
+        let mut connector: Option<ConnectorInstance> = None;
+        let mut os: Option<OSInstance> = None;
+        for step in self.steps.iter() {
+            match step {
+                BuildStep::Connector { name, args } => {
+                    connector = Some(self.inventory.create_connector(name, os, args)?);
+                    os = None;
+                }
+                BuildStep::OS { name, args } => {
+                    os = Some(self.inventory.create_os(name, connector, args)?);
+                    connector = None;
+                }
+            };
+        }
+        os.ok_or(Error(ErrorOrigin::Inventory, ErrorKind::Configuration))
+    }
+}
+
+/// OSBuilder creates a new os instance with the previous connector step as an input
+pub struct OSBuilder<'a> {
+    inventory: &'a Inventory,
+    steps: Vec<BuildStep<'a>>,
+}
+
+impl<'a> OSBuilder<'a> {
+    /// Adds an OS instance to the build chain
     ///
     /// # Arguments
     ///
     /// * `name` - name of the target OS
-    /// * `input` - connector to be passed to the OS
     /// * `args` - arguments to be passed to the OS
-    ///
-    /// # Examples
-    ///
-    /// Creating a OS instance with custom arguments
-    /// ```
-    /// use memflow::plugins::{Inventory, Args};
-    ///
-    /// # let mut inventory = Inventory::scan();
-    /// # inventory.add_dir_filtered("../target/release/deps".into(), "ffi").ok();
-    /// # inventory.add_dir_filtered("../target/debug/deps".into(), "ffi").ok();
-    /// let args = Args::parse("4m").unwrap();
-    /// let connector = inventory.create_os("dummy", None, &args)
-    ///     .unwrap();
-    /// ```
-    pub fn create_os(&self, name: &str, input: OSInputArg, args: &Args) -> Result<OSInstance> {
-        Self::create_internal(&self.os_layers, name, input, args)
+    pub fn os(self, name: &'a str, args: Args) -> ConnectorBuilder<'a> {
+        let mut steps = self.steps;
+        steps.push(BuildStep::OS { name, args });
+        ConnectorBuilder {
+            inventory: self.inventory,
+            steps,
+        }
     }
 
-    /// Create a connector and OS in one go
+    /// Adds an OS instance to the build chain with default (no) arguments
     ///
-    /// This will build a connector, and then feed it to `create_os` function
-    pub fn create_conn_os_combo(
-        &self,
-        conn_name: &str,
-        conn_args: &Args,
-        os_name: &str,
-        os_args: &Args,
-    ) -> Result<OSInstance> {
-        let conn = self.create_connector(conn_name, None, conn_args)?;
-        self.create_os(os_name, Some(conn), os_args)
-    }
-
-    /// Simple way of creating a OS in one go
+    /// # Arguments
     ///
-    /// This function accepts no arguments for the sake of simplicity. It is advised to use
-    /// `create_conn_os_combo` if passing arguments is necessary.
-    pub fn create_os_simple(&self, conn_name: &str, os_name: &str) -> Result<OSInstance> {
-        let conn = self.create_connector_default(conn_name)?;
-        self.create_os(os_name, Some(conn), &Args::default())
-    }
-
-    /// Create a connector and OS in one go, statically
-    ///
-    /// This is essentially the same as `create_conn_os_combo`, but does not require access to the
-    /// inventory. Instead, it finds the libraries on its own. This is less efficient, if creating
-    /// multiple connector instances
-    pub fn build_conn_os_combo(
-        conn_name: &str,
-        conn_args: &Args,
-        os_name: &str,
-        os_args: &Args,
-    ) -> Result<OSInstance> {
-        let inv = Self::scan();
-        inv.create_conn_os_combo(conn_name, conn_args, os_name, os_args)
-    }
-
-    /// Create a OS instance in the most simple way, statically
-    ///
-    /// This is the same as `creat_os_simple`, but does not require inventory. This is the
-    /// shortest, although least flexible, way of building a OS.
-    pub fn build_os_simple(conn_name: &str, os_name: &str) -> Result<OSInstance> {
-        let inv = Self::scan();
-        inv.create_os_simple(conn_name, os_name)
+    /// * `name` - name of the target OS
+    pub fn os_default(self, name: &'a str) -> ConnectorBuilder<'a> {
+        self.os(name, Args::default())
     }
 }
 

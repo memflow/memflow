@@ -7,11 +7,12 @@ pub use instance::{
     ConnectorInstance, OpaquePhysicalMemoryFunctionTable, PhysicalMemoryFunctionTable,
 };
 
-use super::{Args, CArc, GenericBaseTable, Loadable, OpaqueBaseTable, PluginDescriptor};
+use super::{
+    Args, CArc, GenericBaseTable, Loadable, OSInstance, OpaqueBaseTable, PluginDescriptor,
+};
 
 use crate::types::ReprCStr;
 
-use std::ffi::c_void;
 use std::mem::MaybeUninit;
 
 pub mod cpu_state;
@@ -89,8 +90,8 @@ pub struct LoadableConnector {
 
 impl Loadable for LoadableConnector {
     type Instance = ConnectorInstance;
-    type InputArg = Option<&'static mut c_void>;
-    type CInputArg = Option<&'static mut c_void>;
+    type InputArg = Option<OSInstance>;
+    type CInputArg = Option<OSInstance>;
 
     fn ident(&self) -> &str {
         self.descriptor.name

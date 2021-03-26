@@ -71,7 +71,7 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
             #[doc(hidden)]
             extern "C" fn mf_create(
                 args: &#prefix_gen::types::ReprCStr,
-                _: Option<&mut ::std::os::raw::c_void>,
+                _: Option<#prefix_gen::plugins::os::OSInstance>,
                 log_level: i32,
                 out: &mut #prefix_gen::plugins::connector::MUConnectorInstance
             ) -> i32 {
@@ -83,7 +83,7 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
             #[doc(hidden)]
             extern "C" fn mf_create(
                 args: &#prefix_gen::types::ReprCStr,
-                _: Option<&mut ::std::os::raw::c_void>,
+                _: Option<#prefix_gen::plugins::os::OSInstance>,
                 _: i32,
                 out: &mut #prefix_gen::plugins::connector::MUConnectorInstance
             ) -> i32 {

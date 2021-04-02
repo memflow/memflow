@@ -23,9 +23,9 @@ pub fn find_export_by_prefix(
     use goblin::elf::Elf;
 
     let buffer = std::fs::read(path.as_ref())
-        .map_err(|err| Error(ErrorOrigin::Inventory, ErrorKind::UnableToReadFile).log_debug(err))?;
+        .map_err(|err| Error(ErrorOrigin::Inventory, ErrorKind::UnableToReadFile).log_trace(err))?;
     let elf = Elf::parse(buffer.as_slice())
-        .map_err(|err| Error(ErrorOrigin::Inventory, ErrorKind::InvalidElfFile).log_debug(err))?;
+        .map_err(|err| Error(ErrorOrigin::Inventory, ErrorKind::InvalidElfFile).log_trace(err))?;
     Ok(elf
         .syms
         .iter()
@@ -50,9 +50,9 @@ pub fn find_export_by_prefix(
     use goblin::pe::PE;
 
     let buffer = std::fs::read(path.as_ref())
-        .map_err(|err| Error(ErrorOrigin::Inventory, ErrorKind::UnableToReadFile).log_debug(err))?;
+        .map_err(|err| Error(ErrorOrigin::Inventory, ErrorKind::UnableToReadFile).log_trace(err))?;
     let pe = PE::parse(buffer.as_slice())
-        .map_err(|err| Error(ErrorOrigin::Inventory, ErrorKind::InvalidPeFile).log_debug(err))?;
+        .map_err(|err| Error(ErrorOrigin::Inventory, ErrorKind::InvalidPeFile).log_trace(err))?;
     Ok(pe
         .exports
         .iter()
@@ -75,9 +75,9 @@ pub fn find_export_by_prefix(
     use goblin::mach::Mach;
 
     let buffer = std::fs::read(path.as_ref())
-        .map_err(|err| Error(ErrorOrigin::Inventory, ErrorKind::UnableToReadFile).log_debug(err))?;
+        .map_err(|err| Error(ErrorOrigin::Inventory, ErrorKind::UnableToReadFile).log_trace(err))?;
     let mach = Mach::parse(buffer.as_slice())
-        .map_err(|err| Error(ErrorOrigin::Inventory, ErrorKind::InvalidMachFile).log_debug(err))?;
+        .map_err(|err| Error(ErrorOrigin::Inventory, ErrorKind::InvalidMachFile).log_trace(err))?;
     let macho = match mach {
         Mach::Binary(mach) => mach,
         Mach::Fat(mach) => (0..mach.narches)
@@ -85,7 +85,7 @@ pub fn find_export_by_prefix(
             .next()
             .ok_or_else(|| {
                 Error(ErrorOrigin::Inventory, ErrorKind::InvalidMachFile)
-                    .log_debug("failed to find valid MachO header!")
+                    .log_trace("failed to find valid MachO header!")
             })?,
     };
 
@@ -95,7 +95,7 @@ pub fn find_export_by_prefix(
         .symbols
         .ok_or_else(|| {
             Error(ErrorOrigin::Inventory, ErrorKind::InvalidMachFile)
-                .log_debug("failed to parse MachO symbols!")
+                .log_trace("failed to parse MachO symbols!")
         })?
         .iter()
         .filter_map(|s| s.ok())

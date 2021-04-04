@@ -4,7 +4,7 @@ the [`PhysicalMemory`] and [`VirtualMemory`] set of traits.
 
 The cursor provides the [`Read`](https://doc.rust-lang.org/std/io/trait.Read.html),
 [`Write`](https://doc.rust-lang.org/std/io/trait.Write.html) and [`Seek`](https://doc.rust-lang.org/std/io/trait.Seek.html) traits
-for the underlying PhysicalMemory object.
+for the underlying Memory object.
 
 # Examples:
 
@@ -37,6 +37,36 @@ use std::io::{Error, ErrorKind, Read, Result, Seek, SeekFrom, Write};
 use super::{PhysicalMemory, PhysicalMemoryMetadata, VirtualMemory};
 use crate::types::{Address, PhysicalAddress};
 
+/// PhysicalMemoryCursor implments a Cursor around the [`PhysicalMemory`] trait.
+///
+/// The cursor provides the [`Read`](https://doc.rust-lang.org/std/io/trait.Read.html),
+/// [`Write`](https://doc.rust-lang.org/std/io/trait.Write.html) and [`Seek`](https://doc.rust-lang.org/std/io/trait.Seek.html) traits
+/// for the underlying [`PhysicalMemory`] object.
+///
+/// # Examples:
+///
+/// ```
+/// use std::io::{self, Read, Write, Seek};
+///
+/// use memflow::dummy::DummyMemory;
+/// use memflow::types::size;
+/// use memflow::mem::PhysicalMemoryCursor;
+///
+/// fn main() -> io::Result<()> {
+///     let mut phys_mem = DummyMemory::new(size::mb(16));
+///     let mut cursor = PhysicalMemoryCursor::new(&mut phys_mem);
+///
+///     // read up to 10 bytes
+///     let mut buffer = [0; 10];
+///     cursor.read(&mut buffer)?;
+///
+///     // write the previously read 10 bytes again
+///     cursor.seek(io::SeekFrom::Start(0));
+///     cursor.write(&buffer)?;
+///
+///     Ok(())
+/// }
+/// ```
 pub struct PhysicalMemoryCursor<T> {
     phys_mem: T,
     metadata: PhysicalMemoryMetadata,
@@ -215,6 +245,47 @@ impl<T: PhysicalMemory> Seek for PhysicalMemoryCursor<T> {
     }
 }
 
+/// VirtualMemoryCursor implments a Cursor around the [`VirtualMemory`] trait.
+///
+/// The cursor provides the [`Read`](https://doc.rust-lang.org/std/io/trait.Read.html),
+/// [`Write`](https://doc.rust-lang.org/std/io/trait.Write.html) and [`Seek`](https://doc.rust-lang.org/std/io/trait.Seek.html) traits
+/// for the underlying [`VirtualMemory`] object.
+///
+/// # Examples:
+///
+/// ```
+/// use std::io::{self, Read, Write, Seek};
+///
+/// use memflow::dummy::{DummyOs, DummyMemory};
+/// use memflow::types::size;
+/// use memflow::mem::{DirectTranslate, VirtualDma, VirtualMemoryCursor};
+/// use memflow::architecture::x86::x64;
+///
+/// fn main() -> io::Result<()> {
+///     // setup a pseudo virtual memory reader
+///     let phys_mem = DummyMemory::new(size::mb(16));
+///     let mut os = DummyOs::new(phys_mem);
+///     let (dtb, virt_base) = os.alloc_dtb(size::mb(8), &[]);
+///     let phys_mem = os.into_inner();
+///     let translator = x64::new_translator(dtb);
+///
+///     let mut virt_mem = VirtualDma::new(phys_mem, x64::ARCH, translator);
+///
+///     // create the actual cursor and seek it to the dummy virt_base
+///     let mut cursor = VirtualMemoryCursor::new(&mut virt_mem);
+///     cursor.seek(io::SeekFrom::Start(virt_base.as_u64()))?;
+///
+///     // read up to 10 bytes
+///     let mut buffer = [0; 10];
+///     cursor.read(&mut buffer)?;
+///
+///     // write the previously read 10 bytes again
+///     cursor.seek(io::SeekFrom::Start(virt_base.as_u64()))?;
+///     cursor.write(&buffer)?;
+///
+///     Ok(())
+/// }
+/// ```
 pub struct VirtualMemoryCursor<T> {
     virt_mem: T,
     address: Address,

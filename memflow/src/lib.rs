@@ -50,18 +50,22 @@ pub mod os;
 pub mod iter;
 
 // forward declare
+#[doc(hidden)]
 pub mod derive {
     pub use ::memflow_derive::*;
 }
 
+#[doc(hidden)]
 pub mod dataview {
     pub use ::dataview::*;
     pub use ::memflow_derive::Pod;
 }
 
+#[doc(hidden)]
 #[cfg(any(feature = "dummy_mem", test))]
 pub mod dummy;
 
+#[doc(hidden)]
 pub mod prelude {
     pub mod v1 {
         pub use crate::architecture::*;

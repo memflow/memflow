@@ -37,4 +37,5 @@ pub mod callback;
 pub use callback::{Callback, OpaqueCallback};
 
 pub mod repr_cstr;
+#[doc(hidden)]
 pub use repr_cstr::ReprCStr;

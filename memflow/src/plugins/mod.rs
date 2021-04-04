@@ -1,9 +1,7 @@
 /*!
-Module containing connector and OS layer inventory related functions.
+This module contains functions related to the Inventory system for Connectors and Os-Plugins.
 
-This module contains functions to interface with dynamically loaded connectors and OS layers.
-
-This module is gated behind `plugins` feature
+All functionality in this module is gated behind `plugins` feature.
 */
 
 use std::prelude::v1::*;

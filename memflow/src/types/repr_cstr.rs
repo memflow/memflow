@@ -1,3 +1,7 @@
+/*!
+Wrapper around null-terminated C-style strings.
+*/
+
 use std::prelude::v1::*;
 use std::slice::*;
 use std::str::from_utf8_unchecked;

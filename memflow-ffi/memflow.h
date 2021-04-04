@@ -805,10 +805,10 @@ void connector_clone(const struct ConnectorInstance *conn, MuConnectorInstance *
  *
  * # Safety
  *
- * `conn` has to point to a valid `ConnectorInstance` created by one of the provided
+ * `conn` has to point to a valid [`ConnectorInstance`] created by one of the provided
  * functions.
  *
- * There has to be no instance of `PhysicalMemory` created from the input `conn`, because they
+ * There has to be no instance of [`PhysicalMemory`] created from the input `conn`, because they
  * will become invalid.
  */
 void connector_drop(struct ConnectorInstance *conn);

@@ -32,7 +32,7 @@ int main(int argc, char *argv[]) {
 		std::vector<CWin32ProcessInfo> process_list = kernel.process_info_vec();
 
 		printf("Process List:\n");
-		printf("%-8s | %-16s | %-16s | %-12s | %-5s\n", "PID", "Name", "Base", "DTB", "Wow64");
+		printf("%-8s | %-16s | %-16s | %-12s | %-5s\n", "Pid", "Name", "Base", "DTB", "Wow64");
 
 		for (CWin32ProcessInfo &p : process_list) {
 			auto info = p.trait();

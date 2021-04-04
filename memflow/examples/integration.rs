@@ -95,7 +95,7 @@ fn bool_str(b: bool) -> ColoredString {
     }
 }
 
-fn kernel_modules(kernel: &mut impl OS) -> Result<Vec<ModuleInfo>> {
+fn kernel_modules(kernel: &mut impl Os) -> Result<Vec<ModuleInfo>> {
     let modules = kernel.module_list().map_err(From::from);
     println!("kernel modules ... {}", ok_str(&modules));
     modules

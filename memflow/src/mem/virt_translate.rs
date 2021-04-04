@@ -24,7 +24,7 @@ where
     /// This function will do a virtual to physical memory translation for the
     /// `ScopedVirtualTranslate` over multiple elements.
     ///
-    /// In most cases, you will want to use the `VirtualDMA`, but this trait is provided if needed
+    /// In most cases, you will want to use the `VirtualDma`, but this trait is provided if needed
     /// to implement some more advanced filtering.
     ///
     /// # Examples
@@ -32,7 +32,7 @@ where
     /// ```
     /// # use memflow::error::Result;
     /// # use memflow::types::{PhysicalAddress, Address};
-    /// # use memflow::dummy::{DummyMemory, DummyOS};
+    /// # use memflow::dummy::{DummyMemory, DummyOs};
     /// use memflow::mem::{VirtualTranslate, DirectTranslate};
     /// use memflow::types::size;
     /// use memflow::architecture::x86::x64;
@@ -42,7 +42,7 @@ where
     /// # const CHUNK_SIZE: usize = 2;
     /// #
     /// # let mem = DummyMemory::new(size::mb(16));
-    /// # let mut os = DummyOS::new(mem);
+    /// # let mut os = DummyOs::new(mem);
     /// # let (dtb, virtual_base) = os.alloc_dtb(VIRT_MEM_SIZE, &[]);
     /// # let mut mem = os.into_inner();
     /// # let translator = x64::new_translator(dtb);
@@ -102,7 +102,7 @@ where
     /// ```
     /// # use memflow::error::Result;
     /// # use memflow::types::{PhysicalAddress, Address};
-    /// # use memflow::dummy::{DummyMemory, DummyOS};
+    /// # use memflow::dummy::{DummyMemory, DummyOs};
     /// # use memflow::types::size;
     /// # use memflow::architecture::ScopedVirtualTranslate;
     /// use memflow::mem::{VirtualTranslate, DirectTranslate};
@@ -112,7 +112,7 @@ where
     /// # const CHUNK_SIZE: usize = 2;
     /// #
     /// # let mem = DummyMemory::new(size::mb(16));
-    /// # let mut os = DummyOS::new(mem);
+    /// # let mut os = DummyOs::new(mem);
     /// # let (dtb, virtual_base) = os.alloc_dtb(VIRT_MEM_SIZE, &[]);
     /// # let mut mem = os.into_inner();
     /// # let translator = x64::new_translator(dtb);

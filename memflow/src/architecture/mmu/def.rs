@@ -1,8 +1,8 @@
-use super::ArchMMUSpec;
+use super::ArchMmuSpec;
 use crate::architecture::Endianess;
 use crate::types::Address;
 
-/// The `ArchMMUDef` structure defines how a real memory management unit should behave when
+/// The `ArchMmuDef` structure defines how a real memory management unit should behave when
 /// translating virtual memory addresses to physical ones.
 ///
 /// The core logic of virtual to physical memory translation is practically the same, but different
@@ -20,7 +20,7 @@ use crate::types::Address;
 /// is also the same for the x86 (non-PAE) architecture that has different PTE and pointer sizes.
 /// All that differentiates the translation process is the data inside this structure.
 #[derive(Debug)]
-pub struct ArchMMUDef {
+pub struct ArchMmuDef {
     /// defines the way virtual addresses gets split (the last element
     /// being the final physical page offset, and thus treated a bit differently)
     pub virtual_address_splits: &'static [u8],
@@ -45,9 +45,9 @@ pub struct ArchMMUDef {
     pub large_page_bit: fn(Address) -> bool,
 }
 
-impl ArchMMUDef {
-    pub const fn into_spec(self) -> ArchMMUSpec {
-        ArchMMUSpec::from_def(self)
+impl ArchMmuDef {
+    pub const fn into_spec(self) -> ArchMmuSpec {
+        ArchMmuSpec::from_def(self)
     }
 
     /// Mask a page table entry address to retrieve the next page table entry

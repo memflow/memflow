@@ -22,8 +22,8 @@ pub use connector::{
 pub type ConnectorInputArg = <LoadableConnector as Loadable>::InputArg;
 
 pub mod os;
-pub use os::{LoadableOS, OSInstance, OpaqueOSFunctionTable};
-pub type OSInputArg = <LoadableOS as Loadable>::InputArg;
+pub use os::{LoadableOs, OpaqueOsFunctionTable, OsInstance};
+pub type OsInputArg = <LoadableOs as Loadable>::InputArg;
 
 pub(crate) mod util;
 pub use util::create_bare;
@@ -316,8 +316,8 @@ pub trait Loadable: Sized {
 /// ```
 /// use memflow::plugins::Inventory;
 /// # use memflow::error::Result;
-/// # use memflow::plugins::OSInstance;
-/// # fn test() -> Result<OSInstance> {
+/// # use memflow::plugins::OsInstance;
+/// # fn test() -> Result<OsInstance> {
 /// let inventory = Inventory::scan();
 /// inventory
 ///   .builder()
@@ -347,7 +347,7 @@ pub trait Loadable: Sized {
 /// ```
 pub struct Inventory {
     connectors: Vec<LibInstance<connector::LoadableConnector>>,
-    os_layers: Vec<LibInstance<os::LoadableOS>>,
+    os_layers: Vec<LibInstance<os::LoadableOs>>,
 }
 
 impl Inventory {
@@ -623,7 +623,7 @@ impl Inventory {
     /// let connector = inventory.create_os("dummy", None, &args)
     ///     .unwrap();
     /// ```
-    pub fn create_os(&self, name: &str, input: OSInputArg, args: &Args) -> Result<OSInstance> {
+    pub fn create_os(&self, name: &str, input: OsInputArg, args: &Args) -> Result<OsInstance> {
         Self::create_internal(&self.os_layers, name, input, args)
     }
 
@@ -662,7 +662,7 @@ impl Inventory {
 
 enum BuildStep<'a> {
     Connector { name: &'a str, args: Option<Args> },
-    OS { name: &'a str, args: Option<Args> },
+    Os { name: &'a str, args: Option<Args> },
 }
 
 /// ConnectorBuilderEmpty creates a new connector instance without any input.
@@ -678,8 +678,8 @@ impl<'a> ConnectorBuilderEmpty<'a> {
     /// # Arguments
     ///
     /// * `name` - name of the connector
-    pub fn connector(self, name: &'a str) -> OSBuilder<'a> {
-        OSBuilder {
+    pub fn connector(self, name: &'a str) -> OsBuilder<'a> {
+        OsBuilder {
             inventory: self.inventory,
             steps: vec![BuildStep::Connector { name, args: None }],
         }
@@ -698,10 +698,10 @@ impl<'a> ConnectorBuilder<'a> {
     /// # Arguments
     ///
     /// * `name` - name of the connector
-    pub fn connector(self, name: &'a str) -> OSBuilder<'a> {
+    pub fn connector(self, name: &'a str) -> OsBuilder<'a> {
         let mut steps = self.steps;
         steps.push(BuildStep::Connector { name, args: None });
-        OSBuilder {
+        OsBuilder {
             inventory: self.inventory,
             steps,
         }
@@ -713,7 +713,7 @@ impl<'a> ConnectorBuilder<'a> {
     ///
     /// * `os_args` - the arguments to be passed to the previously added OS
     pub fn args(mut self, os_args: Args) -> ConnectorBuilder<'a> {
-        if let Some(BuildStep::OS { name: _, args }) = self.steps.iter_mut().last() {
+        if let Some(BuildStep::Os { name: _, args }) = self.steps.iter_mut().last() {
             *args = Some(os_args);
         }
         self
@@ -723,9 +723,9 @@ impl<'a> ConnectorBuilder<'a> {
     ///
     /// Each created connector / os instance is fed into the next os / connector instance as an argument.
     /// If any build step fails the function returns an error.
-    pub fn build(self) -> Result<OSInstance> {
+    pub fn build(self) -> Result<OsInstance> {
         let mut connector: Option<ConnectorInstance> = None;
-        let mut os: Option<OSInstance> = None;
+        let mut os: Option<OsInstance> = None;
         for step in self.steps.iter() {
             match step {
                 BuildStep::Connector { name, args } => {
@@ -736,7 +736,7 @@ impl<'a> ConnectorBuilder<'a> {
                     )?);
                     os = None;
                 }
-                BuildStep::OS { name, args } => {
+                BuildStep::Os { name, args } => {
                     os = Some(self.inventory.create_os(
                         name,
                         connector,
@@ -750,13 +750,13 @@ impl<'a> ConnectorBuilder<'a> {
     }
 }
 
-/// OSBuilder creates a new os instance with the previous connector step as an input
-pub struct OSBuilder<'a> {
+/// OsBuilder creates a new os instance with the previous connector step as an input
+pub struct OsBuilder<'a> {
     inventory: &'a Inventory,
     steps: Vec<BuildStep<'a>>,
 }
 
-impl<'a> OSBuilder<'a> {
+impl<'a> OsBuilder<'a> {
     /// Adds an OS instance to the build chain
     ///
     /// # Arguments
@@ -764,7 +764,7 @@ impl<'a> OSBuilder<'a> {
     /// * `name` - name of the target OS
     pub fn os(self, name: &'a str) -> ConnectorBuilder<'a> {
         let mut steps = self.steps;
-        steps.push(BuildStep::OS { name, args: None });
+        steps.push(BuildStep::Os { name, args: None });
         ConnectorBuilder {
             inventory: self.inventory,
             steps,
@@ -776,7 +776,7 @@ impl<'a> OSBuilder<'a> {
     /// # Arguments
     ///
     /// * `conn_args` - the arguments to be passed to the previously added Connector
-    pub fn args(mut self, conn_args: Args) -> OSBuilder<'a> {
+    pub fn args(mut self, conn_args: Args) -> OsBuilder<'a> {
         if let Some(BuildStep::Connector { name: _, args }) = self.steps.iter_mut().last() {
             *args = Some(conn_args);
         }
@@ -789,7 +789,7 @@ impl<'a> OSBuilder<'a> {
     /// If any build step fails the function returns an error.
     pub fn build(self) -> Result<ConnectorInstance> {
         let mut connector: Option<ConnectorInstance> = None;
-        let mut os: Option<OSInstance> = None;
+        let mut os: Option<OsInstance> = None;
         for step in self.steps.iter() {
             match step {
                 BuildStep::Connector { name, args } => {
@@ -800,7 +800,7 @@ impl<'a> OSBuilder<'a> {
                     )?);
                     os = None;
                 }
-                BuildStep::OS { name, args } => {
+                BuildStep::Os { name, args } => {
                     os = Some(self.inventory.create_os(
                         name,
                         connector,

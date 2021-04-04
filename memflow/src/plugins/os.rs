@@ -4,15 +4,15 @@ use crate::types::Address;
 use crate::types::ReprCStr;
 
 pub mod instance;
-pub use instance::{OSFunctionTable, OSInstance, OpaqueOSFunctionTable};
+pub use instance::{OpaqueOsFunctionTable, OsFunctionTable, OsInstance};
 
 pub mod process;
 pub use process::{ArcPluginProcess, PluginProcess};
 
 pub mod keyboard;
 pub use keyboard::{
-    ArcPluginKeyboard, ArcPluginKeyboardState, OSKeyboardFunctionTable,
-    OpaqueOSKeyboardFunctionTable, PluginKeyboard,
+    ArcPluginKeyboard, ArcPluginKeyboardState, OpaqueOsKeyboardFunctionTable,
+    OsKeyboardFunctionTable, PluginKeyboard,
 };
 
 use super::{
@@ -26,83 +26,83 @@ use libloading::Library;
 use std::mem::MaybeUninit;
 
 // Type aliases needed for &mut MaybeUninit<T> to work with bindgen
-pub type MUProcessInfo = MaybeUninit<ProcessInfo>;
-pub type MUModuleInfo = MaybeUninit<ModuleInfo>;
-pub type MUPluginProcess<'a> = MaybeUninit<PluginProcess<'a>>;
-pub type MUArcPluginProcess = MaybeUninit<ArcPluginProcess>;
-pub type MUPluginKeyboard<'a> = MaybeUninit<PluginKeyboard<'a>>;
-pub type MUArcPluginKeyboard = MaybeUninit<ArcPluginKeyboard>;
-pub type MUArcPluginKeyboardState = MaybeUninit<ArcPluginKeyboardState>;
-pub type MUAddress = MaybeUninit<Address>;
-pub type MUOSInstance = MaybeUninit<OSInstance>;
+pub type MuProcessInfo = MaybeUninit<ProcessInfo>;
+pub type MuModuleInfo = MaybeUninit<ModuleInfo>;
+pub type MuPluginProcess<'a> = MaybeUninit<PluginProcess<'a>>;
+pub type MuArcPluginProcess = MaybeUninit<ArcPluginProcess>;
+pub type MuPluginKeyboard<'a> = MaybeUninit<PluginKeyboard<'a>>;
+pub type MuArcPluginKeyboard = MaybeUninit<ArcPluginKeyboard>;
+pub type MuArcPluginKeyboardState = MaybeUninit<ArcPluginKeyboardState>;
+pub type MuAddress = MaybeUninit<Address>;
+pub type MuOsInstance = MaybeUninit<OsInstance>;
 
 pub type OptionArchitectureIdent<'a> = Option<&'a crate::architecture::ArchitectureIdent>;
 
-/// Subtrait of Plugin where `Self`, and `OS::IntoProcessType` are `Clone`
-pub trait PluginOS<T: Process + Clone>:
-    'static + Clone + for<'a> OSInner<'a, IntoProcessType = T>
+/// Subtrait of Plugin where `Self`, and `Os::IntoProcessType` are `Clone`
+pub trait PluginOs<T: Process + Clone>:
+    'static + Clone + for<'a> OsInner<'a, IntoProcessType = T>
 {
 }
-impl<T: Process + Clone, K: 'static + Clone + for<'a> OSInner<'a, IntoProcessType = T>> PluginOS<T>
+impl<T: Process + Clone, K: 'static + Clone + for<'a> OsInner<'a, IntoProcessType = T>> PluginOs<T>
     for K
 {
 }
 
-/// Subtrait of Plugin where `Self`, and `OSKeyboard::IntoKeyboardType` are `Clone`
-pub trait PluginOSKeyboard<T: Keyboard + Clone>:
-    'static + Clone + for<'a> OSKeyboardInner<'a, IntoKeyboardType = T>
+/// Subtrait of Plugin where `Self`, and `OsKeyboard::IntoKeyboardType` are `Clone`
+pub trait PluginOsKeyboard<T: Keyboard + Clone>:
+    'static + Clone + for<'a> OsKeyboardInner<'a, IntoKeyboardType = T>
 {
 }
 impl<
         T: Keyboard + Clone,
-        K: 'static + Clone + for<'a> OSKeyboardInner<'a, IntoKeyboardType = T>,
-    > PluginOSKeyboard<T> for K
+        K: 'static + Clone + for<'a> OsKeyboardInner<'a, IntoKeyboardType = T>,
+    > PluginOsKeyboard<T> for K
 {
 }
 
-pub fn create_with_logging<P: 'static + Process + Clone, T: PluginOS<P>>(
+pub fn create_with_logging<P: 'static + Process + Clone, T: PluginOs<P>>(
     args: &ReprCStr,
     conn: ConnectorInstance,
     log_level: i32,
-    out: &mut MUOSInstance,
+    out: &mut MuOsInstance,
     create_fn: impl Fn(&Args, ConnectorInstance, log::Level) -> Result<T>,
 ) -> i32 {
     super::util::create_with_logging(args, log_level, out, move |a, l| {
-        Ok(create_fn(&a, conn, l).map(OSInstance::builder)?.build())
+        Ok(create_fn(&a, conn, l).map(OsInstance::builder)?.build())
     })
 }
 
-pub fn create_without_logging<P: 'static + Process + Clone, T: PluginOS<P>>(
+pub fn create_without_logging<P: 'static + Process + Clone, T: PluginOs<P>>(
     args: &ReprCStr,
     conn: ConnectorInstance,
-    out: &mut MUOSInstance,
+    out: &mut MuOsInstance,
     create_fn: impl Fn(&Args, ConnectorInstance) -> Result<T>,
 ) -> i32 {
     super::util::create_without_logging(args, out, |a| {
-        Ok(create_fn(&a, conn).map(OSInstance::builder)?.build())
+        Ok(create_fn(&a, conn).map(OsInstance::builder)?.build())
     })
 }
 
 #[repr(C)]
 #[derive(Clone, Copy)]
-pub struct OSLayerFunctionTable {
+pub struct OsLayerFunctionTable {
     /// The vtable for object creation and cloning
     pub base: &'static OpaqueBaseTable,
     /// The vtable for all os functions
-    pub os: &'static OpaqueOSFunctionTable,
+    pub os: &'static OpaqueOsFunctionTable,
     /// The vtable for all physical memory access if available
     pub phys: Option<&'static OpaquePhysicalMemoryFunctionTable>,
     /// The vtable for all virtual memory access if available
     pub virt: Option<&'static OpaqueVirtualMemoryFunctionTable>,
     /// The vtable for the keyboard access if available
-    pub keyboard: Option<&'static OpaqueOSKeyboardFunctionTable>,
+    pub keyboard: Option<&'static OpaqueOsKeyboardFunctionTable>,
 }
 
-impl OSLayerFunctionTable {
-    pub fn new<P: 'static + Process + Clone, T: PluginOS<P>>() -> Self {
-        OSLayerFunctionTable {
+impl OsLayerFunctionTable {
+    pub fn new<P: 'static + Process + Clone, T: PluginOs<P>>() -> Self {
+        OsLayerFunctionTable {
             base: <&GenericBaseTable<T>>::default().as_opaque(),
-            os: <&OSFunctionTable<P, T>>::default().as_opaque(),
+            os: <&OsFunctionTable<P, T>>::default().as_opaque(),
             phys: None,
             virt: None,
             keyboard: None,
@@ -110,14 +110,14 @@ impl OSLayerFunctionTable {
     }
 }
 
-pub type OSDescriptor = PluginDescriptor<LoadableOS>;
+pub type OsDescriptor = PluginDescriptor<LoadableOs>;
 
-pub struct LoadableOS {
+pub struct LoadableOs {
     descriptor: PluginDescriptor<Self>,
 }
 
-impl Loadable for LoadableOS {
-    type Instance = OSInstance;
+impl Loadable for LoadableOs {
+    type Instance = OsInstance;
     type InputArg = Option<ConnectorInstance>;
     type CInputArg = COption<ConnectorInstance>;
 
@@ -145,9 +145,9 @@ impl Loadable for LoadableOS {
         library: Option<CArc<Library>>,
         input: Option<ConnectorInstance>,
         args: &Args,
-    ) -> Result<OSInstance> {
+    ) -> Result<OsInstance> {
         let cstr = ReprCStr::from(args.to_string());
-        let mut out = MUOSInstance::uninit();
+        let mut out = MuOsInstance::uninit();
         let res = (self.descriptor.create)(&cstr, input.into(), log::max_level() as i32, &mut out);
         result_from_int(res, out).map(|mut c| {
             c.library = library.into();

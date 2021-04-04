@@ -99,7 +99,7 @@ use memflow::types::Address;
 ///         .build()
 ///         .unwrap();
 ///
-///     // Create a TLB Cache layer with default values
+///     // Create a Tlb Cache layer with default values
 ///     let vat_cached = CachedVirtualTranslate::builder(vat)
 ///         .arch(kernel_info.os_info.arch)
 ///         .build()

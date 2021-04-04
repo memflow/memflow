@@ -105,20 +105,20 @@ pub enum ErrorOrigin {
     ArgsValidator,
 
     Memory,
-    MMU,
+    Mmu,
     MemoryMap,
 
     PhysicalMemory,
     VirtualTranslate,
     Cache,
-    TLBCache,
+    TlbCache,
     PageCache,
     VirtualMemory,
 
     Inventory,
     Connector,
-    OSLayer,
-    FFI,
+    OsLayer,
+    Ffi,
 
     Other,
 }
@@ -133,20 +133,20 @@ impl ErrorOrigin {
             ErrorOrigin::ArgsValidator => "args validator",
 
             ErrorOrigin::Memory => "memory",
-            ErrorOrigin::MMU => "mmu",
+            ErrorOrigin::Mmu => "mmu",
             ErrorOrigin::MemoryMap => "memory map",
 
             ErrorOrigin::PhysicalMemory => "physical memory",
             ErrorOrigin::VirtualTranslate => "virtual translate",
             ErrorOrigin::Cache => "cache",
-            ErrorOrigin::TLBCache => "tlb cache",
+            ErrorOrigin::TlbCache => "tlb cache",
             ErrorOrigin::PageCache => "page cache",
             ErrorOrigin::VirtualMemory => "virtual memory",
 
             ErrorOrigin::Inventory => "inventory",
             ErrorOrigin::Connector => "connector",
-            ErrorOrigin::OSLayer => "oslayer",
-            ErrorOrigin::FFI => "ffi",
+            ErrorOrigin::OsLayer => "oslayer",
+            ErrorOrigin::Ffi => "ffi",
 
             ErrorOrigin::Other => "other",
         }
@@ -161,7 +161,7 @@ pub enum ErrorKind {
     NotImplemented,
     Configuration,
     Offset,
-    HTTP,
+    Http,
 
     ArgNotExists,
     ArgValidation,
@@ -220,7 +220,7 @@ impl ErrorKind {
             ErrorKind::NotImplemented => "not implemented",
             ErrorKind::Configuration => "configuration error",
             ErrorKind::Offset => "offset error",
-            ErrorKind::HTTP => "http error",
+            ErrorKind::Http => "http error",
 
             ErrorKind::ArgNotExists => "the given argument does not exist",
             ErrorKind::ArgValidation => "the argument could not be validated",
@@ -419,7 +419,7 @@ pub fn part_result_from_int_void(res: i32) -> PartialResult<()> {
             2 => Err(PartialError::PartialVirtualRead(())),
             3 => Err(PartialError::PartialVirtualWrite),
             _ => Err(PartialError::Error(Error(
-                ErrorOrigin::FFI,
+                ErrorOrigin::Ffi,
                 ErrorKind::Unknown,
             ))),
         }
@@ -438,7 +438,7 @@ pub fn part_result_from_int<T>(res: i32, out: MaybeUninit<T>) -> PartialResult<T
             })),
             3 => Err(PartialError::PartialVirtualWrite),
             _ => Err(PartialError::Error(Error(
-                ErrorOrigin::FFI,
+                ErrorOrigin::Ffi,
                 ErrorKind::Unknown,
             ))),
         }
@@ -538,7 +538,7 @@ mod tests {
         assert_eq!(result.is_ok(), false);
         assert_eq!(
             result.err().unwrap(),
-            PartialError::Error(Error(ErrorOrigin::FFI, ErrorKind::Unknown))
+            PartialError::Error(Error(ErrorOrigin::Ffi, ErrorKind::Unknown))
         );
     }
 

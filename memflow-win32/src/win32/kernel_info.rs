@@ -5,8 +5,8 @@ use log::{info, warn};
 
 use memflow::architecture::ArchitectureIdent;
 use memflow::error::Result;
-use memflow::mem::{DirectTranslate, PhysicalMemory, VirtualDMA};
-use memflow::os::OSInfo;
+use memflow::mem::{DirectTranslate, PhysicalMemory, VirtualDma};
+use memflow::os::OsInfo;
 use memflow::types::Address;
 
 use super::Win32VirtualTranslate;
@@ -14,7 +14,7 @@ use super::Win32VirtualTranslate;
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize))]
 pub struct Win32KernelInfo {
-    pub os_info: OSInfo,
+    pub os_info: OsInfo,
     pub dtb: Address,
 
     pub kernel_guid: Option<Win32GUID>,
@@ -78,7 +78,7 @@ impl<T: PhysicalMemory> KernelInfoScanner<T> {
         );
 
         // construct virtual memory object for start_block
-        let mut virt_mem = VirtualDMA::with_vat(
+        let mut virt_mem = VirtualDma::with_vat(
             &mut self.mem,
             start_block.arch,
             Win32VirtualTranslate::new(start_block.arch, start_block.dtb),
@@ -119,7 +119,7 @@ impl<T: PhysicalMemory> KernelInfoScanner<T> {
         } = start_block;
 
         Ok(Win32KernelInfo {
-            os_info: OSInfo { base, size, arch },
+            os_info: OsInfo { base, size, arch },
             dtb,
 
             kernel_guid,

@@ -43,7 +43,7 @@ impl<'a, T: VirtualMemory> VirtualReadUnicodeString for T {
         let mut length = 0u16;
         self.virt_read_into(addr, &mut length)?;
         if length == 0 {
-            return Err(Error(ErrorOrigin::OSLayer, ErrorKind::Encoding)
+            return Err(Error(ErrorOrigin::OsLayer, ErrorKind::Encoding)
                 .log_debug("unable to read unicode string length (length is zero)"));
         }
 
@@ -53,17 +53,17 @@ impl<'a, T: VirtualMemory> VirtualReadUnicodeString for T {
             64 => self.virt_read_addr64(addr + 8)?,
             32 => self.virt_read_addr32(addr + 4)?,
             _ => {
-                return Err(Error(ErrorOrigin::OSLayer, ErrorKind::InvalidArchitecture));
+                return Err(Error(ErrorOrigin::OsLayer, ErrorKind::InvalidArchitecture));
             }
         };
         if buffer.is_null() {
-            return Err(Error(ErrorOrigin::OSLayer, ErrorKind::Encoding)
+            return Err(Error(ErrorOrigin::OsLayer, ErrorKind::Encoding)
                 .log_debug("unable to read unicode string buffer"));
         }
 
         // check if buffer length is mod 2 (utf-16)
         if length % 2 != 0 {
-            return Err(Error(ErrorOrigin::OSLayer, ErrorKind::Encoding)
+            return Err(Error(ErrorOrigin::OsLayer, ErrorKind::Encoding)
                 .log_debug("unicode string length is not a multiple of two"));
         }
 
@@ -80,7 +80,7 @@ impl<'a, T: VirtualMemory> VirtualReadUnicodeString for T {
             .map(|b| {
                 b[0..2]
                     .try_into()
-                    .map_err(|_| Error(ErrorOrigin::OSLayer, ErrorKind::Encoding))
+                    .map_err(|_| Error(ErrorOrigin::OsLayer, ErrorKind::Encoding))
             })
             .filter_map(Result::ok)
             .map(|b| match proc_arch.endianess() {
@@ -89,7 +89,7 @@ impl<'a, T: VirtualMemory> VirtualReadUnicodeString for T {
             })
             .collect::<Vec<u16>>();
         Ok(U16CString::from_vec_with_nul(content16)
-            .map_err(|_| Error(ErrorOrigin::OSLayer, ErrorKind::Encoding))?
+            .map_err(|_| Error(ErrorOrigin::OsLayer, ErrorKind::Encoding))?
             .to_string_lossy())
     }
 }

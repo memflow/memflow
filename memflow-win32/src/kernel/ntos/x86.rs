@@ -57,6 +57,6 @@ pub fn find<T: VirtualMemory>(
         }
     }
 
-    Err(Error(ErrorOrigin::OSLayer, ErrorKind::ProcessNotFound)
+    Err(Error(ErrorOrigin::OsLayer, ErrorKind::ProcessNotFound)
         .log_trace("find_x86(): unable to locate ntoskrnl.exe in high mem"))
 }

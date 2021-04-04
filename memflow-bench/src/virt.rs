@@ -1,7 +1,7 @@
 use criterion::*;
 
 use memflow::mem::{
-    CachedMemoryAccess, CachedVirtualTranslate, PhysicalMemory, VirtualDMA, VirtualMemory,
+    CachedMemoryAccess, CachedVirtualTranslate, PhysicalMemory, VirtualDma, VirtualMemory,
     VirtualReadData, VirtualTranslate,
 };
 
@@ -100,11 +100,11 @@ fn read_test_with_ctx<T: PhysicalMemory, V: VirtualTranslate, S: ScopedVirtualTr
                 .arch(proc.sys_arch)
                 .build()
                 .unwrap();
-            let mut virt_mem = VirtualDMA::with_vat(mem, proc.proc_arch, translator, vat);
+            let mut virt_mem = VirtualDma::with_vat(mem, proc.proc_arch, translator, vat);
             read_test_with_mem(bench, &mut virt_mem, chunk_size, chunks, tmod);
         } else {
             let mem = cache.build().unwrap();
-            let mut virt_mem = VirtualDMA::with_vat(mem, proc.proc_arch, translator, vat);
+            let mut virt_mem = VirtualDma::with_vat(mem, proc.proc_arch, translator, vat);
             read_test_with_mem(bench, &mut virt_mem, chunk_size, chunks, tmod);
         }
     } else if use_tlb {
@@ -112,10 +112,10 @@ fn read_test_with_ctx<T: PhysicalMemory, V: VirtualTranslate, S: ScopedVirtualTr
             .arch(proc.sys_arch)
             .build()
             .unwrap();
-        let mut virt_mem = VirtualDMA::with_vat(mem, proc.proc_arch, translator, vat);
+        let mut virt_mem = VirtualDma::with_vat(mem, proc.proc_arch, translator, vat);
         read_test_with_mem(bench, &mut virt_mem, chunk_size, chunks, tmod);
     } else {
-        let mut virt_mem = VirtualDMA::with_vat(mem, proc.proc_arch, translator, vat);
+        let mut virt_mem = VirtualDma::with_vat(mem, proc.proc_arch, translator, vat);
         read_test_with_mem(bench, &mut virt_mem, chunk_size, chunks, tmod);
     }
 }

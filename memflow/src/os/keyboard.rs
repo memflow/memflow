@@ -2,15 +2,15 @@
 
 use crate::prelude::v1::Result;
 
-/// OSKeyboard supertrait for all possible lifetimes
+/// OsKeyboard supertrait for all possible lifetimes
 ///
-/// Use this for convenience. Chances are, once GAT are implemented, only `OSKeyboard` will be kept.
+/// Use this for convenience. Chances are, once GAT are implemented, only `OsKeyboard` will be kept.
 ///
-/// It naturally provides all `OSKeyboardInner` functions.
-pub trait OSKeyboard: for<'a> OSKeyboardInner<'a> {}
-impl<T: for<'a> OSKeyboardInner<'a>> OSKeyboard for T {}
+/// It naturally provides all `OsKeyboardInner` functions.
+pub trait OsKeyboard: for<'a> OsKeyboardInner<'a> {}
+impl<T: for<'a> OsKeyboardInner<'a>> OsKeyboard for T {}
 
-pub trait OSKeyboardInner<'a>: Send {
+pub trait OsKeyboardInner<'a>: Send {
     type KeyboardType: Keyboard + 'a;
     type IntoKeyboardType: Keyboard;
 

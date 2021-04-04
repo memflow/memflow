@@ -1,7 +1,7 @@
 #include "memflow.h"
 #include <stdio.h>
 
-bool list_processes(OSInstance *os, Address addr) {
+bool list_processes(OsInstance *os, Address addr) {
 	ProcessInfo proc_info;
 	if (os->vtable.os->process_info_by_address(os->instance, addr, &proc_info) < 0) {
 		return true;
@@ -33,7 +33,7 @@ int main(int argc, char *argv[]) {
 	printf("connector initialized: %p\n", connector);
 
 	// initialize the OS plugin
-	OSInstance os;
+	OsInstance os;
 	if (inventory_create_os(inventory, "win32", "", connector, &os) < 0) {
 		printf("unable to initialize os plugin\n");
 		connector_drop(&connector);
@@ -43,7 +43,7 @@ int main(int argc, char *argv[]) {
 	printf("os plugin initialized: %p\n", os);
 
 	// iterate over all processes and print them
-	printf("PID\tNAME\tADDRESS\n");
+	printf("Pid\tNAME\tADDRESS\n");
 	OpaqueCallback_Address cb;
 	cb.context = &os;
 	cb.func = (bool (*)(void *, Address))list_processes;

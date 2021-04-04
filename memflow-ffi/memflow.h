@@ -48,8 +48,8 @@ typedef struct ArchitectureObj ArchitectureObj;
  * ```
  * use memflow::plugins::Inventory;
  * # use memflow::error::Result;
- * # use memflow::plugins::OSInstance;
- * # fn test() -> Result<OSInstance> {
+ * # use memflow::plugins::OsInstance;
+ * # fn test() -> Result<OsInstance> {
  * Inventory::build_os_simple("qemu-procfs", "win32")
  * # }
  * # test().ok();
@@ -229,7 +229,7 @@ typedef struct ConnectorInstance {
     struct COptArc_Library library;
 } ConnectorInstance;
 
-typedef struct ConnectorInstance MUConnectorInstance;
+typedef struct ConnectorInstance MuConnectorInstance;
 
 typedef struct Callback_c_void__Address {
     void *context;
@@ -243,10 +243,10 @@ typedef OpaqueCallback_Address AddressCallback;
 /**
  * Type meant for process IDs
  *
- * If there is a case where PID can be over 32-bit limit, or negative, please open an issue, we
+ * If there is a case where Pid can be over 32-bit limit, or negative, please open an issue, we
  * would love to see that.
  */
-typedef uint32_t PID;
+typedef uint32_t Pid;
 
 typedef int8_t *ReprCStr;
 
@@ -265,7 +265,7 @@ typedef enum ArchitectureIdent_Tag {
      */
     X86,
     /**
-     * ARM 64-bit architecture with specified page size
+     * Arm 64-bit architecture with specified page size
      *
      * Valid page sizes are 4kb, 16kb, 64kb. Only 4kb is supported at the moment
      */
@@ -305,7 +305,7 @@ typedef struct ProcessInfo {
     /**
      * ID of this process.
      */
-    PID pid;
+    Pid pid;
     /**
      * Name of the process.
      */
@@ -327,7 +327,7 @@ typedef struct ProcessInfo {
     struct ArchitectureIdent proc_arch;
 } ProcessInfo;
 
-typedef struct ProcessInfo MUProcessInfo;
+typedef struct ProcessInfo MuProcessInfo;
 
 typedef const struct ArchitectureIdent *OptionArchitectureIdent;
 
@@ -402,14 +402,14 @@ typedef struct ModuleInfo {
     struct ArchitectureIdent arch;
 } ModuleInfo;
 
-typedef struct ModuleInfo MUModuleInfo;
+typedef struct ModuleInfo MuModuleInfo;
 
-typedef Address MUAddress;
+typedef Address MuAddress;
 
 typedef struct ProcessFunctionTable_c_void {
     int32_t (*module_address_list_callback)(void *process, OptionArchitectureIdent target_arch, ModuleAddressCallback callback);
-    int32_t (*module_by_address)(void *process, Address address, struct ArchitectureIdent architecture, MUModuleInfo *out);
-    int32_t (*primary_module_address)(void *process, MUAddress *out);
+    int32_t (*module_by_address)(void *process, Address address, struct ArchitectureIdent architecture, MuModuleInfo *out);
+    int32_t (*primary_module_address)(void *process, MuAddress *out);
     const struct ProcessInfo *(*info)(const void *process);
     void *(*virt_mem)(void *process);
     void (*drop)(void *thisptr);
@@ -437,7 +437,7 @@ typedef struct Page {
     uintptr_t page_size;
 } Page;
 
-typedef struct Page MUPage;
+typedef struct Page MuPage;
 
 typedef struct TranslationChunk {
     Address _0;
@@ -471,7 +471,7 @@ typedef OpaqueCallback_PageMapChunk PageMapCallback;
 typedef struct VirtualMemoryFunctionTable_c_void {
     int32_t (*virt_read_raw_list)(void *virt_mem, struct VirtualReadData *read_data, uintptr_t read_data_count);
     int32_t (*virt_write_raw_list)(void *virt_mem, const struct VirtualWriteData *write_data, uintptr_t write_data_count);
-    int32_t (*virt_page_info)(void *virt_mem, Address addr, MUPage *out);
+    int32_t (*virt_page_info)(void *virt_mem, Address addr, MuPage *out);
     void (*virt_translation_map_range)(void *virt_mem, Address start, Address end, TranslationMapCallback out);
     void (*virt_page_map_range)(void *virt_mem, uintptr_t gap_size, Address start, Address end, PageMapCallback out);
 } VirtualMemoryFunctionTable_c_void;
@@ -489,7 +489,7 @@ typedef struct PluginProcess {
     struct VirtualMemoryInstance virt_mem;
 } PluginProcess;
 
-typedef struct PluginProcess MUPluginProcess;
+typedef struct PluginProcess MuPluginProcess;
 
 /**
  * Opaque version of `GenericCloneTable` for FFI purposes
@@ -502,7 +502,7 @@ typedef struct ArcPluginProcess {
     struct COptArc_Library library;
 } ArcPluginProcess;
 
-typedef struct ArcPluginProcess MUArcPluginProcess;
+typedef struct ArcPluginProcess MuArcPluginProcess;
 
 /**
  * Information block about OS
@@ -511,7 +511,7 @@ typedef struct ArcPluginProcess MUArcPluginProcess;
  * omitted in some circumstances (lack of kernel, or privileges). But architecture should always
  * be correct.
  */
-typedef struct OSInfo {
+typedef struct OsInfo {
     /**
      * Base address of the OS kernel
      */
@@ -524,19 +524,19 @@ typedef struct OSInfo {
      * System architecture
      */
     struct ArchitectureIdent arch;
-} OSInfo;
+} OsInfo;
 
-typedef struct OSFunctionTable_c_void__c_void {
+typedef struct OsFunctionTable_c_void__c_void {
     int32_t (*process_address_list_callback)(void *os, AddressCallback callback);
-    int32_t (*process_info_by_address)(void *os, Address address, MUProcessInfo *out);
-    int32_t (*process_by_info)(void *os, struct ProcessInfo info, MUPluginProcess *out);
-    int32_t (*into_process_by_info)(void *os, struct ProcessInfo info, struct COptArc_Library lib, MUArcPluginProcess *out);
+    int32_t (*process_info_by_address)(void *os, Address address, MuProcessInfo *out);
+    int32_t (*process_by_info)(void *os, struct ProcessInfo info, MuPluginProcess *out);
+    int32_t (*into_process_by_info)(void *os, struct ProcessInfo info, struct COptArc_Library lib, MuArcPluginProcess *out);
     int32_t (*module_address_list_callback)(void *os, AddressCallback callback);
-    int32_t (*module_by_address)(void *os, Address address, MUModuleInfo *out);
-    const struct OSInfo *(*info)(const void *os);
-} OSFunctionTable_c_void__c_void;
+    int32_t (*module_by_address)(void *os, Address address, MuModuleInfo *out);
+    const struct OsInfo *(*info)(const void *os);
+} OsFunctionTable_c_void__c_void;
 
-typedef struct OSFunctionTable_c_void__c_void OpaqueOSFunctionTable;
+typedef struct OsFunctionTable_c_void__c_void OpaqueOsFunctionTable;
 
 typedef struct KeyboardStateFunctionTable_c_void {
     int32_t (*is_down)(const void *keyboard_state, int32_t vk);
@@ -553,10 +553,10 @@ typedef struct ArcPluginKeyboardState {
     struct COptArc_Library library;
 } ArcPluginKeyboardState;
 
-typedef struct ArcPluginKeyboardState MUArcPluginKeyboardState;
+typedef struct ArcPluginKeyboardState MuArcPluginKeyboardState;
 
 typedef struct KeyboardFunctionTable_c_void {
-    int32_t (*state)(void *keyboard, struct COptArc_Library lib, MUArcPluginKeyboardState *out);
+    int32_t (*state)(void *keyboard, struct COptArc_Library lib, MuArcPluginKeyboardState *out);
     int32_t (*set_state)(void *keyboard, const struct ArcPluginKeyboardState *state);
     void (*drop)(void *thisptr);
 } KeyboardFunctionTable_c_void;
@@ -569,23 +569,23 @@ typedef struct PluginKeyboard {
     struct COptArc_Library library;
 } PluginKeyboard;
 
-typedef struct PluginKeyboard MUPluginKeyboard;
+typedef struct PluginKeyboard MuPluginKeyboard;
 
 typedef struct ArcPluginKeyboard {
     struct PluginKeyboard inner;
     OpaqueCloneTable clone;
 } ArcPluginKeyboard;
 
-typedef struct ArcPluginKeyboard MUArcPluginKeyboard;
+typedef struct ArcPluginKeyboard MuArcPluginKeyboard;
 
-typedef struct OSKeyboardFunctionTable_c_void__c_void {
-    int32_t (*keyboard)(void *os, struct COptArc_Library lib, MUPluginKeyboard *out);
-    int32_t (*into_keyboard)(void *os, struct COptArc_Library lib, MUArcPluginKeyboard *out);
-} OSKeyboardFunctionTable_c_void__c_void;
+typedef struct OsKeyboardFunctionTable_c_void__c_void {
+    int32_t (*keyboard)(void *os, struct COptArc_Library lib, MuPluginKeyboard *out);
+    int32_t (*into_keyboard)(void *os, struct COptArc_Library lib, MuArcPluginKeyboard *out);
+} OsKeyboardFunctionTable_c_void__c_void;
 
-typedef struct OSKeyboardFunctionTable_c_void__c_void OpaqueOSKeyboardFunctionTable;
+typedef struct OsKeyboardFunctionTable_c_void__c_void OpaqueOsKeyboardFunctionTable;
 
-typedef struct OSLayerFunctionTable {
+typedef struct OsLayerFunctionTable {
     /**
      * The vtable for object creation and cloning
      */
@@ -593,7 +593,7 @@ typedef struct OSLayerFunctionTable {
     /**
      * The vtable for all os functions
      */
-    const OpaqueOSFunctionTable *os;
+    const OpaqueOsFunctionTable *os;
     /**
      * The vtable for all physical memory access if available
      */
@@ -605,8 +605,8 @@ typedef struct OSLayerFunctionTable {
     /**
      * The vtable for the keyboard access if available
      */
-    const OpaqueOSKeyboardFunctionTable *keyboard;
-} OSLayerFunctionTable;
+    const OpaqueOsKeyboardFunctionTable *keyboard;
+} OsLayerFunctionTable;
 
 /**
  * Describes initialized os instance
@@ -614,9 +614,9 @@ typedef struct OSLayerFunctionTable {
  * This structure is returned by `OS`. It is needed to maintain reference
  * counts to the loaded plugin library.
  */
-typedef struct OSInstance {
+typedef struct OsInstance {
     void *instance;
-    struct OSLayerFunctionTable vtable;
+    struct OsLayerFunctionTable vtable;
     /**
      * Internal library arc.
      *
@@ -627,9 +627,9 @@ typedef struct OSInstance {
      * If the library is unloaded prior to the instance this will lead to a SIGSEGV.
      */
     struct COptArc_Library library;
-} OSInstance;
+} OsInstance;
 
-typedef struct OSInstance MUOSInstance;
+typedef struct OsInstance MuOsInstance;
 
 #ifdef __cplusplus
 extern "C" {
@@ -705,7 +705,7 @@ int32_t inventory_add_dir(struct Inventory *inv, const char *dir);
 int32_t inventory_create_connector(struct Inventory *inv,
                                    const char *name,
                                    const char *args,
-                                   MUConnectorInstance *out);
+                                   MuConnectorInstance *out);
 
 /**
  * Create a OS instance with given arguments
@@ -737,17 +737,17 @@ int32_t inventory_create_os(struct Inventory *inv,
                             const char *name,
                             const char *args,
                             struct ConnectorInstance mem,
-                            MUOSInstance *out);
+                            MuOsInstance *out);
 
 /**
  * Free a os plugin
  *
  * # Safety
  *
- * `os` must point to a valid `OSInstance` that was created using one of the provided
+ * `os` must point to a valid `OsInstance` that was created using one of the provided
  * functions.
  */
-void os_drop(struct OSInstance *os);
+void os_drop(struct OsInstance *os);
 
 /**
  * Clone a connector
@@ -761,7 +761,7 @@ void os_drop(struct OSInstance *os);
  * `conn` has to point to a a valid `CloneablePhysicalMemory` created by one of the provided
  * functions.
  */
-void connector_clone(const struct ConnectorInstance *conn, MUConnectorInstance *out);
+void connector_clone(const struct ConnectorInstance *conn, MuConnectorInstance *out);
 
 /**
  * Free a connector instance

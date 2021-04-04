@@ -1,4 +1,4 @@
-use super::{ArchMMUSpec, MMUTranslationBase};
+use super::{ArchMmuSpec, MmuTranslationBase};
 use crate::iter::SplitAtIndex;
 use crate::types::Address;
 use std::cmp::Ordering;
@@ -127,7 +127,7 @@ impl<T> TranslationChunk<T> {
     }
 }
 
-impl<T: MMUTranslationBase> TranslationChunk<T> {
+impl<T: MmuTranslationBase> TranslationChunk<T> {
     /// Pushes data to stack updating min/max bounds
     pub fn push_data<U: SplitAtIndex>(
         &mut self,
@@ -153,7 +153,7 @@ impl<T: MMUTranslationBase> TranslationChunk<T> {
         }
     }
 
-    pub fn next_max_addr_count(&self, spec: &ArchMMUSpec) -> usize {
+    pub fn next_max_addr_count(&self, spec: &ArchMmuSpec) -> usize {
         let step_size = spec.page_size_step_unchecked(self.step + 1);
 
         let add = if (self.max_addr - self.min_addr) % step_size != 0 {
@@ -168,7 +168,7 @@ impl<T: MMUTranslationBase> TranslationChunk<T> {
     /// Splits the chunk into multiple smaller ones for the next VTOP step.
     pub fn split_chunk<U: SplitAtIndex>(
         mut self,
-        spec: &ArchMMUSpec,
+        spec: &ArchMmuSpec,
         (addr_stack, tmp_addr_stack): (&mut TranslateDataVec<U>, &mut TranslateDataVec<U>),
         out_target: &mut (TranslateVec, TranslateDataVec<U>),
         wait_target: &mut (TranslateVec, TranslateDataVec<U>),

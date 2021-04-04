@@ -41,7 +41,7 @@ pub fn find<T: VirtualMemory>(
         }
     }
 
-    Err(Error(ErrorOrigin::OSLayer, ErrorKind::ProcessNotFound)
+    Err(Error(ErrorOrigin::OsLayer, ErrorKind::ProcessNotFound)
         .log_info("unable to find ntoskrnl.exe"))
 }
 
@@ -49,12 +49,12 @@ pub fn find<T: VirtualMemory>(
 pub fn find_guid<T: VirtualMemory>(virt_mem: &mut T, kernel_base: Address) -> Result<Win32GUID> {
     let image = pehelper::try_get_pe_image(virt_mem, kernel_base)?;
     let pe = PeView::from_bytes(&image)
-        .map_err(|err| Error(ErrorOrigin::OSLayer, ErrorKind::InvalidPeFile).log_info(err))?;
+        .map_err(|err| Error(ErrorOrigin::OsLayer, ErrorKind::InvalidPeFile).log_info(err))?;
 
     let debug = match pe.debug() {
         Ok(d) => d,
         Err(_) => {
-            return Err(Error(ErrorOrigin::OSLayer, ErrorKind::InvalidPeFile)
+            return Err(Error(ErrorOrigin::OsLayer, ErrorKind::InvalidPeFile)
                 .log_info("unable to read debug_data in pe header"))
         }
     };
@@ -65,25 +65,25 @@ pub fn find_guid<T: VirtualMemory>(virt_mem: &mut T, kernel_base: Address) -> Re
         .filter_map(std::result::Result::ok)
         .find(|&e| e.as_code_view().is_some())
         .ok_or_else(|| {
-            Error(ErrorOrigin::OSLayer, ErrorKind::InvalidPeFile)
+            Error(ErrorOrigin::OsLayer, ErrorKind::InvalidPeFile)
                 .log_info("unable to find codeview debug_data entry")
         })?
         .as_code_view()
         .ok_or_else(|| {
-            Error(ErrorOrigin::OSLayer, ErrorKind::InvalidPeFile)
+            Error(ErrorOrigin::OsLayer, ErrorKind::InvalidPeFile)
                 .log_info("unable to find codeview debug_data entry")
         })?;
 
     let signature = match code_view {
         CodeView::Cv70 { image, .. } => image.Signature,
         CodeView::Cv20 { .. } => {
-            return Err(Error(ErrorOrigin::OSLayer, ErrorKind::InvalidPeFile)
+            return Err(Error(ErrorOrigin::OsLayer, ErrorKind::InvalidPeFile)
                 .log_info("invalid code_view entry version 2 found, expected 7"))
         }
     };
 
     let file_name = code_view.pdb_file_name().to_str().map_err(|_| {
-        Error(ErrorOrigin::OSLayer, ErrorKind::Encoding)
+        Error(ErrorOrigin::OsLayer, ErrorKind::Encoding)
             .log_info("unable to convert pdb file name to string")
     })?;
     let guid = format!("{:X}{:X}", signature, code_view.age());
@@ -94,11 +94,11 @@ fn get_export(pe: &PeView, name: &str) -> Result<usize> {
     info!("trying to find {} export", name);
     let export = match pe
         .get_export_by_name(name)
-        .map_err(|err| Error(ErrorOrigin::OSLayer, ErrorKind::ExportNotFound).log_info(err))?
+        .map_err(|err| Error(ErrorOrigin::OsLayer, ErrorKind::ExportNotFound).log_info(err))?
     {
         Export::Symbol(s) => *s as usize,
         Export::Forward(_) => {
-            return Err(Error(ErrorOrigin::OSLayer, ErrorKind::ExportNotFound)
+            return Err(Error(ErrorOrigin::OsLayer, ErrorKind::ExportNotFound)
                 .log_info("Export found but it was a forwarded export"))
         }
     };
@@ -112,7 +112,7 @@ pub fn find_winver<T: VirtualMemory>(
 ) -> Result<Win32Version> {
     let image = pehelper::try_get_pe_image(virt_mem, kernel_base)?;
     let pe = PeView::from_bytes(&image)
-        .map_err(|err| Error(ErrorOrigin::OSLayer, ErrorKind::InvalidPeFile).log_info(err))?;
+        .map_err(|err| Error(ErrorOrigin::OsLayer, ErrorKind::InvalidPeFile).log_info(err))?;
 
     // NtBuildNumber
     let nt_build_number_ref = get_export(&pe, "NtBuildNumber")?;
@@ -121,7 +121,7 @@ pub fn find_winver<T: VirtualMemory>(
     let nt_build_number: u32 = virt_mem.virt_read(kernel_base + nt_build_number_ref)?;
     info!("nt_build_number: {}", nt_build_number);
     if nt_build_number == 0 {
-        return Err(Error(ErrorOrigin::OSLayer, ErrorKind::InvalidPeFile)
+        return Err(Error(ErrorOrigin::OsLayer, ErrorKind::InvalidPeFile)
             .log_info("unable to fetch nt build number"));
     }
 

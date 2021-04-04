@@ -51,7 +51,7 @@ impl Win32OffsetBuilder {
 
     pub fn build(self) -> Result<Win32Offsets> {
         if self.guid.is_none() && self.winver.is_none() {
-            return Err(Error(ErrorOrigin::OSLayer, ErrorKind::Configuration)
+            return Err(Error(ErrorOrigin::OsLayer, ErrorKind::Configuration)
                 .log_error("building win32 offsets requires either a guid or winver"));
         }
 
@@ -65,7 +65,7 @@ impl Win32OffsetBuilder {
             return Ok(offs);
         }
 
-        Err(Error(ErrorOrigin::OSLayer, ErrorKind::Configuration)
+        Err(Error(ErrorOrigin::OsLayer, ErrorKind::Configuration)
             .log_error("no valid offset configuration found while building win32"))
     }
 
@@ -122,7 +122,7 @@ impl Win32OffsetBuilder {
         }
 
         closest_match.ok_or_else(|| {
-            Error(ErrorOrigin::OSLayer, ErrorKind::Configuration)
+            Error(ErrorOrigin::OsLayer, ErrorKind::Configuration)
                 .log_error("no valid offset configuration found while building win32")
         })
     }
@@ -130,7 +130,7 @@ impl Win32OffsetBuilder {
     #[cfg(not(feature = "embed_offsets"))]
     fn build_with_offset_list(&self) -> Result<Win32Offsets> {
         Err(
-            Error(ErrorOrigin::OSLayer, ErrorKind::UnsupportedOptionalFeature)
+            Error(ErrorOrigin::OsLayer, ErrorKind::UnsupportedOptionalFeature)
                 .log_error("embed offsets feature is deactivated on compilation"),
         )
     }
@@ -142,11 +142,11 @@ impl Win32OffsetBuilder {
                 let pdb = store.load(self.guid.as_ref().unwrap())?;
                 Win32Offsets::from_pdb_slice(&pdb[..])
             } else {
-                Err(Error(ErrorOrigin::OSLayer, ErrorKind::Configuration)
+                Err(Error(ErrorOrigin::OsLayer, ErrorKind::Configuration)
                     .log_error("symbol store can only be used with a guid"))
             }
         } else {
-            Err(Error(ErrorOrigin::OSLayer, ErrorKind::Configuration)
+            Err(Error(ErrorOrigin::OsLayer, ErrorKind::Configuration)
                 .log_error("symbol store is disabled"))
         }
     }
@@ -154,7 +154,7 @@ impl Win32OffsetBuilder {
     #[cfg(not(feature = "symstore"))]
     fn build_with_symbol_store(&self) -> Result<Win32Offsets> {
         Err(
-            Error(ErrorOrigin::OSLayer, ErrorKind::UnsupportedOptionalFeature)
+            Error(ErrorOrigin::OsLayer, ErrorKind::UnsupportedOptionalFeature)
                 .log_error("symbol store is deactivated via a compilation feature"),
         )
     }

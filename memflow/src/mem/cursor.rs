@@ -206,20 +206,8 @@ impl<T: PhysicalMemory> Seek for PhysicalMemoryCursor<T> {
     fn seek(&mut self, pos: SeekFrom) -> Result<u64> {
         let target_pos = match pos {
             SeekFrom::Start(offs) => offs,
-            SeekFrom::End(offs) => {
-                if offs >= 0 {
-                    self.metadata.size as u64 + (offs as u64)
-                } else {
-                    self.metadata.size as u64 - (offs.abs() as u64)
-                }
-            }
-            SeekFrom::Current(offs) => {
-                if offs >= 0 {
-                    self.address.as_u64() + (offs as u64)
-                } else {
-                    self.address.as_u64() - (offs.abs() as u64)
-                }
-            }
+            SeekFrom::End(offs) => (self.metadata.size as u64).wrapping_add(offs as u64),
+            SeekFrom::Current(offs) => self.address.as_u64().wrapping_add(offs as u64),
         };
 
         self.address = target_pos.into();

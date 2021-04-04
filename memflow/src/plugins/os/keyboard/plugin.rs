@@ -6,7 +6,7 @@ use crate::os::Keyboard;
 
 use std::ffi::c_void;
 
-use super::super::MUArcPluginKeyboardState;
+use super::super::MuArcPluginKeyboardState;
 
 use libloading::Library;
 
@@ -25,7 +25,7 @@ pub struct KeyboardFunctionTable<T> {
     pub state: extern "C" fn(
         keyboard: &mut T,
         lib: COptArc<Library>,
-        out: &mut MUArcPluginKeyboardState,
+        out: &mut MuArcPluginKeyboardState,
     ) -> i32,
     pub set_state: extern "C" fn(keyboard: &mut T, state: &ArcPluginKeyboardState) -> i32,
     pub drop: unsafe extern "C" fn(thisptr: &mut T),
@@ -50,7 +50,7 @@ impl<T: Keyboard> KeyboardFunctionTable<T> {
 extern "C" fn c_state<T: Keyboard>(
     keyboard: &mut T,
     lib: COptArc<Library>,
-    out: &mut MUArcPluginKeyboardState,
+    out: &mut MuArcPluginKeyboardState,
 ) -> i32 {
     keyboard
         .state()
@@ -96,7 +96,7 @@ impl<'a> Keyboard for PluginKeyboard<'a> {
     type KeyboardStateType = ArcPluginKeyboardState;
 
     fn state(&mut self) -> Result<Self::KeyboardStateType> {
-        let mut out = MUArcPluginKeyboardState::uninit();
+        let mut out = MuArcPluginKeyboardState::uninit();
         let res = (self.vtable.state)(self.instance, self.library.clone(), &mut out);
         result_from_int(res, out)
     }

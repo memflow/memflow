@@ -1,5 +1,5 @@
 use super::{
-    super::{ArchMMUDef, ArchitectureObj, Endianess},
+    super::{ArchMmuDef, ArchitectureObj, Endianess},
     X86Architecture, X86ScopedVirtualTranslate,
 };
 
@@ -7,7 +7,7 @@ use crate::types::Address;
 
 pub(super) static ARCH_SPEC: X86Architecture = X86Architecture {
     bits: 64,
-    mmu: ArchMMUDef {
+    mmu: ArchMmuDef {
         virtual_address_splits: &[9, 9, 9, 9, 12],
         valid_final_page_steps: &[2, 3, 4],
         address_space_bits: 52,
@@ -30,10 +30,10 @@ pub fn new_translator(dtb: Address) -> X86ScopedVirtualTranslate {
 
 #[cfg(test)]
 mod tests {
-    use crate::architecture::mmu::ArchMMUSpec;
+    use crate::architecture::mmu::ArchMmuSpec;
     use crate::types::{size, Address, PageType};
 
-    fn get_mmu_spec() -> &'static ArchMMUSpec {
+    fn get_mmu_spec() -> &'static ArchMmuSpec {
         &super::ARCH_SPEC.mmu
     }
 

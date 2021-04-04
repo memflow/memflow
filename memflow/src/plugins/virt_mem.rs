@@ -5,7 +5,7 @@ use crate::types::{OpaqueCallback, Page, PhysicalAddress};
 use std::ffi::c_void;
 
 pub type OpaqueVirtualMemoryFunctionTable = VirtualMemoryFunctionTable<c_void>;
-pub type MUPage = std::mem::MaybeUninit<Page>;
+pub type MuPage = std::mem::MaybeUninit<Page>;
 
 impl Copy for OpaqueVirtualMemoryFunctionTable {}
 
@@ -37,7 +37,7 @@ pub struct VirtualMemoryFunctionTable<T> {
         write_data: *const VirtualWriteData,
         write_data_count: usize,
     ) -> i32,
-    pub virt_page_info: extern "C" fn(virt_mem: &mut T, addr: Address, out: &mut MUPage) -> i32,
+    pub virt_page_info: extern "C" fn(virt_mem: &mut T, addr: Address, out: &mut MuPage) -> i32,
     pub virt_translation_map_range:
         extern "C" fn(virt_mem: &mut T, start: Address, end: Address, out: TranslationMapCallback),
     pub virt_page_map_range: extern "C" fn(
@@ -92,7 +92,7 @@ extern "C" fn c_virt_write_raw_list<T: VirtualMemory>(
 extern "C" fn c_virt_page_info<T: VirtualMemory>(
     virt_mem: &mut T,
     addr: Address,
-    out: &mut MUPage,
+    out: &mut MuPage,
 ) -> i32 {
     virt_mem.virt_page_info(addr).into_int_out_result(out)
 }
@@ -163,7 +163,7 @@ impl VirtualMemory for VirtualMemoryInstance<'_> {
     }
 
     fn virt_page_info(&mut self, addr: Address) -> Result<Page> {
-        let mut out = MUPage::uninit();
+        let mut out = MuPage::uninit();
         let res = (self.vtable.virt_page_info)(self.instance, addr, &mut out);
         result_from_int(res, out)
     }

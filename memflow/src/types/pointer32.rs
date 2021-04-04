@@ -47,9 +47,9 @@ use std::{cmp, fmt, hash, ops};
 /// }
 ///
 /// # use memflow::types::size;
-/// # use memflow::dummy::DummyOS;
+/// # use memflow::dummy::DummyOs;
 /// # use memflow::os::Process;
-/// # read_foo_bar(DummyOS::quick_process(size::mb(2), &[]).virt_mem());
+/// # read_foo_bar(DummyOs::quick_process(size::mb(2), &[]).virt_mem());
 ///
 /// ```
 ///
@@ -77,9 +77,9 @@ use std::{cmp, fmt, hash, ops};
 /// }
 ///
 /// # use memflow::types::size;
-/// # use memflow::dummy::DummyOS;
+/// # use memflow::dummy::DummyOs;
 /// # use memflow::os::Process;
-/// # read_foo_bar(DummyOS::quick_process(size::mb(2), &[]).virt_mem());
+/// # read_foo_bar(DummyOs::quick_process(size::mb(2), &[]).virt_mem());
 /// ```
 #[repr(transparent)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize))]

@@ -6,9 +6,9 @@ use std::prelude::v1::*;
 
 /// Type meant for process IDs
 ///
-/// If there is a case where PID can be over 32-bit limit, or negative, please open an issue, we
+/// If there is a case where Pid can be over 32-bit limit, or negative, please open an issue, we
 /// would love to see that.
-pub type PID = u32;
+pub type Pid = u32;
 
 /// Provides all actions on processes
 ///
@@ -90,7 +90,7 @@ pub trait Process: Send {
         name: &str,
         architecture: Option<&ArchitectureIdent>,
     ) -> Result<ModuleInfo> {
-        let mut ret = Err(Error(ErrorOrigin::OSLayer, ErrorKind::ModuleNotFound));
+        let mut ret = Err(Error(ErrorOrigin::OsLayer, ErrorKind::ModuleNotFound));
         let callback = &mut |data: ModuleInfo| {
             if data.name.as_ref() == name {
                 ret = Ok(data);
@@ -166,7 +166,7 @@ pub struct ProcessInfo {
     /// On Windows this will be the address of the [`_EPROCESS`](https://www.nirsoft.net/kernel_struct/vista/EPROCESS.html) structure.
     pub address: Address,
     /// ID of this process.
-    pub pid: PID,
+    pub pid: Pid,
     /// Name of the process.
     pub name: ReprCStr,
     /// System architecture of the target system.

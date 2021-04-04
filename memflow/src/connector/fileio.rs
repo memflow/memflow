@@ -17,29 +17,29 @@ use std::io::{Read, Seek, SeekFrom, Write};
 ///
 /// # Examples
 /// ```
-/// use memflow::connector::FileIOMemory;
+/// use memflow::connector::FileIoMemory;
 /// use memflow::mem::MemoryMap;
 ///
 /// use std::fs::File;
 ///
 /// fn open(file: &File) {
 ///     let map = MemoryMap::new();
-///     let connector = FileIOMemory::try_with_reader(file, map);
+///     let connector = FileIoMemory::try_with_reader(file, map);
 /// }
 /// ```
 #[derive(Clone)]
-pub struct FileIOMemory<T> {
+pub struct FileIoMemory<T> {
     reader: T,
     mem_map: MemoryMap<(Address, usize)>,
 }
 
-impl<T: Seek + Read + Write + Send> FileIOMemory<T> {
+impl<T: Seek + Read + Write + Send> FileIoMemory<T> {
     pub fn try_with_reader(reader: T, mem_map: MemoryMap<(Address, usize)>) -> Result<Self> {
         Ok(Self { reader, mem_map })
     }
 }
 
-impl<T: Seek + Read + Write + Send> PhysicalMemory for FileIOMemory<T> {
+impl<T: Seek + Read + Write + Send> PhysicalMemory for FileIoMemory<T> {
     fn phys_read_raw_list(&mut self, data: &mut [PhysicalReadData]) -> Result<()> {
         let mut void = FnExtend::void();
         for ((file_off, _), buf) in self.mem_map.map_iter(

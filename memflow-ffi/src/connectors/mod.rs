@@ -4,8 +4,8 @@ use std::path::PathBuf;
 
 use memflow::error::AsIntResult;
 use memflow::plugins::{
-    connector::MUConnectorInstance, os::MUOSInstance, Args, ConnectorInstance, Inventory,
-    OSInstance,
+    connector::MuConnectorInstance, os::MuOsInstance, Args, ConnectorInstance, Inventory,
+    OsInstance,
 };
 
 use crate::util::*;
@@ -79,7 +79,7 @@ pub unsafe extern "C" fn inventory_create_connector(
     inv: &mut Inventory,
     name: *const c_char,
     args: *const c_char,
-    out: &mut MUConnectorInstance,
+    out: &mut MuConnectorInstance,
 ) -> i32 {
     let rname = CStr::from_ptr(name).to_string_lossy();
 
@@ -127,7 +127,7 @@ pub unsafe extern "C" fn inventory_create_os(
     name: *const c_char,
     args: *const c_char,
     mem: ConnectorInstance,
-    out: &mut MUOSInstance,
+    out: &mut MuOsInstance,
 ) -> i32 {
     let rname = CStr::from_ptr(name).to_string_lossy();
     let _args = CStr::from_ptr(args).to_string_lossy();
@@ -151,10 +151,10 @@ pub unsafe extern "C" fn inventory_create_os(
 ///
 /// # Safety
 ///
-/// `os` must point to a valid `OSInstance` that was created using one of the provided
+/// `os` must point to a valid `OsInstance` that was created using one of the provided
 /// functions.
 #[no_mangle]
-pub unsafe extern "C" fn os_drop(os: &mut OSInstance) {
+pub unsafe extern "C" fn os_drop(os: &mut OsInstance) {
     trace!("connector_drop: {:?}", os as *mut _);
     std::ptr::drop_in_place(os);
 }
@@ -170,7 +170,7 @@ pub unsafe extern "C" fn os_drop(os: &mut OSInstance) {
 /// `conn` has to point to a a valid `CloneablePhysicalMemory` created by one of the provided
 /// functions.
 #[no_mangle]
-pub unsafe extern "C" fn connector_clone(conn: &ConnectorInstance, out: &mut MUConnectorInstance) {
+pub unsafe extern "C" fn connector_clone(conn: &ConnectorInstance, out: &mut MuConnectorInstance) {
     trace!("connector_clone: {:?}", conn as *const _);
     *out.as_mut_ptr() = conn.clone();
 }

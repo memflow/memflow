@@ -1,7 +1,7 @@
 use super::super::VirtualMemoryInstance;
 use super::super::{util::*, COptArc, GenericCloneTable, OpaqueCloneTable};
 use super::OptionArchitectureIdent;
-use super::{MUAddress, MUModuleInfo};
+use super::{MuAddress, MuModuleInfo};
 use crate::architecture::ArchitectureIdent;
 use crate::error::*;
 use crate::os::{ModuleAddressCallback, ModuleInfo, Process, ProcessInfo};
@@ -31,9 +31,9 @@ pub struct ProcessFunctionTable<T> {
         process: &mut T,
         address: Address,
         architecture: ArchitectureIdent,
-        out: &mut MUModuleInfo,
+        out: &mut MuModuleInfo,
     ) -> i32,
-    pub primary_module_address: extern "C" fn(process: &mut T, out: &mut MUAddress) -> i32,
+    pub primary_module_address: extern "C" fn(process: &mut T, out: &mut MuAddress) -> i32,
     pub info: extern "C" fn(process: &T) -> &ProcessInfo,
     pub virt_mem: extern "C" fn(process: &mut T) -> &mut c_void,
     pub drop: unsafe extern "C" fn(thisptr: &mut T),
@@ -80,14 +80,14 @@ extern "C" fn c_module_by_address<T: Process>(
     process: &mut T,
     address: Address,
     target_arch: ArchitectureIdent,
-    out: &mut MUModuleInfo,
+    out: &mut MuModuleInfo,
 ) -> i32 {
     process
         .module_by_address(address, target_arch)
         .into_int_out_result(out)
 }
 
-extern "C" fn c_primary_module_address<T: Process>(process: &mut T, out: &mut MUAddress) -> i32 {
+extern "C" fn c_primary_module_address<T: Process>(process: &mut T, out: &mut MuAddress) -> i32 {
     process.primary_module_address().into_int_out_result(out)
 }
 
@@ -145,13 +145,13 @@ impl<'a> Process for PluginProcess<'a> {
         address: Address,
         architecture: ArchitectureIdent,
     ) -> Result<ModuleInfo> {
-        let mut out = MUModuleInfo::uninit();
+        let mut out = MuModuleInfo::uninit();
         let res = (self.vtable.module_by_address)(self.instance, address, architecture, &mut out);
         result_from_int(res, out)
     }
 
     fn primary_module_address(&mut self) -> Result<Address> {
-        let mut out = MUAddress::uninit();
+        let mut out = MuAddress::uninit();
         let res = (self.vtable.primary_module_address)(self.instance, &mut out);
         result_from_int(res, out)
     }

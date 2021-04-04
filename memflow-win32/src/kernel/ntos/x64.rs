@@ -40,7 +40,7 @@ pub fn find_with_va_hint<T: VirtualMemory>(
         va_base -= size::mb(2) as u64;
     }
 
-    Err(Error(ErrorOrigin::OSLayer, ErrorKind::ProcessNotFound)
+    Err(Error(ErrorOrigin::OsLayer, ErrorKind::ProcessNotFound)
         .log_trace("x64::find_with_va_hint: unable to locate ntoskrnl.exe via va hint"))
 }
 
@@ -71,7 +71,7 @@ fn find_with_va<T: VirtualMemory>(virt_mem: &mut T, va_base: u64) -> Result<u64>
         })
         .map(|(i, _, _)| va_base + i as u64 * x64::ARCH.page_size() as u64)
         .ok_or_else(|| {
-            Error(ErrorOrigin::OSLayer, ErrorKind::ProcessNotFound)
+            Error(ErrorOrigin::OsLayer, ErrorKind::ProcessNotFound)
                 .log_trace("unable to locate ntoskrnl.exe")
         })
 }
@@ -101,7 +101,7 @@ pub fn find<T: VirtualMemory>(
             let size_of_image = pehelper::try_get_pe_size(virt_mem, addr)?;
             Ok((addr, size_of_image))
         }
-        None => Err(Error(ErrorOrigin::OSLayer, ErrorKind::ProcessNotFound)
+        None => Err(Error(ErrorOrigin::OsLayer, ErrorKind::ProcessNotFound)
             .log_trace("x64::find: unable to locate ntoskrnl.exe with a page map")),
     }
 }

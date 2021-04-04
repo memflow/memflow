@@ -5,28 +5,28 @@ pub(crate) mod translate_data;
 use crate::error::Error;
 use crate::iter::SplitAtIndex;
 use crate::types::Address;
-pub(crate) use def::ArchMMUDef;
+pub(crate) use def::ArchMmuDef;
 pub(crate) use fixed_slice_vec::FixedSliceVec as MVec;
-pub(crate) use spec::ArchMMUSpec;
+pub(crate) use spec::ArchMmuSpec;
 use translate_data::{TranslateDataVec, TranslateVec, TranslationChunk};
 
-pub trait MMUTranslationBase: Clone + Copy + core::fmt::Debug {
+pub trait MmuTranslationBase: Clone + Copy + core::fmt::Debug {
     /// Retrieves page table address by virtual address
     fn get_pt_by_virt_addr(&self, address: Address) -> Address;
 
     /// Retrieves page table address, and its index by index within
-    /// For instance, on ARM index 257 would return kernel page table
+    /// For instance, on Arm index 257 would return kernel page table
     /// address, and index 1. On X86, however, this is a no-op that returns
     /// underlying page table Address and `idx`.
     fn get_pt_by_index(&self, idx: usize) -> (Address, usize);
 
     /// Retrieves number of page tables used by translation base. 1 on X86,
-    /// 1-2 on ARM (Win32 ARM merges both page tables)
+    /// 1-2 on Arm (Win32 Arm merges both page tables)
     fn pt_count(&self) -> usize;
 
     fn virt_addr_filter<B: SplitAtIndex, O: Extend<(Error, Address, B)>>(
         &self,
-        spec: &ArchMMUSpec,
+        spec: &ArchMmuSpec,
         addr: (Address, B),
         work_group: (&mut TranslationChunk<Self>, &mut TranslateDataVec<B>),
         out_fail: &mut O,
@@ -34,7 +34,7 @@ pub trait MMUTranslationBase: Clone + Copy + core::fmt::Debug {
 
     fn fill_init_chunk<VI, FO, B>(
         &self,
-        spec: &ArchMMUSpec,
+        spec: &ArchMmuSpec,
         out_fail: &mut FO,
         addrs: &mut VI,
         (next_work_addrs, tmp_addrs): (&mut TranslateDataVec<B>, &mut TranslateDataVec<B>),
@@ -62,7 +62,7 @@ pub trait MMUTranslationBase: Clone + Copy + core::fmt::Debug {
     }
 }
 
-impl MMUTranslationBase for Address {
+impl MmuTranslationBase for Address {
     fn get_pt_by_virt_addr(&self, _: Address) -> Address {
         *self
     }
@@ -77,7 +77,7 @@ impl MMUTranslationBase for Address {
 
     fn virt_addr_filter<B, O>(
         &self,
-        spec: &ArchMMUSpec,
+        spec: &ArchMmuSpec,
         addr: (Address, B),
         work_group: (&mut TranslationChunk<Self>, &mut TranslateDataVec<B>),
         out_fail: &mut O,

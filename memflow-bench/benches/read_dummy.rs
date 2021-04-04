@@ -4,7 +4,7 @@ use memflow_bench::*;
 use criterion::*;
 
 use memflow::dummy::DummyMemory as Memory;
-use memflow::dummy::DummyOS;
+use memflow::dummy::DummyOs;
 use memflow::os::Process;
 use memflow::prelude::v1::*;
 
@@ -17,7 +17,7 @@ fn initialize_virt_ctx() -> Result<(
     ModuleInfo,
 )> {
     let mem = Memory::new(size::mb(64));
-    let mut os = DummyOS::new(mem);
+    let mut os = DummyOs::new(mem);
 
     let vat = DirectTranslate::new();
 

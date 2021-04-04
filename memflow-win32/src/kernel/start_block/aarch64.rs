@@ -48,7 +48,7 @@ pub fn find(mem: &[u8]) -> Result<StartBlock> {
         })
         .next()
         .ok_or_else(|| {
-            Error(ErrorOrigin::OSLayer, ErrorKind::NotFound)
+            Error(ErrorOrigin::OsLayer, ErrorKind::NotFound)
                 .log_warn("unable to find aarch64 dtb in lowstub < 16M")
         })
 }

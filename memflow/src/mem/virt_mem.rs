@@ -1,7 +1,7 @@
 use std::prelude::v1::*;
 
 pub mod virtual_dma;
-pub use virtual_dma::VirtualDMA;
+pub use virtual_dma::VirtualDma;
 
 use super::VirtualMemoryBatcher;
 use crate::architecture::ArchitectureObj;
@@ -36,10 +36,10 @@ use std::mem::MaybeUninit;
 ///     println!("addr: {:x}", addr);
 ///     # assert_eq!(addr, 0x00ff_00ff_00ff_00ff);
 /// }
-/// # use memflow::dummy::{DummyMemory, DummyOS};
+/// # use memflow::dummy::{DummyMemory, DummyOs};
 /// # use memflow::os::Process;
 /// # use memflow::types::size;
-/// # let mut proc = DummyOS::quick_process(size::mb(2), &[255, 0, 255, 0, 255, 0, 255, 0]);
+/// # let mut proc = DummyOs::quick_process(size::mb(2), &[255, 0, 255, 0, 255, 0, 255, 0]);
 /// # let virt_base = proc.info().address;
 /// # read(proc.virt_mem(), virt_base);
 /// ```

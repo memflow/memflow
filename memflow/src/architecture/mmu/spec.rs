@@ -1,8 +1,8 @@
-use super::ArchMMUDef;
+use super::ArchMmuDef;
 use crate::architecture::Endianess;
 
 use super::translate_data::{TranslateData, TranslateDataVec, TranslateVec, TranslationChunk};
-use super::MMUTranslationBase;
+use super::MmuTranslationBase;
 use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 use crate::iter::FlowIters;
 use crate::iter::SplitAtIndex;
@@ -25,8 +25,8 @@ macro_rules! vtop_trace {
 
 const MAX_LEVELS: usize = 8;
 
-pub struct ArchMMUSpec {
-    pub def: ArchMMUDef,
+pub struct ArchMmuSpec {
+    pub def: ArchMmuDef,
     pub pte_addr_masks: [u64; MAX_LEVELS],
     pub virt_addr_bit_ranges: [(u8, u8); MAX_LEVELS],
     pub virt_addr_masks: [u64; MAX_LEVELS],
@@ -37,14 +37,14 @@ pub struct ArchMMUSpec {
     pub spare_allocs: usize,
 }
 
-impl From<ArchMMUDef> for ArchMMUSpec {
-    fn from(def: ArchMMUDef) -> Self {
+impl From<ArchMmuDef> for ArchMmuSpec {
+    fn from(def: ArchMmuDef) -> Self {
         Self::from_def(def)
     }
 }
 
-impl ArchMMUSpec {
-    pub const fn from_def(def: ArchMMUDef) -> Self {
+impl ArchMmuSpec {
+    pub const fn from_def(def: ArchMmuDef) -> Self {
         let mut pte_addr_masks = [0; MAX_LEVELS];
         let mut virt_addr_bit_ranges = [(0, 0); MAX_LEVELS];
         let mut virt_addr_masks = [0; MAX_LEVELS];
@@ -120,7 +120,7 @@ impl ArchMMUSpec {
         fail_out: &mut FO,
     ) where
         B: SplitAtIndex,
-        C: MMUTranslationBase,
+        C: MmuTranslationBase,
         FO: Extend<(Error, Address, B)>,
     {
         vtop_trace!("total {:x}+{:x}", addr, buf.length());
@@ -133,7 +133,7 @@ impl ArchMMUSpec {
 
         if let Some(data) = reject {
             fail_out.extend(Some((
-                Error(ErrorOrigin::MMU, ErrorKind::OutOfMemoryRange),
+                Error(ErrorOrigin::Mmu, ErrorKind::OutOfMemoryRange),
                 data.addr,
                 data.buf,
             )));
@@ -152,7 +152,7 @@ impl ArchMMUSpec {
 
             if let Some(data) = reject {
                 fail_out.extend(Some((
-                    Error(ErrorOrigin::MMU, ErrorKind::OutOfMemoryRange),
+                    Error(ErrorOrigin::Mmu, ErrorKind::OutOfMemoryRange),
                     data.addr,
                     data.buf,
                 )));
@@ -169,7 +169,7 @@ impl ArchMMUSpec {
                     chunks.push_data(higher, addrs_out);
                 } else {
                     fail_out.extend(Some((
-                        Error(ErrorOrigin::MMU, ErrorKind::OutOfMemoryRange),
+                        Error(ErrorOrigin::Mmu, ErrorKind::OutOfMemoryRange),
                         higher.addr,
                         higher.buf,
                     )));
@@ -307,8 +307,8 @@ impl ArchMMUSpec {
             || ((self.def.large_page_bit)(pte_addr) && self.valid_final_page_steps[step])
     }
 
-    /// This function will do a virtual to physical memory translation for the `ArchMMUSpec` in
-    /// `MMUTranslationBase` scope, over multiple elements.
+    /// This function will do a virtual to physical memory translation for the `ArchMmuSpec` in
+    /// `MmuTranslationBase` scope, over multiple elements.
     pub(crate) fn virt_to_phys_iter<T, B, D, VI, VO, FO>(
         &self,
         mem: &mut T,
@@ -320,7 +320,7 @@ impl ArchMMUSpec {
     ) where
         T: PhysicalMemory + ?Sized,
         B: SplitAtIndex,
-        D: MMUTranslationBase,
+        D: MmuTranslationBase,
         VI: Iterator<Item = (Address, B)>,
         VO: Extend<(PhysicalAddress, B)>,
         FO: Extend<(Error, Address, B)>,
@@ -559,7 +559,7 @@ impl ArchMMUSpec {
         waiting_pair: &mut (TranslateVec, TranslateDataVec<B>),
         tmp_addrs: &mut TranslateDataVec<B>,
     ) where
-        D: MMUTranslationBase,
+        D: MmuTranslationBase,
         FO: Extend<(Error, Address, B)>,
         VI: Iterator<Item = (Address, B)>,
     {
@@ -657,7 +657,7 @@ impl ArchMMUSpec {
                 // Failure
                 while let Some(entry) = chunk.pop_data(working_addrs) {
                     out_fail.extend(Some((
-                        Error(ErrorOrigin::MMU, ErrorKind::OutOfMemoryRange),
+                        Error(ErrorOrigin::Mmu, ErrorKind::OutOfMemoryRange),
                         entry.addr,
                         entry.buf,
                     )));

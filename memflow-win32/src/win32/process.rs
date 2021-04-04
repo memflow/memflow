@@ -6,7 +6,7 @@ use std::fmt;
 
 use memflow::architecture::ArchitectureIdent;
 use memflow::error::{Error, ErrorKind, ErrorOrigin, Result};
-use memflow::mem::{PhysicalMemory, VirtualDMA, VirtualMemory, VirtualTranslate};
+use memflow::mem::{PhysicalMemory, VirtualDma, VirtualMemory, VirtualTranslate};
 use memflow::os::{ModuleAddressCallback, ModuleAddressInfo, ModuleInfo, Process, ProcessInfo};
 use memflow::types::Address;
 
@@ -176,7 +176,7 @@ impl<T: VirtualMemory> Process for Win32Process<T> {
         } else {
             None
         }
-        .ok_or(Error(ErrorOrigin::OSLayer, ErrorKind::InvalidArchitecture))?;
+        .ok_or(Error(ErrorOrigin::OsLayer, ErrorKind::InvalidArchitecture))?;
 
         info.module_info_from_entry(
             address,
@@ -192,7 +192,7 @@ impl<T: VirtualMemory> Process for Win32Process<T> {
     /// This will be the module of the executable that is being run, and whose name is stored in
     /// _EPROCESS::IMAGE_FILE_NAME
     fn primary_module_address(&mut self) -> memflow::error::Result<Address> {
-        let mut ret = Err(Error(ErrorOrigin::OSLayer, ErrorKind::ModuleNotFound));
+        let mut ret = Err(Error(ErrorOrigin::OsLayer, ErrorKind::ModuleNotFound));
         let sptr = self as *mut Self;
         let callback = &mut |ModuleAddressInfo { address, arch }| {
             let s = unsafe { sptr.as_mut() }.unwrap();
@@ -227,11 +227,11 @@ impl<T: VirtualMemory> Process for Win32Process<T> {
 // TODO: replace the following impls with a dedicated builder
 // TODO: add non cloneable thing
 impl<'a, T: PhysicalMemory, V: VirtualTranslate>
-    Win32Process<VirtualDMA<T, V, Win32VirtualTranslate>>
+    Win32Process<VirtualDma<T, V, Win32VirtualTranslate>>
 {
     pub fn with_kernel(kernel: Win32Kernel<T, V>, proc_info: Win32ProcessInfo) -> Self {
         let (phys_mem, vat) = kernel.virt_mem.into_inner();
-        let virt_mem = VirtualDMA::with_vat(
+        let virt_mem = VirtualDma::with_vat(
             phys_mem,
             proc_info.base_info.proc_arch,
             proc_info.translator(),
@@ -251,11 +251,11 @@ impl<'a, T: PhysicalMemory, V: VirtualTranslate>
 }
 
 impl<'a, T: PhysicalMemory, V: VirtualTranslate>
-    Win32Process<VirtualDMA<&'a mut T, &'a mut V, Win32VirtualTranslate>>
+    Win32Process<VirtualDma<&'a mut T, &'a mut V, Win32VirtualTranslate>>
 {
     /// Constructs a new process by borrowing a kernel object.
     ///
-    /// Internally this will create a `VirtualDMA` object that also
+    /// Internally this will create a `VirtualDma` object that also
     /// borrows the PhysicalMemory and Vat objects from the kernel.
     ///
     /// The resulting process object is NOT cloneable due to the mutable borrowing.
@@ -264,7 +264,7 @@ impl<'a, T: PhysicalMemory, V: VirtualTranslate>
     /// which will move the kernel object.
     pub fn with_kernel_ref(kernel: &'a mut Win32Kernel<T, V>, proc_info: Win32ProcessInfo) -> Self {
         let (phys_mem, vat) = kernel.virt_mem.mem_vat_pair();
-        let virt_mem = VirtualDMA::with_vat(
+        let virt_mem = VirtualDma::with_vat(
             phys_mem,
             proc_info.base_info.proc_arch,
             proc_info.translator(),

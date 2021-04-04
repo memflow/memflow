@@ -28,7 +28,7 @@ pub fn find(mem: &[u8]) -> Result<StartBlock> {
             dtb: a,
         })
         .ok_or_else(|| {
-            Error(ErrorOrigin::OSLayer, ErrorKind::NotFound)
+            Error(ErrorOrigin::OsLayer, ErrorKind::NotFound)
                 .log_warn("unable to find x86_pae dtb in lowstub < 16M")
         })
 }

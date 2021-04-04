@@ -91,12 +91,12 @@ impl<T: VirtualMemory> Process for DummyProcess<T> {
             .filter(|m| m.arch == architecture)
             .cloned()
             .next()
-            .ok_or(Error(ErrorOrigin::OSLayer, ErrorKind::ModuleNotFound))
+            .ok_or(Error(ErrorOrigin::OsLayer, ErrorKind::ModuleNotFound))
     }
 
     /// Retrieves address of the primary module structure of the process
     fn primary_module_address(&mut self) -> Result<Address> {
-        let mut ret = Err(Error(ErrorOrigin::OSLayer, ErrorKind::ModuleNotFound));
+        let mut ret = Err(Error(ErrorOrigin::OsLayer, ErrorKind::ModuleNotFound));
         let callback = &mut |moduleinfo: ModuleAddressInfo| {
             ret = Ok(moduleinfo.address);
             false

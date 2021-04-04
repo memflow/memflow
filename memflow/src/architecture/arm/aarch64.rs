@@ -1,13 +1,13 @@
 use super::{
-    super::{ArchMMUDef, ArchitectureObj, Endianess, ScopedVirtualTranslate},
-    ARMArchitecture, ARMScopedVirtualTranslate,
+    super::{ArchMmuDef, ArchitectureObj, Endianess, ScopedVirtualTranslate},
+    ArmArchitecture, ArmScopedVirtualTranslate,
 };
 
 use crate::types::Address;
 
-pub(super) static ARCH_SPEC: ARMArchitecture = ARMArchitecture {
+pub(super) static ARCH_SPEC: ArmArchitecture = ArmArchitecture {
     bits: 64,
-    mmu: ArchMMUDef {
+    mmu: ArchMmuDef {
         virtual_address_splits: &[9, 9, 9, 9, 12],
         valid_final_page_steps: &[2, 3, 4],
         address_space_bits: 52,
@@ -25,5 +25,5 @@ pub(super) static ARCH_SPEC: ARMArchitecture = ARMArchitecture {
 pub static ARCH: ArchitectureObj = &ARCH_SPEC;
 
 pub fn new_translator(dtb1: Address, dtb2: Address) -> impl ScopedVirtualTranslate {
-    ARMScopedVirtualTranslate::new(&ARCH_SPEC, dtb1, dtb2)
+    ArmScopedVirtualTranslate::new(&ARCH_SPEC, dtb1, dtb2)
 }

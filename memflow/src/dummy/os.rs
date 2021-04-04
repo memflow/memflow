@@ -1,13 +1,13 @@
 use super::{DummyMemory, DummyProcessInfo};
 use crate::architecture::ArchitectureIdent;
 use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
-use crate::mem::virt_mem::VirtualDMA;
+use crate::mem::virt_mem::VirtualDma;
 use crate::mem::PhysicalMemory;
-use crate::os::{ModuleInfo, OSInfo, ProcessInfo, PID};
+use crate::os::{ModuleInfo, OsInfo, Pid, ProcessInfo};
 use crate::plugins::{
     create_bare,
-    os::{MUOSInstance, OSDescriptor},
-    Args, COption, ConnectorInstance, OSInstance, MEMFLOW_PLUGIN_VERSION,
+    os::{MuOsInstance, OsDescriptor},
+    Args, COption, ConnectorInstance, OsInstance, MEMFLOW_PLUGIN_VERSION,
 };
 use crate::types::ReprCStr;
 use crate::types::{size, Address};
@@ -86,17 +86,17 @@ impl PageInfo {
     }
 }
 
-pub struct DummyOS {
+pub struct DummyOs {
     mem: DummyMemory,
     page_list: VecDeque<PageInfo>,
     pt_pages: Vec<PageInfo>,
-    last_pid: PID,
+    last_pid: Pid,
     rng: XorShiftRng,
     processes: Vec<DummyProcessInfo>,
-    info: OSInfo,
+    info: OsInfo,
 }
 
-impl Clone for DummyOS {
+impl Clone for DummyOs {
     fn clone(&self) -> Self {
         Self {
             mem: self.mem.clone(),
@@ -110,13 +110,13 @@ impl Clone for DummyOS {
     }
 }
 
-impl AsMut<DummyMemory> for DummyOS {
+impl AsMut<DummyMemory> for DummyOs {
     fn as_mut(&mut self) -> &mut DummyMemory {
         &mut self.mem
     }
 }
 
-unsafe impl<S> FrameAllocator<S> for DummyOS
+unsafe impl<S> FrameAllocator<S> for DummyOs
 where
     S: PageSize,
 {
@@ -129,7 +129,7 @@ where
     }
 }
 
-impl DummyOS {
+impl DummyOs {
     pub fn new_and_dtb(
         mem: DummyMemory,
         virt_size: usize,
@@ -144,7 +144,7 @@ impl DummyOS {
         self.mem
     }
 
-    pub fn quick_process(virt_size: usize, buffer: &[u8]) -> <Self as OSInner>::IntoProcessType {
+    pub fn quick_process(virt_size: usize, buffer: &[u8]) -> <Self as OsInner>::IntoProcessType {
         let mem = DummyMemory::new(virt_size + size::mb(2));
         let mut os = Self::new(mem);
         let pid = os.alloc_process(virt_size, buffer);
@@ -153,7 +153,7 @@ impl DummyOS {
 
     /*pub fn new_virt(size: usize, virt_size: usize, buffer: &[u8]) -> (impl VirtualMemory, Address) {
         let (ret, dtb, virt_base) = Self::new_and_dtb(size, virt_size, buffer);
-        let virt = VirtualDMA::new(ret.mem, x64::ARCH, x64::new_translator(dtb));
+        let virt = VirtualDma::new(ret.mem, x64::ARCH, x64::new_translator(dtb));
         (virt, virt_base)
     }*/
 
@@ -232,7 +232,7 @@ impl DummyOS {
             last_pid: 0,
             rng,
             processes: vec![],
-            info: OSInfo {
+            info: OsInfo {
                 base: Address::INVALID,
                 size: 0,
                 arch: ArchitectureIdent::X86(64, false),
@@ -259,7 +259,7 @@ impl DummyOS {
         }
     }
 
-    pub fn alloc_process(&mut self, map_size: usize, test_buf: &[u8]) -> PID {
+    pub fn alloc_process(&mut self, map_size: usize, test_buf: &[u8]) -> Pid {
         let (dtb, address) = self.alloc_dtb(map_size, test_buf);
 
         self.last_pid += 1;
@@ -404,11 +404,11 @@ impl DummyOS {
 
 use super::process::DummyProcess;
 use crate::mem::DirectTranslate;
-use crate::os::{AddressCallback, OSInner};
+use crate::os::{AddressCallback, OsInner};
 
-pub type DummyVirtMem<T> = VirtualDMA<T, DirectTranslate, X86ScopedVirtualTranslate>;
+pub type DummyVirtMem<T> = VirtualDma<T, DirectTranslate, X86ScopedVirtualTranslate>;
 
-impl<'a> OSInner<'a> for DummyOS {
+impl<'a> OsInner<'a> for DummyOs {
     type ProcessType = DummyProcess<DummyVirtMem<&'a mut DummyMemory>>;
     type IntoProcessType = DummyProcess<DummyVirtMem<DummyMemory>>;
 
@@ -429,7 +429,7 @@ impl<'a> OSInner<'a> for DummyOS {
         self.processes
             .iter()
             .find(|p| p.info.address == address)
-            .ok_or(Error(ErrorOrigin::OSLayer, ErrorKind::ProcessNotFound))
+            .ok_or(Error(ErrorOrigin::OsLayer, ErrorKind::ProcessNotFound))
             .map(|p| p.info.clone())
     }
 
@@ -441,10 +441,10 @@ impl<'a> OSInner<'a> for DummyOS {
             .processes
             .iter()
             .find(|p| p.info.address == info.address)
-            .ok_or(Error(ErrorOrigin::OSLayer, ErrorKind::InvalidProcessInfo))?
+            .ok_or(Error(ErrorOrigin::OsLayer, ErrorKind::InvalidProcessInfo))?
             .clone();
         Ok(DummyProcess {
-            mem: VirtualDMA::new(&mut self.mem, x64::ARCH, x64::new_translator(proc.dtb)),
+            mem: VirtualDma::new(&mut self.mem, x64::ARCH, x64::new_translator(proc.dtb)),
             proc,
         })
     }
@@ -461,10 +461,10 @@ impl<'a> OSInner<'a> for DummyOS {
             .processes
             .iter()
             .find(|p| p.info.address == info.address)
-            .ok_or(Error(ErrorOrigin::OSLayer, ErrorKind::InvalidProcessInfo))?
+            .ok_or(Error(ErrorOrigin::OsLayer, ErrorKind::InvalidProcessInfo))?
             .clone();
         Ok(DummyProcess {
-            mem: VirtualDMA::new(self.mem, x64::ARCH, x64::new_translator(proc.dtb)),
+            mem: VirtualDma::new(self.mem, x64::ARCH, x64::new_translator(proc.dtb)),
             proc,
         })
     }
@@ -483,18 +483,18 @@ impl<'a> OSInner<'a> for DummyOS {
     /// # Arguments
     /// * `address` - address where module's information resides in
     fn module_by_address(&mut self, _address: Address) -> Result<ModuleInfo> {
-        Err(Error(ErrorOrigin::OSLayer, ErrorKind::ModuleNotFound))
+        Err(Error(ErrorOrigin::OsLayer, ErrorKind::ModuleNotFound))
     }
 
     /// Retrieves the kernel info
-    fn info(&self) -> &OSInfo {
+    fn info(&self) -> &OsInfo {
         &self.info
     }
 }
 
 #[doc(hidden)]
 #[no_mangle]
-pub static MEMFLOW_OS_DUMMY: OSDescriptor = OSDescriptor {
+pub static MEMFLOW_OS_DUMMY: OsDescriptor = OsDescriptor {
     plugin_version: MEMFLOW_PLUGIN_VERSION,
     name: "dummy",
     version: env!("CARGO_PKG_VERSION"),
@@ -507,7 +507,7 @@ extern "C" fn mf_create(
     args: &ReprCStr,
     mem: COption<ConnectorInstance>,
     log_level: i32,
-    out: &mut MUOSInstance,
+    out: &mut MuOsInstance,
 ) -> i32 {
     create_bare(args, mem.into(), log_level, out, build_dummy)
 }
@@ -516,11 +516,11 @@ pub fn build_dummy(
     args: &Args,
     _mem: Option<ConnectorInstance>,
     _log_level: Level,
-) -> Result<OSInstance> {
+) -> Result<OsInstance> {
     let size = super::mem::parse_size(args)?;
     let mem = DummyMemory::new(size);
-    let os = DummyOS::new(mem);
+    let os = DummyOs::new(mem);
 
-    let instance = OSInstance::builder(os).build();
+    let instance = OsInstance::builder(os).build();
     Ok(instance)
 }

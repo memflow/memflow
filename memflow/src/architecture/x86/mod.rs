@@ -3,7 +3,7 @@ pub mod x32_pae;
 pub mod x64;
 
 use super::{
-    mmu::ArchMMUSpec, Architecture, ArchitectureIdent, ArchitectureObj, Endianess,
+    mmu::ArchMmuSpec, Architecture, ArchitectureIdent, ArchitectureObj, Endianess,
     ScopedVirtualTranslate,
 };
 
@@ -18,7 +18,7 @@ pub struct X86Architecture {
     /// Defines how many bits does the native word size have
     bits: u8,
     /// Defines the underlying MMU used for address translation
-    mmu: ArchMMUSpec,
+    mmu: ArchMmuSpec,
 }
 
 impl Architecture for X86Architecture {
@@ -107,7 +107,7 @@ fn underlying_arch(arch: ArchitectureObj) -> Option<&'static X86Architecture> {
 
 pub fn new_translator(dtb: Address, arch: ArchitectureObj) -> Result<X86ScopedVirtualTranslate> {
     let arch =
-        underlying_arch(arch).ok_or(Error(ErrorOrigin::MMU, ErrorKind::InvalidArchitecture))?;
+        underlying_arch(arch).ok_or(Error(ErrorOrigin::Mmu, ErrorKind::InvalidArchitecture))?;
     Ok(X86ScopedVirtualTranslate::new(arch, dtb))
 }
 

@@ -8,7 +8,7 @@ use std::ffi::c_void;
 
 use super::super::COptArc;
 use super::PluginConnectorCpuState;
-use super::{MUArcPluginCpuState, MUPluginCpuState};
+use super::{MuArcPluginCpuState, MuPluginCpuState};
 
 use libloading::Library;
 
@@ -26,9 +26,9 @@ impl Clone for OpaqueConnectorCpuStateFunctionTable {
 #[repr(C)]
 pub struct ConnectorCpuStateFunctionTable<'a, K, T> {
     pub cpu_state:
-        extern "C" fn(os: &'a mut T, lib: COptArc<Library>, out: &mut MUPluginCpuState<'a>) -> i32,
+        extern "C" fn(os: &'a mut T, lib: COptArc<Library>, out: &mut MuPluginCpuState<'a>) -> i32,
     pub into_cpu_state:
-        extern "C" fn(os: &mut T, lib: COptArc<Library>, out: &mut MUArcPluginCpuState) -> i32,
+        extern "C" fn(os: &mut T, lib: COptArc<Library>, out: &mut MuArcPluginCpuState) -> i32,
     phantom: std::marker::PhantomData<K>,
 }
 
@@ -55,7 +55,7 @@ impl<'a, P: 'static + CpuState + Clone, T: PluginConnectorCpuState<P>>
 extern "C" fn c_cpu_state<'a, T: 'a + ConnectorCpuStateInner<'a>>(
     connector: &'a mut T,
     lib: COptArc<Library>,
-    out: &mut MUPluginCpuState<'a>,
+    out: &mut MuPluginCpuState<'a>,
 ) -> i32 {
     connector
         .cpu_state()
@@ -69,7 +69,7 @@ extern "C" fn c_into_cpu_state<
 >(
     connector: &mut T,
     lib: COptArc<Library>,
-    out: &mut MUArcPluginCpuState,
+    out: &mut MuArcPluginCpuState,
 ) -> i32 {
     let connector = unsafe { Box::from_raw(connector) };
     connector

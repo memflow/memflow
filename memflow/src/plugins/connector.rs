@@ -8,7 +8,7 @@ pub use instance::{
 };
 
 use super::{
-    Args, CArc, GenericBaseTable, Loadable, OSInstance, OpaqueBaseTable, PluginDescriptor,
+    Args, CArc, GenericBaseTable, Loadable, OpaqueBaseTable, OsInstance, PluginDescriptor,
 };
 
 use crate::types::ReprCStr;
@@ -24,11 +24,11 @@ pub use cpu_state::{
 use libloading::Library;
 
 // Type aliases needed for &mut MaybeUninit<T> to work with bindgen
-pub type MUPluginCpuState<'a> = MaybeUninit<PluginCpuState<'a>>;
-pub type MUArcPluginCpuState = MaybeUninit<ArcPluginCpuState>;
-pub type MUConnectorInstance = MaybeUninit<ConnectorInstance>;
+pub type MuPluginCpuState<'a> = MaybeUninit<PluginCpuState<'a>>;
+pub type MuArcPluginCpuState = MaybeUninit<ArcPluginCpuState>;
+pub type MuConnectorInstance = MaybeUninit<ConnectorInstance>;
 
-/// Subtrait of Plugin where `Self`, and `OSKeyboard::IntoKeyboardType` are `Clone`
+/// Subtrait of Plugin where `Self`, and `OsKeyboard::IntoKeyboardType` are `Clone`
 pub trait PluginConnectorCpuState<T: CpuState + Clone>:
     'static + Clone + for<'a> ConnectorCpuStateInner<'a, IntoCpuStateType = T>
 {
@@ -43,7 +43,7 @@ impl<
 pub fn create_with_logging<T: 'static + PhysicalMemory + Clone>(
     args: &ReprCStr,
     log_level: i32,
-    out: &mut MUConnectorInstance,
+    out: &mut MuConnectorInstance,
     create_fn: impl Fn(&Args, log::Level) -> Result<T>,
 ) -> i32 {
     super::util::create_with_logging(args, log_level, out, |a, l| {
@@ -53,7 +53,7 @@ pub fn create_with_logging<T: 'static + PhysicalMemory + Clone>(
 
 pub fn create_without_logging<T: 'static + PhysicalMemory + Clone>(
     args: &ReprCStr,
-    out: &mut MUConnectorInstance,
+    out: &mut MuConnectorInstance,
     create_fn: impl Fn(&Args) -> Result<T>,
 ) -> i32 {
     super::util::create_without_logging(args, out, |a| {
@@ -90,8 +90,8 @@ pub struct LoadableConnector {
 
 impl Loadable for LoadableConnector {
     type Instance = ConnectorInstance;
-    type InputArg = Option<OSInstance>;
-    type CInputArg = Option<OSInstance>;
+    type InputArg = Option<OsInstance>;
+    type CInputArg = Option<OsInstance>;
 
     fn ident(&self) -> &str {
         self.descriptor.name
@@ -119,7 +119,7 @@ impl Loadable for LoadableConnector {
         args: &Args,
     ) -> Result<ConnectorInstance> {
         let cstr = ReprCStr::from(args.to_string());
-        let mut out = MUConnectorInstance::uninit();
+        let mut out = MuConnectorInstance::uninit();
         let res = (self.descriptor.create)(&cstr, input, log::max_level() as i32, &mut out);
         result_from_int(res, out).map(|mut c| {
             c.library = library.into();

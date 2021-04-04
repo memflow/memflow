@@ -13,9 +13,9 @@ use std::fmt;
 
 use memflow::architecture::{ArchitectureIdent, ArchitectureObj};
 use memflow::error::{Error, ErrorKind, ErrorOrigin, Result};
-use memflow::mem::{DirectTranslate, PhysicalMemory, VirtualDMA, VirtualMemory, VirtualTranslate};
+use memflow::mem::{DirectTranslate, PhysicalMemory, VirtualDma, VirtualMemory, VirtualTranslate};
 use memflow::os::{
-    AddressCallback, ModuleInfo, OSInfo, OSInner, OSKeyboardInner, Process, ProcessInfo, PID,
+    AddressCallback, ModuleInfo, OsInfo, OsInner, OsKeyboardInner, Pid, Process, ProcessInfo,
 };
 use memflow::types::{Address, ReprCStr};
 
@@ -25,7 +25,7 @@ const MAX_ITER_COUNT: usize = 65536;
 
 #[derive(Clone)]
 pub struct Win32Kernel<T, V> {
-    pub virt_mem: VirtualDMA<T, V, Win32VirtualTranslate>,
+    pub virt_mem: VirtualDma<T, V, Win32VirtualTranslate>,
     pub offsets: Win32Offsets,
 
     pub kernel_info: Win32KernelInfo,
@@ -45,7 +45,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
         // be different to the one used in the actual kernel.
         // In case of a failure this will fall back to the winload dtb.
         let sysproc_dtb = {
-            let mut reader = VirtualDMA::with_vat(
+            let mut reader = VirtualDma::with_vat(
                 &mut phys_mem,
                 kernel_info.os_info.arch,
                 Win32VirtualTranslate::new(kernel_info.os_info.arch, kernel_info.dtb),
@@ -68,7 +68,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
         info!("sysproc_dtb={:x}", sysproc_dtb);
 
         Self {
-            virt_mem: VirtualDMA::with_vat(
+            virt_mem: VirtualDma::with_vat(
                 phys_mem,
                 kernel_info.os_info.arch,
                 Win32VirtualTranslate::new(kernel_info.os_info.arch, kernel_info.dtb),
@@ -90,14 +90,14 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
                 .virt_mem
                 .virt_read_raw(self.kernel_info.os_info.base, self.kernel_info.os_info.size)?;
             let pe = PeView::from_bytes(&image).map_err(|err| {
-                Error(ErrorOrigin::OSLayer, ErrorKind::InvalidPeFile).log_info(err)
+                Error(ErrorOrigin::OsLayer, ErrorKind::InvalidPeFile).log_info(err)
             })?;
             let addr = match pe.get_export_by_name("PsLoadedModuleList").map_err(|err| {
-                Error(ErrorOrigin::OSLayer, ErrorKind::ExportNotFound).log_info(err)
+                Error(ErrorOrigin::OsLayer, ErrorKind::ExportNotFound).log_info(err)
             })? {
                 Export::Symbol(s) => self.kernel_info.os_info.base + *s as usize,
                 Export::Forward(_) => {
-                    return Err(Error(ErrorOrigin::OSLayer, ErrorKind::ExportNotFound)
+                    return Err(Error(ErrorOrigin::OsLayer, ErrorKind::ExportNotFound)
                         .log_info("PsLoadedModuleList found but it was a forwarded export"))
                 }
             };
@@ -235,7 +235,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
         // construct reader with process dtb
         // TODO: can tlb be used here already?
         let (phys_mem, vat) = self.virt_mem.mem_vat_pair();
-        let mut proc_reader = VirtualDMA::with_vat(
+        let mut proc_reader = VirtualDma::with_vat(
             phys_mem,
             base_info.proc_arch,
             Win32VirtualTranslate::new(self.kernel_info.os_info.arch, dtb),
@@ -309,7 +309,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
     }
 
     fn process_info_base_by_address(&mut self, address: Address) -> Result<ProcessInfo> {
-        let pid: PID = self
+        let pid: Pid = self
             .virt_mem
             .virt_read(address + self.offsets.eproc_pid())?;
         trace!("pid={}", pid);
@@ -347,7 +347,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
                 }
             }
             32 => sys_arch,
-            _ => return Err(Error(ErrorOrigin::OSLayer, ErrorKind::InvalidArchitecture)),
+            _ => return Err(Error(ErrorOrigin::OsLayer, ErrorKind::InvalidArchitecture)),
         };
         trace!("proc_arch={:?}", proc_arch);
 
@@ -373,17 +373,17 @@ impl<T: PhysicalMemory, V: VirtualTranslate> AsMut<T> for Win32Kernel<T, V> {
     }
 }
 
-impl<T: PhysicalMemory, V: VirtualTranslate> AsMut<VirtualDMA<T, V, Win32VirtualTranslate>>
+impl<T: PhysicalMemory, V: VirtualTranslate> AsMut<VirtualDma<T, V, Win32VirtualTranslate>>
     for Win32Kernel<T, V>
 {
-    fn as_mut(&mut self) -> &mut VirtualDMA<T, V, Win32VirtualTranslate> {
+    fn as_mut(&mut self) -> &mut VirtualDma<T, V, Win32VirtualTranslate> {
         &mut self.virt_mem
     }
 }
 
-impl<'a, T: PhysicalMemory + 'a, V: VirtualTranslate + 'a> OSInner<'a> for Win32Kernel<T, V> {
-    type ProcessType = Win32Process<VirtualDMA<&'a mut T, &'a mut V, Win32VirtualTranslate>>;
-    type IntoProcessType = Win32Process<VirtualDMA<T, V, Win32VirtualTranslate>>;
+impl<'a, T: PhysicalMemory + 'a, V: VirtualTranslate + 'a> OsInner<'a> for Win32Kernel<T, V> {
+    type ProcessType = Win32Process<VirtualDma<&'a mut T, &'a mut V, Win32VirtualTranslate>>;
+    type IntoProcessType = Win32Process<VirtualDma<T, V, Win32VirtualTranslate>>;
 
     /// Walks a process list and calls a callback for each process structure address
     ///
@@ -477,7 +477,7 @@ impl<'a, T: PhysicalMemory + 'a, V: VirtualTranslate + 'a> OSInner<'a> for Win32
         callback: AddressCallback,
     ) -> memflow::error::Result<()> {
         self.kernel_modules()?
-            .module_entry_list_callback::<Self, VirtualDMA<T, V, Win32VirtualTranslate>>(
+            .module_entry_list_callback::<Self, VirtualDma<T, V, Win32VirtualTranslate>>(
                 self,
                 self.kernel_info.os_info.arch,
                 callback,
@@ -501,16 +501,16 @@ impl<'a, T: PhysicalMemory + 'a, V: VirtualTranslate + 'a> OSInner<'a> for Win32
     }
 
     /// Retrieves the kernel info
-    fn info(&self) -> &OSInfo {
+    fn info(&self) -> &OsInfo {
         &self.kernel_info.os_info
     }
 }
 
-impl<'a, T: PhysicalMemory + 'a, V: VirtualTranslate + 'a> OSKeyboardInner<'a>
+impl<'a, T: PhysicalMemory + 'a, V: VirtualTranslate + 'a> OsKeyboardInner<'a>
     for Win32Kernel<T, V>
 {
-    type KeyboardType = Win32Keyboard<VirtualDMA<&'a mut T, &'a mut V, Win32VirtualTranslate>>;
-    type IntoKeyboardType = Win32Keyboard<VirtualDMA<T, V, Win32VirtualTranslate>>;
+    type KeyboardType = Win32Keyboard<VirtualDma<&'a mut T, &'a mut V, Win32VirtualTranslate>>;
+    type IntoKeyboardType = Win32Keyboard<VirtualDma<T, V, Win32VirtualTranslate>>;
 
     fn keyboard(&'a mut self) -> memflow::error::Result<Self::KeyboardType> {
         Ok(Win32Keyboard::with_kernel_ref(self)?)

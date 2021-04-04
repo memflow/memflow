@@ -6,13 +6,13 @@ use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 use crate::types::{Address, PhysicalAddress};
 
 #[derive(Clone, Copy)]
-pub struct TLBEntry {
+pub struct TlbEntry {
     pub pt_index: usize,
     pub virt_addr: Address,
     pub phys_addr: PhysicalAddress,
 }
 
-impl TLBEntry {
+impl TlbEntry {
     pub const fn create_invalid() -> Self {
         Self {
             pt_index: !0,
@@ -38,12 +38,12 @@ impl CachedEntry {
 }
 
 #[derive(Clone)]
-pub struct TLBCache<T> {
+pub struct TlbCache<T> {
     entries: Box<[CachedEntry]>,
     pub validator: T,
 }
 
-impl<T: CacheValidator> TLBCache<T> {
+impl<T: CacheValidator> TlbCache<T> {
     pub fn new(size: usize, mut validator: T) -> Self {
         validator.allocate_slots(size);
 
@@ -69,7 +69,7 @@ impl<T: CacheValidator> TLBCache<T> {
         translator: &D,
         addr: Address,
         arch: ArchitectureObj,
-    ) -> Option<Result<TLBEntry>> {
+    ) -> Option<Result<TlbEntry>> {
         let pt_index = translator.translation_table_id(addr);
         let page_size = arch.page_size();
         let page_address = addr.as_page_aligned(page_size);
@@ -80,7 +80,7 @@ impl<T: CacheValidator> TLBCache<T> {
             && self.validator.is_slot_valid(idx)
         {
             if entry.phys_page.is_valid() && entry.phys_page.has_page() {
-                Some(Ok(TLBEntry {
+                Some(Ok(TlbEntry {
                     pt_index,
                     virt_addr: addr,
                     // TODO: this should be aware of huge pages
@@ -92,7 +92,7 @@ impl<T: CacheValidator> TLBCache<T> {
                     ),
                 }))
             } else {
-                Some(Err(Error(ErrorOrigin::TLBCache, ErrorKind::NotFound)))
+                Some(Err(Error(ErrorOrigin::TlbCache, ErrorKind::NotFound)))
             }
         } else {
             None

@@ -18,7 +18,7 @@ pub mod x86;
 #[macro_use]
 mod mmu;
 
-pub(crate) use mmu::ArchMMUDef;
+pub(crate) use mmu::ArchMmuDef;
 
 use crate::error::{Error, Result};
 use crate::iter::{FnExtend, SplitAtIndex};
@@ -55,7 +55,7 @@ pub trait ScopedVirtualTranslate: Clone + Copy + Send {
     /// ```
     /// # use memflow::error::Result;
     /// # use memflow::types::{PhysicalAddress, Address};
-    /// # use memflow::dummy::{DummyMemory, DummyOS};
+    /// # use memflow::dummy::{DummyMemory, DummyOs};
     /// use memflow::architecture::ScopedVirtualTranslate;
     /// use memflow::architecture::x86::x64;
     /// use memflow::types::size;
@@ -64,7 +64,7 @@ pub trait ScopedVirtualTranslate: Clone + Copy + Send {
     /// # const CHUNK_SIZE: usize = 2;
     /// #
     /// # let mem = DummyMemory::new(size::mb(16));
-    /// # let mut os = DummyOS::new(mem);
+    /// # let mut os = DummyOs::new(mem);
     /// # let (dtb, virtual_base) = os.alloc_dtb(VIRT_MEM_SIZE, &[]);
     /// # let mut mem = os.into_inner();
     /// # let translator = x64::new_translator(dtb);
@@ -246,7 +246,7 @@ pub enum ArchitectureIdent {
     /// Second argument - `address_extensions` control whether address extensions are
     /// enabled (PAE on x32, or LA57 on x64). Warning: LA57 is currently unsupported.
     X86(u8, bool),
-    /// ARM 64-bit architecture with specified page size
+    /// Arm 64-bit architecture with specified page size
     ///
     /// Valid page sizes are 4kb, 16kb, 64kb. Only 4kb is supported at the moment
     AArch64(usize),

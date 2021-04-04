@@ -21,7 +21,7 @@ fn main() -> Result<()> {
     // Print process list, formatted
     println!(
         "{:>5} {:>10} {:>10} {:<}",
-        "PID", "SYS ARCH", "PROC ARCH", "NAME"
+        "Pid", "SYS ARCH", "PROC ARCH", "NAME"
     );
 
     for p in process_list {

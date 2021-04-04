@@ -1,7 +1,7 @@
 use super::super::COptArc;
 use super::{
     ArcPluginCpuState, ConnectorCpuStateFunctionTable, ConnectorFunctionTable, CpuState,
-    MUArcPluginCpuState, MUPluginCpuState, PluginConnectorCpuState, PluginCpuState,
+    MuArcPluginCpuState, MuPluginCpuState, PluginConnectorCpuState, PluginCpuState,
 };
 use crate::connector::cpu_state::ConnectorCpuStateInner;
 use crate::error::*;
@@ -115,7 +115,7 @@ pub struct ConnectorInstanceBuilder<T> {
 }
 
 impl<T> ConnectorInstanceBuilder<T> {
-    /// Enables the optional Keyboard feature for the OSInstance.
+    /// Enables the optional Keyboard feature for the OsInstance.
     pub fn enable_cpu_state<C>(mut self) -> Self
     where
         C: 'static + CpuState + Clone,
@@ -170,10 +170,10 @@ impl<'a> ConnectorCpuStateInner<'a> for ConnectorInstance {
 
     fn cpu_state(&'a mut self) -> Result<Self::CpuStateType> {
         let cpu_state = self.vtable.cpu_state.ok_or(Error(
-            ErrorOrigin::OSLayer,
+            ErrorOrigin::OsLayer,
             ErrorKind::UnsupportedOptionalFeature,
         ))?;
-        let mut out = MUPluginCpuState::uninit();
+        let mut out = MuPluginCpuState::uninit();
         // Shorten the lifetime of instance
         let instance = unsafe { (self.instance as *mut c_void).as_mut() }.unwrap();
         let res = (cpu_state.cpu_state)(instance, self.library.clone(), &mut out);
@@ -182,10 +182,10 @@ impl<'a> ConnectorCpuStateInner<'a> for ConnectorInstance {
 
     fn into_cpu_state(mut self) -> Result<Self::IntoCpuStateType> {
         let cpu_state = self.vtable.cpu_state.ok_or(Error(
-            ErrorOrigin::OSLayer,
+            ErrorOrigin::OsLayer,
             ErrorKind::UnsupportedOptionalFeature,
         ))?;
-        let mut out = MUArcPluginCpuState::uninit();
+        let mut out = MuArcPluginCpuState::uninit();
         let res = (cpu_state.into_cpu_state)(self.instance, self.library.take(), &mut out);
         std::mem::forget(self);
         result_from_int(res, out)

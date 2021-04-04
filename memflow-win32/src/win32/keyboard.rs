@@ -30,9 +30,9 @@ fn test<T: PhysicalMemory, V: VirtualTranslate>(kernel: &mut Win32Kernel<T, V>) 
 use super::{Win32Kernel, Win32ProcessInfo, Win32VirtualTranslate};
 
 use memflow::error::{Error, ErrorKind, ErrorOrigin, Result};
-use memflow::mem::{PhysicalMemory, VirtualDMA, VirtualMemory, VirtualTranslate};
+use memflow::mem::{PhysicalMemory, VirtualDma, VirtualMemory, VirtualTranslate};
 use memflow::os::{Keyboard, KeyboardState, Process};
-use memflow::prelude::OSInner;
+use memflow::prelude::OsInner;
 
 use std::convert::TryInto;
 
@@ -52,13 +52,13 @@ pub struct Win32Keyboard<T> {
 }
 
 impl<'a, T: PhysicalMemory, V: VirtualTranslate>
-    Win32Keyboard<VirtualDMA<T, V, Win32VirtualTranslate>>
+    Win32Keyboard<VirtualDma<T, V, Win32VirtualTranslate>>
 {
     pub fn with_kernel(mut kernel: Win32Kernel<T, V>) -> Result<Self> {
         let (user_process_info, key_state_addr) = Self::find_keystate(&mut kernel)?;
 
         let (phys_mem, vat) = kernel.virt_mem.into_inner();
-        let virt_mem = VirtualDMA::with_vat(
+        let virt_mem = VirtualDma::with_vat(
             phys_mem,
             user_process_info.base_info.proc_arch,
             user_process_info.translator(),
@@ -79,11 +79,11 @@ impl<'a, T: PhysicalMemory, V: VirtualTranslate>
 }
 
 impl<'a, T: PhysicalMemory, V: VirtualTranslate>
-    Win32Keyboard<VirtualDMA<&'a mut T, &'a mut V, Win32VirtualTranslate>>
+    Win32Keyboard<VirtualDma<&'a mut T, &'a mut V, Win32VirtualTranslate>>
 {
     /// Constructs a new keyboard object by borrowing a kernel object.
     ///
-    /// Internally this will create a `VirtualDMA` object that also
+    /// Internally this will create a `VirtualDma` object that also
     /// borrows the PhysicalMemory and Vat objects from the kernel.
     ///
     /// The resulting process object is NOT cloneable due to the mutable borrowing.
@@ -94,7 +94,7 @@ impl<'a, T: PhysicalMemory, V: VirtualTranslate>
         let (user_process_info, key_state_addr) = Self::find_keystate(kernel)?;
 
         let (phys_mem, vat) = kernel.virt_mem.mem_vat_pair();
-        let virt_mem = VirtualDMA::with_vat(
+        let virt_mem = VirtualDma::with_vat(
             phys_mem,
             user_process_info.base_info.proc_arch,
             user_process_info.translator(),
@@ -144,17 +144,17 @@ impl<T> Win32Keyboard<T> {
 
     fn find_gaf_pe(module_buf: &[u8]) -> Result<usize> {
         let pe = PeView::from_bytes(module_buf)
-            .map_err(|err| Error(ErrorOrigin::OSLayer, ErrorKind::InvalidPeFile).log_info(err))?;
+            .map_err(|err| Error(ErrorOrigin::OsLayer, ErrorKind::InvalidPeFile).log_info(err))?;
 
         match pe.get_export_by_name("gafAsyncKeyState").map_err(|_| {
-            Error(ErrorOrigin::OSLayer, ErrorKind::ExportNotFound)
+            Error(ErrorOrigin::OsLayer, ErrorKind::ExportNotFound)
                 .log_info("unable to find gafAsyncKeyState: {}")
         })? {
             Export::Symbol(s) => {
                 debug!("gafAsyncKeyState export found at: {:x}", *s);
                 Ok(*s as usize)
             }
-            Export::Forward(_) => Err(Error(ErrorOrigin::OSLayer, ErrorKind::ExportNotFound)
+            Export::Forward(_) => Err(Error(ErrorOrigin::OsLayer, ErrorKind::ExportNotFound)
                 .log_info("export gafAsyncKeyState found but it is forwarded")),
         }
     }
@@ -166,11 +166,11 @@ impl<T> Win32Keyboard<T> {
 
         // 48 8B 05 ? ? ? ? 48 89 81 ? ? 00 00 48 8B 8F + 0x3
         let re = Regex::new("(?-u)\\x48\\x8B\\x05(?s:.)(?s:.)(?s:.)(?s:.)\\x48\\x89\\x81(?s:.)(?s:.)\\x00\\x00\\x48\\x8B\\x8F")
-                    .map_err(|_| Error(ErrorOrigin::OSLayer, ErrorKind::Encoding).log_info("malformed gafAsyncKeyState signature"))?;
+                    .map_err(|_| Error(ErrorOrigin::OsLayer, ErrorKind::Encoding).log_info("malformed gafAsyncKeyState signature"))?;
         let buf_offs = re
             .find(&module_buf[..])
             .ok_or_else(|| {
-                Error(ErrorOrigin::OSLayer, ErrorKind::NotFound)
+                Error(ErrorOrigin::OsLayer, ErrorKind::NotFound)
                     .log_info("unable to find gafAsyncKeyState signature")
             })?
             .start()
@@ -187,7 +187,7 @@ impl<T> Win32Keyboard<T> {
     #[cfg(not(feature = "regex"))]
     fn find_gaf_sig(module_buf: &[u8]) -> Result<usize> {
         Err(
-            Error(ErrorOrigin::OSLayer, ErrorKind::UnsupportedOptionalFeature)
+            Error(ErrorOrigin::OsLayer, ErrorKind::UnsupportedOptionalFeature)
                 .log_error("signature scanning requires std"),
         )
     }

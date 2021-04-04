@@ -8,9 +8,9 @@ use std::prelude::v1::*;
 ///
 /// Use this for convenience. Chances are, once GAT are implemented, only `OS` will be kept.
 ///
-/// It naturally provides all `OSInner` functions.
-pub trait OS: for<'a> OSInner<'a> {}
-impl<T: for<'a> OSInner<'a>> OS for T {}
+/// It naturally provides all `OsInner` functions.
+pub trait Os: for<'a> OsInner<'a> {}
+impl<T: for<'a> OsInner<'a>> Os for T {}
 
 /// High level OS trait implemented by OS layers.
 ///
@@ -18,7 +18,7 @@ impl<T: for<'a> OSInner<'a>> OS for T {}
 /// moving resources into processes.
 ///
 /// There are also methods for accessing system level modules.
-pub trait OSInner<'a>: Send {
+pub trait OsInner<'a>: Send {
     type ProcessType: Process + 'a;
     type IntoProcessType: Process;
 
@@ -68,7 +68,7 @@ pub trait OSInner<'a>: Send {
 
     /// Find process information by its name
     fn process_info_by_name(&mut self, name: &str) -> Result<ProcessInfo> {
-        let mut ret = Err(Error(ErrorOrigin::OSLayer, ErrorKind::ProcessNotFound));
+        let mut ret = Err(Error(ErrorOrigin::OsLayer, ErrorKind::ProcessNotFound));
         let callback = &mut |data: ProcessInfo| {
             if data.name.as_ref() == name {
                 ret = Ok(data);
@@ -82,8 +82,8 @@ pub trait OSInner<'a>: Send {
     }
 
     /// Find process information by its ID
-    fn process_info_by_pid(&mut self, pid: PID) -> Result<ProcessInfo> {
-        let mut ret = Err(Error(ErrorOrigin::OSLayer, ErrorKind::ProcessNotFound));
+    fn process_info_by_pid(&mut self, pid: Pid) -> Result<ProcessInfo> {
+        let mut ret = Err(Error(ErrorOrigin::OsLayer, ErrorKind::ProcessNotFound));
         let callback = &mut |data: ProcessInfo| {
             if data.pid == pid {
                 ret = Ok(data);
@@ -134,7 +134,7 @@ pub trait OSInner<'a>: Send {
     /// If no process with the specified ID can be found this function will return an Error.
     ///
     /// This function can be useful for quickly accessing a process.
-    fn process_by_pid(&'a mut self, pid: PID) -> Result<Self::ProcessType> {
+    fn process_by_pid(&'a mut self, pid: Pid) -> Result<Self::ProcessType> {
         self.process_info_by_pid(pid)
             .and_then(move |i| self.process_by_info(i))
     }
@@ -174,7 +174,7 @@ pub trait OSInner<'a>: Send {
     /// If no process with the specified ID can be found this function will return an Error.
     ///
     /// This function can be useful for quickly accessing a process.
-    fn into_process_by_pid(mut self, pid: PID) -> Result<Self::IntoProcessType>
+    fn into_process_by_pid(mut self, pid: Pid) -> Result<Self::IntoProcessType>
     where
         Self: Sized,
     {
@@ -231,7 +231,7 @@ pub trait OSInner<'a>: Send {
     ///
     /// This function can be useful for quickly accessing a specific module
     fn module_by_name(&mut self, name: &str) -> Result<ModuleInfo> {
-        let mut ret = Err(Error(ErrorOrigin::OSLayer, ErrorKind::ProcessNotFound));
+        let mut ret = Err(Error(ErrorOrigin::OsLayer, ErrorKind::ProcessNotFound));
         let callback = &mut |data: ModuleInfo| {
             if data.name.as_ref() == name {
                 ret = Ok(data);
@@ -245,7 +245,7 @@ pub trait OSInner<'a>: Send {
     }
 
     /// Retrieves the OS info
-    fn info(&self) -> &OSInfo;
+    fn info(&self) -> &OsInfo;
 }
 
 /// Information block about OS
@@ -256,7 +256,7 @@ pub trait OSInner<'a>: Send {
 #[repr(C)]
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
-pub struct OSInfo {
+pub struct OsInfo {
     /// Base address of the OS kernel
     pub base: Address,
     /// Size of the OS kernel

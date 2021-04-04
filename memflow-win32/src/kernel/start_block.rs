@@ -42,7 +42,7 @@ pub fn find_fallback<T: PhysicalMemory>(
 
             aarch64::find(&low16m)
         }
-        _ => Err(Error(ErrorOrigin::OSLayer, ErrorKind::NotImplemented)
+        _ => Err(Error(ErrorOrigin::OsLayer, ErrorKind::NotImplemented)
             .log_error("start_block: fallback not implemented for given arch")),
     }
 }
@@ -79,7 +79,7 @@ pub fn find<T: PhysicalMemory>(mem: &mut T, arch: Option<ArchitectureIdent>) -> 
                 x86::find(&low16m)
             }
             ArchitectureIdent::AArch64(_) => find_fallback(mem, arch),
-            _ => Err(Error(ErrorOrigin::OSLayer, ErrorKind::NotSupported)
+            _ => Err(Error(ErrorOrigin::OsLayer, ErrorKind::NotSupported)
                 .log_error("Unsupported architecture")),
         }
     } else {
@@ -88,7 +88,7 @@ pub fn find<T: PhysicalMemory>(mem: &mut T, arch: Option<ArchitectureIdent>) -> 
             .or_else(|_| find(mem, Some(ArchitectureIdent::X86(32, false))))
             .or_else(|_| find(mem, Some(ArchitectureIdent::AArch64(size::kb(4)))))
             .map_err(|_| {
-                Error(ErrorOrigin::OSLayer, ErrorKind::NotFound).log_error("unable to find dtb")
+                Error(ErrorOrigin::OsLayer, ErrorKind::NotFound).log_error("unable to find dtb")
             })
     }
 }

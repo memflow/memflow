@@ -6,7 +6,7 @@ use memflow::error::*;
 use memflow::mem::cache::TimedCacheValidator;
 use memflow::mem::cache::{CachedMemoryAccess, CachedVirtualTranslate};
 use memflow::mem::{PhysicalMemory, VirtualTranslate};
-use memflow::plugins::{Args, ConnectorInstance, OSInstance};
+use memflow::plugins::{Args, ConnectorInstance, OsInstance};
 use memflow::types::{size, Address};
 use std::time::Duration;
 
@@ -15,9 +15,9 @@ pub fn build_kernel(
     args: &Args,
     mem: Option<ConnectorInstance>,
     log_level: log::Level,
-) -> Result<OSInstance> {
+) -> Result<OsInstance> {
     let mem = mem.ok_or_else(|| {
-        Error(ErrorOrigin::OSLayer, ErrorKind::Configuration).log_error("Must provide memory!")
+        Error(ErrorOrigin::OsLayer, ErrorKind::Configuration).log_error("Must provide memory!")
     })?;
 
     simple_logger::SimpleLogger::new()
@@ -37,13 +37,13 @@ fn build_final<
 >(
     kernel_builder: Win32KernelBuilder<A, B, C>,
     _: &Args,
-) -> Result<OSInstance> {
+) -> Result<OsInstance> {
     log::info!(
         "Building kernel of type {}",
         std::any::type_name::<Win32KernelBuilder<A, B, C>>()
     );
     let kernel = kernel_builder.build()?;
-    let instance = OSInstance::builder(kernel).enable_keyboard().build();
+    let instance = OsInstance::builder(kernel).enable_keyboard().build();
     Ok(instance)
 }
 
@@ -54,7 +54,7 @@ fn build_arch<
 >(
     builder: Win32KernelBuilder<A, B, C>,
     args: &Args,
-) -> Result<OSInstance> {
+) -> Result<OsInstance> {
     match args.get("arch").map(|a| a.to_lowercase()).as_deref() {
         Some("x64") => build_final(builder.arch(ArchitectureIdent::X86(64, false)), args),
         Some("x32") => build_final(builder.arch(ArchitectureIdent::X86(32, false)), args),
@@ -71,7 +71,7 @@ fn build_symstore<
 >(
     builder: Win32KernelBuilder<A, B, C>,
     args: &Args,
-) -> Result<OSInstance> {
+) -> Result<OsInstance> {
     match args.get("symstore") {
         Some("uncached") => build_arch(builder.symbol_store(SymbolStore::new().no_cache()), args),
         Some("none") => build_arch(builder.no_symbol_store(), args),
@@ -86,7 +86,7 @@ fn build_kernel_hint<
 >(
     builder: Win32KernelBuilder<A, B, C>,
     args: &Args,
-) -> Result<OSInstance> {
+) -> Result<OsInstance> {
     match args
         .get("kernel_hint")
         .and_then(|d| u64::from_str_radix(d, 16).ok())
@@ -104,18 +104,18 @@ fn build_page_cache<
     builder: Win32KernelBuilder<A, B, C>,
     mode: &str,
     args: &Args,
-) -> Result<OSInstance> {
+) -> Result<OsInstance> {
     match mode.split('&').find(|s| s.contains("page")) {
         Some(page) => match page.split(':').nth(1) {
             Some(vargs) => {
                 let mut sp = vargs.splitn(2, ';');
                 let (size, time) = (
                     sp.next().ok_or_else(|| {
-                        Error(ErrorOrigin::OSLayer, ErrorKind::Configuration)
+                        Error(ErrorOrigin::OsLayer, ErrorKind::Configuration)
                             .log_error("Failed to parse Page Cache size")
                     })?,
                     sp.next().ok_or_else(|| {
-                        Error(ErrorOrigin::OSLayer, ErrorKind::Configuration)
+                        Error(ErrorOrigin::OsLayer, ErrorKind::Configuration)
                             .log_error("Failed to parse Page Cache validator time")
                     })?,
                 );
@@ -139,20 +139,20 @@ fn build_page_cache<
                         })
                         .next()
                         .ok_or_else(|| {
-                            Error(ErrorOrigin::OSLayer, ErrorKind::Configuration)
+                            Error(ErrorOrigin::OsLayer, ErrorKind::Configuration)
                                 .log_error("Invalid Page Cache size unit (or none)!")
                         })?
                 };
 
                 let size = usize::from_str_radix(size, 16).map_err(|_| {
-                    Error(ErrorOrigin::OSLayer, ErrorKind::Configuration)
+                    Error(ErrorOrigin::OsLayer, ErrorKind::Configuration)
                         .log_error("Failed to parse Page Cache size")
                 })?;
 
                 let size = size * size_mul;
 
                 let time = u64::from_str_radix(time, 10).map_err(|_| {
-                    Error(ErrorOrigin::OSLayer, ErrorKind::Configuration)
+                    Error(ErrorOrigin::OsLayer, ErrorKind::Configuration)
                         .log_error("Failed to parse Page Cache validity time")
                 })?;
                 build_kernel_hint(
@@ -186,27 +186,27 @@ fn build_vat<
     builder: Win32KernelBuilder<A, B, C>,
     mode: &str,
     args: &Args,
-) -> Result<OSInstance> {
+) -> Result<OsInstance> {
     match mode.split('&').find(|s| s.contains("vat")) {
         Some(vat) => match vat.split(':').nth(1) {
             Some(vargs) => {
                 let mut sp = vargs.splitn(2, ';');
                 let (size, time) = (
                     sp.next().ok_or_else(|| {
-                        Error(ErrorOrigin::OSLayer, ErrorKind::Configuration)
+                        Error(ErrorOrigin::OsLayer, ErrorKind::Configuration)
                             .log_error("Failed to parse VAT size")
                     })?,
                     sp.next().ok_or_else(|| {
-                        Error(ErrorOrigin::OSLayer, ErrorKind::Configuration)
+                        Error(ErrorOrigin::OsLayer, ErrorKind::Configuration)
                             .log_error("Failed to parse VAT validator time")
                     })?,
                 );
                 let size = usize::from_str_radix(size, 16).map_err(|_| {
-                    Error(ErrorOrigin::OSLayer, ErrorKind::Configuration)
+                    Error(ErrorOrigin::OsLayer, ErrorKind::Configuration)
                         .log_error("Failed to parse VAT size")
                 })?;
                 let time = u64::from_str_radix(time, 10).map_err(|_| {
-                    Error(ErrorOrigin::OSLayer, ErrorKind::Configuration)
+                    Error(ErrorOrigin::OsLayer, ErrorKind::Configuration)
                         .log_error("Failed to parse VAT validity time")
                 })?;
                 build_page_cache(
@@ -241,7 +241,7 @@ fn build_caches<
 >(
     builder: Win32KernelBuilder<A, B, C>,
     args: &Args,
-) -> Result<OSInstance> {
+) -> Result<OsInstance> {
     match args.get("memcache").unwrap_or("default") {
         "default" => build_kernel_hint(builder.build_default_caches(), args),
         "none" => build_kernel_hint(builder, args),
@@ -256,7 +256,7 @@ fn build_dtb<
 >(
     builder: Win32KernelBuilder<A, B, C>,
     args: &Args,
-) -> Result<OSInstance> {
+) -> Result<OsInstance> {
     match args
         .get("dtb")
         .and_then(|d| u64::from_str_radix(d, 16).ok())

@@ -20,10 +20,10 @@ pub mod module;
 pub mod process;
 pub mod root;
 
-pub use keyboard::{Keyboard, KeyboardState, OSKeyboard, OSKeyboardInner};
+pub use keyboard::{Keyboard, KeyboardState, OsKeyboard, OsKeyboardInner};
 pub use module::{ModuleAddressCallback, ModuleAddressInfo, ModuleInfo, ModuleInfoCallback};
-pub use process::{Process, ProcessInfo, ProcessInfoCallback, PID};
-pub use root::{OSInfo, OSInner, OS};
+pub use process::{Pid, Process, ProcessInfo, ProcessInfoCallback};
+pub use root::{Os, OsInfo, OsInner};
 
 use crate::types::{Address, OpaqueCallback};
 pub type AddressCallback<'a> = OpaqueCallback<'a, Address>;

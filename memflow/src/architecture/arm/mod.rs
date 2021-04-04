@@ -3,7 +3,7 @@ pub mod aarch64;
 use super::{
     mmu::{
         translate_data::{TranslateDataVec, TranslationChunk},
-        ArchMMUSpec, MMUTranslationBase,
+        ArchMmuSpec, MmuTranslationBase,
     },
     Architecture, ArchitectureIdent, ArchitectureObj, Endianess, ScopedVirtualTranslate,
 };
@@ -13,14 +13,14 @@ use crate::iter::SplitAtIndex;
 use crate::mem::PhysicalMemory;
 use crate::types::{size, Address, PhysicalAddress};
 
-pub struct ARMArchitecture {
+pub struct ArmArchitecture {
     /// Defines how many bits does the native word size have
     bits: u8,
     /// Defines the underlying MMU used for address translation
-    mmu: ArchMMUSpec,
+    mmu: ArchMmuSpec,
 }
 
-impl Architecture for ARMArchitecture {
+impl Architecture for ArmArchitecture {
     fn bits(&self) -> u8 {
         self.bits
     }
@@ -48,26 +48,26 @@ impl Architecture for ARMArchitecture {
 
 // TODO: Add granularity
 #[derive(Clone, Copy)]
-pub struct ARMScopedVirtualTranslate {
-    arch: &'static ARMArchitecture,
-    dtb: ARMPageTableBase,
+pub struct ArmScopedVirtualTranslate {
+    arch: &'static ArmArchitecture,
+    dtb: ArmPageTableBase,
 }
 
-impl ARMScopedVirtualTranslate {
-    pub fn new(arch: &'static ARMArchitecture, dtb1: Address, dtb2: Address) -> Self {
+impl ArmScopedVirtualTranslate {
+    pub fn new(arch: &'static ArmArchitecture, dtb1: Address, dtb2: Address) -> Self {
         Self {
             arch,
-            dtb: ARMPageTableBase(dtb1, dtb2),
+            dtb: ArmPageTableBase(dtb1, dtb2),
         }
     }
 }
 
 #[derive(Clone, Copy, Debug)]
-pub struct ARMPageTableBase(Address, Address);
+pub struct ArmPageTableBase(Address, Address);
 
-impl MMUTranslationBase for ARMPageTableBase {
+impl MmuTranslationBase for ArmPageTableBase {
     fn get_pt_by_virt_addr(&self, addr: Address) -> Address {
-        //TODO: handle for ARM 32
+        //TODO: handle for Arm 32
         if (addr.as_u64().to_be() & 1) == 1 {
             self.1
         } else {
@@ -89,7 +89,7 @@ impl MMUTranslationBase for ARMPageTableBase {
 
     fn virt_addr_filter<B, O>(
         &self,
-        spec: &ArchMMUSpec,
+        spec: &ArchMmuSpec,
         addr: (Address, B),
         work_group: (&mut TranslationChunk<Self>, &mut TranslateDataVec<B>),
         out_fail: &mut O,
@@ -101,7 +101,7 @@ impl MMUTranslationBase for ARMPageTableBase {
     }
 }
 
-impl ScopedVirtualTranslate for ARMScopedVirtualTranslate {
+impl ScopedVirtualTranslate for ArmScopedVirtualTranslate {
     fn virt_to_phys_iter<
         T: PhysicalMemory + ?Sized,
         B: SplitAtIndex,
@@ -136,7 +136,7 @@ impl ScopedVirtualTranslate for ARMScopedVirtualTranslate {
 
 // This lint doesn't make any sense in our usecase, since we nevel leak ARCH_SPECs, and ARCH is
 // a static trait object with a consistent address.
-fn underlying_arch(arch: ArchitectureObj) -> Option<&'static ARMArchitecture> {
+fn underlying_arch(arch: ArchitectureObj) -> Option<&'static ArmArchitecture> {
     if arch == aarch64::ARCH {
         Some(&aarch64::ARCH_SPEC)
     } else {
@@ -150,8 +150,8 @@ pub fn new_translator(
     arch: ArchitectureObj,
 ) -> Result<impl ScopedVirtualTranslate> {
     let arch =
-        underlying_arch(arch).ok_or(Error(ErrorOrigin::MMU, ErrorKind::InvalidArchitecture))?;
-    Ok(ARMScopedVirtualTranslate::new(arch, dtb1, dtb2))
+        underlying_arch(arch).ok_or(Error(ErrorOrigin::Mmu, ErrorKind::InvalidArchitecture))?;
+    Ok(ArmScopedVirtualTranslate::new(arch, dtb1, dtb2))
 }
 
 pub fn new_translator_nonsplit(

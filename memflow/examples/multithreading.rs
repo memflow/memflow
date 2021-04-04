@@ -26,7 +26,7 @@ pub fn parallel_init(
 
 // This function shows how a kernel can be cloned.
 // For each cloned kernel a thread is spawned that will iterate over all processes of the target in parallel.
-pub fn parallel_kernels(kernel: OSInstance) {
+pub fn parallel_kernels(kernel: OsInstance) {
     (0..8)
         .map(|_| kernel.clone())
         .into_iter()
@@ -40,7 +40,7 @@ pub fn parallel_kernels(kernel: OSInstance) {
 
 // This function shows how a process can be cloned.
 // For each cloned process a thread is spawned that will iterate over all the modules of this process in parallel.
-pub fn parallel_processes(kernel: OSInstance) {
+pub fn parallel_processes(kernel: OsInstance) {
     let process = kernel.into_process_by_name("wininit.exe").unwrap();
 
     (0..8)

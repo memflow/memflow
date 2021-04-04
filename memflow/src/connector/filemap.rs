@@ -9,18 +9,18 @@ use std::sync::Arc;
 use super::mmap::MappedPhysicalMemory;
 
 #[derive(Clone)]
-pub struct MMAPInfo<'a> {
+pub struct MmapInfo<'a> {
     mem_map: MemoryMap<&'a [u8]>,
     _buf: Arc<Mmap>,
 }
 
-impl<'a> AsRef<MemoryMap<&'a [u8]>> for MMAPInfo<'a> {
+impl<'a> AsRef<MemoryMap<&'a [u8]>> for MmapInfo<'a> {
     fn as_ref(&self) -> &MemoryMap<&'a [u8]> {
         &self.mem_map
     }
 }
 
-impl<'a> MMAPInfo<'a> {
+impl<'a> MmapInfo<'a> {
     pub fn try_with_filemap(file: File, map: MemoryMap<(Address, usize)>) -> Result<Self> {
         let file_map = unsafe {
             MmapOptions::new().map(&file).map_err(|err| {
@@ -66,20 +66,20 @@ impl<'a> MMAPInfo<'a> {
     }
 }
 
-pub type ReadMappedFilePhysicalMemory<'a> = MappedPhysicalMemory<&'a [u8], MMAPInfo<'a>>;
+pub type ReadMappedFilePhysicalMemory<'a> = MappedPhysicalMemory<&'a [u8], MmapInfo<'a>>;
 
-pub struct MMAPInfoMut<'a> {
+pub struct MmapInfoMut<'a> {
     mem_map: MemoryMap<&'a mut [u8]>,
     _buf: MmapMut,
 }
 
-impl<'a> AsRef<MemoryMap<&'a mut [u8]>> for MMAPInfoMut<'a> {
+impl<'a> AsRef<MemoryMap<&'a mut [u8]>> for MmapInfoMut<'a> {
     fn as_ref(&self) -> &MemoryMap<&'a mut [u8]> {
         &self.mem_map
     }
 }
 
-impl<'a> MMAPInfoMut<'a> {
+impl<'a> MmapInfoMut<'a> {
     pub fn try_with_filemap_mut(file: File, map: MemoryMap<(Address, usize)>) -> Result<Self> {
         let file_map = unsafe {
             MmapOptions::new().map_mut(&file).map_err(|err| {
@@ -125,4 +125,4 @@ impl<'a> MMAPInfoMut<'a> {
     }
 }
 
-pub type WriteMappedFilePhysicalMemory<'a> = MappedPhysicalMemory<&'a mut [u8], MMAPInfoMut<'a>>;
+pub type WriteMappedFilePhysicalMemory<'a> = MappedPhysicalMemory<&'a mut [u8], MmapInfoMut<'a>>;

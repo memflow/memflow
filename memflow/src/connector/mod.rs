@@ -14,13 +14,13 @@ The inventory system is feature gated behind the `inventory` feature.
 pub mod fileio;
 #[doc(hidden)]
 #[cfg(feature = "std")]
-pub use fileio::FileIOMemory;
+pub use fileio::FileIoMemory;
 
 #[cfg(feature = "filemap")]
 pub mod filemap;
 #[cfg(feature = "filemap")]
 pub use filemap::{
-    MMAPInfo, MMAPInfoMut, ReadMappedFilePhysicalMemory, WriteMappedFilePhysicalMemory,
+    MmapInfo, MmapInfoMut, ReadMappedFilePhysicalMemory, WriteMappedFilePhysicalMemory,
 };
 
 pub mod mmap;

@@ -21,10 +21,7 @@ pub mod virt_translate;
 pub mod cursor;
 
 #[doc(hidden)]
-pub use cache::{
-    CacheValidator, CachedMemoryAccess, CachedMemoryAccessBuilder, CachedVirtualTranslate,
-    CachedVirtualTranslateBuilder, CountCacheValidator, DefaultCacheValidator, TimedCacheValidator,
-};
+pub use cache::*;
 #[doc(hidden)]
 pub use mem_map::MemoryMap;
 #[doc(hidden)]

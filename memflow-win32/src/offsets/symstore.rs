@@ -1,6 +1,6 @@
 use std::prelude::v1::*;
 
-use crate::offsets::Win32GUID;
+use crate::offsets::Win32Guid;
 
 use std::fs::{self, File};
 use std::io::{Read, Write};
@@ -80,7 +80,7 @@ impl SymbolStore {
         Self::default()
     }
 
-    pub fn load(&self, guid: &Win32GUID) -> Result<Vec<u8>> {
+    pub fn load(&self, guid: &Win32Guid) -> Result<Vec<u8>> {
         if let Some(cache_path) = &self.cache_path {
             let cache_dir = cache_path.join(guid.file_name.clone());
             let cache_file = cache_dir.join(guid.guid.clone());
@@ -133,7 +133,7 @@ impl SymbolStore {
         }
     }
 
-    fn download(&self, guid: &Win32GUID) -> Result<Vec<u8>> {
+    fn download(&self, guid: &Win32Guid) -> Result<Vec<u8>> {
         let pdb_url = format!("{}/{}/{}", self.base_url, guid.file_name, guid.guid);
 
         self.download_file(&format!("{}/{}", pdb_url, guid.file_name))

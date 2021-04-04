@@ -44,7 +44,7 @@ pub struct PhysicalMemoryCursor<T> {
 }
 
 impl<T: PhysicalMemory> PhysicalMemoryCursor<T> {
-    /// Creates a new PhysicalMemoryCursor by wrapping around a `PhysicalMemory` object.
+    /// Creates a new PhysicalMemoryCursor by wrapping around a [`PhysicalMemory`] object.
     ///
     /// Cursor initial position is `0`.
     ///
@@ -78,7 +78,7 @@ impl<T: PhysicalMemory> PhysicalMemoryCursor<T> {
         }
     }
 
-    /// Consumes this cursor, returning the underlying `PhysicalMemory` object.
+    /// Consumes this cursor, returning the underlying [`PhysicalMemory`] object.
     ///
     /// # Examples
     ///
@@ -95,7 +95,7 @@ impl<T: PhysicalMemory> PhysicalMemoryCursor<T> {
         self.phys_mem
     }
 
-    /// Gets a reference to the underlying `PhysicalMemory` object in this cursor.
+    /// Gets a reference to the underlying [`PhysicalMemory`] object in this cursor.
     ///
     /// # Examples
     ///
@@ -112,7 +112,7 @@ impl<T: PhysicalMemory> PhysicalMemoryCursor<T> {
         &self.phys_mem
     }
 
-    /// Gets a mutable reference to the underlying `PhysicalMemory` object in this cursor.
+    /// Gets a mutable reference to the underlying [`PhysicalMemory`] object in this cursor.
     ///
     /// # Examples
     ///
@@ -215,14 +215,243 @@ impl<T: PhysicalMemory> Seek for PhysicalMemoryCursor<T> {
     }
 }
 
-pub struct VirtualMemoryCursor {
+pub struct VirtualMemoryCursor<T> {
+    virt_mem: T,
     address: Address,
+}
+
+impl<T: VirtualMemory> VirtualMemoryCursor<T> {
+    /// Creates a new VirtualMemoryCursor by wrapping around a [`VirtualMemory`] object.
+    ///
+    /// Cursor initial position is `0`.
+    ///
+    /// # Examples:
+    ///
+    /// Borrowing a [`VirtualMemory`] object:
+    /// ```
+    /// use memflow::dummy::DummyMemory;
+    /// use memflow::types::size;
+    /// use memflow::mem::VirtualMemoryCursor;
+    /// # use memflow::dummy::DummyOs;
+    /// # use memflow::mem::{DirectTranslate, VirtualDma};
+    /// # use memflow::architecture::x86::x64;
+    ///
+    /// # let phys_mem = DummyMemory::new(size::mb(16));
+    /// # let mut os = DummyOs::new(phys_mem);
+    /// # let (dtb, _) = os.alloc_dtb(size::mb(8), &[]);
+    /// # let phys_mem = os.into_inner();
+    /// # let translator = x64::new_translator(dtb);
+    /// let mut virt_mem = VirtualDma::new(phys_mem, x64::ARCH, translator);
+    /// let mut cursor = VirtualMemoryCursor::new(&mut virt_mem);
+    /// ```
+    ///
+    /// Taking (temporary) ownership of a [`VirtualMemory`] object:
+    /// ```
+    /// use memflow::dummy::DummyMemory;
+    /// use memflow::types::size;
+    /// use memflow::mem::VirtualMemoryCursor;
+    /// # use memflow::dummy::DummyOs;
+    /// # use memflow::mem::{DirectTranslate, VirtualDma};
+    /// # use memflow::architecture::x86::x64;
+    ///
+    /// # let phys_mem = DummyMemory::new(size::mb(16));
+    /// # let mut os = DummyOs::new(phys_mem);
+    /// # let (dtb, _) = os.alloc_dtb(size::mb(8), &[]);
+    /// # let phys_mem = os.into_inner();
+    /// # let translator = x64::new_translator(dtb);
+    /// let virt_mem = VirtualDma::new(phys_mem, x64::ARCH, translator);
+    /// let mut cursor = VirtualMemoryCursor::new(virt_mem);
+    /// ```
+    pub fn new(virt_mem: T) -> Self {
+        Self {
+            virt_mem,
+            address: Address::NULL,
+        }
+    }
+
+    /// Consumes this cursor, returning the underlying [`VirtualMemory`] object.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use memflow::dummy::DummyMemory;
+    /// use memflow::types::size;
+    /// use memflow::mem::VirtualMemoryCursor;
+    /// # use memflow::dummy::DummyOs;
+    /// # use memflow::mem::{DirectTranslate, VirtualDma};
+    /// # use memflow::architecture::x86::x64;
+    ///
+    /// # let phys_mem = DummyMemory::new(size::mb(16));
+    /// # let mut os = DummyOs::new(phys_mem);
+    /// # let (dtb, _) = os.alloc_dtb(size::mb(8), &[]);
+    /// # let phys_mem = os.into_inner();
+    /// # let translator = x64::new_translator(dtb);
+    /// let mut cursor = VirtualMemoryCursor::new(VirtualDma::new(phys_mem, x64::ARCH, translator));
+    ///
+    /// let phys_mem = cursor.into_inner();
+    /// ```
+    pub fn into_inner(self) -> T {
+        self.virt_mem
+    }
+
+    /// Gets a reference to the underlying [`VirtualMemory`] object in this cursor.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use memflow::dummy::DummyMemory;
+    /// use memflow::types::size;
+    /// use memflow::mem::VirtualMemoryCursor;
+    /// # use memflow::dummy::DummyOs;
+    /// # use memflow::mem::{DirectTranslate, VirtualDma};
+    /// # use memflow::architecture::x86::x64;
+    ///
+    /// # let phys_mem = DummyMemory::new(size::mb(16));
+    /// # let mut os = DummyOs::new(phys_mem);
+    /// # let (dtb, _) = os.alloc_dtb(size::mb(8), &[]);
+    /// # let phys_mem = os.into_inner();
+    /// # let translator = x64::new_translator(dtb);
+    /// let mut cursor = VirtualMemoryCursor::new(VirtualDma::new(phys_mem, x64::ARCH, translator));
+    ///
+    /// let reference = cursor.get_ref();
+    /// ```
+    pub fn get_ref(&self) -> &T {
+        &self.virt_mem
+    }
+
+    /// Gets a mutable reference to the underlying [`VirtualMemory`] object in this cursor.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use memflow::dummy::DummyMemory;
+    /// use memflow::types::size;
+    /// use memflow::mem::VirtualMemoryCursor;
+    /// # use memflow::dummy::DummyOs;
+    /// # use memflow::mem::{DirectTranslate, VirtualDma};
+    /// # use memflow::architecture::x86::x64;
+    ///
+    /// # let phys_mem = DummyMemory::new(size::mb(16));
+    /// # let mut os = DummyOs::new(phys_mem);
+    /// # let (dtb, _) = os.alloc_dtb(size::mb(8), &[]);
+    /// # let phys_mem = os.into_inner();
+    /// # let translator = x64::new_translator(dtb);
+    /// let mut cursor = VirtualMemoryCursor::new(VirtualDma::new(phys_mem, x64::ARCH, translator));
+    ///
+    /// let reference = cursor.get_mut();
+    /// ```
+    pub fn get_mut(&mut self) -> &mut T {
+        &mut self.virt_mem
+    }
+
+    /// Returns the current address of this cursor.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::io::{Seek, SeekFrom};
+    ///
+    /// use memflow::dummy::DummyMemory;
+    /// use memflow::types::{Address, size};
+    /// use memflow::mem::VirtualMemoryCursor;
+    /// # use memflow::dummy::DummyOs;
+    /// # use memflow::mem::{DirectTranslate, VirtualDma};
+    /// # use memflow::architecture::x86::x64;
+    ///
+    /// # let phys_mem = DummyMemory::new(size::mb(16));
+    /// # let mut os = DummyOs::new(phys_mem);
+    /// # let (dtb, _) = os.alloc_dtb(size::mb(8), &[]);
+    /// # let phys_mem = os.into_inner();
+    /// # let translator = x64::new_translator(dtb);
+    /// let mut cursor = VirtualMemoryCursor::new(VirtualDma::new(phys_mem, x64::ARCH, translator));
+    ///
+    /// assert_eq!(cursor.address(), Address::NULL);
+    ///
+    /// cursor.seek(SeekFrom::Current(2)).unwrap();
+    /// assert_eq!(cursor.address(), Address::from(2));
+    ///
+    /// cursor.seek(SeekFrom::Current(-1)).unwrap();
+    /// assert_eq!(cursor.address(), Address::from(1));
+    /// ```
+    pub fn address(&self) -> Address {
+        self.address
+    }
+
+    /// Sets the address of this cursor.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use memflow::dummy::DummyMemory;
+    /// use memflow::types::{Address, size};
+    /// use memflow::mem::VirtualMemoryCursor;
+    /// # use memflow::dummy::DummyOs;
+    /// # use memflow::mem::{DirectTranslate, VirtualDma};
+    /// # use memflow::architecture::x86::x64;
+    ///
+    /// # let phys_mem = DummyMemory::new(size::mb(16));
+    /// # let mut os = DummyOs::new(phys_mem);
+    /// # let (dtb, _) = os.alloc_dtb(size::mb(8), &[]);
+    /// # let phys_mem = os.into_inner();
+    /// # let translator = x64::new_translator(dtb);
+    /// let mut cursor = VirtualMemoryCursor::new(VirtualDma::new(phys_mem, x64::ARCH, translator));
+    ///
+    /// assert_eq!(cursor.address(), Address::NULL);
+    ///
+    /// cursor.set_address(Address::from(2));
+    /// assert_eq!(cursor.address(), Address::from(2));
+    ///
+    /// cursor.set_address(Address::from(4));
+    /// assert_eq!(cursor.address(), Address::from(4));
+    /// ```
+    pub fn set_address(&mut self, address: Address) {
+        self.address = address;
+    }
+}
+
+impl<T: VirtualMemory> Read for VirtualMemoryCursor<T> {
+    fn read(&mut self, buf: &mut [u8]) -> Result<usize> {
+        self.virt_mem
+            .virt_read_raw_into(self.address, buf)
+            .map_err(|err| Error::new(ErrorKind::UnexpectedEof, err))?;
+        self.address = (self.address.as_u64() + buf.len() as u64).into();
+        Ok(buf.len())
+    }
+}
+
+impl<T: VirtualMemory> Write for VirtualMemoryCursor<T> {
+    fn write(&mut self, buf: &[u8]) -> Result<usize> {
+        self.virt_mem
+            .virt_write_raw(self.address, buf)
+            .map_err(|err| Error::new(ErrorKind::UnexpectedEof, err))?;
+        self.address = (self.address.as_u64() + buf.len() as u64).into();
+        Ok(buf.len())
+    }
+
+    fn flush(&mut self) -> Result<()> {
+        Ok(())
+    }
+}
+
+impl<T: VirtualMemory> Seek for VirtualMemoryCursor<T> {
+    fn seek(&mut self, pos: SeekFrom) -> Result<u64> {
+        let target_pos = match pos {
+            SeekFrom::Start(offs) => offs,
+            SeekFrom::End(offs) => u64::MAX.wrapping_add(offs as u64),
+            SeekFrom::Current(offs) => self.address.as_u64().wrapping_add(offs as u64),
+        };
+
+        self.address = target_pos.into();
+        Ok(target_pos)
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::dummy::DummyMemory;
+    use crate::architecture::x86::{x64, X86ScopedVirtualTranslate};
+    use crate::dummy::{DummyMemory, DummyOs};
+    use crate::mem::{DirectTranslate, VirtualDma};
     use crate::types::size;
 
     fn dummy_phys_mem() -> DummyMemory {
@@ -275,6 +504,86 @@ mod tests {
 
         let mut read_buf = [0u8; 4];
         assert_eq!(cursor.seek(SeekFrom::Start(512)).unwrap(), 512); // roll back cursor to 512th byte
+        assert_eq!(cursor.read(&mut read_buf).unwrap(), 4); // read 4 bytes from the 512th byte
+        assert_eq!(read_buf, write_buf); // compare buffers
+    }
+
+    fn dummy_virt_mem() -> (
+        VirtualDma<DummyMemory, DirectTranslate, X86ScopedVirtualTranslate>,
+        Address,
+    ) {
+        let phys_mem = DummyMemory::new(size::mb(1));
+        let mut os = DummyOs::new(phys_mem);
+        let (dtb, virt_base) = os.alloc_dtb(size::mb(1), &[]);
+        let phys_mem = os.into_inner();
+        let translator = x64::new_translator(dtb);
+        (VirtualDma::new(phys_mem, x64::ARCH, translator), virt_base)
+    }
+
+    #[test]
+    fn virtual_seek() {
+        let (virt_mem, _) = dummy_virt_mem();
+        let mut cursor = VirtualMemoryCursor::new(virt_mem);
+
+        assert_eq!(cursor.seek(SeekFrom::Current(0)).unwrap(), 0);
+        assert_eq!(cursor.seek(SeekFrom::Current(1024)).unwrap(), 1024);
+        assert_eq!(cursor.seek(SeekFrom::Current(1024)).unwrap(), 2048);
+        assert_eq!(cursor.seek(SeekFrom::Current(-1024)).unwrap(), 1024);
+
+        assert_eq!(cursor.seek(SeekFrom::Start(512)).unwrap(), 512);
+    }
+
+    #[test]
+    fn virtual_read_write() {
+        let (virt_mem, virt_base) = dummy_virt_mem();
+        let mut cursor = VirtualMemoryCursor::new(virt_mem);
+
+        let write_buf = [0xAu8, 0xB, 0xC, 0xD];
+        assert_eq!(
+            cursor.seek(SeekFrom::Start(virt_base.as_u64())).unwrap(),
+            virt_base.as_u64()
+        );
+        assert_eq!(cursor.write(&write_buf).unwrap(), 4); // write 4 bytes from the start
+        assert_eq!(
+            cursor.seek(SeekFrom::Current(0)).unwrap(),
+            virt_base.as_u64() + 4
+        ); // check if cursor moved 4 bytes
+
+        let mut read_buf = [0u8; 4];
+        assert_eq!(
+            cursor.seek(SeekFrom::Start(virt_base.as_u64())).unwrap(),
+            virt_base.as_u64()
+        ); // roll back cursor to start
+        assert_eq!(cursor.read(&mut read_buf).unwrap(), 4); // read 4 bytes from the start
+        assert_eq!(read_buf, write_buf); // compare buffers
+    }
+
+    #[test]
+    fn virtual_read_write_seek() {
+        let (virt_mem, virt_base) = dummy_virt_mem();
+        let mut cursor = VirtualMemoryCursor::new(virt_mem);
+
+        assert_eq!(
+            cursor
+                .seek(SeekFrom::Start(virt_base.as_u64() + 512))
+                .unwrap(),
+            virt_base.as_u64() + 512
+        ); // seek to 512th byte
+
+        let write_buf = [0xAu8, 0xB, 0xC, 0xD];
+        assert_eq!(cursor.write(&write_buf).unwrap(), 4); // write 4 bytes from 512th byte
+        assert_eq!(
+            cursor.seek(SeekFrom::Current(0)).unwrap(),
+            virt_base.as_u64() + 512 + 4
+        ); // check if cursor moved 4 bytes
+
+        let mut read_buf = [0u8; 4];
+        assert_eq!(
+            cursor
+                .seek(SeekFrom::Start(virt_base.as_u64() + 512))
+                .unwrap(),
+            virt_base.as_u64() + 512
+        ); // roll back cursor to 512th byte
         assert_eq!(cursor.read(&mut read_buf).unwrap(), 4); // read 4 bytes from the 512th byte
         assert_eq!(read_buf, write_buf); // compare buffers
     }

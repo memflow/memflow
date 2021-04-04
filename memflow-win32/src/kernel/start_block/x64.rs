@@ -8,8 +8,7 @@ use memflow::types::{size, Address};
 
 // https://github.com/ufrisk/MemProcFS/blob/f2d15cf4fe4f19cfeea3dad52971fae2e491064b/vmm/vmmwininit.c#L560
 pub fn find_lowstub(stub: &[u8]) -> Result<StartBlock> {
-    Ok(stub
-        .chunks_exact(x64::ARCH.page_size())
+    stub.chunks_exact(x64::ARCH.page_size())
         .skip(1)
         .filter(|c| {
             (0xffff_ffff_ffff_00ff & u64::from_le_bytes(c[0..8].try_into().unwrap()))
@@ -30,7 +29,7 @@ pub fn find_lowstub(stub: &[u8]) -> Result<StartBlock> {
         .ok_or_else(|| {
             Error(ErrorOrigin::OsLayer, ErrorKind::NotFound)
                 .log_warn("unable to find x64 dtb in lowstub < 1M")
-        })?)
+        })
 }
 
 fn find_pt(addr: Address, mem: &[u8]) -> Option<Address> {

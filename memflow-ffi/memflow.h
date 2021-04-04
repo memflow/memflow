@@ -43,28 +43,36 @@ typedef struct ArchitectureObj ArchitectureObj;
  *
  * # Examples
  *
- * Creating a OS instance, the fastest way:
+ * Creating a OS instance, the recommended way:
  *
  * ```
  * use memflow::plugins::Inventory;
  * # use memflow::error::Result;
  * # use memflow::plugins::OsInstance;
  * # fn test() -> Result<OsInstance> {
- * Inventory::build_os_simple("qemu-procfs", "win32")
+ * let inventory = Inventory::scan();
+ * inventory
+ *   .builder()
+ *   .connector("qemu_procfs")
+ *   .os("win32")
+ *   .build()
  * # }
  * # test().ok();
  * ```
  *
- * Creating 2 OS instances:
+ * Nesting connectors and os plugins:
  * ```
  * use memflow::plugins::{Inventory, Args};
  * # use memflow::error::Result;
  * # fn test() -> Result<()> {
- *
  * let inventory = Inventory::scan();
- *
- * let windows = inventory.create_os_simple("qemu-procfs", "win32")?;
- * let system = inventory.create_os("pseudo-system", None, &Args::default())?;
+ * let os = inventory
+ *   .builder()
+ *   .connector("qemu_procfs")
+ *   .os("linux")
+ *   .connector("qemu_procfs")
+ *   .os("win32")
+ *   .build();
  * # Ok(())
  * # }
  * # test().ok();
@@ -191,6 +199,45 @@ typedef struct PhysicalMemoryFunctionTable_c_void {
 
 typedef struct PhysicalMemoryFunctionTable_c_void OpaquePhysicalMemoryFunctionTable;
 
+typedef struct COptArc_Library {
+    const Library *inner;
+    struct Option______Library (*clone_fn)(struct Option______Library);
+    void (*drop_fn)(struct Option______Library*);
+} COptArc_Library;
+
+typedef struct CpuStateFunctionTable_c_void {
+    void (*drop)(void *thisptr);
+} CpuStateFunctionTable_c_void;
+
+typedef struct CpuStateFunctionTable_c_void OpaqueCpuStateFunctionTable;
+
+typedef struct PluginCpuState {
+    void *instance;
+    OpaqueCpuStateFunctionTable vtable;
+    struct COptArc_Library library;
+} PluginCpuState;
+
+typedef struct PluginCpuState MuPluginCpuState;
+
+/**
+ * Opaque version of `GenericCloneTable` for FFI purposes
+ */
+typedef struct GenericCloneTable_c_void OpaqueCloneTable;
+
+typedef struct ArcPluginCpuState {
+    struct PluginCpuState inner;
+    OpaqueCloneTable clone;
+} ArcPluginCpuState;
+
+typedef struct ArcPluginCpuState MuArcPluginCpuState;
+
+typedef struct ConnectorCpuStateFunctionTable_c_void__c_void {
+    int32_t (*cpu_state)(void *os, struct COptArc_Library lib, MuPluginCpuState *out);
+    int32_t (*into_cpu_state)(void *os, struct COptArc_Library lib, MuArcPluginCpuState *out);
+} ConnectorCpuStateFunctionTable_c_void__c_void;
+
+typedef struct ConnectorCpuStateFunctionTable_c_void__c_void OpaqueConnectorCpuStateFunctionTable;
+
 typedef struct ConnectorFunctionTable {
     /**
      * The vtable for object creation and cloning
@@ -200,13 +247,8 @@ typedef struct ConnectorFunctionTable {
      * The vtable for all physical memory function calls to the connector.
      */
     const OpaquePhysicalMemoryFunctionTable *phys;
+    const OpaqueConnectorCpuStateFunctionTable *cpu_state;
 } ConnectorFunctionTable;
-
-typedef struct COptArc_Library {
-    const Library *inner;
-    struct Option______Library (*clone_fn)(struct Option______Library);
-    void (*drop_fn)(struct Option______Library*);
-} COptArc_Library;
 
 /**
  * Describes initialized connector instance
@@ -490,11 +532,6 @@ typedef struct PluginProcess {
 } PluginProcess;
 
 typedef struct PluginProcess MuPluginProcess;
-
-/**
- * Opaque version of `GenericCloneTable` for FFI purposes
- */
-typedef struct GenericCloneTable_c_void OpaqueCloneTable;
 
 typedef struct ArcPluginProcess {
     struct PluginProcess inner;

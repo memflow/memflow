@@ -163,6 +163,7 @@ impl TryFrom<String> for Args {
     }
 }
 
+#[allow(clippy::clippy::from_over_into)]
 impl Into<String> for Args {
     fn into(self) -> String {
         self.to_string()

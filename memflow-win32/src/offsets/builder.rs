@@ -6,7 +6,7 @@ use super::symstore::SymbolStore;
 use super::offset_table::Win32OffsetFile;
 use super::{Win32Offsets, Win32OffsetsArchitecture};
 
-use crate::kernel::{Win32GUID, Win32Version};
+use crate::kernel::{Win32Guid, Win32Version};
 use crate::win32::Win32KernelInfo;
 
 use memflow::error::{Error, ErrorKind, ErrorOrigin, Result};
@@ -26,7 +26,7 @@ pub struct Win32OffsetBuilder {
     #[cfg(feature = "symstore")]
     symbol_store: Option<SymbolStore>,
 
-    guid: Option<Win32GUID>,
+    guid: Option<Win32Guid>,
     winver: Option<Win32Version>,
     arch: Option<Win32OffsetsArchitecture>,
 }
@@ -171,7 +171,7 @@ impl Win32OffsetBuilder {
         self
     }
 
-    pub fn guid(mut self, guid: Win32GUID) -> Self {
+    pub fn guid(mut self, guid: Win32Guid) -> Self {
         self.guid = Some(guid);
         self
     }

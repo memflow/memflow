@@ -25,7 +25,7 @@ use memflow::dataview::Pod;
 #[derive(Clone, Pod)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 pub struct Win32OffsetFile {
-    // Win32GUID
+    // Win32Guid
     #[cfg_attr(feature = "serde", serde(default))]
     pub pdb_file_name: BinaryString<128>,
     #[cfg_attr(feature = "serde", serde(default))]

@@ -53,7 +53,7 @@ fn find_with_va<T: VirtualMemory>(virt_mem: &mut T, va_base: u64) -> Result<u64>
     buf.chunks_exact(x64::ARCH.page_size())
         .enumerate()
         .map(|(i, c)| {
-            let view = Pod::as_data_view(&c[..]);
+            let view = Pod::as_data_view(c);
             (i, c, view.copy::<IMAGE_DOS_HEADER>(0)) // TODO: potential endian mismatch
         })
         .filter(|(_, _, p)| p.e_magic == 0x5a4d) // MZ

@@ -5,7 +5,7 @@ use std::io::Write;
 use std::path::PathBuf;
 
 use memflow_win32::prelude::{
-    SymbolStore, Win32GUID, Win32OffsetFile, Win32Offsets, Win32OffsetsArchitecture, Win32Version,
+    SymbolStore, Win32Guid, Win32OffsetFile, Win32Offsets, Win32OffsetsArchitecture, Win32Version,
 };
 
 pub fn main() {
@@ -40,38 +40,38 @@ pub fn main() {
         /*
         (
             Win32Version::new(5, 2, 3790),
-            Win32GUID::new("ntkrnlmp.pdb", "82DCF67A38274C9CA99B60B421D2786D2"),
+            Win32Guid::new("ntkrnlmp.pdb", "82DCF67A38274C9CA99B60B421D2786D2"),
         ),
         */
         (
             Win32Version::new(6, 1, 7601),
             Win32OffsetsArchitecture::X86,
-            Win32GUID::new("ntkrpamp.pdb", "684DA42A30CC450F81C535B4D18944B12"),
+            Win32Guid::new("ntkrpamp.pdb", "684DA42A30CC450F81C535B4D18944B12"),
         ),
         (
             Win32Version::new(6, 1, 7601),
             Win32OffsetsArchitecture::X64,
-            Win32GUID::new("ntkrnlmp.pdb", "ECE191A20CFF4465AE46DF96C22638451"),
+            Win32Guid::new("ntkrnlmp.pdb", "ECE191A20CFF4465AE46DF96C22638451"),
         ),
         (
             Win32Version::new(10, 0, 18362),
             Win32OffsetsArchitecture::X64,
-            Win32GUID::new("ntkrnlmp.pdb", "0AFB69F5FD264D54673570E37B38A3181"),
+            Win32Guid::new("ntkrnlmp.pdb", "0AFB69F5FD264D54673570E37B38A3181"),
         ),
         (
             Win32Version::new(10, 0, 19041),
             Win32OffsetsArchitecture::X64,
-            Win32GUID::new("ntkrnlmp.pdb", "BBED7C2955FBE4522AAA23F4B8677AD91"),
+            Win32Guid::new("ntkrnlmp.pdb", "BBED7C2955FBE4522AAA23F4B8677AD91"),
         ),
         (
             Win32Version::new(10, 0, 19041),
             Win32OffsetsArchitecture::X64,
-            Win32GUID::new("ntkrnlmp.pdb", "1C9875F76C8F0FBF3EB9A9D7C1C274061"),
+            Win32Guid::new("ntkrnlmp.pdb", "1C9875F76C8F0FBF3EB9A9D7C1C274061"),
         ),
         (
             Win32Version::new(10, 0, 19041),
             Win32OffsetsArchitecture::X86,
-            Win32GUID::new("ntkrpamp.pdb", "1B1D6AA205E1C87DC63A314ACAA50B491"),
+            Win32Guid::new("ntkrpamp.pdb", "1B1D6AA205E1C87DC63A314ACAA50B491"),
         ),
     ];
 

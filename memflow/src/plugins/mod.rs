@@ -549,7 +549,7 @@ impl Inventory {
     ///   .os("win10")
     ///   .build();
     /// ```
-    pub fn builder<'a>(&'a self) -> ConnectorBuilderEmpty<'a> {
+    pub fn builder(&self) -> ConnectorBuilderEmpty {
         ConnectorBuilderEmpty { inventory: self }
     }
 

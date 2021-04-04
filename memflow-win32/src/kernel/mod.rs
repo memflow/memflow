@@ -11,12 +11,12 @@ use std::fmt;
 
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize))]
-pub struct Win32GUID {
+pub struct Win32Guid {
     pub file_name: String,
     pub guid: String,
 }
 
-impl Win32GUID {
+impl Win32Guid {
     pub fn new(file_name: &str, guid: &str) -> Self {
         Self {
             file_name: file_name.to_string(),

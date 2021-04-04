@@ -3,7 +3,7 @@ pub(crate) mod pehelper;
 mod x64;
 mod x86;
 
-use super::{StartBlock, Win32GUID, Win32Version};
+use super::{StartBlock, Win32Guid, Win32Version};
 
 use std::convert::TryInto;
 use std::prelude::v1::*;
@@ -46,7 +46,7 @@ pub fn find<T: VirtualMemory>(
 }
 
 // TODO: move to pe::...
-pub fn find_guid<T: VirtualMemory>(virt_mem: &mut T, kernel_base: Address) -> Result<Win32GUID> {
+pub fn find_guid<T: VirtualMemory>(virt_mem: &mut T, kernel_base: Address) -> Result<Win32Guid> {
     let image = pehelper::try_get_pe_image(virt_mem, kernel_base)?;
     let pe = PeView::from_bytes(&image)
         .map_err(|err| Error(ErrorOrigin::OsLayer, ErrorKind::InvalidPeFile).log_info(err))?;
@@ -87,7 +87,7 @@ pub fn find_guid<T: VirtualMemory>(virt_mem: &mut T, kernel_base: Address) -> Re
             .log_info("unable to convert pdb file name to string")
     })?;
     let guid = format!("{:X}{:X}", signature, code_view.age());
-    Ok(Win32GUID::new(file_name, &guid))
+    Ok(Win32Guid::new(file_name, &guid))
 }
 
 fn get_export(pe: &PeView, name: &str) -> Result<usize> {

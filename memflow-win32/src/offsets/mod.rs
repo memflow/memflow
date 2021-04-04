@@ -18,7 +18,7 @@ use std::prelude::v1::*;
 #[cfg(feature = "std")]
 use std::{fs::File, io::Read, path::Path};
 
-use crate::kernel::Win32GUID;
+use crate::kernel::Win32Guid;
 
 use memflow::architecture::ArchitectureIdent;
 use memflow::error::{Error, ErrorKind, ErrorOrigin, Result};
@@ -359,7 +359,7 @@ mod tests {
     /*
     #[test]
     fn download_pdb() {
-        let guid = Win32GUID {
+        let guid = Win32Guid {
             file_name: "ntkrnlmp.pdb".to_string(),
             guid: "3844DBB920174967BE7AA4A2C20430FA2".to_string(),
         };

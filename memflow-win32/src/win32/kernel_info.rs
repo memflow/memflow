@@ -1,5 +1,5 @@
 use crate::kernel::{self, StartBlock};
-use crate::kernel::{Win32GUID, Win32Version};
+use crate::kernel::{Win32Guid, Win32Version};
 
 use log::{info, warn};
 
@@ -17,7 +17,7 @@ pub struct Win32KernelInfo {
     pub os_info: OsInfo,
     pub dtb: Address,
 
-    pub kernel_guid: Option<Win32GUID>,
+    pub kernel_guid: Option<Win32Guid>,
     pub kernel_winver: Win32Version,
 
     pub eprocess_base: Address,

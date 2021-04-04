@@ -513,11 +513,11 @@ impl<'a, T: PhysicalMemory + 'a, V: VirtualTranslate + 'a> OsKeyboardInner<'a>
     type IntoKeyboardType = Win32Keyboard<VirtualDma<T, V, Win32VirtualTranslate>>;
 
     fn keyboard(&'a mut self) -> memflow::error::Result<Self::KeyboardType> {
-        Ok(Win32Keyboard::with_kernel_ref(self)?)
+        Win32Keyboard::with_kernel_ref(self)
     }
 
     fn into_keyboard(self) -> memflow::error::Result<Self::IntoKeyboardType> {
-        Ok(Win32Keyboard::with_kernel(self)?)
+        Win32Keyboard::with_kernel(self)
     }
 }
 

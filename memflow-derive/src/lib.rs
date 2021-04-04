@@ -15,7 +15,7 @@ struct ConnectorFactoryArgs {
 }
 
 #[derive(Debug, FromMeta)]
-struct OSFactoryArgs {
+struct OsFactoryArgs {
     name: String,
     #[darling(default)]
     version: Option<String>,
@@ -114,7 +114,7 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
 #[proc_macro_attribute]
 pub fn os_layer(args: TokenStream, input: TokenStream) -> TokenStream {
     let attr_args = parse_macro_input!(args as AttributeArgs);
-    let args = match OSFactoryArgs::from_list(&attr_args) {
+    let args = match OsFactoryArgs::from_list(&attr_args) {
         Ok(v) => v,
         Err(e) => return TokenStream::from(e.write_errors()),
     };
@@ -186,7 +186,7 @@ pub fn os_layer(args: TokenStream, input: TokenStream) -> TokenStream {
 #[proc_macro_attribute]
 pub fn os_layer_bare(args: TokenStream, input: TokenStream) -> TokenStream {
     let attr_args = parse_macro_input!(args as AttributeArgs);
-    let args = match OSFactoryArgs::from_list(&attr_args) {
+    let args = match OsFactoryArgs::from_list(&attr_args) {
         Ok(v) => v,
         Err(e) => return TokenStream::from(e.write_errors()),
     };

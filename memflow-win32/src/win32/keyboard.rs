@@ -168,7 +168,7 @@ impl<T> Win32Keyboard<T> {
         let re = Regex::new("(?-u)\\x48\\x8B\\x05(?s:.)(?s:.)(?s:.)(?s:.)\\x48\\x89\\x81(?s:.)(?s:.)\\x00\\x00\\x48\\x8B\\x8F")
                     .map_err(|_| Error(ErrorOrigin::OsLayer, ErrorKind::Encoding).log_info("malformed gafAsyncKeyState signature"))?;
         let buf_offs = re
-            .find(&module_buf[..])
+            .find(module_buf)
             .ok_or_else(|| {
                 Error(ErrorOrigin::OsLayer, ErrorKind::NotFound)
                     .log_info("unable to find gafAsyncKeyState signature")

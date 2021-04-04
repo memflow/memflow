@@ -104,7 +104,7 @@ impl<'a, T: PhysicalMemory, Q: CacheValidator> CachedMemoryAccess<'a, T, Q> {
     ///     assert_eq!(value, MAGIC_VALUE);
     ///
     ///     // retrieve ownership of mem and return it back
-    ///     cache.destroy()
+    ///     cache.into_inner()
     /// }
     /// # use memflow::dummy::DummyMemory;
     /// # use memflow::types::size;
@@ -112,7 +112,7 @@ impl<'a, T: PhysicalMemory, Q: CacheValidator> CachedMemoryAccess<'a, T, Q> {
     /// # mem.phys_write(0.into(), &MAGIC_VALUE).unwrap();
     /// # build(mem);
     /// ```
-    pub fn destroy(self) -> T {
+    pub fn into_inner(self) -> T {
         self.mem
     }
 }
@@ -198,7 +198,7 @@ impl<T: PhysicalMemory> CachedMemoryAccessBuilder<T, DefaultCacheValidator> {
     ///
     ///     cache.phys_write(0.into(), &MAGIC_VALUE);
     ///
-    ///     let mut mem = cache.destroy();
+    ///     let mut mem = cache.into_inner();
     ///
     ///     let value: u64 = mem.phys_read(0.into()).unwrap();
     ///     assert_eq!(value, MAGIC_VALUE);

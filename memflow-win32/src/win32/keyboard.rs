@@ -57,7 +57,7 @@ impl<'a, T: PhysicalMemory, V: VirtualTranslate>
     pub fn with_kernel(mut kernel: Win32Kernel<T, V>) -> Result<Self> {
         let (user_process_info, key_state_addr) = Self::find_keystate(&mut kernel)?;
 
-        let (phys_mem, vat) = kernel.virt_mem.destroy();
+        let (phys_mem, vat) = kernel.virt_mem.into_inner();
         let virt_mem = VirtualDMA::with_vat(
             phys_mem,
             user_process_info.base_info.proc_arch,
@@ -72,9 +72,9 @@ impl<'a, T: PhysicalMemory, V: VirtualTranslate>
         })
     }
 
-    /// Consume the self object and return the underlying owned memory and vat objects
-    pub fn destroy(self) -> (T, V) {
-        self.virt_mem.destroy()
+    /// Consumes this keyboard, returning the underlying memory and vat objects
+    pub fn into_inner(self) -> (T, V) {
+        self.virt_mem.into_inner()
     }
 }
 

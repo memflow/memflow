@@ -10,6 +10,7 @@ TODO: more documentation
 */
 
 pub mod cache;
+pub mod cursor;
 pub mod mem_map;
 pub mod phys_mem;
 pub mod phys_mem_batcher;
@@ -19,6 +20,8 @@ pub mod virt_translate;
 
 #[doc(hidden)]
 pub use cache::*; // TODO: specify pub declarations
+#[doc(hidden)]
+pub use cursor::{PhysicalMemoryCursor, VirtualMemoryCursor};
 #[doc(hidden)]
 pub use mem_map::MemoryMap;
 #[doc(hidden)]

@@ -386,7 +386,7 @@ mod tests {
             .unwrap();
         let arch = x86::x64::ARCH;
 
-        let mut mem = CachedMemoryAccess::builder(dummy_os.destroy())
+        let mut mem = CachedMemoryAccess::builder(dummy_os.into_inner())
             .validator(TimedCacheValidator::new(Duration::from_secs(100)))
             .page_type_mask(PageType::UNKNOWN)
             .arch(arch)

@@ -26,7 +26,7 @@ fn initialize_virt_ctx() -> Result<(
     let module = prc.primary_module().unwrap();
     let translator = prc.proc.translator();
     let info = prc.proc.info;
-    Ok((os.destroy(), vat, info, translator, module))
+    Ok((os.into_inner(), vat, info, translator, module))
 }
 
 fn dummy_read_group(c: &mut Criterion) {

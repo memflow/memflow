@@ -140,7 +140,7 @@ impl DummyOS {
         (ret, dtb, virt_base)
     }
 
-    pub fn destroy(self) -> DummyMemory {
+    pub fn into_inner(self) -> DummyMemory {
         self.mem
     }
 

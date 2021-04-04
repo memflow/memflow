@@ -30,7 +30,7 @@ use bumpalo::{collections::Vec as BumpVec, Bump};
 /// # let mut os = DummyOS::new(mem);
 /// # let virt_size = size::mb(8);
 /// # let (dtb, virt_base) = os.alloc_dtb(virt_size, &[]);
-/// # let mut mem = os.destroy();
+/// # let mut mem = os.into_inner();
 /// # let translator = x64::new_translator(dtb);
 /// # let mut vat = DirectTranslate::new();
 /// let mut cached_vat = CachedVirtualTranslate::builder(&mut vat)
@@ -52,7 +52,7 @@ use bumpalo::{collections::Vec as BumpVec, Bump};
 /// # let mut os = DummyOS::new(mem);
 /// # let virt_size = size::mb(8);
 /// # let (dtb, virt_base) = os.alloc_dtb(virt_size, &[]);
-/// # let mut mem = os.destroy();
+/// # let mut mem = os.into_inner();
 /// # let translator = x64::new_translator(dtb);
 /// # let mut vat = DirectTranslate::new();
 /// # let mut cached_vat = CachedVirtualTranslate::builder(&mut vat)
@@ -316,7 +316,7 @@ mod tests {
             .build()
             .unwrap();
 
-        let mem = os.destroy();
+        let mem = os.into_inner();
 
         let vmem = VirtualDMA::with_vat(mem.clone(), x86::x64::ARCH, translator, vat);
 

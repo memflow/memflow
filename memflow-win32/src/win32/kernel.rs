@@ -113,9 +113,9 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
         }
     }
 
-    /// Consume the self object and return the underlying owned memory and vat objects
-    pub fn destroy(self) -> (T, V) {
-        self.virt_mem.destroy()
+    /// Consumes this kernel and return the underlying owned memory and vat objects
+    pub fn into_inner(self) -> (T, V) {
+        self.virt_mem.into_inner()
     }
 
     pub fn kernel_process_info(&mut self) -> Result<Win32ProcessInfo> {

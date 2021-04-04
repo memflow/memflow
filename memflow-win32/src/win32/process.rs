@@ -230,7 +230,7 @@ impl<'a, T: PhysicalMemory, V: VirtualTranslate>
     Win32Process<VirtualDMA<T, V, Win32VirtualTranslate>>
 {
     pub fn with_kernel(kernel: Win32Kernel<T, V>, proc_info: Win32ProcessInfo) -> Self {
-        let (phys_mem, vat) = kernel.virt_mem.destroy();
+        let (phys_mem, vat) = kernel.virt_mem.into_inner();
         let virt_mem = VirtualDMA::with_vat(
             phys_mem,
             proc_info.base_info.proc_arch,
@@ -244,9 +244,9 @@ impl<'a, T: PhysicalMemory, V: VirtualTranslate>
         }
     }
 
-    /// Consume the self object and return the underlying owned memory and vat objects
-    pub fn destroy(self) -> (T, V) {
-        self.virt_mem.destroy()
+    /// Consumes this process, returning the underlying memory and vat objects
+    pub fn into_inner(self) -> (T, V) {
+        self.virt_mem.into_inner()
     }
 }
 

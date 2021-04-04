@@ -44,7 +44,7 @@ where
     /// # let mem = DummyMemory::new(size::mb(16));
     /// # let mut os = DummyOS::new(mem);
     /// # let (dtb, virtual_base) = os.alloc_dtb(VIRT_MEM_SIZE, &[]);
-    /// # let mut mem = os.destroy();
+    /// # let mut mem = os.into_inner();
     /// # let translator = x64::new_translator(dtb);
     /// let arch = x64::ARCH;
     ///
@@ -114,7 +114,7 @@ where
     /// # let mem = DummyMemory::new(size::mb(16));
     /// # let mut os = DummyOS::new(mem);
     /// # let (dtb, virtual_base) = os.alloc_dtb(VIRT_MEM_SIZE, &[]);
-    /// # let mut mem = os.destroy();
+    /// # let mut mem = os.into_inner();
     /// # let translator = x64::new_translator(dtb);
     /// let arch = x64::ARCH;
     ///

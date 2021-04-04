@@ -179,10 +179,10 @@ pub unsafe extern "C" fn connector_clone(conn: &ConnectorInstance, out: &mut MuC
 ///
 /// # Safety
 ///
-/// `conn` has to point to a valid `ConnectorInstance` created by one of the provided
+/// `conn` has to point to a valid [`ConnectorInstance`] created by one of the provided
 /// functions.
 ///
-/// There has to be no instance of `PhysicalMemory` created from the input `conn`, because they
+/// There has to be no instance of [`PhysicalMemory`] created from the input `conn`, because they
 /// will become invalid.
 #[no_mangle]
 pub unsafe extern "C" fn connector_drop(conn: &mut ConnectorInstance) {

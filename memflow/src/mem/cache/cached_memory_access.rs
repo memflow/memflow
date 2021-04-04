@@ -1,5 +1,5 @@
 /*!
-This cache is a wrapper for connector objects that implement the `PhysicalMemory` trait.
+This cache is a wrapper for connector objects that implement the [`PhysicalMemory`] trait.
 It enables a configurable caching layer when accessing physical pages.
 
 Each page that is being read by the the connector will be placed into a `PageCache` object.
@@ -44,8 +44,8 @@ use bumpalo::Bump;
 
 /// The cache object that can use as a drop-in replacement for any Connector.
 ///
-/// Since this cache implements `PhysicalMemory` it can be used as a replacement
-/// in all structs and functions that require a `PhysicalMemory` object.
+/// Since this cache implements [`PhysicalMemory`] it can be used as a replacement
+/// in all structs and functions that require a [`PhysicalMemory`] object.
 pub struct CachedMemoryAccess<'a, T, Q> {
     mem: T,
     cache: PageCache<'a, Q>,

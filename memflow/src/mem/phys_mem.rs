@@ -11,7 +11,7 @@ use std::mem::MaybeUninit;
 // - check endianess here and return an error
 // - better would be to convert endianess with word alignment from addr
 
-/// The `PhysicalMemory` trait is implemented by memory backends
+/// The [`PhysicalMemory`] trait is implemented by memory backends
 /// and provides a generic way to read and write from/to physical memory.
 ///
 /// All addresses are of the type [`PhysicalAddress`](../types/physical_address/index.html)
@@ -22,7 +22,7 @@ use std::mem::MaybeUninit;
 ///
 /// # Examples
 ///
-/// Implementing `PhysicalMemory` for a memory backend:
+/// Implementing [`PhysicalMemory`] for a memory backend:
 /// ```
 /// use std::vec::Vec;
 ///
@@ -74,7 +74,7 @@ use std::mem::MaybeUninit;
 /// }
 /// ```
 ///
-/// Reading from `PhysicalMemory`:
+/// Reading from [`PhysicalMemory`]:
 /// ```
 /// use memflow::types::Address;
 /// use memflow::mem::PhysicalMemory;

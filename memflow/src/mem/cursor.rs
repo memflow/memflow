@@ -1,6 +1,6 @@
 /*!
 The cursor module provides cursor implementations around
-the `PhysicalMemory` and `VirtualMemory` set of traits.
+the [`PhysicalMemory`] and [`VirtualMemory`] set of traits.
 
 The cursor provides the [`Read`](https://doc.rust-lang.org/std/io/trait.Read.html),
 [`Write`](https://doc.rust-lang.org/std/io/trait.Write.html) and [`Seek`](https://doc.rust-lang.org/std/io/trait.Seek.html) traits

@@ -13,10 +13,10 @@ use crate::types::{Address, Page, PhysicalAddress};
 use bumpalo::{collections::Vec as BumpVec, Bump};
 use itertools::Itertools;
 
-/// The `VirtualDma` struct provides a default implementation to access virtual memory
-/// from user provided `PhysicalMemory` and `VirtualTranslate` objects.
+/// The VirtualDma struct provides a default implementation to access virtual memory
+/// from user provided [`PhysicalMemory`] and [`VirtualTranslate`] objects.
 ///
-/// This struct implements `VirtualMemory` and allows the user to access the virtual memory of a process.
+/// This struct implements [`VirtualMemory`] and allows the user to access the virtual memory of a process.
 pub struct VirtualDma<T, V, D> {
     phys_mem: T,
     vat: V,

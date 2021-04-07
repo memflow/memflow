@@ -3,8 +3,8 @@
 */
 
 use crate::dataview::Pod;
-use crate::error::{Error, ErrorKind, ErrorOrigin, PartialResult};
-use crate::mem::VirtualMemory;
+use crate::error::{Error, ErrorKind, ErrorOrigin, PartialResult, Result};
+use crate::mem::{PhysicalMemory, VirtualMemory};
 use crate::types::{Address, ByteSwap};
 
 use std::convert::TryFrom;
@@ -42,7 +42,7 @@ use std::{cmp, fmt, hash, ops};
 ///
 /// fn read_foo_bar(virt_mem: &mut impl VirtualMemory) {
 ///     let bar: Bar = virt_mem.virt_read(0x1234.into()).unwrap();
-///     let foo = bar.foo_ptr.deref(virt_mem).unwrap();
+///     let foo = bar.foo_ptr.virt_read(virt_mem).unwrap();
 ///     println!("value: {}", foo.some_value);
 /// }
 ///
@@ -119,15 +119,15 @@ impl<T: ?Sized> Pointer32<T> {
         Pointer32::NULL
     }
 
-    /// Checks wether the pointer32 is zero or not.
+    /// Returns `true` if the pointer is null.
     ///
     /// # Examples
     ///
     /// ```
     /// use memflow::types::Pointer32;
     ///
-    /// assert_eq!(Pointer32::<()>::null().is_null(), true);
-    /// assert_eq!(Pointer32::<()>::from(0x1000u32).is_null(), false);
+    /// let ptr = Pointer32::<()>::from(0x1000u32);
+    /// assert!(!ptr.is_null());
     /// ```
     #[inline]
     pub const fn is_null(self) -> bool {
@@ -202,17 +202,92 @@ impl<T: ?Sized> Pointer32<T> {
     }
 }
 
+impl<T: Sized> Pointer32<T> {
+    /// Calculates the offset from a pointer
+    ///
+    /// `count` is in units of T; e.g., a `count` of 3 represents a pointer offset of `3 * size_of::<T>()` bytes.
+    ///
+    /// # Panics
+    ///
+    /// This function panics if `T` is a Zero-Sized Type ("ZST").
+    ///
+    /// # Examples:
+    ///
+    /// ```
+    /// use memflow::types::Pointer32;
+    ///
+    /// let ptr = Pointer32::<u16>::from(0x1000u32);
+    ///
+    /// println!("{:?}", ptr.offset(3));
+    /// ```
+    pub fn offset(self, count: i32) -> Self {
+        let pointee_size = size_of::<T>();
+        assert!(0 < pointee_size && pointee_size <= i32::MAX as usize);
+
+        (self
+            .address
+            .wrapping_add((pointee_size as i32 * count) as u32))
+        .into()
+    }
+
+    /// Calculates the distance between two pointers. The returned value is in
+    /// units of T: the distance in bytes is divided by `mem::size_of::<T>()`.
+    ///
+    /// This function is the inverse of [`offset`].
+    ///
+    /// [`offset`]: #method.offset
+    ///
+    /// # Panics
+    ///
+    /// This function panics if `T` is a Zero-Sized Type ("ZST").
+    ///
+    /// # Examples:
+    ///
+    /// ```
+    /// use memflow::types::Pointer32;
+    ///
+    /// let ptr1 = Pointer32::<u16>::from(0x1000u32);
+    /// let ptr2 = Pointer32::<u16>::from(0x1008u32);
+    ///
+    /// assert_eq!(ptr2.offset_from(ptr1), 4);
+    /// assert_eq!(ptr1.offset_from(ptr2), -4);
+    /// ```
+    pub fn offset_from(self, origin: Self) -> i32 {
+        let pointee_size = size_of::<T>();
+        assert!(0 < pointee_size && pointee_size <= i32::MAX as usize);
+
+        let offset = self.address.wrapping_sub(origin.address) as i32;
+        offset / pointee_size as i32
+    }
+}
+
 /// This function will deref the pointer directly into a Pod type.
 impl<T: Pod + ?Sized> Pointer32<T> {
-    pub fn deref_into<U: VirtualMemory>(self, mem: &mut U, out: &mut T) -> PartialResult<()> {
+    pub fn phys_read_into<U: PhysicalMemory>(self, mem: &mut U, out: &mut T) -> Result<()> {
+        mem.phys_read_ptr32_into(self, out)
+    }
+
+    pub fn virt_read_into<U: VirtualMemory>(self, mem: &mut U, out: &mut T) -> PartialResult<()> {
         mem.virt_read_ptr32_into(self, out)
     }
 }
 
 /// This function will return the Object this pointer is pointing towards.
 impl<T: Pod + Sized> Pointer32<T> {
-    pub fn deref<U: VirtualMemory>(self, mem: &mut U) -> PartialResult<T> {
+    pub fn phys_read<U: PhysicalMemory>(self, mem: &mut U) -> Result<T> {
+        mem.phys_read_ptr32(self)
+    }
+
+    pub fn virt_read<U: VirtualMemory>(self, mem: &mut U) -> PartialResult<T> {
         mem.virt_read_ptr32(self)
+    }
+
+    pub fn phys_write<U: PhysicalMemory>(self, mem: &mut U, data: &T) -> Result<()> {
+        mem.phys_write_ptr32(self, data)
+    }
+
+    pub fn virt_write<U: VirtualMemory>(self, mem: &mut U, data: &T) -> PartialResult<()> {
+        mem.virt_write_ptr32(self, data)
     }
 }
 
@@ -300,7 +375,7 @@ impl<T: ?Sized> From<u32> for Pointer32<T> {
 impl<T: ?Sized> TryFrom<u64> for Pointer32<T> {
     type Error = crate::error::Error;
 
-    fn try_from(address: u64) -> Result<Pointer32<T>, Self::Error> {
+    fn try_from(address: u64) -> std::result::Result<Pointer32<T>, Self::Error> {
         if address <= (u32::max_value() as u64) {
             Ok(Pointer32 {
                 address: address as u32,
@@ -317,7 +392,7 @@ impl<T: ?Sized> TryFrom<u64> for Pointer32<T> {
 impl<T: ?Sized> TryFrom<Address> for Pointer32<T> {
     type Error = crate::error::Error;
 
-    fn try_from(address: Address) -> Result<Pointer32<T>, Self::Error> {
+    fn try_from(address: Address) -> std::result::Result<Pointer32<T>, Self::Error> {
         if address.as_u64() <= (u32::max_value() as u64) {
             Ok(Pointer32 {
                 address: address.as_u32(),

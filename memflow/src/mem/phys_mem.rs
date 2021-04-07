@@ -3,7 +3,7 @@ use std::prelude::v1::*;
 use super::PhysicalMemoryBatcher;
 use crate::dataview::Pod;
 use crate::error::Result;
-use crate::types::PhysicalAddress;
+use crate::types::{PhysicalAddress, Pointer32, Pointer64};
 
 use std::mem::MaybeUninit;
 
@@ -157,6 +157,58 @@ where
         Self: Sized,
     {
         self.phys_write_raw(addr, data.as_bytes())
+    }
+
+    // read pointer wrappers
+    fn phys_read_ptr32_into<U: Pod + ?Sized>(
+        &mut self,
+        ptr: Pointer32<U>,
+        out: &mut U,
+    ) -> Result<()>
+    where
+        Self: Sized,
+    {
+        self.phys_read_into(ptr.address.into(), out)
+    }
+
+    fn phys_read_ptr32<U: Pod + Sized>(&mut self, ptr: Pointer32<U>) -> Result<U>
+    where
+        Self: Sized,
+    {
+        self.phys_read(ptr.address.into())
+    }
+
+    fn phys_read_ptr64_into<U: Pod + ?Sized>(
+        &mut self,
+        ptr: Pointer64<U>,
+        out: &mut U,
+    ) -> Result<()>
+    where
+        Self: Sized,
+    {
+        self.phys_read_into(ptr.address.into(), out)
+    }
+
+    fn phys_read_ptr64<U: Pod + Sized>(&mut self, ptr: Pointer64<U>) -> Result<U>
+    where
+        Self: Sized,
+    {
+        self.phys_read(ptr.address.into())
+    }
+
+    // write pointer wrappers
+    fn phys_write_ptr32<U: Pod + Sized>(&mut self, ptr: Pointer32<U>, data: &U) -> Result<()>
+    where
+        Self: Sized,
+    {
+        self.phys_write(ptr.address.into(), data)
+    }
+
+    fn phys_write_ptr64<U: Pod + Sized>(&mut self, ptr: Pointer64<U>, data: &U) -> Result<()>
+    where
+        Self: Sized,
+    {
+        self.phys_write(ptr.address.into(), data)
     }
 
     fn phys_batcher(&mut self) -> PhysicalMemoryBatcher<Self>

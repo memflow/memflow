@@ -187,6 +187,21 @@ where
         self.virt_read(ptr.address.into())
     }
 
+    // write pointer wrappers
+    fn virt_write_ptr32<U: Pod + Sized>(&mut self, ptr: Pointer32<U>, data: &U) -> PartialResult<()>
+    where
+        Self: Sized,
+    {
+        self.virt_write(ptr.address.into(), data)
+    }
+
+    fn virt_write_ptr64<U: Pod + Sized>(&mut self, ptr: Pointer64<U>, data: &U) -> PartialResult<()>
+    where
+        Self: Sized,
+    {
+        self.virt_write(ptr.address.into(), data)
+    }
+
     // TODO: read into slice?
     // TODO: if len is shorter than string -> dynamically double length up to an upper bound
     fn virt_read_cstr(&mut self, addr: Address, len: usize) -> PartialResult<String> {

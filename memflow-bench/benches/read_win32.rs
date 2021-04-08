@@ -50,7 +50,7 @@ fn initialize_virt_ctx() -> Result<(
         let idx = if i >= 0 {
             i as usize
         } else {
-            rng.gen_range(0, proc_list.len())
+            rng.gen_range(0..proc_list.len())
         };
 
         let mod_list: Vec<ModuleInfo> = {
@@ -63,7 +63,7 @@ fn initialize_virt_ctx() -> Result<(
         };
 
         if !mod_list.is_empty() {
-            let tmod = &mod_list[rng.gen_range(0, mod_list.len())];
+            let tmod = &mod_list[rng.gen_range(0..mod_list.len())];
             let proc = proc_list[idx].clone();
             let translator = kernel
                 .process_info_from_base_info(proc.clone())?

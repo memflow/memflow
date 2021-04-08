@@ -288,6 +288,7 @@ impl<T: Sized> Pointer64<T> {
     ///
     /// println!("{:?}", ptr.add(3));
     /// ```
+    #[allow(clippy::should_implement_trait)]
     pub fn add(self, count: u64) -> Self {
         self.offset(count as i64)
     }
@@ -313,6 +314,7 @@ impl<T: Sized> Pointer64<T> {
     ///
     /// println!("{:?}", ptr.sub(3));
     /// ```
+    #[allow(clippy::should_implement_trait)]
     pub fn sub(self, count: u64) -> Self {
         self.offset((count as i64).wrapping_neg())
     }

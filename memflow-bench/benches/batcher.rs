@@ -46,10 +46,10 @@ fn read_test_nobatcher<T: PhysicalMemory>(
     size: usize,
     tbuf: &mut [PhysicalReadData],
 ) {
-    let base_addr = Address::from(rng.gen_range(0, size));
+    let base_addr = Address::from(rng.gen_range(0..size));
 
     for PhysicalReadData(addr, _) in tbuf.iter_mut().take(chunk_size) {
-        *addr = (base_addr + rng.gen_range(0, 0x2000)).into();
+        *addr = (base_addr + rng.gen_range(0..0x2000)).into();
     }
 
     let _ = black_box(mem.phys_read_raw_list(&mut tbuf[..chunk_size]));
@@ -61,13 +61,13 @@ fn read_test_batcher<T: PhysicalMemory>(
     mut rng: CurRng,
     size: usize,
 ) {
-    let base_addr = Address::from(rng.gen_range(0, size));
+    let base_addr = Address::from(rng.gen_range(0..size));
 
     let mut batcher = mem.phys_batcher();
     batcher.read_prealloc(chunk_size);
 
     for i in unsafe { TSLICE.iter_mut().take(chunk_size) } {
-        batcher.read_into((base_addr + rng.gen_range(0, 0x2000)).into(), i);
+        batcher.read_into((base_addr + rng.gen_range(0..0x2000)).into(), i);
     }
 
     let _ = black_box(batcher.commit_rw());

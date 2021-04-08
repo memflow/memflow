@@ -26,13 +26,11 @@ fn vat_test_with_mem<T: PhysicalMemory, V: VirtualTranslate, S: ScopedVirtualTra
 
     let mut bufs = vec![Address::null(); translations];
 
-    let base_addr = rng.gen_range(
-        module.base.as_u64(),
-        module.base.as_u64() + module.size as u64,
-    );
+    let base_addr =
+        rng.gen_range(module.base.as_u64()..(module.base.as_u64() + module.size as u64));
 
     for addr in bufs.iter_mut() {
-        *addr = (base_addr + rng.gen_range(0, 0x2000)).into();
+        *addr = (base_addr + rng.gen_range(0..0x2000)).into();
     }
 
     let mut out = Vec::new();

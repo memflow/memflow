@@ -14,8 +14,8 @@ publish = false
 
 [dependencies]
 memflow = { path = "../memflow", features = ["dummy_mem"] }
-rand = "0.7"
-rand_xorshift = "0.2"
+rand = "0.8"
+rand_xorshift = "0.3"
 
 # This branch provides throughput plots
 criterion = { git = "https://github.com/h33p/criterion.rs.git", branch = "tput" }

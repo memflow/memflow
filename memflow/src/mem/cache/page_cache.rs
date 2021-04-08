@@ -411,7 +411,7 @@ mod tests {
     /// The predetermined seed was found to be problematic when it comes to memory overlap
     #[test]
     fn big_virt_buf() {
-        for &seed in &[0x3ffd_235c_5194_dedf, thread_rng().gen_range(0, !0u64)] {
+        for &seed in &[0x3ffd_235c_5194_dedf, thread_rng().gen_range(0..!0u64)] {
             let dummy_mem = DummyMemory::new(size::mb(512));
             let mut dummy_os = DummyOs::with_seed(dummy_mem, seed);
 

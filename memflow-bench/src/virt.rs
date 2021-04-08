@@ -32,20 +32,18 @@ fn rwtest<T: VirtualMemory>(
             let mut done_size = 0;
 
             while done_size < read_size {
-                let base_addr = rng.gen_range(
-                    module.base.as_u64(),
-                    module.base.as_u64() + module.size as u64,
-                );
+                let base_addr = rng
+                    .gen_range(module.base.as_u64()..(module.base.as_u64() + module.size as u64));
 
                 let mut bufs = Vec::with_capacity(*o);
 
                 for VirtualReadData(addr, _) in bufs.iter_mut() {
-                    *addr = (base_addr + rng.gen_range(0, 0x2000)).into();
+                    *addr = (base_addr + rng.gen_range(0..0x2000)).into();
                 }
 
                 bufs.extend(vbufs.iter_mut().map(|vec| {
                     VirtualReadData(
-                        (base_addr + rng.gen_range(0, 0x2000)).into(),
+                        (base_addr + rng.gen_range(0..0x2000)).into(),
                         vec.as_mut_slice(),
                     )
                 }));

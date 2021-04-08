@@ -23,10 +23,10 @@ use crate::architecture::x86::X86ScopedVirtualTranslate;
 use x86_64::{
     structures::paging,
     structures::paging::{
-        mapper::{Mapper, MapperAllSizes, OffsetPageTable},
+        mapper::{Mapper, OffsetPageTable},
         page::{PageSize, Size1GiB, Size2MiB, Size4KiB},
         page_table::{PageTable, PageTableFlags},
-        FrameAllocator, PhysFrame,
+        FrameAllocator, PhysFrame, Translate,
     },
     PhysAddr, VirtAddr,
 };
@@ -288,7 +288,7 @@ impl DummyOs {
         let virt_base = (Address::null()
             + self
                 .rng
-                .gen_range(0x0001_0000_0000_usize, ((!0_usize) << 20) >> 20))
+                .gen_range(0x0001_0000_0000_usize..((!0_usize) << 20) >> 20))
         .as_page_aligned(size::gb(2));
 
         (

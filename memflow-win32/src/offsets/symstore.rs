@@ -142,12 +142,9 @@ impl SymbolStore {
 
     fn download_file(&self, url: &str) -> Result<Vec<u8>> {
         info!("downloading pdb from {}", url);
-        let resp = ureq::get(url).call();
-        if !resp.ok() {
-            return Err(
-                Error(ErrorOrigin::OsLayer, ErrorKind::Http).log_error("unable to download pdb")
-            );
-        }
+        let resp = ureq::get(url).call().map_err(|_| {
+            Error(ErrorOrigin::OsLayer, ErrorKind::Http).log_error("unable to download pdb")
+        })?;
 
         assert!(resp.has("Content-Length"));
         let len = resp

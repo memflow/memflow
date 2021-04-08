@@ -23,8 +23,8 @@ impl DummyProcessInfo {
             self.modules.push(ModuleInfo {
                 address: Address::from(i * 1024),
                 parent_process: Address::INVALID,
-                base: self.info.address + thread_rng().gen_range(0, self.map_size / 2),
-                size: (thread_rng().gen_range(min_size, self.map_size) / 2),
+                base: self.info.address + thread_rng().gen_range(0..self.map_size / 2),
+                size: (thread_rng().gen_range(min_size..self.map_size) / 2),
                 name: "dummy.so".into(),
                 path: "/".into(),
                 arch: x64::ARCH.ident(),

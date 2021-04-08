@@ -246,7 +246,7 @@ pub trait Loadable: Sized {
         }
 
         // load library
-        let library = Library::new(path.as_ref())
+        let library = unsafe { Library::new(path.as_ref()) }
             .map_err(|_| Error(ErrorOrigin::Inventory, ErrorKind::UnableToLoadLibrary))
             .map(CArc::from)?;
 

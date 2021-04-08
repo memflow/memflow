@@ -42,10 +42,8 @@ fn rwtest(
             let mut calls = 0;
             let mut bufs = vec![(vec![0_u8; *i], 0); *o];
 
-            let base_addr = rng.gen_range(
-                module.base.as_u64(),
-                module.base.as_u64() + module.size as u64,
-            );
+            let base_addr =
+                rng.gen_range(module.base.as_u64()..(module.base.as_u64() + module.size as u64));
 
             // This code will increase the read size for higher number of chunks
             // Since optimized vtop should scale very well with chunk sizes.
@@ -53,7 +51,7 @@ fn rwtest(
 
             while done_size < read_size * chunk_multiplier {
                 for (_, addr) in bufs.iter_mut() {
-                    *addr = base_addr + rng.gen_range(0, 0x2000);
+                    *addr = base_addr + rng.gen_range(0..0x2000);
                 }
 
                 let now = Instant::now();
@@ -92,10 +90,10 @@ fn rwtest(
 
 fn read_bench(mut kernel: impl Os) -> Result<()> {
     let proc_list = kernel.process_info_list()?;
-    let mut rng = CurRng::seed_from_u64(rand::thread_rng().gen_range(0, !0u64));
+    let mut rng = CurRng::seed_from_u64(rand::thread_rng().gen_range(0..!0u64));
     loop {
         let mut prc =
-            kernel.process_by_info(proc_list[rng.gen_range(0, proc_list.len())].clone())?;
+            kernel.process_by_info(proc_list[rng.gen_range(0..proc_list.len())].clone())?;
 
         let mod_list: Vec<ModuleInfo> = prc
             .module_list()?
@@ -104,7 +102,7 @@ fn read_bench(mut kernel: impl Os) -> Result<()> {
             .collect();
 
         if !mod_list.is_empty() {
-            let tmod = &mod_list[rng.gen_range(0, mod_list.len())];
+            let tmod = &mod_list[rng.gen_range(0..mod_list.len())];
             println!(
                 "Found test module {} ({:x}) in {}",
                 tmod.name,

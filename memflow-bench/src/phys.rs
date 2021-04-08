@@ -29,12 +29,12 @@ fn rwtest<T: PhysicalMemory>(
             let mut done_size = 0;
 
             while done_size < read_size {
-                let base_addr = rng.gen_range(start.as_u64(), end.as_u64());
+                let base_addr = rng.gen_range(start.as_u64()..end.as_u64());
 
                 let mut bufs = Vec::with_capacity(*o);
 
                 bufs.extend(vbufs.iter_mut().map(|vec| {
-                    let addr = (base_addr + rng.gen_range(0, 0x2000)).into();
+                    let addr = (base_addr + rng.gen_range(0..0x2000)).into();
 
                     PhysicalReadData(
                         PhysicalAddress::with_page(
@@ -86,7 +86,7 @@ fn read_test_with_ctx<T: PhysicalMemory>(
 ) {
     let mut rng = CurRng::from_rng(thread_rng()).unwrap();
 
-    let start = Address::from(rng.gen_range(0, size::mb(50)));
+    let start = Address::from(rng.gen_range(0..size::mb(50)));
     let end = start + size::mb(1);
 
     if cache_size > 0 {

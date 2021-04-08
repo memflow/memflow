@@ -16,8 +16,8 @@ panic = "abort"
 
 [dependencies]
 rlibc = "1.0.0"
-uefi = "0.6.0"
-uefi-services = "0.3.0"
+uefi = "0.8.0"
+uefi-services = "0.5.0"
 log = "0.4"
 memflow = { path = "../memflow", default-features = false }
 memflow-win32 = { path = "../memflow-win32/", default-features = false, features = ["embed_offsets"] }

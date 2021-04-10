@@ -218,6 +218,8 @@ impl<T: Sized> Pointer64<T> {
     /// # Panics
     ///
     /// This function panics if `T` is a Zero-Sized Type ("ZST").
+    /// This function also panics when `offset * size_of::<T>()`
+    /// causes overflow of a signed 64-bit integer.
     ///
     /// # Examples:
     ///
@@ -531,5 +533,38 @@ const _: [(); std::mem::size_of::<Pointer64<()>>()] = [(); std::mem::size_of::<u
 impl<T: ?Sized + 'static> ByteSwap for Pointer64<T> {
     fn byte_swap(&mut self) {
         self.address.byte_swap();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn offset() {
+        let ptr8 = Pointer64::<u8>::from(0x1000u64);
+        assert_eq!(ptr8.offset(3).as_u64(), 0x1003u64);
+        assert_eq!(ptr8.offset(-5).as_u64(), 0xFFBu64);
+
+        let ptr16 = Pointer64::<u16>::from(0x1000u64);
+        assert_eq!(ptr16.offset(3).as_u64(), 0x1006u64);
+        assert_eq!(ptr16.offset(-5).as_u64(), 0xFF6u64);
+
+        let ptr32 = Pointer64::<u32>::from(0x1000u64);
+        assert_eq!(ptr32.offset(3).as_u64(), 0x100Cu64);
+        assert_eq!(ptr32.offset(-5).as_u64(), 0xFECu64);
+
+        let ptr64 = Pointer64::<u64>::from(0x1000u64);
+        assert_eq!(ptr64.offset(3).as_u64(), 0x1018u64);
+        assert_eq!(ptr64.offset(-5).as_u64(), 0xFD8u64);
+    }
+
+    #[test]
+    fn offset_from() {
+        let ptr1 = Pointer64::<u16>::from(0x1000u64);
+        let ptr2 = Pointer64::<u16>::from(0x1008u64);
+
+        assert_eq!(ptr2.offset_from(ptr1), 4);
+        assert_eq!(ptr1.offset_from(ptr2), -4);
     }
 }

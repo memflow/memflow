@@ -210,6 +210,8 @@ impl<T: Sized> Pointer32<T> {
     /// # Panics
     ///
     /// This function panics if `T` is a Zero-Sized Type ("ZST").
+    /// This function also panics when `offset * size_of::<T>()`
+    /// causes overflow of a signed 32-bit integer.
     ///
     /// # Examples:
     ///
@@ -479,5 +481,34 @@ const _: [(); std::mem::size_of::<Pointer32<()>>()] = [(); std::mem::size_of::<u
 impl<T: ?Sized + 'static> ByteSwap for Pointer32<T> {
     fn byte_swap(&mut self) {
         self.address.byte_swap();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn offset() {
+        let ptr8 = Pointer32::<u8>::from(0x1000u32);
+        assert_eq!(ptr8.offset(3).as_u32(), 0x1003u32);
+        assert_eq!(ptr8.offset(-5).as_u32(), 0xFFBu32);
+
+        let ptr16 = Pointer32::<u16>::from(0x1000u32);
+        assert_eq!(ptr16.offset(3).as_u32(), 0x1006u32);
+        assert_eq!(ptr16.offset(-5).as_u32(), 0xFF6u32);
+
+        let ptr32 = Pointer32::<u32>::from(0x1000u32);
+        assert_eq!(ptr32.offset(3).as_u32(), 0x100Cu32);
+        assert_eq!(ptr32.offset(-5).as_u32(), 0xFECu32);
+    }
+
+    #[test]
+    fn offset_from() {
+        let ptr1 = Pointer32::<u16>::from(0x1000u32);
+        let ptr2 = Pointer32::<u16>::from(0x1008u32);
+
+        assert_eq!(ptr2.offset_from(ptr1), 4);
+        assert_eq!(ptr1.offset_from(ptr2), -4);
     }
 }

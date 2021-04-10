@@ -121,6 +121,7 @@ impl<'de> serde::Deserialize<'de> for ReprCStr {
 #[cfg(test)]
 mod tests {
     use super::ReprCStr;
+
     #[test]
     fn string_size_matches() {
         assert_eq!(0, ReprCStr::from("").as_ref().len());

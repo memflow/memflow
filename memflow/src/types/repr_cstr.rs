@@ -9,7 +9,10 @@ use std::str::from_utf8_unchecked;
 #[repr(transparent)]
 pub struct ReprCStr(*mut i8);
 
+// The underlying pointer isn't being mutated after construction,
+// hence it is safe to assume access to the raw pointer is both Send + Sync
 unsafe impl Send for ReprCStr {}
+unsafe impl Sync for ReprCStr {}
 
 unsafe fn string_size(mut ptr: *const i8) -> usize {
     (1..)

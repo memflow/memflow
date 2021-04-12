@@ -43,7 +43,7 @@ pub fn find_exported<T: VirtualMemory>(
     // PsInitialSystemProcess -> PsActiveProcessHead
     let image = pehelper::try_get_pe_image(virt_mem, kernel_base)?;
     let pe = PeView::from_bytes(&image)
-        .map_err(|err| Error(ErrorOrigin::OsLayer, ErrorKind::InvalidPeFile).log_info(err))?;
+        .map_err(|err| Error(ErrorOrigin::OsLayer, ErrorKind::InvalidExeFile).log_info(err))?;
 
     let sys_proc = match pe
         .get_export_by_name("PsInitialSystemProcess")

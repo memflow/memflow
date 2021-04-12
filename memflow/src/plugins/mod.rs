@@ -547,8 +547,19 @@ impl Inventory {
     ///   .os("win10")
     ///   .build();
     /// ```
-    pub fn builder(&self) -> ConnectorBuilderEmpty {
-        ConnectorBuilderEmpty { inventory: self }
+    ///
+    /// Create a OS without a connector and arguments:
+    /// ```
+    /// use memflow::plugins::Inventory;
+    ///
+    /// let inventory = Inventory::scan();
+    /// let os = inventory
+    ///   .builder()
+    ///   .os("native")
+    ///   .build();
+    /// ```
+    pub fn builder(&self) -> BuilderEmpty {
+        BuilderEmpty { inventory: self }
     }
 
     /// Tries to create a new instance for the library with the given name.
@@ -663,14 +674,12 @@ enum BuildStep<'a> {
     Os { name: &'a str, args: Option<Args> },
 }
 
-/// ConnectorBuilderEmpty creates a new connector instance without any input.
-///
-/// This indirection exists to prevent the end user from calling `args()` or `build()` before adding a connector or os first.
-pub struct ConnectorBuilderEmpty<'a> {
+/// BuilderEmpty is the starting builder that allows to either call `connector`, or `os`.
+pub struct BuilderEmpty<'a> {
     inventory: &'a Inventory,
 }
 
-impl<'a> ConnectorBuilderEmpty<'a> {
+impl<'a> BuilderEmpty<'a> {
     /// Adds a Connector instance to the build chain
     ///
     /// # Arguments
@@ -680,6 +689,18 @@ impl<'a> ConnectorBuilderEmpty<'a> {
         OsBuilder {
             inventory: self.inventory,
             steps: vec![BuildStep::Connector { name, args: None }],
+        }
+    }
+
+    /// Adds an OS instance to the build chain
+    ///
+    /// # Arguments
+    ///
+    /// * `name` - name of the target OS
+    pub fn os(self, name: &'a str) -> ConnectorBuilder<'a> {
+        ConnectorBuilder {
+            inventory: self.inventory,
+            steps: vec![BuildStep::Os { name, args: None }],
         }
     }
 }

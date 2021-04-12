@@ -13,7 +13,7 @@ pub fn try_get_pe_size<T: VirtualMemory>(virt_mem: &mut T, probe_addr: Address) 
     virt_mem.virt_read_raw_into(probe_addr, &mut probe_buf)?;
 
     let pe_probe = PeView::from_bytes(&probe_buf)
-        .map_err(|err| Error(ErrorOrigin::OsLayer, ErrorKind::InvalidPeFile).log_trace(err))?;
+        .map_err(|err| Error(ErrorOrigin::OsLayer, ErrorKind::InvalidExeFile).log_trace(err))?;
 
     let opt_header = pe_probe.optional_header();
     let size_of_image = match opt_header {
@@ -27,7 +27,7 @@ pub fn try_get_pe_size<T: VirtualMemory>(virt_mem: &mut T, probe_addr: Address) 
         );
         Ok(size_of_image as usize)
     } else {
-        Err(Error(ErrorOrigin::OsLayer, ErrorKind::InvalidPeFile)
+        Err(Error(ErrorOrigin::OsLayer, ErrorKind::InvalidExeFile)
             .log_trace("pe size_of_image is zero"))
     }
 }
@@ -45,15 +45,16 @@ pub fn try_get_pe_image<T: VirtualMemory>(
 pub fn try_get_pe_name<T: VirtualMemory>(virt_mem: &mut T, probe_addr: Address) -> Result<String> {
     let image = try_get_pe_image(virt_mem, probe_addr)?;
     let pe = PeView::from_bytes(&image)
-        .map_err(|err| Error(ErrorOrigin::OsLayer, ErrorKind::InvalidPeFile).log_trace(err))?;
+        .map_err(|err| Error(ErrorOrigin::OsLayer, ErrorKind::InvalidExeFile).log_trace(err))?;
     let name = pe
         .exports()
         .map_err(|_| {
-            Error(ErrorOrigin::OsLayer, ErrorKind::InvalidPeFile).log_trace("unable to get exports")
+            Error(ErrorOrigin::OsLayer, ErrorKind::InvalidExeFile)
+                .log_trace("unable to get exports")
         })?
         .dll_name()
         .map_err(|_| {
-            Error(ErrorOrigin::OsLayer, ErrorKind::InvalidPeFile)
+            Error(ErrorOrigin::OsLayer, ErrorKind::InvalidExeFile)
                 .log_trace("unable to get dll name")
         })?
         .to_str()

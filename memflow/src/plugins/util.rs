@@ -25,7 +25,7 @@ pub fn find_export_by_prefix(
     let buffer = std::fs::read(path.as_ref())
         .map_err(|err| Error(ErrorOrigin::Inventory, ErrorKind::UnableToReadFile).log_trace(err))?;
     let elf = Elf::parse(buffer.as_slice())
-        .map_err(|err| Error(ErrorOrigin::Inventory, ErrorKind::InvalidElfFile).log_trace(err))?;
+        .map_err(|err| Error(ErrorOrigin::Inventory, ErrorKind::InvalidExeFile).log_trace(err))?;
     Ok(elf
         .syms
         .iter()
@@ -52,7 +52,7 @@ pub fn find_export_by_prefix(
     let buffer = std::fs::read(path.as_ref())
         .map_err(|err| Error(ErrorOrigin::Inventory, ErrorKind::UnableToReadFile).log_trace(err))?;
     let pe = PE::parse(buffer.as_slice())
-        .map_err(|err| Error(ErrorOrigin::Inventory, ErrorKind::InvalidPeFile).log_trace(err))?;
+        .map_err(|err| Error(ErrorOrigin::Inventory, ErrorKind::InvalidExeFile).log_trace(err))?;
     Ok(pe
         .exports
         .iter()
@@ -77,14 +77,14 @@ pub fn find_export_by_prefix(
     let buffer = std::fs::read(path.as_ref())
         .map_err(|err| Error(ErrorOrigin::Inventory, ErrorKind::UnableToReadFile).log_trace(err))?;
     let mach = Mach::parse(buffer.as_slice())
-        .map_err(|err| Error(ErrorOrigin::Inventory, ErrorKind::InvalidMachFile).log_trace(err))?;
+        .map_err(|err| Error(ErrorOrigin::Inventory, ErrorKind::InvalidExeFile).log_trace(err))?;
     let macho = match mach {
         Mach::Binary(mach) => mach,
         Mach::Fat(mach) => (0..mach.narches)
             .filter_map(|i| mach.get(i).ok())
             .next()
             .ok_or_else(|| {
-                Error(ErrorOrigin::Inventory, ErrorKind::InvalidMachFile)
+                Error(ErrorOrigin::Inventory, ErrorKind::InvalidExeFile)
                     .log_trace("failed to find valid MachO header!")
             })?,
     };
@@ -94,7 +94,7 @@ pub fn find_export_by_prefix(
     Ok(macho
         .symbols
         .ok_or_else(|| {
-            Error(ErrorOrigin::Inventory, ErrorKind::InvalidMachFile)
+            Error(ErrorOrigin::Inventory, ErrorKind::InvalidExeFile)
                 .log_trace("failed to parse MachO symbols!")
         })?
         .iter()

@@ -90,7 +90,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
                 .virt_mem
                 .virt_read_raw(self.kernel_info.os_info.base, self.kernel_info.os_info.size)?;
             let pe = PeView::from_bytes(&image).map_err(|err| {
-                Error(ErrorOrigin::OsLayer, ErrorKind::InvalidPeFile).log_info(err)
+                Error(ErrorOrigin::OsLayer, ErrorKind::InvalidExeFile).log_info(err)
             })?;
             let addr = match pe.get_export_by_name("PsLoadedModuleList").map_err(|err| {
                 Error(ErrorOrigin::OsLayer, ErrorKind::ExportNotFound).log_info(err)

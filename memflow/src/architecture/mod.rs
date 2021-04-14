@@ -266,6 +266,12 @@ impl std::fmt::Display for ArchitectureIdent {
     }
 }
 
+impl ArchitectureIdent {
+    pub fn into_obj(self) -> ArchitectureObj {
+        self.into()
+    }
+}
+
 impl From<ArchitectureIdent> for ArchitectureObj {
     fn from(arch: ArchitectureIdent) -> ArchitectureObj {
         const KB4: usize = size::kb(4);

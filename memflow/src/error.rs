@@ -91,8 +91,23 @@ impl error::Error for Error {
 
 /// Convert from PartialError
 impl<T> From<PartialError<T>> for Error {
-    fn from(_err: PartialError<T>) -> Self {
-        Error(ErrorOrigin::Memory, ErrorKind::PartialData)
+    fn from(err: PartialError<T>) -> Self {
+        match err {
+            PartialError::Error(e) => e,
+            _ => Error(ErrorOrigin::Memory, ErrorKind::PartialData),
+        }
+    }
+}
+
+impl From<ErrorOrigin> for Error {
+    fn from(origin: ErrorOrigin) -> Self {
+        Error(origin, ErrorKind::Unknown)
+    }
+}
+
+impl From<ErrorKind> for Error {
+    fn from(kind: ErrorKind) -> Self {
+        Error(ErrorOrigin::Other, kind)
     }
 }
 
@@ -167,6 +182,8 @@ pub enum ErrorKind {
     ArgValidation,
     RequiredArgNotFound,
 
+    InvalidArgument,
+
     PartialData,
 
     NotFound,
@@ -192,9 +209,7 @@ pub enum ErrorKind {
     InvalidMemorySizeUnit,
 
     UnableToLoadLibrary,
-    InvalidElfFile,
-    InvalidPeFile,
-    InvalidMachFile,
+    InvalidExeFile,
     MemflowExportsNotFound,
     VersionMismatch,
     AlreadyExists,
@@ -226,6 +241,8 @@ impl ErrorKind {
             ErrorKind::ArgValidation => "the argument could not be validated",
             ErrorKind::RequiredArgNotFound => "required argument is not set",
 
+            ErrorKind::InvalidArgument => "invalid argument passed",
+
             ErrorKind::PartialData => "partial data",
 
             ErrorKind::NotFound => "not found",
@@ -251,9 +268,7 @@ impl ErrorKind {
             ErrorKind::InvalidMemorySizeUnit => "invalid memory size units (or none)",
 
             ErrorKind::UnableToLoadLibrary => "unable to load library",
-            ErrorKind::InvalidElfFile => "file is not a valid elf file",
-            ErrorKind::InvalidPeFile => "file is not a valid pe file",
-            ErrorKind::InvalidMachFile => "file is not a valid mach file",
+            ErrorKind::InvalidExeFile => "file is not a valid executable file",
             ErrorKind::MemflowExportsNotFound => "file does not contain any memflow exports",
             ErrorKind::VersionMismatch => "version mismatch",
             ErrorKind::AlreadyExists => "already exists",
@@ -373,8 +388,9 @@ impl<T> PartialResultExt<T> for PartialResult<T> {
         match self {
             Ok(data) => Ok(data),
             Err(PartialError::PartialVirtualRead(data)) => Ok(data),
+            Err(PartialError::Error(e)) => Err(e),
             //Err(Error::PartialVirtualWrite(data)) => Ok(data),
-            Err(_) => Err(Error(ErrorOrigin::Memory, ErrorKind::PartialData)),
+            _ => Err(Error(ErrorOrigin::Memory, ErrorKind::PartialData)),
         }
     }
 
@@ -544,9 +560,9 @@ mod tests {
 
     #[test]
     pub fn error_to_from_i32() {
-        let err = Error::from_i32(Error(ErrorOrigin::Other, ErrorKind::InvalidPeFile).into_i32());
+        let err = Error::from_i32(Error(ErrorOrigin::Other, ErrorKind::InvalidExeFile).into_i32());
         assert_eq!(err.0, ErrorOrigin::Other);
-        assert_eq!(err.1, ErrorKind::InvalidPeFile);
+        assert_eq!(err.1, ErrorKind::InvalidExeFile);
     }
 
     #[test]
@@ -567,21 +583,21 @@ mod tests {
 
     #[test]
     pub fn result_error_void_ffi() {
-        let r: Result<i32> = Err(Error(ErrorOrigin::Other, ErrorKind::InvalidPeFile));
+        let r: Result<i32> = Err(Error(ErrorOrigin::Other, ErrorKind::InvalidExeFile));
         let result = result_from_int_void(r.into_int_result());
         assert_eq!(result.is_ok(), false);
         assert_eq!(result.err().unwrap().0, ErrorOrigin::Other);
-        assert_eq!(result.err().unwrap().1, ErrorKind::InvalidPeFile);
+        assert_eq!(result.err().unwrap().1, ErrorKind::InvalidExeFile);
     }
 
     #[test]
     pub fn result_error_value_ffi() {
-        let r: Result<i32> = Err(Error(ErrorOrigin::Other, ErrorKind::InvalidPeFile));
+        let r: Result<i32> = Err(Error(ErrorOrigin::Other, ErrorKind::InvalidExeFile));
         let mut out = MaybeUninit::<i32>::uninit();
         let result = result_from_int(r.into_int_out_result(&mut out), out);
         assert_eq!(result.is_ok(), false);
         assert_eq!(result.err().unwrap().0, ErrorOrigin::Other);
-        assert_eq!(result.err().unwrap().1, ErrorKind::InvalidPeFile);
+        assert_eq!(result.err().unwrap().1, ErrorKind::InvalidExeFile);
     }
 
     #[test]
@@ -604,13 +620,13 @@ mod tests {
     pub fn part_result_error_void_ffi() {
         let r: PartialResult<i32> = Err(PartialError::Error(Error(
             ErrorOrigin::Other,
-            ErrorKind::InvalidPeFile,
+            ErrorKind::InvalidExeFile,
         )));
         let result = part_result_from_int_void(r.into_int_result());
         assert_eq!(result.is_ok(), false);
         assert_eq!(
             result.err().unwrap(),
-            PartialError::Error(Error(ErrorOrigin::Other, ErrorKind::InvalidPeFile))
+            PartialError::Error(Error(ErrorOrigin::Other, ErrorKind::InvalidExeFile))
         );
     }
 
@@ -618,14 +634,14 @@ mod tests {
     pub fn part_result_error_value_ffi() {
         let r: PartialResult<i32> = Err(PartialError::Error(Error(
             ErrorOrigin::Other,
-            ErrorKind::InvalidPeFile,
+            ErrorKind::InvalidExeFile,
         )));
         let mut out = MaybeUninit::<i32>::uninit();
         let result = part_result_from_int(r.into_int_out_result(&mut out), out);
         assert_eq!(result.is_ok(), false);
         assert_eq!(
             result.err().unwrap(),
-            PartialError::Error(Error(ErrorOrigin::Other, ErrorKind::InvalidPeFile))
+            PartialError::Error(Error(ErrorOrigin::Other, ErrorKind::InvalidExeFile))
         );
     }
 

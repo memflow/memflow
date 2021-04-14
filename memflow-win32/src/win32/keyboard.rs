@@ -144,7 +144,7 @@ impl<T> Win32Keyboard<T> {
 
     fn find_gaf_pe(module_buf: &[u8]) -> Result<usize> {
         let pe = PeView::from_bytes(module_buf)
-            .map_err(|err| Error(ErrorOrigin::OsLayer, ErrorKind::InvalidPeFile).log_info(err))?;
+            .map_err(|err| Error(ErrorOrigin::OsLayer, ErrorKind::InvalidExeFile).log_info(err))?;
 
         match pe.get_export_by_name("gafAsyncKeyState").map_err(|_| {
             Error(ErrorOrigin::OsLayer, ErrorKind::ExportNotFound)

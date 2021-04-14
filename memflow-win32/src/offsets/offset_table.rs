@@ -164,6 +164,8 @@ pub struct Win32OffsetTable {
     pub list_blink: u32,
     pub eproc_link: u32,
 
+    pub phys_mem_block: u32,
+
     /// Since version 3.10
     pub kproc_dtb: u32,
     /// Since version 3.10

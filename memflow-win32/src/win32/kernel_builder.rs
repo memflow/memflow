@@ -167,6 +167,8 @@ where
         // acquire offsets from the symbol store
         let offsets = self.build_offsets(&kernel_info)?;
 
+        // TODO: parse memory maps
+
         // create a vat object
         let vat = DirectTranslate::new();
 

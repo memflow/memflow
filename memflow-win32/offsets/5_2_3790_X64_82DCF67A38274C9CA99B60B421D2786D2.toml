@@ -5,6 +5,7 @@ nt_build_number = 3790
 arch = 'X64'
 
 [offsets]
+phys_mem_block = 0
 list_blink = 8
 eproc_link = 224
 kproc_dtb = 40

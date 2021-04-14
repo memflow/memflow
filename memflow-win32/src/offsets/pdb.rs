@@ -9,6 +9,37 @@ use std::{fmt, io, result};
 use pdb::{FallibleIterator, Result, Source, SourceSlice, SourceView, TypeData, PDB};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PdbSymbols {
+    symbol_map: HashMap<String, u32>,
+}
+
+impl PdbSymbols {
+    pub fn new(pdb_slice: &[u8]) -> Result<Self> {
+        let pdb_buffer = PdbSourceBuffer::new(pdb_slice);
+        let mut pdb = PDB::open(pdb_buffer)?;
+
+        let symbol_table = pdb.global_symbols()?;
+        let address_map = pdb.address_map()?;
+
+        let mut symbol_map = HashMap::new();
+
+        let mut symbols = symbol_table.iter();
+        while let Some(symbol) = symbols.next()? {
+            if let Ok(pdb::SymbolData::Public(data)) = symbol.parse() {
+                let rva = data.offset.to_rva(&address_map).unwrap_or_default();
+                symbol_map.insert(data.name.to_string().into(), rva.0);
+            }
+        }
+
+        Ok(Self { symbol_map })
+    }
+
+    pub fn find_symbol(&self, name: &str) -> Option<&u32> {
+        self.symbol_map.get(name)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PdbField {
     pub type_name: String,
     pub offset: usize,
@@ -20,7 +51,7 @@ pub struct PdbStruct {
 }
 
 impl PdbStruct {
-    pub fn with(pdb_slice: &[u8], class_name: &str) -> Result<Self> {
+    pub fn new(pdb_slice: &[u8], class_name: &str) -> Result<Self> {
         let pdb_buffer = PdbSourceBuffer::new(pdb_slice);
         let mut pdb = PDB::open(pdb_buffer)?;
 

@@ -63,12 +63,10 @@ pub fn find_exported<T: VirtualMemory>(
     let mut buf = vec![0u8; arch_obj.size_addr()];
     let sys_proc_addr: Address = match arch_obj.bits() {
         64 => {
-            // TODO: replace by virt_read_into with ByteSwap
             virt_mem.virt_read_raw_into(sys_proc, &mut buf)?;
             u64::from_le_bytes(buf[0..8].try_into().unwrap()).into()
         }
         32 => {
-            // TODO: replace by virt_read_into with ByteSwap
             virt_mem.virt_read_raw_into(sys_proc, &mut buf)?;
             u32::from_le_bytes(buf[0..4].try_into().unwrap()).into()
         }
@@ -77,7 +75,7 @@ pub fn find_exported<T: VirtualMemory>(
     Ok(sys_proc_addr)
 }
 
-// scan in pdb
+// TODO: scan in pdb
 
 // scan in section
 pub fn find_in_section<T: VirtualMemory>(

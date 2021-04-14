@@ -4,6 +4,8 @@ nt_build_number = 1381
 arch = 'X86'
 
 [offsets]
+phys_mem_block = 0
+
 list_blink = 4
 eproc_link = 0x98
 

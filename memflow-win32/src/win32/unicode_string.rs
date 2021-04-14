@@ -73,8 +73,6 @@ impl<'a, T: VirtualMemory> VirtualReadUnicodeString for T {
         content[length as usize] = 0;
         content[length as usize + 1] = 0;
 
-        // TODO: check length % 2 == 0
-
         let content16 = content
             .chunks_exact(2)
             .map(|b| {

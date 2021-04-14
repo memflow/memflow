@@ -19,5 +19,12 @@ pub trait ConnectorCpuStateInner<'a>: Send {
 }
 
 pub trait CpuState {
-    // TODO: stuff
+    // TODO:
+    // max cpu index
+    // read_register(s)
+    // write_register(s)
+    // pause
+    // resume
+    // single-step
+    // breakpoints
 }

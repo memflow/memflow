@@ -2,7 +2,7 @@ pub mod builder;
 pub use builder::Win32OffsetBuilder;
 
 #[cfg(feature = "symstore")]
-pub mod pdb_struct;
+pub mod pdb;
 #[cfg(feature = "symstore")]
 pub mod symstore;
 
@@ -11,7 +11,10 @@ pub mod offset_table;
 pub use offset_table::{Win32OffsetFile, Win32OffsetTable, Win32OffsetsArchitecture};
 
 #[cfg(feature = "symstore")]
-pub use {pdb_struct::PdbStruct, symstore::*};
+pub use {
+    self::pdb::{PdbStruct, PdbSymbols},
+    symstore::*,
+};
 
 use std::prelude::v1::*;
 
@@ -124,24 +127,32 @@ impl Win32Offsets {
 
     #[cfg(feature = "symstore")]
     pub fn from_pdb_slice(pdb_slice: &[u8]) -> Result<Self> {
-        let list = PdbStruct::with(pdb_slice, "_LIST_ENTRY").map_err(|_| {
+        let symbols = PdbSymbols::new(pdb_slice).map_err(|_| {
+            Error(ErrorOrigin::OsLayer, ErrorKind::Offset).log_warn("Symbols not found")
+        })?;
+        let list = PdbStruct::new(pdb_slice, "_LIST_ENTRY").map_err(|_| {
             Error(ErrorOrigin::OsLayer, ErrorKind::Offset).log_warn("_LIST_ENTRY not found")
         })?;
-        let kproc = PdbStruct::with(pdb_slice, "_KPROCESS").map_err(|_| {
+        let kproc = PdbStruct::new(pdb_slice, "_KPROCESS").map_err(|_| {
             Error(ErrorOrigin::OsLayer, ErrorKind::Offset).log_warn("_KPROCESS not found")
         })?;
-        let eproc = PdbStruct::with(pdb_slice, "_EPROCESS").map_err(|_| {
+        let eproc = PdbStruct::new(pdb_slice, "_EPROCESS").map_err(|_| {
             Error(ErrorOrigin::OsLayer, ErrorKind::Offset).log_warn("_EPROCESS not found")
         })?;
-        let ethread = PdbStruct::with(pdb_slice, "_ETHREAD").map_err(|_| {
+        let ethread = PdbStruct::new(pdb_slice, "_ETHREAD").map_err(|_| {
             Error(ErrorOrigin::OsLayer, ErrorKind::Offset).log_warn("_ETHREAD not found")
         })?;
-        let kthread = PdbStruct::with(pdb_slice, "_KTHREAD").map_err(|_| {
+        let kthread = PdbStruct::new(pdb_slice, "_KTHREAD").map_err(|_| {
             Error(ErrorOrigin::OsLayer, ErrorKind::Offset).log_warn("_KTHREAD not found")
         })?;
-        let teb = PdbStruct::with(pdb_slice, "_TEB").map_err(|_| {
+        let teb = PdbStruct::new(pdb_slice, "_TEB").map_err(|_| {
             Error(ErrorOrigin::OsLayer, ErrorKind::Offset).log_warn("_TEB not found")
         })?;
+
+        let phys_mem_block = symbols
+            .find_symbol("MmPhysicalMemoryBlock")
+            .copied()
+            .unwrap_or(0);
 
         let list_blink = list
             .find_field("Blink")
@@ -238,7 +249,7 @@ impl Win32Offsets {
                     .log_warn("_TEB::ProcessEnvironmentBlock not found")
             })?
             .offset as _;
-        let teb_peb_x86 = if let Ok(teb32) = PdbStruct::with(pdb_slice, "_TEB32").map_err(|_| {
+        let teb_peb_x86 = if let Ok(teb32) = PdbStruct::new(pdb_slice, "_TEB32").map_err(|_| {
             Error(ErrorOrigin::OsLayer, ErrorKind::Offset).log_warn("_TEB32 not found")
         }) {
             teb32
@@ -256,6 +267,8 @@ impl Win32Offsets {
             0: Win32OffsetTable {
                 list_blink,
                 eproc_link,
+
+                phys_mem_block,
 
                 kproc_dtb,
 

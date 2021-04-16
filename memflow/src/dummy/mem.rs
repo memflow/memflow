@@ -6,7 +6,7 @@ use crate::mem::{
 };
 
 use crate::plugins::Args;
-use crate::types::size;
+use crate::types::{size, Address};
 
 use std::sync::Arc;
 
@@ -57,6 +57,10 @@ impl PhysicalMemory for DummyMemory {
 
     fn metadata(&self) -> PhysicalMemoryMetadata {
         self.mem.metadata()
+    }
+
+    fn set_mem_map(&mut self, mem_map: MemoryMap<(Address, usize)>) {
+        self.mem.set_mem_map(mem_map)
     }
 }
 

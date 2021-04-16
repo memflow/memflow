@@ -79,14 +79,13 @@ impl<T: Seek + Read + Write + Send> PhysicalMemory for FileIoMemory<T> {
 
     fn metadata(&self) -> PhysicalMemoryMetadata {
         PhysicalMemoryMetadata {
-            size: self
-                .mem_map
-                .as_ref()
-                .iter()
-                .last()
-                .map(|map| map.base().as_usize() + map.output().1)
-                .unwrap(),
+            size: self.mem_map.max_address().as_usize(),
             readonly: false,
         }
+    }
+
+    #[inline]
+    fn set_mem_map(&mut self, mem_map: MemoryMap<(Address, usize)>) {
+        self.mem_map.merge(mem_map);
     }
 }

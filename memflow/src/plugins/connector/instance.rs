@@ -5,7 +5,11 @@ use super::{
 };
 use crate::connector::cpu_state::ConnectorCpuStateInner;
 use crate::error::*;
-use crate::mem::{PhysicalMemory, PhysicalMemoryMetadata, PhysicalReadData, PhysicalWriteData};
+use crate::mem::{
+    MemoryMap, PhysicalMemory, PhysicalMemoryMapping, PhysicalMemoryMetadata, PhysicalReadData,
+    PhysicalWriteData,
+};
+use crate::types::Address;
 
 use std::ffi::c_void;
 
@@ -34,6 +38,11 @@ pub struct PhysicalMemoryFunctionTable<T> {
         write_data_count: usize,
     ) -> i32,
     pub metadata: extern "C" fn(phys_mem: &T) -> PhysicalMemoryMetadata,
+    pub set_mem_map: extern "C" fn(
+        phys_mem: &mut T,
+        mem_maps: *const PhysicalMemoryMapping,
+        mem_maps_count: usize,
+    ),
 }
 
 impl<T: PhysicalMemory> Default for &'static PhysicalMemoryFunctionTable<T> {
@@ -42,6 +51,7 @@ impl<T: PhysicalMemory> Default for &'static PhysicalMemoryFunctionTable<T> {
             phys_write_raw_list: c_phys_write_raw_list::<T>,
             phys_read_raw_list: c_phys_read_raw_list::<T>,
             metadata: c_metadata::<T>,
+            set_mem_map: c_set_mem_map::<T>,
         }
     }
 }
@@ -76,6 +86,21 @@ extern "C" fn c_phys_read_raw_list<T: PhysicalMemory>(
 
 extern "C" fn c_metadata<T: PhysicalMemory>(phys_mem: &T) -> PhysicalMemoryMetadata {
     phys_mem.metadata()
+}
+
+extern "C" fn c_set_mem_map<T: PhysicalMemory>(
+    phys_mem: &mut T,
+    mem_maps: *const PhysicalMemoryMapping,
+    mem_maps_count: usize,
+) {
+    let mem_maps_slice = unsafe { std::slice::from_raw_parts(mem_maps, mem_maps_count) };
+
+    let mut mem_map = MemoryMap::new();
+    mem_maps_slice.iter().for_each(|m| {
+        mem_map.push_remap(m.base, m.size, m.real_base);
+    });
+
+    phys_mem.set_mem_map(mem_map)
 }
 
 /// Describes initialized connector instance
@@ -160,6 +185,19 @@ impl PhysicalMemory for ConnectorInstance {
 
     fn metadata(&self) -> PhysicalMemoryMetadata {
         (self.vtable.phys.metadata)(self.instance)
+    }
+
+    fn set_mem_map(&mut self, mem_map: MemoryMap<(Address, usize)>) {
+        let mem_maps_slice = mem_map
+            .iter()
+            .map(|m| PhysicalMemoryMapping {
+                base: m.base(),
+                size: m.output().1,
+                real_base: m.output().0,
+            })
+            .collect::<Vec<_>>();
+
+        (self.vtable.phys.set_mem_map)(self.instance, mem_maps_slice.as_ptr(), mem_maps_slice.len())
     }
 }
 

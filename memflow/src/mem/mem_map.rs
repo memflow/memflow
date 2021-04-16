@@ -41,6 +41,7 @@ impl<M> std::convert::AsRef<MemoryMap<M>> for MemoryMap<M> {
 }
 
 #[derive(Clone)]
+#[repr(C)]
 pub struct MemoryMapping<M> {
     base: Address,
     output: std::cell::RefCell<M>, // TODO: why refcell?
@@ -84,6 +85,19 @@ impl<M: SplitAtIndex> MemoryMap<M> {
     /// This function is identical to `MemoryMap::default()`.
     pub fn new() -> Self {
         MemoryMap::default()
+    }
+
+    // Returns `true` if there are no memory mappings.
+    pub fn is_empty(&self) -> bool {
+        self.mappings.is_empty()
+    }
+
+    // TODO: truly merge mappings?
+    /// Merges the current mappings with the mappings contained in `other`.
+    pub fn merge(&mut self, other: MemoryMap<M>) {
+        if self.is_empty() {
+            self.mappings = other.mappings;
+        }
     }
 
     /// Iterator over memory mappings
@@ -226,6 +240,15 @@ impl MemoryMap<(Address, usize)> {
         }
 
         Ok(result)
+    }
+
+    /// Returns the highest memory address that can be read.
+    pub fn max_address(&self) -> Address {
+        self.mappings
+            .iter()
+            .map(|m| m.base() + m.output.borrow().1)
+            .max()
+            .unwrap_or_else(|| u64::MAX.into())
     }
 
     /// Adds a new memory mapping to this memory map by specifying base address and size of the mapping.

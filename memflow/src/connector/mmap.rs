@@ -124,6 +124,9 @@ impl<'a, F: AsRef<MemoryMap<&'a mut [u8]>> + Send> PhysicalMemory
             readonly: false,
         }
     }
+
+    // This is a no-op for u8 slices.
+    fn set_mem_map(&mut self, _mem_map: MemoryMap<(Address, usize)>) {}
 }
 
 impl<'a, F: AsRef<MemoryMap<&'a [u8]>> + Send> PhysicalMemory
@@ -158,4 +161,7 @@ impl<'a, F: AsRef<MemoryMap<&'a [u8]>> + Send> PhysicalMemory
             readonly: true,
         }
     }
+
+    // This is a no-op for u8 slices.
+    fn set_mem_map(&mut self, _mem_map: MemoryMap<(Address, usize)>) {}
 }

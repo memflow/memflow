@@ -31,10 +31,11 @@ use std::mem::MaybeUninit;
 ///     PhysicalMemory,
 ///     PhysicalReadData,
 ///     PhysicalWriteData,
-///     PhysicalMemoryMetadata
+///     PhysicalMemoryMetadata,
+///     MemoryMap
 /// };
 ///
-/// use memflow::types::PhysicalAddress;
+/// use memflow::types::{PhysicalAddress, Address};
 /// use memflow::error::Result;
 ///
 /// pub struct MemoryBackend {
@@ -72,6 +73,9 @@ use std::mem::MaybeUninit;
 ///             readonly: false
 ///         }
 ///     }
+///
+///     // this is a no-op in this example
+///     fn set_mem_map(&mut self, _mem_map: MemoryMap<(Address, usize)>) {}
 /// }
 /// ```
 ///
@@ -118,10 +122,9 @@ where
 
     /// Sets the memory mapping for the physical memory
     ///
-    /// This function is implemented as a no-nop by default.
     /// In case a connector cannot acquire memory mappings on it's own this function
     /// allows the OS plugin to set the memory mapping at a later stage of initialization.
-    fn set_mem_map(&mut self, _mem_map: MemoryMap<(Address, usize)>) {}
+    fn set_mem_map(&mut self, _mem_map: MemoryMap<(Address, usize)>);
 
     // read helpers
     fn phys_read_raw_into(&mut self, addr: PhysicalAddress, out: &mut [u8]) -> Result<()> {
@@ -243,6 +246,11 @@ impl<T: PhysicalMemory + ?Sized, P: std::ops::DerefMut<Target = T> + Send> Physi
     fn metadata(&self) -> PhysicalMemoryMetadata {
         (**self).metadata()
     }
+
+    #[inline]
+    fn set_mem_map(&mut self, mem_map: MemoryMap<(Address, usize)>) {
+        (**self).set_mem_map(mem_map)
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -251,6 +259,15 @@ impl<T: PhysicalMemory + ?Sized, P: std::ops::DerefMut<Target = T> + Send> Physi
 pub struct PhysicalMemoryMetadata {
     pub size: usize,
     pub readonly: bool,
+}
+
+#[derive(Debug, Clone, Copy)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+#[repr(C)]
+pub struct PhysicalMemoryMapping {
+    pub base: Address,
+    pub size: usize,
+    pub real_base: Address,
 }
 
 // iterator helpers

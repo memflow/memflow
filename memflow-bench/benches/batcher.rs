@@ -29,6 +29,9 @@ impl PhysicalMemory for NullMem {
             readonly: true,
         }
     }
+
+    // This is a no-op
+    fn set_mem_map(&mut self, _mem_map: MemoryMap<(Address, usize)>) {}
 }
 
 use NullMem as Memory;

@@ -35,10 +35,10 @@ use super::{
 use crate::architecture::ArchitectureObj;
 use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 use crate::iter::PageChunks;
-use crate::mem::phys_mem::{
-    PhysicalMemory, PhysicalMemoryMetadata, PhysicalReadData, PhysicalWriteData,
+use crate::mem::{
+    MemoryMap, PhysicalMemory, PhysicalMemoryMetadata, PhysicalReadData, PhysicalWriteData,
 };
-use crate::types::{size, PageType};
+use crate::types::{size, Address, PageType};
 
 use bumpalo::Bump;
 
@@ -156,8 +156,14 @@ impl<'a, T: PhysicalMemory, Q: CacheValidator> PhysicalMemory for CachedMemoryAc
         mem.phys_write_raw_list(data)
     }
 
+    #[inline]
     fn metadata(&self) -> PhysicalMemoryMetadata {
         self.mem.metadata()
+    }
+
+    #[inline]
+    fn set_mem_map(&mut self, mem_map: MemoryMap<(Address, usize)>) {
+        self.mem.set_mem_map(mem_map)
     }
 }
 

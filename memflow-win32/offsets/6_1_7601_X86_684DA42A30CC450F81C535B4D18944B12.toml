@@ -8,7 +8,7 @@ arch = 'X86'
 [offsets]
 list_blink = 4
 eproc_link = 184
-phys_mem_block = 0
+phys_mem_block = 1484392
 kproc_dtb = 24
 eproc_pid = 180
 eproc_name = 364

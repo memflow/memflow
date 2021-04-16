@@ -151,6 +151,7 @@ impl Win32Offsets {
 
         let phys_mem_block = symbols
             .find_symbol("MmPhysicalMemoryBlock")
+            .or_else(|| symbols.find_symbol("_MmPhysicalMemoryBlock"))
             .copied()
             .unwrap_or(0);
 

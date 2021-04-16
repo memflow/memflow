@@ -194,7 +194,11 @@ pub trait Loadable: Sized {
 
     fn new(descriptor: PluginDescriptor<Self>) -> Self;
 
-    fn load(library: &CArc<Library>, export: &str) -> Result<LibInstance<Self>> {
+    fn load(
+        path: impl AsRef<Path>,
+        library: &CArc<Library>,
+        export: &str,
+    ) -> Result<LibInstance<Self>> {
         // find os descriptor
         let descriptor = unsafe {
             library
@@ -216,6 +220,7 @@ pub trait Loadable: Sized {
             Err(Error(ErrorOrigin::Inventory, ErrorKind::VersionMismatch))
         } else {
             Ok(LibInstance {
+                path: path.as_ref().to_path_buf(),
                 library: library.clone(),
                 loader: Self::new(descriptor),
             })
@@ -252,7 +257,7 @@ pub trait Loadable: Sized {
 
         Ok(exports
             .into_iter()
-            .filter_map(|e| Self::load(&library, &e).ok())
+            .filter_map(|e| Self::load(path.as_ref(), &library, &e).ok())
             .collect())
     }
 
@@ -659,9 +664,10 @@ impl Inventory {
             })?;
 
         info!(
-            "attempting to load `{}` type plugin {}",
+            "attempting to load `{}` type plugin `{}` from `{}`",
             T::plugin_type(),
-            lib.loader.ident()
+            lib.loader.ident(),
+            lib.path.to_string_lossy(),
         );
 
         lib.loader
@@ -840,6 +846,7 @@ impl<'a> OsBuilder<'a> {
 #[repr(C)]
 #[derive(Clone)]
 pub struct LibInstance<T> {
+    path: PathBuf,
     library: CArc<Library>,
     loader: T,
 }

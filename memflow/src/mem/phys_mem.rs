@@ -3,7 +3,8 @@ use std::prelude::v1::*;
 use super::PhysicalMemoryBatcher;
 use crate::dataview::Pod;
 use crate::error::Result;
-use crate::types::{PhysicalAddress, Pointer32, Pointer64};
+use crate::mem::MemoryMap;
+use crate::types::{Address, PhysicalAddress, Pointer32, Pointer64};
 
 use std::mem::MaybeUninit;
 
@@ -114,6 +115,13 @@ where
     /// assert_eq!(metadata.readonly, false);
     /// ```
     fn metadata(&self) -> PhysicalMemoryMetadata;
+
+    /// Sets the memory mapping for the physical memory
+    ///
+    /// This function is implemented as a no-nop by default.
+    /// In case a connector cannot acquire memory mappings on it's own this function
+    /// allows the OS plugin to set the memory mapping at a later stage of initialization.
+    fn set_mem_map(&mut self, _mem_map: MemoryMap<(Address, usize)>) {}
 
     // read helpers
     fn phys_read_raw_into(&mut self, addr: PhysicalAddress, out: &mut [u8]) -> Result<()> {

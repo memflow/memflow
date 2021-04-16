@@ -21,6 +21,8 @@ use memflow::types::{Address, ReprCStr};
 
 use pelite::{self, pe64::exports::Export, PeView};
 
+mod mem_map;
+
 const MAX_ITER_COUNT: usize = 65536;
 
 #[derive(Clone)]
@@ -35,45 +37,81 @@ pub struct Win32Kernel<T, V> {
 }
 
 impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
-    pub fn new(
-        mut phys_mem: T,
-        mut vat: V,
-        offsets: Win32Offsets,
-        kernel_info: Win32KernelInfo,
-    ) -> Self {
+    pub fn new(phys_mem: T, vat: V, offsets: Win32Offsets, kernel_info: Win32KernelInfo) -> Self {
+        let mut virt_mem = VirtualDma::with_vat(
+            phys_mem,
+            kernel_info.os_info.arch,
+            Win32VirtualTranslate::new(kernel_info.os_info.arch, kernel_info.dtb),
+            vat,
+        );
+
+        if offsets.phys_mem_block() != 0 {
+            match kernel_info.os_info.arch.into_obj().bits() {
+                32 => {
+                    if let Some(mem_map) = mem_map::parse::<_, u32>(
+                        &mut virt_mem,
+                        kernel_info.os_info.base + offsets.phys_mem_block(),
+                    ) {
+                        // update mem mapping in connector
+                        info!("updating connector mem_map={:?}", mem_map);
+                        let (mut phys_mem, vat) = virt_mem.into_inner();
+                        phys_mem.set_mem_map(mem_map);
+                        virt_mem = VirtualDma::with_vat(
+                            phys_mem,
+                            kernel_info.os_info.arch,
+                            Win32VirtualTranslate::new(kernel_info.os_info.arch, kernel_info.dtb),
+                            vat,
+                        );
+                    }
+                }
+                64 => {
+                    if let Some(mem_map) = mem_map::parse::<_, u64>(
+                        &mut virt_mem,
+                        kernel_info.os_info.base + offsets.phys_mem_block(),
+                    ) {
+                        // update mem mapping in connector
+                        info!("updating connector mem_map={:?}", mem_map);
+                        let (mut phys_mem, vat) = virt_mem.into_inner();
+                        phys_mem.set_mem_map(mem_map);
+                        virt_mem = VirtualDma::with_vat(
+                            phys_mem,
+                            kernel_info.os_info.arch,
+                            Win32VirtualTranslate::new(kernel_info.os_info.arch, kernel_info.dtb),
+                            vat,
+                        );
+                    }
+                }
+                _ => {}
+            }
+        }
+
         // start_block only contains the winload's dtb which might
         // be different to the one used in the actual kernel.
         // In case of a failure this will fall back to the winload dtb.
-        let sysproc_dtb = {
-            let mut reader = VirtualDma::with_vat(
-                &mut phys_mem,
-                kernel_info.os_info.arch,
-                Win32VirtualTranslate::new(kernel_info.os_info.arch, kernel_info.dtb),
-                &mut vat,
-            );
-
-            if let Some(Some(dtb)) = reader
-                .virt_read_addr_arch(
-                    kernel_info.os_info.arch.into(),
-                    kernel_info.eprocess_base + offsets.kproc_dtb(),
-                )
-                .ok()
-                .map(|a| a.as_page_aligned(4096).non_null())
-            {
-                dtb
-            } else {
-                kernel_info.dtb
-            }
-        };
-        info!("sysproc_dtb={:x}", sysproc_dtb);
-
-        Self {
-            virt_mem: VirtualDma::with_vat(
+        // Read dtb of first process in eprocess list:
+        let sysproc_dtb = if let Some(Some(dtb)) = virt_mem
+            .virt_read_addr_arch(
+                kernel_info.os_info.arch.into(),
+                kernel_info.eprocess_base + offsets.kproc_dtb(),
+            )
+            .ok()
+            .map(|a| a.as_page_aligned(4096).non_null())
+        {
+            info!("updating sysproc_dtb={:x}", dtb);
+            let (phys_mem, vat) = virt_mem.into_inner();
+            virt_mem = VirtualDma::with_vat(
                 phys_mem,
                 kernel_info.os_info.arch,
-                Win32VirtualTranslate::new(kernel_info.os_info.arch, kernel_info.dtb),
+                Win32VirtualTranslate::new(kernel_info.os_info.arch, dtb),
                 vat,
-            ),
+            );
+            dtb
+        } else {
+            kernel_info.dtb
+        };
+
+        Self {
+            virt_mem,
             offsets,
 
             kernel_info,

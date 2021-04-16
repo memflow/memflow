@@ -298,6 +298,11 @@ impl Win32Offsets {
         self.0.eproc_link as usize
     }
 
+    /// MmPhysicalMemoryBlock offset
+    pub fn phys_mem_block(&self) -> usize {
+        self.0.phys_mem_block as usize
+    }
+
     /// _KPROCESS::DirectoryTableBase offset
     /// Exists since version 3.10
     pub fn kproc_dtb(&self) -> usize {

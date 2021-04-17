@@ -177,8 +177,6 @@ impl<T: PhysicalMemory, V: VirtualTranslate, D: ScopedVirtualTranslate> VirtualM
     for VirtualDma<T, V, D>
 {
     fn virt_read_raw_list(&mut self, data: &mut [VirtualReadData]) -> PartialResult<()> {
-        println!("virt_read_raw_list called");
-
         self.arena.reset();
         let mut translation = BumpVec::with_capacity_in(data.len(), &self.arena);
 

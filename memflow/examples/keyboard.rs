@@ -23,17 +23,6 @@ fn main() -> Result<()> {
         );
     }
 
-    println!("yolo");
-    let mut buffer = [0u8; 32];
-    let base = os.info().base;
-    let virt = os.virt_mem().unwrap();
-    println!("yolo21");
-    virt.virt_read_into(base, &mut buffer).unwrap();
-    println!("value: {:?}", buffer);
-    println!("value: {:?}", buffer);
-    println!("value: {:?}", buffer);
-    println!("value: {:?}", buffer);
-
     let mut keyboard = os.into_keyboard()?;
 
     loop {

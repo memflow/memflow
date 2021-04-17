@@ -202,7 +202,10 @@ pub struct OsInstanceBuilder<T> {
     vtable: OsLayerFunctionTable,
 }
 
-impl<'a, T: OsInner<'a>> OsInstanceBuilder<T> {
+impl<'a, T: OsInner<'a>> OsInstanceBuilder<T>
+where
+    <T as OsInner<'a>>::VirtualMemoryType: 'static,
+{
     /// Enables the optional Keyboard feature for the OsInstance.
     pub fn enable_keyboard<K>(mut self) -> Self
     where
@@ -220,10 +223,6 @@ impl<'a, T: OsInner<'a>> OsInstanceBuilder<T> {
 
         let virt_mem = {
             let virt_mem_ref = c_os_virt_mem(unsafe { instance.as_mut() }.unwrap());
-            println!("virt_mem_ref={:?}", virt_mem_ref);
-            println!("virt_mem_ref={:?}", virt_mem_ref);
-            println!("virt_mem_ref={:?}", virt_mem_ref);
-            println!("virt_mem_ref={:?}", virt_mem_ref);
             if !virt_mem_ref.is_null() {
                 unsafe {
                     Some(VirtualMemoryInstance::unsafe_new::<

@@ -23,7 +23,7 @@ crate-type = ["lib", "cdylib"]
 memflow = { version = "0.1", path = "../memflow", default-features = false }
 log = { version = "0.4", default-features = false }
 pelite = { version = "0.9", default-features = false }
-goblin = { version = "0.4" }
+goblin = { version = "0.4", default-features = false, features = ["pe32", "pe64"] }
 widestring = { version = "0.4", default-features = false, features = ["alloc"] }
 no-std-compat = { version = "0.4", features = ["alloc"] }
 serde = { version = "1.0", default-features = false, optional = true, features = ["derive"] }
@@ -53,12 +53,12 @@ memflow = { version = "0.1", path = "../memflow", default-features = false }
 
 [features]
 default = ["std", "serde_derive", "embed_offsets", "symstore", "download_progress", "regex"]
-std = ["no-std-compat/std", "memflow/std"]
+std = ["no-std-compat/std", "memflow/std", "pelite/std", "goblin/std"]
 plugins = ["memflow/plugins", "simple_logger"]
 embed_offsets = ["serde", "memflow/serde_derive"]
 collections = []
 alloc = []
-serde_derive = ["serde", "memflow/serde_derive", "pelite/std", "pelite/serde"]
+serde_derive = ["serde", "memflow/serde_derive", "pelite/std", "pelite/serde", "goblin/std"]
 symstore = ["dirs", "ureq", "pdb"]
 download_progress = ["pbr", "progress-streams"]
 

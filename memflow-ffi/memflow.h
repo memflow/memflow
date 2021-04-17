@@ -80,6 +80,10 @@ typedef struct ArchitectureObj ArchitectureObj;
  */
 typedef struct Inventory Inventory;
 
+typedef struct Option_PhysicalMemoryInstance Option_PhysicalMemoryInstance;
+
+typedef struct Option_VirtualMemoryInstance Option_VirtualMemoryInstance;
+
 typedef struct Option______Library Option______Library;
 
 typedef struct PhysicalReadData PhysicalReadData;
@@ -191,10 +195,17 @@ typedef struct PhysicalMemoryMetadata {
     bool readonly;
 } PhysicalMemoryMetadata;
 
+typedef struct PhysicalMemoryMapping {
+    Address base;
+    uintptr_t size;
+    Address real_base;
+} PhysicalMemoryMapping;
+
 typedef struct PhysicalMemoryFunctionTable_c_void {
     int32_t (*phys_read_raw_list)(void *phys_mem, struct PhysicalReadData *read_data, uintptr_t read_data_count);
     int32_t (*phys_write_raw_list)(void *phys_mem, const struct PhysicalWriteData *write_data, uintptr_t write_data_count);
     struct PhysicalMemoryMetadata (*metadata)(const void *phys_mem);
+    void (*set_mem_map)(void *phys_mem, const struct PhysicalMemoryMapping *mem_maps, uintptr_t mem_maps_count);
 } PhysicalMemoryFunctionTable_c_void;
 
 typedef struct PhysicalMemoryFunctionTable_c_void OpaquePhysicalMemoryFunctionTable;
@@ -448,10 +459,86 @@ typedef struct ModuleInfo MuModuleInfo;
 
 typedef Address MuAddress;
 
+/**
+ * Import information structure
+ */
+typedef struct ImportInfo {
+    /**
+     * Name of the import
+     */
+    ReprCString name;
+    /**
+     * Offset of this import from the containing modules base address
+     */
+    uintptr_t offset;
+} ImportInfo;
+
+typedef struct Callback_c_void__ImportInfo {
+    void *context;
+    bool (*func)(void*, struct ImportInfo);
+} Callback_c_void__ImportInfo;
+
+typedef struct Callback_c_void__ImportInfo OpaqueCallback_ImportInfo;
+
+typedef OpaqueCallback_ImportInfo ImportCallback;
+
+/**
+ * Export information structure
+ */
+typedef struct ExportInfo {
+    /**
+     * Name of the export
+     */
+    ReprCString name;
+    /**
+     * Offset of this export from the containing modules base address
+     */
+    uintptr_t offset;
+} ExportInfo;
+
+typedef struct Callback_c_void__ExportInfo {
+    void *context;
+    bool (*func)(void*, struct ExportInfo);
+} Callback_c_void__ExportInfo;
+
+typedef struct Callback_c_void__ExportInfo OpaqueCallback_ExportInfo;
+
+typedef OpaqueCallback_ExportInfo ExportCallback;
+
+/**
+ * Section information structure
+ */
+typedef struct SectionInfo {
+    /**
+     * Name of the section
+     */
+    ReprCString name;
+    /**
+     * Virtual address of this section (essentially module_info.base + virtual_address)
+     */
+    Address base;
+    /**
+     * Size of this section
+     */
+    uintptr_t size;
+} SectionInfo;
+
+typedef struct Callback_c_void__SectionInfo {
+    void *context;
+    bool (*func)(void*, struct SectionInfo);
+} Callback_c_void__SectionInfo;
+
+typedef struct Callback_c_void__SectionInfo OpaqueCallback_SectionInfo;
+
+typedef OpaqueCallback_SectionInfo SectionCallback;
+
 typedef struct ProcessFunctionTable_c_void {
     int32_t (*module_address_list_callback)(void *process, OptionArchitectureIdent target_arch, ModuleAddressCallback callback);
     int32_t (*module_by_address)(void *process, Address address, struct ArchitectureIdent architecture, MuModuleInfo *out);
     int32_t (*primary_module_address)(void *process, MuAddress *out);
+    int32_t (*module_import_list_callback)(void *process, const struct ModuleInfo *info, ImportCallback callback);
+    int32_t (*module_export_list_callback)(void *process, const struct ModuleInfo *info, ExportCallback callback);
+    int32_t (*module_section_list_callback)(void *process, const struct ModuleInfo *info, SectionCallback callback);
     const struct ProcessInfo *(*info)(const void *process);
     void *(*virt_mem)(void *process);
     void (*drop)(void *thisptr);
@@ -571,6 +658,8 @@ typedef struct OsFunctionTable_c_void__c_void {
     int32_t (*module_address_list_callback)(void *os, AddressCallback callback);
     int32_t (*module_by_address)(void *os, Address address, MuModuleInfo *out);
     const struct OsInfo *(*info)(const void *os);
+    void *(*phys_mem)(void *os);
+    void *(*virt_mem)(void *os);
 } OsFunctionTable_c_void__c_void;
 
 typedef struct OsFunctionTable_c_void__c_void OpaqueOsFunctionTable;
@@ -632,14 +721,6 @@ typedef struct OsLayerFunctionTable {
      */
     const OpaqueOsFunctionTable *os;
     /**
-     * The vtable for all physical memory access if available
-     */
-    const OpaquePhysicalMemoryFunctionTable *phys;
-    /**
-     * The vtable for all virtual memory access if available
-     */
-    const OpaqueVirtualMemoryFunctionTable *virt;
-    /**
      * The vtable for the keyboard access if available
      */
     const OpaqueOsKeyboardFunctionTable *keyboard;
@@ -664,6 +745,11 @@ typedef struct OsInstance {
      * If the library is unloaded prior to the instance this will lead to a SIGSEGV.
      */
     struct COptArc_Library library;
+    /**
+     * Internal physical / virtual memory instances for borrowing
+     */
+    struct Option_PhysicalMemoryInstance phys_mem;
+    struct Option_VirtualMemoryInstance virt_mem;
 } OsInstance;
 
 typedef struct OsInstance MuOsInstance;
@@ -808,7 +894,7 @@ void connector_clone(const struct ConnectorInstance *conn, MuConnectorInstance *
  * `conn` has to point to a valid [`ConnectorInstance`] created by one of the provided
  * functions.
  *
- * There has to be no instance of [`PhysicalMemory`] created from the input `conn`, because they
+ * There has to be no instance of `PhysicalMemory` created from the input `conn`, because they
  * will become invalid.
  */
 void connector_drop(struct ConnectorInstance *conn);

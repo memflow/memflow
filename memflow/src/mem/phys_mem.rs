@@ -261,15 +261,6 @@ pub struct PhysicalMemoryMetadata {
     pub readonly: bool,
 }
 
-#[derive(Debug, Clone, Copy)]
-#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
-#[repr(C)]
-pub struct PhysicalMemoryMapping {
-    pub base: Address,
-    pub size: usize,
-    pub real_base: Address,
-}
-
 // iterator helpers
 #[repr(C)]
 pub struct PhysicalReadData<'a>(pub PhysicalAddress, pub &'a mut [u8]);

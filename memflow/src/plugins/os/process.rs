@@ -181,14 +181,15 @@ impl ArcPluginProcess {
 impl Clone for ArcPluginProcess {
     fn clone(&self) -> Self {
         let instance = (self.clone.clone)(self.inner.instance).expect("Unable to clone Process");
-        let vmem_ref =
+        let virt_mem_ref =
             (self.inner.vtable.virt_mem)(unsafe { (instance as *mut c_void).as_mut() }.unwrap());
         Self {
             inner: PluginProcess {
                 instance,
                 vtable: self.inner.vtable,
                 virt_mem: VirtualMemoryInstance {
-                    instance: vmem_ref,
+                    instance: virt_mem_ref,
+                    // vtable is copied here because we cannot infer the type in the Clone trait anymore.
                     vtable: self.inner.virt_mem.vtable,
                 },
             },

@@ -26,8 +26,8 @@ pub use cache::*;
 pub use mem_map::MemoryMap;
 #[doc(hidden)]
 pub use phys_mem::{
-    PhysicalMemory, PhysicalMemoryMapping, PhysicalMemoryMetadata, PhysicalReadData,
-    PhysicalReadIterator, PhysicalWriteData, PhysicalWriteIterator,
+    PhysicalMemory, PhysicalMemoryMetadata, PhysicalReadData, PhysicalReadIterator,
+    PhysicalWriteData, PhysicalWriteIterator,
 };
 #[doc(hidden)]
 pub use phys_mem_batcher::PhysicalMemoryBatcher;

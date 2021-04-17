@@ -199,6 +199,17 @@ struct MemoryMapFileRange {
     real_base: Option<u64>,
 }
 
+// FFI Safe MemoryMapping type for `MemoryMap<(Address, usize)>`.
+// TODO: this could be removed if the RefCell requirement above would be removed.
+#[derive(Debug, Clone, Copy)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+#[repr(C)]
+pub struct PhysicalMemoryMapping {
+    pub base: Address,
+    pub size: usize,
+    pub real_base: Address,
+}
+
 impl MemoryMap<(Address, usize)> {
     /// Constructs a new memory map by parsing the mapping table from a [TOML](https://toml.io/) file.
     ///
@@ -321,6 +332,17 @@ impl MemoryMap<(Address, usize)> {
             });
 
         ret_map
+    }
+
+    // TODO: this could be removed if the RefCell requirement above would be removed.
+    pub fn into_vec(self) -> Vec<PhysicalMemoryMapping> {
+        self.iter()
+            .map(|m| PhysicalMemoryMapping {
+                base: m.base(),
+                size: m.output().1,
+                real_base: m.output().0,
+            })
+            .collect::<Vec<_>>()
     }
 }
 

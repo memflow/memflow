@@ -16,6 +16,7 @@ pub type OptionVoid = Option<&'static mut std::ffi::c_void>;
 pub mod connector;
 pub use connector::{
     ConnectorDescriptor, ConnectorFunctionTable, ConnectorInstance, LoadableConnector,
+    PhysicalMemoryInstance,
 };
 pub type ConnectorInputArg = <LoadableConnector as Loadable>::InputArg;
 

@@ -1,9 +1,9 @@
 use crate::error::*;
 
 use super::{
-    super::VirtualMemoryInstance, ArcPluginKeyboard, ArcPluginProcess, ConnectorInstance, Keyboard,
-    MuArcPluginKeyboard, MuPluginKeyboard, OsKeyboardFunctionTable, OsLayerFunctionTable,
-    PluginKeyboard, PluginOsKeyboard, PluginProcess,
+    super::PhysicalMemoryInstance, super::VirtualMemoryInstance, ArcPluginKeyboard,
+    ArcPluginProcess, Keyboard, MuArcPluginKeyboard, MuPluginKeyboard, OsKeyboardFunctionTable,
+    OsLayerFunctionTable, PluginKeyboard, PluginOsKeyboard, PluginProcess,
 };
 use crate::os::{
     AddressCallback, ModuleInfo, OsInfo, OsInner, OsKeyboardInner, Process, ProcessInfo,
@@ -161,7 +161,7 @@ pub struct OsInstance {
     pub(super) library: COptArc<Library>,
 
     /// Internal physical / virtual memory instances for borrowing
-    phys_mem: Option<ConnectorInstance>,
+    phys_mem: Option<PhysicalMemoryInstance<'static>>,
     virt_mem: Option<VirtualMemoryInstance<'static>>,
 }
 
@@ -184,6 +184,7 @@ pub struct OsInstanceBuilder<T> {
 
 impl<'a, T: OsInner<'a>> OsInstanceBuilder<T>
 where
+    <T as OsInner<'a>>::PhysicalMemoryType: 'static,
     <T as OsInner<'a>>::VirtualMemoryType: 'static,
 {
     /// Enables the optional Keyboard feature for the OsInstance.
@@ -200,6 +201,19 @@ where
     pub fn build(self) -> OsInstance {
         let instance = Box::into_raw(Box::new(self.instance));
         let instance_void = unsafe { instance.cast::<c_void>().as_mut() }.unwrap();
+
+        let phys_mem = {
+            let phys_mem_ref = c_os_phys_mem(unsafe { instance.as_mut() }.unwrap());
+            if !phys_mem_ref.is_null() {
+                unsafe {
+                    Some(PhysicalMemoryInstance::unsafe_new::<
+                        <T as OsInner<'a>>::PhysicalMemoryType,
+                    >(phys_mem_ref.as_mut().unwrap()))
+                }
+            } else {
+                None
+            }
+        };
 
         let virt_mem = {
             let virt_mem_ref = c_os_virt_mem(unsafe { instance.as_mut() }.unwrap());
@@ -219,7 +233,7 @@ where
             vtable: self.vtable,
             library: None.into(),
 
-            phys_mem: None,
+            phys_mem,
             virt_mem,
         }
     }
@@ -235,7 +249,7 @@ impl<'a> OsInner<'a> for OsInstance {
     type ProcessType = PluginProcess<'a>;
     type IntoProcessType = ArcPluginProcess;
 
-    type PhysicalMemoryType = ConnectorInstance;
+    type PhysicalMemoryType = PhysicalMemoryInstance<'a>;
     type VirtualMemoryType = VirtualMemoryInstance<'a>;
 
     /// Walks a process list and calls a callback for each process structure address
@@ -308,10 +322,12 @@ impl<'a> OsInner<'a> for OsInstance {
     }
 
     fn phys_mem(&mut self) -> Option<&mut Self::PhysicalMemoryType> {
-        self.phys_mem.as_mut()
+        // Safety: we shorten the 'static lifetime to 'a here.
+        unsafe { std::mem::transmute(self.phys_mem.as_mut()) }
     }
 
     fn virt_mem(&mut self) -> Option<&mut Self::VirtualMemoryType> {
+        // Safety: we shorten the 'static lifetime to 'a here.
         unsafe { std::mem::transmute(self.virt_mem.as_mut()) }
     }
 }
@@ -350,16 +366,24 @@ impl Clone for OsInstance {
         let instance =
             (self.vtable.base.clone.clone)(self.instance).expect("Unable to clone Connector");
 
+        // vtable is copied here because we cannot infer the type in the Clone trait anymore.
         let phys_mem_ref =
             (self.vtable.os.phys_mem)(unsafe { (instance as *mut c_void).as_mut() }.unwrap());
+        let phys_mem = if !phys_mem_ref.is_null() {
+            Some(PhysicalMemoryInstance {
+                instance: unsafe { phys_mem_ref.as_mut() }.unwrap(),
+                vtable: self.phys_mem.as_ref().unwrap().vtable,
+            })
+        } else {
+            None
+        };
 
         let virt_mem_ref =
             (self.vtable.os.virt_mem)(unsafe { (instance as *mut c_void).as_mut() }.unwrap());
         let virt_mem = if !virt_mem_ref.is_null() {
-            Some(unsafe {
-                VirtualMemoryInstance::unsafe_new::<VirtualMemoryInstance>(
-                    virt_mem_ref.as_mut().unwrap(),
-                )
+            Some(VirtualMemoryInstance {
+                instance: unsafe { virt_mem_ref.as_mut() }.unwrap(),
+                vtable: self.virt_mem.as_ref().unwrap().vtable,
             })
         } else {
             None
@@ -370,7 +394,7 @@ impl Clone for OsInstance {
             vtable: self.vtable,
             library: self.library.clone(),
 
-            phys_mem: None,
+            phys_mem,
             virt_mem,
         }
     }

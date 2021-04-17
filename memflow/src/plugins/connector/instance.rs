@@ -5,9 +5,9 @@ use super::{
 };
 use crate::connector::cpu_state::ConnectorCpuStateInner;
 use crate::error::*;
+use crate::mem::mem_map::PhysicalMemoryMapping;
 use crate::mem::{
-    MemoryMap, PhysicalMemory, PhysicalMemoryMapping, PhysicalMemoryMetadata, PhysicalReadData,
-    PhysicalWriteData,
+    MemoryMap, PhysicalMemory, PhysicalMemoryMetadata, PhysicalReadData, PhysicalWriteData,
 };
 use crate::types::Address;
 
@@ -45,7 +45,7 @@ pub struct PhysicalMemoryFunctionTable<T> {
     ),
 }
 
-impl<T: PhysicalMemory> Default for &'static PhysicalMemoryFunctionTable<T> {
+impl<'a, T: PhysicalMemory> Default for &'a PhysicalMemoryFunctionTable<T> {
     fn default() -> Self {
         &PhysicalMemoryFunctionTable {
             phys_write_raw_list: c_phys_write_raw_list::<T>,
@@ -57,7 +57,7 @@ impl<T: PhysicalMemory> Default for &'static PhysicalMemoryFunctionTable<T> {
 }
 
 impl<T: PhysicalMemory> PhysicalMemoryFunctionTable<T> {
-    pub fn as_opaque(&'static self) -> &'static OpaquePhysicalMemoryFunctionTable {
+    pub fn as_opaque(&self) -> &OpaquePhysicalMemoryFunctionTable {
         unsafe { &*(self as *const Self as *const OpaquePhysicalMemoryFunctionTable) }
     }
 }
@@ -188,16 +188,8 @@ impl PhysicalMemory for ConnectorInstance {
     }
 
     fn set_mem_map(&mut self, mem_map: MemoryMap<(Address, usize)>) {
-        let mem_maps_slice = mem_map
-            .iter()
-            .map(|m| PhysicalMemoryMapping {
-                base: m.base(),
-                size: m.output().1,
-                real_base: m.output().0,
-            })
-            .collect::<Vec<_>>();
-
-        (self.vtable.phys.set_mem_map)(self.instance, mem_maps_slice.as_ptr(), mem_maps_slice.len())
+        let mem_maps_vec = mem_map.into_vec();
+        (self.vtable.phys.set_mem_map)(self.instance, mem_maps_vec.as_ptr(), mem_maps_vec.len())
     }
 }
 
@@ -247,5 +239,51 @@ impl Drop for ConnectorInstance {
         unsafe {
             (self.vtable.base.drop)(self.instance);
         }
+    }
+}
+
+#[repr(C)]
+pub struct PhysicalMemoryInstance<'a> {
+    pub(crate) instance: &'a mut c_void,
+    pub(crate) vtable: &'a OpaquePhysicalMemoryFunctionTable,
+}
+
+impl<'a> PhysicalMemoryInstance<'a> {
+    pub fn new<T: 'a + PhysicalMemory>(instance: &'a mut T) -> Self {
+        Self {
+            instance: unsafe { (instance as *mut T as *mut c_void).as_mut() }.unwrap(),
+            vtable: <&PhysicalMemoryFunctionTable<T>>::default().as_opaque(),
+        }
+    }
+
+    /// # Safety
+    ///
+    /// The type of `instance` has to match T
+    pub unsafe fn unsafe_new<T: 'a + PhysicalMemory>(instance: &'a mut c_void) -> Self {
+        Self {
+            instance,
+            vtable: <&PhysicalMemoryFunctionTable<T>>::default().as_opaque(),
+        }
+    }
+}
+
+impl PhysicalMemory for PhysicalMemoryInstance<'_> {
+    fn phys_read_raw_list(&mut self, data: &mut [PhysicalReadData]) -> Result<()> {
+        (self.vtable.phys_read_raw_list)(self.instance, data.as_mut_ptr(), data.len());
+        Ok(())
+    }
+
+    fn phys_write_raw_list(&mut self, data: &[PhysicalWriteData]) -> Result<()> {
+        (self.vtable.phys_write_raw_list)(self.instance, data.as_ptr(), data.len());
+        Ok(())
+    }
+
+    fn metadata(&self) -> PhysicalMemoryMetadata {
+        (self.vtable.metadata)(self.instance)
+    }
+
+    fn set_mem_map(&mut self, mem_map: MemoryMap<(Address, usize)>) {
+        let mem_maps_vec = mem_map.into_vec();
+        (self.vtable.set_mem_map)(self.instance, mem_maps_vec.as_ptr(), mem_maps_vec.len())
     }
 }

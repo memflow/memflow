@@ -5,6 +5,7 @@ use crate::mem::PhysicalMemory;
 pub mod instance;
 pub use instance::{
     ConnectorInstance, OpaquePhysicalMemoryFunctionTable, PhysicalMemoryFunctionTable,
+    PhysicalMemoryInstance,
 };
 
 use super::{

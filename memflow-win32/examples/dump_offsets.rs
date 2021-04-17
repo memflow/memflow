@@ -4,9 +4,8 @@ use std::io::Write;
 use clap::*;
 use log::{error, Level};
 
-use memflow::plugins::*;
-
-use memflow_win32::prelude::{Win32Kernel, Win32OffsetFile};
+use memflow::prelude::v1::*;
+use memflow_win32::prelude::v1::*;
 
 pub fn main() {
     let matches = App::new("dump offsets example")
@@ -59,39 +58,39 @@ pub fn main() {
         )
         .unwrap();
 
-    let kernel = Win32Kernel::builder(connector)
+    let os = Win32Kernel::builder(connector)
         .build_default_caches()
         .build()
         .unwrap();
 
-    let winver = kernel.kernel_info.kernel_winver;
+    let winver = os.kernel_info.kernel_winver;
 
     if winver != (0, 0).into() {
-        let offsets = if let Some(guid) = &kernel.kernel_info.kernel_guid {
+        let offsets = if let Some(guid) = &os.kernel_info.kernel_guid {
             Win32OffsetFile {
                 pdb_file_name: guid.file_name.as_str().into(),
                 pdb_guid: guid.guid.as_str().into(),
 
-                arch: kernel.kernel_info.os_info.arch.into(),
+                arch: os.kernel_info.os_info.arch.into(),
 
                 nt_major_version: winver.major_version(),
                 nt_minor_version: winver.minor_version(),
                 nt_build_number: winver.build_number(),
 
-                offsets: kernel.offsets.into(),
+                offsets: os.offsets.into(),
             }
         } else {
             Win32OffsetFile {
                 pdb_file_name: Default::default(),
                 pdb_guid: Default::default(),
 
-                arch: kernel.kernel_info.os_info.arch.into(),
+                arch: os.kernel_info.os_info.arch.into(),
 
                 nt_major_version: winver.major_version(),
                 nt_minor_version: winver.minor_version(),
                 nt_build_number: winver.build_number(),
 
-                offsets: kernel.offsets.into(),
+                offsets: os.offsets.into(),
             }
         };
 

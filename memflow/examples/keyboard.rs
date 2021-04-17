@@ -8,7 +8,7 @@ fn main() -> Result<()> {
 
     // create connector + os
     let inventory = Inventory::scan();
-    let os = inventory
+    let mut os = inventory
         .builder()
         .connector(&conn_name)
         .args(conn_args)
@@ -22,6 +22,17 @@ fn main() -> Result<()> {
                 .log_error("keyboard feature is not implemented for the given os plugin"),
         );
     }
+
+    println!("yolo");
+    let mut buffer = [0u8; 32];
+    let base = os.info().base;
+    let virt = os.virt_mem().unwrap();
+    println!("yolo21");
+    virt.virt_read_into(base, &mut buffer).unwrap();
+    println!("value: {:?}", buffer);
+    println!("value: {:?}", buffer);
+    println!("value: {:?}", buffer);
+    println!("value: {:?}", buffer);
 
     let mut keyboard = os.into_keyboard()?;
 

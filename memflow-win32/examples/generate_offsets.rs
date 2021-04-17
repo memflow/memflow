@@ -4,9 +4,7 @@ use std::fs::{create_dir_all, File};
 use std::io::Write;
 use std::path::PathBuf;
 
-use memflow_win32::prelude::{
-    SymbolStore, Win32Guid, Win32OffsetFile, Win32Offsets, Win32OffsetsArchitecture, Win32Version,
-};
+use memflow_win32::prelude::v1::*;
 
 pub fn main() {
     let matches = App::new("generate offsets example")

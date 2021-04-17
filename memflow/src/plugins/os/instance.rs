@@ -1,9 +1,11 @@
 use crate::error::*;
 
 use super::{
-    ArcPluginKeyboard, ArcPluginProcess, Keyboard, MuArcPluginKeyboard, MuPluginKeyboard,
-    OsKeyboardFunctionTable, OsLayerFunctionTable, PluginKeyboard, PluginOsKeyboard, PluginProcess,
+    super::VirtualMemoryInstance, ArcPluginKeyboard, ArcPluginProcess, ConnectorInstance, Keyboard,
+    MuArcPluginKeyboard, MuPluginKeyboard, OsKeyboardFunctionTable, OsLayerFunctionTable,
+    PluginKeyboard, PluginOsKeyboard, PluginProcess,
 };
+use crate::mem::{PhysicalMemory, VirtualMemory};
 use crate::os::{
     AddressCallback, ModuleInfo, OsInfo, OsInner, OsKeyboardInner, Process, ProcessInfo,
 };
@@ -16,7 +18,7 @@ use super::{MuArcPluginProcess, MuModuleInfo, MuPluginProcess, MuProcessInfo};
 
 use libloading::Library;
 
-pub type OpaqueOsFunctionTable = OsFunctionTable<'static, c_void, c_void>;
+pub type OpaqueOsFunctionTable = OsFunctionTable<'static, c_void, c_void, c_void, c_void>;
 
 impl Copy for OpaqueOsFunctionTable {}
 
@@ -27,7 +29,7 @@ impl Clone for OpaqueOsFunctionTable {
 }
 
 #[repr(C)]
-pub struct OsFunctionTable<'a, P, T> {
+pub struct OsFunctionTable<'a, P, PM, VM, T> {
     pub process_address_list_callback: extern "C" fn(os: &mut T, callback: AddressCallback) -> i32,
     pub process_info_by_address:
         extern "C" fn(os: &mut T, address: Address, out: &mut MuProcessInfo) -> i32,
@@ -43,10 +45,19 @@ pub struct OsFunctionTable<'a, P, T> {
     pub module_by_address:
         extern "C" fn(os: &mut T, address: Address, out: &mut MuModuleInfo) -> i32,
     pub info: extern "C" fn(os: &T) -> &OsInfo,
-    phantom: std::marker::PhantomData<P>,
+    pub phys_mem: extern "C" fn(os: &mut T) -> *mut c_void,
+    pub virt_mem: extern "C" fn(os: &mut T) -> *mut c_void,
+    phantom: std::marker::PhantomData<(P, PM, VM)>,
 }
 
-impl<'a, P: 'static + Process + Clone, T: PluginOs<P>> Default for &'a OsFunctionTable<'a, P, T> {
+impl<
+        'a,
+        P: 'static + Process + Clone,
+        PM: 'static + PhysicalMemory,
+        VM: 'static + VirtualMemory,
+        T: PluginOs<P, PM, VM>,
+    > Default for &'a OsFunctionTable<'a, P, PM, VM, T>
+{
     fn default() -> Self {
         &OsFunctionTable {
             process_address_list_callback: c_process_address_list_callback,
@@ -56,12 +67,16 @@ impl<'a, P: 'static + Process + Clone, T: PluginOs<P>> Default for &'a OsFunctio
             module_address_list_callback: c_module_address_list_callback,
             module_by_address: c_module_by_address,
             info: c_os_info,
+            phys_mem: c_os_phys_mem,
+            virt_mem: c_os_virt_mem,
             phantom: std::marker::PhantomData {},
         }
     }
 }
 
-impl<'a, P: Process + Clone, T: PluginOs<P>> OsFunctionTable<'a, P, T> {
+impl<'a, P: Process + Clone, PM: PhysicalMemory, VM: VirtualMemory, T: PluginOs<P, PM, VM>>
+    OsFunctionTable<'a, P, PM, VM, T>
+{
     pub fn as_opaque(&self) -> &OpaqueOsFunctionTable {
         unsafe { &*(self as *const Self as *const OpaqueOsFunctionTable) }
     }
@@ -92,7 +107,12 @@ extern "C" fn c_process_by_info<'a, T: 'a + OsInner<'a>>(
         .into_int_out_result(out)
 }
 
-extern "C" fn c_into_process_by_info<P: 'static + Process + Clone, T: 'static + PluginOs<P>>(
+extern "C" fn c_into_process_by_info<
+    P: 'static + Process + Clone,
+    PM: 'static + PhysicalMemory,
+    VM: 'static + VirtualMemory,
+    T: 'static + PluginOs<P, PM, VM>,
+>(
     os: &mut T,
     info: ProcessInfo,
     lib: COptArc<Library>,
@@ -123,6 +143,20 @@ extern "C" fn c_os_info<'a, T: OsInner<'a>>(os: &T) -> &OsInfo {
     os.info()
 }
 
+extern "C" fn c_os_phys_mem<'a, T: OsInner<'a>>(os: &mut T) -> *mut c_void {
+    match os.phys_mem() {
+        Some(phys_mem) => phys_mem as *mut _ as *mut c_void,
+        None => std::ptr::null_mut(),
+    }
+}
+
+extern "C" fn c_os_virt_mem<'a, T: OsInner<'a>>(os: &mut T) -> *mut c_void {
+    match os.virt_mem() {
+        Some(virt_mem) => virt_mem as *mut _ as *mut c_void,
+        None => std::ptr::null_mut(),
+    }
+}
+
 /// Describes initialized os instance
 ///
 /// This structure is returned by `OS`. It is needed to maintain reference
@@ -140,15 +174,24 @@ pub struct OsInstance {
     ///
     /// If the library is unloaded prior to the instance this will lead to a SIGSEGV.
     pub(super) library: COptArc<Library>,
+
+    /// Internal physical / virtual memory instances for borrowing
+    phys_mem: Option<ConnectorInstance>,
+    virt_mem: Option<VirtualMemoryInstance<'static>>,
 }
 
 impl OsInstance {
-    pub fn builder<P: 'static + Process + Clone, T: PluginOs<P>>(
+    pub fn builder<
+        P: 'static + Process + Clone,
+        PM: 'static + PhysicalMemory,
+        VM: 'static + VirtualMemory,
+        T: PluginOs<P, PM, VM>,
+    >(
         instance: T,
     ) -> OsInstanceBuilder<T> {
         OsInstanceBuilder {
             instance,
-            vtable: OsLayerFunctionTable::new::<P, T>(),
+            vtable: OsLayerFunctionTable::new::<P, PM, VM, T>(),
         }
     }
 }
@@ -159,7 +202,7 @@ pub struct OsInstanceBuilder<T> {
     vtable: OsLayerFunctionTable,
 }
 
-impl<T> OsInstanceBuilder<T> {
+impl<'a, T: OsInner<'a>> OsInstanceBuilder<T> {
     /// Enables the optional Keyboard feature for the OsInstance.
     pub fn enable_keyboard<K>(mut self) -> Self
     where
@@ -172,28 +215,38 @@ impl<T> OsInstanceBuilder<T> {
 
     /// Build the OsInstance
     pub fn build(self) -> OsInstance {
-        OsInstance {
-            instance: unsafe {
-                Box::into_raw(Box::new(self.instance))
-                    .cast::<c_void>()
-                    .as_mut()
+        let instance = Box::into_raw(Box::new(self.instance));
+        let instance_void = unsafe { instance.cast::<c_void>().as_mut() }.unwrap();
+
+        let virt_mem = {
+            let virt_mem_ref = c_os_virt_mem(unsafe { instance.as_mut() }.unwrap());
+            println!("virt_mem_ref={:?}", virt_mem_ref);
+            println!("virt_mem_ref={:?}", virt_mem_ref);
+            println!("virt_mem_ref={:?}", virt_mem_ref);
+            println!("virt_mem_ref={:?}", virt_mem_ref);
+            if !virt_mem_ref.is_null() {
+                unsafe {
+                    Some(VirtualMemoryInstance::unsafe_new::<
+                        <T as OsInner<'a>>::VirtualMemoryType,
+                    >(virt_mem_ref.as_mut().unwrap()))
+                }
+            } else {
+                None
             }
-            .unwrap(),
+        };
+
+        OsInstance {
+            instance: instance_void,
             vtable: self.vtable,
             library: None.into(),
+
+            phys_mem: None,
+            virt_mem,
         }
     }
 }
 
 impl OsInstance {
-    pub fn has_phys_mem(&self) -> bool {
-        self.vtable.phys.is_some()
-    }
-
-    pub fn has_virt_mem(&self) -> bool {
-        self.vtable.virt.is_some()
-    }
-
     pub fn has_keyboard(&self) -> bool {
         self.vtable.keyboard.is_some()
     }
@@ -202,6 +255,9 @@ impl OsInstance {
 impl<'a> OsInner<'a> for OsInstance {
     type ProcessType = PluginProcess<'a>;
     type IntoProcessType = ArcPluginProcess;
+
+    type PhysicalMemoryType = ConnectorInstance;
+    type VirtualMemoryType = VirtualMemoryInstance<'a>;
 
     /// Walks a process list and calls a callback for each process structure address
     ///
@@ -271,6 +327,14 @@ impl<'a> OsInner<'a> for OsInstance {
     fn info(&self) -> &OsInfo {
         (self.vtable.os.info)(self.instance)
     }
+
+    fn phys_mem(&mut self) -> Option<&mut Self::PhysicalMemoryType> {
+        self.phys_mem.as_mut()
+    }
+
+    fn virt_mem(&mut self) -> Option<&mut Self::VirtualMemoryType> {
+        unsafe { std::mem::transmute(self.virt_mem.as_mut()) }
+    }
 }
 
 /// Optional Keyboard feature implementation
@@ -306,10 +370,29 @@ impl Clone for OsInstance {
     fn clone(&self) -> Self {
         let instance =
             (self.vtable.base.clone.clone)(self.instance).expect("Unable to clone Connector");
+
+        let phys_mem_ref =
+            (self.vtable.os.phys_mem)(unsafe { (instance as *mut c_void).as_mut() }.unwrap());
+
+        let virt_mem_ref =
+            (self.vtable.os.virt_mem)(unsafe { (instance as *mut c_void).as_mut() }.unwrap());
+        let virt_mem = if !virt_mem_ref.is_null() {
+            Some(unsafe {
+                VirtualMemoryInstance::unsafe_new::<VirtualMemoryInstance>(
+                    virt_mem_ref.as_mut().unwrap(),
+                )
+            })
+        } else {
+            None
+        };
+
         Self {
             instance,
             vtable: self.vtable,
             library: self.library.clone(),
+
+            phys_mem: None,
+            virt_mem,
         }
     }
 }

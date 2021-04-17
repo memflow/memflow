@@ -412,6 +412,9 @@ impl<'a> OsInner<'a> for DummyOs {
     type ProcessType = DummyProcess<DummyVirtMem<&'a mut DummyMemory>>;
     type IntoProcessType = DummyProcess<DummyVirtMem<DummyMemory>>;
 
+    type PhysicalMemoryType = DummyMemory;
+    type VirtualMemoryType = DummyVirtMem<DummyMemory>;
+
     /// Walks a process list and calls a callback for each process structure address
     ///
     /// The callback is fully opaque. We need this style so that C FFI can work seamlessly.
@@ -489,6 +492,14 @@ impl<'a> OsInner<'a> for DummyOs {
     /// Retrieves the kernel info
     fn info(&self) -> &OsInfo {
         &self.info
+    }
+
+    fn phys_mem(&mut self) -> Option<&mut Self::PhysicalMemoryType> {
+        Some(&mut self.mem)
+    }
+
+    fn virt_mem(&mut self) -> Option<&mut Self::VirtualMemoryType> {
+        None
     }
 }
 

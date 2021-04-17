@@ -423,6 +423,9 @@ impl<'a, T: PhysicalMemory + 'a, V: VirtualTranslate + 'a> OsInner<'a> for Win32
     type ProcessType = Win32Process<VirtualDma<&'a mut T, &'a mut V, Win32VirtualTranslate>>;
     type IntoProcessType = Win32Process<VirtualDma<T, V, Win32VirtualTranslate>>;
 
+    type PhysicalMemoryType = T;
+    type VirtualMemoryType = VirtualDma<T, V, Win32VirtualTranslate>;
+
     /// Walks a process list and calls a callback for each process structure address
     ///
     /// The callback is fully opaque. We need this style so that C FFI can work seamlessly.
@@ -541,6 +544,14 @@ impl<'a, T: PhysicalMemory + 'a, V: VirtualTranslate + 'a> OsInner<'a> for Win32
     /// Retrieves the kernel info
     fn info(&self) -> &OsInfo {
         &self.kernel_info.os_info
+    }
+
+    fn phys_mem(&mut self) -> Option<&mut Self::PhysicalMemoryType> {
+        Some(self.virt_mem.phys_mem())
+    }
+
+    fn virt_mem(&mut self) -> Option<&mut Self::VirtualMemoryType> {
+        Some(&mut self.virt_mem)
     }
 }
 

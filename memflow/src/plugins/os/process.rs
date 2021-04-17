@@ -45,8 +45,8 @@ impl<T: Process> Default for ProcessFunctionTable<T> {
             module_address_list_callback: c_module_address_list_callback,
             module_by_address: c_module_by_address,
             primary_module_address: c_primary_module_address,
-            info: c_info,
-            virt_mem: c_virt_mem,
+            info: c_proc_info,
+            virt_mem: c_proc_virt_mem,
             drop: c_drop::<T>,
         }
     }
@@ -58,7 +58,7 @@ impl<T: Process> ProcessFunctionTable<T> {
     }
 }
 
-extern "C" fn c_virt_mem<T: Process>(process: &mut T) -> &mut c_void {
+extern "C" fn c_proc_virt_mem<T: Process>(process: &mut T) -> &mut c_void {
     unsafe {
         (process.virt_mem() as *mut _ as *mut c_void)
             .as_mut()
@@ -91,7 +91,7 @@ extern "C" fn c_primary_module_address<T: Process>(process: &mut T, out: &mut Mu
     process.primary_module_address().into_int_out_result(out)
 }
 
-extern "C" fn c_info<T: Process>(process: &T) -> &ProcessInfo {
+extern "C" fn c_proc_info<T: Process>(process: &T) -> &ProcessInfo {
     process.info()
 }
 
@@ -108,7 +108,7 @@ impl<'a> PluginProcess<'a> {
         let instance_void = unsafe { (instance as *mut T as *mut c_void).as_mut() }.unwrap();
         let vtable = ProcessFunctionTable::<T>::default().into_opaque();
         let virt_mem = unsafe {
-            VirtualMemoryInstance::unsafe_new::<T::VirtualMemoryType>(c_virt_mem(instance))
+            VirtualMemoryInstance::unsafe_new::<T::VirtualMemoryType>(c_proc_virt_mem(instance))
         };
         Self {
             instance: instance_void,

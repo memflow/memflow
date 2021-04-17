@@ -22,6 +22,9 @@ pub trait OsInner<'a>: Send {
     type ProcessType: Process + 'a;
     type IntoProcessType: Process;
 
+    type PhysicalMemoryType: PhysicalMemory;
+    type VirtualMemoryType: VirtualMemory;
+
     /// Walks a process list and calls a callback for each process structure address
     ///
     /// The callback is fully opaque. We need this style so that C FFI can work seamlessly.
@@ -246,6 +249,17 @@ pub trait OsInner<'a>: Send {
 
     /// Retrieves the OS info
     fn info(&self) -> &OsInfo;
+
+    /// Returns a reference to the [`PhysicalMemory`] object this OS uses.
+    /// The [`PhysicalMemory`] usually is just the Connector this OS was intitialized with.
+    ///
+    /// If no connector is used `None` is returned.
+    fn phys_mem(&mut self) -> Option<&mut Self::PhysicalMemoryType>;
+
+    /// Returns a reference to the [`VirtualMemory`] object this OS uses.
+    ///
+    /// If no [`VirtualMemory`] object is used `None` is returned.
+    fn virt_mem(&mut self) -> Option<&mut Self::VirtualMemoryType>;
 }
 
 /// Information block about OS

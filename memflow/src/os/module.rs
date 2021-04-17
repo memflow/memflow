@@ -29,9 +29,9 @@ pub struct ModuleInfo {
     /// Size of the module
     pub size: usize,
     /// Name of the module
-    pub name: ReprCStr,
+    pub name: ReprCString,
     /// Path of the module
-    pub path: ReprCStr,
+    pub path: ReprCString,
     /// Architecture of the module
     ///
     /// # Remarks
@@ -55,4 +55,43 @@ pub struct ModuleAddressInfo {
 
 pub type ModuleAddressCallback<'a> = OpaqueCallback<'a, ModuleAddressInfo>;
 
-// TODO: Exports / Sections / etc
+/// Import information structure
+#[repr(C)]
+#[derive(Clone, Debug)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+pub struct ImportInfo {
+    /// Name of the import
+    pub name: ReprCString,
+    /// Offset of this import from the containing modules base address
+    pub offset: usize,
+}
+
+pub type ImportCallback<'a> = OpaqueCallback<'a, ImportInfo>;
+
+/// Export information structure
+#[repr(C)]
+#[derive(Clone, Debug)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+pub struct ExportInfo {
+    /// Name of the export
+    pub name: ReprCString,
+    /// Offset of this export from the containing modules base address
+    pub offset: usize,
+}
+
+pub type ExportCallback<'a> = OpaqueCallback<'a, ExportInfo>;
+
+/// Section information structure
+#[repr(C)]
+#[derive(Clone, Debug)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+pub struct SectionInfo {
+    /// Name of the section
+    pub name: ReprCString,
+    /// Virtual address of this section (essentially module_info.base + virtual_address)
+    pub base: Address,
+    /// Size of this section
+    pub size: usize,
+}
+
+pub type SectionCallback<'a> = OpaqueCallback<'a, SectionInfo>;

@@ -17,7 +17,7 @@ use memflow::mem::{DirectTranslate, PhysicalMemory, VirtualDma, VirtualMemory, V
 use memflow::os::{
     AddressCallback, ModuleInfo, OsInfo, OsInner, OsKeyboardInner, Pid, Process, ProcessInfo,
 };
-use memflow::types::{Address, ReprCStr};
+use memflow::types::{Address, ReprCString};
 
 use pelite::{self, pe64::exports::Export, PeView};
 
@@ -352,7 +352,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
             .virt_read(address + self.offsets.eproc_pid())?;
         trace!("pid={}", pid);
 
-        let name: ReprCStr = self
+        let name: ReprCString = self
             .virt_mem
             .virt_read_cstr(address + self.offsets.eproc_name(), IMAGE_FILE_NAME_LENGTH)?
             .into();

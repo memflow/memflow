@@ -1,7 +1,7 @@
 use crate::error::*;
 use crate::os::*;
 use crate::types::Address;
-use crate::types::ReprCStr;
+use crate::types::ReprCString;
 
 pub mod instance;
 pub use instance::{OpaqueOsFunctionTable, OsFunctionTable, OsInstance};
@@ -60,7 +60,7 @@ impl<
 }
 
 pub fn create_with_logging<P: 'static + Process + Clone, T: PluginOs<P>>(
-    args: &ReprCStr,
+    args: &ReprCString,
     conn: ConnectorInstance,
     log_level: i32,
     out: &mut MuOsInstance,
@@ -72,7 +72,7 @@ pub fn create_with_logging<P: 'static + Process + Clone, T: PluginOs<P>>(
 }
 
 pub fn create_without_logging<P: 'static + Process + Clone, T: PluginOs<P>>(
-    args: &ReprCStr,
+    args: &ReprCString,
     conn: ConnectorInstance,
     out: &mut MuOsInstance,
     create_fn: impl Fn(&Args, ConnectorInstance) -> Result<T>,
@@ -139,7 +139,7 @@ impl Loadable for LoadableOs {
         input: Option<ConnectorInstance>,
         args: &Args,
     ) -> Result<OsInstance> {
-        let cstr = ReprCStr::from(args.to_string());
+        let cstr = ReprCString::from(args.to_string());
         let mut out = MuOsInstance::uninit();
         let res = (self.descriptor.create)(&cstr, input.into(), log::max_level() as i32, &mut out);
         result_from_int(res, out).map(|mut c| {

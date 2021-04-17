@@ -4,7 +4,10 @@ use super::OptionArchitectureIdent;
 use super::{MuAddress, MuModuleInfo};
 use crate::architecture::ArchitectureIdent;
 use crate::error::*;
-use crate::os::{ModuleAddressCallback, ModuleInfo, Process, ProcessInfo};
+use crate::os::{
+    ExportCallback, ImportCallback, ModuleAddressCallback, ModuleInfo, Process, ProcessInfo,
+    SectionCallback,
+};
 use crate::types::Address;
 use std::ffi::c_void;
 
@@ -34,6 +37,12 @@ pub struct ProcessFunctionTable<T> {
         out: &mut MuModuleInfo,
     ) -> i32,
     pub primary_module_address: extern "C" fn(process: &mut T, out: &mut MuAddress) -> i32,
+    pub module_import_list_callback:
+        extern "C" fn(process: &mut T, info: &ModuleInfo, callback: ImportCallback) -> i32,
+    pub module_export_list_callback:
+        extern "C" fn(process: &mut T, info: &ModuleInfo, callback: ExportCallback) -> i32,
+    pub module_section_list_callback:
+        extern "C" fn(process: &mut T, info: &ModuleInfo, callback: SectionCallback) -> i32,
     pub info: extern "C" fn(process: &T) -> &ProcessInfo,
     pub virt_mem: extern "C" fn(process: &mut T) -> &mut c_void,
     pub drop: unsafe extern "C" fn(thisptr: &mut T),
@@ -45,6 +54,9 @@ impl<T: Process> Default for ProcessFunctionTable<T> {
             module_address_list_callback: c_module_address_list_callback,
             module_by_address: c_module_by_address,
             primary_module_address: c_primary_module_address,
+            module_import_list_callback: c_module_import_list_callback,
+            module_export_list_callback: c_module_export_list_callback,
+            module_section_list_callback: c_module_section_list_callback,
             info: c_proc_info,
             virt_mem: c_proc_virt_mem,
             drop: c_drop::<T>,
@@ -89,6 +101,36 @@ extern "C" fn c_module_by_address<T: Process>(
 
 extern "C" fn c_primary_module_address<T: Process>(process: &mut T, out: &mut MuAddress) -> i32 {
     process.primary_module_address().into_int_out_result(out)
+}
+
+extern "C" fn c_module_import_list_callback<T: Process>(
+    process: &mut T,
+    info: &ModuleInfo,
+    callback: ImportCallback,
+) -> i32 {
+    process
+        .module_import_list_callback(info, callback)
+        .into_int_result()
+}
+
+extern "C" fn c_module_export_list_callback<T: Process>(
+    process: &mut T,
+    info: &ModuleInfo,
+    callback: ExportCallback,
+) -> i32 {
+    process
+        .module_export_list_callback(info, callback)
+        .into_int_result()
+}
+
+extern "C" fn c_module_section_list_callback<T: Process>(
+    process: &mut T,
+    info: &ModuleInfo,
+    callback: SectionCallback,
+) -> i32 {
+    process
+        .module_section_list_callback(info, callback)
+        .into_int_result()
 }
 
 extern "C" fn c_proc_info<T: Process>(process: &T) -> &ProcessInfo {
@@ -154,6 +196,33 @@ impl<'a> Process for PluginProcess<'a> {
         let mut out = MuAddress::uninit();
         let res = (self.vtable.primary_module_address)(self.instance, &mut out);
         result_from_int(res, out)
+    }
+
+    fn module_import_list_callback(
+        &mut self,
+        info: &ModuleInfo,
+        callback: ImportCallback,
+    ) -> Result<()> {
+        let res = (self.vtable.module_import_list_callback)(self.instance, info, callback);
+        result_from_int_void(res)
+    }
+
+    fn module_export_list_callback(
+        &mut self,
+        info: &ModuleInfo,
+        callback: ExportCallback,
+    ) -> Result<()> {
+        let res = (self.vtable.module_export_list_callback)(self.instance, info, callback);
+        result_from_int_void(res)
+    }
+
+    fn module_section_list_callback(
+        &mut self,
+        info: &ModuleInfo,
+        callback: SectionCallback,
+    ) -> Result<()> {
+        let res = (self.vtable.module_section_list_callback)(self.instance, info, callback);
+        result_from_int_void(res)
     }
 
     fn info(&self) -> &ProcessInfo {
@@ -225,6 +294,30 @@ impl Process for ArcPluginProcess {
 
     fn primary_module_address(&mut self) -> Result<Address> {
         self.inner.primary_module_address()
+    }
+
+    fn module_import_list_callback(
+        &mut self,
+        info: &ModuleInfo,
+        callback: ImportCallback,
+    ) -> Result<()> {
+        self.inner.module_import_list_callback(info, callback)
+    }
+
+    fn module_export_list_callback(
+        &mut self,
+        info: &ModuleInfo,
+        callback: ExportCallback,
+    ) -> Result<()> {
+        self.inner.module_export_list_callback(info, callback)
+    }
+
+    fn module_section_list_callback(
+        &mut self,
+        info: &ModuleInfo,
+        callback: SectionCallback,
+    ) -> Result<()> {
+        self.inner.module_section_list_callback(info, callback)
     }
 
     fn info(&self) -> &ProcessInfo {

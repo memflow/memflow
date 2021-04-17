@@ -23,6 +23,7 @@ crate-type = ["lib", "cdylib"]
 memflow = { version = "0.1", path = "../memflow", default-features = false }
 log = { version = "0.4", default-features = false }
 pelite = { version = "0.9", default-features = false }
+goblin = { version = "0.4" }
 widestring = { version = "0.4", default-features = false, features = ["alloc"] }
 no-std-compat = { version = "0.4", features = ["alloc"] }
 serde = { version = "1.0", default-features = false, optional = true, features = ["derive"] }

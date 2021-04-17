@@ -9,7 +9,7 @@ use crate::plugins::{
     os::{MuOsInstance, OsDescriptor},
     Args, COption, ConnectorInstance, OsInstance, MEMFLOW_PLUGIN_VERSION,
 };
-use crate::types::ReprCStr;
+use crate::types::ReprCString;
 use crate::types::{size, Address};
 use log::Level;
 use rand::seq::SliceRandom;
@@ -515,7 +515,7 @@ pub static MEMFLOW_OS_DUMMY: OsDescriptor = OsDescriptor {
 
 #[doc(hidden)]
 extern "C" fn mf_create(
-    args: &ReprCStr,
+    args: &ReprCString,
     mem: COption<ConnectorInstance>,
     log_level: i32,
     out: &mut MuOsInstance,

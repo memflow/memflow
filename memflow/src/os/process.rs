@@ -1,6 +1,9 @@
 //! Describes process context
 
-use super::{ModuleAddressInfo, ModuleInfo, ModuleInfoCallback};
+use super::{
+    ExportCallback, ExportInfo, ImportCallback, ImportInfo, ModuleAddressInfo, ModuleInfo,
+    ModuleInfoCallback, SectionCallback, SectionInfo,
+};
 use crate::prelude::v1::{Result, *};
 use std::prelude::v1::*;
 
@@ -147,6 +150,48 @@ pub trait Process: Send {
         self.module_by_address(addr, self.info().proc_arch)
     }
 
+    /// Retrieves a list of all imports of a given module
+    fn module_import_list_callback(
+        &mut self,
+        info: &ModuleInfo,
+        callback: ImportCallback,
+    ) -> Result<()>;
+
+    /// Retrieves a list of all exports of a given module
+    fn module_export_list_callback(
+        &mut self,
+        info: &ModuleInfo,
+        callback: ExportCallback,
+    ) -> Result<()>;
+
+    /// Retrieves a list of all sections of a given module
+    fn module_section_list_callback(
+        &mut self,
+        info: &ModuleInfo,
+        callback: SectionCallback,
+    ) -> Result<()>;
+
+    /// Retrieves a list of all imports of a given module
+    fn module_import_list(&mut self, info: &ModuleInfo) -> Result<Vec<ImportInfo>> {
+        let mut ret = vec![];
+        self.module_import_list_callback(info, (&mut ret).into())?;
+        Ok(ret)
+    }
+
+    /// Retrieves a list of all exports of a given module
+    fn module_export_list(&mut self, info: &ModuleInfo) -> Result<Vec<ExportInfo>> {
+        let mut ret = vec![];
+        self.module_export_list_callback(info, (&mut ret).into())?;
+        Ok(ret)
+    }
+
+    /// Retrieves a list of all sections of a given module
+    fn module_section_list(&mut self, info: &ModuleInfo) -> Result<Vec<SectionInfo>> {
+        let mut ret = vec![];
+        self.module_section_list_callback(info, (&mut ret).into())?;
+        Ok(ret)
+    }
+
     /// Retrieves the process info
     fn info(&self) -> &ProcessInfo;
 }
@@ -168,7 +213,7 @@ pub struct ProcessInfo {
     /// ID of this process.
     pub pid: Pid,
     /// Name of the process.
-    pub name: ReprCStr,
+    pub name: ReprCString,
     /// System architecture of the target system.
     pub sys_arch: ArchitectureIdent,
     /// Process architecture

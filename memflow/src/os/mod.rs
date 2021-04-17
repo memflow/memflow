@@ -21,7 +21,10 @@ pub mod process;
 pub mod root;
 
 pub use keyboard::{Keyboard, KeyboardState, OsKeyboard, OsKeyboardInner};
-pub use module::{ModuleAddressCallback, ModuleAddressInfo, ModuleInfo, ModuleInfoCallback};
+pub use module::{
+    ExportCallback, ExportInfo, ImportCallback, ImportInfo, ModuleAddressCallback,
+    ModuleAddressInfo, ModuleInfo, ModuleInfoCallback, SectionCallback, SectionInfo,
+};
 pub use process::{Pid, Process, ProcessInfo, ProcessInfoCallback};
 pub use root::{Os, OsInfo, OsInner};
 

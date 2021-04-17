@@ -5,10 +5,16 @@ use super::{Win32Kernel, Win32ModuleListInfo};
 use std::fmt;
 
 use memflow::architecture::ArchitectureIdent;
+use memflow::error::PartialResultExt;
 use memflow::error::{Error, ErrorKind, ErrorOrigin, Result};
 use memflow::mem::{PhysicalMemory, VirtualDma, VirtualMemory, VirtualTranslate};
-use memflow::os::{ModuleAddressCallback, ModuleAddressInfo, ModuleInfo, Process, ProcessInfo};
-use memflow::types::Address;
+use memflow::os::{
+    ExportCallback, ExportInfo, ImportCallback, ImportInfo, ModuleAddressCallback,
+    ModuleAddressInfo, ModuleInfo, Process, ProcessInfo, SectionCallback, SectionInfo,
+};
+use memflow::types::{Address, ReprCString};
+
+use goblin::pe::{options::ParseOptions, PE};
 
 use super::Win32VirtualTranslate;
 
@@ -216,6 +222,85 @@ impl<T: VirtualMemory> Process for Win32Process<T> {
         let proc_arch = self.proc_info.base_info.proc_arch;
         self.module_address_list_callback(Some(&proc_arch), callback.into())?;
         ret
+    }
+
+    fn module_import_list_callback(
+        &mut self,
+        info: &ModuleInfo,
+        mut callback: ImportCallback,
+    ) -> Result<()> {
+        let mut module_image = vec![0u8; info.size];
+        self.virt_mem
+            .virt_read_raw_into(info.base, &mut module_image)
+            .data_part()?;
+
+        let pe = PE::parse_with_opts(&module_image, &ParseOptions { resolve_rva: false })
+            .map_err(|_| Error(ErrorOrigin::OsLayer, ErrorKind::InvalidExeFile))?;
+
+        pe.imports
+            .iter()
+            .take_while(|i| {
+                callback.call(ImportInfo {
+                    name: ReprCString::from(i.name.to_string()),
+                    offset: i.offset,
+                })
+            })
+            .for_each(|_| ());
+
+        Ok(())
+    }
+
+    fn module_export_list_callback(
+        &mut self,
+        info: &ModuleInfo,
+        mut callback: ExportCallback,
+    ) -> Result<()> {
+        let mut module_image = vec![0u8; info.size];
+        self.virt_mem
+            .virt_read_raw_into(info.base, &mut module_image)
+            .data_part()?;
+
+        let pe = PE::parse_with_opts(&module_image, &ParseOptions { resolve_rva: false })
+            .map_err(|_| Error(ErrorOrigin::OsLayer, ErrorKind::InvalidExeFile))?;
+
+        pe.exports
+            .iter()
+            .take_while(|e| {
+                callback.call(ExportInfo {
+                    name: ReprCString::from(e.name.map(|n| n.to_string()).unwrap_or_default()),
+                    offset: e.offset,
+                })
+            })
+            .for_each(|_| ());
+
+        Ok(())
+    }
+
+    fn module_section_list_callback(
+        &mut self,
+        info: &ModuleInfo,
+        mut callback: SectionCallback,
+    ) -> Result<()> {
+        let mut module_image = vec![0u8; info.size];
+        self.virt_mem
+            .virt_read_raw_into(info.base, &mut module_image)
+            .data_part()?;
+
+        let pe = PE::parse_with_opts(&module_image, &ParseOptions { resolve_rva: false })
+            .map_err(|_| Error(ErrorOrigin::OsLayer, ErrorKind::InvalidExeFile))?;
+
+        pe.sections
+            .iter()
+            .take_while(|s| {
+                callback.call(SectionInfo {
+                    name: ReprCString::from(&s.name[..]),
+                    base: info.base + s.virtual_address as usize,
+                    size: s.virtual_size as usize,
+                })
+            })
+            .for_each(|_| ());
+
+        Ok(())
     }
 
     /// Retrieves the process info

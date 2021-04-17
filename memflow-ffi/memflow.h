@@ -290,7 +290,7 @@ typedef OpaqueCallback_Address AddressCallback;
  */
 typedef uint32_t Pid;
 
-typedef int8_t *ReprCStr;
+typedef int8_t *ReprCString;
 
 typedef enum ArchitectureIdent_Tag {
     /**
@@ -351,7 +351,7 @@ typedef struct ProcessInfo {
     /**
      * Name of the process.
      */
-    ReprCStr name;
+    ReprCString name;
     /**
      * System architecture of the target system.
      */
@@ -426,11 +426,11 @@ typedef struct ModuleInfo {
     /**
      * Name of the module
      */
-    ReprCStr name;
+    ReprCString name;
     /**
      * Path of the module
      */
-    ReprCStr path;
+    ReprCString path;
     /**
      * Architecture of the module
      *

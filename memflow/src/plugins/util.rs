@@ -1,6 +1,6 @@
 use super::{Args, OptionMut};
 use crate::error::{AsIntResult, Error, ErrorKind, ErrorOrigin};
-use crate::types::ReprCStr;
+use crate::types::ReprCString;
 
 use std::mem::MaybeUninit;
 use std::path::Path;
@@ -117,7 +117,7 @@ pub fn find_export_by_prefix(
 ///
 /// This function is used by the proc macros
 pub fn create_with_logging<T>(
-    args: &ReprCStr,
+    args: &ReprCString,
     log_level: i32,
     out: &mut MaybeUninit<T>,
     create_fn: impl FnOnce(Args, log::Level) -> Result<T, Error>,
@@ -152,7 +152,7 @@ pub fn create_with_logging<T>(
 ///
 /// This function is used by the proc macros
 pub fn create_bare<T, I>(
-    args: &ReprCStr,
+    args: &ReprCString,
     input: I,
     log_level: i32,
     out: &mut MaybeUninit<T>,
@@ -187,7 +187,7 @@ pub fn create_bare<T, I>(
 ///
 /// This function is used by the proc macros
 pub fn create_without_logging<T>(
-    args: &ReprCStr,
+    args: &ReprCString,
     out: &mut MaybeUninit<T>,
     create_fn: impl FnOnce(super::Args) -> Result<T, Error>,
 ) -> i32 {

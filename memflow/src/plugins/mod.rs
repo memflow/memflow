@@ -35,7 +35,7 @@ pub(crate) mod arc;
 pub(crate) use arc::{CArc, COptArc};
 
 use crate::error::{Result, *};
-use crate::types::ReprCStr;
+use crate::types::ReprCString;
 
 use log::*;
 use std::ffi::c_void;
@@ -165,13 +165,14 @@ pub struct PluginDescriptor<T: Loadable> {
     pub description: &'static str,
 
     /// Retrieve a help string from the connector.
-    //pub help: extern "C" fn(&ReprCStr) -> (),
+    //pub help: extern "C" fn(&ReprCString) -> (),
 
     /// Retrieve a list of available targets for this connector
     // TODO:
 
     /// Create instance of the plugin
-    pub create: extern "C" fn(&ReprCStr, T::CInputArg, i32, &mut MaybeUninit<T::Instance>) -> i32,
+    pub create:
+        extern "C" fn(&ReprCString, T::CInputArg, i32, &mut MaybeUninit<T::Instance>) -> i32,
 }
 
 /// Defines a common interface for loadable plugins

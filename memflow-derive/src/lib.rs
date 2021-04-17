@@ -70,7 +70,7 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
         quote! {
             #[doc(hidden)]
             extern "C" fn mf_create(
-                args: &#prefix_gen::types::ReprCStr,
+                args: &#prefix_gen::types::ReprCString,
                 _: Option<#prefix_gen::plugins::os::OsInstance>,
                 log_level: i32,
                 out: &mut #prefix_gen::plugins::connector::MuConnectorInstance
@@ -82,7 +82,7 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
         quote! {
             #[doc(hidden)]
             extern "C" fn mf_create(
-                args: &#prefix_gen::types::ReprCStr,
+                args: &#prefix_gen::types::ReprCString,
                 _: Option<#prefix_gen::plugins::os::OsInstance>,
                 _: i32,
                 out: &mut #prefix_gen::plugins::connector::MuConnectorInstance
@@ -142,7 +142,7 @@ pub fn os_layer(args: TokenStream, input: TokenStream) -> TokenStream {
         quote! {
             #[doc(hidden)]
             extern "C" fn mf_create(
-                args: &::memflow::types::ReprCStr,
+                args: &::memflow::types::ReprCString,
                 mem: ::memflow::plugins::COption<::memflow::plugins::ConnectorInstance>,
                 log_level: i32,
                 out: &mut ::memflow::plugins::os::MuOsInstance
@@ -154,7 +154,7 @@ pub fn os_layer(args: TokenStream, input: TokenStream) -> TokenStream {
         quote! {
             #[doc(hidden)]
             extern "C" fn mf_create(
-                args: &::memflow::types::ReprCStr,
+                args: &::memflow::types::ReprCString,
                 mem: ::memflow::plugins::COption<::memflow::plugins::ConnectorInstance>,
                 _: i32,
                 out: &mut ::memflow::plugins::os::MuOsInstance
@@ -212,7 +212,7 @@ pub fn os_layer_bare(args: TokenStream, input: TokenStream) -> TokenStream {
     let create_gen = quote! {
         #[doc(hidden)]
         extern "C" fn mf_create(
-            args: &::memflow::types::ReprCStr,
+            args: &::memflow::types::ReprCString,
             mem: ::memflow::plugins::COption<::memflow::plugins::ConnectorInstance>,
             log_level: i32,
             out: &mut ::memflow::plugins::os::MuOsInstance

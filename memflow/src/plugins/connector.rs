@@ -12,7 +12,7 @@ use super::{
     Args, CArc, GenericBaseTable, Loadable, OpaqueBaseTable, OsInstance, PluginDescriptor,
 };
 
-use crate::types::ReprCStr;
+use crate::types::ReprCString;
 
 use std::mem::MaybeUninit;
 
@@ -42,7 +42,7 @@ impl<
 }
 
 pub fn create_with_logging<T: 'static + PhysicalMemory + Clone>(
-    args: &ReprCStr,
+    args: &ReprCString,
     log_level: i32,
     out: &mut MuConnectorInstance,
     create_fn: impl Fn(&Args, log::Level) -> Result<T>,
@@ -53,7 +53,7 @@ pub fn create_with_logging<T: 'static + PhysicalMemory + Clone>(
 }
 
 pub fn create_without_logging<T: 'static + PhysicalMemory + Clone>(
-    args: &ReprCStr,
+    args: &ReprCString,
     out: &mut MuConnectorInstance,
     create_fn: impl Fn(&Args) -> Result<T>,
 ) -> i32 {
@@ -119,7 +119,7 @@ impl Loadable for LoadableConnector {
         input: Self::InputArg,
         args: &Args,
     ) -> Result<ConnectorInstance> {
-        let cstr = ReprCStr::from(args.to_string());
+        let cstr = ReprCString::from(args.to_string());
         let mut out = MuConnectorInstance::uninit();
         let res = (self.descriptor.create)(&cstr, input, log::max_level() as i32, &mut out);
         result_from_int(res, out).map(|mut c| {

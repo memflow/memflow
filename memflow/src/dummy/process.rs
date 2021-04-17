@@ -4,7 +4,10 @@ use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 
 use crate::architecture::ArchitectureIdent;
 use crate::mem::VirtualMemory;
-use crate::os::{ModuleAddressCallback, ModuleAddressInfo, ModuleInfo, Process, ProcessInfo};
+use crate::os::{
+    ExportCallback, ImportCallback, ModuleAddressCallback, ModuleAddressInfo, ModuleInfo, Process,
+    ProcessInfo, SectionCallback,
+};
 use crate::types::Address;
 
 use rand::{thread_rng, Rng};
@@ -104,6 +107,30 @@ impl<T: VirtualMemory> Process for DummyProcess<T> {
         let proc_arch = self.info().proc_arch;
         self.module_address_list_callback(Some(&proc_arch), callback.into())?;
         ret
+    }
+
+    fn module_import_list_callback(
+        &mut self,
+        _info: &ModuleInfo,
+        _callback: ImportCallback,
+    ) -> Result<()> {
+        Err(Error(ErrorOrigin::OsLayer, ErrorKind::NotImplemented))
+    }
+
+    fn module_export_list_callback(
+        &mut self,
+        _info: &ModuleInfo,
+        _callback: ExportCallback,
+    ) -> Result<()> {
+        Err(Error(ErrorOrigin::OsLayer, ErrorKind::NotImplemented))
+    }
+
+    fn module_section_list_callback(
+        &mut self,
+        _info: &ModuleInfo,
+        _callback: SectionCallback,
+    ) -> Result<()> {
+        Err(Error(ErrorOrigin::OsLayer, ErrorKind::NotImplemented))
     }
 
     /// Retrieves the process info

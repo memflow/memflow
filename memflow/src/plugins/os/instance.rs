@@ -5,7 +5,6 @@ use super::{
     MuArcPluginKeyboard, MuPluginKeyboard, OsKeyboardFunctionTable, OsLayerFunctionTable,
     PluginKeyboard, PluginOsKeyboard, PluginProcess,
 };
-use crate::mem::{PhysicalMemory, VirtualMemory};
 use crate::os::{
     AddressCallback, ModuleInfo, OsInfo, OsInner, OsKeyboardInner, Process, ProcessInfo,
 };
@@ -18,7 +17,7 @@ use super::{MuArcPluginProcess, MuModuleInfo, MuPluginProcess, MuProcessInfo};
 
 use libloading::Library;
 
-pub type OpaqueOsFunctionTable = OsFunctionTable<'static, c_void, c_void, c_void, c_void>;
+pub type OpaqueOsFunctionTable = OsFunctionTable<'static, c_void, c_void>;
 
 impl Copy for OpaqueOsFunctionTable {}
 
@@ -29,7 +28,7 @@ impl Clone for OpaqueOsFunctionTable {
 }
 
 #[repr(C)]
-pub struct OsFunctionTable<'a, P, PM, VM, T> {
+pub struct OsFunctionTable<'a, P, T> {
     pub process_address_list_callback: extern "C" fn(os: &mut T, callback: AddressCallback) -> i32,
     pub process_info_by_address:
         extern "C" fn(os: &mut T, address: Address, out: &mut MuProcessInfo) -> i32,
@@ -47,17 +46,10 @@ pub struct OsFunctionTable<'a, P, PM, VM, T> {
     pub info: extern "C" fn(os: &T) -> &OsInfo,
     pub phys_mem: extern "C" fn(os: &mut T) -> *mut c_void,
     pub virt_mem: extern "C" fn(os: &mut T) -> *mut c_void,
-    phantom: std::marker::PhantomData<(P, PM, VM)>,
+    phantom: std::marker::PhantomData<P>,
 }
 
-impl<
-        'a,
-        P: 'static + Process + Clone,
-        PM: 'static + PhysicalMemory,
-        VM: 'static + VirtualMemory,
-        T: PluginOs<P, PM, VM>,
-    > Default for &'a OsFunctionTable<'a, P, PM, VM, T>
-{
+impl<'a, P: 'static + Process + Clone, T: PluginOs<P>> Default for &'a OsFunctionTable<'a, P, T> {
     fn default() -> Self {
         &OsFunctionTable {
             process_address_list_callback: c_process_address_list_callback,
@@ -74,9 +66,7 @@ impl<
     }
 }
 
-impl<'a, P: Process + Clone, PM: PhysicalMemory, VM: VirtualMemory, T: PluginOs<P, PM, VM>>
-    OsFunctionTable<'a, P, PM, VM, T>
-{
+impl<'a, P: Process + Clone, T: PluginOs<P>> OsFunctionTable<'a, P, T> {
     pub fn as_opaque(&self) -> &OpaqueOsFunctionTable {
         unsafe { &*(self as *const Self as *const OpaqueOsFunctionTable) }
     }
@@ -107,12 +97,7 @@ extern "C" fn c_process_by_info<'a, T: 'a + OsInner<'a>>(
         .into_int_out_result(out)
 }
 
-extern "C" fn c_into_process_by_info<
-    P: 'static + Process + Clone,
-    PM: 'static + PhysicalMemory,
-    VM: 'static + VirtualMemory,
-    T: 'static + PluginOs<P, PM, VM>,
->(
+extern "C" fn c_into_process_by_info<P: 'static + Process + Clone, T: 'static + PluginOs<P>>(
     os: &mut T,
     info: ProcessInfo,
     lib: COptArc<Library>,
@@ -181,17 +166,12 @@ pub struct OsInstance {
 }
 
 impl OsInstance {
-    pub fn builder<
-        P: 'static + Process + Clone,
-        PM: 'static + PhysicalMemory,
-        VM: 'static + VirtualMemory,
-        T: PluginOs<P, PM, VM>,
-    >(
+    pub fn builder<P: 'static + Process + Clone, T: PluginOs<P>>(
         instance: T,
     ) -> OsInstanceBuilder<T> {
         OsInstanceBuilder {
             instance,
-            vtable: OsLayerFunctionTable::new::<P, PM, VM, T>(),
+            vtable: OsLayerFunctionTable::new::<P, T>(),
         }
     }
 }

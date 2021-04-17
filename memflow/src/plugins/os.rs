@@ -1,5 +1,4 @@
 use crate::error::*;
-use crate::mem::{PhysicalMemory, VirtualMemory};
 use crate::os::*;
 use crate::types::Address;
 use crate::types::ReprCStr;
@@ -39,20 +38,12 @@ pub type MuOsInstance = MaybeUninit<OsInstance>;
 pub type OptionArchitectureIdent<'a> = Option<&'a crate::architecture::ArchitectureIdent>;
 
 /// Subtrait of Plugin where `Self`, and `Os::IntoProcessType` are `Clone`
-pub trait PluginOs<T: Process + Clone, P: PhysicalMemory, V: VirtualMemory>:
-    'static
-    + Clone
-    + for<'a> OsInner<'a, IntoProcessType = T, PhysicalMemoryType = P, VirtualMemoryType = V>
+pub trait PluginOs<T: Process + Clone>:
+    'static + Clone + for<'a> OsInner<'a, IntoProcessType = T>
 {
 }
-impl<
-        T: Process + Clone,
-        P: 'static + PhysicalMemory,
-        V: 'static + VirtualMemory,
-        K: 'static
-            + Clone
-            + for<'a> OsInner<'a, IntoProcessType = T, PhysicalMemoryType = P, VirtualMemoryType = V>,
-    > PluginOs<T, P, V> for K
+impl<T: Process + Clone, K: 'static + Clone + for<'a> OsInner<'a, IntoProcessType = T>> PluginOs<T>
+    for K
 {
 }
 
@@ -68,12 +59,7 @@ impl<
 {
 }
 
-pub fn create_with_logging<
-    P: 'static + Process + Clone,
-    PM: 'static + PhysicalMemory,
-    VM: 'static + VirtualMemory,
-    T: PluginOs<P, PM, VM>,
->(
+pub fn create_with_logging<P: 'static + Process + Clone, T: PluginOs<P>>(
     args: &ReprCStr,
     conn: ConnectorInstance,
     log_level: i32,
@@ -85,12 +71,7 @@ pub fn create_with_logging<
     })
 }
 
-pub fn create_without_logging<
-    P: 'static + Process + Clone,
-    PM: 'static + PhysicalMemory,
-    VM: 'static + VirtualMemory,
-    T: PluginOs<P, PM, VM>,
->(
+pub fn create_without_logging<P: 'static + Process + Clone, T: PluginOs<P>>(
     args: &ReprCStr,
     conn: ConnectorInstance,
     out: &mut MuOsInstance,
@@ -113,15 +94,10 @@ pub struct OsLayerFunctionTable {
 }
 
 impl OsLayerFunctionTable {
-    pub fn new<
-        P: 'static + Process + Clone,
-        PM: 'static + PhysicalMemory,
-        VM: 'static + VirtualMemory,
-        T: PluginOs<P, PM, VM>,
-    >() -> Self {
+    pub fn new<P: 'static + Process + Clone, T: PluginOs<P>>() -> Self {
         OsLayerFunctionTable {
             base: <&GenericBaseTable<T>>::default().as_opaque(),
-            os: <&OsFunctionTable<P, PM, VM, T>>::default().as_opaque(),
+            os: <&OsFunctionTable<P, T>>::default().as_opaque(),
             keyboard: None,
         }
     }

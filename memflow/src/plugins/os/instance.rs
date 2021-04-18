@@ -325,37 +325,26 @@ impl<'a> OsInner<'a> for OsInstance {
     }
 
     fn phys_mem(&mut self) -> Option<&mut Self::PhysicalMemoryType> {
-        unsafe { std::mem::transmute(self.phys_mem.as_mut()) }
-
-        /*
         if self.phys_mem.is_some() {
             let phys_mem_ref = (self.vtable.os.phys_mem)(
                 unsafe { (self.instance as *mut c_void).as_mut() }.unwrap(),
             );
-            println!("phys_mem_ref: {:?}", phys_mem_ref);
-
             if !phys_mem_ref.is_null() {
                 // update the internal reference
                 self.phys_mem.as_mut().unwrap().instance =
                     unsafe { phys_mem_ref.as_mut() }.unwrap();
 
-                println!("phys_mem_ref: {:?}", self.phys_mem.as_mut().unwrap().instance);
-
                 // Safety: we shorten the 'static lifetime to 'a here.
-                unsafe { std::mem::transmute(self.phys_mem.as_mut().into_option()) }
+                unsafe { std::mem::transmute(self.phys_mem.as_mut()) }
             } else {
                 None
             }
         } else {
             None
         }
-        */
     }
 
     fn virt_mem(&mut self) -> Option<&mut Self::VirtualMemoryType> {
-        unsafe { std::mem::transmute(self.virt_mem.as_mut()) }
-
-        /*
         if self.virt_mem.is_some() {
             let virt_mem_ref = (self.vtable.os.virt_mem)(
                 unsafe { (self.instance as *mut c_void).as_mut() }.unwrap(),
@@ -366,14 +355,13 @@ impl<'a> OsInner<'a> for OsInstance {
                     unsafe { virt_mem_ref.as_mut() }.unwrap();
 
                 // Safety: we shorten the 'static lifetime to 'a here.
-                unsafe { std::mem::transmute(self.virt_mem.as_mut().into_option()) }
+                unsafe { std::mem::transmute(self.virt_mem.as_mut()) }
             } else {
                 None
             }
         } else {
             None
         }
-        */
     }
 }
 

@@ -80,10 +80,6 @@ typedef struct ArchitectureObj ArchitectureObj;
  */
 typedef struct Inventory Inventory;
 
-typedef struct Option_PhysicalMemoryInstance Option_PhysicalMemoryInstance;
-
-typedef struct Option_VirtualMemoryInstance Option_VirtualMemoryInstance;
-
 typedef struct Option______Library Option______Library;
 
 typedef struct PhysicalReadData PhysicalReadData;
@@ -726,6 +722,45 @@ typedef struct OsLayerFunctionTable {
     const OpaqueOsKeyboardFunctionTable *keyboard;
 } OsLayerFunctionTable;
 
+typedef struct PhysicalMemoryInstance {
+    void *instance;
+    const OpaquePhysicalMemoryFunctionTable *vtable;
+} PhysicalMemoryInstance;
+
+/**
+ * Describes a FFI safe option
+ */
+typedef enum COption_PhysicalMemoryInstance_Tag {
+    None_PhysicalMemoryInstance,
+    Some_PhysicalMemoryInstance,
+} COption_PhysicalMemoryInstance_Tag;
+
+typedef struct COption_PhysicalMemoryInstance {
+    COption_PhysicalMemoryInstance_Tag tag;
+    union {
+        struct {
+            struct PhysicalMemoryInstance some;
+        };
+    };
+} COption_PhysicalMemoryInstance;
+
+/**
+ * Describes a FFI safe option
+ */
+typedef enum COption_VirtualMemoryInstance_Tag {
+    None_VirtualMemoryInstance,
+    Some_VirtualMemoryInstance,
+} COption_VirtualMemoryInstance_Tag;
+
+typedef struct COption_VirtualMemoryInstance {
+    COption_VirtualMemoryInstance_Tag tag;
+    union {
+        struct {
+            struct VirtualMemoryInstance some;
+        };
+    };
+} COption_VirtualMemoryInstance;
+
 /**
  * Describes initialized os instance
  *
@@ -748,8 +783,8 @@ typedef struct OsInstance {
     /**
      * Internal physical / virtual memory instances for borrowing
      */
-    struct Option_PhysicalMemoryInstance phys_mem;
-    struct Option_VirtualMemoryInstance virt_mem;
+    struct COption_PhysicalMemoryInstance phys_mem;
+    struct COption_VirtualMemoryInstance virt_mem;
 } OsInstance;
 
 typedef struct OsInstance MuOsInstance;
@@ -1067,6 +1102,31 @@ int32_t virt_write_u32(struct VirtualMemoryObj *mem, Address addr, uint32_t val)
  * Write a single 64-bit value into a provided `Address`
  */
 int32_t virt_write_u64(struct VirtualMemoryObj *mem, Address addr, uint64_t val);
+
+/**
+ * Returns a reference to the [`PhysicalMemory`] object this OS uses.
+ * The [`PhysicalMemory`] usually is just the Connector this OS was intitialized with.
+ *
+ * If no connector is used `null` is returned.
+ *
+ * # Safety
+ *
+ * `os` must point to a valid `OsInstance` that was created using one of the provided
+ * functions.
+ */
+struct PhysicalMemoryInstance *os_phys_mem(struct OsInstance *os);
+
+/**
+ * Returns a reference to the [`VirtualMemory`] object this OS uses.
+ *
+ * If no [`VirtualMemory`] object is used `null` is returned.
+ *
+ * # Safety
+ *
+ * `os` must point to a valid `OsInstance` that was created using one of the provided
+ * functions.
+ */
+struct VirtualMemoryInstance *os_virt_mem(struct OsInstance *os);
 
 uint8_t arch_bits(const struct ArchitectureObj *arch);
 

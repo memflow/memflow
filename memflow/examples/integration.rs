@@ -9,22 +9,24 @@ use colored::*;
 static mut HAD_ERROR: bool = false;
 
 fn main() -> Result<()> {
-    let (connector, args_str, os_name, os_args_str, sysproc, kernel_mods) = parse_args();
+    let (conn_name, conn_args_str, os_name, os_args_str, sysproc, kernel_mods) = parse_args();
 
-    let args = Args::parse(&args_str)?;
+    let conn_args = Args::parse(&conn_args_str)?;
     let os_args = Args::parse(&os_args_str)?;
 
     // create inventory + connector
     let inventory = Inventory::scan();
-    let connector = inventory.create_connector(&connector, None, &args)?;
-
-    let kernel_result = inventory.create_os(&os_name, Some(connector), &os_args);
-    println!("Kernel::build ... {}", ok_str(&kernel_result));
-    let mut kernel = kernel_result?;
+    let mut os = inventory
+        .builder()
+        .connector(&conn_name)
+        .args(conn_args)
+        .os(&os_name)
+        .args(os_args)
+        .build()?;
 
     {
         println!("Kernel info:");
-        let base_info = kernel.info();
+        let base_info = os.info();
         println!(
             "base: {:x} ... {}",
             base_info.base,
@@ -39,20 +41,20 @@ fn main() -> Result<()> {
     }
 
     {
-        let os_base = kernel.info().base;
+        let os_base = os.info().base;
 
         let mut out = [0u8; 32];
-        let phys_mem = kernel.phys_mem().expect("no phys mem found");
+        let phys_mem = os.phys_mem().expect("no phys mem found");
         phys_mem.phys_read_into(0x1000.into(), &mut out).unwrap();
         println!("Kernel Physical Read: {:?}", out);
 
-        let virt_mem = kernel.virt_mem().expect("no virt mem found");
+        let virt_mem = os.virt_mem().expect("no virt mem found");
         virt_mem.virt_read_into(os_base, &mut out).unwrap();
         println!("Kernel Virtual Read: {:?}", out);
     }
 
     {
-        if let Ok(modules) = kernel_modules(&mut kernel) {
+        if let Ok(modules) = kernel_modules(&mut os) {
             for k in kernel_mods.split(',') {
                 println!(
                     "{} ... {}",
@@ -66,7 +68,7 @@ fn main() -> Result<()> {
 
     {
         println!("Process List:");
-        let prc_list = kernel.process_info_list()?;
+        let prc_list = os.process_info_list()?;
         let lsass = prc_list
             .iter()
             .find(|p| p.name.to_string().to_lowercase() == sysproc);

@@ -9,6 +9,12 @@ fn main() {
     // create inventory
     let inventory = Inventory::scan();
 
+    // try to get help text
+    println!(
+        "Connector help:\n{}",
+        inventory.connector_help(&connector).unwrap_or_default()
+    );
+
     // try to get target list
     let targets = inventory
         .connector_target_list(&connector)

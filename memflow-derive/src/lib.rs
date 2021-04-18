@@ -13,6 +13,8 @@ struct ConnectorFactoryArgs {
     #[darling(default)]
     import_prefix: Option<String>,
     #[darling(default)]
+    help_fn: Option<String>,
+    #[darling(default)]
     target_list_fn: Option<String>,
 }
 
@@ -23,6 +25,8 @@ struct OsFactoryArgs {
     version: Option<String>,
     #[darling(default)]
     description: Option<String>,
+    #[darling(default)]
+    help_fn: Option<String>,
 }
 
 // We should add conditional compilation for the crate-type here
@@ -58,6 +62,12 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
         || quote! { ::memflow },
         |v: proc_macro2::TokenStream| quote! { #v },
     );
+
+    let help_gen = if args.help_fn.is_some() {
+        quote! { Some(mf_help_callback) }
+    } else {
+        quote! { None }
+    };
 
     let target_list_gen = if args.target_list_fn.is_some() {
         quote! { Some(mf_target_list_callback) }
@@ -100,6 +110,21 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
         }
     };
 
+    let help_fn_gen = args.help_fn.map(|v| v.parse().unwrap()).map_or_else(
+        proc_macro2::TokenStream::new,
+        |func_name: proc_macro2::TokenStream| {
+            quote! {
+                #[doc(hidden)]
+                extern "C" fn mf_help_callback(
+                    mut callback: #prefix_gen::plugins::HelpCallback,
+                ) {
+                    let helpstr = #func_name();
+                    let _ = callback.call(helpstr.into());
+                }
+            }
+        },
+    );
+
     let target_list_fn_gen = args.target_list_fn.map(|v| v.parse().unwrap()).map_or_else(
         proc_macro2::TokenStream::new,
         |func_name: proc_macro2::TokenStream| {
@@ -129,11 +154,15 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
             name: #connector_name,
             version: #version_gen,
             description: #description_gen,
+            help_callback: #help_gen,
             target_list_callback: #target_list_gen,
             create: mf_create,
         };
 
         #create_fn_gen
+
+        #help_fn_gen
+
         #target_list_fn_gen
 
         #func
@@ -161,6 +190,12 @@ pub fn os_layer(args: TokenStream, input: TokenStream) -> TokenStream {
         |d| quote! { #d },
     );
 
+    let help_gen = if args.help_fn.is_some() {
+        quote! { Some(mf_help_callback) }
+    } else {
+        quote! { None }
+    };
+
     let os_descriptor: proc_macro2::TokenStream = ["MEMFLOW_OS_", &(&os_name).to_uppercase()]
         .concat()
         .parse()
@@ -169,7 +204,7 @@ pub fn os_layer(args: TokenStream, input: TokenStream) -> TokenStream {
     let func = parse_macro_input!(input as ItemFn);
     let func_name = &func.sig.ident;
 
-    let create_gen = if func.sig.inputs.len() > 2 {
+    let create_fn_gen = if func.sig.inputs.len() > 2 {
         quote! {
             #[doc(hidden)]
             extern "C" fn mf_create(
@@ -195,6 +230,21 @@ pub fn os_layer(args: TokenStream, input: TokenStream) -> TokenStream {
         }
     };
 
+    let help_fn_gen = args.help_fn.map(|v| v.parse().unwrap()).map_or_else(
+        proc_macro2::TokenStream::new,
+        |func_name: proc_macro2::TokenStream| {
+            quote! {
+                #[doc(hidden)]
+                extern "C" fn mf_help_callback(
+                    mut callback: ::memflow::plugins::HelpCallback,
+                ) {
+                    let helpstr = #func_name();
+                    let _ = callback.call(helpstr.into());
+                }
+            }
+        },
+    );
+
     let gen = quote! {
         #[doc(hidden)]
         #[no_mangle]
@@ -203,11 +253,14 @@ pub fn os_layer(args: TokenStream, input: TokenStream) -> TokenStream {
             name: #os_name,
             version: #version_gen,
             description: #description_gen,
+            help_callback: #help_gen,
             target_list_callback: None, // non existent on Os Plugins
             create: mf_create,
         };
 
-        #create_gen
+        #create_fn_gen
+
+        #help_fn_gen
 
         #func
     };
@@ -234,6 +287,12 @@ pub fn os_layer_bare(args: TokenStream, input: TokenStream) -> TokenStream {
         |d| quote! { #d },
     );
 
+    let help_gen = if args.help_fn.is_some() {
+        quote! { Some(mf_help_callback) }
+    } else {
+        quote! { None }
+    };
+
     let os_descriptor: proc_macro2::TokenStream = ["MEMFLOW_OS_", &(&os_name).to_uppercase()]
         .concat()
         .parse()
@@ -241,7 +300,8 @@ pub fn os_layer_bare(args: TokenStream, input: TokenStream) -> TokenStream {
 
     let func = parse_macro_input!(input as ItemFn);
     let func_name = &func.sig.ident;
-    let create_gen = quote! {
+
+    let create_fn_gen = quote! {
         #[doc(hidden)]
         extern "C" fn mf_create(
             args: &::memflow::types::ReprCString,
@@ -253,6 +313,21 @@ pub fn os_layer_bare(args: TokenStream, input: TokenStream) -> TokenStream {
         }
     };
 
+    let help_fn_gen = args.help_fn.map(|v| v.parse().unwrap()).map_or_else(
+        proc_macro2::TokenStream::new,
+        |func_name: proc_macro2::TokenStream| {
+            quote! {
+                #[doc(hidden)]
+                extern "C" fn mf_help_callback(
+                    mut callback: ::memflow::plugins::HelpCallback,
+                ) {
+                    let helpstr = #func_name();
+                    let _ = callback.call(helpstr.into());
+                }
+            }
+        },
+    );
+
     let gen = quote! {
         #[doc(hidden)]
         #[no_mangle]
@@ -261,11 +336,14 @@ pub fn os_layer_bare(args: TokenStream, input: TokenStream) -> TokenStream {
             name: #os_name,
             version: #version_gen,
             description: #description_gen,
+            help_callback: #help_gen,
             target_list_callback: None, // non existent on Os Plugins
             create: mf_create,
         };
 
-        #create_gen
+        #create_fn_gen
+
+        #help_fn_gen
 
         #func
     };

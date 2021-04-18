@@ -111,7 +111,29 @@ impl Loadable for LoadableConnector {
         Self { descriptor }
     }
 
-    /// Retrieves the list of available targets for this connector.
+    /// Retrieves the help text for this plugin
+    fn help(&self) -> Result<String> {
+        match self.descriptor.help_callback {
+            Some(help_callback) => {
+                let mut ret = vec![];
+                (help_callback)((&mut ret).into());
+                ret.first().map(|h| h.to_string()).ok_or_else(|| {
+                    Error(ErrorOrigin::Connector, ErrorKind::NotSupported).log_error(&format!(
+                        "Connector `{}` did not return any help text.",
+                        self.ident()
+                    ))
+                })
+            }
+            None => Err(
+                Error(ErrorOrigin::Connector, ErrorKind::NotSupported).log_error(&format!(
+                    "Connector `{}` does not support help text.",
+                    self.ident()
+                )),
+            ),
+        }
+    }
+
+    /// Retrieves the list of available targets for this plugin
     fn target_list(&self) -> Result<Vec<TargetInfo>> {
         match self.descriptor.target_list_callback {
             Some(target_list_callback) => {

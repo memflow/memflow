@@ -143,6 +143,8 @@ impl<T> From<COption<T>> for Option<T> {
     }
 }
 
+pub type HelpCallback<'a> = OpaqueCallback<'a, ReprCString>;
+
 /// Target information structure
 #[repr(C)]
 #[derive(Clone, Debug)]
@@ -176,7 +178,7 @@ pub struct PluginDescriptor<T: Loadable> {
     pub description: &'static str,
 
     /// Retrieves a help string from the plugin (lists all available commands)
-    //pub help: extern "C" fn(&ReprCString) -> (),
+    pub help_callback: Option<extern "C" fn(callback: HelpCallback) -> ()>,
 
     /// Retrieves a list of available targets for the plugin
     pub target_list_callback: Option<extern "C" fn(callback: TargetCallback) -> i32>,
@@ -308,10 +310,10 @@ pub trait Loadable: Sized {
         Ok(())
     }
 
-    /// Retrieves the list of available targets for this connector.
-    ///
-    /// This function assumes that `load` performed necessary safety checks
-    /// for validity of the library.
+    /// Retrieves the help text for this plugin
+    fn help(&self) -> Result<String>;
+
+    /// Retrieves the list of available targets for this plugin
     fn target_list(&self) -> Result<Vec<TargetInfo>>;
 
     /// Creates an `Instance` of the library
@@ -532,6 +534,50 @@ impl Inventory {
             .collect::<Vec<_>>()
     }
 
+    /// Returns the help string of the given Connector.
+    ///
+    /// This function returns an error in case the Connector was not found or does not implement the help feature.
+    pub fn connector_help(&self, name: &str) -> Result<String> {
+        Self::help_internal(&self.connectors, name)
+    }
+
+    /// Returns the help string of the given Os Plugin.
+    ///
+    /// This function returns an error in case the Os Plugin was not found or does not implement the help feature.
+    pub fn os_help(&self, name: &str) -> Result<String> {
+        Self::help_internal(&self.os_layers, name)
+    }
+
+    fn help_internal<T: Loadable>(libs: &[LibInstance<T>], name: &str) -> Result<String> {
+        let lib = libs
+            .iter()
+            .find(|c| c.loader.ident() == name)
+            .ok_or_else(|| {
+                error!(
+                    "unable to find plugin with name '{}'. available `{}` plugins are: {}",
+                    name,
+                    T::plugin_type(),
+                    libs.iter()
+                        .map(|c| c.loader.ident().to_string())
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                );
+                Error(ErrorOrigin::Inventory, ErrorKind::PluginNotFound)
+            })?;
+
+        info!(
+            "attempting to load `{}` type plugin `{}` from `{}`",
+            T::plugin_type(),
+            lib.loader.ident(),
+            lib.path.to_string_lossy(),
+        );
+
+        lib.loader.help()
+    }
+
+    /// Returns a list of all available targets of the connector.
+    ///
+    /// This function returns an error in case the connector does not implement this feature.
     pub fn connector_target_list(&self, name: &str) -> Result<Vec<TargetInfo>> {
         let lib = self
             .connectors

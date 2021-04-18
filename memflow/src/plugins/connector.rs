@@ -116,7 +116,7 @@ impl Loadable for LoadableConnector {
         match self.descriptor.target_list_callback {
             Some(target_list_callback) => {
                 let mut ret = vec![];
-                (target_list_callback)((&mut ret).into());
+                result_from_int_void((target_list_callback)((&mut ret).into()))?;
                 Ok(ret)
             }
             None => Err(

@@ -179,7 +179,7 @@ pub struct PluginDescriptor<T: Loadable> {
     //pub help: extern "C" fn(&ReprCString) -> (),
 
     /// Retrieves a list of available targets for the plugin
-    pub target_list_callback: Option<extern "C" fn(callback: TargetCallback) -> ()>,
+    pub target_list_callback: Option<extern "C" fn(callback: TargetCallback) -> i32>,
 
     /// Create instance of the plugin
     pub create:

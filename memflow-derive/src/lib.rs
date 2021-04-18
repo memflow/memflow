@@ -106,9 +106,16 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
             quote! {
                 #[doc(hidden)]
                 extern "C" fn mf_target_list_callback(
-                    callback: #prefix_gen::plugins::TargetCallback,
-                ) -> () {
-                    #func_name(callback)
+                    mut callback: #prefix_gen::plugins::TargetCallback,
+                ) -> i32 {
+                    #func_name()
+                        .map(|mut targets| {
+                            targets
+                                .into_iter()
+                                .take_while(|t| callback.call(t.clone()))
+                                .for_each(|_| ());
+                        })
+                        .into_int_result()
                 }
             }
         },

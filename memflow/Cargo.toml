@@ -84,3 +84,7 @@ path = "examples/kernel_modules.rs"
 [[example]]
 name = "keyboard"
 path = "examples/keyboard.rs"
+
+[[example]]
+name = "target_list"
+path = "examples/target_list.rs"

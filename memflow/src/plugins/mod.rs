@@ -35,7 +35,7 @@ pub(crate) mod arc;
 pub(crate) use arc::{CArc, COptArc};
 
 use crate::error::{Result, *};
-use crate::types::ReprCString;
+use crate::types::{OpaqueCallback, ReprCString};
 
 use log::*;
 use std::ffi::c_void;
@@ -143,6 +143,17 @@ impl<T> From<COption<T>> for Option<T> {
     }
 }
 
+/// Target information structure
+#[repr(C)]
+#[derive(Clone, Debug)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+pub struct TargetInfo {
+    /// Name of the target
+    pub name: ReprCString,
+}
+
+pub type TargetCallback<'a> = OpaqueCallback<'a, TargetInfo>;
+
 #[repr(C)]
 pub struct PluginDescriptor<T: Loadable> {
     /// The plugin api version for when the plugin was built.
@@ -164,11 +175,11 @@ pub struct PluginDescriptor<T: Loadable> {
     /// The description of the connector.
     pub description: &'static str,
 
-    /// Retrieve a help string from the connector.
+    /// Retrieves a help string from the plugin (lists all available commands)
     //pub help: extern "C" fn(&ReprCString) -> (),
 
-    /// Retrieve a list of available targets for this connector
-    // TODO:
+    /// Retrieves a list of available targets for the plugin
+    pub target_list_callback: Option<extern "C" fn(callback: TargetCallback) -> ()>,
 
     /// Create instance of the plugin
     pub create:
@@ -296,6 +307,12 @@ pub trait Loadable: Sized {
 
         Ok(())
     }
+
+    /// Retrieves the list of available targets for this connector.
+    ///
+    /// This function assumes that `load` performed necessary safety checks
+    /// for validity of the library.
+    fn target_list(&self) -> Result<Vec<TargetInfo>>;
 
     /// Creates an `Instance` of the library
     ///
@@ -513,6 +530,23 @@ impl Inventory {
             .iter()
             .map(|c| c.loader.ident().to_string())
             .collect::<Vec<_>>()
+    }
+
+    pub fn connector_target_list(&self, name: &str) -> Result<Vec<TargetInfo>> {
+        let lib = self
+            .connectors
+            .iter()
+            .find(|c| c.loader.ident() == name)
+            .ok_or_else(|| {
+                error!(
+                    "unable to find connector with name '{}'. available connectors are: {}",
+                    name,
+                    self.available_connectors().join(", "),
+                );
+                Error(ErrorOrigin::Inventory, ErrorKind::PluginNotFound)
+            })?;
+
+        lib.loader.target_list()
     }
 
     /// Creates a new Connector / OS builder.

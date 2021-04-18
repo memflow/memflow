@@ -10,6 +10,7 @@ pub use instance::{
 
 use super::{
     Args, CArc, GenericBaseTable, Loadable, OpaqueBaseTable, OsInstance, PluginDescriptor,
+    TargetInfo,
 };
 
 use crate::types::ReprCString;
@@ -108,6 +109,23 @@ impl Loadable for LoadableConnector {
 
     fn new(descriptor: PluginDescriptor<Self>) -> Self {
         Self { descriptor }
+    }
+
+    /// Retrieves the list of available targets for this connector.
+    fn target_list(&self) -> Result<Vec<TargetInfo>> {
+        match self.descriptor.target_list_callback {
+            Some(target_list_callback) => {
+                let mut ret = vec![];
+                (target_list_callback)((&mut ret).into());
+                Ok(ret)
+            }
+            None => Err(
+                Error(ErrorOrigin::Connector, ErrorKind::NotSupported).log_error(&format!(
+                    "Connector `{}` does not support target listing.",
+                    self.ident()
+                )),
+            ),
+        }
     }
 
     /// Creates a new connector instance from this library.

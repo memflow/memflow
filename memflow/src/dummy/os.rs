@@ -510,6 +510,7 @@ pub static MEMFLOW_OS_DUMMY: OsDescriptor = OsDescriptor {
     name: "dummy",
     version: env!("CARGO_PKG_VERSION"),
     description: "Dummy testing OS",
+    target_list_callback: None,
     create: mf_create,
 };
 

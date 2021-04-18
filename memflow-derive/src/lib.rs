@@ -12,6 +12,8 @@ struct ConnectorFactoryArgs {
     description: Option<String>,
     #[darling(default)]
     import_prefix: Option<String>,
+    #[darling(default)]
+    target_list_fn: Option<String>,
 }
 
 #[derive(Debug, FromMeta)]
@@ -57,6 +59,12 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
         |v: proc_macro2::TokenStream| quote! { #v },
     );
 
+    let target_list_gen = if args.target_list_fn.is_some() {
+        quote! { Some(mf_target_list_callback) }
+    } else {
+        quote! { None }
+    };
+
     let connector_descriptor: proc_macro2::TokenStream =
         ["MEMFLOW_CONNECTOR_", &(&connector_name).to_uppercase()]
             .concat()
@@ -66,7 +74,7 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
     let func = parse_macro_input!(input as ItemFn);
     let func_name = &func.sig.ident;
 
-    let create_gen = if func.sig.inputs.len() > 1 {
+    let create_fn_gen = if func.sig.inputs.len() > 1 {
         quote! {
             #[doc(hidden)]
             extern "C" fn mf_create(
@@ -92,6 +100,20 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
         }
     };
 
+    let target_list_fn_gen = args.target_list_fn.map(|v| v.parse().unwrap()).map_or_else(
+        proc_macro2::TokenStream::new,
+        |func_name: proc_macro2::TokenStream| {
+            quote! {
+                #[doc(hidden)]
+                extern "C" fn mf_target_list_callback(
+                    callback: #prefix_gen::plugins::TargetCallback,
+                ) -> () {
+                    #func_name(callback)
+                }
+            }
+        },
+    );
+
     let gen = quote! {
         #[doc(hidden)]
         #[no_mangle]
@@ -100,10 +122,12 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
             name: #connector_name,
             version: #version_gen,
             description: #description_gen,
+            target_list_callback: #target_list_gen,
             create: mf_create,
         };
 
-        #create_gen
+        #create_fn_gen
+        #target_list_fn_gen
 
         #func
     };
@@ -172,6 +196,7 @@ pub fn os_layer(args: TokenStream, input: TokenStream) -> TokenStream {
             name: #os_name,
             version: #version_gen,
             description: #description_gen,
+            target_list_callback: None, // non existent on Os Plugins
             create: mf_create,
         };
 
@@ -229,6 +254,7 @@ pub fn os_layer_bare(args: TokenStream, input: TokenStream) -> TokenStream {
             name: #os_name,
             version: #version_gen,
             description: #description_gen,
+            target_list_callback: None, // non existent on Os Plugins
             create: mf_create,
         };
 

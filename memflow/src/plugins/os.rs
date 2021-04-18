@@ -17,7 +17,7 @@ pub use keyboard::{
 
 use super::{
     Args, CArc, COption, ConnectorInstance, GenericBaseTable, Loadable, OpaqueBaseTable,
-    PluginDescriptor,
+    PluginDescriptor, TargetInfo,
 };
 
 use libloading::Library;
@@ -128,6 +128,12 @@ impl Loadable for LoadableOs {
 
     fn new(descriptor: PluginDescriptor<Self>) -> Self {
         Self { descriptor }
+    }
+
+    /// Retrieves the list of available targets for this connector.
+    fn target_list(&self) -> Result<Vec<TargetInfo>> {
+        Err(Error(ErrorOrigin::Connector, ErrorKind::NotSupported)
+            .log_error("Os does not support target listing."))
     }
 
     /// Creates a new OS instance from this library.

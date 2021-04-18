@@ -1,10 +1,8 @@
-use memflow::os::*;
-use memflow::plugins::*;
+use memflow::prelude::v1::*;
+use memflow::prelude::v1::{ErrorKind, Result};
 
 use clap::*;
 use log::Level;
-
-use memflow::error::{Error, ErrorKind, ErrorOrigin, Result};
 
 use colored::*;
 
@@ -38,6 +36,19 @@ fn main() -> Result<()> {
             bool_str(base_info.size != 0)
         );
         println!();
+    }
+
+    {
+        let os_base = kernel.info().base;
+
+        let mut out = [0u8; 32];
+        let phys_mem = kernel.phys_mem().expect("no phys mem found");
+        phys_mem.phys_read_into(0x1000.into(), &mut out).unwrap();
+        println!("Kernel Physical Read: {:?}", out);
+
+        let virt_mem = kernel.virt_mem().expect("no virt mem found");
+        virt_mem.virt_read_into(os_base, &mut out).unwrap();
+        println!("Kernel Virtual Read: {:?}", out);
     }
 
     {

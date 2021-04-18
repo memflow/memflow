@@ -2,8 +2,8 @@ use crate::error::*;
 
 use super::{
     super::PhysicalMemoryInstance, super::VirtualMemoryInstance, ArcPluginKeyboard,
-    ArcPluginProcess, Keyboard, MuArcPluginKeyboard, MuPluginKeyboard, OsKeyboardFunctionTable,
-    OsLayerFunctionTable, PluginKeyboard, PluginOsKeyboard, PluginProcess,
+    ArcPluginProcess, COption, Keyboard, MuArcPluginKeyboard, MuPluginKeyboard,
+    OsKeyboardFunctionTable, OsLayerFunctionTable, PluginKeyboard, PluginOsKeyboard, PluginProcess,
 };
 use crate::os::{
     AddressCallback, ModuleInfo, OsInfo, OsInner, OsKeyboardInner, Process, ProcessInfo,
@@ -161,8 +161,8 @@ pub struct OsInstance {
     pub(super) library: COptArc<Library>,
 
     /// Internal physical / virtual memory instances for borrowing
-    phys_mem: Option<PhysicalMemoryInstance<'static>>,
-    virt_mem: Option<VirtualMemoryInstance<'static>>,
+    phys_mem: COption<PhysicalMemoryInstance<'static>>,
+    virt_mem: COption<VirtualMemoryInstance<'static>>,
 }
 
 impl OsInstance {
@@ -213,7 +213,8 @@ where
             } else {
                 None
             }
-        };
+        }
+        .into();
 
         let virt_mem = {
             let virt_mem_ref = c_os_virt_mem(unsafe { instance.as_mut() }.unwrap());
@@ -226,7 +227,8 @@ where
             } else {
                 None
             }
-        };
+        }
+        .into();
 
         OsInstance {
             instance: instance_void,
@@ -279,6 +281,7 @@ impl<'a> OsInner<'a> for OsInstance {
         let res = (self.vtable.os.process_by_info)(instance, info, &mut out);
         result_from_int(res, out)
     }
+
     /// Construct a process by its info, consuming the os
     ///
     /// This function will consume the OS instance and move its resources into the process
@@ -322,13 +325,55 @@ impl<'a> OsInner<'a> for OsInstance {
     }
 
     fn phys_mem(&mut self) -> Option<&mut Self::PhysicalMemoryType> {
-        // Safety: we shorten the 'static lifetime to 'a here.
         unsafe { std::mem::transmute(self.phys_mem.as_mut()) }
+
+        /*
+        if self.phys_mem.is_some() {
+            let phys_mem_ref = (self.vtable.os.phys_mem)(
+                unsafe { (self.instance as *mut c_void).as_mut() }.unwrap(),
+            );
+            println!("phys_mem_ref: {:?}", phys_mem_ref);
+
+            if !phys_mem_ref.is_null() {
+                // update the internal reference
+                self.phys_mem.as_mut().unwrap().instance =
+                    unsafe { phys_mem_ref.as_mut() }.unwrap();
+
+                println!("phys_mem_ref: {:?}", self.phys_mem.as_mut().unwrap().instance);
+
+                // Safety: we shorten the 'static lifetime to 'a here.
+                unsafe { std::mem::transmute(self.phys_mem.as_mut().into_option()) }
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+        */
     }
 
     fn virt_mem(&mut self) -> Option<&mut Self::VirtualMemoryType> {
-        // Safety: we shorten the 'static lifetime to 'a here.
         unsafe { std::mem::transmute(self.virt_mem.as_mut()) }
+
+        /*
+        if self.virt_mem.is_some() {
+            let virt_mem_ref = (self.vtable.os.virt_mem)(
+                unsafe { (self.instance as *mut c_void).as_mut() }.unwrap(),
+            );
+            if !virt_mem_ref.is_null() {
+                // update the internal reference
+                self.virt_mem.as_mut().unwrap().instance =
+                    unsafe { virt_mem_ref.as_mut() }.unwrap();
+
+                // Safety: we shorten the 'static lifetime to 'a here.
+                unsafe { std::mem::transmute(self.virt_mem.as_mut().into_option()) }
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+        */
     }
 }
 
@@ -376,7 +421,8 @@ impl Clone for OsInstance {
             })
         } else {
             None
-        };
+        }
+        .into();
 
         let virt_mem_ref =
             (self.vtable.os.virt_mem)(unsafe { (instance as *mut c_void).as_mut() }.unwrap());
@@ -387,7 +433,8 @@ impl Clone for OsInstance {
             })
         } else {
             None
-        };
+        }
+        .into();
 
         Self {
             instance,

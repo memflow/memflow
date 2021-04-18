@@ -143,6 +143,33 @@ impl<T> From<COption<T>> for Option<T> {
     }
 }
 
+impl<T> COption<T> {
+    pub const fn is_some(&self) -> bool {
+        matches!(*self, COption::Some(_))
+    }
+
+    pub fn unwrap(self) -> T {
+        match self {
+            COption::Some(val) => val,
+            COption::None => panic!("called `COption::unwrap()` on a `None` value"),
+        }
+    }
+
+    pub const fn as_ref(&self) -> Option<&T> {
+        match *self {
+            COption::Some(ref x) => Some(x),
+            COption::None => None,
+        }
+    }
+
+    pub fn as_mut(&mut self) -> Option<&mut T> {
+        match *self {
+            COption::Some(ref mut x) => Some(x),
+            COption::None => None,
+        }
+    }
+}
+
 pub type HelpCallback<'a> = OpaqueCallback<'a, ReprCString>;
 
 /// Target information structure

@@ -9,7 +9,94 @@ use crate::mem::{
 };
 use crate::types::Address;
 
-use std::io::{Read, Seek, SeekFrom, Write};
+use std::fs::File;
+use std::io::{self, Read, Seek, SeekFrom, Write};
+use std::ops::{Deref, DerefMut};
+
+/// File that implements Clone
+///
+/// This file is meant for use with FileIoMemory when clone is needed, and possible Clone panics
+/// are acceptable (they should either always, or never happen on a given platform, probably never)
+pub struct CloneFile {
+    file: File,
+}
+
+impl Clone for CloneFile {
+    /// Clone the file
+    ///
+    /// # Panics
+    ///
+    /// If file cloning fails.
+    fn clone(&self) -> Self {
+        Self {
+            file: self.file.try_clone().unwrap(),
+        }
+    }
+}
+
+impl Deref for CloneFile {
+    type Target = File;
+
+    fn deref(&self) -> &Self::Target {
+        &self.file
+    }
+}
+
+impl DerefMut for CloneFile {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.file
+    }
+}
+
+impl From<File> for CloneFile {
+    fn from(file: File) -> Self {
+        Self { file }
+    }
+}
+
+impl Read for CloneFile {
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        self.file.read(buf)
+    }
+}
+
+impl Read for &CloneFile {
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        (&self.file).read(buf)
+    }
+}
+
+impl Seek for CloneFile {
+    fn seek(&mut self, pos: SeekFrom) -> io::Result<u64> {
+        self.file.seek(pos)
+    }
+}
+
+impl Seek for &CloneFile {
+    fn seek(&mut self, pos: SeekFrom) -> io::Result<u64> {
+        (&self.file).seek(pos)
+    }
+}
+
+impl Write for CloneFile {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        self.file.write(buf)
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        self.file.flush()
+    }
+}
+
+impl Write for &CloneFile {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        (&self.file).write(buf)
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        (&self.file).flush()
+    }
+}
 
 /// Accesses physical memory via file i/o.
 ///

@@ -14,7 +14,7 @@ The inventory system is feature gated behind the `inventory` feature.
 pub mod fileio;
 #[doc(hidden)]
 #[cfg(feature = "std")]
-pub use fileio::FileIoMemory;
+pub use fileio::{CloneFile, FileIoMemory};
 
 #[cfg(feature = "filemap")]
 pub mod filemap;

@@ -170,6 +170,12 @@ impl<'a> Process for PluginProcess<'a> {
     type VirtualMemoryType = VirtualMemoryInstance<'a>;
 
     fn virt_mem(&mut self) -> &mut Self::VirtualMemoryType {
+        // update the internal reference
+        let virt_mem_ref =
+            (self.vtable.virt_mem)(unsafe { (self.instance as *mut c_void).as_mut() }.unwrap());
+        self.virt_mem.instance = virt_mem_ref;
+
+        // return the internal virt_mem object
         &mut self.virt_mem
     }
 

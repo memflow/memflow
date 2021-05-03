@@ -192,6 +192,51 @@ pub trait Process: Send {
         Ok(ret)
     }
 
+    /// Finds a single import of a given module by its name
+    fn module_import_by_name(&mut self, info: &ModuleInfo, name: &str) -> Result<ImportInfo> {
+        let mut ret = Err(Error(ErrorOrigin::OsLayer, ErrorKind::ImportNotFound));
+        let callback = &mut |data: ImportInfo| {
+            if data.name.as_ref() == name {
+                ret = Ok(data);
+                false
+            } else {
+                true
+            }
+        };
+        self.module_import_list_callback(info, callback.into())?;
+        ret
+    }
+
+    /// Finds a single export of a given module by its name
+    fn module_export_by_name(&mut self, info: &ModuleInfo, name: &str) -> Result<ExportInfo> {
+        let mut ret = Err(Error(ErrorOrigin::OsLayer, ErrorKind::ImportNotFound));
+        let callback = &mut |data: ExportInfo| {
+            if data.name.as_ref() == name {
+                ret = Ok(data);
+                false
+            } else {
+                true
+            }
+        };
+        self.module_export_list_callback(info, callback.into())?;
+        ret
+    }
+
+    /// Finds a single section of a given module by its name
+    fn module_section_by_name(&mut self, info: &ModuleInfo, name: &str) -> Result<SectionInfo> {
+        let mut ret = Err(Error(ErrorOrigin::OsLayer, ErrorKind::ImportNotFound));
+        let callback = &mut |data: SectionInfo| {
+            if data.name.as_ref() == name {
+                ret = Ok(data);
+                false
+            } else {
+                true
+            }
+        };
+        self.module_section_list_callback(info, callback.into())?;
+        ret
+    }
+
     /// Retrieves the process info
     fn info(&self) -> &ProcessInfo;
 }

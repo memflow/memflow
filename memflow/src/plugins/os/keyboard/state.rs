@@ -1,5 +1,6 @@
-use super::super::super::{util::*, COptArc, GenericCloneTable, OpaqueCloneTable};
+use super::super::super::{util::*, GenericCloneTable, OpaqueCloneTable};
 use crate::os::KeyboardState;
+use crate::types::cglue::COptArc;
 use std::ffi::c_void;
 
 use libloading::Library;

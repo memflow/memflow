@@ -1,4 +1,3 @@
-use super::super::COptArc;
 use super::{
     ArcPluginCpuState, ConnectorCpuStateFunctionTable, ConnectorFunctionTable, CpuState,
     MuArcPluginCpuState, MuPluginCpuState, PluginConnectorCpuState, PluginCpuState,
@@ -9,6 +8,7 @@ use crate::mem::mem_map::PhysicalMemoryMapping;
 use crate::mem::{
     MemoryMap, PhysicalMemory, PhysicalMemoryMetadata, PhysicalReadData, PhysicalWriteData,
 };
+use crate::types::cglue::COptArc;
 use crate::types::Address;
 
 use std::ffi::c_void;

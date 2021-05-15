@@ -7,10 +7,10 @@ use crate::os::{ModuleInfo, OsInfo, Pid, ProcessInfo};
 use crate::plugins::{
     create_bare,
     os::{MuOsInstance, OsDescriptor},
-    Args, COption, ConnectorInstance, OsInstance, MEMFLOW_PLUGIN_VERSION,
+    Args, ConnectorInstance, OsInstance, MEMFLOW_PLUGIN_VERSION,
 };
-use crate::types::ReprCString;
 use crate::types::{size, Address};
+use crate::types::{COption, ReprCString};
 use log::Level;
 use rand::seq::SliceRandom;
 use rand::{thread_rng, Rng, SeedableRng};

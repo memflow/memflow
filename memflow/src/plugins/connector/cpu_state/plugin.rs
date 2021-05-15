@@ -1,5 +1,6 @@
-use super::super::super::{util::*, COptArc, GenericCloneTable, OpaqueCloneTable};
+use super::super::super::{util::*, GenericCloneTable, OpaqueCloneTable};
 use crate::connector::cpu_state::CpuState;
+use crate::types::cglue::COptArc;
 
 use std::ffi::c_void;
 

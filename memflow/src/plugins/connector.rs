@@ -1,6 +1,7 @@
 use crate::connector::*;
 use crate::error::*;
 use crate::mem::PhysicalMemory;
+use crate::types::cglue::{CArc, ReprCString};
 
 pub mod instance;
 pub use instance::{
@@ -9,11 +10,8 @@ pub use instance::{
 };
 
 use super::{
-    Args, CArc, GenericBaseTable, Loadable, OpaqueBaseTable, OsInstance, PluginDescriptor,
-    TargetInfo,
+    Args, GenericBaseTable, Loadable, OpaqueBaseTable, OsInstance, PluginDescriptor, TargetInfo,
 };
-
-use crate::types::ReprCString;
 
 use std::mem::MaybeUninit;
 

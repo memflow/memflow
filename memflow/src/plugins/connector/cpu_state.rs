@@ -6,9 +6,9 @@ use crate::error::*;
 use crate::connector::{ConnectorCpuStateInner, CpuState};
 use std::ffi::c_void;
 
-use super::super::COptArc;
 use super::PluginConnectorCpuState;
 use super::{MuArcPluginCpuState, MuPluginCpuState};
+use crate::types::cglue::COptArc;
 
 use libloading::Library;
 

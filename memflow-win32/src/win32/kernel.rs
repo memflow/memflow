@@ -17,8 +17,7 @@ use memflow::mem::{DirectTranslate, PhysicalMemory, VirtualDma, VirtualMemory, V
 use memflow::os::{
     AddressCallback, ModuleInfo, OsInfo, OsInner, OsKeyboardInner, Pid, Process, ProcessInfo,
 };
-use memflow::plugins::COption;
-use memflow::types::{Address, ReprCString};
+use memflow::types::{Address, COption, ReprCString};
 
 use pelite::{self, pe64::exports::Export, PeView};
 

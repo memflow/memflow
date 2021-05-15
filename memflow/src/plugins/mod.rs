@@ -31,11 +31,12 @@ pub mod virt_mem;
 pub use virt_mem::{
     OpaqueVirtualMemoryFunctionTable, VirtualMemoryFunctionTable, VirtualMemoryInstance,
 };
-pub(crate) mod arc;
-pub(crate) use arc::{CArc, COptArc};
 
 use crate::error::{Result, *};
-use crate::types::{OpaqueCallback, ReprCString};
+use crate::types::{
+    cglue::{CArc, ReprCString},
+    OpaqueCallback,
+};
 
 use log::*;
 use std::ffi::c_void;
@@ -115,60 +116,6 @@ impl<T: Clone> Default for &'static GenericBaseTable<T> {
 impl<T: Clone> GenericBaseTable<T> {
     pub fn as_opaque(&self) -> &OpaqueBaseTable {
         unsafe { &*(self as *const Self as *const OpaqueBaseTable) }
-    }
-}
-
-/// Describes a FFI safe option
-#[repr(C)]
-#[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
-pub enum COption<T> {
-    None,
-    Some(T),
-}
-
-impl<T> From<Option<T>> for COption<T> {
-    fn from(opt: Option<T>) -> Self {
-        match opt {
-            None => Self::None,
-            Some(t) => Self::Some(t),
-        }
-    }
-}
-
-impl<T> From<COption<T>> for Option<T> {
-    fn from(opt: COption<T>) -> Self {
-        match opt {
-            COption::None => None,
-            COption::Some(t) => Some(t),
-        }
-    }
-}
-
-impl<T> COption<T> {
-    pub const fn is_some(&self) -> bool {
-        matches!(*self, COption::Some(_))
-    }
-
-    pub fn unwrap(self) -> T {
-        match self {
-            COption::Some(val) => val,
-            COption::None => panic!("called `COption::unwrap()` on a `None` value"),
-        }
-    }
-
-    pub const fn as_ref(&self) -> Option<&T> {
-        match *self {
-            COption::Some(ref x) => Some(x),
-            COption::None => None,
-        }
-    }
-
-    pub fn as_mut(&mut self) -> Option<&mut T> {
-        match *self {
-            COption::Some(ref mut x) => Some(x),
-            COption::None => None,
-        }
     }
 }
 

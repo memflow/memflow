@@ -1,7 +1,7 @@
 use crate::error::*;
 use crate::os::*;
+use crate::types::cglue::{CArc, COption, ReprCString};
 use crate::types::Address;
-use crate::types::ReprCString;
 
 pub mod instance;
 pub use instance::{OpaqueOsFunctionTable, OsFunctionTable, OsInstance};
@@ -16,8 +16,8 @@ pub use keyboard::{
 };
 
 use super::{
-    Args, CArc, COption, ConnectorInstance, GenericBaseTable, Loadable, OpaqueBaseTable,
-    PluginDescriptor, TargetInfo,
+    Args, ConnectorInstance, GenericBaseTable, Loadable, OpaqueBaseTable, PluginDescriptor,
+    TargetInfo,
 };
 
 use libloading::Library;

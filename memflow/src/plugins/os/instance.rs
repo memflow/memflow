@@ -2,8 +2,8 @@ use crate::error::*;
 
 use super::{
     super::PhysicalMemoryInstance, super::VirtualMemoryInstance, ArcPluginKeyboard,
-    ArcPluginProcess, COption, Keyboard, MuArcPluginKeyboard, MuPluginKeyboard,
-    OsKeyboardFunctionTable, OsLayerFunctionTable, PluginKeyboard, PluginOsKeyboard, PluginProcess,
+    ArcPluginProcess, Keyboard, MuArcPluginKeyboard, MuPluginKeyboard, OsKeyboardFunctionTable,
+    OsLayerFunctionTable, PluginKeyboard, PluginOsKeyboard, PluginProcess,
 };
 use crate::os::{
     AddressCallback, ModuleInfo, OsInfo, OsInner, OsKeyboardInner, Process, ProcessInfo,
@@ -11,9 +11,9 @@ use crate::os::{
 use crate::types::Address;
 use std::ffi::c_void;
 
-use super::super::COptArc;
 use super::PluginOs;
 use super::{MuArcPluginProcess, MuModuleInfo, MuPluginProcess, MuProcessInfo};
+use crate::types::cglue::{COptArc, COption};
 
 use libloading::Library;
 

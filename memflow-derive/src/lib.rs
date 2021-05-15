@@ -209,7 +209,7 @@ pub fn os_layer(args: TokenStream, input: TokenStream) -> TokenStream {
             #[doc(hidden)]
             extern "C" fn mf_create(
                 args: &::memflow::types::ReprCString,
-                mem: ::memflow::plugins::COption<::memflow::plugins::ConnectorInstance>,
+                mem: ::memflow::types::COption<::memflow::plugins::ConnectorInstance>,
                 log_level: i32,
                 out: &mut ::memflow::plugins::os::MuOsInstance
             ) -> i32 {
@@ -221,7 +221,7 @@ pub fn os_layer(args: TokenStream, input: TokenStream) -> TokenStream {
             #[doc(hidden)]
             extern "C" fn mf_create(
                 args: &::memflow::types::ReprCString,
-                mem: ::memflow::plugins::COption<::memflow::plugins::ConnectorInstance>,
+                mem: ::memflow::types::COption<::memflow::plugins::ConnectorInstance>,
                 _: i32,
                 out: &mut ::memflow::plugins::os::MuOsInstance
             ) -> i32 {
@@ -305,7 +305,7 @@ pub fn os_layer_bare(args: TokenStream, input: TokenStream) -> TokenStream {
         #[doc(hidden)]
         extern "C" fn mf_create(
             args: &::memflow::types::ReprCString,
-            mem: ::memflow::plugins::COption<::memflow::plugins::ConnectorInstance>,
+            mem: ::memflow::types::COption<::memflow::plugins::ConnectorInstance>,
             log_level: i32,
             out: &mut ::memflow::plugins::os::MuOsInstance
         ) -> i32 {

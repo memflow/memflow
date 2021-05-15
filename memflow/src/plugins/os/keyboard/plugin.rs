@@ -1,6 +1,7 @@
 use crate::error::*;
+use crate::types::cglue::COptArc;
 
-use super::super::super::{util::*, COptArc, GenericCloneTable, OpaqueCloneTable};
+use super::super::super::{util::*, GenericCloneTable, OpaqueCloneTable};
 use super::ArcPluginKeyboardState;
 use crate::os::Keyboard;
 

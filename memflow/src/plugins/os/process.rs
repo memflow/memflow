@@ -1,5 +1,5 @@
 use super::super::VirtualMemoryInstance;
-use super::super::{util::*, COptArc, GenericCloneTable, OpaqueCloneTable};
+use super::super::{util::*, GenericCloneTable, OpaqueCloneTable};
 use super::OptionArchitectureIdent;
 use super::{MuAddress, MuModuleInfo};
 use crate::architecture::ArchitectureIdent;
@@ -8,6 +8,7 @@ use crate::os::{
     ExportCallback, ImportCallback, ModuleAddressCallback, ModuleInfo, Process, ProcessInfo,
     SectionCallback,
 };
+use crate::types::cglue::COptArc;
 use crate::types::Address;
 use std::ffi::c_void;
 

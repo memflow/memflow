@@ -36,6 +36,6 @@ pub mod callback;
 #[doc(hidden)]
 pub use callback::{Callback, OpaqueCallback};
 
-pub mod repr_cstr;
+pub mod cglue;
 #[doc(hidden)]
-pub use repr_cstr::ReprCString;
+pub use cglue::{CArc, COptArc, COption, ReprCString};

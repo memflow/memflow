@@ -9,9 +9,9 @@ use crate::error::*;
 use crate::os::{Keyboard, OsKeyboardInner};
 use std::ffi::c_void;
 
-use super::super::COptArc;
 use super::PluginOsKeyboard;
 use super::{MuArcPluginKeyboard, MuPluginKeyboard};
+use crate::types::cglue::COptArc;
 
 use libloading::Library;
 

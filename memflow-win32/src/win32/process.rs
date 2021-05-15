@@ -35,7 +35,6 @@ pub struct Win32ProcessInfo {
     // general information from eprocess
     pub dtb: Address,
     pub section_base: Address,
-    pub exit_status: Win32ExitStatus,
     pub ethread: Address,
     pub wow64: Address,
 

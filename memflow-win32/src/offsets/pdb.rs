@@ -79,10 +79,7 @@ impl PdbStruct {
         // add all the needed types iteratively until we're done
         loop {
             // get the last element in needed_types without holding an immutable borrow
-            let last = match needed_types.iter().next_back() {
-                Some(n) => Some(*n),
-                None => None,
-            };
+            let last = needed_types.iter().next_back().copied();
 
             if let Some(type_index) = last {
                 // remove it

@@ -253,10 +253,9 @@ impl DummyOs {
         let pt_mapper =
             unsafe { OffsetPageTable::new(&mut pml4, VirtAddr::from_ptr(self.mem.buf.as_ptr())) };
 
-        match pt_mapper.translate_addr(VirtAddr::new(virt_addr.as_u64())) {
-            None => None,
-            Some(addr) => Some(Address::from(addr.as_u64())),
-        }
+        pt_mapper
+            .translate_addr(VirtAddr::new(virt_addr.as_u64()))
+            .map(|addr| Address::from(addr.as_u64()))
     }
 
     pub fn alloc_process(&mut self, map_size: usize, test_buf: &[u8]) -> Pid {
@@ -271,6 +270,7 @@ impl DummyOs {
                 name: "Dummy".into(),
                 sys_arch: x64::ARCH.ident(),
                 proc_arch: x64::ARCH.ident(),
+                exit_code: COption::None,
             },
             dtb,
             map_size,

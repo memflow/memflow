@@ -120,6 +120,8 @@ impl<T: Clone> GenericBaseTable<T> {
 
 /// Describes a FFI safe option
 #[repr(C)]
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 pub enum COption<T> {
     None,
     Some(T),

@@ -14,12 +14,12 @@ impl NullMem {
 
 impl PhysicalMemory for NullMem {
     fn phys_read_raw_list(&mut self, data: &mut [PhysicalReadData]) -> Result<()> {
-        black_box(data.iter_mut().count());
+        black_box(data.len());
         Ok(())
     }
 
     fn phys_write_raw_list(&mut self, data: &[PhysicalWriteData]) -> Result<()> {
-        black_box(data.iter().count());
+        black_box(data.len());
         Ok(())
     }
 

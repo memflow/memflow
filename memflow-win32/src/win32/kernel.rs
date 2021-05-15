@@ -1,9 +1,9 @@
 use std::prelude::v1::*;
 
 use super::{
-    process::EXIT_STATUS_STILL_ACTIVE, process::IMAGE_FILE_NAME_LENGTH, Win32ExitStatus,
-    Win32KernelBuilder, Win32KernelInfo, Win32Keyboard, Win32ModuleListInfo, Win32Process,
-    Win32ProcessInfo, Win32VirtualTranslate,
+    process::IMAGE_FILE_NAME_LENGTH, Win32ExitStatus, Win32KernelBuilder, Win32KernelInfo,
+    Win32Keyboard, Win32ModuleListInfo, Win32Process, Win32ProcessInfo, Win32VirtualTranslate,
+    EXIT_STATUS_STILL_ACTIVE,
 };
 
 use crate::offsets::Win32Offsets;
@@ -17,6 +17,7 @@ use memflow::mem::{DirectTranslate, PhysicalMemory, VirtualDma, VirtualMemory, V
 use memflow::os::{
     AddressCallback, ModuleInfo, OsInfo, OsInner, OsKeyboardInner, Pid, Process, ProcessInfo,
 };
+use memflow::plugins::COption;
 use memflow::types::{Address, ReprCString};
 
 use pelite::{self, pe64::exports::Export, PeView};
@@ -166,11 +167,11 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
                 name: "ntoskrnl.exe".into(),
                 sys_arch: self.kernel_info.os_info.arch,
                 proc_arch: self.kernel_info.os_info.arch,
+                exit_code: COption::None,
             },
             dtb: self.sysproc_dtb,
             section_base: Address::NULL, // TODO: see below
-            exit_status: EXIT_STATUS_STILL_ACTIVE,
-            ethread: Address::NULL, // TODO: see below
+            ethread: Address::NULL,      // TODO: see below
             wow64: Address::NULL,
 
             teb: None,
@@ -206,11 +207,6 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
             base_info.address + self.offsets.eproc_section_base(),
         )?;
         trace!("section_base={:x}", section_base);
-
-        let exit_status: Win32ExitStatus = self
-            .virt_mem
-            .virt_read(base_info.address + self.offsets.eproc_exit_status())?;
-        trace!("exit_status={}", exit_status);
 
         // find first ethread
         let ethread = self.virt_mem.virt_read_addr_arch(
@@ -308,7 +304,6 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
 
             dtb,
             section_base,
-            exit_status,
             ethread,
             wow64,
 
@@ -389,12 +384,23 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
         };
         trace!("proc_arch={:?}", proc_arch);
 
+        let exit_status: Win32ExitStatus = self
+            .virt_mem
+            .virt_read(address + self.offsets.eproc_exit_status())?;
+        trace!("exit_status={}", exit_status);
+        let exit_code = if exit_status != EXIT_STATUS_STILL_ACTIVE {
+            COption::Some(exit_status)
+        } else {
+            COption::None
+        };
+
         Ok(ProcessInfo {
             address,
             pid,
             name,
             sys_arch,
             proc_arch,
+            exit_code,
         })
     }
 }

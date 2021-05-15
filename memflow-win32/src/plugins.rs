@@ -151,7 +151,7 @@ fn build_page_cache<
 
                 let size = size * size_mul;
 
-                let time = u64::from_str_radix(time, 10).map_err(|_| {
+                let time = time.parse::<u64>().map_err(|_| {
                     Error(ErrorOrigin::OsLayer, ErrorKind::Configuration)
                         .log_error("Failed to parse Page Cache validity time")
                 })?;
@@ -205,7 +205,7 @@ fn build_vat<
                     Error(ErrorOrigin::OsLayer, ErrorKind::Configuration)
                         .log_error("Failed to parse VAT size")
                 })?;
-                let time = u64::from_str_radix(time, 10).map_err(|_| {
+                let time = time.parse::<u64>().map_err(|_| {
                     Error(ErrorOrigin::OsLayer, ErrorKind::Configuration)
                         .log_error("Failed to parse VAT validity time")
                 })?;

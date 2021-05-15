@@ -67,7 +67,7 @@ impl<T: SplitAtIndex> SplitAtIndex for TranslateData<T> {
         let (bleft, bright) = self.buf.split_at(idx);
 
         (
-            bleft.map(|buf| TranslateData { buf, addr }),
+            bleft.map(|buf| TranslateData { addr, buf }),
             bright.map(|buf| TranslateData {
                 buf,
                 addr: addr + idx,
@@ -83,7 +83,7 @@ impl<T: SplitAtIndex> SplitAtIndex for TranslateData<T> {
         let (bleft, bright) = self.buf.split_at_mut(idx);
 
         (
-            bleft.map(|buf| TranslateData { buf, addr }),
+            bleft.map(|buf| TranslateData { addr, buf }),
             bright.map(|buf| TranslateData {
                 buf,
                 addr: addr + idx,

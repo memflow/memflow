@@ -13,6 +13,9 @@ use std::prelude::v1::*;
 /// would love to see that.
 pub type Pid = u32;
 
+/// Exit code of a process
+pub type ExitCode = i32;
+
 /// Provides all actions on processes
 ///
 /// This trait provides a lot of typical functionality for processes, such as memory access, module lists, and basic information.
@@ -270,6 +273,12 @@ pub struct ProcessInfo {
     ///
     /// On windows this technique is called [`WOW64`](https://docs.microsoft.com/en-us/windows/win32/winprog64/wow64-implementation-details).
     pub proc_arch: ArchitectureIdent,
+    /// Process exit code
+    ///
+    /// # Remarks
+    ///
+    /// On Windows this will be set to `None` for the special-purpose error code [`STILL_ACTIVE`](https://docs.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-getexitcodeprocess).
+    pub exit_code: COption<ExitCode>,
 }
 
 pub type ProcessInfoCallback<'a> = OpaqueCallback<'a, ProcessInfo>;

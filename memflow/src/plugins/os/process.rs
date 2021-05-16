@@ -6,7 +6,7 @@ use crate::architecture::ArchitectureIdent;
 use crate::error::*;
 use crate::os::{
     ExportCallback, ImportCallback, ModuleAddressCallback, ModuleInfo, Process, ProcessInfo,
-    SectionCallback,
+    ProcessState, SectionCallback,
 };
 use crate::types::cglue::COptArc;
 use crate::types::Address;
@@ -26,6 +26,7 @@ impl Clone for OpaqueProcessFunctionTable {
 
 #[repr(C)]
 pub struct ProcessFunctionTable<T> {
+    pub state: extern "C" fn(process: &mut T) -> ProcessState,
     pub module_address_list_callback: extern "C" fn(
         process: &mut T,
         target_arch: OptionArchitectureIdent,
@@ -52,6 +53,7 @@ pub struct ProcessFunctionTable<T> {
 impl<T: Process> Default for ProcessFunctionTable<T> {
     fn default() -> Self {
         Self {
+            state: c_proc_state,
             module_address_list_callback: c_module_address_list_callback,
             module_by_address: c_module_by_address,
             primary_module_address: c_primary_module_address,
@@ -69,6 +71,10 @@ impl<T: Process> ProcessFunctionTable<T> {
     pub fn into_opaque(self) -> OpaqueProcessFunctionTable {
         unsafe { std::mem::transmute(self) }
     }
+}
+
+extern "C" fn c_proc_state<T: Process>(process: &mut T) -> ProcessState {
+    process.state()
 }
 
 extern "C" fn c_proc_virt_mem<T: Process>(process: &mut T) -> &mut c_void {
@@ -180,6 +186,12 @@ impl<'a> Process for PluginProcess<'a> {
         &mut self.virt_mem
     }
 
+    fn state(&mut self) -> ProcessState {
+        let state =
+            (self.vtable.state)(unsafe { (self.instance as *mut c_void).as_mut() }.unwrap());
+        state
+    }
+
     fn module_address_list_callback(
         &mut self,
         target_arch: OptionArchitectureIdent,
@@ -280,6 +292,10 @@ impl Process for ArcPluginProcess {
 
     fn virt_mem(&mut self) -> &mut Self::VirtualMemoryType {
         self.inner.virt_mem()
+    }
+
+    fn state(&mut self) -> ProcessState {
+        self.inner.state()
     }
 
     fn module_address_list_callback(

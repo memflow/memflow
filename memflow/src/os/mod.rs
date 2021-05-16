@@ -25,7 +25,7 @@ pub use module::{
     ExportCallback, ExportInfo, ImportCallback, ImportInfo, ModuleAddressCallback,
     ModuleAddressInfo, ModuleInfo, ModuleInfoCallback, SectionCallback, SectionInfo,
 };
-pub use process::{Pid, Process, ProcessInfo, ProcessInfoCallback};
+pub use process::{Pid, Process, ProcessInfo, ProcessInfoCallback, ProcessState};
 pub use root::{Os, OsInfo, OsInner};
 
 use crate::types::{Address, OpaqueCallback};

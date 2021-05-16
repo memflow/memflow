@@ -6,7 +6,7 @@ use crate::architecture::ArchitectureIdent;
 use crate::mem::VirtualMemory;
 use crate::os::{
     ExportCallback, ImportCallback, ModuleAddressCallback, ModuleAddressInfo, ModuleInfo, Process,
-    ProcessInfo, SectionCallback,
+    ProcessInfo, ProcessState, SectionCallback,
 };
 use crate::types::Address;
 
@@ -57,6 +57,10 @@ impl<T: VirtualMemory> Process for DummyProcess<T> {
 
     /// Retrieves virtual address translator for the process (if applicable)
     //fn vat(&mut self) -> Option<&mut Self::VirtualTranslateType>;
+
+    fn state(&mut self) -> ProcessState {
+        ProcessState::Alive
+    }
 
     /// Walks the process' module list and calls the provided callback for each module
     fn module_address_list_callback(

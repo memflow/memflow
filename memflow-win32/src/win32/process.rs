@@ -10,7 +10,8 @@ use memflow::error::{Error, ErrorKind, ErrorOrigin, Result};
 use memflow::mem::{PhysicalMemory, VirtualDma, VirtualMemory, VirtualTranslate};
 use memflow::os::{
     ExportCallback, ExportInfo, ImportCallback, ImportInfo, ModuleAddressCallback,
-    ModuleAddressInfo, ModuleInfo, Process, ProcessInfo, SectionCallback, SectionInfo,
+    ModuleAddressInfo, ModuleInfo, Process, ProcessInfo, ProcessState, SectionCallback,
+    SectionInfo,
 };
 use memflow::types::{Address, ReprCString};
 
@@ -100,6 +101,7 @@ impl Win32ProcessInfo {
 pub struct Win32Process<T> {
     pub virt_mem: T,
     pub proc_info: Win32ProcessInfo,
+    offset_eproc_exit_status: usize,
 }
 
 // TODO: can be removed i think
@@ -108,6 +110,7 @@ impl<T: Clone> Clone for Win32Process<T> {
         Self {
             virt_mem: self.virt_mem.clone(),
             proc_info: self.proc_info.clone(),
+            offset_eproc_exit_status: self.offset_eproc_exit_status,
         }
     }
 }
@@ -129,6 +132,21 @@ impl<T: VirtualMemory> Process for Win32Process<T> {
 
     /// Retrieves virtual address translator for the process (if applicable)
     //fn vat(&mut self) -> Option<&mut Self::VirtualTranslateType>;
+
+    /// Retrieves the state of the process
+    fn state(&mut self) -> ProcessState {
+        if let Ok(exit_status) = self.virt_mem.virt_read::<Win32ExitStatus>(
+            self.proc_info.base_info.address + self.offset_eproc_exit_status,
+        ) {
+            if exit_status == EXIT_STATUS_STILL_ACTIVE {
+                ProcessState::Alive
+            } else {
+                ProcessState::Dead(exit_status)
+            }
+        } else {
+            ProcessState::Unknown
+        }
+    }
 
     /// Walks the process' module list and calls the provided callback for each module
     fn module_address_list_callback(
@@ -325,6 +343,7 @@ impl<'a, T: PhysicalMemory, V: VirtualTranslate>
         Self {
             virt_mem,
             proc_info,
+            offset_eproc_exit_status: kernel.offsets.eproc_exit_status(),
         }
     }
 
@@ -358,6 +377,7 @@ impl<'a, T: PhysicalMemory, V: VirtualTranslate>
         Self {
             virt_mem,
             proc_info,
+            offset_eproc_exit_status: kernel.offsets.eproc_exit_status(),
         }
     }
 }

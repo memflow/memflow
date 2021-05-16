@@ -270,7 +270,6 @@ impl DummyOs {
                 name: "Dummy".into(),
                 sys_arch: x64::ARCH.ident(),
                 proc_arch: x64::ARCH.ident(),
-                exit_code: COption::None,
             },
             dtb,
             map_size,

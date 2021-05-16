@@ -16,6 +16,34 @@ pub type Pid = u32;
 /// Exit code of a process
 pub type ExitCode = i32;
 
+/// The state of a process
+///
+/// # Remarks
+///
+/// In case the exit code isn't known ProcessState::Unknown is set.
+#[repr(C)]
+#[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+pub enum ProcessState {
+    Alive,
+    Dead(ExitCode),
+    Unknown,
+}
+
+impl ProcessState {
+    pub fn is_alive(&self) -> bool {
+        matches!(*self, ProcessState::Alive)
+    }
+
+    pub fn is_dead(&self) -> bool {
+        matches!(*self, ProcessState::Dead(_))
+    }
+
+    pub fn is_unknown(&self) -> bool {
+        matches!(*self, ProcessState::Unknown)
+    }
+}
+
 /// Provides all actions on processes
 ///
 /// This trait provides a lot of typical functionality for processes, such as memory access, module lists, and basic information.
@@ -26,6 +54,9 @@ pub trait Process: Send {
 
     /// Retrieves virtual memory object for the process
     fn virt_mem(&mut self) -> &mut Self::VirtualMemoryType;
+
+    /// Retrieves the state of the process
+    fn state(&mut self) -> ProcessState;
 
     /// Walks the process' module list and calls the provided callback for each module structure
     /// address
@@ -273,12 +304,6 @@ pub struct ProcessInfo {
     ///
     /// On windows this technique is called [`WOW64`](https://docs.microsoft.com/en-us/windows/win32/winprog64/wow64-implementation-details).
     pub proc_arch: ArchitectureIdent,
-    /// Process exit code
-    ///
-    /// # Remarks
-    ///
-    /// On Windows this will be set to `None` for the special-purpose error code [`STILL_ACTIVE`](https://docs.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-getexitcodeprocess).
-    pub exit_code: COption<ExitCode>,
 }
 
 pub type ProcessInfoCallback<'a> = OpaqueCallback<'a, ProcessInfo>;

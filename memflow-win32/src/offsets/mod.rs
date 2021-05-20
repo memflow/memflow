@@ -31,38 +31,46 @@ use memflow::error::{Error, ErrorKind, ErrorOrigin, Result};
 #[cfg_attr(feature = "serde", derive(::serde::Serialize))]
 pub struct Win32ArchOffsets {
     pub peb_ldr: usize,            // _PEB::Ldr
+    pub peb_process_params: usize, // _PEB::ProcessParameters
     pub ldr_list: usize,           // _PEB_LDR_DATA::InLoadOrderModuleList
     pub ldr_data_base: usize,      // _LDR_DATA_TABLE_ENTRY::DllBase
     pub ldr_data_size: usize,      // _LDR_DATA_TABLE_ENTRY::SizeOfImage
     pub ldr_data_full_name: usize, // _LDR_DATA_TABLE_ENTRY::FullDllName
     pub ldr_data_base_name: usize, // _LDR_DATA_TABLE_ENTRY::BaseDllName
+    pub ppm_command_line: usize,   // _RTL_USER_PROCESS_PARAMETERS::CommandLine
 }
 
 pub const X86: Win32ArchOffsets = Win32ArchOffsets {
     peb_ldr: 0xc,
+    peb_process_params: 0x10,
     ldr_list: 0xc,
     ldr_data_base: 0x18,
     ldr_data_size: 0x20,
     ldr_data_full_name: 0x24,
     ldr_data_base_name: 0x2c,
+    ppm_command_line: 0x40,
 };
 
 pub const X64: Win32ArchOffsets = Win32ArchOffsets {
     peb_ldr: 0x18,
+    peb_process_params: 0x20,
     ldr_list: 0x10,
     ldr_data_base: 0x30,
     ldr_data_size: 0x40,
     ldr_data_full_name: 0x48,
     ldr_data_base_name: 0x58,
+    ppm_command_line: 0x70,
 };
 
 pub const AARCH64: Win32ArchOffsets = Win32ArchOffsets {
     peb_ldr: 0x18,
+    peb_process_params: 0x20,
     ldr_list: 0x10,
     ldr_data_base: 0x30,
     ldr_data_size: 0x40,
     ldr_data_full_name: 0x48,
     ldr_data_base_name: 0x58,
+    ppm_command_line: 0x70,
 };
 
 impl Win32OffsetsArchitecture {

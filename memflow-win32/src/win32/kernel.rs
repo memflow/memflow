@@ -5,7 +5,10 @@ use super::{
     Win32ModuleListInfo, Win32Process, Win32ProcessInfo, Win32VirtualTranslate,
 };
 
-use crate::offsets::Win32Offsets;
+use crate::{
+    offsets::{Win32ArchOffsets, Win32Offsets},
+    prelude::VirtualReadUnicodeString,
+};
 
 use log::{info, trace};
 use std::fmt;
@@ -163,6 +166,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
                 address: self.kernel_info.os_info.base,
                 pid: 0,
                 name: "ntoskrnl.exe".into(),
+                command_line: "ntoskrnl.exe".into(),
                 sys_arch: self.kernel_info.os_info.arch,
                 proc_arch: self.kernel_info.os_info.arch,
             },
@@ -191,13 +195,6 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
             base_info.address + self.offsets.kproc_dtb(),
         )?;
         trace!("dtb={:x}", dtb);
-
-        // read native_peb (either the process peb or the peb containing the wow64 helpers)
-        let native_peb = self.virt_mem.virt_read_addr_arch(
-            self.kernel_info.os_info.arch.into(),
-            base_info.address + self.offsets.eproc_peb(),
-        )?;
-        trace!("native_peb={:x}", native_peb);
 
         let section_base = self.virt_mem.virt_read_addr_arch(
             self.kernel_info.os_info.arch.into(),
@@ -315,9 +312,10 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
         })
     }
 
-    fn process_info_fullname(&mut self, info: Win32ProcessInfo) -> Result<Win32ProcessInfo> {
+    fn process_info_fill(&mut self, info: Win32ProcessInfo) -> Result<Win32ProcessInfo> {
+        // get full process name from module list
         let cloned_base = info.base_info.clone();
-        let mut name = info.base_info.name;
+        let mut name = info.base_info.name.clone();
         let callback = &mut |m: ModuleInfo| {
             if m.name.as_ref().starts_with(name.as_ref()) {
                 name = m.name;
@@ -329,9 +327,37 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
         let sys_arch = info.base_info.sys_arch;
         let mut process = self.process_by_info(cloned_base)?;
         process.module_list_callback(Some(&sys_arch), callback.into())?;
+
+        // get process_parameters
+        let offsets = Win32ArchOffsets::from(info.base_info.proc_arch);
+        let command_line = info
+            .peb()
+            .and_then(|peb| {
+                process
+                    .virt_mem()
+                    .virt_read_addr_arch(
+                        info.base_info.proc_arch.into(),
+                        peb + offsets.peb_process_params,
+                    )
+                    .ok()
+            })
+            .and_then(|peb_process_params| {
+                trace!("peb_process_params={:x}", peb_process_params);
+                process
+                    .virt_mem()
+                    .virt_read_unicode_string(
+                        info.base_info.proc_arch.into(),
+                        peb_process_params + offsets.ppm_command_line,
+                    )
+                    .ok()
+            })
+            .map(|s| s.into())
+            .unwrap_or_else(|| name.to_string().into());
+
         Ok(Win32ProcessInfo {
             base_info: ProcessInfo {
                 name,
+                command_line,
                 ..info.base_info
             },
             ..info
@@ -384,7 +410,8 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
         Ok(ProcessInfo {
             address,
             pid,
-            name,
+            name: name.clone(),
+            command_line: name,
             sys_arch,
             proc_arch,
         })
@@ -468,7 +495,7 @@ impl<'a, T: PhysicalMemory + 'a, V: VirtualTranslate + 'a> OsInner<'a> for Win32
     fn process_info_by_address(&mut self, address: Address) -> memflow::error::Result<ProcessInfo> {
         let base_info = self.process_info_base_by_address(address)?;
         if let Ok(info) = self.process_info_from_base_info(base_info.clone()) {
-            Ok(self.process_info_fullname(info)?.base_info)
+            Ok(self.process_info_fill(info)?.base_info)
         } else {
             Ok(base_info)
         }

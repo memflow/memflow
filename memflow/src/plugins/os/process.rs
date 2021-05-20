@@ -2,7 +2,6 @@ use super::super::VirtualMemoryInstance;
 use super::super::{util::*, GenericCloneTable, OpaqueCloneTable};
 use super::OptionArchitectureIdent;
 use super::{MuAddress, MuModuleInfo};
-use crate::architecture::ArchitectureIdent;
 use crate::error::*;
 use crate::os::{
     ExportCallback, ImportCallback, ModuleAddressCallback, ModuleInfo, Process, ProcessInfo,
@@ -10,6 +9,10 @@ use crate::os::{
 };
 use crate::types::cglue::COptArc;
 use crate::types::Address;
+use crate::{
+    architecture::ArchitectureIdent,
+    types::{OpaqueCallback, ReprCString},
+};
 use std::ffi::c_void;
 
 use libloading::Library;
@@ -23,6 +26,8 @@ impl Clone for OpaqueProcessFunctionTable {
         *self
     }
 }
+
+pub type CommandLineCallback<'a> = OpaqueCallback<'a, ReprCString>;
 
 #[repr(C)]
 pub struct ProcessFunctionTable<T> {

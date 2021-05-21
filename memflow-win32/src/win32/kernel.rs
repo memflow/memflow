@@ -372,7 +372,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
 
         let name: ReprCString = self
             .virt_mem
-            .virt_read_cstr(address + self.offsets.eproc_name(), IMAGE_FILE_NAME_LENGTH)?
+            .virt_read_char_array(address + self.offsets.eproc_name(), IMAGE_FILE_NAME_LENGTH)?
             .into();
         trace!("name={}", name);
 

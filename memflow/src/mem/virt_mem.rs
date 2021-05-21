@@ -202,15 +202,47 @@ where
         self.virt_write(ptr.address.into(), data)
     }
 
-    // TODO: read into slice?
-    // TODO: if len is shorter than string -> dynamically double length up to an upper bound
-    fn virt_read_cstr(&mut self, addr: Address, len: usize) -> PartialResult<String> {
+    /// Reads a fixed length string from the target.
+    ///
+    /// # Remarks:
+    ///
+    /// The string does not have to be null-terminated.
+    /// If a null terminator is found the string is truncated to the terminator.
+    /// If no null terminator is found the resulting string is exactly `len` characters long.
+    fn virt_read_char_array(&mut self, addr: Address, len: usize) -> PartialResult<String> {
         let mut buf = vec![0; len];
         self.virt_read_raw_into(addr, &mut buf).data_part()?;
         if let Some((n, _)) = buf.iter().enumerate().find(|(_, c)| **c == 0_u8) {
             buf.truncate(n);
         }
         Ok(String::from_utf8_lossy(&buf).to_string())
+    }
+
+    /// Reads a variable length string with a length of up to 4kb from the target.
+    ///
+    /// # Remarks:
+    ///
+    /// The string must be null-terminated.
+    /// If no null terminator is found the this function will return an error.
+    ///
+    /// For reading fixed-size char arrays the [`virt_read_char_array`] should be used.
+    fn virt_read_char_string(&mut self, addr: Address) -> PartialResult<String> {
+        let mut buf = vec![0; 32];
+        loop {
+            self.virt_read_raw_into(addr, &mut buf).data_part()?;
+            if let Some((n, _)) = buf.iter().enumerate().find(|(_, c)| **c == 0_u8) {
+                buf.truncate(n);
+                return Ok(String::from_utf8_lossy(&buf).to_string());
+            }
+            if buf.len() * 2 > 4096 {
+                break;
+            }
+            buf.extend(vec![0; buf.len()]);
+        }
+        Err(PartialError::Error(Error(
+            ErrorOrigin::VirtualMemory,
+            ErrorKind::OutOfBounds,
+        )))
     }
 
     fn virt_batcher(&mut self) -> VirtualMemoryBatcher<Self>

@@ -3,9 +3,9 @@
 */
 
 use crate::dataview::Pod;
-use crate::error::{Error, ErrorKind, ErrorOrigin, PartialResult, Result};
+use crate::error::{Error, ErrorKind, ErrorOrigin, PartialError, PartialResult, Result};
 use crate::mem::{PhysicalMemory, VirtualMemory};
-use crate::types::{Address, ByteSwap};
+use crate::types::{Address, ByteSwap, ReprCString};
 
 use std::convert::TryFrom;
 use std::marker::PhantomData;
@@ -322,7 +322,7 @@ impl<T: Sized> Pointer64<T> {
     }
 }
 
-/// This function will deref the pointer directly into a Pod type.
+/// Implement special phys/virt read/write for Pod types
 impl<T: Pod + ?Sized> Pointer64<T> {
     pub fn phys_read_into<U: PhysicalMemory>(self, mem: &mut U, out: &mut T) -> Result<()> {
         mem.phys_read_ptr64_into(self, out)
@@ -333,7 +333,6 @@ impl<T: Pod + ?Sized> Pointer64<T> {
     }
 }
 
-/// This function will return the Object this pointer is pointing towards.
 impl<T: Pod + Sized> Pointer64<T> {
     pub fn phys_read<U: PhysicalMemory>(self, mem: &mut U) -> Result<T> {
         mem.phys_read_ptr64(self)
@@ -349,6 +348,27 @@ impl<T: Pod + Sized> Pointer64<T> {
 
     pub fn virt_write<U: VirtualMemory>(self, mem: &mut U, data: &T) -> PartialResult<()> {
         mem.virt_write_ptr64(self, data)
+    }
+}
+
+/// Implement special phys/virt read/write for CReprStr
+impl Pointer64<ReprCString> {
+    pub fn phys_read<U: PhysicalMemory>(self, mem: &mut U) -> Result<ReprCString> {
+        match mem.phys_read_char_string(self.address.into()) {
+            Ok(s) => Ok(s.into()),
+            Err(e) => Err(e),
+        }
+    }
+
+    pub fn virt_read<U: VirtualMemory>(self, mem: &mut U) -> PartialResult<ReprCString> {
+        match mem.virt_read_char_string(self.address.into()) {
+            Ok(s) => Ok(s.into()),
+            Err(PartialError::Error(e)) => Err(PartialError::Error(e)),
+            Err(PartialError::PartialVirtualRead(s)) => {
+                Err(PartialError::PartialVirtualRead(s.into()))
+            }
+            Err(PartialError::PartialVirtualWrite) => Err(PartialError::PartialVirtualWrite),
+        }
     }
 }
 

@@ -2,7 +2,7 @@ use std::prelude::v1::*;
 
 use super::PhysicalMemoryBatcher;
 use crate::dataview::Pod;
-use crate::error::Result;
+use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 use crate::mem::MemoryMap;
 use crate::types::{Address, PhysicalAddress, Pointer32, Pointer64};
 
@@ -220,6 +220,46 @@ where
         Self: Sized,
     {
         self.phys_write(ptr.address.into(), data)
+    }
+
+    /// Reads a fixed length string from the target.
+    ///
+    /// # Remarks:
+    ///
+    /// The string does not have to be null-terminated.
+    /// If a null terminator is found the string is truncated to the terminator.
+    /// If no null terminator is found the resulting string is exactly `len` characters long.
+    fn phys_read_char_array(&mut self, addr: PhysicalAddress, len: usize) -> Result<String> {
+        let mut buf = vec![0; len];
+        self.phys_read_raw_into(addr, &mut buf)?;
+        if let Some((n, _)) = buf.iter().enumerate().find(|(_, c)| **c == 0_u8) {
+            buf.truncate(n);
+        }
+        Ok(String::from_utf8_lossy(&buf).to_string())
+    }
+
+    /// Reads a variable length string with a length of up to 4kb from the target.
+    ///
+    /// # Remarks:
+    ///
+    /// The string must be null-terminated.
+    /// If no null terminator is found the this function will return an error.
+    ///
+    /// For reading fixed-size char arrays the [`virt_read_char_array`] should be used.
+    fn phys_read_char_string(&mut self, addr: PhysicalAddress) -> Result<String> {
+        let mut buf = vec![0; 32];
+        loop {
+            self.phys_read_raw_into(addr, &mut buf)?;
+            if let Some((n, _)) = buf.iter().enumerate().find(|(_, c)| **c == 0_u8) {
+                buf.truncate(n);
+                return Ok(String::from_utf8_lossy(&buf).to_string());
+            }
+            if buf.len() * 2 > 4096 {
+                break;
+            }
+            buf.extend(vec![0; buf.len()]);
+        }
+        Err(Error(ErrorOrigin::PhysicalMemory, ErrorKind::OutOfBounds))
     }
 
     fn phys_batcher(&mut self) -> PhysicalMemoryBatcher<Self>

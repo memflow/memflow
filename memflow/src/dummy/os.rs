@@ -268,6 +268,7 @@ impl DummyOs {
                 address,
                 pid: self.last_pid,
                 name: "Dummy".into(),
+                path: "Dummy".into(),
                 command_line: "Dummy ".into(),
                 sys_arch: x64::ARCH.ident(),
                 proc_arch: x64::ARCH.ident(),

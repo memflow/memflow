@@ -166,7 +166,8 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
                 address: self.kernel_info.os_info.base,
                 pid: 0,
                 name: "ntoskrnl.exe".into(),
-                command_line: "ntoskrnl.exe".into(),
+                path: "".into(),
+                command_line: "".into(),
                 sys_arch: self.kernel_info.os_info.arch,
                 proc_arch: self.kernel_info.os_info.arch,
             },
@@ -330,7 +331,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
 
         // get process_parameters
         let offsets = Win32ArchOffsets::from(info.base_info.proc_arch);
-        let command_line = info
+        let (path, command_line) = info
             .peb()
             .and_then(|peb| {
                 process
@@ -343,20 +344,33 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
             })
             .and_then(|peb_process_params| {
                 trace!("peb_process_params={:x}", peb_process_params);
-                process
+                let image_path_name = process
+                    .virt_mem()
+                    .virt_read_unicode_string(
+                        info.base_info.proc_arch.into(),
+                        peb_process_params + offsets.ppm_image_path_name,
+                    )
+                    .ok();
+
+                let command_line = process
                     .virt_mem()
                     .virt_read_unicode_string(
                         info.base_info.proc_arch.into(),
                         peb_process_params + offsets.ppm_command_line,
                     )
-                    .ok()
+                    .ok();
+
+                Some((
+                    image_path_name.unwrap_or_default().into(),
+                    command_line.unwrap_or_default().into(),
+                ))
             })
-            .map(|s| s.into())
-            .unwrap_or_else(|| name.to_string().into());
+            .unwrap();
 
         Ok(Win32ProcessInfo {
             base_info: ProcessInfo {
                 name,
+                path,
                 command_line,
                 ..info.base_info
             },
@@ -411,7 +425,8 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
             address,
             pid,
             name: name.clone(),
-            command_line: name,
+            path: "".into(),
+            command_line: "".into(),
             sys_arch,
             proc_arch,
         })

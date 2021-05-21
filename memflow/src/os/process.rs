@@ -293,6 +293,8 @@ pub struct ProcessInfo {
     pub pid: Pid,
     /// Name of the process.
     pub name: ReprCString,
+    /// Path of the process binary
+    pub path: ReprCString,
     /// Command line the process was started with.
     pub command_line: ReprCString,
     /// System architecture of the target system.

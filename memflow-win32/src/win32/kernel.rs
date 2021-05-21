@@ -365,7 +365,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
                     command_line.unwrap_or_default().into(),
                 ))
             })
-            .unwrap();
+            .unwrap_or_else(|| ("".into(), "".into()));
 
         Ok(Win32ProcessInfo {
             base_info: ProcessInfo {

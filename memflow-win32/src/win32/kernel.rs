@@ -331,41 +331,33 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
 
         // get process_parameters
         let offsets = Win32ArchOffsets::from(info.base_info.proc_arch);
-        let (path, command_line) = info
-            .peb()
-            .and_then(|peb| {
-                process
-                    .virt_mem()
-                    .virt_read_addr_arch(
-                        info.base_info.proc_arch.into(),
-                        peb + offsets.peb_process_params,
-                    )
-                    .ok()
-            })
-            .and_then(|peb_process_params| {
-                trace!("peb_process_params={:x}", peb_process_params);
-                let image_path_name = process
-                    .virt_mem()
-                    .virt_read_unicode_string(
-                        info.base_info.proc_arch.into(),
-                        peb_process_params + offsets.ppm_image_path_name,
-                    )
-                    .ok();
+        let (path, command_line) = if let Some(Ok(peb_process_params)) = info.peb().map(|peb| {
+            process.virt_mem().virt_read_addr_arch(
+                info.base_info.proc_arch.into(),
+                peb + offsets.peb_process_params,
+            )
+        }) {
+            trace!("peb_process_params={:x}", peb_process_params);
+            let image_path_name = process
+                .virt_mem()
+                .virt_read_unicode_string(
+                    info.base_info.proc_arch.into(),
+                    peb_process_params + offsets.ppm_image_path_name,
+                )
+                .unwrap_or_default();
 
-                let command_line = process
-                    .virt_mem()
-                    .virt_read_unicode_string(
-                        info.base_info.proc_arch.into(),
-                        peb_process_params + offsets.ppm_command_line,
-                    )
-                    .ok();
+            let command_line = process
+                .virt_mem()
+                .virt_read_unicode_string(
+                    info.base_info.proc_arch.into(),
+                    peb_process_params + offsets.ppm_command_line,
+                )
+                .unwrap_or_default();
 
-                Some((
-                    image_path_name.unwrap_or_default().into(),
-                    command_line.unwrap_or_default().into(),
-                ))
-            })
-            .unwrap_or_else(|| ("".into(), "".into()));
+            (image_path_name.into(), command_line.into())
+        } else {
+            ("".into(), "".into())
+        };
 
         Ok(Win32ProcessInfo {
             base_info: ProcessInfo {
@@ -424,7 +416,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> Win32Kernel<T, V> {
         Ok(ProcessInfo {
             address,
             pid,
-            name: name.clone(),
+            name,
             path: "".into(),
             command_line: "".into(),
             sys_arch,

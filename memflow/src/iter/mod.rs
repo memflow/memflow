@@ -308,9 +308,6 @@ mod tests {
     #[test]
     fn pc_check_empty() {
         let arr = [0_u8; 0];
-
-        for (_addr, _chunk) in arr.page_chunks(0.into(), PAGE_SIZE) {
-            // must not panic
-        }
+        let _ = arr.page_chunks(0.into(), PAGE_SIZE).next();
     }
 }

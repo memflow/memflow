@@ -216,7 +216,7 @@ pub struct PageChunkIterator<T: SplitAtIndex, FS> {
 impl<T: SplitAtIndex, FS> PageChunkIterator<T, FS> {
     pub fn new(buf: T, start_address: Address, page_size: usize, check_split_fn: FS) -> Self {
         Self {
-            v: Some(buf),
+            v: if buf.length() == 0 { None } else { Some(buf) },
             cur_address: start_address,
             page_size,
             check_split_fn,

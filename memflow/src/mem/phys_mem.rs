@@ -238,7 +238,12 @@ where
         Ok(String::from_utf8_lossy(&buf).to_string())
     }
 
-    /// Reads a variable length string with a length of up to 4kb from the target.
+    /// Reads a variable length string with a length of up to specified amount from the target.
+    ///
+    /// # Arguments
+    ///
+    /// * `addr` - target address to read from
+    /// * `n` - maximum number of bytes to read
     ///
     /// # Remarks:
     ///
@@ -246,20 +251,37 @@ where
     /// If no null terminator is found the this function will return an error.
     ///
     /// For reading fixed-size char arrays the [`virt_read_char_array`] should be used.
-    fn phys_read_char_string(&mut self, addr: PhysicalAddress) -> Result<String> {
+    fn phys_read_char_string_n(&mut self, addr: PhysicalAddress, n: usize) -> Result<String> {
         let mut buf = vec![0; 32];
+
+        let mut last_n = 0;
+
         loop {
-            self.phys_read_raw_into(addr, &mut buf)?;
+            let (_, right) = buf.split_at_mut(last_n);
+
+            self.phys_read_raw_into(addr, right)?;
             if let Some((n, _)) = buf.iter().enumerate().find(|(_, c)| **c == 0_u8) {
-                buf.truncate(n);
+                buf.truncate(last_n + n);
                 return Ok(String::from_utf8_lossy(&buf).to_string());
             }
-            if buf.len() * 2 > 4096 {
+            if buf.len() >= n {
                 break;
             }
-            buf.extend(vec![0; buf.len()]);
+            last_n = buf.len();
+
+            buf.extend((0..buf.len()).map(|_| 0));
         }
+
         Err(Error(ErrorOrigin::PhysicalMemory, ErrorKind::OutOfBounds))
+    }
+
+    /// Reads a variable length string with up to 4kb length from the target.
+    ///
+    /// # Arguments
+    ///
+    /// * `addr` - target address to read from
+    fn phys_read_char_string(&mut self, addr: PhysicalAddress) -> Result<String> {
+        self.phys_read_char_string_n(addr, 4096)
     }
 
     fn phys_batcher(&mut self) -> PhysicalMemoryBatcher<Self>

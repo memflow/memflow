@@ -541,13 +541,6 @@ impl Inventory {
                 Error(ErrorOrigin::Inventory, ErrorKind::PluginNotFound)
             })?;
 
-        info!(
-            "attempting to load `{}` type plugin `{}` from `{}`",
-            T::plugin_type(),
-            lib.loader.ident(),
-            lib.path.to_string_lossy(),
-        );
-
         lib.loader.help()
     }
 

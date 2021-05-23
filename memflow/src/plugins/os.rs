@@ -138,14 +138,14 @@ impl Loadable for LoadableOs {
                 (help_callback)((&mut ret).into());
                 ret.first().map(|h| h.to_string()).ok_or_else(|| {
                     Error(ErrorOrigin::Connector, ErrorKind::NotSupported).log_error(&format!(
-                        "Connector `{}` did not return any help text.",
+                        "Os-Plugin `{}` did not return any help text.",
                         self.ident()
                     ))
                 })
             }
             None => Err(
                 Error(ErrorOrigin::Connector, ErrorKind::NotSupported).log_error(&format!(
-                    "Connector `{}` does not support help text.",
+                    "Os-Plugin `{}` does not support help text.",
                     self.ident()
                 )),
             ),
@@ -155,7 +155,7 @@ impl Loadable for LoadableOs {
     /// Retrieves the list of available targets for this connector.
     fn target_list(&self) -> Result<Vec<TargetInfo>> {
         Err(Error(ErrorOrigin::Connector, ErrorKind::NotSupported)
-            .log_error("Os does not support target listing."))
+            .log_error("Os-Plugin does not support target listing."))
     }
 
     /// Creates a new OS instance from this library.

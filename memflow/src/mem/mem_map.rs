@@ -41,7 +41,6 @@ impl<M> std::convert::AsRef<MemoryMap<M>> for MemoryMap<M> {
 }
 
 #[derive(Clone)]
-#[repr(C)]
 pub struct MemoryMapping<M> {
     base: Address,
     output: std::cell::RefCell<M>, // TODO: why refcell?

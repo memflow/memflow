@@ -259,8 +259,9 @@ where
         loop {
             let (_, right) = buf.split_at_mut(last_n);
 
-            self.phys_read_raw_into(addr, right)?;
-            if let Some((n, _)) = buf.iter().enumerate().find(|(_, c)| **c == 0_u8) {
+            // TODO: add a special add function which will check page boundaries and keep/destroy metadata
+            self.phys_read_raw_into((addr.address() + last_n).into(), right)?;
+            if let Some((n, _)) = right.iter().enumerate().find(|(_, c)| **c == 0_u8) {
                 buf.truncate(last_n + n);
                 return Ok(String::from_utf8_lossy(&buf).to_string());
             }

@@ -239,8 +239,8 @@ where
         loop {
             let (_, right) = buf.split_at_mut(last_n);
 
-            self.virt_read_raw_into(addr, right).data_part()?;
-            if let Some((n, _)) = buf.iter().enumerate().find(|(_, c)| **c == 0_u8) {
+            self.virt_read_raw_into(addr + last_n, right).data_part()?;
+            if let Some((n, _)) = right.iter().enumerate().find(|(_, c)| **c == 0_u8) {
                 buf.truncate(last_n + n);
                 return Ok(String::from_utf8_lossy(&buf).to_string());
             }

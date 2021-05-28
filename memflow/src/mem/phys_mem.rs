@@ -1,11 +1,14 @@
 use std::prelude::v1::*;
 
-use super::{MemoryMap, PhysicalMemoryBatcher, PhysicalMemoryCursor};
+use super::{MemoryMap, PhysicalMemoryBatcher};
 use crate::dataview::Pod;
 use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 use crate::types::{Address, PhysicalAddress, Pointer32, Pointer64};
 
 use std::mem::MaybeUninit;
+
+#[cfg(feature = "std")]
+use super::PhysicalMemoryCursor;
 
 // TODO:
 // - check endianess here and return an error
@@ -291,6 +294,7 @@ where
         PhysicalMemoryBatcher::new(self)
     }
 
+    #[cfg(feature = "std")]
     fn phys_cursor(&mut self) -> PhysicalMemoryCursor<&mut Self>
     where
         Self: Sized,
@@ -298,6 +302,7 @@ where
         PhysicalMemoryCursor::new(self)
     }
 
+    #[cfg(feature = "std")]
     fn into_phys_cursor(self) -> PhysicalMemoryCursor<Self>
     where
         Self: Sized,
@@ -305,6 +310,7 @@ where
         PhysicalMemoryCursor::new(self)
     }
 
+    #[cfg(feature = "std")]
     fn phys_cursor_at(&mut self, address: PhysicalAddress) -> PhysicalMemoryCursor<&mut Self>
     where
         Self: Sized,
@@ -312,6 +318,7 @@ where
         PhysicalMemoryCursor::at(self, address)
     }
 
+    #[cfg(feature = "std")]
     fn into_phys_cursor_at(self, address: PhysicalAddress) -> PhysicalMemoryCursor<Self>
     where
         Self: Sized,

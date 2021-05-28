@@ -3,7 +3,7 @@ use std::prelude::v1::*;
 pub mod virtual_dma;
 pub use virtual_dma::VirtualDma;
 
-use super::{VirtualMemoryBatcher, VirtualMemoryCursor};
+use super::VirtualMemoryBatcher;
 use crate::architecture::ArchitectureObj;
 use crate::dataview::Pod;
 use crate::error::{
@@ -12,6 +12,9 @@ use crate::error::{
 use crate::types::{Address, Page, PhysicalAddress, Pointer32, Pointer64};
 
 use std::mem::MaybeUninit;
+
+#[cfg(feature = "std")]
+use super::VirtualMemoryCursor;
 
 /// The `VirtualMemory` trait implements access to virtual memory for a specific process
 /// and provides a generic way to read and write from/to that processes virtual memory.
@@ -274,6 +277,7 @@ where
         VirtualMemoryBatcher::new(self)
     }
 
+    #[cfg(feature = "std")]
     fn virt_cursor(&mut self) -> VirtualMemoryCursor<&mut Self>
     where
         Self: Sized,
@@ -281,6 +285,7 @@ where
         VirtualMemoryCursor::new(self)
     }
 
+    #[cfg(feature = "std")]
     fn into_virt_cursor(self) -> VirtualMemoryCursor<Self>
     where
         Self: Sized,
@@ -288,6 +293,7 @@ where
         VirtualMemoryCursor::new(self)
     }
 
+    #[cfg(feature = "std")]
     fn virt_cursor_at(&mut self, address: Address) -> VirtualMemoryCursor<&mut Self>
     where
         Self: Sized,
@@ -295,6 +301,7 @@ where
         VirtualMemoryCursor::at(self, address)
     }
 
+    #[cfg(feature = "std")]
     fn into_virt_cursor_at(self, address: Address) -> VirtualMemoryCursor<Self>
     where
         Self: Sized,

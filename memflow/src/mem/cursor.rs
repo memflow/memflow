@@ -108,6 +108,41 @@ impl<T: PhysicalMemory> PhysicalMemoryCursor<T> {
         }
     }
 
+    /// Creates a new PhysicalMemoryCursor by wrapping around a [`PhysicalMemory`] object
+    /// at the desired starting position.
+    ///
+    /// Cursor initial position is * `address`.
+    ///
+    /// # Examples:
+    ///
+    /// Borrowing a [`PhysicalMemory`] object:
+    /// ```
+    /// use memflow::dummy::DummyMemory;
+    /// use memflow::types::size;
+    /// use memflow::mem::PhysicalMemoryCursor;
+    ///
+    /// let mut phys_mem = DummyMemory::new(size::mb(16));
+    /// let mut cursor = PhysicalMemoryCursor::at(&mut phys_mem, 0x1000.into());
+    /// ```
+    ///
+    /// Taking (temporary) ownership of a [`PhysicalMemory`] object:
+    /// ```
+    /// use memflow::dummy::DummyMemory;
+    /// use memflow::types::size;
+    /// use memflow::mem::PhysicalMemoryCursor;
+    ///
+    /// let phys_mem = DummyMemory::new(size::mb(16));
+    /// let mut cursor = PhysicalMemoryCursor::at(phys_mem, 0x1000.into());
+    /// ```
+    pub fn at(phys_mem: T, address: PhysicalAddress) -> Self {
+        let metadata = phys_mem.metadata();
+        Self {
+            phys_mem,
+            metadata,
+            address,
+        }
+    }
+
     /// Consumes this cursor, returning the underlying [`PhysicalMemory`] object.
     ///
     /// # Examples
@@ -338,6 +373,52 @@ impl<T: VirtualMemory> VirtualMemoryCursor<T> {
             virt_mem,
             address: Address::NULL,
         }
+    }
+
+    /// Creates a new VirtualMemoryCursor by wrapping around a [`VirtualMemory`] object
+    /// at the desired starting position.
+    ///
+    /// Cursor initial position is * `address`.
+    ///
+    /// # Examples:
+    ///
+    /// Borrowing a [`VirtualMemory`] object:
+    /// ```
+    /// use memflow::dummy::DummyMemory;
+    /// use memflow::types::size;
+    /// use memflow::mem::VirtualMemoryCursor;
+    /// # use memflow::dummy::DummyOs;
+    /// # use memflow::mem::{DirectTranslate, VirtualDma};
+    /// # use memflow::architecture::x86::x64;
+    ///
+    /// # let phys_mem = DummyMemory::new(size::mb(16));
+    /// # let mut os = DummyOs::new(phys_mem);
+    /// # let (dtb, _) = os.alloc_dtb(size::mb(8), &[]);
+    /// # let phys_mem = os.into_inner();
+    /// # let translator = x64::new_translator(dtb);
+    /// let mut virt_mem = VirtualDma::new(phys_mem, x64::ARCH, translator);
+    /// let mut cursor = VirtualMemoryCursor::at(&mut virt_mem, 0x1000.into());
+    /// ```
+    ///
+    /// Taking (temporary) ownership of a [`VirtualMemory`] object:
+    /// ```
+    /// use memflow::dummy::DummyMemory;
+    /// use memflow::types::size;
+    /// use memflow::mem::VirtualMemoryCursor;
+    /// # use memflow::dummy::DummyOs;
+    /// # use memflow::mem::{DirectTranslate, VirtualDma};
+    /// # use memflow::architecture::x86::x64;
+    ///
+    /// # let phys_mem = DummyMemory::new(size::mb(16));
+    /// # let mut os = DummyOs::new(phys_mem);
+    /// # let (dtb, _) = os.alloc_dtb(size::mb(8), &[]);
+    /// # let phys_mem = os.into_inner();
+    /// # let translator = x64::new_translator(dtb);
+    /// let virt_mem = VirtualDma::new(phys_mem, x64::ARCH, translator);
+    /// let mut cursor = VirtualMemoryCursor::at(virt_mem, 0x1000.into());
+    /// ```
+    pub fn at(virt_mem: T, address: Address) -> Self {
+        Self { virt_mem, address }
     }
 
     /// Consumes this cursor, returning the underlying [`VirtualMemory`] object.

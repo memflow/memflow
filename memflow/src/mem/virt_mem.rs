@@ -3,7 +3,7 @@ use std::prelude::v1::*;
 pub mod virtual_dma;
 pub use virtual_dma::VirtualDma;
 
-use super::VirtualMemoryBatcher;
+use super::{VirtualMemoryBatcher, VirtualMemoryCursor};
 use crate::architecture::ArchitectureObj;
 use crate::dataview::Pod;
 use crate::error::{
@@ -272,6 +272,34 @@ where
         Self: Sized,
     {
         VirtualMemoryBatcher::new(self)
+    }
+
+    fn virt_cursor(&mut self) -> VirtualMemoryCursor<&mut Self>
+    where
+        Self: Sized,
+    {
+        VirtualMemoryCursor::new(self)
+    }
+
+    fn into_virt_cursor(self) -> VirtualMemoryCursor<Self>
+    where
+        Self: Sized,
+    {
+        VirtualMemoryCursor::new(self)
+    }
+
+    fn virt_cursor_at(&mut self, address: Address) -> VirtualMemoryCursor<&mut Self>
+    where
+        Self: Sized,
+    {
+        VirtualMemoryCursor::at(self, address)
+    }
+
+    fn into_virt_cursor_at(self, address: Address) -> VirtualMemoryCursor<Self>
+    where
+        Self: Sized,
+    {
+        VirtualMemoryCursor::at(self, address)
     }
 }
 

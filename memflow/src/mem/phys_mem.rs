@@ -1,9 +1,8 @@
 use std::prelude::v1::*;
 
-use super::PhysicalMemoryBatcher;
+use super::{MemoryMap, PhysicalMemoryBatcher, PhysicalMemoryCursor};
 use crate::dataview::Pod;
 use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
-use crate::mem::MemoryMap;
 use crate::types::{Address, PhysicalAddress, Pointer32, Pointer64};
 
 use std::mem::MaybeUninit;
@@ -290,6 +289,34 @@ where
         Self: Sized,
     {
         PhysicalMemoryBatcher::new(self)
+    }
+
+    fn phys_cursor(&mut self) -> PhysicalMemoryCursor<&mut Self>
+    where
+        Self: Sized,
+    {
+        PhysicalMemoryCursor::new(self)
+    }
+
+    fn into_phys_cursor(self) -> PhysicalMemoryCursor<Self>
+    where
+        Self: Sized,
+    {
+        PhysicalMemoryCursor::new(self)
+    }
+
+    fn phys_cursor_at(&mut self, address: PhysicalAddress) -> PhysicalMemoryCursor<&mut Self>
+    where
+        Self: Sized,
+    {
+        PhysicalMemoryCursor::at(self, address)
+    }
+
+    fn into_phys_cursor_at(self, address: PhysicalAddress) -> PhysicalMemoryCursor<Self>
+    where
+        Self: Sized,
+    {
+        PhysicalMemoryCursor::at(self, address)
     }
 }
 

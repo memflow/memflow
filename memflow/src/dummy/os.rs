@@ -535,7 +535,7 @@ pub fn build_dummy(
     args: &Args,
     _mem: Option<ConnectorInstanceBox>,
     _log_level: Level,
-) -> Result<OsInstanceBox<'static, 'static>> {
+) -> Result<OsInstanceBox<'static>> {
     let size = super::mem::parse_size(args)?;
     let mem = DummyMemory::new(size);
     let os = DummyOs::new(mem);

@@ -47,7 +47,7 @@ cglue_trait_group!(OsInstance<'a>, { OsInner<'a>, Clone }, {});
 
 // TODO: remove later
 pub type MuConnectorInstanceBox<'a> = std::mem::MaybeUninit<ConnectorInstanceBox<'a>>;
-pub type MuOsInstanceBox<'a, 'b> = std::mem::MaybeUninit<OsInstanceBox<'a, 'b>>;
+pub type MuOsInstanceBox<'a> = std::mem::MaybeUninit<OsInstanceBox<'a>>;
 
 /// Utility typedef for better cbindgen
 ///
@@ -799,9 +799,9 @@ impl<'a> ConnectorBuilder<'a> {
     ///
     /// Each created connector / os instance is fed into the next os / connector instance as an argument.
     /// If any build step fails the function returns an error.
-    pub fn build(self) -> Result<OsInstanceBox<'static, 'static>> {
+    pub fn build(self) -> Result<OsInstanceBox<'static>> {
         let mut connector: Option<ConnectorInstanceBox<'static>> = None;
-        let mut os: Option<OsInstanceBox<'static, 'static>> = None;
+        let mut os: Option<OsInstanceBox<'static>> = None;
         for step in self.steps.iter() {
             match step {
                 BuildStep::Connector { name, args } => {
@@ -865,7 +865,7 @@ impl<'a> OsBuilder<'a> {
     /// If any build step fails the function returns an error.
     pub fn build(self) -> Result<ConnectorInstanceBox<'static>> {
         let mut connector: Option<ConnectorInstanceBox<'static>> = None;
-        let mut os: Option<OsInstanceBox<'static, 'static>> = None;
+        let mut os: Option<OsInstanceBox<'static>> = None;
         for step in self.steps.iter() {
             match step {
                 BuildStep::Connector { name, args } => {

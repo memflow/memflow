@@ -42,8 +42,8 @@ pub struct LoadableConnector {
 
 impl Loadable for LoadableConnector {
     type Instance = ConnectorInstanceBox<'static>;
-    type InputArg = Option<OsInstanceBox<'static, 'static>>;
-    type CInputArg = Option<OsInstanceBox<'static, 'static>>;
+    type InputArg = Option<OsInstanceBox<'static>>;
+    type CInputArg = Option<OsInstanceBox<'static>>;
 
     fn ident(&self) -> &str {
         self.descriptor.name

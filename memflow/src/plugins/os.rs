@@ -23,7 +23,7 @@ pub fn create_with_logging<T: 'static>(
     create_fn: impl Fn(&Args, ConnectorInstanceBox, log::Level) -> Result<T>,
 ) -> i32
 where
-    OsInstance<'static, 'static, CBox<T>, T>: From<T>,
+    OsInstance<'static, CBox<'static, T>, T>: From<T>,
 {
     super::util::create_with_logging(args, log_level, out, move |a, l| {
         Ok(group_obj!(create_fn(&a, conn, l)? as OsInstance))
@@ -37,7 +37,7 @@ pub fn create_without_logging<T: 'static>(
     create_fn: impl Fn(&Args, ConnectorInstanceBox) -> Result<T>,
 ) -> i32
 where
-    OsInstance<'static, 'static, CBox<T>, T>: From<T>,
+    OsInstance<'static, CBox<'static, T>, T>: From<T>,
 {
     super::util::create_without_logging(args, out, |a| {
         Ok(group_obj!(create_fn(&a, conn)? as OsInstance))
@@ -51,7 +51,7 @@ pub struct LoadableOs {
 }
 
 impl Loadable for LoadableOs {
-    type Instance = OsInstanceBox<'static, 'static>;
+    type Instance = OsInstanceBox<'static>;
     type InputArg = Option<ConnectorInstanceBox<'static>>;
     type CInputArg = COption<ConnectorInstanceBox<'static>>;
 

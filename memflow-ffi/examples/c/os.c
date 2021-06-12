@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <inttypes.h>
 
 #include "memflow.h"
 #include "memflow_support.h"
@@ -37,7 +38,7 @@ int main(int argc, char *argv[]) {
     PhysicalMemoryInstance *phys_mem = os_phys_mem(&os);
     if (phys_mem != 0) {
         PhysicalMemoryMetadata metadata = phys_metadata(phys_mem);
-        printf("PhysicalMemoryMetadata{ size: %U64d, writable: %s }\n", metadata.size, metadata.readonly ? "true" : "false");
+        printf("PhysicalMemoryMetadata{ size: %" PRIu64 ", writable: %s }\n", (uint64_t)metadata.size, metadata.readonly ? "true" : "false");
     }
 
     // virtual read on os

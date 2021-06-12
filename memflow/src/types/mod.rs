@@ -35,7 +35,3 @@ pub use byte_swap::ByteSwap;
 pub mod callback;
 #[doc(hidden)]
 pub use callback::{Callback, OpaqueCallback};
-
-pub mod cglue;
-#[doc(hidden)]
-pub use cglue::{CArc, COptArc, COption, ReprCString};

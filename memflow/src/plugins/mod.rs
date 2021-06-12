@@ -4,6 +4,7 @@ This module contains functions related to the Inventory system for Connectors an
 All functionality in this module is gated behind `plugins` feature.
 */
 
+use cglue::{arc::CArc, repr_cstring::ReprCString};
 use std::prelude::v1::*;
 
 pub mod args;
@@ -14,29 +15,20 @@ pub use args::{ArgDescriptor, Args, ArgsValidator};
 pub type OptionVoid = Option<&'static mut std::ffi::c_void>;
 
 pub mod connector;
-pub use connector::{
-    ConnectorDescriptor, ConnectorFunctionTable, ConnectorInstance, LoadableConnector,
-    PhysicalMemoryInstance,
-};
+pub use connector::{ConnectorDescriptor, LoadableConnector};
 pub type ConnectorInputArg = <LoadableConnector as Loadable>::InputArg;
 
 pub mod os;
-pub use os::{LoadableOs, OpaqueOsFunctionTable, OsInstance};
+pub use os::LoadableOs;
 pub type OsInputArg = <LoadableOs as Loadable>::InputArg;
 
 pub(crate) mod util;
 pub use util::create_bare;
 
-pub mod virt_mem;
-pub use virt_mem::{
-    OpaqueVirtualMemoryFunctionTable, VirtualMemoryFunctionTable, VirtualMemoryInstance,
-};
-
 use crate::error::{Result, *};
-use crate::types::{
-    cglue::{CArc, ReprCString},
-    OpaqueCallback,
-};
+use crate::mem::phys_mem::*;
+use crate::os::root::*;
+use crate::types::OpaqueCallback;
 
 use log::*;
 use std::ffi::c_void;
@@ -44,10 +36,18 @@ use std::fs::read_dir;
 use std::mem::MaybeUninit;
 use std::path::{Path, PathBuf};
 
+use cglue::*;
 use libloading::Library;
 
 /// Exported memflow plugins version
 pub const MEMFLOW_PLUGIN_VERSION: i32 = 1;
+
+cglue_trait_group!(ConnectorInstance, { PhysicalMemory, Clone }, {});
+cglue_trait_group!(OsInstance<'a>, { OsInner<'a>, Clone }, {});
+
+// TODO: remove later
+pub type MuConnectorInstanceBox<'a> = std::mem::MaybeUninit<ConnectorInstanceBox<'a>>;
+pub type MuOsInstanceBox<'a, 'b> = std::mem::MaybeUninit<OsInstanceBox<'a, 'b>>;
 
 /// Utility typedef for better cbindgen
 ///
@@ -661,7 +661,7 @@ impl Inventory {
         name: &str,
         input: ConnectorInputArg,
         args: &Args,
-    ) -> Result<ConnectorInstance> {
+    ) -> Result<ConnectorInstanceBox> {
         Self::create_internal(&self.connectors, name, input, args)
     }
 
@@ -688,7 +688,7 @@ impl Inventory {
     /// let connector = inventory.create_os("dummy", None, &args)
     ///     .unwrap();
     /// ```
-    pub fn create_os(&self, name: &str, input: OsInputArg, args: &Args) -> Result<OsInstance> {
+    pub fn create_os(&self, name: &str, input: OsInputArg, args: &Args) -> Result<OsInstanceBox> {
         Self::create_internal(&self.os_layers, name, input, args)
     }
 
@@ -799,9 +799,9 @@ impl<'a> ConnectorBuilder<'a> {
     ///
     /// Each created connector / os instance is fed into the next os / connector instance as an argument.
     /// If any build step fails the function returns an error.
-    pub fn build(self) -> Result<OsInstance> {
-        let mut connector: Option<ConnectorInstance> = None;
-        let mut os: Option<OsInstance> = None;
+    pub fn build(self) -> Result<OsInstanceBox<'static, 'static>> {
+        let mut connector: Option<ConnectorInstanceBox<'static>> = None;
+        let mut os: Option<OsInstanceBox<'static, 'static>> = None;
         for step in self.steps.iter() {
             match step {
                 BuildStep::Connector { name, args } => {
@@ -863,9 +863,9 @@ impl<'a> OsBuilder<'a> {
     ///
     /// Each created connector / os instance is fed into the next os / connector instance as an argument.
     /// If any build step fails the function returns an error.
-    pub fn build(self) -> Result<ConnectorInstance> {
-        let mut connector: Option<ConnectorInstance> = None;
-        let mut os: Option<OsInstance> = None;
+    pub fn build(self) -> Result<ConnectorInstanceBox<'static>> {
+        let mut connector: Option<ConnectorInstanceBox<'static>> = None;
+        let mut os: Option<OsInstanceBox<'static, 'static>> = None;
         for step in self.steps.iter() {
             match step {
                 BuildStep::Connector { name, args } => {

@@ -2,11 +2,14 @@
 Specialized `Error` and `Result` types for memflow.
 */
 
+use std::num::NonZeroI32;
 use std::prelude::v1::*;
 use std::{fmt, result, str};
 
 use log::{debug, error, info, trace, warn};
 use std::mem::MaybeUninit;
+
+use cglue::result::IntError;
 
 #[cfg(feature = "std")]
 use std::error;
@@ -23,31 +26,6 @@ impl Error {
     /// Returns a static string representing the type of error.
     pub fn into_str(self) -> &'static str {
         self.as_str()
-    }
-
-    pub const fn into_i32(self) -> i32 {
-        let origin = ((self.0 as i32 + 1) & 0xFFFi32) << 4;
-        let kind = ((self.1 as i32 + 1) & 0xFFFi32) << 16;
-        -(1 + origin + kind)
-    }
-
-    pub fn from_i32(error: i32) -> Self {
-        let origin = ((-error - 1) >> 4i32) & 0xFFFi32;
-        let kind = ((-error - 1) >> 16i32) & 0xFFFi32;
-
-        let error_origin = if origin > 0 && origin <= ErrorOrigin::Other as i32 + 1 {
-            unsafe { std::mem::transmute(origin as u16 - 1) }
-        } else {
-            ErrorOrigin::Other
-        };
-
-        let error_kind = if kind > 0 && kind <= ErrorKind::Unknown as i32 + 1 {
-            unsafe { std::mem::transmute(kind as u16 - 1) }
-        } else {
-            ErrorKind::Unknown
-        };
-
-        Self(error_origin, error_kind)
     }
 
     pub fn log_error(self, err: impl std::fmt::Display) -> Self {
@@ -73,6 +51,33 @@ impl Error {
     pub fn log_trace(self, err: impl std::fmt::Display) -> Self {
         trace!("{}: {} ({})", self.0.to_str(), self.1.to_str(), err);
         self
+    }
+}
+
+impl IntError for Error {
+    fn into_int_err(self) -> NonZeroI32 {
+        let origin = ((self.0 as i32 + 1) & 0xFFFi32) << 4;
+        let kind = ((self.1 as i32 + 1) & 0xFFFi32) << 16;
+        (-(1 + origin + kind)).into()
+    }
+
+    fn from_int_err(err: NonZeroI32) -> Self {
+        let origin = ((-err - 1) >> 4i32) & 0xFFFi32;
+        let kind = ((-err - 1) >> 16i32) & 0xFFFi32;
+
+        let error_origin = if origin > 0 && origin <= ErrorOrigin::Other as i32 + 1 {
+            unsafe { std::mem::transmute(origin as u16 - 1) }
+        } else {
+            ErrorOrigin::Other
+        };
+
+        let error_kind = if kind > 0 && kind <= ErrorKind::Unknown as i32 + 1 {
+            unsafe { std::mem::transmute(kind as u16 - 1) }
+        } else {
+            ErrorKind::Unknown
+        };
+
+        Self(error_origin, error_kind)
     }
 }
 
@@ -329,6 +334,26 @@ impl<T> PartialError<T> {
     }
 }
 
+impl<T> IntError for PartialError<T> {
+    fn into_int_err(self) -> NonZeroI32 {
+        match self {
+            PartialError::Error(err) => err.into_int_err(),
+            PartialError::PartialVirtualRead(_) => NonZeroI32 { 0: -2 },
+            PartialError::PartialVirtualWrite => NonZeroI32 { 0: -3 },
+        }
+    }
+
+    fn from_int_err(err: NonZeroI32) -> Self {
+        let err = (-err.0) & 0xFi32;
+        match err {
+            1 => PartialError::Error(Error::from_int_err(err)),
+            2 => PartialError::PartialVirtualRead(()),
+            3 => PartialError::PartialVirtualWrite,
+            _ => PartialError::Error(Error(ErrorOrigin::Ffi, ErrorKind::Unknown)),
+        }
+    }
+}
+
 /// Custom fmt::Debug impl for the specialized memflow `Error` type.
 /// This is required due to our generic type T.
 impl<T> fmt::Debug for PartialError<T> {
@@ -404,11 +429,6 @@ impl<T> PartialResultExt<T> for PartialResult<T> {
     }
 }
 
-pub trait AsIntResult<T> {
-    fn into_int_result(self) -> i32;
-    fn into_int_out_result(self, out: &mut MaybeUninit<T>) -> i32;
-}
-
 pub fn result_from_int_void(res: i32) -> Result<()> {
     if res == 0 {
         Ok(())
@@ -461,56 +481,11 @@ pub fn part_result_from_int<T>(res: i32, out: MaybeUninit<T>) -> PartialResult<T
     }
 }
 
-impl<T> AsIntResult<T> for result::Result<T, Error> {
-    fn into_int_result(self) -> i32 {
-        match self {
-            Ok(_) => 0,
-            Err(err) => err.into_i32(),
-        }
-    }
-
-    fn into_int_out_result(self, out: &mut MaybeUninit<T>) -> i32 {
-        match self {
-            Ok(ret) => {
-                unsafe { out.as_mut_ptr().write(ret) };
-                0
-            }
-            Err(err) => err.into_i32(),
-        }
-    }
-}
-
-impl<T> AsIntResult<T> for result::Result<T, PartialError<T>> {
-    fn into_int_result(self) -> i32 {
-        match self {
-            Ok(_) => 0,
-            Err(PartialError::Error(err)) => err.into_i32(),
-            Err(PartialError::PartialVirtualRead(_)) => -2,
-            Err(PartialError::PartialVirtualWrite) => -3,
-        }
-    }
-
-    fn into_int_out_result(self, out: &mut MaybeUninit<T>) -> i32 {
-        match self {
-            Ok(ret) => {
-                unsafe { out.as_mut_ptr().write(ret) };
-                0
-            }
-            Err(PartialError::Error(err)) => err.into_i32(),
-            Err(PartialError::PartialVirtualRead(ret)) => {
-                unsafe { out.as_mut_ptr().write(ret) };
-                -2
-            }
-            Err(PartialError::PartialVirtualWrite) => -3,
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::{
         part_result_from_int, part_result_from_int_void, result_from_int, result_from_int_void,
-        AsIntResult, Error, ErrorKind, ErrorOrigin, PartialError, PartialResult, Result,
+        Error, ErrorKind, ErrorOrigin, PartialError, PartialResult, Result,
     };
     use std::mem::MaybeUninit;
 

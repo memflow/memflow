@@ -1,6 +1,6 @@
 use super::{Args, OptionMut};
-use crate::error::{AsIntResult, Error, ErrorKind, ErrorOrigin};
-use crate::types::ReprCString;
+use crate::error::{Error, ErrorKind, ErrorOrigin};
+use cglue::repr_cstring::ReprCString;
 
 use std::mem::MaybeUninit;
 use std::path::Path;

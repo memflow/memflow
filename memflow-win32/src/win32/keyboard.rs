@@ -257,10 +257,9 @@ macro_rules! set_key_down {
 impl KeyboardState for Win32KeyboardState {
     /// Returns true wether the given key was pressed.
     /// This function accepts a valid microsoft virtual keycode.
+    /// In case of supplying a invalid key this function will just return false cleanly.
     ///
     /// A list of all Keycodes can be found on the [msdn](https://docs.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes).
-    ///
-    /// In case of supplying a invalid key this function will just return false cleanly.
     fn is_down(&self, vk: i32) -> bool {
         if !(0..=256).contains(&vk) {
             false

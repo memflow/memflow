@@ -80,8 +80,6 @@ typedef struct ArchitectureObj ArchitectureObj;
  */
 typedef struct Inventory Inventory;
 
-typedef struct Option______Library Option______Library;
-
 typedef struct PhysicalReadData PhysicalReadData;
 
 typedef struct PhysicalWriteData PhysicalWriteData;
@@ -208,8 +206,8 @@ typedef struct PhysicalMemoryFunctionTable_c_void OpaquePhysicalMemoryFunctionTa
 
 typedef struct COptArc_Library {
     const Library *inner;
-    struct Option______Library (*clone_fn)(struct Option______Library);
-    void (*drop_fn)(struct Option______Library*);
+    const Library *(*clone_fn)(const Library*);
+    void (*drop_fn)(const Library**);
 } COptArc_Library;
 
 typedef struct CpuStateFunctionTable_c_void {
@@ -954,7 +952,7 @@ void inventory_free(struct Inventory *inv);
  *
  * `data` must be a valid array of `PhysicalReadData` with the length of at least `len`
  */
-int32_t phys_read_raw_list(struct ConnectorInstance *mem,
+int32_t phys_read_raw_list(struct PhysicalMemoryInstance *mem,
                            struct PhysicalReadData *data,
                            uintptr_t len);
 
@@ -968,14 +966,28 @@ int32_t phys_read_raw_list(struct ConnectorInstance *mem,
  *
  * `data` must be a valid array of `PhysicalWriteData` with the length of at least `len`
  */
-int32_t phys_write_raw_list(struct ConnectorInstance *mem,
+int32_t phys_write_raw_list(struct PhysicalMemoryInstance *mem,
                             const struct PhysicalWriteData *data,
                             uintptr_t len);
 
 /**
  * Retrieve metadata about the physical memory object
  */
-struct PhysicalMemoryMetadata phys_metadata(const struct ConnectorInstance *mem);
+struct PhysicalMemoryMetadata phys_metadata(const struct PhysicalMemoryInstance *mem);
+
+/**
+ * Write a list of values
+ *
+ * This will perform `len` physical memory writes on the provided `data`. Using lists is preferable
+ * for performance, because then the underlying connectors can batch those operations.
+ *
+ * # Safety
+ *
+ * `data` must be a valid array of `PhysicalWriteData` with the length of at least `len`
+ */
+void phys_set_mem_map(struct PhysicalMemoryInstance *mem,
+                      const struct PhysicalMemoryMapping *maps,
+                      uintptr_t len);
 
 /**
  * Read a single value into `out` from a provided `PhysicalAddress`
@@ -984,7 +996,7 @@ struct PhysicalMemoryMetadata phys_metadata(const struct ConnectorInstance *mem)
  *
  * `out` must be a valid pointer to a data buffer of at least `len` size.
  */
-int32_t phys_read_raw(struct ConnectorInstance *mem,
+int32_t phys_read_raw(struct PhysicalMemoryInstance *mem,
                       struct PhysicalAddress addr,
                       uint8_t *out,
                       uintptr_t len);
@@ -992,12 +1004,12 @@ int32_t phys_read_raw(struct ConnectorInstance *mem,
 /**
  * Read a single 32-bit value from a provided `PhysicalAddress`
  */
-uint32_t phys_read_u32(struct ConnectorInstance *mem, struct PhysicalAddress addr);
+uint32_t phys_read_u32(struct PhysicalMemoryInstance *mem, struct PhysicalAddress addr);
 
 /**
  * Read a single 64-bit value from a provided `PhysicalAddress`
  */
-uint64_t phys_read_u64(struct ConnectorInstance *mem, struct PhysicalAddress addr);
+uint64_t phys_read_u64(struct PhysicalMemoryInstance *mem, struct PhysicalAddress addr);
 
 /**
  * Write a single value from `input` into a provided `PhysicalAddress`
@@ -1006,7 +1018,7 @@ uint64_t phys_read_u64(struct ConnectorInstance *mem, struct PhysicalAddress add
  *
  * `input` must be a valid pointer to a data buffer of at least `len` size.
  */
-int32_t phys_write_raw(struct ConnectorInstance *mem,
+int32_t phys_write_raw(struct PhysicalMemoryInstance *mem,
                        struct PhysicalAddress addr,
                        const uint8_t *input,
                        uintptr_t len);
@@ -1014,12 +1026,16 @@ int32_t phys_write_raw(struct ConnectorInstance *mem,
 /**
  * Write a single 32-bit value into a provided `PhysicalAddress`
  */
-int32_t phys_write_u32(struct ConnectorInstance *mem, struct PhysicalAddress addr, uint32_t val);
+int32_t phys_write_u32(struct PhysicalMemoryInstance *mem,
+                       struct PhysicalAddress addr,
+                       uint32_t val);
 
 /**
  * Write a single 64-bit value into a provided `PhysicalAddress`
  */
-int32_t phys_write_u64(struct ConnectorInstance *mem, struct PhysicalAddress addr, uint64_t val);
+int32_t phys_write_u64(struct PhysicalMemoryInstance *mem,
+                       struct PhysicalAddress addr,
+                       uint64_t val);
 
 /**
  * Free a virtual memory object reference

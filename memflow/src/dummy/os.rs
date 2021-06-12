@@ -1,16 +1,16 @@
 use super::{DummyMemory, DummyProcessInfo};
 use crate::architecture::ArchitectureIdent;
 use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
-use crate::mem::virt_mem::VirtualDma;
+use crate::mem::phys_mem::AsPhysicalMemory;
+use crate::mem::virt_mem::{AsVirtualMemory, VirtualDma};
 use crate::mem::PhysicalMemory;
-use crate::os::{ModuleInfo, OsInfo, Pid, ProcessInfo};
+use crate::os::{ModuleInfo, Os, OsInfo, Pid, ProcessInfo};
 use crate::plugins::{
-    create_bare,
-    os::{MuOsInstance, OsDescriptor},
-    Args, ConnectorInstance, OsInstance, MEMFLOW_PLUGIN_VERSION,
+    create_bare, os::OsDescriptor, Args, ConnectorInstanceBox, MuOsInstanceBox, OsInstance,
+    OsInstanceBox, MEMFLOW_PLUGIN_VERSION,
 };
 use crate::types::{size, Address};
-use crate::types::{COption, ReprCString};
+use cglue::{option::COption, repr_cstring::ReprCString, *};
 use log::Level;
 use rand::seq::SliceRandom;
 use rand::{thread_rng, Rng, SeedableRng};
@@ -413,9 +413,6 @@ impl<'a> OsInner<'a> for DummyOs {
     type ProcessType = DummyProcess<DummyVirtMem<&'a mut DummyMemory>>;
     type IntoProcessType = DummyProcess<DummyVirtMem<DummyMemory>>;
 
-    type PhysicalMemoryType = DummyMemory;
-    type VirtualMemoryType = DummyVirtMem<DummyMemory>;
-
     /// Walks a process list and calls a callback for each process structure address
     ///
     /// The callback is fully opaque. We need this style so that C FFI can work seamlessly.
@@ -494,10 +491,18 @@ impl<'a> OsInner<'a> for DummyOs {
     fn info(&self) -> &OsInfo {
         &self.info
     }
+}
+
+impl AsPhysicalMemory for DummyOs {
+    type PhysicalMemoryType = DummyMemory;
 
     fn phys_mem(&mut self) -> Option<&mut Self::PhysicalMemoryType> {
         Some(&mut self.mem)
     }
+}
+
+impl AsVirtualMemory for DummyOs {
+    type VirtualMemoryType = DummyVirtMem<DummyMemory>;
 
     fn virt_mem(&mut self) -> Option<&mut Self::VirtualMemoryType> {
         None
@@ -519,22 +524,20 @@ pub static MEMFLOW_OS_DUMMY: OsDescriptor = OsDescriptor {
 #[doc(hidden)]
 extern "C" fn mf_create(
     args: &ReprCString,
-    mem: COption<ConnectorInstance>,
+    mem: COption<ConnectorInstanceBox>,
     log_level: i32,
-    out: &mut MuOsInstance,
+    out: &mut MuOsInstanceBox,
 ) -> i32 {
     create_bare(args, mem.into(), log_level, out, build_dummy)
 }
 
 pub fn build_dummy(
     args: &Args,
-    _mem: Option<ConnectorInstance>,
+    _mem: Option<ConnectorInstanceBox>,
     _log_level: Level,
-) -> Result<OsInstance> {
+) -> Result<OsInstanceBox<'static, 'static>> {
     let size = super::mem::parse_size(args)?;
     let mem = DummyMemory::new(size);
     let os = DummyOs::new(mem);
-
-    let instance = OsInstance::builder(os).build();
-    Ok(instance)
+    Ok(group_obj!(os as OsInstance))
 }

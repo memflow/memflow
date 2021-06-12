@@ -1,7 +1,9 @@
 //! Describes the root of the Operating System
 
+use super::process::*;
 use super::{AddressCallback, Process, ProcessInfo, ProcessInfoCallback};
 use crate::prelude::v1::{Result, *};
+use cglue::*;
 use std::prelude::v1::*;
 
 /// OS supertrait for all possible lifetimes
@@ -18,12 +20,13 @@ impl<T: for<'a> OsInner<'a>> Os for T {}
 /// moving resources into processes.
 ///
 /// There are also methods for accessing system level modules.
+#[cglue_trait]
+#[int_result]
 pub trait OsInner<'a>: Send {
-    type ProcessType: Process + 'a;
-    type IntoProcessType: Process;
-
-    type PhysicalMemoryType: PhysicalMemory;
-    type VirtualMemoryType: VirtualMemory;
+    #[wrap_with_obj(crate::os::process::Process)]
+    type ProcessType: crate::os::process::Process + 'a;
+    #[wrap_with_obj(crate::os::process::Process)]
+    type IntoProcessType: crate::os::process::Process + 'static;
 
     /// Walks a process list and calls a callback for each process structure address
     ///
@@ -33,6 +36,7 @@ pub trait OsInner<'a>: Send {
     /// Retrieves a process address list
     ///
     /// This will be a list of unique internal addresses for underlying process structures
+    #[skip_func]
     fn process_address_list(&mut self) -> Result<Vec<Address>> {
         let mut ret = vec![];
         self.process_address_list_callback((&mut ret).into())?;
@@ -42,6 +46,7 @@ pub trait OsInner<'a>: Send {
     /// Walks a process list and calls a callback for each process
     ///
     /// The callback is fully opaque. We need this style so that C FFI can work seamlessly.
+    #[skip_func]
     fn process_info_list_callback(&mut self, mut callback: ProcessInfoCallback) -> Result<()> {
         // This is safe, because control will flow back to the callback.
         let sptr = self as *mut Self;
@@ -60,6 +65,7 @@ pub trait OsInner<'a>: Send {
     }
 
     /// Retrieves a process list
+    #[skip_func]
     fn process_info_list(&mut self) -> Result<Vec<ProcessInfo>> {
         let mut ret = vec![];
         self.process_info_list_callback((&mut ret).into())?;
@@ -70,6 +76,7 @@ pub trait OsInner<'a>: Send {
     fn process_info_by_address(&mut self, address: Address) -> Result<ProcessInfo>;
 
     /// Find process information by its name
+    #[skip_func]
     fn process_info_by_name(&mut self, name: &str) -> Result<ProcessInfo> {
         let mut ret = Err(Error(ErrorOrigin::OsLayer, ErrorKind::ProcessNotFound));
         let callback = &mut |data: ProcessInfo| {
@@ -85,6 +92,7 @@ pub trait OsInner<'a>: Send {
     }
 
     /// Find process information by its ID
+    #[skip_func]
     fn process_info_by_pid(&mut self, pid: Pid) -> Result<ProcessInfo> {
         let mut ret = Err(Error(ErrorOrigin::OsLayer, ErrorKind::ProcessNotFound));
         let callback = &mut |data: ProcessInfo| {
@@ -102,7 +110,7 @@ pub trait OsInner<'a>: Send {
     /// Construct a process by its info, borrowing the OS
     ///
     /// It will share the underlying memory resources
-    fn process_by_info(&'a mut self, info: ProcessInfo) -> Result<Self::ProcessType>;
+    fn process_by_info(&mut self, info: ProcessInfo) -> Result<Self::ProcessType>;
     /// Construct a process by its info, consuming the OS
     ///
     /// This function will consume the Kernel instance and move its resources into the process
@@ -115,6 +123,7 @@ pub trait OsInner<'a>: Send {
     /// If no process with the specified address can be found this function will return an Error.
     ///
     /// This function can be useful for quickly accessing a process.
+    #[skip_func]
     fn process_by_address(&'a mut self, addr: Address) -> Result<Self::ProcessType> {
         self.process_info_by_address(addr)
             .and_then(move |i| self.process_by_info(i))
@@ -126,6 +135,7 @@ pub trait OsInner<'a>: Send {
     /// If no process with the specified name can be found this function will return an Error.
     ///
     /// This function can be useful for quickly accessing a process.
+    #[skip_func]
     fn process_by_name(&'a mut self, name: &str) -> Result<Self::ProcessType> {
         self.process_info_by_name(name)
             .and_then(move |i| self.process_by_info(i))
@@ -137,6 +147,7 @@ pub trait OsInner<'a>: Send {
     /// If no process with the specified ID can be found this function will return an Error.
     ///
     /// This function can be useful for quickly accessing a process.
+    #[skip_func]
     fn process_by_pid(&'a mut self, pid: Pid) -> Result<Self::ProcessType> {
         self.process_info_by_pid(pid)
             .and_then(move |i| self.process_by_info(i))
@@ -149,6 +160,7 @@ pub trait OsInner<'a>: Send {
     /// If no process with the specified address can be found this function will return an Error.
     ///
     /// This function can be useful for quickly accessing a process.
+    #[skip_func]
     fn into_process_by_address(mut self, addr: Address) -> Result<Self::IntoProcessType>
     where
         Self: Sized,
@@ -163,6 +175,7 @@ pub trait OsInner<'a>: Send {
     /// If no process with the specified name can be found this function will return an Error.
     ///
     /// This function can be useful for quickly accessing a process.
+    #[skip_func]
     fn into_process_by_name(mut self, name: &str) -> Result<Self::IntoProcessType>
     where
         Self: Sized,
@@ -177,6 +190,7 @@ pub trait OsInner<'a>: Send {
     /// If no process with the specified ID can be found this function will return an Error.
     ///
     /// This function can be useful for quickly accessing a process.
+    #[skip_func]
     fn into_process_by_pid(mut self, pid: Pid) -> Result<Self::IntoProcessType>
     where
         Self: Sized,
@@ -196,6 +210,7 @@ pub trait OsInner<'a>: Send {
     ///
     /// # Arguments
     /// * `callback` - where to pass each matching module to. This is an opaque callback.
+    #[skip_func]
     fn module_list_callback(&mut self, mut callback: ModuleInfoCallback) -> Result<()> {
         // This is safe, because control will flow back to the callback.
         let sptr = self as *mut Self;
@@ -218,6 +233,7 @@ pub trait OsInner<'a>: Send {
     }
 
     /// Retrieves a module list for the OS
+    #[skip_func]
     fn module_list(&mut self) -> Result<Vec<ModuleInfo>> {
         let mut ret = vec![];
         self.module_list_callback((&mut ret).into())?;
@@ -233,6 +249,7 @@ pub trait OsInner<'a>: Send {
     /// Finds a OS module by its name
     ///
     /// This function can be useful for quickly accessing a specific module
+    #[skip_func]
     fn module_by_name(&mut self, name: &str) -> Result<ModuleInfo> {
         let mut ret = Err(Error(ErrorOrigin::OsLayer, ErrorKind::ProcessNotFound));
         let callback = &mut |data: ModuleInfo| {
@@ -249,17 +266,6 @@ pub trait OsInner<'a>: Send {
 
     /// Retrieves the OS info
     fn info(&self) -> &OsInfo;
-
-    /// Returns a reference to the [`PhysicalMemory`] object this OS uses.
-    /// The [`PhysicalMemory`] usually is just the Connector this OS was intitialized with.
-    ///
-    /// If no connector is used `None` is returned.
-    fn phys_mem(&mut self) -> Option<&mut Self::PhysicalMemoryType>;
-
-    /// Returns a reference to the [`VirtualMemory`] object this OS uses.
-    ///
-    /// If no [`VirtualMemory`] object is used `None` is returned.
-    fn virt_mem(&mut self) -> Option<&mut Self::VirtualMemoryType>;
 }
 
 /// Information block about OS

@@ -1,106 +1,47 @@
 use crate::error::*;
 use crate::os::*;
-use crate::types::cglue::{CArc, COption, ReprCString};
 use crate::types::Address;
 
-pub mod instance;
-pub use instance::{OpaqueOsFunctionTable, OsFunctionTable, OsInstance};
-
-pub mod process;
-pub use process::{ArcPluginProcess, PluginProcess};
-
-pub mod keyboard;
-pub use keyboard::{
-    ArcPluginKeyboard, ArcPluginKeyboardState, OpaqueOsKeyboardFunctionTable,
-    OsKeyboardFunctionTable, PluginKeyboard,
-};
-
 use super::{
-    Args, ConnectorInstance, GenericBaseTable, Loadable, OpaqueBaseTable, PluginDescriptor,
-    TargetInfo,
+    Args, ConnectorInstance, ConnectorInstanceBox, GenericBaseTable, Loadable, MuOsInstanceBox,
+    OpaqueBaseTable, OsInstance, OsInstanceBox, PluginDescriptor, TargetInfo,
 };
 
+use cglue::*;
+use cglue::{arc::CArc, boxed::CBox, option::COption, repr_cstring::ReprCString};
 use libloading::Library;
 
 use std::mem::MaybeUninit;
 
-// Type aliases needed for &mut MaybeUninit<T> to work with bindgen
-pub type MuProcessInfo = MaybeUninit<ProcessInfo>;
-pub type MuModuleInfo = MaybeUninit<ModuleInfo>;
-pub type MuPluginProcess<'a> = MaybeUninit<PluginProcess<'a>>;
-pub type MuArcPluginProcess = MaybeUninit<ArcPluginProcess>;
-pub type MuPluginKeyboard<'a> = MaybeUninit<PluginKeyboard<'a>>;
-pub type MuArcPluginKeyboard = MaybeUninit<ArcPluginKeyboard>;
-pub type MuArcPluginKeyboardState = MaybeUninit<ArcPluginKeyboardState>;
-pub type MuAddress = MaybeUninit<Address>;
-pub type MuOsInstance = MaybeUninit<OsInstance>;
-
 pub type OptionArchitectureIdent<'a> = Option<&'a crate::architecture::ArchitectureIdent>;
 
-/// Subtrait of Plugin where `Self`, and `Os::IntoProcessType` are `Clone`
-pub trait PluginOs<T: Process + Clone>:
-    'static + Clone + for<'a> OsInner<'a, IntoProcessType = T>
-{
-}
-impl<T: Process + Clone, K: 'static + Clone + for<'a> OsInner<'a, IntoProcessType = T>> PluginOs<T>
-    for K
-{
-}
-
-/// Subtrait of Plugin where `Self`, and `OsKeyboard::IntoKeyboardType` are `Clone`
-pub trait PluginOsKeyboard<T: Keyboard + Clone>:
-    'static + Clone + for<'a> OsKeyboardInner<'a, IntoKeyboardType = T>
-{
-}
-impl<
-        T: Keyboard + Clone,
-        K: 'static + Clone + for<'a> OsKeyboardInner<'a, IntoKeyboardType = T>,
-    > PluginOsKeyboard<T> for K
-{
-}
-
-pub fn create_with_logging<P: 'static + Process + Clone, T: PluginOs<P>>(
+pub fn create_with_logging<T: 'static>(
     args: &ReprCString,
-    conn: ConnectorInstance,
+    conn: ConnectorInstanceBox,
     log_level: i32,
-    out: &mut MuOsInstance,
-    create_fn: impl Fn(&Args, ConnectorInstance, log::Level) -> Result<T>,
-) -> i32 {
+    out: &mut MuOsInstanceBox,
+    create_fn: impl Fn(&Args, ConnectorInstanceBox, log::Level) -> Result<T>,
+) -> i32
+where
+    OsInstance<'static, 'static, CBox<T>, T>: From<T>,
+{
     super::util::create_with_logging(args, log_level, out, move |a, l| {
-        Ok(create_fn(&a, conn, l).map(OsInstance::builder)?.build())
+        Ok(group_obj!(create_fn(&a, conn, l)? as OsInstance))
     })
 }
 
-pub fn create_without_logging<P: 'static + Process + Clone, T: PluginOs<P>>(
+pub fn create_without_logging<T: 'static>(
     args: &ReprCString,
-    conn: ConnectorInstance,
-    out: &mut MuOsInstance,
-    create_fn: impl Fn(&Args, ConnectorInstance) -> Result<T>,
-) -> i32 {
+    conn: ConnectorInstanceBox,
+    out: &mut MuOsInstanceBox,
+    create_fn: impl Fn(&Args, ConnectorInstanceBox) -> Result<T>,
+) -> i32
+where
+    OsInstance<'static, 'static, CBox<T>, T>: From<T>,
+{
     super::util::create_without_logging(args, out, |a| {
-        Ok(create_fn(&a, conn).map(OsInstance::builder)?.build())
+        Ok(group_obj!(create_fn(&a, conn)? as OsInstance))
     })
-}
-
-#[repr(C)]
-#[derive(Clone, Copy)]
-pub struct OsLayerFunctionTable {
-    /// The vtable for object creation and cloning
-    pub base: &'static OpaqueBaseTable,
-    /// The vtable for all os functions
-    pub os: &'static OpaqueOsFunctionTable,
-    /// The vtable for the keyboard access if available
-    pub keyboard: Option<&'static OpaqueOsKeyboardFunctionTable>,
-}
-
-impl OsLayerFunctionTable {
-    pub fn new<P: 'static + Process + Clone, T: PluginOs<P>>() -> Self {
-        OsLayerFunctionTable {
-            base: <&GenericBaseTable<T>>::default().as_opaque(),
-            os: <&OsFunctionTable<P, T>>::default().as_opaque(),
-            keyboard: None,
-        }
-    }
 }
 
 pub type OsDescriptor = PluginDescriptor<LoadableOs>;
@@ -110,9 +51,9 @@ pub struct LoadableOs {
 }
 
 impl Loadable for LoadableOs {
-    type Instance = OsInstance;
-    type InputArg = Option<ConnectorInstance>;
-    type CInputArg = COption<ConnectorInstance>;
+    type Instance = OsInstanceBox<'static, 'static>;
+    type InputArg = Option<ConnectorInstanceBox<'static>>;
+    type CInputArg = COption<ConnectorInstanceBox<'static>>;
 
     fn export_prefix() -> &'static str {
         "MEMFLOW_OS_"
@@ -164,11 +105,11 @@ impl Loadable for LoadableOs {
     fn instantiate(
         &self,
         library: Option<CArc<Library>>,
-        input: Option<ConnectorInstance>,
+        input: Self::InputArg,
         args: &Args,
-    ) -> Result<OsInstance> {
+    ) -> Result<Self::Instance> {
         let cstr = ReprCString::from(args.to_string());
-        let mut out = MuOsInstance::uninit();
+        let mut out = MuOsInstanceBox::uninit();
         let res = (self.descriptor.create)(&cstr, input.into(), log::max_level() as i32, &mut out);
         result_from_int(res, out).map(|mut c| {
             c.library = library.into();

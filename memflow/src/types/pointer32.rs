@@ -5,7 +5,8 @@
 use crate::dataview::Pod;
 use crate::error::{Error, ErrorKind, ErrorOrigin, PartialError, PartialResult, Result};
 use crate::mem::{PhysicalMemory, VirtualMemory};
-use crate::types::{Address, ByteSwap, ReprCString};
+use crate::types::{Address, ByteSwap};
+use cglue::repr_cstring::ReprCString;
 
 use std::convert::TryFrom;
 use std::marker::PhantomData;
@@ -293,6 +294,8 @@ impl<T: Pod + Sized> Pointer32<T> {
 }
 
 /// Implement special phys/virt read/write for CReprStr
+// TODO: fixme
+/*
 impl Pointer32<ReprCString> {
     pub fn phys_read<U: PhysicalMemory>(self, mem: &mut U) -> Result<ReprCString> {
         match mem.phys_read_char_string(self.address.into()) {
@@ -312,6 +315,7 @@ impl Pointer32<ReprCString> {
         }
     }
 }
+*/
 
 impl<T> Pointer32<[T]> {
     pub const fn decay(self) -> Pointer32<T> {

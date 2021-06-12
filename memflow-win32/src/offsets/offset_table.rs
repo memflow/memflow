@@ -182,6 +182,8 @@ pub struct Win32OffsetTable {
     pub eproc_thread_list: u32,
     /// Since version 5.0
     pub eproc_wow64: u32,
+    /// Since version xxx
+    pub eproc_vad_root: u32,
 
     /// Since version 6.2
     pub kthread_teb: u32,
@@ -191,4 +193,15 @@ pub struct Win32OffsetTable {
     pub teb_peb: u32,
     /// Since version x.x
     pub teb_peb_x86: u32,
+
+    /// Since version xxx
+    pub balanced_node_left: u32,
+    pub balanced_node_right: u32,
+
+    pub mm_vad_vad_node: u32,
+    pub mm_vad_starting_vpn: u32,
+    pub mm_vad_ending_vpn: u32,
+    pub mm_vad_starting_vpn_high: u32,
+    pub mm_vad_ending_vpn_high: u32,
+    pub mm_vad_u: u32,
 }

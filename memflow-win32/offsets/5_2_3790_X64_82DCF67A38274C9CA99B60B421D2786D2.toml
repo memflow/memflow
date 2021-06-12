@@ -16,7 +16,17 @@ eproc_section_base = 0x128
 eproc_exit_status = 0x024C
 eproc_thread_list = 656
 eproc_wow64 = 680
+eproc_vad_root = 0
 kthread_teb = 176
 ethread_list_entry = 976
 teb_peb = 96
 teb_peb_x86 = 48
+balanced_node_left = 0
+balanced_node_right = 0
+
+mm_vad_vad_node = 0
+mm_vad_starting_vpn = 0
+mm_vad_ending_vpn = 0
+mm_vad_starting_vpn_high = 0
+mm_vad_ending_vpn_high = 0
+mm_vad_u = 0

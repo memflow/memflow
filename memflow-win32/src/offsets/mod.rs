@@ -160,6 +160,12 @@ impl Win32Offsets {
         let teb = PdbStruct::new(pdb_slice, "_TEB").map_err(|_| {
             Error(ErrorOrigin::OsLayer, ErrorKind::Offset).log_warn("_TEB not found")
         })?;
+        let balanced_node = PdbStruct::new(pdb_slice, "_RTL_BALANCED_NODE").map_err(|_| {
+            Error(ErrorOrigin::OsLayer, ErrorKind::Offset).log_warn("_RTL_BALANCED_NODE not found")
+        })?;
+        let mm_vad = PdbStruct::new(pdb_slice, "_MMVAD_SHORT").map_err(|_| {
+            Error(ErrorOrigin::OsLayer, ErrorKind::Offset).log_warn("_MMVAD_SHORT not found")
+        })?;
 
         let phys_mem_block = symbols
             .find_symbol("MmPhysicalMemoryBlock")
@@ -276,6 +282,42 @@ impl Win32Offsets {
             0
         };
 
+        let eproc_vad_root = eproc
+            .find_field("VadRoot") // MM_AVL_TABLE *PhysicalVadRoot / MM_AVL_TABLE VadRoot / RTL_AVL_TREE VadRoot
+            .ok_or_else(|| {
+                Error(ErrorOrigin::OsLayer, ErrorKind::Offset)
+                    .log_warn("_EPROCESS::VadRoot not found")
+            })?
+            .offset as _;
+
+        let balanced_node_left = balanced_node
+            .find_field("Left")
+            .map(|f| f.offset)
+            .unwrap_or(0) as _;
+        let balanced_node_right = balanced_node
+            .find_field("Right")
+            .map(|f| f.offset)
+            .unwrap_or(0) as _;
+
+        let mm_vad_vad_node = mm_vad.find_field("VadNode").map(|f| f.offset).unwrap_or(0) as _;
+        let mm_vad_starting_vpn = mm_vad
+            .find_field("StartingVpn")
+            .map(|f| f.offset)
+            .unwrap_or(0) as _;
+        let mm_vad_ending_vpn = mm_vad
+            .find_field("EndingVpn")
+            .map(|f| f.offset)
+            .unwrap_or(0) as _;
+        let mm_vad_starting_vpn_high = mm_vad
+            .find_field("StartingVpnHigh")
+            .map(|f| f.offset)
+            .unwrap_or(0) as _;
+        let mm_vad_ending_vpn_high = mm_vad
+            .find_field("EndingVpnHigh")
+            .map(|f| f.offset)
+            .unwrap_or(0) as _;
+        let mm_vad_u = mm_vad.find_field("u").map(|f| f.offset).unwrap_or(0) as _;
+
         Ok(Self {
             0: Win32OffsetTable {
                 list_blink,
@@ -292,11 +334,22 @@ impl Win32Offsets {
                 eproc_exit_status,
                 eproc_thread_list,
                 eproc_wow64,
+                eproc_vad_root,
 
                 kthread_teb,
                 ethread_list_entry,
                 teb_peb,
                 teb_peb_x86,
+
+                balanced_node_left,
+                balanced_node_right,
+
+                mm_vad_vad_node,
+                mm_vad_starting_vpn,
+                mm_vad_ending_vpn,
+                mm_vad_starting_vpn_high,
+                mm_vad_ending_vpn_high,
+                mm_vad_u,
             },
         })
     }
@@ -350,10 +403,15 @@ impl Win32Offsets {
     pub fn eproc_thread_list(&self) -> usize {
         self.0.eproc_thread_list as usize
     }
-    /// _EPROCESS::WoW64Process offset
+    /// _EPROCESS::VadRoot offset
     /// Exists since version 5.0
     pub fn eproc_wow64(&self) -> usize {
         self.0.eproc_wow64 as usize
+    }
+    /// _EPROCESS::WoW64Process offset
+    /// Exists since version xxx
+    pub fn eproc_vad_root(&self) -> usize {
+        self.0.eproc_vad_root as usize
     }
 
     /// _KTHREAD::Teb offset
@@ -375,6 +433,39 @@ impl Win32Offsets {
     /// Exists since version x.x
     pub fn teb_peb_x86(&self) -> usize {
         self.0.teb_peb_x86 as usize
+    }
+
+    /// _RTL_BALANCED_NODE::Left offset
+    pub fn balanced_node_left(&self) -> usize {
+        self.0.balanced_node_left as usize
+    }
+    /// _RTL_BALANCED_NODE::Right offset
+    pub fn balanced_node_right(&self) -> usize {
+        self.0.balanced_node_right as usize
+    }
+    /// _MMVAD_SHORT::VadNode offset
+    pub fn mm_vad_vad_node(&self) -> usize {
+        self.0.mm_vad_vad_node as usize
+    }
+    /// _MMVAD_SHORT::StartingVpn offset
+    pub fn mm_vad_starting_vpn(&self) -> usize {
+        self.0.mm_vad_starting_vpn as usize
+    }
+    /// _MMVAD_SHORT::EndingVpn offset
+    pub fn mm_vad_ending_vpn(&self) -> usize {
+        self.0.mm_vad_ending_vpn as usize
+    }
+    /// _MMVAD_SHORT::StartingVpnHigh offset
+    pub fn mm_vad_starting_vpn_high(&self) -> usize {
+        self.0.mm_vad_starting_vpn_high as usize
+    }
+    /// _MMVAD_SHORT::EndingVpnHigh offset
+    pub fn mm_vad_ending_vpn_high(&self) -> usize {
+        self.0.mm_vad_ending_vpn_high as usize
+    }
+    /// _MMVAD_SHORT::StartingVpn offset
+    pub fn mm_vad_u(&self) -> usize {
+        self.0.mm_vad_u as usize
     }
 
     pub fn builder() -> Win32OffsetBuilder {

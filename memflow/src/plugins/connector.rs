@@ -1,49 +1,22 @@
 use crate::connector::*;
 use crate::error::*;
 use crate::mem::PhysicalMemory;
-use crate::types::cglue::{CArc, ReprCString};
-
-pub mod instance;
-pub use instance::{
-    ConnectorInstance, OpaquePhysicalMemoryFunctionTable, PhysicalMemoryFunctionTable,
-    PhysicalMemoryInstance,
-};
+use cglue::{arc::CArc, repr_cstring::ReprCString};
 
 use super::{
-    Args, GenericBaseTable, Loadable, OpaqueBaseTable, OsInstance, PluginDescriptor, TargetInfo,
+    Args, ConnectorInstance, ConnectorInstanceBox, GenericBaseTable, Loadable,
+    MuConnectorInstanceBox, OpaqueBaseTable, OsInstance, OsInstanceBox, PluginDescriptor,
+    TargetInfo,
 };
 
 use std::mem::MaybeUninit;
 
-pub mod cpu_state;
-pub use cpu_state::{
-    ArcPluginCpuState, ConnectorCpuStateFunctionTable, OpaqueConnectorCpuStateFunctionTable,
-    PluginCpuState,
-};
-
 use libloading::Library;
-
-// Type aliases needed for &mut MaybeUninit<T> to work with bindgen
-pub type MuPluginCpuState<'a> = MaybeUninit<PluginCpuState<'a>>;
-pub type MuArcPluginCpuState = MaybeUninit<ArcPluginCpuState>;
-pub type MuConnectorInstance = MaybeUninit<ConnectorInstance>;
-
-/// Subtrait of Plugin where `Self`, and `OsKeyboard::IntoKeyboardType` are `Clone`
-pub trait PluginConnectorCpuState<T: CpuState + Clone>:
-    'static + Clone + for<'a> ConnectorCpuStateInner<'a, IntoCpuStateType = T>
-{
-}
-impl<
-        T: CpuState + Clone,
-        C: 'static + Clone + for<'a> ConnectorCpuStateInner<'a, IntoCpuStateType = T>,
-    > PluginConnectorCpuState<T> for C
-{
-}
 
 pub fn create_with_logging<T: 'static + PhysicalMemory + Clone>(
     args: &ReprCString,
     log_level: i32,
-    out: &mut MuConnectorInstance,
+    out: &mut MuConnectorInstanceBox,
     create_fn: impl Fn(&Args, log::Level) -> Result<T>,
 ) -> i32 {
     super::util::create_with_logging(args, log_level, out, |a, l| {
@@ -53,33 +26,12 @@ pub fn create_with_logging<T: 'static + PhysicalMemory + Clone>(
 
 pub fn create_without_logging<T: 'static + PhysicalMemory + Clone>(
     args: &ReprCString,
-    out: &mut MuConnectorInstance,
+    out: &mut MuConnectorInstanceBox,
     create_fn: impl Fn(&Args) -> Result<T>,
 ) -> i32 {
     super::util::create_without_logging(args, out, |a| {
         Ok(create_fn(&a).map(ConnectorInstance::builder)?.build())
     })
-}
-
-#[repr(C)]
-#[derive(Clone, Copy)]
-pub struct ConnectorFunctionTable {
-    /// The vtable for object creation and cloning
-    pub base: &'static OpaqueBaseTable,
-    /// The vtable for all physical memory function calls to the connector.
-    pub phys: &'static OpaquePhysicalMemoryFunctionTable,
-    // The vtable for cpu state if available
-    pub cpu_state: Option<&'static OpaqueConnectorCpuStateFunctionTable>,
-}
-
-impl ConnectorFunctionTable {
-    pub fn create_vtable<T: 'static + PhysicalMemory + Clone>() -> Self {
-        Self {
-            base: <&GenericBaseTable<T>>::default().as_opaque(),
-            phys: <&PhysicalMemoryFunctionTable<T>>::default().as_opaque(),
-            cpu_state: None,
-        }
-    }
 }
 
 pub type ConnectorDescriptor = PluginDescriptor<LoadableConnector>;
@@ -89,9 +41,9 @@ pub struct LoadableConnector {
 }
 
 impl Loadable for LoadableConnector {
-    type Instance = ConnectorInstance;
-    type InputArg = Option<OsInstance>;
-    type CInputArg = Option<OsInstance>;
+    type Instance = ConnectorInstanceBox<'static>;
+    type InputArg = Option<OsInstanceBox<'static, 'static>>;
+    type CInputArg = Option<OsInstanceBox<'static, 'static>>;
 
     fn ident(&self) -> &str {
         self.descriptor.name
@@ -156,9 +108,9 @@ impl Loadable for LoadableConnector {
         library: Option<CArc<Library>>,
         input: Self::InputArg,
         args: &Args,
-    ) -> Result<ConnectorInstance> {
+    ) -> Result<Self::Instance> {
         let cstr = ReprCString::from(args.to_string());
-        let mut out = MuConnectorInstance::uninit();
+        let mut out = MuConnectorInstanceBox::uninit();
         let res = (self.descriptor.create)(&cstr, input, log::max_level() as i32, &mut out);
         result_from_int(res, out).map(|mut c| {
             c.library = library.into();

@@ -6,7 +6,9 @@ use super::{
 };
 
 use cglue::*;
-use cglue::{arc::COptArc, option::COption, repr_cstring::ReprCString, result::from_int_result};
+use cglue::{
+    arc::COptArc, boxed::CBox, option::COption, repr_cstring::ReprCString, result::from_int_result,
+};
 use libloading::Library;
 
 pub type OptionArchitectureIdent<'a> = Option<&'a crate::architecture::ArchitectureIdent>;
@@ -20,7 +22,7 @@ pub fn create_with_logging<T: 'static>(
     create_fn: impl Fn(&Args, ConnectorInstanceBox, log::Level) -> Result<T>,
 ) -> i32
 where
-    OsInstanceBox<'static>: From<T>,
+    OsInstance<'static, CBox<'static, T>, T>: From<T>,
 {
     super::util::create_with_logging(args, lib, log_level, out, move |a, l| {
         Ok(group_obj!(create_fn(&a, conn, l)? as OsInstance))
@@ -35,7 +37,7 @@ pub fn create_without_logging<T: 'static>(
     create_fn: impl Fn(&Args, ConnectorInstanceBox) -> Result<T>,
 ) -> i32
 where
-    OsInstanceBox<'static>: From<T>,
+    OsInstance<'static, CBox<'static, T>, T>: From<T>,
 {
     super::util::create_without_logging(args, lib, out, |a| {
         Ok(group_obj!(create_fn(&a, conn)? as OsInstance))

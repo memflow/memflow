@@ -4,11 +4,15 @@ use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 use crate::mem::{
     MemoryMap, PhysicalMemory, PhysicalMemoryMetadata, PhysicalReadData, PhysicalWriteData,
 };
+use crate::plugins::*;
 
 use crate::plugins::Args;
 use crate::types::{size, Address};
 
+use cglue::*;
 use std::sync::Arc;
+
+cglue_impl_group!(DummyMemory, ConnectorInstance, {});
 
 pub struct DummyMemory {
     pub(crate) buf: Arc<Box<[u8]>>,

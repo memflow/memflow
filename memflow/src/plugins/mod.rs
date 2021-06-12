@@ -43,7 +43,9 @@ use libloading::Library;
 /// Exported memflow plugins version
 pub const MEMFLOW_PLUGIN_VERSION: i32 = 1;
 
+// TODO: cpustate
 cglue_trait_group!(ConnectorInstance, { PhysicalMemory, Clone }, {});
+// TODO: keyboard
 cglue_trait_group!(OsInstance<'a>, { OsInner<'a>, Clone }, { AsPhysicalMemory, AsVirtualMemory });
 
 // TODO: remove later

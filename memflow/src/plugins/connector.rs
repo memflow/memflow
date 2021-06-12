@@ -1,10 +1,5 @@
 use crate::error::*;
 use crate::mem::PhysicalMemory;
-use cglue::{
-    arc::COptArc,
-    repr_cstring::ReprCString,
-    result::{from_int_result, from_int_result_empty},
-};
 
 use super::{
     Args, ConnectorInstance, ConnectorInstanceBox, Loadable, MuConnectorInstanceBox, OsInstanceBox,
@@ -12,6 +7,12 @@ use super::{
 };
 
 use cglue::*;
+use cglue::{
+    arc::COptArc,
+    boxed::CBox,
+    repr_cstring::ReprCString,
+    result::{from_int_result, from_int_result_empty},
+};
 use libloading::Library;
 
 pub fn create_with_logging<T: 'static + PhysicalMemory + Clone>(
@@ -22,7 +23,7 @@ pub fn create_with_logging<T: 'static + PhysicalMemory + Clone>(
     create_fn: impl Fn(&Args, log::Level) -> Result<T>,
 ) -> i32
 where
-    ConnectorInstanceBox<'static>: From<T>,
+    ConnectorInstance<'static, CBox<'static, T>, T>: From<T>,
 {
     super::util::create_with_logging(args, lib, log_level, out, |a, l| {
         Ok(group_obj!(create_fn(&a, l)? as ConnectorInstance))
@@ -36,7 +37,7 @@ pub fn create_without_logging<T: 'static + PhysicalMemory + Clone>(
     create_fn: impl Fn(&Args) -> Result<T>,
 ) -> i32
 where
-    ConnectorInstanceBox<'static>: From<T>,
+    ConnectorInstance<'static, CBox<'static, T>, T>: From<T>,
 {
     super::util::create_without_logging(args, lib, out, |a| {
         Ok(group_obj!(create_fn(&a)? as ConnectorInstance))

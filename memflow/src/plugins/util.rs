@@ -1,6 +1,6 @@
 use super::Args;
 use crate::error::{Error, ErrorKind, ErrorOrigin};
-use cglue::{arc::COptArc, repr_cstring::ReprCString};
+use cglue::{arc::COptArc, repr_cstring::ReprCString, result::into_int_out_result};
 use libloading::Library;
 
 use std::mem::MaybeUninit;
@@ -123,18 +123,20 @@ pub fn create_with_logging<T>(
         _ => ::log::Level::Trace,
     };
 
-    Args::parse(&args)
-        .map_err(|e| {
-            ::log::error!("error parsing args: {}", e);
-            e
-        })
-        .and_then(|args| {
-            create_fn(args, level).map_err(|e| {
-                ::log::error!("{}", e);
+    into_int_out_result(
+        Args::parse(&args)
+            .map_err(|e| {
+                ::log::error!("error parsing args: {}", e);
                 e
             })
-        })
-        .into_int_out_result(out)
+            .and_then(|args| {
+                create_fn(args, level).map_err(|e| {
+                    ::log::error!("{}", e);
+                    e
+                })
+            }),
+        out,
+    )
 }
 
 /// Wrapper for instantiating object with all needed parameters
@@ -160,18 +162,20 @@ pub fn create_bare<T, I>(
         _ => ::log::Level::Trace,
     };
 
-    Args::parse(&args)
-        .map_err(|e| {
-            ::log::error!("error parsing args: {}", e);
-            e
-        })
-        .and_then(|args| {
-            create_fn(&args, input, level).map_err(|e| {
-                ::log::error!("{}", e);
+    into_int_out_result(
+        Args::parse(&args)
+            .map_err(|e| {
+                ::log::error!("error parsing args: {}", e);
                 e
             })
-        })
-        .into_int_out_result(out)
+            .and_then(|args| {
+                create_fn(&args, input, level).map_err(|e| {
+                    ::log::error!("{}", e);
+                    e
+                })
+            }),
+        out,
+    )
 }
 
 /// Wrapper for instantiating object without logging
@@ -185,7 +189,5 @@ pub fn create_without_logging<T>(
     out: &mut MaybeUninit<T>,
     create_fn: impl FnOnce(super::Args) -> Result<T, Error>,
 ) -> i32 {
-    Args::parse(&args)
-        .and_then(|args| create_fn(args))
-        .into_int_out_result(out)
+    into_int_out_result(Args::parse(&args).and_then(|args| create_fn(args)), out)
 }

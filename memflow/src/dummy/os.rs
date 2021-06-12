@@ -1,14 +1,11 @@
 use super::{DummyMemory, DummyProcessInfo};
 use crate::architecture::ArchitectureIdent;
 use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
-use crate::mem::phys_mem::{AsPhysicalMemory, PhysicalMemoryMut};
+use crate::mem::phys_mem::*;
 use crate::mem::virt_mem::VirtualDma;
-use crate::mem::PhysicalMemory;
 use crate::os::{ModuleInfo, OsInfo, Pid, ProcessInfo};
-use crate::plugins::{
-    create_bare, os::OsDescriptor, Args, ConnectorInstanceBox, MuOsInstanceBox, OsInstance,
-    OsInstanceBox, MEMFLOW_PLUGIN_VERSION,
-};
+use crate::plugins::os::OsDescriptor;
+use crate::plugins::*;
 use crate::types::{size, Address};
 use cglue::{arc::COptArc, option::COption, repr_cstring::ReprCString, *};
 use libloading::Library;
@@ -86,6 +83,8 @@ impl PageInfo {
         self.split_to_size(X64PageSize::from_idx(self.size.to_idx() - 1))
     }
 }
+
+cglue_impl_group!(DummyOs, OsInstance<'a>, AsPhysicalMemory);
 
 pub struct DummyOs {
     mem: DummyMemory,

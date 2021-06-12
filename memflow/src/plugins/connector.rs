@@ -11,28 +11,35 @@ use super::{
     PluginDescriptor, TargetInfo,
 };
 
+use cglue::*;
 use libloading::Library;
 
 pub fn create_with_logging<T: 'static + PhysicalMemory + Clone>(
     args: &ReprCString,
     lib: COptArc<Library>,
     log_level: i32,
-    out: &mut MuConnectorInstanceBox,
+    out: &mut MuConnectorInstanceBox<'static>,
     create_fn: impl Fn(&Args, log::Level) -> Result<T>,
-) -> i32 {
+) -> i32
+where
+    ConnectorInstanceBox<'static>: From<T>,
+{
     super::util::create_with_logging(args, lib, log_level, out, |a, l| {
-        Ok(create_fn(&a, l).map(ConnectorInstance::builder)?.build())
+        Ok(group_obj!(create_fn(&a, l)? as ConnectorInstance))
     })
 }
 
 pub fn create_without_logging<T: 'static + PhysicalMemory + Clone>(
     args: &ReprCString,
     lib: COptArc<Library>,
-    out: &mut MuConnectorInstanceBox,
+    out: &mut MuConnectorInstanceBox<'static>,
     create_fn: impl Fn(&Args) -> Result<T>,
-) -> i32 {
+) -> i32
+where
+    ConnectorInstanceBox<'static>: From<T>,
+{
     super::util::create_without_logging(args, lib, out, |a| {
-        Ok(create_fn(&a).map(ConnectorInstance::builder)?.build())
+        Ok(group_obj!(create_fn(&a)? as ConnectorInstance))
     })
 }
 

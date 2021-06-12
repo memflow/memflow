@@ -3,14 +3,12 @@ use crate::architecture::ScopedVirtualTranslate;
 use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 
 use crate::architecture::ArchitectureIdent;
-use crate::mem::virt_mem::AsVirtualMemory;
-use crate::mem::VirtualMemory;
-use crate::os::{
-    ExportCallback, ImportCallback, ModuleAddressCallback, ModuleAddressInfo, ModuleInfo, Process,
-    ProcessInfo, ProcessState, SectionCallback,
-};
+use crate::mem::virt_mem::*;
+use crate::os::process::*;
+use crate::os::*;
 use crate::types::Address;
 
+use cglue::*;
 use rand::{thread_rng, Rng};
 
 #[derive(Clone)]
@@ -40,6 +38,8 @@ impl DummyProcessInfo {
         x64::new_translator(self.dtb)
     }
 }
+
+cglue_impl_group!(DummyProcess<T>, ProcessInstance, AsVirtualMemory);
 
 #[derive(Clone)]
 pub struct DummyProcess<T> {

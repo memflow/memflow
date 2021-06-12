@@ -27,6 +27,7 @@ pub use util::create_bare;
 
 use crate::error::{Result, *};
 use crate::mem::phys_mem::*;
+use crate::mem::virt_mem::*;
 use crate::os::root::*;
 use crate::types::OpaqueCallback;
 
@@ -43,7 +44,7 @@ use libloading::Library;
 pub const MEMFLOW_PLUGIN_VERSION: i32 = 1;
 
 cglue_trait_group!(ConnectorInstance, { PhysicalMemory, Clone }, {});
-cglue_trait_group!(OsInstance<'a>, { OsInner<'a>, Clone }, {});
+cglue_trait_group!(OsInstance<'a>, { OsInner<'a>, Clone }, { AsPhysicalMemory, AsVirtualMemory });
 
 // TODO: remove later
 pub type MuConnectorInstanceBox<'a> = std::mem::MaybeUninit<ConnectorInstanceBox<'a>>;
@@ -597,7 +598,7 @@ impl Inventory {
         name: &str,
         input: ConnectorInputArg,
         args: &Args,
-    ) -> Result<ConnectorInstanceBox> {
+    ) -> Result<ConnectorInstanceBox<'static>> {
         Self::create_internal(&self.connectors, name, input, args)
     }
 
@@ -624,7 +625,12 @@ impl Inventory {
     /// let connector = inventory.create_os("dummy", None, &args)
     ///     .unwrap();
     /// ```
-    pub fn create_os(&self, name: &str, input: OsInputArg, args: &Args) -> Result<OsInstanceBox> {
+    pub fn create_os(
+        &self,
+        name: &str,
+        input: OsInputArg,
+        args: &Args,
+    ) -> Result<OsInstanceBox<'static>> {
         Self::create_internal(&self.os_layers, name, input, args)
     }
 

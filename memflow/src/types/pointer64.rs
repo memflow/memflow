@@ -3,10 +3,9 @@
 */
 
 use crate::dataview::Pod;
-use crate::error::{Error, ErrorKind, ErrorOrigin, PartialError, PartialResult, Result};
+use crate::error::{Error, ErrorKind, ErrorOrigin, PartialResult, Result};
 use crate::mem::{PhysicalMemory, VirtualMemory};
 use crate::types::{Address, ByteSwap};
-use cglue::repr_cstring::ReprCString;
 
 use std::convert::TryFrom;
 use std::marker::PhantomData;

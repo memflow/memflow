@@ -36,6 +36,7 @@ use std::fs::read_dir;
 use std::mem::MaybeUninit;
 use std::path::{Path, PathBuf};
 
+use cglue::arc::COptArc;
 use cglue::*;
 use libloading::Library;
 
@@ -49,76 +50,7 @@ cglue_trait_group!(OsInstance<'a>, { OsInner<'a>, Clone }, {});
 pub type MuConnectorInstanceBox<'a> = std::mem::MaybeUninit<ConnectorInstanceBox<'a>>;
 pub type MuOsInstanceBox<'a> = std::mem::MaybeUninit<OsInstanceBox<'a>>;
 
-/// Utility typedef for better cbindgen
-///
-/// TODO: remove when fixed in cbindgen
-pub type OptionMut<T> = Option<&'static mut T>;
-
-/// Opaque version of `GenericBaseTable` for FFI purposes
-pub type OpaqueBaseTable = GenericBaseTable<c_void>;
-/// Opaque version of `GenericCloneTable` for FFI purposes
-pub type OpaqueCloneTable = GenericCloneTable<c_void>;
-
-impl Copy for OpaqueCloneTable {}
-
-impl Clone for OpaqueCloneTable {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-
-/// Generic function for cloning past FFI boundary
-#[repr(C)]
-pub struct GenericCloneTable<T: 'static> {
-    pub clone: extern "C" fn(thisptr: &T) -> OptionMut<T>,
-}
-
-impl<T: Clone> Default for GenericCloneTable<T> {
-    fn default() -> Self {
-        Self {
-            clone: util::c_clone::<T>,
-        }
-    }
-}
-
-impl<T: Clone> GenericCloneTable<T> {
-    pub fn into_opaque(self) -> OpaqueCloneTable {
-        unsafe { std::mem::transmute(self) }
-    }
-}
-
-impl Copy for OpaqueBaseTable {}
-
-impl Clone for OpaqueBaseTable {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-
-/// Base table for most objects that are cloneable and droppable.
-#[repr(C)]
-pub struct GenericBaseTable<T: 'static> {
-    clone: GenericCloneTable<T>,
-    pub drop: unsafe extern "C" fn(thisptr: &mut T),
-}
-
-impl<T: Clone> Default for &'static GenericBaseTable<T> {
-    fn default() -> Self {
-        &GenericBaseTable {
-            clone: GenericCloneTable {
-                clone: util::c_clone::<T>,
-            },
-            drop: util::c_drop::<T>,
-        }
-    }
-}
-
-impl<T: Clone> GenericBaseTable<T> {
-    pub fn as_opaque(&self) -> &OpaqueBaseTable {
-        unsafe { &*(self as *const Self as *const OpaqueBaseTable) }
-    }
-}
-
+/// Help and Target callbacks
 pub type HelpCallback<'a> = OpaqueCallback<'a, ReprCString>;
 
 /// Target information structure
@@ -160,8 +92,13 @@ pub struct PluginDescriptor<T: Loadable> {
     pub target_list_callback: Option<extern "C" fn(callback: TargetCallback) -> i32>,
 
     /// Create instance of the plugin
-    pub create:
-        extern "C" fn(&ReprCString, T::CInputArg, i32, &mut MaybeUninit<T::Instance>) -> i32,
+    pub create: extern "C" fn(
+        &ReprCString,
+        T::CInputArg,
+        COptArc<Library>,
+        i32,
+        &mut MaybeUninit<T::Instance>,
+    ) -> i32,
 }
 
 /// Defines a common interface for loadable plugins
@@ -298,7 +235,7 @@ pub trait Loadable: Sized {
     /// for validity of the library.
     fn instantiate(
         &self,
-        lib: Option<CArc<Library>>,
+        library: COptArc<Library>,
         input: Self::InputArg,
         args: &Args,
     ) -> Result<Self::Instance>;
@@ -722,7 +659,7 @@ impl Inventory {
         );
 
         lib.loader
-            .instantiate(Some(lib.library.clone()), input, args)
+            .instantiate(Some(lib.library.clone()).into(), input, args)
     }
 }
 

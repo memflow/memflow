@@ -3,12 +3,19 @@ use crate::os::*;
 use crate::types::Address;
 
 use super::{
-    Args, ConnectorInstance, ConnectorInstanceBox, GenericBaseTable, Loadable, MuOsInstanceBox,
-    OpaqueBaseTable, OsInstance, OsInstanceBox, PluginDescriptor, TargetInfo,
+    Args, ConnectorInstance, ConnectorInstanceBox, Loadable, MuOsInstanceBox, OsInstance,
+    OsInstanceBox, PluginDescriptor, TargetInfo,
 };
 
 use cglue::*;
-use cglue::{arc::CArc, boxed::CBox, option::COption, repr_cstring::ReprCString};
+use cglue::{
+    arc::CArc,
+    arc::{ArcWrapped, COptArc},
+    boxed::CBox,
+    option::COption,
+    repr_cstring::ReprCString,
+    result::{from_int_result, from_int_result_empty},
+};
 use libloading::Library;
 
 use std::mem::MaybeUninit;
@@ -18,14 +25,15 @@ pub type OptionArchitectureIdent<'a> = Option<&'a crate::architecture::Architect
 pub fn create_with_logging<T: 'static>(
     args: &ReprCString,
     conn: ConnectorInstanceBox,
+    lib: COptArc<Library>,
     log_level: i32,
-    out: &mut MuOsInstanceBox,
+    out: &mut MuOsInstanceBox<'static>,
     create_fn: impl Fn(&Args, ConnectorInstanceBox, log::Level) -> Result<T>,
 ) -> i32
 where
     OsInstance<'static, CBox<'static, T>, T>: From<T>,
 {
-    super::util::create_with_logging(args, log_level, out, move |a, l| {
+    super::util::create_with_logging(args, lib, log_level, out, move |a, l| {
         Ok(group_obj!(create_fn(&a, conn, l)? as OsInstance))
     })
 }
@@ -33,13 +41,14 @@ where
 pub fn create_without_logging<T: 'static>(
     args: &ReprCString,
     conn: ConnectorInstanceBox,
-    out: &mut MuOsInstanceBox,
+    lib: COptArc<Library>,
+    out: &mut MuOsInstanceBox<'static>,
     create_fn: impl Fn(&Args, ConnectorInstanceBox) -> Result<T>,
 ) -> i32
 where
     OsInstance<'static, CBox<'static, T>, T>: From<T>,
 {
-    super::util::create_without_logging(args, out, |a| {
+    super::util::create_without_logging(args, lib, out, |a| {
         Ok(group_obj!(create_fn(&a, conn)? as OsInstance))
     })
 }
@@ -104,16 +113,19 @@ impl Loadable for LoadableOs {
     /// The OS is initialized with the arguments provided to this function.
     fn instantiate(
         &self,
-        library: Option<CArc<Library>>,
+        library: COptArc<Library>,
         input: Self::InputArg,
         args: &Args,
     ) -> Result<Self::Instance> {
         let cstr = ReprCString::from(args.to_string());
         let mut out = MuOsInstanceBox::uninit();
-        let res = (self.descriptor.create)(&cstr, input.into(), log::max_level() as i32, &mut out);
-        result_from_int(res, out).map(|mut c| {
-            c.library = library.into();
-            c
-        })
+        let res = (self.descriptor.create)(
+            &cstr,
+            input.into(),
+            library,
+            log::max_level() as i32,
+            &mut out,
+        );
+        unsafe { from_int_result(res, out) }
     }
 }

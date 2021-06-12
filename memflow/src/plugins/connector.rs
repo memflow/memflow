@@ -1,35 +1,37 @@
-use crate::connector::*;
 use crate::error::*;
 use crate::mem::PhysicalMemory;
-use cglue::{arc::CArc, repr_cstring::ReprCString};
-
-use super::{
-    Args, ConnectorInstance, ConnectorInstanceBox, GenericBaseTable, Loadable,
-    MuConnectorInstanceBox, OpaqueBaseTable, OsInstance, OsInstanceBox, PluginDescriptor,
-    TargetInfo,
+use cglue::{
+    arc::COptArc,
+    repr_cstring::ReprCString,
+    result::{from_int_result, from_int_result_empty},
 };
 
-use std::mem::MaybeUninit;
+use super::{
+    Args, ConnectorInstance, ConnectorInstanceBox, Loadable, MuConnectorInstanceBox, OsInstanceBox,
+    PluginDescriptor, TargetInfo,
+};
 
 use libloading::Library;
 
 pub fn create_with_logging<T: 'static + PhysicalMemory + Clone>(
     args: &ReprCString,
+    lib: COptArc<Library>,
     log_level: i32,
     out: &mut MuConnectorInstanceBox,
     create_fn: impl Fn(&Args, log::Level) -> Result<T>,
 ) -> i32 {
-    super::util::create_with_logging(args, log_level, out, |a, l| {
+    super::util::create_with_logging(args, lib, log_level, out, |a, l| {
         Ok(create_fn(&a, l).map(ConnectorInstance::builder)?.build())
     })
 }
 
 pub fn create_without_logging<T: 'static + PhysicalMemory + Clone>(
     args: &ReprCString,
+    lib: COptArc<Library>,
     out: &mut MuConnectorInstanceBox,
     create_fn: impl Fn(&Args) -> Result<T>,
 ) -> i32 {
-    super::util::create_without_logging(args, out, |a| {
+    super::util::create_without_logging(args, lib, out, |a| {
         Ok(create_fn(&a).map(ConnectorInstance::builder)?.build())
     })
 }
@@ -88,7 +90,7 @@ impl Loadable for LoadableConnector {
         match self.descriptor.target_list_callback {
             Some(target_list_callback) => {
                 let mut ret = vec![];
-                result_from_int_void((target_list_callback)((&mut ret).into()))?;
+                from_int_result_empty::<Error>((target_list_callback)((&mut ret).into()))?;
                 Ok(ret)
             }
             None => Err(
@@ -105,16 +107,14 @@ impl Loadable for LoadableConnector {
     /// The connector is initialized with the arguments provided to this function.
     fn instantiate(
         &self,
-        library: Option<CArc<Library>>,
+        library: COptArc<Library>,
         input: Self::InputArg,
         args: &Args,
     ) -> Result<Self::Instance> {
         let cstr = ReprCString::from(args.to_string());
         let mut out = MuConnectorInstanceBox::uninit();
-        let res = (self.descriptor.create)(&cstr, input, log::max_level() as i32, &mut out);
-        result_from_int(res, out).map(|mut c| {
-            c.library = library.into();
-            c
-        })
+        let res =
+            (self.descriptor.create)(&cstr, input, library, log::max_level() as i32, &mut out);
+        unsafe { from_int_result(res, out) }
     }
 }

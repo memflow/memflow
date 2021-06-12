@@ -1,7 +1,7 @@
 use super::{DummyMemory, DummyProcessInfo};
 use crate::architecture::ArchitectureIdent;
 use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
-use crate::mem::phys_mem::AsPhysicalMemory;
+use crate::mem::phys_mem::{AsPhysicalMemory, PhysicalMemoryMut};
 use crate::mem::virt_mem::{AsVirtualMemory, VirtualDma};
 use crate::mem::PhysicalMemory;
 use crate::os::{ModuleInfo, Os, OsInfo, Pid, ProcessInfo};
@@ -10,7 +10,8 @@ use crate::plugins::{
     OsInstanceBox, MEMFLOW_PLUGIN_VERSION,
 };
 use crate::types::{size, Address};
-use cglue::{option::COption, repr_cstring::ReprCString, *};
+use cglue::{arc::COptArc, option::COption, repr_cstring::ReprCString, *};
+use libloading::Library;
 use log::Level;
 use rand::seq::SliceRandom;
 use rand::{thread_rng, Rng, SeedableRng};
@@ -410,7 +411,7 @@ use crate::os::{AddressCallback, OsInner};
 pub type DummyVirtMem<T> = VirtualDma<T, DirectTranslate, X86ScopedVirtualTranslate>;
 
 impl<'a> OsInner<'a> for DummyOs {
-    type ProcessType = DummyProcess<DummyVirtMem<&'a mut DummyMemory>>;
+    type ProcessType = DummyProcess<DummyVirtMem<PhysicalMemoryMut<'a, DummyMemory>>>;
     type IntoProcessType = DummyProcess<DummyVirtMem<DummyMemory>>;
 
     /// Walks a process list and calls a callback for each process structure address
@@ -445,7 +446,11 @@ impl<'a> OsInner<'a> for DummyOs {
             .ok_or(Error(ErrorOrigin::OsLayer, ErrorKind::InvalidProcessInfo))?
             .clone();
         Ok(DummyProcess {
-            mem: VirtualDma::new(&mut self.mem, x64::ARCH, x64::new_translator(proc.dtb)),
+            mem: VirtualDma::new(
+                (&mut self.mem).into(),
+                x64::ARCH,
+                x64::new_translator(proc.dtb),
+            ),
             proc,
         })
     }
@@ -496,16 +501,8 @@ impl<'a> OsInner<'a> for DummyOs {
 impl AsPhysicalMemory for DummyOs {
     type PhysicalMemoryType = DummyMemory;
 
-    fn phys_mem(&mut self) -> Option<&mut Self::PhysicalMemoryType> {
-        Some(&mut self.mem)
-    }
-}
-
-impl AsVirtualMemory for DummyOs {
-    type VirtualMemoryType = DummyVirtMem<DummyMemory>;
-
-    fn virt_mem(&mut self) -> Option<&mut Self::VirtualMemoryType> {
-        None
+    fn phys_mem(&mut self) -> &mut Self::PhysicalMemoryType {
+        &mut self.mem
     }
 }
 
@@ -525,10 +522,11 @@ pub static MEMFLOW_OS_DUMMY: OsDescriptor = OsDescriptor {
 extern "C" fn mf_create(
     args: &ReprCString,
     mem: COption<ConnectorInstanceBox>,
+    lib: COptArc<Library>,
     log_level: i32,
-    out: &mut MuOsInstanceBox,
+    out: &mut MuOsInstanceBox<'static>,
 ) -> i32 {
-    create_bare(args, mem.into(), log_level, out, build_dummy)
+    create_bare(args, mem.into(), lib, log_level, out, build_dummy)
 }
 
 pub fn build_dummy(

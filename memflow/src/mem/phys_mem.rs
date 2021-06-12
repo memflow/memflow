@@ -99,6 +99,7 @@ use super::PhysicalMemoryCursor;
 /// # read(&mut DummyMemory::new(size::mb(4)));
 /// ```
 #[cglue_trait]
+#[cglue_arc_wrappable]
 #[int_result]
 pub trait PhysicalMemory: Send {
     fn phys_read_raw_list(&mut self, data: &mut [PhysicalReadData]) -> Result<()>;
@@ -313,11 +314,11 @@ pub trait PhysicalMemory: Send {
 
     #[cfg(feature = "std")]
     #[skip_func]
-    fn phys_cursor(&mut self) -> PhysicalMemoryCursor<&mut Self>
+    fn phys_cursor(&mut self) -> PhysicalMemoryCursor<PhysicalMemoryMut<Self>>
     where
         Self: Sized,
     {
-        PhysicalMemoryCursor::new(self)
+        PhysicalMemoryCursor::new(self.into())
     }
 
     #[cfg(feature = "std")]
@@ -331,11 +332,14 @@ pub trait PhysicalMemory: Send {
 
     #[cfg(feature = "std")]
     #[skip_func]
-    fn phys_cursor_at(&mut self, address: PhysicalAddress) -> PhysicalMemoryCursor<&mut Self>
+    fn phys_cursor_at(
+        &mut self,
+        address: PhysicalAddress,
+    ) -> PhysicalMemoryCursor<PhysicalMemoryMut<Self>>
     where
         Self: Sized,
     {
-        PhysicalMemoryCursor::at(self, address)
+        PhysicalMemoryCursor::at(self.into(), address)
     }
 
     #[cfg(feature = "std")]

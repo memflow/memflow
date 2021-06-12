@@ -7,7 +7,6 @@ use std::prelude::v1::*;
 use std::{fmt, result, str};
 
 use log::{debug, error, info, trace, warn};
-use std::mem::MaybeUninit;
 
 use cglue::result::IntError;
 
@@ -58,12 +57,12 @@ impl IntError for Error {
     fn into_int_err(self) -> NonZeroI32 {
         let origin = ((self.0 as i32 + 1) & 0xFFFi32) << 4;
         let kind = ((self.1 as i32 + 1) & 0xFFFi32) << 16;
-        (-(1 + origin + kind)).into()
+        NonZeroI32::new(-(1 + origin + kind)).unwrap()
     }
 
     fn from_int_err(err: NonZeroI32) -> Self {
-        let origin = ((-err - 1) >> 4i32) & 0xFFFi32;
-        let kind = ((-err - 1) >> 16i32) & 0xFFFi32;
+        let origin = ((-err.get() - 1) >> 4i32) & 0xFFFi32;
+        let kind = ((-err.get() - 1) >> 16i32) & 0xFFFi32;
 
         let error_origin = if origin > 0 && origin <= ErrorOrigin::Other as i32 + 1 {
             unsafe { std::mem::transmute(origin as u16 - 1) }
@@ -334,7 +333,7 @@ impl<T> PartialError<T> {
     }
 }
 
-impl<T> IntError for PartialError<T> {
+impl IntError for PartialError<()> {
     fn into_int_err(self) -> NonZeroI32 {
         match self {
             PartialError::Error(err) => err.into_int_err(),
@@ -344,9 +343,9 @@ impl<T> IntError for PartialError<T> {
     }
 
     fn from_int_err(err: NonZeroI32) -> Self {
-        let err = (-err.0) & 0xFi32;
+        let err = (-err.get()) & 0xFi32;
         match err {
-            1 => PartialError::Error(Error::from_int_err(err)),
+            1 => PartialError::Error(Error::from_int_err(NonZeroI32::new(err).unwrap())),
             2 => PartialError::PartialVirtualRead(()),
             3 => PartialError::PartialVirtualWrite,
             _ => PartialError::Error(Error(ErrorOrigin::Ffi, ErrorKind::Unknown)),
@@ -429,64 +428,9 @@ impl<T> PartialResultExt<T> for PartialResult<T> {
     }
 }
 
-pub fn result_from_int_void(res: i32) -> Result<()> {
-    if res == 0 {
-        Ok(())
-    } else {
-        Err(Error::from_i32(res))
-    }
-}
-
-pub fn result_from_int<T>(res: i32, out: MaybeUninit<T>) -> Result<T> {
-    if res == 0 {
-        Ok(unsafe { out.assume_init() })
-    } else {
-        Err(Error::from_i32(res))
-    }
-}
-
-pub fn part_result_from_int_void(res: i32) -> PartialResult<()> {
-    if res == 0 {
-        Ok(())
-    } else {
-        let err = (-res) & 0xFi32;
-        match err {
-            1 => Err(PartialError::Error(Error::from_i32(res))),
-            2 => Err(PartialError::PartialVirtualRead(())),
-            3 => Err(PartialError::PartialVirtualWrite),
-            _ => Err(PartialError::Error(Error(
-                ErrorOrigin::Ffi,
-                ErrorKind::Unknown,
-            ))),
-        }
-    }
-}
-
-pub fn part_result_from_int<T>(res: i32, out: MaybeUninit<T>) -> PartialResult<T> {
-    if res == 0 {
-        Ok(unsafe { out.assume_init() })
-    } else {
-        let err = (-res) & 0xFi32;
-        match err {
-            1 => Err(PartialError::Error(Error::from_i32(res))),
-            2 => Err(PartialError::PartialVirtualRead(unsafe {
-                out.assume_init()
-            })),
-            3 => Err(PartialError::PartialVirtualWrite),
-            _ => Err(PartialError::Error(Error(
-                ErrorOrigin::Ffi,
-                ErrorKind::Unknown,
-            ))),
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use super::{
-        part_result_from_int, part_result_from_int_void, result_from_int, result_from_int_void,
-        Error, ErrorKind, ErrorOrigin, PartialError, PartialResult, Result,
-    };
+    use super::{Error, ErrorKind, ErrorOrigin, PartialError, PartialResult, Result};
     use std::mem::MaybeUninit;
 
     #[test]

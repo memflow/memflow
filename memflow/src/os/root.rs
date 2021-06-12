@@ -110,7 +110,7 @@ pub trait OsInner<'a>: Send {
     /// Construct a process by its info, borrowing the OS
     ///
     /// It will share the underlying memory resources
-    fn process_by_info(&mut self, info: ProcessInfo) -> Result<Self::ProcessType>;
+    fn process_by_info(&'a mut self, info: ProcessInfo) -> Result<Self::ProcessType>;
     /// Construct a process by its info, consuming the OS
     ///
     /// This function will consume the Kernel instance and move its resources into the process

@@ -1,19 +1,10 @@
-use super::{Args, OptionMut};
+use super::Args;
 use crate::error::{Error, ErrorKind, ErrorOrigin};
-use cglue::repr_cstring::ReprCString;
+use cglue::{arc::COptArc, repr_cstring::ReprCString};
+use libloading::Library;
 
 use std::mem::MaybeUninit;
 use std::path::Path;
-
-pub extern "C" fn c_clone<T: Clone>(obj: &T) -> OptionMut<T> {
-    let cloned_conn = Box::new(obj.clone());
-    Some(Box::leak(cloned_conn))
-}
-
-pub unsafe extern "C" fn c_drop<T>(obj: &mut T) {
-    let _: Box<T> = Box::from_raw(obj);
-    // drop box
-}
 
 #[cfg(not(any(target_os = "windows", target_os = "macos")))]
 pub fn find_export_by_prefix(
@@ -118,6 +109,7 @@ pub fn find_export_by_prefix(
 /// This function is used by the proc macros
 pub fn create_with_logging<T>(
     args: &ReprCString,
+    lib: COptArc<Library>,
     log_level: i32,
     out: &mut MaybeUninit<T>,
     create_fn: impl FnOnce(Args, log::Level) -> Result<T, Error>,
@@ -154,6 +146,7 @@ pub fn create_with_logging<T>(
 pub fn create_bare<T, I>(
     args: &ReprCString,
     input: I,
+    lib: COptArc<Library>,
     log_level: i32,
     out: &mut MaybeUninit<T>,
     create_fn: impl FnOnce(&Args, I, log::Level) -> Result<T, Error>,
@@ -188,6 +181,7 @@ pub fn create_bare<T, I>(
 /// This function is used by the proc macros
 pub fn create_without_logging<T>(
     args: &ReprCString,
+    lib: COptArc<Library>,
     out: &mut MaybeUninit<T>,
     create_fn: impl FnOnce(super::Args) -> Result<T, Error>,
 ) -> i32 {

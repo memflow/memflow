@@ -57,7 +57,7 @@ impl ProcessState {
 #[int_result]
 pub trait Process: Send {
     #[wrap_with_obj_mut(crate::mem::virt_mem::VirtualMemory)]
-    type VirtualMemoryType: crate::mem::virt_mem::VirtualMemory + 'static;
+    type VirtualMemoryType: crate::mem::virt_mem::VirtualMemory;
 
     /// Retrieves virtual memory object for the process
     fn virt_mem(&mut self) -> &mut Self::VirtualMemoryType;

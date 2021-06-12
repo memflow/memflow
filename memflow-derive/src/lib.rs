@@ -90,10 +90,11 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
             extern "C" fn mf_create(
                 args: &cglue::repr_cstring::ReprCString,
                 _: Option<#prefix_gen::plugins::OsInstanceBox>,
+                lib: cglue::arc::COptArc<libloading::Library>,
                 log_level: i32,
                 out: &mut #prefix_gen::plugins::MuConnectorInstanceBox
             ) -> i32 {
-                #prefix_gen::plugins::connector::create_with_logging(args, log_level, out, #func_name)
+                #prefix_gen::plugins::connector::create_with_logging(args, log_level, lib, out, #func_name)
             }
         }
     } else {
@@ -102,10 +103,11 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
             extern "C" fn mf_create(
                 args: &cglue::repr_cstring::ReprCString,
                 _: Option<#prefix_gen::plugins::OsInstanceBox>,
+                lib: cglue::arc::COptArc<libloading::Library>,
                 _: i32,
                 out: &mut #prefix_gen::plugins::MuConnectorInstanceBox
             ) -> i32 {
-                #prefix_gen::plugins::connector::create_without_logging(args, out, #func_name)
+                #prefix_gen::plugins::connector::create_without_logging(args, lib, out, #func_name)
             }
         }
     };
@@ -210,10 +212,11 @@ pub fn os_layer(args: TokenStream, input: TokenStream) -> TokenStream {
             extern "C" fn mf_create(
                 args: &cglue::repr_cstring::ReprCString,
                 mem: ::memflow::types::COption<::memflow::plugins::ConnectorInstanceBox>,
+                lib: cglue::arc::COptArc<libloading::Library>,
                 log_level: i32,
                 out: &mut ::memflow::plugins::MuOsInstanceBox
             ) -> i32 {
-                ::memflow::plugins::os::create_with_logging(args, mem.into(), log_level, out, #func_name)
+                ::memflow::plugins::os::create_with_logging(args, mem.into(), lib, log_level, out, #func_name)
             }
         }
     } else {
@@ -222,10 +225,11 @@ pub fn os_layer(args: TokenStream, input: TokenStream) -> TokenStream {
             extern "C" fn mf_create(
                 args: &cglue::repr_cstring::ReprCString,
                 mem: ::memflow::types::COption<::memflow::plugins::ConnectorInstanceBox>,
+                lib: cglue::arc::COptArc<libloading::Library>,
                 _: i32,
                 out: &mut ::memflow::plugins::MuOsInstanceBox
             ) -> i32 {
-                ::memflow::plugins::os::create_without_logging(args, mem.into(), out, #func_name)
+                ::memflow::plugins::os::create_without_logging(args, mem.into(), lib, out, #func_name)
             }
         }
     };
@@ -306,10 +310,11 @@ pub fn os_layer_bare(args: TokenStream, input: TokenStream) -> TokenStream {
         extern "C" fn mf_create(
             args: &cglue::repr_cstring::ReprCString,
             mem: ::memflow::types::COption<::memflow::plugins::ConnectorInstanceBox>,
+            lib: cglue::arc::COptArc<libloading::Library>,
             log_level: i32,
             out: &mut ::memflow::plugins::MuOsInstanceBox
         ) -> i32 {
-            ::memflow::plugins::create_bare(args, mem.into(), log_level, out, #func_name)
+            ::memflow::plugins::create_bare(args, mem.into(), lib, log_level, out, #func_name)
         }
     };
 

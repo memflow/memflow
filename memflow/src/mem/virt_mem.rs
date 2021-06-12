@@ -300,11 +300,11 @@ pub trait VirtualMemory: Send {
 
     #[cfg(feature = "std")]
     #[skip_func]
-    fn virt_cursor(&mut self) -> VirtualMemoryCursor<&mut Self>
+    fn virt_cursor(&mut self) -> VirtualMemoryCursor<VirtualMemoryMut<Self>>
     where
         Self: Sized,
     {
-        VirtualMemoryCursor::new(self)
+        VirtualMemoryCursor::new(self.into())
     }
 
     #[cfg(feature = "std")]
@@ -318,11 +318,11 @@ pub trait VirtualMemory: Send {
 
     #[cfg(feature = "std")]
     #[skip_func]
-    fn virt_cursor_at(&mut self, address: Address) -> VirtualMemoryCursor<&mut Self>
+    fn virt_cursor_at(&mut self, address: Address) -> VirtualMemoryCursor<VirtualMemoryMut<Self>>
     where
         Self: Sized,
     {
-        VirtualMemoryCursor::at(self, address)
+        VirtualMemoryCursor::at(self.into(), address)
     }
 
     #[cfg(feature = "std")]

@@ -31,7 +31,6 @@ use crate::os::root::*;
 use crate::types::OpaqueCallback;
 
 use log::*;
-use std::ffi::c_void;
 use std::fs::read_dir;
 use std::mem::MaybeUninit;
 use std::path::{Path, PathBuf};

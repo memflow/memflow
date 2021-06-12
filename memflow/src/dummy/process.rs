@@ -3,6 +3,7 @@ use crate::architecture::ScopedVirtualTranslate;
 use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 
 use crate::architecture::ArchitectureIdent;
+use crate::mem::virt_mem::AsVirtualMemory;
 use crate::mem::VirtualMemory;
 use crate::os::{
     ExportCallback, ImportCallback, ModuleAddressCallback, ModuleAddressInfo, ModuleInfo, Process,
@@ -47,14 +48,6 @@ pub struct DummyProcess<T> {
 }
 
 impl<T: VirtualMemory> Process for DummyProcess<T> {
-    type VirtualMemoryType = T;
-    //type VirtualTranslateType: VirtualTranslate;
-
-    /// Retrieves virtual memory object for the process
-    fn virt_mem(&mut self) -> &mut Self::VirtualMemoryType {
-        &mut self.mem
-    }
-
     /// Retrieves virtual address translator for the process (if applicable)
     //fn vat(&mut self) -> Option<&mut Self::VirtualTranslateType>;
 
@@ -140,5 +133,15 @@ impl<T: VirtualMemory> Process for DummyProcess<T> {
     /// Retrieves the process info
     fn info(&self) -> &ProcessInfo {
         &self.proc.info
+    }
+}
+
+impl<T: VirtualMemory> AsVirtualMemory for DummyProcess<T> {
+    type VirtualMemoryType = T;
+    //type VirtualTranslateType: VirtualTranslate;
+
+    /// Retrieves virtual memory object for the process
+    fn virt_mem(&mut self) -> &mut Self::VirtualMemoryType {
+        &mut self.mem
     }
 }

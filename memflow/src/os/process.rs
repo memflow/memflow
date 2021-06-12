@@ -4,12 +4,13 @@ use super::{
     ExportCallback, ExportInfo, ImportCallback, ImportInfo, ModuleAddressInfo, ModuleInfo,
     ModuleInfoCallback, SectionCallback, SectionInfo,
 };
+use crate::mem::virt_mem::*;
 use crate::prelude::v1::{Result, *};
 use cglue::{repr_cstring::ReprCString, *};
 use std::prelude::v1::*;
 
-// TODO: removeme?
-use crate::mem::virt_mem::CGlueBaseVirtualMemory;
+// ProcessInstance group for Process and AsVirtualMemory
+cglue_trait_group!(ProcessInstance, { Process }, { AsVirtualMemory });
 
 /// Type meant for process IDs
 ///
@@ -56,12 +57,6 @@ impl ProcessState {
 #[cglue_trait]
 #[int_result]
 pub trait Process: Send {
-    #[wrap_with_obj_mut(crate::mem::virt_mem::VirtualMemory)]
-    type VirtualMemoryType: crate::mem::virt_mem::VirtualMemory;
-
-    /// Retrieves virtual memory object for the process
-    fn virt_mem(&mut self) -> &mut Self::VirtualMemoryType;
-
     /// Retrieves the state of the process
     fn state(&mut self) -> ProcessState;
 

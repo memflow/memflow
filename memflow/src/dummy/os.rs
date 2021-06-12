@@ -2,9 +2,9 @@ use super::{DummyMemory, DummyProcessInfo};
 use crate::architecture::ArchitectureIdent;
 use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 use crate::mem::phys_mem::{AsPhysicalMemory, PhysicalMemoryMut};
-use crate::mem::virt_mem::{AsVirtualMemory, VirtualDma};
+use crate::mem::virt_mem::VirtualDma;
 use crate::mem::PhysicalMemory;
-use crate::os::{ModuleInfo, Os, OsInfo, Pid, ProcessInfo};
+use crate::os::{ModuleInfo, OsInfo, Pid, ProcessInfo};
 use crate::plugins::{
     create_bare, os::OsDescriptor, Args, ConnectorInstanceBox, MuOsInstanceBox, OsInstance,
     OsInstanceBox, MEMFLOW_PLUGIN_VERSION,

@@ -1,24 +1,15 @@
 use crate::error::*;
-use crate::os::*;
-use crate::types::Address;
 
 use super::{
-    Args, ConnectorInstance, ConnectorInstanceBox, Loadable, MuOsInstanceBox, OsInstance,
-    OsInstanceBox, PluginDescriptor, TargetInfo,
+    Args, ConnectorInstanceBox, Loadable, MuOsInstanceBox, OsInstance, OsInstanceBox,
+    PluginDescriptor, TargetInfo,
 };
 
 use cglue::*;
 use cglue::{
-    arc::CArc,
-    arc::{ArcWrapped, COptArc},
-    boxed::CBox,
-    option::COption,
-    repr_cstring::ReprCString,
-    result::{from_int_result, from_int_result_empty},
+    arc::COptArc, boxed::CBox, option::COption, repr_cstring::ReprCString, result::from_int_result,
 };
 use libloading::Library;
-
-use std::mem::MaybeUninit;
 
 pub type OptionArchitectureIdent<'a> = Option<&'a crate::architecture::ArchitectureIdent>;
 

@@ -1,7 +1,7 @@
 //! Describes the root of the Operating System
 
 use super::process::*;
-use super::{AddressCallback, Process, ProcessInfo, ProcessInfoCallback};
+use super::{AddressCallback, ProcessInfo, ProcessInfoCallback};
 use crate::prelude::v1::{Result, *};
 use cglue::*;
 use std::prelude::v1::*;
@@ -23,9 +23,9 @@ impl<T: for<'a> OsInner<'a>> Os for T {}
 #[cglue_trait]
 #[int_result]
 pub trait OsInner<'a>: Send {
-    #[wrap_with_obj(crate::os::process::Process)]
+    #[wrap_with_group(crate::os::process::ProcessInstance)]
     type ProcessType: crate::os::process::Process + 'a;
-    #[wrap_with_obj(crate::os::process::Process)]
+    #[wrap_with_group(crate::os::process::ProcessInstance)]
     type IntoProcessType: crate::os::process::Process + 'static;
 
     /// Walks a process list and calls a callback for each process structure address

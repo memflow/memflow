@@ -4,16 +4,19 @@ use super::{Win32Kernel, Win32ModuleListInfo};
 
 use std::fmt;
 
+use cglue::repr_cstring::ReprCString;
 use memflow::architecture::ArchitectureIdent;
 use memflow::error::PartialResultExt;
 use memflow::error::{Error, ErrorKind, ErrorOrigin, Result};
-use memflow::mem::{PhysicalMemory, VirtualDma, VirtualMemory, VirtualTranslate};
+use memflow::mem::{
+    virt_mem::AsVirtualMemory, PhysicalMemory, VirtualDma, VirtualMemory, VirtualTranslate,
+};
 use memflow::os::{
     ExportCallback, ExportInfo, ImportCallback, ImportInfo, ModuleAddressCallback,
     ModuleAddressInfo, ModuleInfo, Process, ProcessInfo, ProcessState, SectionCallback,
     SectionInfo,
 };
-use memflow::types::{Address, ReprCString};
+use memflow::types::Address;
 
 use goblin::pe::{options::ParseOptions, PE};
 
@@ -121,7 +124,7 @@ impl<V: VirtualMemory> AsMut<V> for Win32Process<V> {
     }
 }
 
-impl<T: VirtualMemory> Process for Win32Process<T> {
+impl<T: VirtualMemory> AsVirtualMemory for Win32Process<T> {
     type VirtualMemoryType = T;
     //type VirtualTranslateType: VirtualTranslate;
 
@@ -129,7 +132,9 @@ impl<T: VirtualMemory> Process for Win32Process<T> {
     fn virt_mem(&mut self) -> &mut Self::VirtualMemoryType {
         &mut self.virt_mem
     }
+}
 
+impl<T: VirtualMemory> Process for Win32Process<T> {
     /// Retrieves virtual address translator for the process (if applicable)
     //fn vat(&mut self) -> Option<&mut Self::VirtualTranslateType>;
 

@@ -7,7 +7,7 @@ use crate::os::{ModuleInfo, OsInfo, Pid, ProcessInfo};
 use crate::plugins::os::OsDescriptor;
 use crate::plugins::*;
 use crate::types::{size, Address};
-use cglue::{arc::COptArc, option::COption, repr_cstring::ReprCString, *};
+use cglue::{arc::COptArc, forward::*, option::COption, repr_cstring::ReprCString, *};
 use libloading::Library;
 use log::Level;
 use rand::seq::SliceRandom;
@@ -410,7 +410,7 @@ use crate::os::{AddressCallback, OsInner};
 pub type DummyVirtMem<T> = VirtualDma<T, DirectTranslate, X86ScopedVirtualTranslate>;
 
 impl<'a> OsInner<'a> for DummyOs {
-    type ProcessType = DummyProcess<DummyVirtMem<PhysicalMemoryMut<'a, DummyMemory>>>;
+    type ProcessType = DummyProcess<DummyVirtMem<Fwd<&'a mut DummyMemory>>>;
     type IntoProcessType = DummyProcess<DummyVirtMem<DummyMemory>>;
 
     /// Walks a process list and calls a callback for each process structure address
@@ -446,7 +446,7 @@ impl<'a> OsInner<'a> for DummyOs {
             .clone();
         Ok(DummyProcess {
             mem: VirtualDma::new(
-                (&mut self.mem).into(),
+                self.mem.forward_mut(),
                 x64::ARCH,
                 x64::new_translator(proc.dtb),
             ),

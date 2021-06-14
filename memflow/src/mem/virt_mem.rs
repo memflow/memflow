@@ -11,6 +11,7 @@ use crate::error::{
 };
 use crate::types::{Address, Page, PhysicalAddress, Pointer32, Pointer64};
 
+use cglue::forward::*;
 use cglue::*;
 use std::mem::MaybeUninit;
 
@@ -49,6 +50,7 @@ use super::VirtualMemoryCursor;
 /// ```
 #[cglue_trait]
 #[int_result]
+#[cglue_forward]
 pub trait VirtualMemory: Send {
     fn virt_read_raw_list(&mut self, data: &mut [VirtualReadData]) -> PartialResult<()>;
 
@@ -300,11 +302,11 @@ pub trait VirtualMemory: Send {
 
     #[cfg(feature = "std")]
     #[skip_func]
-    fn virt_cursor(&mut self) -> VirtualMemoryCursor<VirtualMemoryMut<Self>>
+    fn virt_cursor(&mut self) -> VirtualMemoryCursor<Fwd<&mut Self>>
     where
         Self: Sized,
     {
-        VirtualMemoryCursor::new(self.into())
+        VirtualMemoryCursor::new(self.forward())
     }
 
     #[cfg(feature = "std")]
@@ -318,11 +320,11 @@ pub trait VirtualMemory: Send {
 
     #[cfg(feature = "std")]
     #[skip_func]
-    fn virt_cursor_at(&mut self, address: Address) -> VirtualMemoryCursor<VirtualMemoryMut<Self>>
+    fn virt_cursor_at(&mut self, address: Address) -> VirtualMemoryCursor<Fwd<&mut Self>>
     where
         Self: Sized,
     {
-        VirtualMemoryCursor::at(self.into(), address)
+        VirtualMemoryCursor::at(self.forward(), address)
     }
 
     #[cfg(feature = "std")]
@@ -332,52 +334,6 @@ pub trait VirtualMemory: Send {
         Self: Sized,
     {
         VirtualMemoryCursor::at(self, address)
-    }
-}
-
-// forward impls
-
-pub struct VirtualMemoryMut<'a, T>(&'a mut T);
-impl<'a, T: VirtualMemory> VirtualMemory for VirtualMemoryMut<'a, T> {
-    #[inline]
-    fn virt_read_raw_list(&mut self, data: &mut [VirtualReadData]) -> PartialResult<()> {
-        self.0.virt_read_raw_list(data)
-    }
-
-    #[inline]
-    fn virt_write_raw_list(&mut self, data: &[VirtualWriteData]) -> PartialResult<()> {
-        self.0.virt_write_raw_list(data)
-    }
-
-    #[inline]
-    fn virt_page_info(&mut self, addr: Address) -> Result<Page> {
-        self.0.virt_page_info(addr)
-    }
-
-    #[inline]
-    fn virt_translation_map_range(
-        &mut self,
-        start: Address,
-        end: Address,
-    ) -> Vec<(Address, usize, PhysicalAddress)> {
-        self.0.virt_translation_map_range(start, end)
-    }
-
-    #[inline]
-    fn virt_page_map_range(
-        &mut self,
-        gap_size: usize,
-        start: Address,
-        end: Address,
-    ) -> Vec<(Address, usize)> {
-        self.0.virt_page_map_range(gap_size, start, end)
-    }
-}
-
-impl<'a, T: VirtualMemory> From<&'a mut T> for VirtualMemoryMut<'a, T> {
-    #[inline]
-    fn from(mem: &'a mut T) -> Self {
-        Self(mem)
     }
 }
 

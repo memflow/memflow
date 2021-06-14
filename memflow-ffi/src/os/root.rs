@@ -1,3 +1,5 @@
+use memflow::mem::phys_mem::*;
+use memflow::mem::virt_mem::*;
 use memflow::os::*;
 use memflow::plugins::*;
 
@@ -33,30 +35,11 @@ use memflow::plugins::*;
 // os_module_by_name
 
 // os_info
+//#[no_mangle]
+//pub unsafe extern "C" fn os_phys_mem<'a>(os: &'a mut OsInstanceBox) -> Option<&'a mut CGlueBoxPhysicalMemory> {
+//}
 
-/// Returns a reference to the [`PhysicalMemory`] object this OS uses.
-/// The [`PhysicalMemory`] usually is just the Connector this OS was intitialized with.
-///
-/// If no connector is used `null` is returned.
-///
-/// # Safety
-///
-/// `os` must point to a valid `OsInstance` that was created using one of the provided
-/// functions.
-#[no_mangle]
-pub unsafe extern "C" fn os_phys_mem(os: &mut OsInstance) -> Option<&mut PhysicalMemoryInstance> {
-    os.phys_mem()
-}
-
-/// Returns a reference to the [`VirtualMemory`] object this OS uses.
-///
-/// If no [`VirtualMemory`] object is used `null` is returned.
-///
-/// # Safety
-///
-/// `os` must point to a valid `OsInstance` that was created using one of the provided
-/// functions.
-#[no_mangle]
-pub unsafe extern "C" fn os_virt_mem(os: &mut OsInstance) -> Option<&mut VirtualMemoryInstance> {
-    os.virt_mem()
-}
+//#[no_mangle]
+//pub unsafe extern "C" fn os_virt_mem(os: &mut OsInstanceBox) -> Option<&mut CGlueBoxVirtualMemory> {
+//    os.virt_mem()
+//}

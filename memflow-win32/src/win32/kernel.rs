@@ -13,13 +13,17 @@ use crate::{
 use log::{info, trace};
 use std::fmt;
 
+use cglue::{forward::Fwd, repr_cstring::ReprCString};
 use memflow::architecture::{ArchitectureIdent, ArchitectureObj};
 use memflow::error::{Error, ErrorKind, ErrorOrigin, Result};
-use memflow::mem::{DirectTranslate, PhysicalMemory, VirtualDma, VirtualMemory, VirtualTranslate};
+use memflow::mem::{
+    phys_mem::AsPhysicalMemory, virt_mem::AsVirtualMemory, DirectTranslate, PhysicalMemory,
+    VirtualDma, VirtualMemory, VirtualTranslate,
+};
 use memflow::os::{
     AddressCallback, ModuleInfo, OsInfo, OsInner, OsKeyboardInner, Pid, Process, ProcessInfo,
 };
-use memflow::types::{Address, ReprCString};
+use memflow::types::Address;
 
 use pelite::{self, pe64::exports::Export, PeView};
 
@@ -445,12 +449,26 @@ impl<T: PhysicalMemory, V: VirtualTranslate> AsMut<VirtualDma<T, V, Win32Virtual
     }
 }
 
-impl<'a, T: PhysicalMemory + 'a, V: VirtualTranslate + 'a> OsInner<'a> for Win32Kernel<T, V> {
-    type ProcessType = Win32Process<VirtualDma<&'a mut T, &'a mut V, Win32VirtualTranslate>>;
-    type IntoProcessType = Win32Process<VirtualDma<T, V, Win32VirtualTranslate>>;
-
+impl<T: PhysicalMemory, V> AsPhysicalMemory for Win32Kernel<T, V> {
     type PhysicalMemoryType = T;
+
+    fn phys_mem(&mut self) -> &mut Self::PhysicalMemoryType {
+        self.virt_mem.phys_mem()
+    }
+}
+
+impl<T: PhysicalMemory, V: VirtualTranslate> AsVirtualMemory for Win32Kernel<T, V> {
     type VirtualMemoryType = VirtualDma<T, V, Win32VirtualTranslate>;
+
+    fn virt_mem(&mut self) -> &mut Self::VirtualMemoryType {
+        &mut self.virt_mem
+    }
+}
+
+impl<'a, T: PhysicalMemory + 'a, V: VirtualTranslate + 'a> OsInner<'a> for Win32Kernel<T, V> {
+    type ProcessType =
+        Win32Process<VirtualDma<Fwd<&'a mut T>, Fwd<&'a mut V>, Win32VirtualTranslate>>;
+    type IntoProcessType = Win32Process<VirtualDma<T, V, Win32VirtualTranslate>>;
 
     /// Walks a process list and calls a callback for each process structure address
     ///
@@ -570,14 +588,6 @@ impl<'a, T: PhysicalMemory + 'a, V: VirtualTranslate + 'a> OsInner<'a> for Win32
     /// Retrieves the kernel info
     fn info(&self) -> &OsInfo {
         &self.kernel_info.os_info
-    }
-
-    fn phys_mem(&mut self) -> Option<&mut Self::PhysicalMemoryType> {
-        Some(self.virt_mem.phys_mem())
-    }
-
-    fn virt_mem(&mut self) -> Option<&mut Self::VirtualMemoryType> {
-        Some(&mut self.virt_mem)
     }
 }
 

@@ -7,6 +7,7 @@ use crate::types::{Address, PhysicalAddress, Pointer32, Pointer64};
 
 use std::mem::MaybeUninit;
 
+use cglue::forward::*;
 use cglue::*;
 
 #[cfg(feature = "std")]
@@ -101,6 +102,7 @@ use super::PhysicalMemoryCursor;
 #[cglue_trait]
 #[cglue_arc_wrappable]
 #[int_result]
+#[cglue_forward]
 pub trait PhysicalMemory: Send {
     fn phys_read_raw_list(&mut self, data: &mut [PhysicalReadData]) -> Result<()>;
     fn phys_write_raw_list(&mut self, data: &[PhysicalWriteData]) -> Result<()>;
@@ -314,11 +316,11 @@ pub trait PhysicalMemory: Send {
 
     #[cfg(feature = "std")]
     #[skip_func]
-    fn phys_cursor(&mut self) -> PhysicalMemoryCursor<PhysicalMemoryMut<Self>>
+    fn phys_cursor(&mut self) -> PhysicalMemoryCursor<Fwd<&mut Self>>
     where
         Self: Sized,
     {
-        PhysicalMemoryCursor::new(self.into())
+        PhysicalMemoryCursor::new(self.forward())
     }
 
     #[cfg(feature = "std")]
@@ -332,14 +334,11 @@ pub trait PhysicalMemory: Send {
 
     #[cfg(feature = "std")]
     #[skip_func]
-    fn phys_cursor_at(
-        &mut self,
-        address: PhysicalAddress,
-    ) -> PhysicalMemoryCursor<PhysicalMemoryMut<Self>>
+    fn phys_cursor_at(&mut self, address: PhysicalAddress) -> PhysicalMemoryCursor<Fwd<&mut Self>>
     where
         Self: Sized,
     {
-        PhysicalMemoryCursor::at(self.into(), address)
+        PhysicalMemoryCursor::at(self.forward(), address)
     }
 
     #[cfg(feature = "std")]
@@ -349,37 +348,6 @@ pub trait PhysicalMemory: Send {
         Self: Sized,
     {
         PhysicalMemoryCursor::at(self, address)
-    }
-}
-
-// forward impls
-pub struct PhysicalMemoryMut<'a, T>(&'a mut T);
-impl<'a, T: PhysicalMemory> PhysicalMemory for PhysicalMemoryMut<'a, T> {
-    #[inline]
-    fn phys_read_raw_list(&mut self, data: &mut [PhysicalReadData]) -> Result<()> {
-        self.0.phys_read_raw_list(data)
-    }
-
-    #[inline]
-    fn phys_write_raw_list(&mut self, data: &[PhysicalWriteData]) -> Result<()> {
-        self.0.phys_write_raw_list(data)
-    }
-
-    #[inline]
-    fn metadata(&self) -> PhysicalMemoryMetadata {
-        self.0.metadata()
-    }
-
-    #[inline]
-    fn set_mem_map(&mut self, mem_map: MemoryMap<(Address, usize)>) {
-        self.0.set_mem_map(mem_map)
-    }
-}
-
-impl<'a, T: PhysicalMemory> From<&'a mut T> for PhysicalMemoryMut<'a, T> {
-    #[inline]
-    fn from(mem: &'a mut T) -> Self {
-        Self(mem)
     }
 }
 

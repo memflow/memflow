@@ -24,7 +24,7 @@ crate-type = ["lib", "cdylib", "staticlib"]
 memflow = { version = "0.1", path = "../memflow" }
 log = "0.4"
 simple_logger = "1.9"
-cglue = { path = "../../../cglue/cglue" }
+cglue = { path = "../../cglue/cglue" }
 
 [features]
 default = []

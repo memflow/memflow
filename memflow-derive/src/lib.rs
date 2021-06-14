@@ -11,8 +11,6 @@ struct ConnectorFactoryArgs {
     #[darling(default)]
     description: Option<String>,
     #[darling(default)]
-    import_prefix: Option<String>,
-    #[darling(default)]
     help_fn: Option<String>,
     #[darling(default)]
     target_list_fn: Option<String>,
@@ -58,11 +56,6 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
         |d| quote! { #d },
     );
 
-    let prefix_gen = args.import_prefix.map(|v| v.parse().unwrap()).map_or_else(
-        || quote! { ::memflow },
-        |v: proc_macro2::TokenStream| quote! { #v },
-    );
-
     let help_gen = if args.help_fn.is_some() {
         quote! { Some(mf_help_callback) }
     } else {
@@ -89,12 +82,12 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
             #[doc(hidden)]
             extern "C" fn mf_create(
                 args: &cglue::repr_cstring::ReprCString,
-                _: Option<#prefix_gen::plugins::OsInstanceBox>,
-                lib: cglue::arc::COptArc<libloading::Library>,
+                _: Option<::memflow::plugins::OsInstanceBox>,
+                lib: cglue::arc::COptArc<::memflow::libloading::Library>,
                 log_level: i32,
-                out: &mut #prefix_gen::plugins::MuConnectorInstanceBox<'static>
+                out: &mut ::memflow::plugins::MuConnectorInstanceBox<'static>
             ) -> i32 {
-                #prefix_gen::plugins::connector::create_with_logging(args, log_level, lib, out, #func_name)
+                ::memflow::plugins::connector::create_with_logging(args, log_level, lib, out, #func_name)
             }
         }
     } else {
@@ -102,12 +95,12 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
             #[doc(hidden)]
             extern "C" fn mf_create(
                 args: &cglue::repr_cstring::ReprCString,
-                _: Option<#prefix_gen::plugins::OsInstanceBox>,
-                lib: cglue::arc::COptArc<libloading::Library>,
+                _: Option<::memflow::plugins::OsInstanceBox>,
+                lib: cglue::arc::COptArc<::memflow::libloading::Library>,
                 _: i32,
-                out: &mut #prefix_gen::plugins::MuConnectorInstanceBox<'static>
+                out: &mut ::memflow::plugins::MuConnectorInstanceBox<'static>
             ) -> i32 {
-                #prefix_gen::plugins::connector::create_without_logging(args, lib, out, #func_name)
+                ::memflow::plugins::connector::create_without_logging(args, lib, out, #func_name)
             }
         }
     };
@@ -118,7 +111,7 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
             quote! {
                 #[doc(hidden)]
                 extern "C" fn mf_help_callback(
-                    mut callback: #prefix_gen::plugins::HelpCallback,
+                    mut callback: ::memflow::plugins::HelpCallback,
                 ) {
                     let helpstr = #func_name();
                     let _ = callback.call(helpstr.into());
@@ -133,7 +126,7 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
             quote! {
                 #[doc(hidden)]
                 extern "C" fn mf_target_list_callback(
-                    mut callback: #prefix_gen::plugins::TargetCallback,
+                    mut callback: ::memflow::plugins::TargetCallback,
                 ) -> i32 {
                     #func_name()
                         .map(|mut targets| {
@@ -151,8 +144,8 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
     let gen = quote! {
         #[doc(hidden)]
         #[no_mangle]
-        pub static #connector_descriptor: #prefix_gen::plugins::ConnectorDescriptor = #prefix_gen::plugins::ConnectorDescriptor {
-            plugin_version: #prefix_gen::plugins::MEMFLOW_PLUGIN_VERSION,
+        pub static #connector_descriptor: ::memflow::plugins::ConnectorDescriptor = ::memflow::plugins::ConnectorDescriptor {
+            plugin_version: ::memflow::plugins::MEMFLOW_PLUGIN_VERSION,
             name: #connector_name,
             version: #version_gen,
             description: #description_gen,
@@ -212,7 +205,7 @@ pub fn os_layer(args: TokenStream, input: TokenStream) -> TokenStream {
             extern "C" fn mf_create(
                 args: &cglue::repr_cstring::ReprCString,
                 mem: ::memflow::types::COption<::memflow::plugins::ConnectorInstanceBox>,
-                lib: cglue::arc::COptArc<libloading::Library>,
+                lib: cglue::arc::COptArc<::memflow::libloading::Library>,
                 log_level: i32,
                 out: &mut ::memflow::plugins::MuOsInstanceBox
             ) -> i32 {
@@ -225,7 +218,7 @@ pub fn os_layer(args: TokenStream, input: TokenStream) -> TokenStream {
             extern "C" fn mf_create(
                 args: &cglue::repr_cstring::ReprCString,
                 mem: ::memflow::types::COption<::memflow::plugins::ConnectorInstanceBox>,
-                lib: cglue::arc::COptArc<libloading::Library>,
+                lib: cglue::arc::COptArc<::memflow::libloading::Library>,
                 _: i32,
                 out: &mut ::memflow::plugins::MuOsInstanceBox
             ) -> i32 {
@@ -310,7 +303,7 @@ pub fn os_layer_bare(args: TokenStream, input: TokenStream) -> TokenStream {
         extern "C" fn mf_create(
             args: &cglue::repr_cstring::ReprCString,
             mem: ::memflow::types::COption<::memflow::plugins::ConnectorInstanceBox>,
-            lib: cglue::arc::COptArc<libloading::Library>,
+            lib: cglue::arc::COptArc<::memflow::libloading::Library>,
             log_level: i32,
             out: &mut ::memflow::plugins::MuOsInstanceBox
         ) -> i32 {

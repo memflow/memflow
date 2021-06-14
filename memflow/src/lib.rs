@@ -56,9 +56,19 @@ pub mod derive {
 }
 
 #[doc(hidden)]
+pub mod cglue {
+    pub use ::cglue::prelude::v1::*;
+}
+
+#[doc(hidden)]
 pub mod dataview {
     pub use ::dataview::*;
     pub use ::memflow_derive::Pod;
+}
+
+#[doc(hidden)]
+pub mod libloading {
+    pub use ::libloading::*;
 }
 
 #[doc(hidden)]

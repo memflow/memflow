@@ -92,7 +92,7 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
                 _: Option<#prefix_gen::plugins::OsInstanceBox>,
                 lib: cglue::arc::COptArc<libloading::Library>,
                 log_level: i32,
-                out: &mut #prefix_gen::plugins::MuConnectorInstanceBox
+                out: &mut #prefix_gen::plugins::MuConnectorInstanceBox<'static>
             ) -> i32 {
                 #prefix_gen::plugins::connector::create_with_logging(args, log_level, lib, out, #func_name)
             }
@@ -105,7 +105,7 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
                 _: Option<#prefix_gen::plugins::OsInstanceBox>,
                 lib: cglue::arc::COptArc<libloading::Library>,
                 _: i32,
-                out: &mut #prefix_gen::plugins::MuConnectorInstanceBox
+                out: &mut #prefix_gen::plugins::MuConnectorInstanceBox<'static>
             ) -> i32 {
                 #prefix_gen::plugins::connector::create_without_logging(args, lib, out, #func_name)
             }

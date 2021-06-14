@@ -337,8 +337,8 @@ impl IntError for PartialError<()> {
     fn into_int_err(self) -> NonZeroI32 {
         match self {
             PartialError::Error(err) => err.into_int_err(),
-            PartialError::PartialVirtualRead(_) => NonZeroI32 { 0: -2 },
-            PartialError::PartialVirtualWrite => NonZeroI32 { 0: -3 },
+            PartialError::PartialVirtualRead(_) => NonZeroI32::new(-2).unwrap(),
+            PartialError::PartialVirtualWrite => NonZeroI32::new(-3).unwrap(),
         }
     }
 

@@ -102,7 +102,7 @@ pub fn parse_size(args: &Args) -> Result<usize> {
 }
 
 #[connector(name = "dummy", import_prefix = "crate")]
-pub fn create_connector(args: &Args) -> Result<impl PhysicalMemory + Clone> {
+pub fn create_connector(args: &Args) -> Result<DummyMemory> {
     let size = parse_size(args)?;
     Ok(DummyMemory::new(size))
 }

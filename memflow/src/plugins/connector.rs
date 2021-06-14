@@ -2,43 +2,40 @@ use crate::error::*;
 use crate::mem::PhysicalMemory;
 
 use super::{
-    Args, ConnectorInstance, ConnectorInstanceBox, Loadable, MuConnectorInstanceBox, OsInstanceBox,
-    PluginDescriptor, TargetInfo,
+    Args, ConnectorInstance, ConnectorInstanceBaseBox, ConnectorInstanceBox, Loadable,
+    MuConnectorInstanceBox, OsInstanceBox, PluginDescriptor, TargetInfo,
 };
 
 use cglue::*;
 use cglue::{
     arc::COptArc,
-    boxed::CBox,
     repr_cstring::ReprCString,
     result::{from_int_result, from_int_result_empty},
 };
 use libloading::Library;
 
-pub fn create_with_logging<T: 'static + PhysicalMemory + Clone>(
+pub fn create_with_logging<
+    T: 'static + PhysicalMemory + Clone + Into<ConnectorInstanceBaseBox<'static, T>>,
+>(
     args: &ReprCString,
     lib: COptArc<Library>,
     log_level: i32,
     out: &mut MuConnectorInstanceBox<'static>,
     create_fn: impl Fn(&Args, log::Level) -> Result<T>,
-) -> i32
-where
-    ConnectorInstance<'static, CBox<'static, T>, T>: From<T>,
-{
+) -> i32 {
     super::util::create_with_logging(args, lib, log_level, out, |a, l| {
         Ok(group_obj!(create_fn(&a, l)? as ConnectorInstance))
     })
 }
 
-pub fn create_without_logging<T: 'static + PhysicalMemory + Clone>(
+pub fn create_without_logging<
+    T: 'static + PhysicalMemory + Clone + Into<ConnectorInstanceBaseBox<'static, T>>,
+>(
     args: &ReprCString,
     lib: COptArc<Library>,
     out: &mut MuConnectorInstanceBox<'static>,
     create_fn: impl Fn(&Args) -> Result<T>,
-) -> i32
-where
-    ConnectorInstance<'static, CBox<'static, T>, T>: From<T>,
-{
+) -> i32 {
     super::util::create_without_logging(args, lib, out, |a| {
         Ok(group_obj!(create_fn(&a)? as ConnectorInstance))
     })

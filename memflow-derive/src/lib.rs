@@ -1,6 +1,7 @@
 use darling::FromMeta;
 use proc_macro::TokenStream;
-use quote::quote;
+use proc_macro_crate::*;
+use quote::{format_ident, quote};
 use syn::{parse_macro_input, AttributeArgs, Data, DeriveInput, Fields, ItemFn};
 
 #[derive(Debug, FromMeta)]
@@ -39,6 +40,8 @@ struct OsFactoryArgs {
 // #[cfg(crate_type = "cdylib")]
 #[proc_macro_attribute]
 pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
+    let crate_path = crate_path();
+
     let attr_args = parse_macro_input!(args as AttributeArgs);
     let args = match ConnectorFactoryArgs::from_list(&attr_args) {
         Ok(v) => v,
@@ -82,12 +85,12 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
             #[doc(hidden)]
             extern "C" fn mf_create(
                 args: &cglue::repr_cstring::ReprCString,
-                _: Option<::memflow::plugins::OsInstanceBox>,
-                lib: cglue::arc::COptArc<::memflow::libloading::Library>,
+                _: Option<#crate_path::plugins::OsInstanceBox>,
+                lib: cglue::arc::COptArc<#crate_path::libloading::Library>,
                 log_level: i32,
-                out: &mut ::memflow::plugins::MuConnectorInstanceBox<'static>
+                out: &mut #crate_path::plugins::MuConnectorInstanceBox<'static>
             ) -> i32 {
-                ::memflow::plugins::connector::create_with_logging(args, log_level, lib, out, #func_name)
+                #crate_path::plugins::connector::create_with_logging(args, log_level, lib, out, #func_name)
             }
         }
     } else {
@@ -95,12 +98,12 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
             #[doc(hidden)]
             extern "C" fn mf_create(
                 args: &cglue::repr_cstring::ReprCString,
-                _: Option<::memflow::plugins::OsInstanceBox>,
-                lib: cglue::arc::COptArc<::memflow::libloading::Library>,
+                _: Option<#crate_path::plugins::OsInstanceBox>,
+                lib: cglue::arc::COptArc<#crate_path::libloading::Library>,
                 _: i32,
-                out: &mut ::memflow::plugins::MuConnectorInstanceBox<'static>
+                out: &mut #crate_path::plugins::MuConnectorInstanceBox<'static>
             ) -> i32 {
-                ::memflow::plugins::connector::create_without_logging(args, lib, out, #func_name)
+                #crate_path::plugins::connector::create_without_logging(args, lib, out, #func_name)
             }
         }
     };
@@ -111,7 +114,7 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
             quote! {
                 #[doc(hidden)]
                 extern "C" fn mf_help_callback(
-                    mut callback: ::memflow::plugins::HelpCallback,
+                    mut callback: #crate_path::plugins::HelpCallback,
                 ) {
                     let helpstr = #func_name();
                     let _ = callback.call(helpstr.into());
@@ -126,7 +129,7 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
             quote! {
                 #[doc(hidden)]
                 extern "C" fn mf_target_list_callback(
-                    mut callback: ::memflow::plugins::TargetCallback,
+                    mut callback: #crate_path::plugins::TargetCallback,
                 ) -> i32 {
                     #func_name()
                         .map(|mut targets| {
@@ -144,8 +147,8 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
     let gen = quote! {
         #[doc(hidden)]
         #[no_mangle]
-        pub static #connector_descriptor: ::memflow::plugins::ConnectorDescriptor = ::memflow::plugins::ConnectorDescriptor {
-            plugin_version: ::memflow::plugins::MEMFLOW_PLUGIN_VERSION,
+        pub static #connector_descriptor: #crate_path::plugins::ConnectorDescriptor = #crate_path::plugins::ConnectorDescriptor {
+            plugin_version: #crate_path::plugins::MEMFLOW_PLUGIN_VERSION,
             name: #connector_name,
             version: #version_gen,
             description: #description_gen,
@@ -168,6 +171,8 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
 
 #[proc_macro_attribute]
 pub fn os_layer(args: TokenStream, input: TokenStream) -> TokenStream {
+    let crate_path = crate_path();
+
     let attr_args = parse_macro_input!(args as AttributeArgs);
     let args = match OsFactoryArgs::from_list(&attr_args) {
         Ok(v) => v,
@@ -204,12 +209,12 @@ pub fn os_layer(args: TokenStream, input: TokenStream) -> TokenStream {
             #[doc(hidden)]
             extern "C" fn mf_create(
                 args: &cglue::repr_cstring::ReprCString,
-                mem: ::memflow::types::COption<::memflow::plugins::ConnectorInstanceBox>,
-                lib: cglue::arc::COptArc<::memflow::libloading::Library>,
+                mem: #crate_path::types::COption<#crate_path::plugins::ConnectorInstanceBox>,
+                lib: cglue::arc::COptArc<#crate_path::libloading::Library>,
                 log_level: i32,
-                out: &mut ::memflow::plugins::MuOsInstanceBox
+                out: &mut #crate_path::plugins::MuOsInstanceBox
             ) -> i32 {
-                ::memflow::plugins::os::create_with_logging(args, mem.into(), lib, log_level, out, #func_name)
+                #crate_path::plugins::os::create_with_logging(args, mem.into(), lib, log_level, out, #func_name)
             }
         }
     } else {
@@ -217,12 +222,12 @@ pub fn os_layer(args: TokenStream, input: TokenStream) -> TokenStream {
             #[doc(hidden)]
             extern "C" fn mf_create(
                 args: &cglue::repr_cstring::ReprCString,
-                mem: ::memflow::types::COption<::memflow::plugins::ConnectorInstanceBox>,
-                lib: cglue::arc::COptArc<::memflow::libloading::Library>,
+                mem: #crate_path::types::COption<#crate_path::plugins::ConnectorInstanceBox>,
+                lib: cglue::arc::COptArc<#crate_path::libloading::Library>,
                 _: i32,
-                out: &mut ::memflow::plugins::MuOsInstanceBox
+                out: &mut #crate_path::plugins::MuOsInstanceBox
             ) -> i32 {
-                ::memflow::plugins::os::create_without_logging(args, mem.into(), lib, out, #func_name)
+                #crate_path::plugins::os::create_without_logging(args, mem.into(), lib, out, #func_name)
             }
         }
     };
@@ -233,7 +238,7 @@ pub fn os_layer(args: TokenStream, input: TokenStream) -> TokenStream {
             quote! {
                 #[doc(hidden)]
                 extern "C" fn mf_help_callback(
-                    mut callback: ::memflow::plugins::HelpCallback,
+                    mut callback: #crate_path::plugins::HelpCallback,
                 ) {
                     let helpstr = #func_name();
                     let _ = callback.call(helpstr.into());
@@ -245,8 +250,8 @@ pub fn os_layer(args: TokenStream, input: TokenStream) -> TokenStream {
     let gen = quote! {
         #[doc(hidden)]
         #[no_mangle]
-        pub static #os_descriptor: ::memflow::plugins::OsLayerDescriptor = ::memflow::plugins::OsLayerDescriptor {
-            os_version: ::memflow::plugins::MEMFLOW_PLUGIN_VERSION,
+        pub static #os_descriptor: #crate_path::plugins::OsLayerDescriptor = #crate_path::plugins::OsLayerDescriptor {
+            os_version: #crate_path::plugins::MEMFLOW_PLUGIN_VERSION,
             name: #os_name,
             version: #version_gen,
             description: #description_gen,
@@ -267,6 +272,8 @@ pub fn os_layer(args: TokenStream, input: TokenStream) -> TokenStream {
 
 #[proc_macro_attribute]
 pub fn os_layer_bare(args: TokenStream, input: TokenStream) -> TokenStream {
+    let crate_path = crate_path();
+
     let attr_args = parse_macro_input!(args as AttributeArgs);
     let args = match OsFactoryArgs::from_list(&attr_args) {
         Ok(v) => v,
@@ -302,12 +309,12 @@ pub fn os_layer_bare(args: TokenStream, input: TokenStream) -> TokenStream {
         #[doc(hidden)]
         extern "C" fn mf_create(
             args: &cglue::repr_cstring::ReprCString,
-            mem: ::memflow::types::COption<::memflow::plugins::ConnectorInstanceBox>,
-            lib: cglue::arc::COptArc<::memflow::libloading::Library>,
+            mem: #crate_path::types::COption<#crate_path::plugins::ConnectorInstanceBox>,
+            lib: cglue::arc::COptArc<#crate_path::libloading::Library>,
             log_level: i32,
-            out: &mut ::memflow::plugins::MuOsInstanceBox
+            out: &mut #crate_path::plugins::MuOsInstanceBox
         ) -> i32 {
-            ::memflow::plugins::create_bare(args, mem.into(), lib, log_level, out, #func_name)
+            #crate_path::plugins::create_bare(args, mem.into(), lib, log_level, out, #func_name)
         }
     };
 
@@ -317,7 +324,7 @@ pub fn os_layer_bare(args: TokenStream, input: TokenStream) -> TokenStream {
             quote! {
                 #[doc(hidden)]
                 extern "C" fn mf_help_callback(
-                    mut callback: ::memflow::plugins::HelpCallback,
+                    mut callback: #crate_path::plugins::HelpCallback,
                 ) {
                     let helpstr = #func_name();
                     let _ = callback.call(helpstr.into());
@@ -329,8 +336,8 @@ pub fn os_layer_bare(args: TokenStream, input: TokenStream) -> TokenStream {
     let gen = quote! {
         #[doc(hidden)]
         #[no_mangle]
-        pub static #os_descriptor: ::memflow::plugins::os::OsDescriptor = ::memflow::plugins::os::OsDescriptor {
-            plugin_version: ::memflow::plugins::MEMFLOW_PLUGIN_VERSION,
+        pub static #os_descriptor: #crate_path::plugins::os::OsDescriptor = #crate_path::plugins::os::OsDescriptor {
+            plugin_version: #crate_path::plugins::MEMFLOW_PLUGIN_VERSION,
             name: #os_name,
             version: #version_gen,
             description: #description_gen,
@@ -380,13 +387,17 @@ pub fn os_layer_bare(args: TokenStream, input: TokenStream) -> TokenStream {
 /// See https://github.com/CasualX/dataview/blob/master/derive_pod/lib.rs for the original implementation.
 #[proc_macro_derive(Pod)]
 pub fn pod_derive(input: TokenStream) -> TokenStream {
-    format!("::memflow::dataview::derive_pod!{{ {} }}", input)
+    let crate_path = crate_path();
+
+    format!("{}::dataview::derive_pod!{{ {} }}", crate_path, input)
         .parse()
         .unwrap()
 }
 
 #[proc_macro_derive(ByteSwap)]
 pub fn byteswap_derive(input: TokenStream) -> TokenStream {
+    let crate_path = crate_path();
+
     let input = parse_macro_input!(input as DeriveInput);
     let name = &input.ident;
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
@@ -408,7 +419,7 @@ pub fn byteswap_derive(input: TokenStream) -> TokenStream {
     };
 
     let gen = quote!(
-        impl #impl_generics ::memflow::types::byte_swap::ByteSwap for #name #ty_generics #where_clause {
+        impl #impl_generics #crate_path::types::byte_swap::ByteSwap for #name #ty_generics #where_clause {
             fn byte_swap(&mut self) {
                 #gen_inner
             }
@@ -416,4 +427,35 @@ pub fn byteswap_derive(input: TokenStream) -> TokenStream {
     );
 
     gen.into()
+}
+
+fn crate_path() -> proc_macro2::TokenStream {
+    let (col, ident) = crate_path_ident();
+    quote!(#col #ident)
+}
+
+fn crate_path_ident() -> (Option<syn::token::Colon2>, proc_macro2::Ident) {
+    match crate_path_fixed() {
+        FoundCrate::Itself => (None, format_ident!("crate")),
+        FoundCrate::Name(name) => (Some(Default::default()), format_ident!("{}", name)),
+    }
+}
+
+fn crate_path_fixed() -> FoundCrate {
+    let found_crate = crate_name("memflow").expect("memflow found in `Cargo.toml`");
+
+    match found_crate {
+        FoundCrate::Itself => {
+            let has_doc_env = std::env::vars().any(|(k, _)| {
+                k == "UNSTABLE_RUSTDOC_TEST_LINE" || k == "UNSTABLE_RUSTDOC_TEST_PATH"
+            });
+
+            if has_doc_env {
+                FoundCrate::Name("memflow".to_string())
+            } else {
+                FoundCrate::Itself
+            }
+        }
+        x => x,
+    }
 }

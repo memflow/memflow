@@ -1,6 +1,7 @@
 use crate::kernel::{self, StartBlock};
 use crate::kernel::{Win32Guid, Win32Version};
 
+use cglue::forward::ForwardMut;
 use log::{info, warn};
 
 use memflow::architecture::ArchitectureIdent;
@@ -79,7 +80,7 @@ impl<T: PhysicalMemory> KernelInfoScanner<T> {
 
         // construct virtual memory object for start_block
         let mut virt_mem = VirtualDma::with_vat(
-            &mut self.mem,
+            self.mem.forward_mut(),
             start_block.arch,
             Win32VirtualTranslate::new(start_block.arch, start_block.dtb),
             DirectTranslate::new(),

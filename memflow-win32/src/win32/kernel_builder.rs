@@ -6,6 +6,7 @@ use crate::offsets::Win32Offsets;
 #[cfg(feature = "symstore")]
 use crate::offsets::SymbolStore;
 
+use cglue::forward::ForwardMut;
 use memflow::architecture::ArchitectureIdent;
 use memflow::error::Result;
 use memflow::mem::{
@@ -147,12 +148,12 @@ where
 impl<'a, T, TK, VK> Win32KernelBuilder<T, TK, VK>
 where
     T: PhysicalMemory,
-    TK: PhysicalMemory,
-    VK: VirtualTranslate,
+    TK: 'static + PhysicalMemory,
+    VK: 'static + VirtualTranslate,
 {
     pub fn build(mut self) -> Result<Win32Kernel<TK, VK>> {
         // find kernel_info
-        let mut kernel_scanner = Win32KernelInfo::scanner(&mut self.connector);
+        let mut kernel_scanner = Win32KernelInfo::scanner(self.connector.forward_mut());
         if let Some(arch) = self.arch {
             kernel_scanner = kernel_scanner.arch(arch);
         }

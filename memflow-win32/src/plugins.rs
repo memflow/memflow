@@ -1,21 +1,18 @@
 use crate::offsets::SymbolStore;
 use crate::win32::{Win32Kernel, Win32KernelBuilder};
-use memflow::architecture::ArchitectureIdent;
-use memflow::derive::*;
-use memflow::error::*;
-use memflow::mem::cache::TimedCacheValidator;
-use memflow::mem::cache::{CachedMemoryAccess, CachedVirtualTranslate};
-use memflow::mem::{PhysicalMemory, VirtualTranslate};
-use memflow::plugins::{Args, ConnectorInstance, OsInstanceArcBox};
-use memflow::types::{size, Address};
+
+use memflow::prelude::v1::*;
+
+use std::ffi::c_void;
 use std::time::Duration;
 
 #[os_layer_bare(name = "win32")]
 pub fn build_kernel(
     args: &Args,
-    mem: Option<ConnectorInstance>,
+    mem: Option<ConnectorInstanceArcBox<'static>>,
+    lib: COptArc<c_void>,
     log_level: log::Level,
-) -> Result<OsInstanceArcBox> {
+) -> Result<OsInstanceArcBox<'static>> {
     let mem = mem.ok_or_else(|| {
         Error(ErrorOrigin::OsLayer, ErrorKind::Configuration).log_error("Must provide memory!")
     })?;
@@ -26,8 +23,7 @@ pub fn build_kernel(
         .ok();
 
     let builder = Win32Kernel::builder(mem);
-
-    build_dtb(builder, args)
+    build_dtb(builder, args, lib)
 }
 
 fn build_final<
@@ -37,13 +33,14 @@ fn build_final<
 >(
     kernel_builder: Win32KernelBuilder<A, B, C>,
     _: &Args,
-) -> Result<OsInstanceArcBox> {
+    lib: COptArc<c_void>,
+) -> Result<OsInstanceArcBox<'static>> {
     log::info!(
         "Building kernel of type {}",
         std::any::type_name::<Win32KernelBuilder<A, B, C>>()
     );
     let kernel = kernel_builder.build()?;
-    Ok(group_obj!(kernel as OsInstance))
+    Ok(group_obj!((kernel, lib) as OsInstance))
 }
 
 fn build_arch<
@@ -53,13 +50,18 @@ fn build_arch<
 >(
     builder: Win32KernelBuilder<A, B, C>,
     args: &Args,
-) -> Result<OsInstanceArcBox> {
+    lib: COptArc<c_void>,
+) -> Result<OsInstanceArcBox<'static>> {
     match args.get("arch").map(|a| a.to_lowercase()).as_deref() {
-        Some("x64") => build_final(builder.arch(ArchitectureIdent::X86(64, false)), args),
-        Some("x32") => build_final(builder.arch(ArchitectureIdent::X86(32, false)), args),
-        Some("x32_pae") => build_final(builder.arch(ArchitectureIdent::X86(32, true)), args),
-        Some("aarch64") => build_final(builder.arch(ArchitectureIdent::AArch64(size::kb(4))), args),
-        _ => build_final(builder, args),
+        Some("x64") => build_final(builder.arch(ArchitectureIdent::X86(64, false)), args, lib),
+        Some("x32") => build_final(builder.arch(ArchitectureIdent::X86(32, false)), args, lib),
+        Some("x32_pae") => build_final(builder.arch(ArchitectureIdent::X86(32, true)), args, lib),
+        Some("aarch64") => build_final(
+            builder.arch(ArchitectureIdent::AArch64(size::kb(4))),
+            args,
+            lib,
+        ),
+        _ => build_final(builder, args, lib),
     }
 }
 
@@ -70,11 +72,16 @@ fn build_symstore<
 >(
     builder: Win32KernelBuilder<A, B, C>,
     args: &Args,
-) -> Result<OsInstanceArcBox> {
+    lib: COptArc<c_void>,
+) -> Result<OsInstanceArcBox<'static>> {
     match args.get("symstore") {
-        Some("uncached") => build_arch(builder.symbol_store(SymbolStore::new().no_cache()), args),
-        Some("none") => build_arch(builder.no_symbol_store(), args),
-        _ => build_arch(builder, args),
+        Some("uncached") => build_arch(
+            builder.symbol_store(SymbolStore::new().no_cache()),
+            args,
+            lib,
+        ),
+        Some("none") => build_arch(builder.no_symbol_store(), args, lib),
+        _ => build_arch(builder, args, lib),
     }
 }
 
@@ -85,13 +92,14 @@ fn build_kernel_hint<
 >(
     builder: Win32KernelBuilder<A, B, C>,
     args: &Args,
-) -> Result<OsInstanceArcBox> {
+    lib: COptArc<c_void>,
+) -> Result<OsInstanceArcBox<'static>> {
     match args
         .get("kernel_hint")
         .and_then(|d| u64::from_str_radix(d, 16).ok())
     {
-        Some(dtb) => build_symstore(builder.kernel_hint(Address::from(dtb)), args),
-        _ => build_symstore(builder, args),
+        Some(dtb) => build_symstore(builder.kernel_hint(Address::from(dtb)), args, lib),
+        _ => build_symstore(builder, args, lib),
     }
 }
 
@@ -103,7 +111,8 @@ fn build_page_cache<
     builder: Win32KernelBuilder<A, B, C>,
     mode: &str,
     args: &Args,
-) -> Result<OsInstanceArcBox> {
+    lib: COptArc<c_void>,
+) -> Result<OsInstanceArcBox<'static>> {
     match mode.split('&').find(|s| s.contains("page")) {
         Some(page) => match page.split(':').nth(1) {
             Some(vargs) => {
@@ -164,6 +173,7 @@ fn build_page_cache<
                             .unwrap()
                     }),
                     args,
+                    lib,
                 )
             }
             None => build_kernel_hint(
@@ -171,9 +181,10 @@ fn build_page_cache<
                     CachedMemoryAccess::builder(v).arch(a).build().unwrap()
                 }),
                 args,
+                lib,
             ),
         },
-        None => build_kernel_hint(builder, args),
+        None => build_kernel_hint(builder, args, lib),
     }
 }
 
@@ -185,7 +196,8 @@ fn build_vat<
     builder: Win32KernelBuilder<A, B, C>,
     mode: &str,
     args: &Args,
-) -> Result<OsInstanceArcBox> {
+    lib: COptArc<c_void>,
+) -> Result<OsInstanceArcBox<'static>> {
     match mode.split('&').find(|s| s.contains("vat")) {
         Some(vat) => match vat.split(':').nth(1) {
             Some(vargs) => {
@@ -219,6 +231,7 @@ fn build_vat<
                     }),
                     mode,
                     args,
+                    lib,
                 )
             }
             None => build_page_cache(
@@ -227,9 +240,10 @@ fn build_vat<
                 }),
                 mode,
                 args,
+                lib,
             ),
         },
-        None => build_page_cache(builder, mode, args),
+        None => build_page_cache(builder, mode, args, lib),
     }
 }
 
@@ -240,11 +254,12 @@ fn build_caches<
 >(
     builder: Win32KernelBuilder<A, B, C>,
     args: &Args,
-) -> Result<OsInstanceArcBox> {
+    lib: COptArc<c_void>,
+) -> Result<OsInstanceArcBox<'static>> {
     match args.get("memcache").unwrap_or("default") {
-        "default" => build_kernel_hint(builder.build_default_caches(), args),
-        "none" => build_kernel_hint(builder, args),
-        mode => build_vat(builder, mode, args),
+        "default" => build_kernel_hint(builder.build_default_caches(), args, lib),
+        "none" => build_kernel_hint(builder, args, lib),
+        mode => build_vat(builder, mode, args, lib),
     }
 }
 
@@ -255,12 +270,13 @@ fn build_dtb<
 >(
     builder: Win32KernelBuilder<A, B, C>,
     args: &Args,
-) -> Result<OsInstanceArcBox> {
+    lib: COptArc<c_void>,
+) -> Result<OsInstanceArcBox<'static>> {
     match args
         .get("dtb")
         .and_then(|d| u64::from_str_radix(d, 16).ok())
     {
-        Some(dtb) => build_caches(builder.dtb(Address::from(dtb)), args),
-        _ => build_caches(builder, args),
+        Some(dtb) => build_caches(builder.dtb(Address::from(dtb)), args, lib),
+        _ => build_caches(builder, args, lib),
     }
 }

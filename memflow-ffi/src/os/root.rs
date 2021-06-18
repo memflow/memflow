@@ -1,6 +1,10 @@
+#[allow(unused)]
 use memflow::mem::phys_mem::*;
+#[allow(unused)]
 use memflow::mem::virt_mem::*;
+#[allow(unused)]
 use memflow::os::*;
+#[allow(unused)]
 use memflow::plugins::*;
 
 // os_process_address_list_callback

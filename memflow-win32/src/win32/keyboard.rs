@@ -29,9 +29,11 @@ fn test<T: PhysicalMemory, V: VirtualTranslate>(kernel: &mut Win32Kernel<T, V>) 
 */
 use super::{Win32Kernel, Win32ProcessInfo, Win32VirtualTranslate};
 
+use cglue::forward::ForwardMut;
+use memflow::cglue::Fwd;
 use memflow::error::{Error, ErrorKind, ErrorOrigin, Result};
-use memflow::mem::{PhysicalMemory, VirtualDma, VirtualMemory, VirtualTranslate};
-use memflow::os::{Keyboard, KeyboardState, Process};
+use memflow::mem::{AsVirtualMemory, PhysicalMemory, VirtualDma, VirtualMemory, VirtualTranslate};
+use memflow::os::{Keyboard, KeyboardState};
 use memflow::prelude::OsInner;
 
 use std::convert::TryInto;
@@ -51,7 +53,7 @@ pub struct Win32Keyboard<T> {
     key_state_addr: Address,
 }
 
-impl<'a, T: PhysicalMemory, V: VirtualTranslate>
+impl<'a, T: 'static + PhysicalMemory, V: 'static + VirtualTranslate>
     Win32Keyboard<VirtualDma<T, V, Win32VirtualTranslate>>
 {
     pub fn with_kernel(mut kernel: Win32Kernel<T, V>) -> Result<Self> {
@@ -78,8 +80,8 @@ impl<'a, T: PhysicalMemory, V: VirtualTranslate>
     }
 }
 
-impl<'a, T: PhysicalMemory, V: VirtualTranslate>
-    Win32Keyboard<VirtualDma<&'a mut T, &'a mut V, Win32VirtualTranslate>>
+impl<'a, T: 'static + PhysicalMemory, V: 'static + VirtualTranslate>
+    Win32Keyboard<VirtualDma<Fwd<&'a mut T>, Fwd<&'a mut V>, Win32VirtualTranslate>>
 {
     /// Constructs a new keyboard object by borrowing a kernel object.
     ///
@@ -95,10 +97,10 @@ impl<'a, T: PhysicalMemory, V: VirtualTranslate>
 
         let (phys_mem, vat) = kernel.virt_mem.mem_vat_pair();
         let virt_mem = VirtualDma::with_vat(
-            phys_mem,
+            phys_mem.forward_mut(),
             user_process_info.base_info.proc_arch,
             user_process_info.translator(),
-            vat,
+            vat.forward_mut(),
         );
 
         Ok(Self {
@@ -110,7 +112,7 @@ impl<'a, T: PhysicalMemory, V: VirtualTranslate>
 }
 
 impl<T> Win32Keyboard<T> {
-    fn find_keystate<P: PhysicalMemory, V: VirtualTranslate>(
+    fn find_keystate<P: 'static + PhysicalMemory, V: 'static + VirtualTranslate>(
         kernel: &mut Win32Kernel<P, V>,
     ) -> Result<(Win32ProcessInfo, Address)> {
         let win32kbase_module_info = kernel.module_by_name("win32kbase.sys")?;

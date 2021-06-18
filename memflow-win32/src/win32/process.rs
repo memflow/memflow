@@ -4,13 +4,14 @@ use super::{Win32Kernel, Win32ModuleListInfo};
 
 use std::fmt;
 
+use cglue::forward::ForwardMut;
 use cglue::repr_cstring::ReprCString;
 use memflow::architecture::ArchitectureIdent;
-use memflow::error::PartialResultExt;
-use memflow::error::{Error, ErrorKind, ErrorOrigin, Result};
-use memflow::mem::{
-    virt_mem::AsVirtualMemory, PhysicalMemory, VirtualDma, VirtualMemory, VirtualTranslate,
-};
+use memflow::cglue::*;
+use memflow::error::{Error, ErrorKind, ErrorOrigin, PartialResultExt, Result};
+use memflow::mem::virt_mem::*;
+use memflow::mem::{PhysicalMemory, VirtualDma, VirtualMemory, VirtualTranslate};
+use memflow::os::process::*;
 use memflow::os::{
     ExportCallback, ExportInfo, ImportCallback, ImportInfo, ModuleAddressCallback,
     ModuleAddressInfo, ModuleInfo, Process, ProcessInfo, ProcessState, SectionCallback,
@@ -100,6 +101,8 @@ impl Win32ProcessInfo {
         Win32VirtualTranslate::new(self.base_info.sys_arch, self.dtb)
     }
 }
+
+cglue_impl_group!(Win32Process<T>, ProcessInstance, AsVirtualMemory);
 
 pub struct Win32Process<T> {
     pub virt_mem: T,
@@ -359,7 +362,7 @@ impl<'a, T: PhysicalMemory, V: VirtualTranslate>
 }
 
 impl<'a, T: PhysicalMemory, V: VirtualTranslate>
-    Win32Process<VirtualDma<&'a mut T, &'a mut V, Win32VirtualTranslate>>
+    Win32Process<VirtualDma<Fwd<&'a mut T>, Fwd<&'a mut V>, Win32VirtualTranslate>>
 {
     /// Constructs a new process by borrowing a kernel object.
     ///
@@ -373,10 +376,10 @@ impl<'a, T: PhysicalMemory, V: VirtualTranslate>
     pub fn with_kernel_ref(kernel: &'a mut Win32Kernel<T, V>, proc_info: Win32ProcessInfo) -> Self {
         let (phys_mem, vat) = kernel.virt_mem.mem_vat_pair();
         let virt_mem = VirtualDma::with_vat(
-            phys_mem,
+            phys_mem.forward_mut(),
             proc_info.base_info.proc_arch,
             proc_info.translator(),
-            vat,
+            vat.forward_mut(),
         );
 
         Self {

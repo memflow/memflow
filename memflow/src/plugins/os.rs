@@ -1,46 +1,66 @@
 use crate::error::*;
+use crate::os::Os;
 
 use super::{
-    Args, ConnectorInstanceBox, Loadable, MuOsInstanceBox, OsInstance, OsInstanceBox,
-    PluginDescriptor, TargetInfo,
+    Args, ConnectorInstanceArcBox, Loadable, MuOsInstanceArcBox, OsInstance, OsInstanceArcBox,
+    OsInstanceBaseArcBox, OsInstanceVtableFiller, PluginDescriptor, TargetInfo,
 };
 
-use cglue::*;
-use cglue::{
-    arc::COptArc, boxed::CBox, option::COption, repr_cstring::ReprCString, result::from_int_result,
-};
+use cglue::prelude::v1::*;
+use cglue::result::from_int_result;
 use libloading::Library;
+use std::ffi::c_void;
 
 pub type OptionArchitectureIdent<'a> = Option<&'a crate::architecture::ArchitectureIdent>;
 
-pub fn create_with_logging<T: 'static>(
+pub fn create_with_logging<
+    T: 'static
+        + Os
+        + Clone
+        + OsInstanceVtableFiller<
+            'static,
+            CtxBox<'static, T, COptArc<c_void>>,
+            COptArc<c_void>,
+            COptArc<c_void>,
+        >,
+>(
     args: &ReprCString,
-    conn: ConnectorInstanceBox,
-    lib: COptArc<Library>,
+    conn: ConnectorInstanceArcBox,
+    lib: COptArc<c_void>,
     log_level: i32,
-    out: &mut MuOsInstanceBox<'static>,
-    create_fn: impl Fn(&Args, ConnectorInstanceBox, log::Level) -> Result<T>,
+    out: &mut MuOsInstanceArcBox<'static>,
+    create_fn: impl Fn(&Args, ConnectorInstanceArcBox, log::Level) -> Result<T>,
 ) -> i32
 where
-    OsInstance<'static, CBox<'static, T>, T>: From<T>,
+    (T, COptArc<c_void>): Into<OsInstanceBaseArcBox<'static, T, c_void>>,
 {
-    super::util::create_with_logging(args, lib, log_level, out, move |a, l| {
-        Ok(group_obj!(create_fn(&a, conn, l)? as OsInstance))
+    super::util::create_with_logging(args, lib, log_level, out, move |a, lib, l| {
+        Ok(group_obj!((create_fn(&a, conn, l)?, lib) as OsInstance))
     })
 }
 
-pub fn create_without_logging<T: 'static>(
+pub fn create_without_logging<
+    T: 'static
+        + Os
+        + Clone
+        + OsInstanceVtableFiller<
+            'static,
+            CtxBox<'static, T, COptArc<c_void>>,
+            COptArc<c_void>,
+            COptArc<c_void>,
+        >,
+>(
     args: &ReprCString,
-    conn: ConnectorInstanceBox,
-    lib: COptArc<Library>,
-    out: &mut MuOsInstanceBox<'static>,
-    create_fn: impl Fn(&Args, ConnectorInstanceBox) -> Result<T>,
+    conn: ConnectorInstanceArcBox,
+    lib: COptArc<c_void>,
+    out: &mut MuOsInstanceArcBox<'static>,
+    create_fn: impl Fn(&Args, ConnectorInstanceArcBox) -> Result<T>,
 ) -> i32
 where
-    OsInstance<'static, CBox<'static, T>, T>: From<T>,
+    (T, COptArc<c_void>): Into<OsInstanceBaseArcBox<'static, T, c_void>>,
 {
-    super::util::create_without_logging(args, lib, out, |a| {
-        Ok(group_obj!(create_fn(&a, conn)? as OsInstance))
+    super::util::create_without_logging(args, lib, out, |a, lib| {
+        Ok(group_obj!((create_fn(&a, conn)?, lib) as OsInstance))
     })
 }
 
@@ -51,9 +71,9 @@ pub struct LoadableOs {
 }
 
 impl Loadable for LoadableOs {
-    type Instance = OsInstanceBox<'static>;
-    type InputArg = Option<ConnectorInstanceBox<'static>>;
-    type CInputArg = COption<ConnectorInstanceBox<'static>>;
+    type Instance = OsInstanceArcBox<'static>;
+    type InputArg = Option<ConnectorInstanceArcBox<'static>>;
+    type CInputArg = COption<ConnectorInstanceArcBox<'static>>;
 
     fn export_prefix() -> &'static str {
         "MEMFLOW_OS_"
@@ -109,11 +129,11 @@ impl Loadable for LoadableOs {
         args: &Args,
     ) -> Result<Self::Instance> {
         let cstr = ReprCString::from(args.to_string());
-        let mut out = MuOsInstanceBox::uninit();
+        let mut out = MuOsInstanceArcBox::uninit();
         let res = (self.descriptor.create)(
             &cstr,
             input.into(),
-            library,
+            library.into_opaque(),
             log::max_level() as i32,
             &mut out,
         );

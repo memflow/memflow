@@ -2,42 +2,55 @@ use crate::error::*;
 use crate::mem::PhysicalMemory;
 
 use super::{
-    Args, ConnectorInstance, ConnectorInstanceBaseBox, ConnectorInstanceBox, Loadable,
-    MuConnectorInstanceBox, OsInstanceBox, PluginDescriptor, TargetInfo,
+    Args, ConnectorInstance, ConnectorInstanceArcBox, ConnectorInstanceVtableFiller, Loadable,
+    MuConnectorInstanceArcBox, OsInstanceArcBox, PluginDescriptor, TargetInfo,
 };
 
-use cglue::*;
-use cglue::{
-    arc::COptArc,
-    repr_cstring::ReprCString,
-    result::{from_int_result, from_int_result_empty},
-};
+use cglue::prelude::v1::*;
+use cglue::result::{from_int_result, from_int_result_empty};
 use libloading::Library;
+use std::ffi::c_void;
 
 pub fn create_with_logging<
-    T: 'static + PhysicalMemory + Clone + Into<ConnectorInstanceBaseBox<'static, T>>,
+    T: 'static
+        + PhysicalMemory
+        + Clone
+        + ConnectorInstanceVtableFiller<
+            'static,
+            CtxBox<'static, T, COptArc<c_void>>,
+            COptArc<c_void>,
+            COptArc<c_void>,
+        >,
 >(
     args: &ReprCString,
-    lib: COptArc<Library>,
+    lib: COptArc<c_void>,
     log_level: i32,
-    out: &mut MuConnectorInstanceBox<'static>,
+    out: &mut MuConnectorInstanceArcBox<'static>,
     create_fn: impl Fn(&Args, log::Level) -> Result<T>,
 ) -> i32 {
-    super::util::create_with_logging(args, lib, log_level, out, |a, l| {
-        Ok(group_obj!(create_fn(&a, l)? as ConnectorInstance))
+    super::util::create_with_logging(args, lib, log_level, out, |a, lib, l| {
+        Ok(group_obj!((create_fn(&a, l)?, lib) as ConnectorInstance))
     })
 }
 
 pub fn create_without_logging<
-    T: 'static + PhysicalMemory + Clone + Into<ConnectorInstanceBaseBox<'static, T>>,
+    T: 'static
+        + PhysicalMemory
+        + Clone
+        + ConnectorInstanceVtableFiller<
+            'static,
+            CtxBox<'static, T, COptArc<c_void>>,
+            COptArc<c_void>,
+            COptArc<c_void>,
+        >,
 >(
     args: &ReprCString,
-    lib: COptArc<Library>,
-    out: &mut MuConnectorInstanceBox<'static>,
+    lib: COptArc<c_void>,
+    out: &mut MuConnectorInstanceArcBox<'static>,
     create_fn: impl Fn(&Args) -> Result<T>,
 ) -> i32 {
-    super::util::create_without_logging(args, lib, out, |a| {
-        Ok(group_obj!(create_fn(&a)? as ConnectorInstance))
+    super::util::create_without_logging(args, lib, out, |a, lib| {
+        Ok(group_obj!((create_fn(&a)?, lib) as ConnectorInstance))
     })
 }
 
@@ -48,9 +61,9 @@ pub struct LoadableConnector {
 }
 
 impl Loadable for LoadableConnector {
-    type Instance = ConnectorInstanceBox<'static>;
-    type InputArg = Option<OsInstanceBox<'static>>;
-    type CInputArg = Option<OsInstanceBox<'static>>;
+    type Instance = ConnectorInstanceArcBox<'static>;
+    type InputArg = Option<OsInstanceArcBox<'static>>;
+    type CInputArg = Option<OsInstanceArcBox<'static>>;
 
     fn ident(&self) -> &str {
         self.descriptor.name
@@ -117,9 +130,14 @@ impl Loadable for LoadableConnector {
         args: &Args,
     ) -> Result<Self::Instance> {
         let cstr = ReprCString::from(args.to_string());
-        let mut out = MuConnectorInstanceBox::uninit();
-        let res =
-            (self.descriptor.create)(&cstr, input, library, log::max_level() as i32, &mut out);
+        let mut out = MuConnectorInstanceArcBox::uninit();
+        let res = (self.descriptor.create)(
+            &cstr,
+            input,
+            library.into_opaque(),
+            log::max_level() as i32,
+            &mut out,
+        );
         unsafe { from_int_result(res, out) }
     }
 }

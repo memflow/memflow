@@ -6,7 +6,7 @@ use super::{
 };
 use crate::mem::virt_mem::*;
 use crate::prelude::v1::{Result, *};
-use cglue::{repr_cstring::ReprCString, *};
+use cglue::prelude::v1::*;
 use std::prelude::v1::*;
 
 // ProcessInstance group for Process and AsVirtualMemory

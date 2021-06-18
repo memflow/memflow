@@ -3,7 +3,7 @@
 use super::process::*;
 use super::{AddressCallback, ProcessInfo, ProcessInfoCallback};
 use crate::prelude::v1::{Result, *};
-use cglue::*;
+use cglue::prelude::v1::*;
 use std::prelude::v1::*;
 
 /// OS supertrait for all possible lifetimes

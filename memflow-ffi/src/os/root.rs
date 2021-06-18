@@ -36,10 +36,10 @@ use memflow::plugins::*;
 
 // os_info
 //#[no_mangle]
-//pub unsafe extern "C" fn os_phys_mem<'a>(os: &'a mut OsInstanceBox) -> Option<&'a mut CGlueBoxPhysicalMemory> {
+//pub unsafe extern "C" fn os_phys_mem<'a>(os: &'a mut OsInstanceArcBox) -> Option<&'a mut CGlueBoxPhysicalMemory> {
 //}
 
 //#[no_mangle]
-//pub unsafe extern "C" fn os_virt_mem(os: &mut OsInstanceBox) -> Option<&mut CGlueBoxVirtualMemory> {
+//pub unsafe extern "C" fn os_virt_mem(os: &mut OsInstanceArcBox) -> Option<&mut CGlueBoxVirtualMemory> {
 //    os.virt_mem()
 //}

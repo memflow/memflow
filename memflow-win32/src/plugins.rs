@@ -6,7 +6,7 @@ use memflow::error::*;
 use memflow::mem::cache::TimedCacheValidator;
 use memflow::mem::cache::{CachedMemoryAccess, CachedVirtualTranslate};
 use memflow::mem::{PhysicalMemory, VirtualTranslate};
-use memflow::plugins::{Args, ConnectorInstance, OsInstance};
+use memflow::plugins::{Args, ConnectorInstance, OsInstanceArcBox};
 use memflow::types::{size, Address};
 use std::time::Duration;
 
@@ -15,7 +15,7 @@ pub fn build_kernel(
     args: &Args,
     mem: Option<ConnectorInstance>,
     log_level: log::Level,
-) -> Result<OsInstance> {
+) -> Result<OsInstanceArcBox> {
     let mem = mem.ok_or_else(|| {
         Error(ErrorOrigin::OsLayer, ErrorKind::Configuration).log_error("Must provide memory!")
     })?;
@@ -37,14 +37,13 @@ fn build_final<
 >(
     kernel_builder: Win32KernelBuilder<A, B, C>,
     _: &Args,
-) -> Result<OsInstance> {
+) -> Result<OsInstanceArcBox> {
     log::info!(
         "Building kernel of type {}",
         std::any::type_name::<Win32KernelBuilder<A, B, C>>()
     );
     let kernel = kernel_builder.build()?;
-    let instance = OsInstance::builder(kernel).enable_keyboard().build();
-    Ok(instance)
+    Ok(group_obj!(kernel as OsInstance))
 }
 
 fn build_arch<
@@ -54,7 +53,7 @@ fn build_arch<
 >(
     builder: Win32KernelBuilder<A, B, C>,
     args: &Args,
-) -> Result<OsInstance> {
+) -> Result<OsInstanceArcBox> {
     match args.get("arch").map(|a| a.to_lowercase()).as_deref() {
         Some("x64") => build_final(builder.arch(ArchitectureIdent::X86(64, false)), args),
         Some("x32") => build_final(builder.arch(ArchitectureIdent::X86(32, false)), args),
@@ -71,7 +70,7 @@ fn build_symstore<
 >(
     builder: Win32KernelBuilder<A, B, C>,
     args: &Args,
-) -> Result<OsInstance> {
+) -> Result<OsInstanceArcBox> {
     match args.get("symstore") {
         Some("uncached") => build_arch(builder.symbol_store(SymbolStore::new().no_cache()), args),
         Some("none") => build_arch(builder.no_symbol_store(), args),
@@ -86,7 +85,7 @@ fn build_kernel_hint<
 >(
     builder: Win32KernelBuilder<A, B, C>,
     args: &Args,
-) -> Result<OsInstance> {
+) -> Result<OsInstanceArcBox> {
     match args
         .get("kernel_hint")
         .and_then(|d| u64::from_str_radix(d, 16).ok())
@@ -104,7 +103,7 @@ fn build_page_cache<
     builder: Win32KernelBuilder<A, B, C>,
     mode: &str,
     args: &Args,
-) -> Result<OsInstance> {
+) -> Result<OsInstanceArcBox> {
     match mode.split('&').find(|s| s.contains("page")) {
         Some(page) => match page.split(':').nth(1) {
             Some(vargs) => {
@@ -186,7 +185,7 @@ fn build_vat<
     builder: Win32KernelBuilder<A, B, C>,
     mode: &str,
     args: &Args,
-) -> Result<OsInstance> {
+) -> Result<OsInstanceArcBox> {
     match mode.split('&').find(|s| s.contains("vat")) {
         Some(vat) => match vat.split(':').nth(1) {
             Some(vargs) => {
@@ -241,7 +240,7 @@ fn build_caches<
 >(
     builder: Win32KernelBuilder<A, B, C>,
     args: &Args,
-) -> Result<OsInstance> {
+) -> Result<OsInstanceArcBox> {
     match args.get("memcache").unwrap_or("default") {
         "default" => build_kernel_hint(builder.build_default_caches(), args),
         "none" => build_kernel_hint(builder, args),
@@ -256,7 +255,7 @@ fn build_dtb<
 >(
     builder: Win32KernelBuilder<A, B, C>,
     args: &Args,
-) -> Result<OsInstance> {
+) -> Result<OsInstanceArcBox> {
     match args
         .get("dtb")
         .and_then(|d| u64::from_str_radix(d, 16).ok())

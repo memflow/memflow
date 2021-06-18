@@ -67,11 +67,6 @@ pub mod dataview {
 }
 
 #[doc(hidden)]
-pub mod libloading {
-    pub use ::libloading::*;
-}
-
-#[doc(hidden)]
 #[cfg(any(feature = "dummy_mem", test))]
 pub mod dummy;
 
@@ -79,6 +74,7 @@ pub mod dummy;
 pub mod prelude {
     pub mod v1 {
         pub use crate::architecture::*;
+        pub use crate::cglue::*;
         pub use crate::connector::*;
         pub use crate::dataview::*;
         pub use crate::derive::*;

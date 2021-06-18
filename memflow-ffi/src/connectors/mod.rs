@@ -3,7 +3,8 @@ use std::os::raw::c_char;
 use std::path::PathBuf;
 
 use memflow::plugins::{
-    Args, ConnectorInstanceBox, Inventory, MuConnectorInstanceBox, MuOsInstanceBox, OsInstanceBox,
+    Args, ConnectorInstanceArcBox, Inventory, MuConnectorInstanceArcBox, MuOsInstanceArcBox,
+    OsInstanceArcBox,
 };
 
 use crate::util::*;
@@ -78,7 +79,7 @@ pub unsafe extern "C" fn inventory_create_connector(
     inv: &mut Inventory,
     name: *const c_char,
     args: *const c_char,
-    out: &mut MuConnectorInstanceBox<'static>,
+    out: &mut MuConnectorInstanceArcBox<'static>,
 ) -> i32 {
     let rname = CStr::from_ptr(name).to_string_lossy();
 
@@ -125,8 +126,8 @@ pub unsafe extern "C" fn inventory_create_os(
     inv: &mut Inventory,
     name: *const c_char,
     args: *const c_char,
-    mem: ConnectorInstanceBox<'static>,
-    out: &mut MuOsInstanceBox<'static>,
+    mem: ConnectorInstanceArcBox<'static>,
+    out: &mut MuOsInstanceArcBox<'static>,
 ) -> i32 {
     let rname = CStr::from_ptr(name).to_string_lossy();
     let _args = CStr::from_ptr(args).to_string_lossy();
@@ -153,7 +154,7 @@ pub unsafe extern "C" fn inventory_create_os(
 /// `os` must point to a valid `OsInstance` that was created using one of the provided
 /// functions.
 #[no_mangle]
-pub unsafe extern "C" fn os_drop(os: &mut OsInstanceBox<'static>) {
+pub unsafe extern "C" fn os_drop(os: &mut OsInstanceArcBox<'static>) {
     trace!("connector_drop: {:?}", os as *mut _);
     std::ptr::drop_in_place(os);
 }
@@ -170,8 +171,8 @@ pub unsafe extern "C" fn os_drop(os: &mut OsInstanceBox<'static>) {
 /// functions.
 #[no_mangle]
 pub unsafe extern "C" fn connector_clone(
-    conn: &ConnectorInstanceBox<'static>,
-    out: &mut MuConnectorInstanceBox<'static>,
+    conn: &ConnectorInstanceArcBox<'static>,
+    out: &mut MuConnectorInstanceArcBox<'static>,
 ) {
     trace!("connector_clone: {:?}", conn as *const _);
     *out.as_mut_ptr() = conn.clone();
@@ -187,7 +188,7 @@ pub unsafe extern "C" fn connector_clone(
 /// There has to be no instance of `PhysicalMemory` created from the input `conn`, because they
 /// will become invalid.
 #[no_mangle]
-pub unsafe extern "C" fn connector_drop(conn: &mut ConnectorInstanceBox<'static>) {
+pub unsafe extern "C" fn connector_drop(conn: &mut ConnectorInstanceArcBox<'static>) {
     trace!("connector_drop: {:?}", conn as *mut _);
     std::ptr::drop_in_place(conn)
 }

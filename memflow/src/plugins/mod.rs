@@ -4,7 +4,8 @@ This module contains functions related to the Inventory system for Connectors an
 All functionality in this module is gated behind `plugins` feature.
 */
 
-use cglue::{arc::CArc, repr_cstring::ReprCString};
+use cglue::prelude::v1::*;
+use std::ffi::c_void;
 use std::prelude::v1::*;
 
 pub mod args;
@@ -36,8 +37,6 @@ use std::fs::read_dir;
 use std::mem::MaybeUninit;
 use std::path::{Path, PathBuf};
 
-use cglue::arc::COptArc;
-use cglue::*;
 use libloading::Library;
 
 /// Exported memflow plugins version
@@ -49,8 +48,8 @@ cglue_trait_group!(ConnectorInstance, { PhysicalMemory, Clone }, {});
 cglue_trait_group!(OsInstance<'a>, { OsInner<'a>, Clone }, { AsPhysicalMemory, AsVirtualMemory });
 
 // TODO: remove later
-pub type MuConnectorInstanceBox<'a> = std::mem::MaybeUninit<ConnectorInstanceBox<'a>>;
-pub type MuOsInstanceBox<'a> = std::mem::MaybeUninit<OsInstanceBox<'a>>;
+pub type MuConnectorInstanceArcBox<'a> = std::mem::MaybeUninit<ConnectorInstanceArcBox<'a>>;
+pub type MuOsInstanceArcBox<'a> = std::mem::MaybeUninit<OsInstanceArcBox<'a>>;
 
 /// Help and Target callbacks
 pub type HelpCallback<'a> = OpaqueCallback<'a, ReprCString>;
@@ -97,7 +96,7 @@ pub struct PluginDescriptor<T: Loadable> {
     pub create: extern "C" fn(
         &ReprCString,
         T::CInputArg,
-        COptArc<Library>,
+        lib: COptArc<c_void>,
         i32,
         &mut MaybeUninit<T::Instance>,
     ) -> i32,
@@ -600,7 +599,7 @@ impl Inventory {
         name: &str,
         input: ConnectorInputArg,
         args: &Args,
-    ) -> Result<ConnectorInstanceBox<'static>> {
+    ) -> Result<ConnectorInstanceArcBox<'static>> {
         Self::create_internal(&self.connectors, name, input, args)
     }
 
@@ -632,7 +631,7 @@ impl Inventory {
         name: &str,
         input: OsInputArg,
         args: &Args,
-    ) -> Result<OsInstanceBox<'static>> {
+    ) -> Result<OsInstanceArcBox<'static>> {
         Self::create_internal(&self.os_layers, name, input, args)
     }
 
@@ -743,9 +742,9 @@ impl<'a> ConnectorBuilder<'a> {
     ///
     /// Each created connector / os instance is fed into the next os / connector instance as an argument.
     /// If any build step fails the function returns an error.
-    pub fn build(self) -> Result<OsInstanceBox<'static>> {
-        let mut connector: Option<ConnectorInstanceBox<'static>> = None;
-        let mut os: Option<OsInstanceBox<'static>> = None;
+    pub fn build(self) -> Result<OsInstanceArcBox<'static>> {
+        let mut connector: Option<ConnectorInstanceArcBox<'static>> = None;
+        let mut os: Option<OsInstanceArcBox<'static>> = None;
         for step in self.steps.iter() {
             match step {
                 BuildStep::Connector { name, args } => {
@@ -807,9 +806,9 @@ impl<'a> OsBuilder<'a> {
     ///
     /// Each created connector / os instance is fed into the next os / connector instance as an argument.
     /// If any build step fails the function returns an error.
-    pub fn build(self) -> Result<ConnectorInstanceBox<'static>> {
-        let mut connector: Option<ConnectorInstanceBox<'static>> = None;
-        let mut os: Option<OsInstanceBox<'static>> = None;
+    pub fn build(self) -> Result<ConnectorInstanceArcBox<'static>> {
+        let mut connector: Option<ConnectorInstanceArcBox<'static>> = None;
+        let mut os: Option<OsInstanceArcBox<'static>> = None;
         for step in self.steps.iter() {
             match step {
                 BuildStep::Connector { name, args } => {

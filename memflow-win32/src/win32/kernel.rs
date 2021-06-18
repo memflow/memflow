@@ -13,7 +13,7 @@ use crate::{
 use log::{info, trace};
 use std::fmt;
 
-use cglue::{forward::Fwd, repr_cstring::ReprCString};
+use cglue::prelude::v1::*;
 use memflow::architecture::{ArchitectureIdent, ArchitectureObj};
 use memflow::error::{Error, ErrorKind, ErrorOrigin, Result};
 use memflow::mem::{

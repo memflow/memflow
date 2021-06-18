@@ -9,7 +9,7 @@ use crate::plugins::*;
 use crate::plugins::Args;
 use crate::types::{size, Address};
 
-use cglue::*;
+use cglue::prelude::v1::*;
 use std::sync::Arc;
 
 cglue_impl_group!(DummyMemory, ConnectorInstance, {});

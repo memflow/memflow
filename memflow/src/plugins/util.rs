@@ -1,7 +1,8 @@
 use super::Args;
 use crate::error::{Error, ErrorKind, ErrorOrigin};
-use cglue::{arc::COptArc, repr_cstring::ReprCString, result::into_int_out_result};
-use libloading::Library;
+use cglue::prelude::v1::*;
+use cglue::result::into_int_out_result;
+use std::ffi::c_void;
 
 use std::mem::MaybeUninit;
 use std::path::Path;
@@ -109,10 +110,10 @@ pub fn find_export_by_prefix(
 /// This function is used by the proc macros
 pub fn create_with_logging<T>(
     args: &ReprCString,
-    lib: COptArc<Library>,
+    lib: COptArc<c_void>,
     log_level: i32,
     out: &mut MaybeUninit<T>,
-    create_fn: impl FnOnce(Args, log::Level) -> Result<T, Error>,
+    create_fn: impl FnOnce(Args, COptArc<c_void>, log::Level) -> Result<T, Error>,
 ) -> i32 {
     let level = match log_level {
         1 => ::log::Level::Error,
@@ -130,7 +131,7 @@ pub fn create_with_logging<T>(
                 e
             })
             .and_then(|args| {
-                create_fn(args, level).map_err(|e| {
+                create_fn(args, lib, level).map_err(|e| {
                     ::log::error!("{}", e);
                     e
                 })
@@ -148,10 +149,10 @@ pub fn create_with_logging<T>(
 pub fn create_bare<T, I>(
     args: &ReprCString,
     input: I,
-    lib: COptArc<Library>,
+    lib: COptArc<c_void>,
     log_level: i32,
     out: &mut MaybeUninit<T>,
-    create_fn: impl FnOnce(&Args, I, log::Level) -> Result<T, Error>,
+    create_fn: impl FnOnce(&Args, I, COptArc<c_void>, log::Level) -> Result<T, Error>,
 ) -> i32 {
     let level = match log_level {
         1 => ::log::Level::Error,
@@ -169,7 +170,7 @@ pub fn create_bare<T, I>(
                 e
             })
             .and_then(|args| {
-                create_fn(&args, input, level).map_err(|e| {
+                create_fn(&args, input, lib, level).map_err(|e| {
                     ::log::error!("{}", e);
                     e
                 })
@@ -185,9 +186,12 @@ pub fn create_bare<T, I>(
 /// This function is used by the proc macros
 pub fn create_without_logging<T>(
     args: &ReprCString,
-    lib: COptArc<Library>,
+    lib: COptArc<c_void>,
     out: &mut MaybeUninit<T>,
-    create_fn: impl FnOnce(super::Args) -> Result<T, Error>,
+    create_fn: impl FnOnce(super::Args, COptArc<c_void>) -> Result<T, Error>,
 ) -> i32 {
-    into_int_out_result(Args::parse(&args).and_then(|args| create_fn(args)), out)
+    into_int_out_result(
+        Args::parse(&args).and_then(|args| create_fn(args, lib)),
+        out,
+    )
 }

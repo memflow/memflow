@@ -11,8 +11,7 @@ use crate::error::{
 };
 use crate::types::{Address, Page, PhysicalAddress, Pointer32, Pointer64};
 
-use cglue::forward::*;
-use cglue::*;
+use cglue::prelude::v1::*;
 use std::mem::MaybeUninit;
 
 #[cfg(feature = "std")]
@@ -52,8 +51,10 @@ use super::VirtualMemoryCursor;
 #[int_result]
 #[cglue_forward]
 pub trait VirtualMemory: Send {
+    #[int_result(PartialResult)]
     fn virt_read_raw_list(&mut self, data: &mut [VirtualReadData]) -> PartialResult<()>;
 
+    #[int_result(PartialResult)]
     fn virt_write_raw_list(&mut self, data: &[VirtualWriteData]) -> PartialResult<()>;
 
     fn virt_page_info(&mut self, addr: Address) -> Result<Page>;

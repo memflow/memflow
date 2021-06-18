@@ -8,7 +8,7 @@ use crate::types::{Address, PhysicalAddress, Pointer32, Pointer64};
 use std::mem::MaybeUninit;
 
 use cglue::forward::*;
-use cglue::*;
+use cglue::prelude::v1::*;
 
 #[cfg(feature = "std")]
 use super::PhysicalMemoryCursor;
@@ -100,7 +100,6 @@ use super::PhysicalMemoryCursor;
 /// # read(&mut DummyMemory::new(size::mb(4)));
 /// ```
 #[cglue_trait]
-#[cglue_arc_wrappable]
 #[int_result]
 #[cglue_forward]
 pub trait PhysicalMemory: Send {

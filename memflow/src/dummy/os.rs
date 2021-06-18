@@ -7,13 +7,14 @@ use crate::os::{ModuleInfo, OsInfo, Pid, ProcessInfo};
 use crate::plugins::os::OsDescriptor;
 use crate::plugins::*;
 use crate::types::{size, Address};
-use cglue::{arc::COptArc, forward::*, option::COption, repr_cstring::ReprCString, *};
-use libloading::Library;
+
+use cglue::prelude::v1::*;
 use log::Level;
 use rand::seq::SliceRandom;
 use rand::{thread_rng, Rng, SeedableRng};
 use rand_xorshift::XorShiftRng;
 use std::collections::VecDeque;
+use std::ffi::c_void;
 
 use crate::architecture::x86::x64;
 use crate::architecture::x86::X86ScopedVirtualTranslate;
@@ -520,21 +521,22 @@ pub static MEMFLOW_OS_DUMMY: OsDescriptor = OsDescriptor {
 #[doc(hidden)]
 extern "C" fn mf_create(
     args: &ReprCString,
-    mem: COption<ConnectorInstanceBox>,
-    lib: COptArc<Library>,
+    mem: COption<ConnectorInstanceArcBox>,
+    lib: COptArc<c_void>,
     log_level: i32,
-    out: &mut MuOsInstanceBox<'static>,
+    out: &mut MuOsInstanceArcBox<'static>,
 ) -> i32 {
     create_bare(args, mem.into(), lib, log_level, out, build_dummy)
 }
 
 pub fn build_dummy(
     args: &Args,
-    _mem: Option<ConnectorInstanceBox>,
+    _mem: Option<ConnectorInstanceArcBox>,
+    lib: COptArc<c_void>,
     _log_level: Level,
-) -> Result<OsInstanceBox<'static>> {
+) -> Result<OsInstanceArcBox<'static>> {
     let size = super::mem::parse_size(args)?;
     let mem = DummyMemory::new(size);
     let os = DummyOs::new(mem);
-    Ok(group_obj!(os as OsInstance))
+    Ok(group_obj!((os, lib) as OsInstance))
 }

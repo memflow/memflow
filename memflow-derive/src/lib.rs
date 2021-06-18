@@ -90,7 +90,7 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
                 log_level: i32,
                 out: &mut #crate_path::plugins::MuConnectorInstanceArcBox<'static>
             ) -> i32 {
-                #crate_path::plugins::connector::create_with_logging(args, log_level, lib, out, #func_name)
+                #crate_path::plugins::connector::create_with_logging(args, lib, log_level, out, #func_name)
             }
         }
     } else {

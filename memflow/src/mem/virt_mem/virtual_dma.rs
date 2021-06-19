@@ -39,8 +39,9 @@ impl<T: PhysicalMemory, D: ScopedVirtualTranslate> VirtualDma<T, DirectTranslate
     /// use memflow::types::Address;
     /// use memflow::architecture::x86::x64;
     /// use memflow::mem::{PhysicalMemory, VirtualTranslate, VirtualMemory, VirtualDma};
+    /// use memflow::cglue::Fwd;
     ///
-    /// fn read(phys_mem: &mut impl PhysicalMemory, vat: &mut impl VirtualTranslate, dtb: Address, read_addr: Address) {
+    /// fn read(phys_mem: Fwd<&mut impl PhysicalMemory>, vat: &mut impl VirtualTranslate, dtb: Address, read_addr: Address) {
     ///     let arch = x64::ARCH;
     ///     let translator = x64::new_translator(dtb);
     ///
@@ -53,11 +54,12 @@ impl<T: PhysicalMemory, D: ScopedVirtualTranslate> VirtualDma<T, DirectTranslate
     /// }
     /// # use memflow::dummy::{DummyMemory, DummyOs};
     /// # use memflow::types::size;
-    /// # use memflow::mem::DirectTranslate;
+    /// # use memflow::mem::{DirectTranslate, AsPhysicalMemory};
+    /// # use memflow::cglue::ForwardMut;
     /// # let mem = DummyMemory::new(size::mb(4));
     /// # let (mut os, dtb, virt_base) = DummyOs::new_and_dtb(mem, size::mb(2), &[255, 0, 255, 0, 255, 0, 255, 0]);
     /// # let mut vat = DirectTranslate::new();
-    /// # read(os.as_mut(), &mut vat, dtb, virt_base);
+    /// # read(os.phys_mem().forward_mut(), &mut vat, dtb, virt_base);
     /// ```
     pub fn new(phys_mem: T, arch: impl Into<ArchitectureObj>, translator: D) -> Self {
         Self {
@@ -81,8 +83,9 @@ impl<T: PhysicalMemory, V: VirtualTranslate, D: ScopedVirtualTranslate> VirtualD
     /// use memflow::types::Address;
     /// use memflow::architecture::x86::x64;
     /// use memflow::mem::{PhysicalMemory, VirtualTranslate, VirtualMemory, VirtualDma};
+    /// use memflow::cglue::Fwd;
     ///
-    /// fn read(phys_mem: &mut impl PhysicalMemory, vat: impl VirtualTranslate, dtb: Address, read_addr: Address) {
+    /// fn read(phys_mem: Fwd<&mut impl PhysicalMemory>, vat: impl VirtualTranslate, dtb: Address, read_addr: Address) {
     ///     let arch = x64::ARCH;
     ///     let translator = x64::new_translator(dtb);
     ///
@@ -95,11 +98,12 @@ impl<T: PhysicalMemory, V: VirtualTranslate, D: ScopedVirtualTranslate> VirtualD
     /// }
     /// # use memflow::dummy::{DummyMemory, DummyOs};
     /// # use memflow::types::size;
-    /// # use memflow::mem::DirectTranslate;
+    /// # use memflow::mem::{DirectTranslate, AsPhysicalMemory};
+    /// # use memflow::cglue::ForwardMut;
     /// # let mem = DummyMemory::new(size::mb(4));
     /// # let (mut os, dtb, virt_base) = DummyOs::new_and_dtb(mem, size::mb(2), &[255, 0, 255, 0, 255, 0, 255, 0]);
     /// # let mut vat = DirectTranslate::new();
-    /// # read(os.as_mut(), &mut vat, dtb, virt_base);
+    /// # read(os.phys_mem().forward_mut(), &mut vat, dtb, virt_base);
     /// ```
     pub fn with_vat(phys_mem: T, arch: impl Into<ArchitectureObj>, translator: D, vat: V) -> Self {
         Self {

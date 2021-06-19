@@ -17,7 +17,7 @@ use memflow::mem::PhysicalMemoryCursor;
 
 fn main() -> io::Result<()> {
     let mut phys_mem = DummyMemory::new(size::mb(16));
-    let mut cursor = PhysicalMemoryCursor::new(&mut phys_mem);
+    let mut cursor = PhysicalMemoryCursor::new(phys_mem);
 
     // read up to 10 bytes
     let mut buffer = [0; 10];
@@ -54,7 +54,7 @@ use crate::types::{Address, PhysicalAddress};
 ///
 /// fn main() -> io::Result<()> {
 ///     let mut phys_mem = DummyMemory::new(size::mb(16));
-///     let mut cursor = PhysicalMemoryCursor::new(&mut phys_mem);
+///     let mut cursor = PhysicalMemoryCursor::new(phys_mem);
 ///
 ///     // read up to 10 bytes
 ///     let mut buffer = [0; 10];
@@ -87,7 +87,7 @@ impl<T: PhysicalMemory> PhysicalMemoryCursor<T> {
     /// use memflow::mem::PhysicalMemoryCursor;
     ///
     /// let mut phys_mem = DummyMemory::new(size::mb(16));
-    /// let mut cursor = PhysicalMemoryCursor::new(&mut phys_mem);
+    /// let mut cursor = PhysicalMemoryCursor::new(phys_mem);
     /// ```
     ///
     /// Taking (temporary) ownership of a [`PhysicalMemory`] object:
@@ -122,7 +122,7 @@ impl<T: PhysicalMemory> PhysicalMemoryCursor<T> {
     /// use memflow::mem::PhysicalMemoryCursor;
     ///
     /// let mut phys_mem = DummyMemory::new(size::mb(16));
-    /// let mut cursor = PhysicalMemoryCursor::at(&mut phys_mem, 0x1000.into());
+    /// let mut cursor = PhysicalMemoryCursor::at(phys_mem, 0x1000.into());
     /// ```
     ///
     /// Taking (temporary) ownership of a [`PhysicalMemory`] object:
@@ -304,10 +304,10 @@ impl<T: PhysicalMemory> Seek for PhysicalMemoryCursor<T> {
 ///     let phys_mem = os.into_inner();
 ///     let translator = x64::new_translator(dtb);
 ///
-///     let mut virt_mem = VirtualDma::new(phys_mem, x64::ARCH, translator);
+///     let virt_mem = VirtualDma::new(phys_mem, x64::ARCH, translator);
 ///
 ///     // create the actual cursor and seek it to the dummy virt_base
-///     let mut cursor = VirtualMemoryCursor::new(&mut virt_mem);
+///     let mut cursor = VirtualMemoryCursor::new(virt_mem);
 ///     cursor.seek(io::SeekFrom::Start(virt_base.as_u64()))?;
 ///
 ///     // read up to 10 bytes
@@ -348,7 +348,7 @@ impl<T: VirtualMemory> VirtualMemoryCursor<T> {
     /// # let phys_mem = os.into_inner();
     /// # let translator = x64::new_translator(dtb);
     /// let mut virt_mem = VirtualDma::new(phys_mem, x64::ARCH, translator);
-    /// let mut cursor = VirtualMemoryCursor::new(&mut virt_mem);
+    /// let mut cursor = VirtualMemoryCursor::new(virt_mem);
     /// ```
     ///
     /// Taking (temporary) ownership of a [`VirtualMemory`] object:
@@ -397,7 +397,7 @@ impl<T: VirtualMemory> VirtualMemoryCursor<T> {
     /// # let phys_mem = os.into_inner();
     /// # let translator = x64::new_translator(dtb);
     /// let mut virt_mem = VirtualDma::new(phys_mem, x64::ARCH, translator);
-    /// let mut cursor = VirtualMemoryCursor::at(&mut virt_mem, 0x1000.into());
+    /// let mut cursor = VirtualMemoryCursor::at(virt_mem, 0x1000.into());
     /// ```
     ///
     /// Taking (temporary) ownership of a [`VirtualMemory`] object:

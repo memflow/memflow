@@ -23,7 +23,7 @@ fn main() -> Result<()> {
         );
     }
 
-    let mut keyboard = os.into_impl_oskeyboardinner().unwrap().into_keyboard()?;
+    let mut keyboard = into!(os impl OsKeyboardInner).unwrap().into_keyboard()?;
 
     loop {
         println!("space down: {:?}", keyboard.is_down(0x20)); // VK_SPACE

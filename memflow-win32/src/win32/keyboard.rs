@@ -16,7 +16,7 @@ use memflow::mem::{PhysicalMemory, VirtualTranslate};
 use memflow::os::{Keyboard, KeyboardState};
 use memflow_win32::win32::{Win32Kernel, Win32Keyboard};
 
-fn test<T: PhysicalMemory, V: VirtualTranslate>(kernel: &mut Win32Kernel<T, V>) {
+fn test<T: 'static + PhysicalMemory, V: 'static + VirtualTranslate>(kernel: &mut Win32Kernel<T, V>) {
     let mut kbd = Win32Keyboard::with_kernel_ref(kernel).unwrap();
 
     loop {

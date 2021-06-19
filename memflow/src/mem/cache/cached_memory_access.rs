@@ -221,8 +221,9 @@ impl<T: PhysicalMemory> CachedMemoryAccessBuilder<T, DefaultCacheValidator> {
     /// # const MAGIC_VALUE: u64 = 0x23bd_318f_f3a3_5821;
     /// use memflow::architecture::x86::x64;
     /// use memflow::mem::{PhysicalMemory, CachedMemoryAccess};
+    /// use memflow::cglue::{Fwd, ForwardMut};
     ///
-    /// fn build<T: PhysicalMemory>(mem: &mut T)
+    /// fn build<T: PhysicalMemory>(mem: Fwd<&mut T>)
     ///     -> impl PhysicalMemory + '_ {
     ///     CachedMemoryAccess::builder(mem)
     ///         .arch(x64::ARCH)
@@ -234,7 +235,7 @@ impl<T: PhysicalMemory> CachedMemoryAccessBuilder<T, DefaultCacheValidator> {
     /// # use memflow::types::size;
     /// # let mut mem = DummyMemory::new(size::mb(4));
     /// # mem.phys_write(0.into(), &MAGIC_VALUE).unwrap();
-    /// let mut cache = build(&mut mem);
+    /// let mut cache = build(mem.forward_mut());
     ///
     /// let value: u64 = cache.phys_read(0.into()).unwrap();
     /// assert_eq!(value, MAGIC_VALUE);

@@ -32,7 +32,7 @@ use super::VirtualMemoryCursor;
 /// Reading from `VirtualMemory`:
 /// ```
 /// use memflow::types::Address;
-/// use memflow::mem::VirtualMemory;
+/// use memflow::mem::{VirtualMemory, AsVirtualMemory};
 ///
 /// fn read(virt_mem: &mut impl VirtualMemory, read_addr: Address) {
 ///     let mut addr = 0u64;

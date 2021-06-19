@@ -243,8 +243,8 @@ pub trait Loadable: Sized {
 /// ```
 /// use memflow::plugins::Inventory;
 /// # use memflow::error::Result;
-/// # use memflow::plugins::OsInstance;
-/// # fn test() -> Result<OsInstance> {
+/// # use memflow::os::OsInstanceArcBox;
+/// # fn test() -> Result<OsInstanceArcBox<'static>> {
 /// let inventory = Inventory::scan();
 /// inventory
 ///   .builder()
@@ -578,8 +578,7 @@ impl Inventory {
     /// use memflow::mem::phys_mem::*;
     ///
     /// #[connector(name = "dummy_conn")]
-    /// pub fn create_connector(_args: &Args, _log_level: log::Level) ->
-    ///     Result<impl PhysicalMemory + Clone> {
+    /// pub fn create_connector(_args: &Args, _log_level: log::Level) -> Result<DummyMemory> {
     ///     Ok(DummyMemory::new(size::mb(16)))
     /// }
     /// ```

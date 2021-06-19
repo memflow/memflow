@@ -34,7 +34,7 @@ use memflow::types::Address;
 /// use memflow::mem::PhysicalMemory;
 /// use memflow_win32::win32::Win32Kernel;
 ///
-/// fn test<T: PhysicalMemory>(connector: T) {
+/// fn test<T: 'static + PhysicalMemory + Clone>(connector: T) {
 ///     let _kernel = Win32Kernel::builder(connector)
 ///         .build()
 ///         .unwrap();
@@ -46,7 +46,7 @@ use memflow::types::Address;
 /// use memflow::mem::PhysicalMemory;
 /// use memflow_win32::win32::Win32Kernel;
 ///
-/// fn test<T: PhysicalMemory>(connector: T) {
+/// fn test<T: 'static + PhysicalMemory + Clone>(connector: T) {
 ///     let _kernel = Win32Kernel::builder(connector)
 ///         .build_default_caches()
 ///         .build()
@@ -59,7 +59,7 @@ use memflow::types::Address;
 /// use memflow::mem::{PhysicalMemory, CachedMemoryAccess, CachedVirtualTranslate};
 /// use memflow_win32::win32::Win32Kernel;
 ///
-/// fn test<T: PhysicalMemory>(connector: T) {
+/// fn test<T: 'static + PhysicalMemory + Clone>(connector: T) {
 ///     let _kernel = Win32Kernel::builder(connector)
 ///     .build_page_cache(|connector, arch| {
 ///         CachedMemoryAccess::builder(connector)
@@ -85,9 +85,9 @@ use memflow::types::Address;
 /// use memflow::prelude::v1::*;
 /// use memflow_win32::prelude::{Win32KernelInfo, Win32Offsets, Win32Kernel};
 ///
-/// fn test<T: PhysicalMemory>(mut connector: T) {
+/// fn test<T: 'static + PhysicalMemory>(mut connector: T) {
 ///     // Use the ntoskrnl scanner to find the relevant KernelInfo (start_block, arch, dtb, ntoskrnl, etc)
-///     let kernel_info = Win32KernelInfo::scanner(&mut connector).scan().unwrap();
+///     let kernel_info = Win32KernelInfo::scanner(connector.forward_mut()).scan().unwrap();
 ///     // Download the corresponding pdb from the default symbol store
 ///     let offsets = Win32Offsets::builder().kernel_info(&kernel_info).build().unwrap();
 ///
@@ -107,7 +107,7 @@ use memflow::types::Address;
 ///         .unwrap();
 ///
 ///     // Initialize the final Kernel object
-///     let _kernel = Win32Kernel::new(&mut connector_cached, vat_cached, offsets, kernel_info);
+///     let _kernel = Win32Kernel::new(connector_cached, vat_cached, offsets, kernel_info);
 /// }
 /// ```
 pub struct Win32KernelBuilder<T, TK, VK> {
@@ -226,7 +226,7 @@ where
     /// use memflow::mem::PhysicalMemory;
     /// use memflow_win32::prelude::{Win32Kernel, SymbolStore};
     ///
-    /// fn test<T: PhysicalMemory>(connector: T) {
+    /// fn test<T: 'static + PhysicalMemory + Clone>(connector: T) {
     ///     let _kernel = Win32Kernel::builder(connector)
     ///         .symbol_store(SymbolStore::new().no_cache())
     ///         .build()
@@ -251,7 +251,7 @@ where
     /// use memflow_win32::win32::Win32Kernel;
     /// use memflow_win32::offsets::SymbolStore;
     ///
-    /// fn test<T: PhysicalMemory>(connector: T) {
+    /// fn test<T: 'static + PhysicalMemory + Clone>(connector: T) {
     ///     let _kernel = Win32Kernel::builder(connector)
     ///         .no_symbol_store()
     ///         .build()
@@ -276,7 +276,7 @@ where
     /// use memflow::mem::PhysicalMemory;
     /// use memflow_win32::win32::Win32Kernel;
     ///
-    /// fn test<T: PhysicalMemory>(connector: T) {
+    /// fn test<T: 'static + PhysicalMemory + Clone>(connector: T) {
     ///     let _kernel = Win32Kernel::builder(connector)
     ///         .build_default_caches()
     ///         .build()
@@ -326,7 +326,7 @@ where
     /// use memflow::mem::{PhysicalMemory, CachedMemoryAccess};
     /// use memflow_win32::win32::Win32Kernel;
     ///
-    /// fn test<T: PhysicalMemory>(connector: T) {
+    /// fn test<T: 'static + PhysicalMemory + Clone>(connector: T) {
     ///     let _kernel = Win32Kernel::builder(connector)
     ///         .build_page_cache(|connector, arch| {
     ///             CachedMemoryAccess::builder(connector)
@@ -371,7 +371,7 @@ where
     /// use memflow::mem::{PhysicalMemory, CachedVirtualTranslate};
     /// use memflow_win32::win32::Win32Kernel;
     ///
-    /// fn test<T: PhysicalMemory>(connector: T) {
+    /// fn test<T: 'static + PhysicalMemory + Clone>(connector: T) {
     ///     let _kernel = Win32Kernel::builder(connector)
     ///         .build_vat_cache(|vat, arch| {
     ///             CachedVirtualTranslate::builder(vat)

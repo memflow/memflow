@@ -26,7 +26,7 @@ use std::{cmp, fmt, hash, ops};
 ///
 /// ```
 /// use memflow::types::Pointer64;
-/// use memflow::mem::VirtualMemory;
+/// use memflow::mem::{VirtualMemory, AsVirtualMemory};
 /// use memflow::dataview::Pod;
 ///
 /// #[repr(C)]
@@ -55,7 +55,7 @@ use std::{cmp, fmt, hash, ops};
 ///
 /// ```
 /// use memflow::types::Pointer64;
-/// use memflow::mem::VirtualMemory;
+/// use memflow::mem::{VirtualMemory, AsVirtualMemory};
 /// use memflow::dataview::Pod;
 ///
 /// #[repr(C)]

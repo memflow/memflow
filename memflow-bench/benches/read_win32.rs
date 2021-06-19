@@ -25,7 +25,7 @@ fn initialize_virt_ctx() -> Result<(
 )> {
     let mut phys_mem = create_connector(&Args::new())?;
 
-    let kernel_info = Win32KernelInfo::scanner(&mut phys_mem)
+    let kernel_info = Win32KernelInfo::scanner(phys_mem.forward_mut())
         .scan()
         .map_err(|_| {
             Error(ErrorOrigin::Other, ErrorKind::NotFound).log_error("unable to find kernel")

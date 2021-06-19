@@ -431,7 +431,7 @@ impl<T> PartialResultExt<T> for PartialResult<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::cglue::{
+    use crate::cglue::result::{
         from_int_result, from_int_result_empty, into_int_out_result, into_int_result, IntError,
     };
     use std::mem::MaybeUninit;

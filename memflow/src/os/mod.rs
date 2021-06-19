@@ -20,7 +20,7 @@ pub mod module;
 pub mod process;
 pub mod root;
 
-pub use keyboard::{Keyboard, KeyboardState, OsKeyboard, OsKeyboardInner};
+pub use keyboard::{Keyboard, OsKeyboard, OsKeyboardInner};
 pub use module::{
     ExportCallback, ExportInfo, ImportCallback, ImportInfo, ModuleAddressCallback,
     ModuleAddressInfo, ModuleInfo, ModuleInfoCallback, SectionCallback, SectionInfo,

@@ -28,7 +28,6 @@ pub use util::create_bare;
 
 use crate::error::{Result, *};
 use crate::mem::phys_mem::*;
-use crate::os::keyboard::*;
 use crate::os::root::*;
 
 use log::*;
@@ -36,7 +35,6 @@ use std::fs::read_dir;
 use std::mem::MaybeUninit;
 use std::path::{Path, PathBuf};
 
-use cglue::prelude::v1::*;
 use libloading::Library;
 
 /// Exported memflow plugins version
@@ -581,7 +579,7 @@ impl Inventory {
     /// use memflow::dummy::DummyMemory;
     /// use memflow::plugins::Args;
     /// use memflow::derive::connector;
-    /// use memflow::mem::PhysicalMemory;
+    /// use memflow::mem::phys_mem::*;
     ///
     /// #[connector(name = "dummy_conn")]
     /// pub fn create_connector(_args: &Args, _log_level: log::Level) ->

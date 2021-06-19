@@ -39,7 +39,7 @@ impl DummyProcessInfo {
     }
 }
 
-cglue_impl_group!(DummyProcess<T>, ProcessInstance, {});
+cglue_impl_group!(DummyProcess<T>, ProcessInstance, { });
 
 #[derive(Clone)]
 pub struct DummyProcess<T> {

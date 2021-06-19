@@ -16,18 +16,17 @@ fn main() -> Result<()> {
         .args(os_args)
         .build()?;
 
-    if !os.has_keyboard() {
+    if !os.check_impl_oskeyboardinner() {
         return Err(
             Error(ErrorOrigin::Other, ErrorKind::UnsupportedOptionalFeature)
                 .log_error("keyboard feature is not implemented for the given os plugin"),
         );
     }
 
-    let mut keyboard = os.into_keyboard()?;
+    let mut keyboard = os.into_impl_oskeyboardinner().unwrap().into_keyboard()?;
 
     loop {
-        let keyboard_state = keyboard.state()?;
-        println!("space down: {:?}", keyboard_state.is_down(0x20)); // VK_SPACE
+        println!("space down: {:?}", keyboard.is_down(0x20)); // VK_SPACE
         std::thread::sleep(std::time::Duration::from_millis(1000));
     }
 }

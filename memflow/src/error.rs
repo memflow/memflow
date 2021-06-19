@@ -343,9 +343,9 @@ impl IntError for PartialError<()> {
     }
 
     fn from_int_err(err: NonZeroI32) -> Self {
-        let err = (-err.get()) & 0xFi32;
-        match err {
-            1 => PartialError::Error(Error::from_int_err(NonZeroI32::new(err).unwrap())),
+        let errc = (-err.get()) & 0xFi32;
+        match errc {
+            1 => PartialError::Error(Error::from_int_err(err)),
             2 => PartialError::PartialVirtualRead(()),
             3 => PartialError::PartialVirtualWrite,
             _ => PartialError::Error(Error(ErrorOrigin::Ffi, ErrorKind::Unknown)),
@@ -544,6 +544,14 @@ mod tests {
             result.err().unwrap(),
             PartialError::Error(Error(ErrorOrigin::Other, ErrorKind::InvalidExeFile))
         );
+    }
+
+    #[test]
+    pub fn part_result_part_error_read_ffi() {
+        let r: PartialResult<()> = Err(PartialError::PartialVirtualRead(()));
+        let result: PartialResult<()> = from_int_result_empty(into_int_result(r));
+        assert_eq!(result.is_ok(), false);
+        assert_eq!(result.err().unwrap(), PartialError::PartialVirtualRead(()));
     }
 
     #[test]

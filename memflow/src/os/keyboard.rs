@@ -13,7 +13,7 @@ impl<T: for<'a> OsKeyboardInner<'a>> OsKeyboard for T {}
 
 #[cglue_trait]
 #[int_result]
-#[cglue_forward]
+//#[cglue_forward]
 pub trait OsKeyboardInner<'a>: Send {
     #[wrap_with_obj(crate::os::keyboard::Keyboard)]
     type KeyboardType: crate::os::keyboard::Keyboard + 'a;
@@ -27,15 +27,6 @@ pub trait OsKeyboardInner<'a>: Send {
 #[cglue_trait]
 #[int_result]
 pub trait Keyboard {
-    #[wrap_with_obj(crate::os::keyboard::KeyboardState)]
-    type KeyboardStateType: crate::os::keyboard::KeyboardState + 'static;
-
-    fn state(&mut self) -> Result<Self::KeyboardStateType>;
-    fn set_state(&mut self, state: &Self::KeyboardStateType) -> Result<()>;
-}
-
-#[cglue_trait]
-pub trait KeyboardState: Clone {
-    fn is_down(&self, vk: i32) -> bool;
+    fn is_down(&mut self, vk: i32) -> bool;
     fn set_down(&mut self, vk: i32, down: bool);
 }

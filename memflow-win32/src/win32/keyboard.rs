@@ -32,7 +32,7 @@ use super::{Win32Kernel, Win32ProcessInfo, Win32VirtualTranslate};
 use memflow::cglue::*;
 use memflow::error::{Error, ErrorKind, ErrorOrigin, Result};
 use memflow::mem::{AsVirtualMemory, PhysicalMemory, VirtualDma, VirtualMemory, VirtualTranslate};
-use memflow::os::{Keyboard, KeyboardState};
+use memflow::os::Keyboard;
 use memflow::prelude::OsInner;
 
 use std::convert::TryInto;
@@ -194,39 +194,6 @@ impl<T> Win32Keyboard<T> {
     }
 }
 
-impl<T> Keyboard for Win32Keyboard<T>
-where
-    T: VirtualMemory,
-{
-    type KeyboardStateType = Win32KeyboardState;
-
-    /// Reads the gafAsyncKeyState global from the win32kbase.sys kernel module.
-    fn state(&mut self) -> memflow::error::Result<Self::KeyboardStateType> {
-        let buffer: [u8; 256 * 2 / 8] = self.virt_mem.virt_read(self.key_state_addr)?;
-        Ok(Win32KeyboardState { buffer })
-    }
-
-    /// Writes the gafAsyncKeyState global to the win32kbase.sys kernel module.
-    ///
-    /// # Remarks:
-    ///
-    /// This will not enforce key presses in all applications on Windows.
-    /// It will only modify calls to GetKeyState / GetAsyncKeyState.
-    fn set_state(&mut self, state: &Self::KeyboardStateType) -> memflow::error::Result<()> {
-        self.virt_mem
-            .virt_write(self.key_state_addr, &state.buffer)
-            .data_part()
-    }
-}
-
-/// Represents the current Keyboardstate.
-///
-/// Internally this will hold a 256 * 2 / 8 byte long copy of the gafAsyncKeyState array from the target.
-#[derive(Clone)]
-pub struct Win32KeyboardState {
-    buffer: [u8; 256 * 2 / 8],
-}
-
 macro_rules! get_ks_byte {
     ($vk:expr) => {
         $vk * 2 / 8
@@ -255,23 +222,47 @@ macro_rules! set_key_down {
     };
 }
 
-impl KeyboardState for Win32KeyboardState {
-    /// Returns true wether the given key was pressed.
+impl<T> Keyboard for Win32Keyboard<T>
+where
+    T: VirtualMemory,
+{
+    /// Reads the gafAsyncKeyState global from the win32kbase.sys kernel module and
+    /// returns true wether the given key was pressed.
     /// This function accepts a valid microsoft virtual keycode.
     /// In case of supplying a invalid key this function will just return false cleanly.
     ///
     /// A list of all Keycodes can be found on the [msdn](https://docs.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes).
-    fn is_down(&self, vk: i32) -> bool {
+    fn is_down(&mut self, vk: i32) -> bool {
         if !(0..=256).contains(&vk) {
             false
         } else {
-            is_key_down!(self.buffer, vk)
+            if let Ok(buffer) = self
+                .virt_mem
+                .virt_read::<[u8; 256 * 2 / 8]>(self.key_state_addr)
+                .data_part()
+            {
+                is_key_down!(buffer, vk)
+            } else {
+                false
+            }
         }
     }
 
+    /// Writes the gafAsyncKeyState global to the win32kbase.sys kernel module.
+    ///
+    /// # Remarks:
+    ///
+    /// This will not enforce key presses in all applications on Windows.
+    /// It will only modify calls to GetKeyState / GetAsyncKeyState.
     fn set_down(&mut self, vk: i32, down: bool) {
         if (0..=256).contains(&vk) {
-            set_key_down!(self.buffer, vk, down);
+            if let Ok(mut buffer) = self
+                .virt_mem
+                .virt_read::<[u8; 256 * 2 / 8]>(self.key_state_addr)
+            {
+                set_key_down!(buffer, vk, down);
+                self.virt_mem.virt_write(self.key_state_addr, &buffer).ok();
+            }
         }
     }
 }

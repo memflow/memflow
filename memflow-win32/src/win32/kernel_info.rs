@@ -1,10 +1,10 @@
 use crate::kernel::{self, StartBlock};
 use crate::kernel::{Win32Guid, Win32Version};
 
-use cglue::forward::ForwardMut;
 use log::{info, warn};
 
 use memflow::architecture::ArchitectureIdent;
+use memflow::cglue::forward::ForwardMut;
 use memflow::error::Result;
 use memflow::mem::{DirectTranslate, PhysicalMemory, VirtualDma};
 use memflow::os::OsInfo;

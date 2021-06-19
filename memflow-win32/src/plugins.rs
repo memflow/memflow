@@ -1,6 +1,7 @@
 use crate::offsets::SymbolStore;
 use crate::win32::{Win32Kernel, Win32KernelBuilder};
 
+use memflow::cglue;
 use memflow::prelude::v1::*;
 
 use std::ffi::c_void;

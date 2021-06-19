@@ -29,8 +29,7 @@ fn test<T: PhysicalMemory, V: VirtualTranslate>(kernel: &mut Win32Kernel<T, V>) 
 */
 use super::{Win32Kernel, Win32ProcessInfo, Win32VirtualTranslate};
 
-use cglue::forward::ForwardMut;
-use memflow::cglue::Fwd;
+use memflow::cglue::*;
 use memflow::error::{Error, ErrorKind, ErrorOrigin, Result};
 use memflow::mem::{AsVirtualMemory, PhysicalMemory, VirtualDma, VirtualMemory, VirtualTranslate};
 use memflow::os::{Keyboard, KeyboardState};

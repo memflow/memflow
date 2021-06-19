@@ -11,9 +11,9 @@ use cglue::prelude::v1::*;
 pub trait OsKeyboard: for<'a> OsKeyboardInner<'a> {}
 impl<T: for<'a> OsKeyboardInner<'a>> OsKeyboard for T {}
 
-#[cglue_trait]
-#[int_result]
-#[cglue_forward]
+//#[cglue_trait]
+//#[int_result]
+//#[cglue_forward]
 pub trait OsKeyboardInner<'a>: Send {
     #[wrap_with_obj(crate::os::keyboard::Keyboard)]
     type KeyboardType: crate::os::keyboard::Keyboard + 'a;
@@ -24,8 +24,8 @@ pub trait OsKeyboardInner<'a>: Send {
     fn into_keyboard(self) -> Result<Self::IntoKeyboardType>;
 }
 
-#[cglue_trait]
-#[int_result]
+//#[cglue_trait]
+//#[int_result]
 pub trait Keyboard {
     #[wrap_with_obj(crate::os::keyboard::KeyboardState)]
     type KeyboardStateType: crate::os::keyboard::KeyboardState + 'static;
@@ -34,7 +34,7 @@ pub trait Keyboard {
     fn set_state(&mut self, state: &Self::KeyboardStateType) -> Result<()>;
 }
 
-#[cglue_trait]
+//#[cglue_trait]
 pub trait KeyboardState: Clone {
     fn is_down(&self, vk: i32) -> bool;
     fn set_down(&mut self, vk: i32, down: bool);

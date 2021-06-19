@@ -6,8 +6,8 @@ use crate::offsets::Win32Offsets;
 #[cfg(feature = "symstore")]
 use crate::offsets::SymbolStore;
 
-use cglue::forward::ForwardMut;
 use memflow::architecture::ArchitectureIdent;
+use memflow::cglue::forward::ForwardMut;
 use memflow::error::Result;
 use memflow::mem::{
     CachedMemoryAccess, CachedVirtualTranslate, DefaultCacheValidator, DirectTranslate,

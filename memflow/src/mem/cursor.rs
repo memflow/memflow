@@ -600,6 +600,8 @@ impl<T: VirtualMemory> Seek for VirtualMemoryCursor<T> {
 
 #[cfg(test)]
 mod tests {
+    use cglue::forward::ForwardMut;
+
     use super::*;
     use crate::architecture::x86::{x64, X86ScopedVirtualTranslate};
     use crate::dummy::{DummyMemory, DummyOs};
@@ -613,7 +615,7 @@ mod tests {
     #[test]
     fn physical_seek() {
         let mut phys_mem = dummy_phys_mem();
-        let mut cursor = PhysicalMemoryCursor::new(&mut phys_mem);
+        let mut cursor = PhysicalMemoryCursor::new(phys_mem.forward_mut());
 
         assert_eq!(cursor.seek(SeekFrom::Current(0)).unwrap(), 0);
         assert_eq!(cursor.seek(SeekFrom::Current(1024)).unwrap(), 1024);
@@ -631,7 +633,7 @@ mod tests {
     #[test]
     fn physical_read_write() {
         let mut phys_mem = dummy_phys_mem();
-        let mut cursor = PhysicalMemoryCursor::new(&mut phys_mem);
+        let mut cursor = PhysicalMemoryCursor::new(phys_mem.forward_mut());
 
         let write_buf = [0xAu8, 0xB, 0xC, 0xD];
         assert_eq!(cursor.write(&write_buf).unwrap(), 4); // write 4 bytes from the start
@@ -646,7 +648,7 @@ mod tests {
     #[test]
     fn physical_read_write_seek() {
         let mut phys_mem = dummy_phys_mem();
-        let mut cursor = PhysicalMemoryCursor::new(&mut phys_mem);
+        let mut cursor = PhysicalMemoryCursor::new(phys_mem.forward_mut());
 
         assert_eq!(cursor.seek(SeekFrom::Start(512)).unwrap(), 512); // seek to 512th byte
 

@@ -4,10 +4,8 @@ use super::{Win32Kernel, Win32ModuleListInfo};
 
 use std::fmt;
 
-use cglue::forward::ForwardMut;
-use cglue::repr_cstring::ReprCString;
 use memflow::architecture::ArchitectureIdent;
-use memflow::cglue::*;
+use memflow::cglue::{self, *};
 use memflow::error::{Error, ErrorKind, ErrorOrigin, PartialResultExt, Result};
 use memflow::mem::virt_mem::*;
 use memflow::mem::{PhysicalMemory, VirtualDma, VirtualMemory, VirtualTranslate};

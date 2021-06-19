@@ -27,6 +27,7 @@ cglue_trait_group!(IntoKeyboard, { Keyboard, Clone }, {});
 
 #[cglue_trait]
 #[int_result]
+#[cglue_forward]
 pub trait Keyboard {
     fn is_down(&mut self, vk: i32) -> bool;
     fn set_down(&mut self, vk: i32, down: bool);

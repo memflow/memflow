@@ -27,6 +27,7 @@ cglue_trait_group!(IntoCpuState, { CpuState, Clone }, {});
 
 #[cglue_trait]
 #[int_result]
+#[cglue_forward]
 pub trait CpuState {
     // TODO:
     // max cpu index

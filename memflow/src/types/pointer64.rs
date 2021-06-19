@@ -2,8 +2,9 @@
 64-bit Pointer abstraction.
 */
 
+use crate::cglue::ReprCString;
 use crate::dataview::Pod;
-use crate::error::{Error, ErrorKind, ErrorOrigin, PartialResult, Result};
+use crate::error::{Error, ErrorKind, ErrorOrigin, PartialError, PartialResult, Result};
 use crate::mem::{PhysicalMemory, VirtualMemory};
 use crate::types::{Address, ByteSwap};
 
@@ -352,17 +353,15 @@ impl<T: Pod + Sized> Pointer64<T> {
 }
 
 /// Implement special phys/virt read/write for CReprStr
-// TODO: fixme
-/*
 impl Pointer64<ReprCString> {
-    pub fn phys_read<U: PhysicalMemory>(self, mem: &mut U) -> Result<ReprCString> {
+    pub fn phys_read_string<U: PhysicalMemory>(self, mem: &mut U) -> Result<ReprCString> {
         match mem.phys_read_char_string(self.address.into()) {
             Ok(s) => Ok(s.into()),
             Err(e) => Err(e),
         }
     }
 
-    pub fn virt_read<U: VirtualMemory>(self, mem: &mut U) -> PartialResult<ReprCString> {
+    pub fn virt_read_string<U: VirtualMemory>(self, mem: &mut U) -> PartialResult<ReprCString> {
         match mem.virt_read_char_string(self.address.into()) {
             Ok(s) => Ok(s.into()),
             Err(PartialError::Error(e)) => Err(PartialError::Error(e)),
@@ -373,7 +372,6 @@ impl Pointer64<ReprCString> {
         }
     }
 }
-*/
 
 impl<T> Pointer64<[T]> {
     pub const fn decay(self) -> Pointer64<T> {

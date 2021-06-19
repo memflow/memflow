@@ -1,7 +1,6 @@
 //! Describes modules
 
 use crate::prelude::v1::*;
-use cglue::repr_cstring::ReprCString;
 
 /// Module information structure
 #[repr(C)]

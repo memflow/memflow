@@ -11,7 +11,7 @@ use crate::error::{
 };
 use crate::types::{Address, Page, PhysicalAddress, Pointer32, Pointer64};
 
-use cglue::prelude::v1::*;
+use crate::cglue::*;
 use std::mem::MaybeUninit;
 
 #[cfg(feature = "std")]

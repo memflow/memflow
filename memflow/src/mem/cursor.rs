@@ -600,7 +600,7 @@ impl<T: VirtualMemory> Seek for VirtualMemoryCursor<T> {
 
 #[cfg(test)]
 mod tests {
-    use cglue::forward::ForwardMut;
+    use crate::cglue::ForwardMut;
 
     use super::*;
     use crate::architecture::x86::{x64, X86ScopedVirtualTranslate};

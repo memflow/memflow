@@ -8,7 +8,7 @@ use crate::mem::{
 use crate::plugins::*;
 use crate::types::{size, Address};
 
-use cglue::prelude::v1::*;
+use crate::cglue::*;
 use std::sync::Arc;
 
 cglue_impl_group!(DummyMemory, ConnectorInstance, {});

@@ -8,7 +8,7 @@ use crate::os::process::*;
 use crate::os::*;
 use crate::types::Address;
 
-use cglue::prelude::v1::*;
+use crate::cglue::*;
 use rand::{thread_rng, Rng};
 
 #[derive(Clone)]

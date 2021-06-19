@@ -4,9 +4,9 @@ use super::{
     ExportCallback, ExportInfo, ImportCallback, ImportInfo, ModuleAddressInfo, ModuleInfo,
     ModuleInfoCallback, SectionCallback, SectionInfo,
 };
+use crate::cglue::*;
 use crate::mem::virt_mem::*;
 use crate::prelude::v1::{Result, *};
-use cglue::prelude::v1::*;
 use std::prelude::v1::*;
 
 // ProcessInstance group for Process and AsVirtualMemory

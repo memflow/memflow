@@ -336,12 +336,12 @@ impl<'a, T> Drop for PageCache<'a, T> {
 mod tests {
     use super::*;
     use crate::architecture::x86;
+    use crate::cglue::ForwardMut;
     use crate::dummy::{DummyMemory, DummyOs};
     use crate::mem::{
         AsPhysicalMemory, CachedMemoryAccess, TimedCacheValidator, VirtualDma, VirtualMemory,
     };
     use crate::types::{size, Address, PhysicalAddress};
-    use cglue::forward::ForwardMut;
 
     use coarsetime::Duration;
     use rand::{thread_rng, Rng};

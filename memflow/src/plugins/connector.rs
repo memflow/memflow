@@ -1,3 +1,7 @@
+use crate::cglue::{
+    result::{from_int_result, from_int_result_empty},
+    *,
+};
 use crate::error::*;
 use crate::mem::PhysicalMemory;
 
@@ -6,8 +10,6 @@ use super::{
     MuConnectorInstanceArcBox, OsInstanceArcBox, PluginDescriptor, TargetInfo,
 };
 
-use cglue::prelude::v1::*;
-use cglue::result::{from_int_result, from_int_result_empty};
 use libloading::Library;
 use std::ffi::c_void;
 

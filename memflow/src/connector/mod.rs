@@ -29,4 +29,6 @@ pub use mmap::MappedPhysicalMemory;
 
 pub mod cpu_state;
 #[doc(hidden)]
-pub use cpu_state::{ConnectorCpuState, ConnectorCpuStateInner, CpuState};
+pub use cpu_state::{
+    ConnectorCpuState, ConnectorCpuStateInner, CpuState, CpuStateArcBox, IntoCpuStateArcBox,
+};

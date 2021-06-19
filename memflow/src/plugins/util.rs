@@ -1,7 +1,8 @@
-use super::Args;
+use crate::cglue::{result::into_int_out_result, *};
 use crate::error::{Error, ErrorKind, ErrorOrigin};
-use cglue::prelude::v1::*;
-use cglue::result::into_int_out_result;
+
+use super::Args;
+
 use std::ffi::c_void;
 
 use std::mem::MaybeUninit;

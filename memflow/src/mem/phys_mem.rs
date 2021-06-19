@@ -8,8 +8,7 @@ use crate::types::{Address, PhysicalAddress, Pointer32, Pointer64};
 
 use std::mem::MaybeUninit;
 
-use cglue::forward::*;
-use cglue::prelude::v1::*;
+use crate::cglue::*;
 
 #[cfg(feature = "std")]
 use super::PhysicalMemoryCursor;

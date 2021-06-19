@@ -1,7 +1,7 @@
 //! Describes optional keyboard input for a Operating System
 
+use crate::cglue::*;
 use crate::prelude::v1::Result;
-use cglue::prelude::v1::*;
 
 /// OsKeyboard supertrait for all possible lifetimes
 ///
@@ -29,6 +29,18 @@ cglue_trait_group!(IntoKeyboard, { Keyboard, Clone }, {});
 #[int_result]
 #[cglue_forward]
 pub trait Keyboard {
+    #[wrap_with_obj(crate::os::keyboard::KeyboardState)]
+    type KeyboardStateType: crate::os::keyboard::KeyboardState;
+
     fn is_down(&mut self, vk: i32) -> bool;
     fn set_down(&mut self, vk: i32, down: bool);
+
+    fn state(&mut self) -> Result<Self::KeyboardStateType>;
+}
+
+#[cglue_trait]
+#[int_result]
+#[cglue_forward]
+pub trait KeyboardState {
+    fn is_down(&self, vk: i32) -> bool;
 }

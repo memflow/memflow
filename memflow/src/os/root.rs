@@ -8,7 +8,7 @@ use crate::mem::phys_mem::*;
 use crate::mem::virt_mem::*;
 use crate::prelude::v1::{Result, *};
 
-use cglue::prelude::v1::*;
+use crate::cglue::*;
 use std::prelude::v1::*;
 
 cglue_trait_group!(OsInstance<'a>, { OsInner<'a>, Clone }, { AsPhysicalMemory, AsVirtualMemory, OsKeyboardInner<'a> });

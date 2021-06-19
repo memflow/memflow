@@ -20,19 +20,22 @@ pub mod module;
 pub mod process;
 pub mod root;
 
-pub use keyboard::{Keyboard, OsKeyboard, OsKeyboardInner};
+pub use keyboard::{
+    IntoKeyboardArcBox, Keyboard, KeyboardArcBox, KeyboardState, KeyboardStateArcBox, OsKeyboard,
+    OsKeyboardInner,
+};
 pub use module::{
     ExportCallback, ExportInfo, ImportCallback, ImportInfo, ModuleAddressCallback,
     ModuleAddressInfo, ModuleInfo, ModuleInfoCallback, SectionCallback, SectionInfo,
 };
 pub use process::{
-    Pid, Process, ProcessInfo, ProcessInfoCallback, ProcessInstance, ProcessInstanceArcBox,
-    ProcessState,
+    IntoProcessInstance, IntoProcessInstanceArcBox, Pid, Process, ProcessInfo, ProcessInfoCallback,
+    ProcessInstance, ProcessInstanceArcBox, ProcessState,
 };
 pub use root::{Os, OsInfo, OsInner, OsInstance, OsInstanceArcBox};
 
 use crate::types::Address;
 
-use cglue::prelude::v1::*;
+use crate::cglue::*;
 
 pub type AddressCallback<'a> = OpaqueCallback<'a, Address>;

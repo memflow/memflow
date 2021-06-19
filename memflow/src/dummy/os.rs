@@ -12,7 +12,7 @@ use crate::os::*;
 use crate::plugins::*;
 use crate::types::{size, Address};
 
-use cglue::prelude::v1::*;
+use crate::cglue::*;
 use log::Level;
 use rand::seq::SliceRandom;
 use rand::{thread_rng, Rng, SeedableRng};

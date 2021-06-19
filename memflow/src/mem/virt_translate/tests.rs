@@ -1,7 +1,5 @@
-use cglue::forward::ForwardMut;
-
 use crate::architecture::x86::x64;
-
+use crate::cglue::ForwardMut;
 use crate::dummy::{DummyMemory, DummyOs};
 use crate::mem::{AsPhysicalMemory, DirectTranslate, VirtualDma, VirtualMemory, VirtualTranslate};
 use crate::types::size;

@@ -1,3 +1,4 @@
+use crate::cglue::{result::from_int_result, *};
 use crate::error::*;
 use crate::os::Os;
 
@@ -6,8 +7,6 @@ use super::{
     OsInstanceBaseArcBox, OsInstanceVtableFiller, PluginDescriptor, TargetInfo,
 };
 
-use cglue::prelude::v1::*;
-use cglue::result::from_int_result;
 use libloading::Library;
 use std::ffi::c_void;
 

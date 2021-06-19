@@ -4,7 +4,7 @@ This module contains functions related to the Inventory system for Connectors an
 All functionality in this module is gated behind `plugins` feature.
 */
 
-use cglue::prelude::v1::*;
+use crate::cglue::*;
 use std::ffi::c_void;
 use std::prelude::v1::*;
 

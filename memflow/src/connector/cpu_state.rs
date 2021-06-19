@@ -1,7 +1,7 @@
 //! Describes optional cpu state for a connector
 
+use crate::cglue::*;
 use crate::prelude::v1::Result;
-use cglue::prelude::v1::*;
 
 /// ConnectorCpuState supertrait for all possible lifetimes
 ///

@@ -8,7 +8,7 @@ use std::{fmt, result, str};
 
 use log::{debug, error, info, trace, warn};
 
-use cglue::result::IntError;
+use crate::cglue::IntError;
 
 #[cfg(feature = "std")]
 use std::error;
@@ -431,7 +431,7 @@ impl<T> PartialResultExt<T> for PartialResult<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cglue::result::{
+    use crate::cglue::{
         from_int_result, from_int_result_empty, into_int_out_result, into_int_result, IntError,
     };
     use std::mem::MaybeUninit;

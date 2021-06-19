@@ -501,7 +501,7 @@ mod tests {
     pub fn result_ok_value_ffi() {
         let r: Result<i32> = Ok(1234i32);
         let mut out = MaybeUninit::<i32>::uninit();
-        let result: Result<i32> = from_int_result(into_int_out_result(r, &mut out), out);
+        let result: Result<i32> = unsafe { from_int_result(into_int_out_result(r, &mut out), out) };
         assert_eq!(result.is_ok(), true);
         assert_eq!(result.unwrap(), 1234i32);
     }
@@ -509,7 +509,7 @@ mod tests {
     #[test]
     pub fn result_error_void_ffi() {
         let r: Result<i32> = Err(Error(ErrorOrigin::Other, ErrorKind::InvalidExeFile));
-        let result: Result<i32> = from_int_result_empty(into_int_result(r));
+        let result: Result<()> = from_int_result_empty(into_int_result(r));
         assert_eq!(result.is_ok(), false);
         assert_eq!(result.err().unwrap().0, ErrorOrigin::Other);
         assert_eq!(result.err().unwrap().1, ErrorKind::InvalidExeFile);
@@ -519,7 +519,7 @@ mod tests {
     pub fn result_error_value_ffi() {
         let r: Result<i32> = Err(Error(ErrorOrigin::Other, ErrorKind::InvalidExeFile));
         let mut out = MaybeUninit::<i32>::uninit();
-        let result: Result<i32> = from_int_result(into_int_out_result(r, &mut out), out);
+        let result: Result<i32> = unsafe { from_int_result(into_int_out_result(r, &mut out), out) };
         assert_eq!(result.is_ok(), false);
         assert_eq!(result.err().unwrap().0, ErrorOrigin::Other);
         assert_eq!(result.err().unwrap().1, ErrorKind::InvalidExeFile);
@@ -533,36 +533,12 @@ mod tests {
     }
 
     #[test]
-    pub fn part_result_ok_value_ffi() {
-        let r: PartialResult<i32> = Ok(1234i32);
-        let mut out = MaybeUninit::<i32>::uninit();
-        let result: PartialResult<i32> = from_int_result(into_int_out_result(r, &mut out), out);
-        assert_eq!(result.is_ok(), true);
-        assert_eq!(result.unwrap(), 1234i32);
-    }
-
-    #[test]
     pub fn part_result_error_void_ffi() {
-        let r: PartialResult<i32> = Err(PartialError::Error(Error(
+        let r: PartialResult<()> = Err(PartialError::Error(Error(
             ErrorOrigin::Other,
             ErrorKind::InvalidExeFile,
         )));
-        let result: PartialResult<i32> = from_int_result_empty(into_int_result(r));
-        assert_eq!(result.is_ok(), false);
-        assert_eq!(
-            result.err().unwrap(),
-            PartialError::Error(Error(ErrorOrigin::Other, ErrorKind::InvalidExeFile))
-        );
-    }
-
-    #[test]
-    pub fn part_result_error_value_ffi() {
-        let r: PartialResult<i32> = Err(PartialError::Error(Error(
-            ErrorOrigin::Other,
-            ErrorKind::InvalidExeFile,
-        )));
-        let mut out = MaybeUninit::<i32>::uninit();
-        let result: PartialResult<i32> = from_int_result(into_int_out_result(r, &mut out), out);
+        let result: PartialResult<()> = from_int_result_empty(into_int_result(r));
         assert_eq!(result.is_ok(), false);
         assert_eq!(
             result.err().unwrap(),
@@ -572,21 +548,9 @@ mod tests {
 
     #[test]
     pub fn part_result_part_error_write_ffi() {
-        let r: PartialResult<i32> = Err(PartialError::PartialVirtualWrite);
-        let result: PartialResult<i32> = from_int_result_empty(into_int_result(r));
+        let r: PartialResult<()> = Err(PartialError::PartialVirtualWrite);
+        let result: PartialResult<()> = from_int_result_empty(into_int_result(r));
         assert_eq!(result.is_ok(), false);
         assert_eq!(result.err().unwrap(), PartialError::PartialVirtualWrite);
-    }
-
-    #[test]
-    pub fn part_result_part_error_read_ffi() {
-        let r: PartialResult<i32> = Err(PartialError::PartialVirtualRead(1234i32));
-        let mut out = MaybeUninit::<i32>::uninit();
-        let result: PartialResult<i32> = from_int_result(into_int_out_result(r, &mut out), out);
-        assert_eq!(result.is_ok(), false);
-        assert_eq!(
-            result.err().unwrap(),
-            PartialError::PartialVirtualRead(1234i32)
-        );
     }
 }

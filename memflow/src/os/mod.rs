@@ -26,9 +26,13 @@ pub use module::{
     ModuleAddressInfo, ModuleInfo, ModuleInfoCallback, SectionCallback, SectionInfo,
 };
 pub use process::{
-    Pid, Process, ProcessInfo, ProcessInfoCallback, ProcessInstanceBox, ProcessState,
+    Pid, Process, ProcessInfo, ProcessInfoCallback, ProcessInstance, ProcessInstanceArcBox,
+    ProcessState,
 };
-pub use root::{Os, OsInfo, OsInner};
+pub use root::{Os, OsInfo, OsInner, OsInstance, OsInstanceArcBox};
 
-use crate::types::{Address, OpaqueCallback};
+use crate::types::Address;
+
+use cglue::prelude::v1::*;
+
 pub type AddressCallback<'a> = OpaqueCallback<'a, Address>;

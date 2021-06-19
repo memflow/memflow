@@ -100,7 +100,7 @@ impl Win32ProcessInfo {
     }
 }
 
-cglue_impl_group!(Win32Process<T>, ProcessInstance, AsVirtualMemory);
+cglue_impl_group!(Win32Process<T>, ProcessInstance);
 
 pub struct Win32Process<T> {
     pub virt_mem: T,

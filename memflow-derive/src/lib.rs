@@ -85,7 +85,7 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
             #[doc(hidden)]
             extern "C" fn mf_create(
                 args: &cglue::repr_cstring::ReprCString,
-                _: Option<#crate_path::plugins::OsInstanceArcBox>,
+                _: Option<#crate_path::os::root::OsInstanceArcBox>,
                 lib: #crate_path::cglue::COptArc<::core::ffi::c_void>,
                 log_level: i32,
                 out: &mut #crate_path::plugins::MuConnectorInstanceArcBox<'static>
@@ -98,7 +98,7 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
             #[doc(hidden)]
             extern "C" fn mf_create(
                 args: &cglue::repr_cstring::ReprCString,
-                _: Option<#crate_path::plugins::OsInstanceArcBox>,
+                _: Option<#crate_path::os::root::OsInstanceArcBox>,
                 lib: #crate_path::cglue::COptArc<::core::ffi::c_void>,
                 _: i32,
                 out: &mut #crate_path::plugins::MuConnectorInstanceArcBox<'static>
@@ -209,7 +209,7 @@ pub fn os_layer(args: TokenStream, input: TokenStream) -> TokenStream {
             #[doc(hidden)]
             extern "C" fn mf_create(
                 args: &cglue::repr_cstring::ReprCString,
-                mem: #crate_path::cglue::COption<#crate_path::plugins::ConnectorInstanceArcBox<'static>>,
+                mem: #crate_path::cglue::COption<#crate_path::mem::phys_mem::ConnectorInstanceArcBox<'static>>,
                 lib: #crate_path::cglue::COptArc<::core::ffi::c_void>,
                 log_level: i32,
                 out: &mut #crate_path::plugins::MuOsInstanceArcBox<'static>
@@ -222,7 +222,7 @@ pub fn os_layer(args: TokenStream, input: TokenStream) -> TokenStream {
             #[doc(hidden)]
             extern "C" fn mf_create(
                 args: &cglue::repr_cstring::ReprCString,
-                mem: #crate_path::cglue::COption<#crate_path::plugins::ConnectorInstanceArcBox<'static>>,
+                mem: #crate_path::cglue::COption<#crate_path::mem::phys_mem::ConnectorInstanceArcBox<'static>>,
                 lib: #crate_path::cglue::COptArc<::core::ffi::c_void>,
                 _: i32,
                 out: &mut #crate_path::plugins::MuOsInstanceArcBox<'static>
@@ -309,7 +309,7 @@ pub fn os_layer_bare(args: TokenStream, input: TokenStream) -> TokenStream {
         #[doc(hidden)]
         extern "C" fn mf_create(
             args: &cglue::repr_cstring::ReprCString,
-            mem: #crate_path::cglue::COption<#crate_path::plugins::ConnectorInstanceArcBox<'static>>,
+            mem: #crate_path::cglue::COption<#crate_path::mem::phys_mem::ConnectorInstanceArcBox<'static>>,
             lib: #crate_path::cglue::COptArc<::core::ffi::c_void>,
             log_level: i32,
             out: &mut #crate_path::plugins::MuOsInstanceArcBox<'static>

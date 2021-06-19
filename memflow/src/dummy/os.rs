@@ -1,10 +1,14 @@
-use super::{DummyMemory, DummyProcessInfo};
+use super::mem::*;
+use super::process::*;
+
 use crate::architecture::ArchitectureIdent;
 use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 use crate::mem::phys_mem::*;
-use crate::mem::virt_mem::VirtualDma;
-use crate::os::{ModuleInfo, OsInfo, Pid, ProcessInfo};
-use crate::plugins::os::OsDescriptor;
+use crate::mem::virt_mem::*;
+use crate::mem::*;
+use crate::os::process::*;
+use crate::os::root::*;
+use crate::os::*;
 use crate::plugins::*;
 use crate::types::{size, Address};
 
@@ -16,8 +20,7 @@ use rand_xorshift::XorShiftRng;
 use std::collections::VecDeque;
 use std::ffi::c_void;
 
-use crate::architecture::x86::x64;
-use crate::architecture::x86::X86ScopedVirtualTranslate;
+use crate::architecture::x86::{x64, X86ScopedVirtualTranslate};
 
 use x86_64::{
     structures::paging,
@@ -404,10 +407,6 @@ impl DummyOs {
     }
 }
 
-use super::process::DummyProcess;
-use crate::mem::DirectTranslate;
-use crate::os::{AddressCallback, OsInner};
-
 pub type DummyVirtMem<T> = VirtualDma<T, DirectTranslate, X86ScopedVirtualTranslate>;
 
 impl<'a> OsInner<'a> for DummyOs {
@@ -538,5 +537,6 @@ pub fn build_dummy(
     let size = super::mem::parse_size(args)?;
     let mem = DummyMemory::new(size);
     let os = DummyOs::new(mem);
-    Ok(group_obj!((os, lib) as OsInstance))
+    let obj = group_obj!((os, lib) as OsInstance);
+    Ok(obj)
 }

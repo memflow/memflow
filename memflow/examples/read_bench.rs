@@ -4,9 +4,10 @@ use std::time::{Duration, Instant};
 use clap::*;
 use log::Level;
 
+use memflow::cglue::*;
 use memflow::error::{Error, ErrorKind, ErrorOrigin, Result};
 use memflow::mem::*;
-use memflow::os::{ModuleInfo, Os, Process};
+use memflow::os::{ModuleInfo, Os, Process, ProcessInstanceArcBox};
 use memflow::plugins::*;
 use memflow::types::*;
 
@@ -14,7 +15,7 @@ use rand::{Rng, SeedableRng};
 use rand_xorshift::XorShiftRng as CurRng;
 
 fn rwtest(
-    proc: &mut impl Process,
+    proc: Fwd<&mut ProcessInstanceArcBox>,
     module: &ModuleInfo,
     chunk_sizes: &[usize],
     chunk_counts: &[usize],
@@ -119,7 +120,7 @@ fn read_bench(mut kernel: impl Os) -> Result<()> {
             }
 
             rwtest(
-                &mut prc,
+                prc.forward_mut(),
                 tmod,
                 &[0x10000, 0x1000, 0x100, 0x10, 0x8],
                 &[32, 8, 1],

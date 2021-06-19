@@ -4,13 +4,14 @@ use clap::*;
 use log::{info, Level};
 
 use memflow::error::{Error, ErrorKind, ErrorOrigin, Result};
+use memflow::mem::phys_mem::ConnectorInstanceArcBox;
 use memflow::os::*;
 use memflow::plugins::*;
 
 // This function shows how the connector can be cloned.
 // For each cloned connector a thread is spawned that initializes a seperate OS instance.
 pub fn parallel_init(
-    connector: ConnectorInstance,
+    connector: ConnectorInstanceArcBox<'static>,
     inventory: &Inventory,
     os_name: &str,
     os_args: &Args,
@@ -26,7 +27,7 @@ pub fn parallel_init(
 
 // This function shows how a kernel can be cloned.
 // For each cloned kernel a thread is spawned that will iterate over all processes of the target in parallel.
-pub fn parallel_kernels(kernel: OsInstance) {
+pub fn parallel_kernels(kernel: OsInstanceArcBox<'static>) {
     (0..8)
         .map(|_| kernel.clone())
         .into_iter()
@@ -40,7 +41,7 @@ pub fn parallel_kernels(kernel: OsInstance) {
 
 // This function shows how a process can be cloned.
 // For each cloned process a thread is spawned that will iterate over all the modules of this process in parallel.
-pub fn parallel_processes(kernel: OsInstance) {
+pub fn parallel_processes(kernel: OsInstanceArcBox<'static>) {
     let process = kernel.into_process_by_name("wininit.exe").unwrap();
 
     (0..8)

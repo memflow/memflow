@@ -1,6 +1,7 @@
 use crate::connector::MappedPhysicalMemory;
 use crate::derive::connector;
 use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
+use crate::mem::phys_mem::*;
 use crate::mem::{
     MemoryMap, PhysicalMemory, PhysicalMemoryMetadata, PhysicalReadData, PhysicalWriteData,
 };

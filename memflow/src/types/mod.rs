@@ -31,7 +31,3 @@ pub use pointer64::Pointer64;
 pub mod byte_swap;
 #[doc(hidden)]
 pub use byte_swap::ByteSwap;
-
-pub mod callback;
-#[doc(hidden)]
-pub use callback::{Callback, OpaqueCallback};

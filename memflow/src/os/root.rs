@@ -1,10 +1,17 @@
 //! Describes the root of the Operating System
 
+use super::keyboard::*;
 use super::process::*;
 use super::{AddressCallback, ProcessInfo, ProcessInfoCallback};
+
+use crate::mem::phys_mem::*;
+use crate::mem::virt_mem::*;
 use crate::prelude::v1::{Result, *};
+
 use cglue::prelude::v1::*;
 use std::prelude::v1::*;
+
+cglue_trait_group!(OsInstance<'a>, { OsInner<'a>, Clone }, { AsPhysicalMemory, AsVirtualMemory, OsKeyboardInner<'a> });
 
 /// OS supertrait for all possible lifetimes
 ///
@@ -24,9 +31,11 @@ impl<T: for<'a> OsInner<'a>> Os for T {}
 #[int_result]
 pub trait OsInner<'a>: Send {
     #[wrap_with_group(crate::os::process::ProcessInstance)]
-    type ProcessType: crate::os::process::Process + 'a;
+    type ProcessType: crate::os::process::Process + crate::mem::virt_mem::AsVirtualMemory + 'a;
     #[wrap_with_group(crate::os::process::ProcessInstance)]
-    type IntoProcessType: crate::os::process::Process + 'static;
+    type IntoProcessType: crate::os::process::Process
+        + crate::mem::virt_mem::AsVirtualMemory
+        + 'static;
 
     /// Walks a process list and calls a callback for each process structure address
     ///

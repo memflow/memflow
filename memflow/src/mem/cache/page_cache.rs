@@ -765,7 +765,7 @@ mod tests {
             TimedCacheValidator::new(Duration::from_secs(100)),
         );
 
-        let mut mem_cache = CachedMemoryAccess::new(dummy_os.phys_mem().forward_mut(), cache);
+        let mem_cache = CachedMemoryAccess::new(dummy_os.phys_mem().forward_mut(), cache);
         let mut virt_mem = VirtualDma::new(mem_cache, arch, translator);
 
         let mut buf_1 = vec![0_u8; 64];

@@ -17,6 +17,9 @@ use super::PhysicalMemoryCursor;
 // - check endianess here and return an error
 // - better would be to convert endianess with word alignment from addr
 
+// TODO: cpustate
+cglue_trait_group!(ConnectorInstance, { PhysicalMemory, Clone }, {});
+
 /// The [`PhysicalMemory`] trait is implemented by memory backends
 /// and provides a generic way to read and write from/to physical memory.
 ///

@@ -39,7 +39,7 @@ impl DummyProcessInfo {
     }
 }
 
-cglue_impl_group!(DummyProcess<T>, ProcessInstance, AsVirtualMemory);
+cglue_impl_group!(DummyProcess<T>, ProcessInstance, {});
 
 #[derive(Clone)]
 pub struct DummyProcess<T> {
@@ -138,7 +138,6 @@ impl<T: VirtualMemory> Process for DummyProcess<T> {
 
 impl<T: VirtualMemory> AsVirtualMemory for DummyProcess<T> {
     type VirtualMemoryType = T;
-    //type VirtualTranslateType: VirtualTranslate;
 
     /// Retrieves virtual memory object for the process
     fn virt_mem(&mut self) -> &mut Self::VirtualMemoryType {

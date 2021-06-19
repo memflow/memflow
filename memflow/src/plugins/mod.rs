@@ -20,7 +20,7 @@ pub use connector::{ConnectorDescriptor, LoadableConnector};
 pub type ConnectorInputArg = <LoadableConnector as Loadable>::InputArg;
 
 pub mod os;
-pub use os::LoadableOs;
+pub use os::{LoadableOs, OsDescriptor};
 pub type OsInputArg = <LoadableOs as Loadable>::InputArg;
 
 pub(crate) mod util;
@@ -28,25 +28,19 @@ pub use util::create_bare;
 
 use crate::error::{Result, *};
 use crate::mem::phys_mem::*;
-use crate::mem::virt_mem::*;
 use crate::os::keyboard::*;
 use crate::os::root::*;
-use crate::types::OpaqueCallback;
 
 use log::*;
 use std::fs::read_dir;
 use std::mem::MaybeUninit;
 use std::path::{Path, PathBuf};
 
+use cglue::prelude::v1::*;
 use libloading::Library;
 
 /// Exported memflow plugins version
 pub const MEMFLOW_PLUGIN_VERSION: i32 = 1;
-
-// TODO: cpustate
-cglue_trait_group!(ConnectorInstance, { PhysicalMemory, Clone }, {});
-// cglue_trait_group!(OsInstance<'a>, { OsInner<'a>, Clone }, { AsPhysicalMemory, AsVirtualMemory, OsKeyboardInner<'a> });
-cglue_trait_group!(OsInstance<'a>, { OsInner<'a>, Clone }, { AsPhysicalMemory, AsVirtualMemory });
 
 // TODO: remove later
 pub type MuConnectorInstanceArcBox<'a> = std::mem::MaybeUninit<ConnectorInstanceArcBox<'a>>;

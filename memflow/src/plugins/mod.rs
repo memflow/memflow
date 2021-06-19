@@ -29,6 +29,7 @@ pub use util::create_bare;
 use crate::error::{Result, *};
 use crate::mem::phys_mem::*;
 use crate::mem::virt_mem::*;
+use crate::os::keyboard::*;
 use crate::os::root::*;
 use crate::types::OpaqueCallback;
 
@@ -45,7 +46,7 @@ pub const MEMFLOW_PLUGIN_VERSION: i32 = 1;
 // TODO: cpustate
 cglue_trait_group!(ConnectorInstance, { PhysicalMemory, Clone }, {});
 // TODO: keyboard
-cglue_trait_group!(OsInstance<'a>, { OsInner<'a>, Clone }, { AsPhysicalMemory, AsVirtualMemory });
+cglue_trait_group!(OsInstance<'a>, { OsInner<'a>, Clone }, { AsPhysicalMemory, AsVirtualMemory, OsKeyboardInner<'a> });
 
 // TODO: remove later
 pub type MuConnectorInstanceArcBox<'a> = std::mem::MaybeUninit<ConnectorInstanceArcBox<'a>>;

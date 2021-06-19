@@ -1,6 +1,7 @@
 //! Describes optional cpu state for a connector
 
 use crate::prelude::v1::Result;
+use cglue::prelude::v1::*;
 
 /// ConnectorCpuState supertrait for all possible lifetimes
 ///
@@ -10,14 +11,22 @@ use crate::prelude::v1::Result;
 pub trait ConnectorCpuState: for<'a> ConnectorCpuStateInner<'a> {}
 impl<T: for<'a> ConnectorCpuStateInner<'a>> ConnectorCpuState for T {}
 
+#[cglue_trait]
+#[int_result]
 pub trait ConnectorCpuStateInner<'a>: Send {
-    type CpuStateType: CpuState + 'a;
-    type IntoCpuStateType: CpuState;
+    #[wrap_with_obj(crate::connector::cpu_state::CpuState)]
+    type CpuStateType: crate::connector::cpu_state::CpuState + 'a;
+    #[wrap_with_group(crate::connector::cpu_state::IntoCpuState)]
+    type IntoCpuStateType: crate::connector::cpu_state::CpuState + 'static;
 
     fn cpu_state(&'a mut self) -> Result<Self::CpuStateType>;
     fn into_cpu_state(self) -> Result<Self::IntoCpuStateType>;
 }
 
+cglue_trait_group!(IntoCpuState, { CpuState, Clone }, {});
+
+#[cglue_trait]
+#[int_result]
 pub trait CpuState {
     // TODO:
     // max cpu index
@@ -27,4 +36,7 @@ pub trait CpuState {
     // resume
     // single-step
     // breakpoints
+
+    fn pause(&mut self);
+    fn resume(&mut self);
 }

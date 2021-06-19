@@ -1,6 +1,7 @@
 use std::prelude::v1::*;
 
 use super::{MemoryMap, PhysicalMemoryBatcher};
+use crate::connector::cpu_state::*;
 use crate::dataview::Pod;
 use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 use crate::types::{Address, PhysicalAddress, Pointer32, Pointer64};
@@ -17,8 +18,7 @@ use super::PhysicalMemoryCursor;
 // - check endianess here and return an error
 // - better would be to convert endianess with word alignment from addr
 
-// TODO: cpustate
-cglue_trait_group!(ConnectorInstance, { PhysicalMemory, Clone }, {});
+cglue_trait_group!(ConnectorInstance<'a>, { PhysicalMemory, Clone }, { ConnectorCpuStateInner<'a> });
 pub type MuConnectorInstanceArcBox<'a> = std::mem::MaybeUninit<ConnectorInstanceArcBox<'a>>;
 
 /// The [`PhysicalMemory`] trait is implemented by memory backends

@@ -59,7 +59,7 @@ fn vat_test_with_ctx<T: PhysicalMemory, V: VirtualTranslate, S: ScopedVirtualTra
     (mut mem, mut vat, prc, translator, tmod): (T, V, ProcessInfo, S, ModuleInfo),
 ) {
     if cache_size > 0 {
-        let cache = CachedMemoryAccess::builder(&mut mem)
+        let cache = CachedMemoryAccess::builder(mem)
             .arch(prc.sys_arch)
             .cache_size(size::mb(cache_size as usize))
             .page_type_mask(PageType::PAGE_TABLE | PageType::READ_ONLY | PageType::WRITEABLE);

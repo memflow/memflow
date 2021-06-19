@@ -12,6 +12,7 @@ use cglue::prelude::v1::*;
 use std::prelude::v1::*;
 
 cglue_trait_group!(OsInstance<'a>, { OsInner<'a>, Clone }, { AsPhysicalMemory, AsVirtualMemory, OsKeyboardInner<'a> });
+pub type MuOsInstanceArcBox<'a> = std::mem::MaybeUninit<OsInstanceArcBox<'a>>;
 
 /// OS supertrait for all possible lifetimes
 ///
@@ -32,7 +33,7 @@ impl<T: for<'a> OsInner<'a>> Os for T {}
 pub trait OsInner<'a>: Send {
     #[wrap_with_group(crate::os::process::ProcessInstance)]
     type ProcessType: crate::os::process::Process + crate::mem::virt_mem::AsVirtualMemory + 'a;
-    #[wrap_with_group(crate::os::process::ProcessInstance)]
+    #[wrap_with_group(crate::os::process::IntoProcessInstance)]
     type IntoProcessType: crate::os::process::Process
         + crate::mem::virt_mem::AsVirtualMemory
         + 'static;

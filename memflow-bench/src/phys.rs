@@ -3,6 +3,7 @@ use criterion::*;
 use memflow::mem::{CachedMemoryAccess, PhysicalMemory};
 
 use memflow::architecture;
+use memflow::cglue::*;
 use memflow::error::Result;
 use memflow::mem::PhysicalReadData;
 use memflow::types::*;
@@ -11,9 +12,9 @@ use rand::prelude::*;
 use rand::{Rng, SeedableRng};
 use rand_xorshift::XorShiftRng as CurRng;
 
-fn rwtest<T: PhysicalMemory>(
+fn rwtest(
     bench: &mut Bencher,
-    mem: &mut T,
+    mut mem: impl PhysicalMemory,
     (start, end): (Address, Address),
     chunk_sizes: &[usize],
     chunk_counts: &[usize],
@@ -60,9 +61,9 @@ fn rwtest<T: PhysicalMemory>(
     total_size
 }
 
-fn read_test_with_mem<T: PhysicalMemory>(
+fn read_test_with_mem(
     bench: &mut Bencher,
-    mem: &mut T,
+    mem: impl PhysicalMemory,
     chunk_size: usize,
     chunks: usize,
     start_end: (Address, Address),
@@ -77,12 +78,12 @@ fn read_test_with_mem<T: PhysicalMemory>(
     ));
 }
 
-fn read_test_with_ctx<T: PhysicalMemory>(
+fn read_test_with_ctx(
     bench: &mut Bencher,
     cache_size: u64,
     chunk_size: usize,
     chunks: usize,
-    mut mem: T,
+    mem: impl PhysicalMemory,
 ) {
     let mut rng = CurRng::from_rng(thread_rng()).unwrap();
 
@@ -90,16 +91,22 @@ fn read_test_with_ctx<T: PhysicalMemory>(
     let end = start + size::mb(1);
 
     if cache_size > 0 {
-        let mut mem = CachedMemoryAccess::builder(&mut mem)
+        let mut cached_mem = CachedMemoryAccess::builder(mem)
             .arch(architecture::x86::x64::ARCH)
             .cache_size(size::mb(cache_size as usize))
             .page_type_mask(PageType::PAGE_TABLE | PageType::READ_ONLY | PageType::WRITEABLE)
             .build()
             .unwrap();
 
-        read_test_with_mem(bench, &mut mem, chunk_size, chunks, (start, end));
+        read_test_with_mem(
+            bench,
+            cached_mem.forward_mut(),
+            chunk_size,
+            chunks,
+            (start, end),
+        );
     } else {
-        read_test_with_mem(bench, &mut mem, chunk_size, chunks, (start, end));
+        read_test_with_mem(bench, mem, chunk_size, chunks, (start, end));
     }
 }
 
@@ -120,7 +127,7 @@ fn seq_read_params<T: PhysicalMemory>(
                     black_box(cache_size),
                     black_box(size as usize),
                     black_box(1),
-                    initialize_ctx().unwrap(),
+                    initialize_ctx().unwrap().forward_mut(),
                 )
             },
         );
@@ -145,7 +152,7 @@ fn chunk_read_params<T: PhysicalMemory>(
                         black_box(cache_size),
                         black_box(size as usize),
                         black_box(chunk_size as usize),
-                        initialize_ctx().unwrap(),
+                        initialize_ctx().unwrap().forward_mut(),
                     )
                 },
             );

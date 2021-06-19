@@ -19,6 +19,7 @@ use super::PhysicalMemoryCursor;
 
 // TODO: cpustate
 cglue_trait_group!(ConnectorInstance, { PhysicalMemory, Clone }, {});
+pub type MuConnectorInstanceArcBox<'a> = std::mem::MaybeUninit<ConnectorInstanceArcBox<'a>>;
 
 /// The [`PhysicalMemory`] trait is implemented by memory backends
 /// and provides a generic way to read and write from/to physical memory.

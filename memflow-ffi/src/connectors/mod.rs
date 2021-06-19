@@ -2,13 +2,12 @@ use std::ffi::CStr;
 use std::os::raw::c_char;
 use std::path::PathBuf;
 
-use memflow::plugins::{
-    Args, ConnectorInstanceArcBox, Inventory, MuConnectorInstanceArcBox, MuOsInstanceArcBox,
-    OsInstanceArcBox,
-};
+use memflow::mem::phys_mem::{ConnectorInstanceArcBox, MuConnectorInstanceArcBox};
+use memflow::os::root::{MuOsInstanceArcBox, OsInstanceArcBox};
+use memflow::plugins::{Args, Inventory};
 
 use crate::util::*;
-use cglue::result::IntResult;
+use memflow::cglue::result::IntResult;
 
 use log::trace;
 

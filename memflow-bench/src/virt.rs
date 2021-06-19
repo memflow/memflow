@@ -84,10 +84,10 @@ fn read_test_with_ctx<T: PhysicalMemory, V: VirtualTranslate, S: ScopedVirtualTr
     chunk_size: usize,
     chunks: usize,
     use_tlb: bool,
-    (mut mem, vat, proc, translator, tmod): (T, V, ProcessInfo, S, ModuleInfo),
+    (mem, vat, proc, translator, tmod): (T, V, ProcessInfo, S, ModuleInfo),
 ) {
     if cache_size > 0 {
-        let cache = CachedMemoryAccess::builder(&mut mem)
+        let cache = CachedMemoryAccess::builder(mem)
             .arch(proc.sys_arch)
             .cache_size(size::mb(cache_size as usize))
             .page_type_mask(PageType::PAGE_TABLE | PageType::READ_ONLY | PageType::WRITEABLE);

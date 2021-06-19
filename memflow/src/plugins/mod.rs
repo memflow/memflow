@@ -40,10 +40,6 @@ use libloading::Library;
 /// Exported memflow plugins version
 pub const MEMFLOW_PLUGIN_VERSION: i32 = 1;
 
-// TODO: remove later
-pub type MuConnectorInstanceArcBox<'a> = std::mem::MaybeUninit<ConnectorInstanceArcBox<'a>>;
-pub type MuOsInstanceArcBox<'a> = std::mem::MaybeUninit<OsInstanceArcBox<'a>>;
-
 /// Help and Target callbacks
 pub type HelpCallback<'a> = OpaqueCallback<'a, ReprCString>;
 

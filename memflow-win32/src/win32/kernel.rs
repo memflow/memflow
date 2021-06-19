@@ -469,7 +469,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate> AsVirtualMemory for Win32Kernel<T, 
     }
 }
 
-impl<'a, T: PhysicalMemory + 'static, V: VirtualTranslate + 'static> OsInner<'a>
+impl<'a, T: 'static + PhysicalMemory, V: 'static + VirtualTranslate> OsInner<'a>
     for Win32Kernel<T, V>
 {
     type ProcessType =

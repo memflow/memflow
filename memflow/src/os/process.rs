@@ -11,6 +11,7 @@ use std::prelude::v1::*;
 
 // ProcessInstance group for Process and AsVirtualMemory
 cglue_trait_group!(ProcessInstance, { Process, AsVirtualMemory }, {});
+cglue_trait_group!(IntoProcessInstance, { Process, AsVirtualMemory, Clone }, {});
 
 /// Type meant for process IDs
 ///

@@ -42,11 +42,10 @@ pub fn parallel_kernels(kernel: OsInstanceArcBox<'static>) {
 // This function shows how a process can be cloned.
 // For each cloned process a thread is spawned that will iterate over all the modules of this process in parallel.
 pub fn parallel_processes(kernel: OsInstanceArcBox<'static>) {
-    // TODO: enable process to be clone again
-    // let process = kernel.into_process_by_name("wininit.exe").unwrap();
+    let process = kernel.into_process_by_name("wininit.exe").unwrap();
 
     (0..8)
-        .map(|_| kernel.clone().into_process_by_name("wininit.exe").unwrap())
+        .map(|_| process.clone())
         .into_iter()
         .map(|mut p| {
             thread::spawn(move || {

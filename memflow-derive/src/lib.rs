@@ -88,7 +88,7 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
                 _: Option<#crate_path::os::root::OsInstanceArcBox>,
                 lib: #crate_path::cglue::COptArc<::core::ffi::c_void>,
                 log_level: i32,
-                out: &mut #crate_path::plugins::MuConnectorInstanceArcBox<'static>
+                out: &mut #crate_path::mem::phys_mem::MuConnectorInstanceArcBox<'static>
             ) -> i32 {
                 #crate_path::plugins::connector::create_with_logging(args, lib, log_level, out, #func_name)
             }
@@ -101,7 +101,7 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
                 _: Option<#crate_path::os::root::OsInstanceArcBox>,
                 lib: #crate_path::cglue::COptArc<::core::ffi::c_void>,
                 _: i32,
-                out: &mut #crate_path::plugins::MuConnectorInstanceArcBox<'static>
+                out: &mut #crate_path::mem::phys_mem::MuConnectorInstanceArcBox<'static>
             ) -> i32 {
                 #crate_path::plugins::connector::create_without_logging(args, lib, out, #func_name)
             }
@@ -212,7 +212,7 @@ pub fn os_layer(args: TokenStream, input: TokenStream) -> TokenStream {
                 mem: #crate_path::cglue::COption<#crate_path::mem::phys_mem::ConnectorInstanceArcBox<'static>>,
                 lib: #crate_path::cglue::COptArc<::core::ffi::c_void>,
                 log_level: i32,
-                out: &mut #crate_path::plugins::MuOsInstanceArcBox<'static>
+                out: &mut #crate_path::os::root::MuOsInstanceArcBox<'static>
             ) -> i32 {
                 #crate_path::plugins::os::create_with_logging(args, mem.into(), lib, log_level, out, #func_name)
             }
@@ -225,7 +225,7 @@ pub fn os_layer(args: TokenStream, input: TokenStream) -> TokenStream {
                 mem: #crate_path::cglue::COption<#crate_path::mem::phys_mem::ConnectorInstanceArcBox<'static>>,
                 lib: #crate_path::cglue::COptArc<::core::ffi::c_void>,
                 _: i32,
-                out: &mut #crate_path::plugins::MuOsInstanceArcBox<'static>
+                out: &mut #crate_path::os::root::MuOsInstanceArcBox<'static>
             ) -> i32 {
                 #crate_path::plugins::os::create_without_logging(args, mem.into(), lib, out, #func_name)
             }
@@ -312,7 +312,7 @@ pub fn os_layer_bare(args: TokenStream, input: TokenStream) -> TokenStream {
             mem: #crate_path::cglue::COption<#crate_path::mem::phys_mem::ConnectorInstanceArcBox<'static>>,
             lib: #crate_path::cglue::COptArc<::core::ffi::c_void>,
             log_level: i32,
-            out: &mut #crate_path::plugins::MuOsInstanceArcBox<'static>
+            out: &mut #crate_path::os::root::MuOsInstanceArcBox<'static>
         ) -> i32 {
             #crate_path::plugins::create_bare(args, mem.into(), lib, log_level, out, #func_name)
         }

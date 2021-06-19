@@ -148,8 +148,8 @@ where
 impl<'a, T, TK, VK> Win32KernelBuilder<T, TK, VK>
 where
     T: PhysicalMemory,
-    TK: 'static + PhysicalMemory,
-    VK: 'static + VirtualTranslate,
+    TK: 'static + PhysicalMemory + Clone,
+    VK: 'static + VirtualTranslate + Clone,
 {
     pub fn build(mut self) -> Result<Win32Kernel<TK, VK>> {
         // find kernel_info

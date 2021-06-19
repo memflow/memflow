@@ -14,18 +14,15 @@ use log::{info, trace};
 use std::fmt;
 
 use memflow::architecture::{ArchitectureIdent, ArchitectureObj};
-use memflow::cglue::*;
+use memflow::cglue::{self, *};
 use memflow::error::{Error, ErrorKind, ErrorOrigin, Result};
 use memflow::mem::phys_mem::*;
 use memflow::mem::virt_mem::*;
 use memflow::mem::{DirectTranslate, VirtualDma, VirtualTranslate};
-use memflow::os::{
-    AddressCallback, ModuleInfo, OsInfo, OsInner, OsKeyboardInner, Pid, Process, ProcessInfo,
-};
-use memflow::types::Address;
-
-use memflow::cglue;
+use memflow::os::keyboard::*;
 use memflow::os::root::*;
+use memflow::os::*;
+use memflow::types::Address;
 
 use pelite::{self, pe64::exports::Export, PeView};
 
@@ -33,7 +30,7 @@ mod mem_map;
 
 const MAX_ITER_COUNT: usize = 65536;
 
-cglue_impl_group!(Win32Kernel<T, V>, OsInstance<'a>, { AsPhysicalMemory, AsVirtualMemory });
+cglue_impl_group!(Win32Kernel<T, V>, OsInstance<'a>, { AsPhysicalMemory, AsVirtualMemory, OsKeyboardInner<'a> });
 
 #[derive(Clone)]
 pub struct Win32Kernel<T, V> {

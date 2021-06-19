@@ -29,10 +29,10 @@ fn test<T: PhysicalMemory, V: VirtualTranslate>(kernel: &mut Win32Kernel<T, V>) 
 */
 use super::{Win32Kernel, Win32ProcessInfo, Win32VirtualTranslate};
 
-use memflow::cglue::*;
+use memflow::cglue::{self, *};
 use memflow::error::{Error, ErrorKind, ErrorOrigin, Result};
 use memflow::mem::{AsVirtualMemory, PhysicalMemory, VirtualDma, VirtualMemory, VirtualTranslate};
-use memflow::os::Keyboard;
+use memflow::os::keyboard::*;
 use memflow::prelude::OsInner;
 
 use std::convert::TryInto;
@@ -43,6 +43,8 @@ use memflow::error::PartialResultExt;
 use memflow::types::Address;
 
 use pelite::{self, pe64::exports::Export, PeView};
+
+cglue_impl_group!(Win32Keyboard<T>, IntoKeyboard);
 
 /// Interface for accessing the target's keyboard state.
 #[derive(Clone, Debug)]

@@ -23,7 +23,7 @@ pub mod cursor;
 #[doc(hidden)]
 pub use cache::*;
 #[doc(hidden)]
-pub use mem_map::MemoryMap;
+pub use mem_map::{MemoryMap, PhysicalMemoryMapping};
 #[doc(hidden)]
 pub use phys_mem::{
     AsPhysicalMemory, ConnectorInstanceArcBox, PhysicalMemory, PhysicalMemoryMetadata,

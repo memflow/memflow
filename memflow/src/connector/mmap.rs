@@ -5,7 +5,8 @@ Basic connector which works on mapped memory.
 use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 use crate::iter::FnExtend;
 use crate::mem::{
-    MemoryMap, PhysicalMemory, PhysicalMemoryMetadata, PhysicalReadData, PhysicalWriteData,
+    MemoryMap, PhysicalMemory, PhysicalMemoryMapping, PhysicalMemoryMetadata, PhysicalReadData,
+    PhysicalWriteData,
 };
 use crate::types::Address;
 
@@ -126,7 +127,7 @@ impl<'a, F: AsRef<MemoryMap<&'a mut [u8]>> + Send> PhysicalMemory
     }
 
     // This is a no-op for u8 slices.
-    fn set_mem_map(&mut self, _mem_map: MemoryMap<(Address, usize)>) {}
+    fn set_mem_map(&mut self, _mem_map: &[PhysicalMemoryMapping]) {}
 }
 
 impl<'a, F: AsRef<MemoryMap<&'a [u8]>> + Send> PhysicalMemory
@@ -163,5 +164,5 @@ impl<'a, F: AsRef<MemoryMap<&'a [u8]>> + Send> PhysicalMemory
     }
 
     // This is a no-op for u8 slices.
-    fn set_mem_map(&mut self, _mem_map: MemoryMap<(Address, usize)>) {}
+    fn set_mem_map(&mut self, _mem_map: &[PhysicalMemoryMapping]) {}
 }

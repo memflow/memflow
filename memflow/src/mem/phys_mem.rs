@@ -1,10 +1,10 @@
 use std::prelude::v1::*;
 
-use super::{MemoryMap, PhysicalMemoryBatcher};
+use super::{PhysicalMemoryBatcher, PhysicalMemoryMapping};
 use crate::connector::cpu_state::*;
 use crate::dataview::Pod;
 use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
-use crate::types::{Address, PhysicalAddress, Pointer32, Pointer64};
+use crate::types::{PhysicalAddress, Pointer32, Pointer64};
 
 use std::mem::MaybeUninit;
 
@@ -40,6 +40,7 @@ pub type MuConnectorInstanceArcBox<'a> = std::mem::MaybeUninit<ConnectorInstance
 ///     PhysicalReadData,
 ///     PhysicalWriteData,
 ///     PhysicalMemoryMetadata,
+///     PhysicalMemoryMapping,
 ///     MemoryMap
 /// };
 ///
@@ -83,7 +84,7 @@ pub type MuConnectorInstanceArcBox<'a> = std::mem::MaybeUninit<ConnectorInstance
 ///     }
 ///
 ///     // this is a no-op in this example
-///     fn set_mem_map(&mut self, _mem_map: MemoryMap<(Address, usize)>) {}
+///     fn set_mem_map(&mut self, _mem_map: &[PhysicalMemoryMapping]) {}
 /// }
 /// ```
 ///
@@ -132,7 +133,7 @@ pub trait PhysicalMemory: Send {
     ///
     /// In case a connector cannot acquire memory mappings on it's own this function
     /// allows the OS plugin to set the memory mapping at a later stage of initialization.
-    fn set_mem_map(&mut self, _mem_map: MemoryMap<(Address, usize)>);
+    fn set_mem_map(&mut self, mem_map: &[PhysicalMemoryMapping]);
 
     // read helpers
     #[skip_func]

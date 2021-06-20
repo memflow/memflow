@@ -114,8 +114,12 @@ fn read_bench(mut kernel: impl Os) -> Result<()> {
 
             println!("Memory map (with up to 1GB gaps):");
 
-            for (addr, len) in mem_map {
-                println!("{:x}-{:x}", addr, addr + len);
+            for map in mem_map {
+                println!(
+                    "{:x}-{:x}",
+                    map.virt_address,
+                    map.virt_address + map.virt_size
+                );
             }
 
             rwtest(

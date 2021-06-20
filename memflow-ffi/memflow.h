@@ -36,6 +36,48 @@ typedef uint8_t Endianess;
 typedef struct ArchitectureObj ArchitectureObj;
 
 /**
+ * Type definition for temporary return value wrapping storage.
+ *
+ * The trait does not use return wrapping, thus is a typedef to `PhantomData`.
+ *
+ * Note that `cbindgen` will generate wrong structures for this type. It is important
+ * to go inside the generated headers and fix it - all RetTmp structures without a
+ * body should be completely deleted, both as types, and as fields in the
+ * groups/objects. If C++11 templates are generated, it is important to define a
+ * custom type for CGlueTraitObj that does not have `ret_tmp` defined, and change all
+ * type aliases of this trait to use that particular structure.
+ */
+typedef struct CloneRetTmp CloneRetTmp;
+
+/**
+ * Type definition for temporary return value wrapping storage.
+ *
+ * The trait does not use return wrapping, thus is a typedef to `PhantomData`.
+ *
+ * Note that `cbindgen` will generate wrong structures for this type. It is important
+ * to go inside the generated headers and fix it - all RetTmp structures without a
+ * body should be completely deleted, both as types, and as fields in the
+ * groups/objects. If C++11 templates are generated, it is important to define a
+ * custom type for CGlueTraitObj that does not have `ret_tmp` defined, and change all
+ * type aliases of this trait to use that particular structure.
+ */
+typedef struct ConnectorCpuStateInnerRetTmp ConnectorCpuStateInnerRetTmp;
+
+/**
+ * Type definition for temporary return value wrapping storage.
+ *
+ * The trait does not use return wrapping, thus is a typedef to `PhantomData`.
+ *
+ * Note that `cbindgen` will generate wrong structures for this type. It is important
+ * to go inside the generated headers and fix it - all RetTmp structures without a
+ * body should be completely deleted, both as types, and as fields in the
+ * groups/objects. If C++11 templates are generated, it is important to define a
+ * custom type for CGlueTraitObj that does not have `ret_tmp` defined, and change all
+ * type aliases of this trait to use that particular structure.
+ */
+typedef struct CpuStateRetTmp CpuStateRetTmp;
+
+/**
  * The core of the plugin system
  *
  * It scans system directories and collects valid memflow plugins. They can then be instantiated
@@ -48,8 +90,8 @@ typedef struct ArchitectureObj ArchitectureObj;
  * ```
  * use memflow::plugins::Inventory;
  * # use memflow::error::Result;
- * # use memflow::plugins::OsInstance;
- * # fn test() -> Result<OsInstance> {
+ * # use memflow::os::OsInstanceArcBox;
+ * # fn test() -> Result<OsInstanceArcBox<'static>> {
  * let inventory = Inventory::scan();
  * inventory
  *   .builder()
@@ -80,11 +122,107 @@ typedef struct ArchitectureObj ArchitectureObj;
  */
 typedef struct Inventory Inventory;
 
+/**
+ * Type definition for temporary return value wrapping storage.
+ *
+ * The trait does not use return wrapping, thus is a typedef to `PhantomData`.
+ *
+ * Note that `cbindgen` will generate wrong structures for this type. It is important
+ * to go inside the generated headers and fix it - all RetTmp structures without a
+ * body should be completely deleted, both as types, and as fields in the
+ * groups/objects. If C++11 templates are generated, it is important to define a
+ * custom type for CGlueTraitObj that does not have `ret_tmp` defined, and change all
+ * type aliases of this trait to use that particular structure.
+ */
+typedef struct KeyboardRetTmp KeyboardRetTmp;
+
+/**
+ * Type definition for temporary return value wrapping storage.
+ *
+ * The trait does not use return wrapping, thus is a typedef to `PhantomData`.
+ *
+ * Note that `cbindgen` will generate wrong structures for this type. It is important
+ * to go inside the generated headers and fix it - all RetTmp structures without a
+ * body should be completely deleted, both as types, and as fields in the
+ * groups/objects. If C++11 templates are generated, it is important to define a
+ * custom type for CGlueTraitObj that does not have `ret_tmp` defined, and change all
+ * type aliases of this trait to use that particular structure.
+ */
+typedef struct KeyboardStateRetTmp KeyboardStateRetTmp;
+
+/**
+ * Type definition for temporary return value wrapping storage.
+ *
+ * The trait does not use return wrapping, thus is a typedef to `PhantomData`.
+ *
+ * Note that `cbindgen` will generate wrong structures for this type. It is important
+ * to go inside the generated headers and fix it - all RetTmp structures without a
+ * body should be completely deleted, both as types, and as fields in the
+ * groups/objects. If C++11 templates are generated, it is important to define a
+ * custom type for CGlueTraitObj that does not have `ret_tmp` defined, and change all
+ * type aliases of this trait to use that particular structure.
+ */
+typedef struct OsInnerRetTmp OsInnerRetTmp;
+
+/**
+ * Type definition for temporary return value wrapping storage.
+ *
+ * The trait does not use return wrapping, thus is a typedef to `PhantomData`.
+ *
+ * Note that `cbindgen` will generate wrong structures for this type. It is important
+ * to go inside the generated headers and fix it - all RetTmp structures without a
+ * body should be completely deleted, both as types, and as fields in the
+ * groups/objects. If C++11 templates are generated, it is important to define a
+ * custom type for CGlueTraitObj that does not have `ret_tmp` defined, and change all
+ * type aliases of this trait to use that particular structure.
+ */
+typedef struct OsKeyboardInnerRetTmp OsKeyboardInnerRetTmp;
+
+/**
+ * Type definition for temporary return value wrapping storage.
+ *
+ * The trait does not use return wrapping, thus is a typedef to `PhantomData`.
+ *
+ * Note that `cbindgen` will generate wrong structures for this type. It is important
+ * to go inside the generated headers and fix it - all RetTmp structures without a
+ * body should be completely deleted, both as types, and as fields in the
+ * groups/objects. If C++11 templates are generated, it is important to define a
+ * custom type for CGlueTraitObj that does not have `ret_tmp` defined, and change all
+ * type aliases of this trait to use that particular structure.
+ */
+typedef struct PhysicalMemoryRetTmp PhysicalMemoryRetTmp;
+
 typedef struct PhysicalReadData PhysicalReadData;
 
 typedef struct PhysicalWriteData PhysicalWriteData;
 
-typedef struct VirtualMemoryObj VirtualMemoryObj;
+/**
+ * Type definition for temporary return value wrapping storage.
+ *
+ * The trait does not use return wrapping, thus is a typedef to `PhantomData`.
+ *
+ * Note that `cbindgen` will generate wrong structures for this type. It is important
+ * to go inside the generated headers and fix it - all RetTmp structures without a
+ * body should be completely deleted, both as types, and as fields in the
+ * groups/objects. If C++11 templates are generated, it is important to define a
+ * custom type for CGlueTraitObj that does not have `ret_tmp` defined, and change all
+ * type aliases of this trait to use that particular structure.
+ */
+typedef struct ProcessRetTmp ProcessRetTmp;
+
+/**
+ * Type definition for temporary return value wrapping storage.
+ *
+ * The trait does not use return wrapping, thus is a typedef to `PhantomData`.
+ *
+ * Note that `cbindgen` will generate wrong structures for this type. It is important
+ * to go inside the generated headers and fix it - all RetTmp structures without a
+ * body should be completely deleted, both as types, and as fields in the
+ * groups/objects. If C++11 templates are generated, it is important to define a
+ * custom type for CGlueTraitObj that does not have `ret_tmp` defined, and change all
+ * type aliases of this trait to use that particular structure.
+ */
+typedef struct VirtualMemoryRetTmp VirtualMemoryRetTmp;
 
 typedef struct VirtualReadData VirtualReadData;
 
@@ -118,27 +256,27 @@ typedef uint8_t PageType;
 /**
  * The page explicitly has no flags.
  */
-#define PageType_NONE (uint8_t)0
+#define PageType_NONE 0
 /**
  * The page type is not known.
  */
-#define PageType_UNKNOWN (uint8_t)1
+#define PageType_UNKNOWN 1
 /**
  * The page contains page table entries.
  */
-#define PageType_PAGE_TABLE (uint8_t)2
+#define PageType_PAGE_TABLE 2
 /**
  * The page is a writeable page.
  */
-#define PageType_WRITEABLE (uint8_t)4
+#define PageType_WRITEABLE 4
 /**
  * The page is read only.
  */
-#define PageType_READ_ONLY (uint8_t)8
+#define PageType_READ_ONLY 8
 /**
  * The page is not executable.
  */
-#define PageType_NOEXEC (uint8_t)16
+#define PageType_NOEXEC 16
 
 /**
  * This type represents a wrapper over a [address](address/index.html)
@@ -158,31 +296,36 @@ typedef struct PhysicalAddress {
 } PhysicalAddress;
 
 /**
- * Utility typedef for better cbindgen
+ * FFI-safe box
  *
- * TODO: remove when fixed in cbindgen
+ * This box has a static self reference, alongside a custom drop function.
+ *
+ * The drop function can be called from anywhere, it will free on correct allocator internally.
  */
-typedef void *pvoid;
+typedef struct CBox_c_void {
+    void *instance;
+    void (*drop)(void*);
+} CBox_c_void;
+
+typedef struct COptArc_c_void {
+    const void *inner;
+    const void *(*clone_fn)(const void*);
+    void (*drop_fn)(const void**);
+} COptArc_c_void;
+
+typedef struct CtxBox_c_void__COptArc_c_void {
+    struct CBox_c_void inner;
+    struct COptArc_c_void ctx;
+} CtxBox_c_void__COptArc_c_void;
 
 /**
- * Generic function for cloning past FFI boundary
+ * CGlue vtable for trait Clone.
+ *
+ * This virtual function table contains ABI-safe interface for the given trait.
  */
-typedef struct GenericCloneTable_c_void {
-    pvoid (*clone)(const void *thisptr);
-} GenericCloneTable_c_void;
-
-/**
- * Base table for most objects that are cloneable and droppable.
- */
-typedef struct GenericBaseTable_c_void {
-    struct GenericCloneTable_c_void clone;
-    void (*drop)(void *thisptr);
-} GenericBaseTable_c_void;
-
-/**
- * Opaque version of `GenericBaseTable` for FFI purposes
- */
-typedef struct GenericBaseTable_c_void OpaqueBaseTable;
+typedef struct CloneVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____OpaqueTarget {
+    struct CtxBox_c_void__COptArc_c_void (*clone)(const void *thisptr, const struct COptArc_c_void *cglue_ctx);
+} CloneVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____OpaqueTarget;
 
 typedef struct PhysicalMemoryMetadata {
     uintptr_t size;
@@ -195,88 +338,59 @@ typedef struct PhysicalMemoryMapping {
     Address real_base;
 } PhysicalMemoryMapping;
 
-typedef struct PhysicalMemoryFunctionTable_c_void {
-    int32_t (*phys_read_raw_list)(void *phys_mem, struct PhysicalReadData *read_data, uintptr_t read_data_count);
-    int32_t (*phys_write_raw_list)(void *phys_mem, const struct PhysicalWriteData *write_data, uintptr_t write_data_count);
-    struct PhysicalMemoryMetadata (*metadata)(const void *phys_mem);
-    void (*set_mem_map)(void *phys_mem, const struct PhysicalMemoryMapping *mem_maps, uintptr_t mem_maps_count);
-} PhysicalMemoryFunctionTable_c_void;
-
-typedef struct PhysicalMemoryFunctionTable_c_void OpaquePhysicalMemoryFunctionTable;
-
-typedef struct COptArc_Library {
-    const Library *inner;
-    const Library *(*clone_fn)(const Library*);
-    void (*drop_fn)(const Library**);
-} COptArc_Library;
-
-typedef struct CpuStateFunctionTable_c_void {
-    void (*drop)(void *thisptr);
-} CpuStateFunctionTable_c_void;
-
-typedef struct CpuStateFunctionTable_c_void OpaqueCpuStateFunctionTable;
-
-typedef struct PluginCpuState {
-    void *instance;
-    OpaqueCpuStateFunctionTable vtable;
-    struct COptArc_Library library;
-} PluginCpuState;
-
-typedef struct PluginCpuState MuPluginCpuState;
-
 /**
- * Opaque version of `GenericCloneTable` for FFI purposes
- */
-typedef struct GenericCloneTable_c_void OpaqueCloneTable;
-
-typedef struct ArcPluginCpuState {
-    struct PluginCpuState inner;
-    OpaqueCloneTable clone;
-} ArcPluginCpuState;
-
-typedef struct ArcPluginCpuState MuArcPluginCpuState;
-
-typedef struct ConnectorCpuStateFunctionTable_c_void__c_void {
-    int32_t (*cpu_state)(void *os, struct COptArc_Library lib, MuPluginCpuState *out);
-    int32_t (*into_cpu_state)(void *os, struct COptArc_Library lib, MuArcPluginCpuState *out);
-} ConnectorCpuStateFunctionTable_c_void__c_void;
-
-typedef struct ConnectorCpuStateFunctionTable_c_void__c_void OpaqueConnectorCpuStateFunctionTable;
-
-typedef struct ConnectorFunctionTable {
-    /**
-     * The vtable for object creation and cloning
-     */
-    const OpaqueBaseTable *base;
-    /**
-     * The vtable for all physical memory function calls to the connector.
-     */
-    const OpaquePhysicalMemoryFunctionTable *phys;
-    const OpaqueConnectorCpuStateFunctionTable *cpu_state;
-} ConnectorFunctionTable;
-
-/**
- * Describes initialized connector instance
+ * CGlue vtable for trait PhysicalMemory.
  *
- * This structure is returned by `Connector`. It is needed to maintain reference
- * counts to the loaded connector library.
+ * This virtual function table contains ABI-safe interface for the given trait.
  */
-typedef struct ConnectorInstance {
-    void *instance;
-    struct ConnectorFunctionTable vtable;
-    /**
-     * Internal library arc.
-     *
-     * This will keep the library loaded in memory as long as the connector instance is alive.
-     * This has to be the last member of the struct so the library will be unloaded _after_
-     * the instance is destroyed.
-     *
-     * If the library is unloaded prior to the instance this will lead to a SIGSEGV.
-     */
-    struct COptArc_Library library;
-} ConnectorInstance;
+typedef struct PhysicalMemoryVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____OpaqueTarget {
+    int32_t (*phys_read_raw_list)(void *thisptr, struct PhysicalReadData *data, uintptr_t data_size);
+    int32_t (*phys_write_raw_list)(void *thisptr, const struct PhysicalWriteData *data, uintptr_t data_size);
+    struct PhysicalMemoryMetadata (*metadata)(const void *thisptr);
+    void (*set_mem_map)(void *thisptr, const struct PhysicalMemoryMapping *mem_map, uintptr_t mem_map_size);
+} PhysicalMemoryVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____OpaqueTarget;
 
-typedef struct ConnectorInstance MuConnectorInstance;
+/**
+ * CGlue vtable for trait CpuState.
+ *
+ * This virtual function table contains ABI-safe interface for the given trait.
+ */
+typedef struct CpuStateVtbl_CtxBox_c_void__OpaqueTarget_____c_void__OpaqueTarget__OpaqueTarget {
+    void (*pause)(void *thisptr);
+    void (*resume)(void *thisptr);
+} CpuStateVtbl_CtxBox_c_void__OpaqueTarget_____c_void__OpaqueTarget__OpaqueTarget;
+
+/**
+ * Base CGlue trait object for trait CpuState.
+ */
+typedef struct CGlueTraitObj_CtxBox_c_void__OpaqueTarget_____CpuStateVtbl_CtxBox_c_void__OpaqueTarget_____c_void__OpaqueTarget__OpaqueTarget_____CpuStateRetTmp CpuStateBase_CtxBox_c_void__OpaqueTarget_____c_void__OpaqueTarget__OpaqueTarget;
+
+/**
+ * CGlue vtable for trait Clone.
+ *
+ * This virtual function table contains ABI-safe interface for the given trait.
+ */
+typedef struct CloneVtbl_CtxBox_c_void__OpaqueTarget_____c_void__OpaqueTarget__OpaqueTarget {
+    struct CtxBox_c_void__OpaqueTarget (*clone)(const void *thisptr, const void *cglue_ctx);
+} CloneVtbl_CtxBox_c_void__OpaqueTarget_____c_void__OpaqueTarget__OpaqueTarget;
+
+/**
+ * CGlue vtable for trait ConnectorCpuStateInner.
+ *
+ * This virtual function table contains ABI-safe interface for the given trait.
+ */
+typedef struct ConnectorCpuStateInnerVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____OpaqueTarget {
+    int32_t (*cpu_state)(void *thisptr, const struct COptArc_c_void *cglue_ctx, CpuStateBase_CtxBox_c_void__OpaqueTarget_____c_void__OpaqueTarget__OpaqueTarget *ok_out);
+    int32_t (*into_cpu_state)(struct CtxBox_c_void__COptArc_c_void thisobj, struct IntoCpuState_CtxBox_c_void__OpaqueTarget_____c_void__OpaqueTarget__OpaqueTarget *ok_out);
+} ConnectorCpuStateInnerVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____OpaqueTarget;
+
+typedef struct ConnectorInstance_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____OpaqueTarget ConnectorInstanceBaseCtxBox_c_void__COptArc_c_void;
+
+typedef ConnectorInstanceBaseCtxBox_c_void__COptArc_c_void ConnectorInstanceBaseArcBox_c_void__c_void;
+
+typedef ConnectorInstanceBaseArcBox_c_void__c_void ConnectorInstanceArcBox;
+
+typedef ConnectorInstanceArcBox MuConnectorInstanceArcBox;
 
 typedef struct Callback_c_void__Address {
     void *context;
@@ -295,6 +409,11 @@ typedef OpaqueCallback_Address AddressCallback;
  */
 typedef uint32_t Pid;
 
+/**
+ * Wrapper around null-terminated C-style strings.
+ *
+ * Analog to Rust's `String` & `str`, [`ReprCString`] owns the underlying data.
+ */
 typedef int8_t *ReprCString;
 
 typedef enum ArchitectureIdent_Tag {
@@ -358,6 +477,14 @@ typedef struct ProcessInfo {
      */
     ReprCString name;
     /**
+     * Path of the process binary
+     */
+    ReprCString path;
+    /**
+     * Command line the process was started with.
+     */
+    ReprCString command_line;
+    /**
      * System architecture of the target system.
      */
     struct ArchitectureIdent sys_arch;
@@ -374,9 +501,114 @@ typedef struct ProcessInfo {
     struct ArchitectureIdent proc_arch;
 } ProcessInfo;
 
-typedef struct ProcessInfo MuProcessInfo;
+/**
+ * A `Page` holds information about a memory page.
+ *
+ * More information about paging can be found [here](https://en.wikipedia.org/wiki/Paging).
+ */
+typedef struct Page {
+    /**
+     * Contains the page type (see above).
+     */
+    PageType page_type;
+    /**
+     * Contains the base address of this page.
+     */
+    Address page_base;
+    /**
+     * Contains the size of this page.
+     */
+    uintptr_t page_size;
+} Page;
 
-typedef const struct ArchitectureIdent *OptionArchitectureIdent;
+/**
+ * Virtual page range information with physical mappings used for callbacks
+ */
+typedef struct VirtualTranslationRangeInfo {
+    Address virt_address;
+    uintptr_t virt_size;
+    struct PhysicalAddress phys_address;
+} VirtualTranslationRangeInfo;
+
+typedef struct Callback_c_void__VirtualTranslationRangeInfo {
+    void *context;
+    bool (*func)(void*, struct VirtualTranslationRangeInfo);
+} Callback_c_void__VirtualTranslationRangeInfo;
+
+typedef struct Callback_c_void__VirtualTranslationRangeInfo OpaqueCallback_VirtualTranslationRangeInfo;
+
+typedef OpaqueCallback_VirtualTranslationRangeInfo VirtualTranslationRangeCallback;
+
+/**
+ * Virtual page range information used for callbacks
+ */
+typedef struct VirtualRangeInfo {
+    Address virt_address;
+    uintptr_t virt_size;
+} VirtualRangeInfo;
+
+typedef struct Callback_c_void__VirtualRangeInfo {
+    void *context;
+    bool (*func)(void*, struct VirtualRangeInfo);
+} Callback_c_void__VirtualRangeInfo;
+
+typedef struct Callback_c_void__VirtualRangeInfo OpaqueCallback_VirtualRangeInfo;
+
+typedef OpaqueCallback_VirtualRangeInfo VirtualRangeCallback;
+
+/**
+ * CGlue vtable for trait VirtualMemory.
+ *
+ * This virtual function table contains ABI-safe interface for the given trait.
+ */
+typedef struct VirtualMemoryVtbl_____c_void__c_void__NoContext__NoContext {
+    int32_t (*virt_read_raw_list)(void *thisptr, struct VirtualReadData *data, uintptr_t data_size);
+    int32_t (*virt_write_raw_list)(void *thisptr, const struct VirtualWriteData *data, uintptr_t data_size);
+    int32_t (*virt_page_info)(void *thisptr, Address addr, struct Page *ok_out);
+    void (*virt_translation_map_range)(void *thisptr, Address start, Address end, VirtualTranslationRangeCallback callback);
+    void (*virt_page_map_range)(void *thisptr, uintptr_t gap_size, Address start, Address end, VirtualRangeCallback callback);
+} VirtualMemoryVtbl_____c_void__c_void__NoContext__NoContext;
+
+/**
+ * Base CGlue trait object for trait VirtualMemory.
+ */
+typedef struct CGlueTraitObj_____c_void__VirtualMemoryVtbl_____c_void__c_void__NoContext__NoContext_____VirtualMemoryRetTmp VirtualMemoryBase_____c_void__c_void__NoContext__NoContext;
+
+/**
+ * CGlue vtable for trait AsVirtualMemory.
+ *
+ * This virtual function table contains ABI-safe interface for the given trait.
+ */
+typedef struct AsVirtualMemoryVtbl_CtxBox_c_void__OpaqueTarget_____c_void__OpaqueTarget__OpaqueTarget {
+    VirtualMemoryBase_____c_void__c_void__NoContext__NoContext *(*virt_mem)(void *thisptr, VirtualMemoryBase_____c_void__c_void__NoContext__NoContext *ret_tmp);
+} AsVirtualMemoryVtbl_CtxBox_c_void__OpaqueTarget_____c_void__OpaqueTarget__OpaqueTarget;
+
+/**
+ * Exit code of a process
+ */
+typedef int32_t ExitCode;
+
+/**
+ * The state of a process
+ *
+ * # Remarks
+ *
+ * In case the exit code isn't known ProcessState::Unknown is set.
+ */
+typedef enum ProcessState_Tag {
+    Alive,
+    Dead,
+    UnknownState,
+} ProcessState_Tag;
+
+typedef struct ProcessState {
+    ProcessState_Tag tag;
+    union {
+        struct {
+            ExitCode dead;
+        };
+    };
+} ProcessState;
 
 /**
  * Pair of address and architecture used for callbacks
@@ -448,10 +680,6 @@ typedef struct ModuleInfo {
      */
     struct ArchitectureIdent arch;
 } ModuleInfo;
-
-typedef struct ModuleInfo MuModuleInfo;
-
-typedef Address MuAddress;
 
 /**
  * Import information structure
@@ -526,101 +754,21 @@ typedef struct Callback_c_void__SectionInfo OpaqueCallback_SectionInfo;
 
 typedef OpaqueCallback_SectionInfo SectionCallback;
 
-typedef struct ProcessFunctionTable_c_void {
-    int32_t (*module_address_list_callback)(void *process, OptionArchitectureIdent target_arch, ModuleAddressCallback callback);
-    int32_t (*module_by_address)(void *process, Address address, struct ArchitectureIdent architecture, MuModuleInfo *out);
-    int32_t (*primary_module_address)(void *process, MuAddress *out);
-    int32_t (*module_import_list_callback)(void *process, const struct ModuleInfo *info, ImportCallback callback);
-    int32_t (*module_export_list_callback)(void *process, const struct ModuleInfo *info, ExportCallback callback);
-    int32_t (*module_section_list_callback)(void *process, const struct ModuleInfo *info, SectionCallback callback);
-    const struct ProcessInfo *(*info)(const void *process);
-    void *(*virt_mem)(void *process);
-    void (*drop)(void *thisptr);
-} ProcessFunctionTable_c_void;
-
-typedef struct ProcessFunctionTable_c_void OpaqueProcessFunctionTable;
-
 /**
- * A `Page` holds information about a memory page.
+ * CGlue vtable for trait Process.
  *
- * More information about paging can be found [here](https://en.wikipedia.org/wiki/Paging).
+ * This virtual function table contains ABI-safe interface for the given trait.
  */
-typedef struct Page {
-    /**
-     * Contains the page type (see above).
-     */
-    PageType page_type;
-    /**
-     * Contains the base address of this page.
-     */
-    Address page_base;
-    /**
-     * Contains the size of this page.
-     */
-    uintptr_t page_size;
-} Page;
-
-typedef struct Page MuPage;
-
-typedef struct TranslationChunk {
-    Address _0;
-    uintptr_t _1;
-    struct PhysicalAddress _2;
-} TranslationChunk;
-
-typedef struct Callback_c_void__TranslationChunk {
-    void *context;
-    bool (*func)(void*, struct TranslationChunk);
-} Callback_c_void__TranslationChunk;
-
-typedef struct Callback_c_void__TranslationChunk OpaqueCallback_TranslationChunk;
-
-typedef OpaqueCallback_TranslationChunk TranslationMapCallback;
-
-typedef struct PageMapChunk {
-    Address _0;
-    uintptr_t _1;
-} PageMapChunk;
-
-typedef struct Callback_c_void__PageMapChunk {
-    void *context;
-    bool (*func)(void*, struct PageMapChunk);
-} Callback_c_void__PageMapChunk;
-
-typedef struct Callback_c_void__PageMapChunk OpaqueCallback_PageMapChunk;
-
-typedef OpaqueCallback_PageMapChunk PageMapCallback;
-
-typedef struct VirtualMemoryFunctionTable_c_void {
-    int32_t (*virt_read_raw_list)(void *virt_mem, struct VirtualReadData *read_data, uintptr_t read_data_count);
-    int32_t (*virt_write_raw_list)(void *virt_mem, const struct VirtualWriteData *write_data, uintptr_t write_data_count);
-    int32_t (*virt_page_info)(void *virt_mem, Address addr, MuPage *out);
-    void (*virt_translation_map_range)(void *virt_mem, Address start, Address end, TranslationMapCallback out);
-    void (*virt_page_map_range)(void *virt_mem, uintptr_t gap_size, Address start, Address end, PageMapCallback out);
-} VirtualMemoryFunctionTable_c_void;
-
-typedef struct VirtualMemoryFunctionTable_c_void OpaqueVirtualMemoryFunctionTable;
-
-typedef struct VirtualMemoryInstance {
-    void *instance;
-    const OpaqueVirtualMemoryFunctionTable *vtable;
-} VirtualMemoryInstance;
-
-typedef struct PluginProcess {
-    void *instance;
-    OpaqueProcessFunctionTable vtable;
-    struct VirtualMemoryInstance virt_mem;
-} PluginProcess;
-
-typedef struct PluginProcess MuPluginProcess;
-
-typedef struct ArcPluginProcess {
-    struct PluginProcess inner;
-    OpaqueCloneTable clone;
-    struct COptArc_Library library;
-} ArcPluginProcess;
-
-typedef struct ArcPluginProcess MuArcPluginProcess;
+typedef struct ProcessVtbl_CtxBox_c_void__OpaqueTarget_____c_void__OpaqueTarget__OpaqueTarget {
+    struct ProcessState (*state)(void *thisptr);
+    int32_t (*module_address_list_callback)(void *thisptr, const struct ArchitectureIdent *target_arch, ModuleAddressCallback callback);
+    int32_t (*module_by_address)(void *thisptr, Address address, struct ArchitectureIdent architecture, struct ModuleInfo *ok_out);
+    int32_t (*primary_module_address)(void *thisptr, Address *ok_out);
+    int32_t (*module_import_list_callback)(void *thisptr, const struct ModuleInfo *info, ImportCallback callback);
+    int32_t (*module_export_list_callback)(void *thisptr, const struct ModuleInfo *info, ExportCallback callback);
+    int32_t (*module_section_list_callback)(void *thisptr, const struct ModuleInfo *info, SectionCallback callback);
+    const struct ProcessInfo *(*info)(const void *thisptr);
+} ProcessVtbl_CtxBox_c_void__OpaqueTarget_____c_void__OpaqueTarget__OpaqueTarget;
 
 /**
  * Information block about OS
@@ -644,148 +792,103 @@ typedef struct OsInfo {
     struct ArchitectureIdent arch;
 } OsInfo;
 
-typedef struct OsFunctionTable_c_void__c_void {
-    int32_t (*process_address_list_callback)(void *os, AddressCallback callback);
-    int32_t (*process_info_by_address)(void *os, Address address, MuProcessInfo *out);
-    int32_t (*process_by_info)(void *os, struct ProcessInfo info, MuPluginProcess *out);
-    int32_t (*into_process_by_info)(void *os, struct ProcessInfo info, struct COptArc_Library lib, MuArcPluginProcess *out);
-    int32_t (*module_address_list_callback)(void *os, AddressCallback callback);
-    int32_t (*module_by_address)(void *os, Address address, MuModuleInfo *out);
-    const struct OsInfo *(*info)(const void *os);
-    void *(*phys_mem)(void *os);
-    void *(*virt_mem)(void *os);
-} OsFunctionTable_c_void__c_void;
-
-typedef struct OsFunctionTable_c_void__c_void OpaqueOsFunctionTable;
-
-typedef struct KeyboardStateFunctionTable_c_void {
-    int32_t (*is_down)(const void *keyboard_state, int32_t vk);
-    void (*set_down)(void *keyboard_state, int32_t vk, int32_t down);
-    void (*drop)(void *thisptr);
-} KeyboardStateFunctionTable_c_void;
-
-typedef struct KeyboardStateFunctionTable_c_void OpaqueKeyboardStateFunctionTable;
-
-typedef struct ArcPluginKeyboardState {
-    void *instance;
-    OpaqueKeyboardStateFunctionTable vtable;
-    OpaqueCloneTable clone;
-    struct COptArc_Library library;
-} ArcPluginKeyboardState;
-
-typedef struct ArcPluginKeyboardState MuArcPluginKeyboardState;
-
-typedef struct KeyboardFunctionTable_c_void {
-    int32_t (*state)(void *keyboard, struct COptArc_Library lib, MuArcPluginKeyboardState *out);
-    int32_t (*set_state)(void *keyboard, const struct ArcPluginKeyboardState *state);
-    void (*drop)(void *thisptr);
-} KeyboardFunctionTable_c_void;
-
-typedef struct KeyboardFunctionTable_c_void OpaqueKeyboardFunctionTable;
-
-typedef struct PluginKeyboard {
-    void *instance;
-    OpaqueKeyboardFunctionTable vtable;
-    struct COptArc_Library library;
-} PluginKeyboard;
-
-typedef struct PluginKeyboard MuPluginKeyboard;
-
-typedef struct ArcPluginKeyboard {
-    struct PluginKeyboard inner;
-    OpaqueCloneTable clone;
-} ArcPluginKeyboard;
-
-typedef struct ArcPluginKeyboard MuArcPluginKeyboard;
-
-typedef struct OsKeyboardFunctionTable_c_void__c_void {
-    int32_t (*keyboard)(void *os, struct COptArc_Library lib, MuPluginKeyboard *out);
-    int32_t (*into_keyboard)(void *os, struct COptArc_Library lib, MuArcPluginKeyboard *out);
-} OsKeyboardFunctionTable_c_void__c_void;
-
-typedef struct OsKeyboardFunctionTable_c_void__c_void OpaqueOsKeyboardFunctionTable;
-
-typedef struct OsLayerFunctionTable {
-    /**
-     * The vtable for object creation and cloning
-     */
-    const OpaqueBaseTable *base;
-    /**
-     * The vtable for all os functions
-     */
-    const OpaqueOsFunctionTable *os;
-    /**
-     * The vtable for the keyboard access if available
-     */
-    const OpaqueOsKeyboardFunctionTable *keyboard;
-} OsLayerFunctionTable;
-
-typedef struct PhysicalMemoryInstance {
-    void *instance;
-    const OpaquePhysicalMemoryFunctionTable *vtable;
-} PhysicalMemoryInstance;
-
 /**
- * Describes a FFI safe option
- */
-typedef enum COption_PhysicalMemoryInstance_Tag {
-    None_PhysicalMemoryInstance,
-    Some_PhysicalMemoryInstance,
-} COption_PhysicalMemoryInstance_Tag;
-
-typedef struct COption_PhysicalMemoryInstance {
-    COption_PhysicalMemoryInstance_Tag tag;
-    union {
-        struct {
-            struct PhysicalMemoryInstance some;
-        };
-    };
-} COption_PhysicalMemoryInstance;
-
-/**
- * Describes a FFI safe option
- */
-typedef enum COption_VirtualMemoryInstance_Tag {
-    None_VirtualMemoryInstance,
-    Some_VirtualMemoryInstance,
-} COption_VirtualMemoryInstance_Tag;
-
-typedef struct COption_VirtualMemoryInstance {
-    COption_VirtualMemoryInstance_Tag tag;
-    union {
-        struct {
-            struct VirtualMemoryInstance some;
-        };
-    };
-} COption_VirtualMemoryInstance;
-
-/**
- * Describes initialized os instance
+ * CGlue vtable for trait OsInner.
  *
- * This structure is returned by `OS`. It is needed to maintain reference
- * counts to the loaded plugin library.
+ * This virtual function table contains ABI-safe interface for the given trait.
  */
-typedef struct OsInstance {
-    void *instance;
-    struct OsLayerFunctionTable vtable;
-    /**
-     * Internal library arc.
-     *
-     * This will keep the library loaded in memory as long as the os instance is alive.
-     * This has to be the last member of the struct so the library will be unloaded _after_
-     * the instance is destroyed.
-     *
-     * If the library is unloaded prior to the instance this will lead to a SIGSEGV.
-     */
-    struct COptArc_Library library;
-    /**
-     * Internal physical / virtual memory instances for borrowing
-     */
-    struct COption_PhysicalMemoryInstance phys_mem;
-    struct COption_VirtualMemoryInstance virt_mem;
-} OsInstance;
+typedef struct OsInnerVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____OpaqueTarget {
+    int32_t (*process_address_list_callback)(void *thisptr, AddressCallback callback);
+    int32_t (*process_info_by_address)(void *thisptr, Address address, struct ProcessInfo *ok_out);
+    int32_t (*process_by_info)(void *thisptr, struct ProcessInfo info, const struct COptArc_c_void *cglue_ctx, struct ProcessInstance_CtxBox_c_void__OpaqueTarget_____c_void__OpaqueTarget__OpaqueTarget *ok_out);
+    int32_t (*into_process_by_info)(struct CtxBox_c_void__COptArc_c_void thisobj, struct ProcessInfo info, struct IntoProcessInstance_CtxBox_c_void__OpaqueTarget_____c_void__OpaqueTarget__OpaqueTarget *ok_out);
+    int32_t (*module_address_list_callback)(void *thisptr, AddressCallback callback);
+    int32_t (*module_by_address)(void *thisptr, Address address, struct ModuleInfo *ok_out);
+    const struct OsInfo *(*info)(const void *thisptr);
+} OsInnerVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____OpaqueTarget;
 
-typedef struct OsInstance MuOsInstance;
+/**
+ * CGlue vtable for trait PhysicalMemory.
+ *
+ * This virtual function table contains ABI-safe interface for the given trait.
+ */
+typedef struct PhysicalMemoryVtbl_____c_void__c_void__NoContext__NoContext {
+    int32_t (*phys_read_raw_list)(void *thisptr, struct PhysicalReadData *data, uintptr_t data_size);
+    int32_t (*phys_write_raw_list)(void *thisptr, const struct PhysicalWriteData *data, uintptr_t data_size);
+    struct PhysicalMemoryMetadata (*metadata)(const void *thisptr);
+    void (*set_mem_map)(void *thisptr, const struct PhysicalMemoryMapping *mem_map, uintptr_t mem_map_size);
+} PhysicalMemoryVtbl_____c_void__c_void__NoContext__NoContext;
+
+/**
+ * Base CGlue trait object for trait PhysicalMemory.
+ */
+typedef struct CGlueTraitObj_____c_void__PhysicalMemoryVtbl_____c_void__c_void__NoContext__NoContext_____PhysicalMemoryRetTmp PhysicalMemoryBase_____c_void__c_void__NoContext__NoContext;
+
+/**
+ * CGlue vtable for trait AsPhysicalMemory.
+ *
+ * This virtual function table contains ABI-safe interface for the given trait.
+ */
+typedef struct AsPhysicalMemoryVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____OpaqueTarget {
+    PhysicalMemoryBase_____c_void__c_void__NoContext__NoContext *(*phys_mem)(void *thisptr, PhysicalMemoryBase_____c_void__c_void__NoContext__NoContext *ret_tmp);
+} AsPhysicalMemoryVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____OpaqueTarget;
+
+/**
+ * CGlue vtable for trait AsVirtualMemory.
+ *
+ * This virtual function table contains ABI-safe interface for the given trait.
+ */
+typedef struct AsVirtualMemoryVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____OpaqueTarget {
+    VirtualMemoryBase_____c_void__c_void__NoContext__NoContext *(*virt_mem)(void *thisptr, VirtualMemoryBase_____c_void__c_void__NoContext__NoContext *ret_tmp);
+} AsVirtualMemoryVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____OpaqueTarget;
+
+/**
+ * CGlue vtable for trait KeyboardState.
+ *
+ * This virtual function table contains ABI-safe interface for the given trait.
+ */
+typedef struct KeyboardStateVtbl_CtxBox_c_void__OpaqueTarget_____c_void__OpaqueTarget__OpaqueTarget {
+    bool (*is_down)(const void *thisptr, int32_t vk);
+} KeyboardStateVtbl_CtxBox_c_void__OpaqueTarget_____c_void__OpaqueTarget__OpaqueTarget;
+
+/**
+ * Base CGlue trait object for trait KeyboardState.
+ */
+typedef struct CGlueTraitObj_CtxBox_c_void__OpaqueTarget_____KeyboardStateVtbl_CtxBox_c_void__OpaqueTarget_____c_void__OpaqueTarget__OpaqueTarget_____KeyboardStateRetTmp KeyboardStateBase_CtxBox_c_void__OpaqueTarget_____c_void__OpaqueTarget__OpaqueTarget;
+
+/**
+ * CGlue vtable for trait Keyboard.
+ *
+ * This virtual function table contains ABI-safe interface for the given trait.
+ */
+typedef struct KeyboardVtbl_CtxBox_c_void__OpaqueTarget_____c_void__OpaqueTarget__OpaqueTarget {
+    bool (*is_down)(void *thisptr, int32_t vk);
+    void (*set_down)(void *thisptr, int32_t vk, bool down);
+    int32_t (*state)(void *thisptr, const void *cglue_ctx, KeyboardStateBase_CtxBox_c_void__OpaqueTarget_____c_void__OpaqueTarget__OpaqueTarget *ok_out);
+} KeyboardVtbl_CtxBox_c_void__OpaqueTarget_____c_void__OpaqueTarget__OpaqueTarget;
+
+/**
+ * Base CGlue trait object for trait Keyboard.
+ */
+typedef struct CGlueTraitObj_CtxBox_c_void__OpaqueTarget_____KeyboardVtbl_CtxBox_c_void__OpaqueTarget_____c_void__OpaqueTarget__OpaqueTarget_____KeyboardRetTmp KeyboardBase_CtxBox_c_void__OpaqueTarget_____c_void__OpaqueTarget__OpaqueTarget;
+
+/**
+ * CGlue vtable for trait OsKeyboardInner.
+ *
+ * This virtual function table contains ABI-safe interface for the given trait.
+ */
+typedef struct OsKeyboardInnerVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____OpaqueTarget {
+    int32_t (*keyboard)(void *thisptr, const struct COptArc_c_void *cglue_ctx, KeyboardBase_CtxBox_c_void__OpaqueTarget_____c_void__OpaqueTarget__OpaqueTarget *ok_out);
+    int32_t (*into_keyboard)(struct CtxBox_c_void__COptArc_c_void thisobj, struct IntoKeyboard_CtxBox_c_void__OpaqueTarget_____c_void__OpaqueTarget__OpaqueTarget *ok_out);
+} OsKeyboardInnerVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____OpaqueTarget;
+
+typedef struct OsInstance_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____OpaqueTarget OsInstanceBaseCtxBox_c_void__COptArc_c_void;
+
+typedef OsInstanceBaseCtxBox_c_void__COptArc_c_void OsInstanceBaseArcBox_c_void__c_void;
+
+typedef OsInstanceBaseArcBox_c_void__c_void OsInstanceArcBox;
+
+typedef OsInstanceArcBox MuOsInstanceArcBox;
 
 #ifdef __cplusplus
 extern "C" {
@@ -861,7 +964,7 @@ int32_t inventory_add_dir(struct Inventory *inv, const char *dir);
 int32_t inventory_create_connector(struct Inventory *inv,
                                    const char *name,
                                    const char *args,
-                                   MuConnectorInstance *out);
+                                   MuConnectorInstanceArcBox *out);
 
 /**
  * Create a OS instance with given arguments
@@ -892,8 +995,8 @@ int32_t inventory_create_connector(struct Inventory *inv,
 int32_t inventory_create_os(struct Inventory *inv,
                             const char *name,
                             const char *args,
-                            struct ConnectorInstance mem,
-                            MuOsInstance *out);
+                            ConnectorInstanceArcBox mem,
+                            MuOsInstanceArcBox *out);
 
 /**
  * Free a os plugin
@@ -903,7 +1006,7 @@ int32_t inventory_create_os(struct Inventory *inv,
  * `os` must point to a valid `OsInstance` that was created using one of the provided
  * functions.
  */
-void os_drop(struct OsInstance *os);
+void os_drop(OsInstanceArcBox *os);
 
 /**
  * Clone a connector
@@ -917,7 +1020,7 @@ void os_drop(struct OsInstance *os);
  * `conn` has to point to a a valid `CloneablePhysicalMemory` created by one of the provided
  * functions.
  */
-void connector_clone(const struct ConnectorInstance *conn, MuConnectorInstance *out);
+void connector_clone(const ConnectorInstanceArcBox *conn, MuConnectorInstanceArcBox *out);
 
 /**
  * Free a connector instance
@@ -930,7 +1033,7 @@ void connector_clone(const struct ConnectorInstance *conn, MuConnectorInstance *
  * There has to be no instance of `PhysicalMemory` created from the input `conn`, because they
  * will become invalid.
  */
-void connector_drop(struct ConnectorInstance *conn);
+void connector_drop(ConnectorInstanceArcBox *conn);
 
 /**
  * Free a connector inventory
@@ -941,208 +1044,6 @@ void connector_drop(struct ConnectorInstance *conn);
  * functions.
  */
 void inventory_free(struct Inventory *inv);
-
-/**
- * Read a list of values
- *
- * This will perform `len` physical memory reads on the provided `data`. Using lists is preferable
- * for performance, because then the underlying connectors can batch those operations.
- *
- * # Safety
- *
- * `data` must be a valid array of `PhysicalReadData` with the length of at least `len`
- */
-int32_t phys_read_raw_list(struct PhysicalMemoryInstance *mem,
-                           struct PhysicalReadData *data,
-                           uintptr_t len);
-
-/**
- * Write a list of values
- *
- * This will perform `len` physical memory writes on the provided `data`. Using lists is preferable
- * for performance, because then the underlying connectors can batch those operations.
- *
- * # Safety
- *
- * `data` must be a valid array of `PhysicalWriteData` with the length of at least `len`
- */
-int32_t phys_write_raw_list(struct PhysicalMemoryInstance *mem,
-                            const struct PhysicalWriteData *data,
-                            uintptr_t len);
-
-/**
- * Retrieve metadata about the physical memory object
- */
-struct PhysicalMemoryMetadata phys_metadata(const struct PhysicalMemoryInstance *mem);
-
-/**
- * Write a list of values
- *
- * This will perform `len` physical memory writes on the provided `data`. Using lists is preferable
- * for performance, because then the underlying connectors can batch those operations.
- *
- * # Safety
- *
- * `data` must be a valid array of `PhysicalWriteData` with the length of at least `len`
- */
-void phys_set_mem_map(struct PhysicalMemoryInstance *mem,
-                      const struct PhysicalMemoryMapping *maps,
-                      uintptr_t len);
-
-/**
- * Read a single value into `out` from a provided `PhysicalAddress`
- *
- * # Safety
- *
- * `out` must be a valid pointer to a data buffer of at least `len` size.
- */
-int32_t phys_read_raw(struct PhysicalMemoryInstance *mem,
-                      struct PhysicalAddress addr,
-                      uint8_t *out,
-                      uintptr_t len);
-
-/**
- * Read a single 32-bit value from a provided `PhysicalAddress`
- */
-uint32_t phys_read_u32(struct PhysicalMemoryInstance *mem, struct PhysicalAddress addr);
-
-/**
- * Read a single 64-bit value from a provided `PhysicalAddress`
- */
-uint64_t phys_read_u64(struct PhysicalMemoryInstance *mem, struct PhysicalAddress addr);
-
-/**
- * Write a single value from `input` into a provided `PhysicalAddress`
- *
- * # Safety
- *
- * `input` must be a valid pointer to a data buffer of at least `len` size.
- */
-int32_t phys_write_raw(struct PhysicalMemoryInstance *mem,
-                       struct PhysicalAddress addr,
-                       const uint8_t *input,
-                       uintptr_t len);
-
-/**
- * Write a single 32-bit value into a provided `PhysicalAddress`
- */
-int32_t phys_write_u32(struct PhysicalMemoryInstance *mem,
-                       struct PhysicalAddress addr,
-                       uint32_t val);
-
-/**
- * Write a single 64-bit value into a provided `PhysicalAddress`
- */
-int32_t phys_write_u64(struct PhysicalMemoryInstance *mem,
-                       struct PhysicalAddress addr,
-                       uint64_t val);
-
-/**
- * Free a virtual memory object reference
- *
- * This function frees the reference to a virtual memory object.
- *
- * # Safety
- *
- * `mem` must be a valid reference to a virtual memory object.
- */
-void virt_free(struct VirtualMemoryObj *mem);
-
-/**
- * Read a list of values
- *
- * This will perform `len` virtual memory reads on the provided `data`. Using lists is preferable
- * for performance, because then the underlying connectors can batch those operations, and virtual
- * translation function can cut down on read operations.
- *
- * # Safety
- *
- * `data` must be a valid array of `VirtualReadData` with the length of at least `len`
- */
-int32_t virt_read_raw_list(struct VirtualMemoryObj *mem,
-                           struct VirtualReadData *data,
-                           uintptr_t len);
-
-/**
- * Write a list of values
- *
- * This will perform `len` virtual memory writes on the provided `data`. Using lists is preferable
- * for performance, because then the underlying connectors can batch those operations, and virtual
- * translation function can cut down on read operations.
- *
- * # Safety
- *
- * `data` must be a valid array of `VirtualWriteData` with the length of at least `len`
- */
-int32_t virt_write_raw_list(struct VirtualMemoryObj *mem,
-                            const struct VirtualWriteData *data,
-                            uintptr_t len);
-
-/**
- * Read a single value into `out` from a provided `Address`
- *
- * # Safety
- *
- * `out` must be a valid pointer to a data buffer of at least `len` size.
- */
-int32_t virt_read_raw_into(struct VirtualMemoryObj *mem, Address addr, uint8_t *out, uintptr_t len);
-
-/**
- * Read a single 32-bit value from a provided `Address`
- */
-uint32_t virt_read_u32(struct VirtualMemoryObj *mem, Address addr);
-
-/**
- * Read a single 64-bit value from a provided `Address`
- */
-uint64_t virt_read_u64(struct VirtualMemoryObj *mem, Address addr);
-
-/**
- * Write a single value from `input` into a provided `Address`
- *
- * # Safety
- *
- * `input` must be a valid pointer to a data buffer of at least `len` size.
- */
-int32_t virt_write_raw(struct VirtualMemoryObj *mem,
-                       Address addr,
-                       const uint8_t *input,
-                       uintptr_t len);
-
-/**
- * Write a single 32-bit value into a provided `Address`
- */
-int32_t virt_write_u32(struct VirtualMemoryObj *mem, Address addr, uint32_t val);
-
-/**
- * Write a single 64-bit value into a provided `Address`
- */
-int32_t virt_write_u64(struct VirtualMemoryObj *mem, Address addr, uint64_t val);
-
-/**
- * Returns a reference to the [`PhysicalMemory`] object this OS uses.
- * The [`PhysicalMemory`] usually is just the Connector this OS was intitialized with.
- *
- * If no connector is used `null` is returned.
- *
- * # Safety
- *
- * `os` must point to a valid `OsInstance` that was created using one of the provided
- * functions.
- */
-struct PhysicalMemoryInstance *os_phys_mem(struct OsInstance *os);
-
-/**
- * Returns a reference to the [`VirtualMemory`] object this OS uses.
- *
- * If no [`VirtualMemory`] object is used `null` is returned.
- *
- * # Safety
- *
- * `os` must point to a valid `OsInstance` that was created using one of the provided
- * functions.
- */
-struct VirtualMemoryInstance *os_virt_mem(struct OsInstance *os);
 
 uint8_t arch_bits(const struct ArchitectureObj *arch);
 

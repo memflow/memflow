@@ -62,13 +62,18 @@ fn test_virt_page_map() {
 
     let page_map = virt_mem.virt_page_map(0);
 
-    for (addr, len) in page_map.iter() {
-        println!("{:x}-{:x} ({:x})", addr, *addr + *len, len);
+    for map in page_map.iter() {
+        println!(
+            "{:x}-{:x} ({:x})",
+            map.virt_address,
+            map.virt_address + map.virt_size,
+            map.virt_size
+        );
     }
 
     assert!(page_map.len() == 1);
-    assert_eq!(page_map[0].0, virt_base);
-    assert_eq!(page_map[0].1, size::mb(2));
+    assert_eq!(page_map[0].virt_address, virt_base);
+    assert_eq!(page_map[0].virt_size, size::mb(2));
 }
 
 #[test]

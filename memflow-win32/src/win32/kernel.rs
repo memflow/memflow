@@ -62,7 +62,7 @@ impl<T: 'static + PhysicalMemory, V: 'static + VirtualTranslate> Win32Kernel<T, 
                         // update mem mapping in connector
                         info!("updating connector mem_map={:?}", mem_map);
                         let (mut phys_mem, vat) = virt_mem.into_inner();
-                        phys_mem.set_mem_map(mem_map);
+                        phys_mem.set_mem_map(mem_map.into_vec().as_slice());
                         virt_mem = VirtualDma::with_vat(
                             phys_mem,
                             kernel_info.os_info.arch,
@@ -79,7 +79,7 @@ impl<T: 'static + PhysicalMemory, V: 'static + VirtualTranslate> Win32Kernel<T, 
                         // update mem mapping in connector
                         info!("updating connector mem_map={:?}", mem_map);
                         let (mut phys_mem, vat) = virt_mem.into_inner();
-                        phys_mem.set_mem_map(mem_map);
+                        phys_mem.set_mem_map(mem_map.into_vec().as_slice());
                         virt_mem = VirtualDma::with_vat(
                             phys_mem,
                             kernel_info.os_info.arch,

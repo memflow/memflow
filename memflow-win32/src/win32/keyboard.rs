@@ -239,16 +239,14 @@ where
     fn is_down(&mut self, vk: i32) -> bool {
         if !(0..=256).contains(&vk) {
             false
+        } else if let Ok(buffer) = self
+            .virt_mem
+            .virt_read::<[u8; 256 * 2 / 8]>(self.key_state_addr)
+            .data_part()
+        {
+            is_key_down!(buffer, vk)
         } else {
-            if let Ok(buffer) = self
-                .virt_mem
-                .virt_read::<[u8; 256 * 2 / 8]>(self.key_state_addr)
-                .data_part()
-            {
-                is_key_down!(buffer, vk)
-            } else {
-                false
-            }
+            false
         }
     }
 

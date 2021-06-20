@@ -3,10 +3,11 @@ use crate::derive::connector;
 use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 use crate::mem::phys_mem::*;
 use crate::mem::{
-    MemoryMap, PhysicalMemory, PhysicalMemoryMetadata, PhysicalReadData, PhysicalWriteData,
+    MemoryMap, PhysicalMemory, PhysicalMemoryMapping, PhysicalMemoryMetadata, PhysicalReadData,
+    PhysicalWriteData,
 };
 use crate::plugins::*;
-use crate::types::{size, Address};
+use crate::types::size;
 
 use crate::cglue::*;
 use std::sync::Arc;
@@ -62,7 +63,7 @@ impl PhysicalMemory for DummyMemory {
         self.mem.metadata()
     }
 
-    fn set_mem_map(&mut self, mem_map: MemoryMap<(Address, usize)>) {
+    fn set_mem_map(&mut self, mem_map: &[PhysicalMemoryMapping]) {
         self.mem.set_mem_map(mem_map)
     }
 }

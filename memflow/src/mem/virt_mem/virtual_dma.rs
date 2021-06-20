@@ -5,10 +5,14 @@ use crate::architecture::{ArchitectureObj, ScopedVirtualTranslate};
 use crate::error::{Error, ErrorKind, ErrorOrigin, PartialError, PartialResult, Result};
 use crate::iter::FnExtend;
 use crate::mem::{
+    virt_mem::{
+        VirtualRangeCallback, VirtualRangeInfo, VirtualTranslationRangeCallback,
+        VirtualTranslationRangeInfo,
+    },
     virt_translate::{DirectTranslate, VirtualTranslate},
     PhysicalMemory, PhysicalReadData, PhysicalWriteData, VirtualMemory,
 };
-use crate::types::{Address, Page, PhysicalAddress};
+use crate::types::{Address, Page};
 
 use bumpalo::{collections::Vec as BumpVec, Bump};
 use itertools::Itertools;
@@ -242,7 +246,8 @@ impl<T: PhysicalMemory, V: VirtualTranslate, D: ScopedVirtualTranslate> VirtualM
         &mut self,
         start: Address,
         end: Address,
-    ) -> Vec<(Address, usize, PhysicalAddress)> {
+        mut callback: VirtualTranslationRangeCallback,
+    ) {
         self.arena.reset();
         let mut out = BumpVec::new_in(&self.arena);
 
@@ -264,8 +269,14 @@ impl<T: PhysicalMemory, V: VirtualTranslate, D: ScopedVirtualTranslate> VirtualM
                     Err(((ap, av), (bp, bv)))
                 }
             })
-            .map(|(p, (v, s))| (v, s, p))
-            .collect()
+            .take_while(|(p, (v, s))| {
+                callback.call(VirtualTranslationRangeInfo {
+                    virt_address: *v,
+                    virt_size: *s,
+                    phys_address: *p,
+                })
+            })
+            .for_each(|_| {});
     }
 
     fn virt_page_map_range(
@@ -273,7 +284,8 @@ impl<T: PhysicalMemory, V: VirtualTranslate, D: ScopedVirtualTranslate> VirtualM
         gap_length: usize,
         start: Address,
         end: Address,
-    ) -> Vec<(Address, usize)> {
+        mut callback: VirtualRangeCallback,
+    ) {
         self.arena.reset();
         let mut out = BumpVec::new_in(&self.arena);
 
@@ -296,6 +308,12 @@ impl<T: PhysicalMemory, V: VirtualTranslate, D: ScopedVirtualTranslate> VirtualM
                     Err((a, b))
                 }
             })
-            .collect()
+            .take_while(|(v, s)| {
+                callback.call(VirtualRangeInfo {
+                    virt_address: *v,
+                    virt_size: *s,
+                })
+            })
+            .for_each(|_| {});
     }
 }

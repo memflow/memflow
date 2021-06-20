@@ -31,7 +31,7 @@ impl PhysicalMemory for NullMem {
     }
 
     // This is a no-op
-    fn set_mem_map(&mut self, _mem_map: MemoryMap<(Address, usize)>) {}
+    fn set_mem_map(&mut self, _mem_map: &[PhysicalMemoryMapping]) {}
 }
 
 use NullMem as Memory;

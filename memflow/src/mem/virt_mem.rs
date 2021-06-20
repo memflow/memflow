@@ -17,6 +17,27 @@ use std::mem::MaybeUninit;
 #[cfg(feature = "std")]
 use super::VirtualMemoryCursor;
 
+/// Virtual page range information with physical mappings used for callbacks
+#[repr(C)]
+#[derive(Clone, Debug, PartialEq)]
+pub struct VirtualTranslationRangeInfo {
+    pub virt_address: Address,
+    pub virt_size: usize,
+    pub phys_address: PhysicalAddress,
+}
+
+pub type VirtualTranslationRangeCallback<'a> = OpaqueCallback<'a, VirtualTranslationRangeInfo>;
+
+/// Virtual page range information used for callbacks
+#[repr(C)]
+#[derive(Clone, Debug, PartialEq)]
+pub struct VirtualRangeInfo {
+    pub virt_address: Address,
+    pub virt_size: usize,
+}
+
+pub type VirtualRangeCallback<'a> = OpaqueCallback<'a, VirtualRangeInfo>;
+
 /// The `VirtualMemory` trait implements access to virtual memory for a specific process
 /// and provides a generic way to read and write from/to that processes virtual memory.
 ///
@@ -63,14 +84,16 @@ pub trait VirtualMemory: Send {
         &mut self,
         start: Address,
         end: Address,
-    ) -> Vec<(Address, usize, PhysicalAddress)>;
+        callback: VirtualTranslationRangeCallback,
+    );
 
     fn virt_page_map_range(
         &mut self,
         gap_size: usize,
         start: Address,
         end: Address,
-    ) -> Vec<(Address, usize)>;
+        callback: VirtualRangeCallback,
+    );
 
     // read helpers
     #[skip_func]
@@ -122,13 +145,22 @@ pub trait VirtualMemory: Send {
 
     // page map helpers
     #[skip_func]
-    fn virt_translation_map(&mut self) -> Vec<(Address, usize, PhysicalAddress)> {
-        self.virt_translation_map_range(Address::null(), Address::invalid())
+    fn virt_translation_map(&mut self) -> Vec<VirtualTranslationRangeInfo> {
+        let mut ret = vec![];
+        self.virt_translation_map_range(Address::null(), Address::invalid(), (&mut ret).into());
+        ret
     }
 
     #[skip_func]
-    fn virt_page_map(&mut self, gap_size: usize) -> Vec<(Address, usize)> {
-        self.virt_page_map_range(gap_size, Address::null(), Address::invalid())
+    fn virt_page_map(&mut self, gap_size: usize) -> Vec<VirtualRangeInfo> {
+        let mut ret = vec![];
+        self.virt_page_map_range(
+            gap_size,
+            Address::null(),
+            Address::invalid(),
+            (&mut ret).into(),
+        );
+        ret
     }
 
     // specific read helpers

@@ -11,8 +11,10 @@ after_includes = "typedef void *Library;"
 
 [parse]
 parse_deps = true
-
 include = ["memflow"]
+
+[parse.expand]
+crates = ["cglue", "memflow", "memflow-ffi"]
 
 [macro_expansion]
 bitflags = true

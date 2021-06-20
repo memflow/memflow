@@ -11,7 +11,7 @@ int main(int argc, char *argv[]) {
 	const char *conn_name = argc > 1? argv[1]: "kvm";
 	const char *conn_arg = argc > 2? argv[2]: "";
 
-	ConnectorInstance conn;
+	ConnectorInstanceArcBox conn;
 	if (!inventory_create_connector(inv, conn_name, conn_arg, &conn)) {
 		uint64_t read = phys_read_u64(&conn, addr_to_paddr(0x30000));
 

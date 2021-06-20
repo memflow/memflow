@@ -1,11 +1,11 @@
 #[allow(unused)]
-use memflow::mem::phys_mem::*;
+pub use memflow::mem::phys_mem::*;
 #[allow(unused)]
-use memflow::mem::virt_mem::*;
+pub use memflow::mem::virt_mem::*;
 #[allow(unused)]
-use memflow::os::*;
+pub use memflow::os::*;
 #[allow(unused)]
-use memflow::plugins::*;
+pub use memflow::plugins::*;
 
 // os_process_address_list_callback
 // void os_process_address_list(struct OsInstance *os);

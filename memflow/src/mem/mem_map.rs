@@ -333,7 +333,7 @@ impl MemoryMap<(Address, usize)> {
         ret_map
     }
 
-    // TODO: this could be removed if the RefCell requirement above would be removed.
+    // TODO: into/from trait impls
     pub fn into_vec(self) -> Vec<PhysicalMemoryMapping> {
         self.iter()
             .map(|m| PhysicalMemoryMapping {
@@ -342,6 +342,14 @@ impl MemoryMap<(Address, usize)> {
                 real_base: m.output().0,
             })
             .collect::<Vec<_>>()
+    }
+
+    pub fn from_vec(mem_map: Vec<PhysicalMemoryMapping>) -> Self {
+        let mut map = Self::new();
+        for mapping in mem_map.iter() {
+            map.push_range(mapping.base, mapping.base + mapping.size, mapping.real_base);
+        }
+        map
     }
 }
 

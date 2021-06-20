@@ -82,13 +82,11 @@ pub fn find<T: VirtualMemory>(
 ) -> Result<(Address, usize)> {
     debug!("x64::find: trying to find ntoskrnl.exe with page map",);
 
-    let mut page_map = vec![];
-    virt_mem.virt_page_map_range(
+    let page_map = virt_mem.virt_page_map_range(
         size::mb(2),
         (!0u64 - (1u64 << (ArchitectureObj::from(start_block.arch).address_space_bits() - 1)))
             .into(),
         (!0u64).into(),
-        (&mut page_map).into(),
     );
 
     match page_map

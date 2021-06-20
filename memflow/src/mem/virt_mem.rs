@@ -80,14 +80,14 @@ pub trait VirtualMemory: Send {
 
     fn virt_page_info(&mut self, addr: Address) -> Result<Page>;
 
-    fn virt_translation_map_range(
+    fn virt_translation_map_range_callback(
         &mut self,
         start: Address,
         end: Address,
         callback: VirtualTranslationRangeCallback,
     );
 
-    fn virt_page_map_range(
+    fn virt_page_map_range_callback(
         &mut self,
         gap_size: usize,
         start: Address,
@@ -145,22 +145,36 @@ pub trait VirtualMemory: Send {
 
     // page map helpers
     #[skip_func]
-    fn virt_translation_map(&mut self) -> Vec<VirtualTranslationRangeInfo> {
+    fn virt_translation_map_range(
+        &mut self,
+        start: Address,
+        end: Address,
+    ) -> Vec<VirtualTranslationRangeInfo> {
         let mut ret = vec![];
-        self.virt_translation_map_range(Address::null(), Address::invalid(), (&mut ret).into());
+        self.virt_translation_map_range_callback(start, end, (&mut ret).into());
         ret
     }
 
     #[skip_func]
-    fn virt_page_map(&mut self, gap_size: usize) -> Vec<VirtualRangeInfo> {
+    fn virt_page_map_range(
+        &mut self,
+        gap_size: usize,
+        start: Address,
+        end: Address,
+    ) -> Vec<VirtualRangeInfo> {
         let mut ret = vec![];
-        self.virt_page_map_range(
-            gap_size,
-            Address::null(),
-            Address::invalid(),
-            (&mut ret).into(),
-        );
+        self.virt_page_map_range_callback(gap_size, start, end, (&mut ret).into());
         ret
+    }
+
+    #[skip_func]
+    fn virt_translation_map(&mut self) -> Vec<VirtualTranslationRangeInfo> {
+        self.virt_translation_map_range(Address::null(), Address::invalid())
+    }
+
+    #[skip_func]
+    fn virt_page_map(&mut self, gap_size: usize) -> Vec<VirtualRangeInfo> {
+        self.virt_page_map_range(gap_size, Address::null(), Address::invalid())
     }
 
     // specific read helpers

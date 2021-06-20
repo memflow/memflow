@@ -242,7 +242,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate, D: ScopedVirtualTranslate> VirtualM
         Ok(paddr.containing_page())
     }
 
-    fn virt_translation_map_range(
+    fn virt_translation_map_range_callback(
         &mut self,
         start: Address,
         end: Address,
@@ -279,7 +279,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate, D: ScopedVirtualTranslate> VirtualM
             .for_each(|_| {});
     }
 
-    fn virt_page_map_range(
+    fn virt_page_map_range_callback(
         &mut self,
         gap_length: usize,
         start: Address,

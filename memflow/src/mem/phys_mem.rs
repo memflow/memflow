@@ -1,14 +1,13 @@
-use std::prelude::v1::*;
-
-use super::{PhysicalMemoryBatcher, PhysicalMemoryMapping};
+use crate::cglue::*;
 use crate::connector::cpu_state::*;
 use crate::dataview::Pod;
 use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 use crate::types::{PhysicalAddress, Pointer32, Pointer64};
 
-use std::mem::MaybeUninit;
+use super::{PhysicalMemoryBatcher, PhysicalMemoryMapping};
 
-use crate::cglue::*;
+use std::mem::MaybeUninit;
+use std::prelude::v1::*;
 
 #[cfg(feature = "std")]
 use super::PhysicalMemoryCursor;
@@ -58,9 +57,10 @@ pub type MuConnectorInstanceArcBox<'a> = std::mem::MaybeUninit<ConnectorInstance
 ///     ) -> Result<()> {
 ///         data
 ///             .iter_mut()
-///             .for_each(|PhysicalReadData(addr, out)| out
-///                 .copy_from_slice(&self.mem[addr.as_usize()..(addr.as_usize() + out.len())])
-///             );
+///             .for_each(|PhysicalReadData(addr, out)| {
+///                 let len = out.len();
+///                 out.copy_from_slice(&self.mem[addr.as_usize()..(addr.as_usize() + len)])
+///             });
 ///         Ok(())
 ///     }
 ///
@@ -138,7 +138,7 @@ pub trait PhysicalMemory: Send {
     // read helpers
     #[skip_func]
     fn phys_read_raw_into(&mut self, addr: PhysicalAddress, out: &mut [u8]) -> Result<()> {
-        self.phys_read_raw_list(&mut [PhysicalReadData(addr, out)])
+        self.phys_read_raw_list(&mut [PhysicalReadData(addr, out.into())])
     }
 
     #[skip_func]
@@ -174,7 +174,7 @@ pub trait PhysicalMemory: Send {
     // write helpers
     #[skip_func]
     fn phys_write_raw(&mut self, addr: PhysicalAddress, data: &[u8]) -> Result<()> {
-        self.phys_write_raw_list(&[PhysicalWriteData(addr, data)])
+        self.phys_write_raw_list(&[PhysicalWriteData(addr, data.into())])
     }
 
     #[skip_func]
@@ -364,25 +364,25 @@ pub struct PhysicalMemoryMetadata {
 
 // iterator helpers
 #[repr(C)]
-pub struct PhysicalReadData<'a>(pub PhysicalAddress, pub &'a mut [u8]);
+pub struct PhysicalReadData<'a>(pub PhysicalAddress, pub CSliceMut<'a, u8>);
 pub trait PhysicalReadIterator<'a>: Iterator<Item = PhysicalReadData<'a>> + 'a {}
 impl<'a, T: Iterator<Item = PhysicalReadData<'a>> + 'a> PhysicalReadIterator<'a> for T {}
 
 impl<'a> From<PhysicalReadData<'a>> for (PhysicalAddress, &'a mut [u8]) {
     fn from(PhysicalReadData(a, b): PhysicalReadData<'a>) -> Self {
-        (a, b)
+        (a, b.into())
     }
 }
 
 #[repr(C)]
 #[derive(Clone, Copy)]
-pub struct PhysicalWriteData<'a>(pub PhysicalAddress, pub &'a [u8]);
+pub struct PhysicalWriteData<'a>(pub PhysicalAddress, pub CSliceRef<'a, u8>);
 pub trait PhysicalWriteIterator<'a>: Iterator<Item = PhysicalWriteData<'a>> + 'a {}
 impl<'a, T: Iterator<Item = PhysicalWriteData<'a>> + 'a> PhysicalWriteIterator<'a> for T {}
 
 impl<'a> From<PhysicalWriteData<'a>> for (PhysicalAddress, &'a [u8]) {
     fn from(PhysicalWriteData(a, b): PhysicalWriteData<'a>) -> Self {
-        (a, b)
+        (a, b.into())
     }
 }
 

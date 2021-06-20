@@ -533,7 +533,7 @@ impl ArchMmuSpec {
                     PageType::PAGE_TABLE,
                     self.pt_leaf_size(tr_chunk.step),
                 ),
-                chunk,
+                chunk.into(),
             ));
         }
 
@@ -541,7 +541,7 @@ impl ArchMmuSpec {
 
         // Move the read value into the chunk
         for (ref mut chunk, PhysicalReadData(_, buf)) in chunks.iter_mut().zip(pt_read.iter()) {
-            let pt_addr = buf_to_addr(*buf);
+            let pt_addr = buf_to_addr(&*buf);
             chunk.pt_addr = pt_addr;
         }
 

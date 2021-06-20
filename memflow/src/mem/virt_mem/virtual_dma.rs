@@ -194,7 +194,9 @@ impl<T: PhysicalMemory, V: VirtualTranslate, D: ScopedVirtualTranslate> VirtualM
             &self.translator,
             data.iter_mut()
                 .map(|VirtualReadData(a, b)| (*a, &mut b[..])),
-            &mut FnExtend::new(|(a, b)| translation.push(PhysicalReadData(a, b))),
+            &mut FnExtend::new(|(a, b): (_, &mut [u8])| {
+                translation.push(PhysicalReadData(a, b.into()))
+            }),
             &mut FnExtend::new(|(_, _, out): (_, _, &mut [u8])| {
                 for v in out.iter_mut() {
                     *v = 0;
@@ -221,7 +223,9 @@ impl<T: PhysicalMemory, V: VirtualTranslate, D: ScopedVirtualTranslate> VirtualM
             &mut self.phys_mem,
             &self.translator,
             data.iter().copied().map(<_>::into),
-            &mut FnExtend::new(|(a, b)| translation.push(PhysicalWriteData(a, b))),
+            &mut FnExtend::new(|(a, b): (_, &[u8])| {
+                translation.push(PhysicalWriteData(a, b.into()))
+            }),
             &mut FnExtend::new(|(_, _, _): (_, _, _)| {
                 partial_read = true;
             }),

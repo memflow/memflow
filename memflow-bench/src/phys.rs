@@ -43,7 +43,7 @@ fn rwtest(
                             PageType::default().write(true),
                             size::kb(4),
                         ),
-                        vec.as_mut_slice(),
+                        vec.as_mut_slice().into(),
                     )
                 }));
 

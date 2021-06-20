@@ -1,18 +1,18 @@
-use std::prelude::v1::*;
-
 pub mod virtual_dma;
 pub use virtual_dma::VirtualDma;
 
-use super::VirtualMemoryBatcher;
 use crate::architecture::ArchitectureObj;
+use crate::cglue::*;
 use crate::dataview::Pod;
 use crate::error::{
     Error, ErrorKind, ErrorOrigin, PartialError, PartialResult, PartialResultExt, Result,
 };
 use crate::types::{Address, Page, PhysicalAddress, Pointer32, Pointer64};
 
-use crate::cglue::*;
+use super::VirtualMemoryBatcher;
+
 use std::mem::MaybeUninit;
+use std::prelude::v1::*;
 
 #[cfg(feature = "std")]
 use super::VirtualMemoryCursor;
@@ -98,7 +98,7 @@ pub trait VirtualMemory: Send {
     // read helpers
     #[skip_func]
     fn virt_read_raw_into(&mut self, addr: Address, out: &mut [u8]) -> PartialResult<()> {
-        self.virt_read_raw_list(&mut [VirtualReadData(addr, out)])
+        self.virt_read_raw_list(&mut [VirtualReadData(addr, out.into())])
     }
 
     #[skip_func]
@@ -132,7 +132,7 @@ pub trait VirtualMemory: Send {
     // write helpers
     #[skip_func]
     fn virt_write_raw(&mut self, addr: Address, data: &[u8]) -> PartialResult<()> {
-        self.virt_write_raw_list(&[VirtualWriteData(addr, data)])
+        self.virt_write_raw_list(&[VirtualWriteData(addr, data.into())])
     }
 
     #[skip_func]
@@ -386,25 +386,25 @@ pub trait VirtualMemory: Send {
 
 // iterator helpers
 #[repr(C)]
-pub struct VirtualReadData<'a>(pub Address, pub &'a mut [u8]);
+pub struct VirtualReadData<'a>(pub Address, pub CSliceMut<'a, u8>);
 pub trait VirtualReadIterator<'a>: Iterator<Item = VirtualReadData<'a>> + 'a {}
 impl<'a, T: Iterator<Item = VirtualReadData<'a>> + 'a> VirtualReadIterator<'a> for T {}
 
 impl<'a> From<VirtualReadData<'a>> for (Address, &'a mut [u8]) {
     fn from(VirtualReadData(a, b): VirtualReadData<'a>) -> Self {
-        (a, b)
+        (a, b.into())
     }
 }
 
 #[repr(C)]
 #[derive(Clone, Copy)]
-pub struct VirtualWriteData<'a>(pub Address, pub &'a [u8]);
+pub struct VirtualWriteData<'a>(pub Address, pub CSliceRef<'a, u8>);
 pub trait VirtualWriteIterator<'a>: Iterator<Item = VirtualWriteData<'a>> + 'a {}
 impl<'a, T: Iterator<Item = VirtualWriteData<'a>> + 'a> VirtualWriteIterator<'a> for T {}
 
 impl<'a> From<VirtualWriteData<'a>> for (Address, &'a [u8]) {
     fn from(VirtualWriteData(a, b): VirtualWriteData<'a>) -> Self {
-        (a, b)
+        (a, b.into())
     }
 }
 

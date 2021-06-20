@@ -198,7 +198,7 @@ impl<'a, T: CacheValidator> PageCache<'a, T> {
                 if self.is_cached_page_type(addr.page_type()) {
                     out.page_chunks(addr.address(), page_size)
                         .for_each(|(paddr, chunk)| {
-                            let prd = PhysicalReadData(
+                            let mut prd = PhysicalReadData(
                                 PhysicalAddress::with_page(
                                     paddr,
                                     addr.page_type(),
@@ -222,7 +222,7 @@ impl<'a, T: CacheValidator> PageCache<'a, T> {
                                     clist.push(prd);
                                     wlistcache.push(PhysicalReadData(
                                         PhysicalAddress::from(cached_page.address),
-                                        buf,
+                                        buf.into(),
                                     ));
                                     self.mark_page_for_validation(cached_page.address);
                                 }
@@ -235,7 +235,7 @@ impl<'a, T: CacheValidator> PageCache<'a, T> {
                             }
                         });
                 } else {
-                    wlist.push(PhysicalReadData(*addr, out));
+                    wlist.push(PhysicalReadData(*addr, *out));
                 }
 
                 next = iter.next();
@@ -256,13 +256,13 @@ impl<'a, T: CacheValidator> PageCache<'a, T> {
                         wlistcache
                             .into_iter()
                             .for_each(|PhysicalReadData(addr, buf)| {
-                                self.validate_page(addr.address(), buf)
+                                self.validate_page(addr.address(), buf.into())
                             });
 
                         wlistcache = BumpVec::new_in(arena);
                     }
 
-                    while let Some(PhysicalReadData(addr, out)) = clist.pop() {
+                    while let Some(PhysicalReadData(addr, mut out)) = clist.pop() {
                         let cached_page = self.cached_page_mut(addr.address(), false);
                         let aligned_addr = cached_page.address.as_page_aligned(self.page_size);
 

@@ -36,48 +36,6 @@ typedef uint8_t Endianess;
 typedef struct ArchitectureObj ArchitectureObj;
 
 /**
- * Type definition for temporary return value wrapping storage.
- *
- * The trait does not use return wrapping, thus is a typedef to `PhantomData`.
- *
- * Note that `cbindgen` will generate wrong structures for this type. It is important
- * to go inside the generated headers and fix it - all RetTmp structures without a
- * body should be completely deleted, both as types, and as fields in the
- * groups/objects. If C++11 templates are generated, it is important to define a
- * custom type for CGlueTraitObj that does not have `ret_tmp` defined, and change all
- * type aliases of this trait to use that particular structure.
- */
-typedef struct CloneRetTmp CloneRetTmp;
-
-/**
- * Type definition for temporary return value wrapping storage.
- *
- * The trait does not use return wrapping, thus is a typedef to `PhantomData`.
- *
- * Note that `cbindgen` will generate wrong structures for this type. It is important
- * to go inside the generated headers and fix it - all RetTmp structures without a
- * body should be completely deleted, both as types, and as fields in the
- * groups/objects. If C++11 templates are generated, it is important to define a
- * custom type for CGlueTraitObj that does not have `ret_tmp` defined, and change all
- * type aliases of this trait to use that particular structure.
- */
-typedef struct ConnectorCpuStateInnerRetTmp ConnectorCpuStateInnerRetTmp;
-
-/**
- * Type definition for temporary return value wrapping storage.
- *
- * The trait does not use return wrapping, thus is a typedef to `PhantomData`.
- *
- * Note that `cbindgen` will generate wrong structures for this type. It is important
- * to go inside the generated headers and fix it - all RetTmp structures without a
- * body should be completely deleted, both as types, and as fields in the
- * groups/objects. If C++11 templates are generated, it is important to define a
- * custom type for CGlueTraitObj that does not have `ret_tmp` defined, and change all
- * type aliases of this trait to use that particular structure.
- */
-typedef struct CpuStateRetTmp CpuStateRetTmp;
-
-/**
  * The core of the plugin system
  *
  * It scans system directories and collects valid memflow plugins. They can then be instantiated
@@ -121,112 +79,6 @@ typedef struct CpuStateRetTmp CpuStateRetTmp;
  * ```
  */
 typedef struct Inventory Inventory;
-
-/**
- * Type definition for temporary return value wrapping storage.
- *
- * The trait does not use return wrapping, thus is a typedef to `PhantomData`.
- *
- * Note that `cbindgen` will generate wrong structures for this type. It is important
- * to go inside the generated headers and fix it - all RetTmp structures without a
- * body should be completely deleted, both as types, and as fields in the
- * groups/objects. If C++11 templates are generated, it is important to define a
- * custom type for CGlueTraitObj that does not have `ret_tmp` defined, and change all
- * type aliases of this trait to use that particular structure.
- */
-typedef struct KeyboardRetTmp KeyboardRetTmp;
-
-/**
- * Type definition for temporary return value wrapping storage.
- *
- * The trait does not use return wrapping, thus is a typedef to `PhantomData`.
- *
- * Note that `cbindgen` will generate wrong structures for this type. It is important
- * to go inside the generated headers and fix it - all RetTmp structures without a
- * body should be completely deleted, both as types, and as fields in the
- * groups/objects. If C++11 templates are generated, it is important to define a
- * custom type for CGlueTraitObj that does not have `ret_tmp` defined, and change all
- * type aliases of this trait to use that particular structure.
- */
-typedef struct KeyboardStateRetTmp KeyboardStateRetTmp;
-
-/**
- * Type definition for temporary return value wrapping storage.
- *
- * The trait does not use return wrapping, thus is a typedef to `PhantomData`.
- *
- * Note that `cbindgen` will generate wrong structures for this type. It is important
- * to go inside the generated headers and fix it - all RetTmp structures without a
- * body should be completely deleted, both as types, and as fields in the
- * groups/objects. If C++11 templates are generated, it is important to define a
- * custom type for CGlueTraitObj that does not have `ret_tmp` defined, and change all
- * type aliases of this trait to use that particular structure.
- */
-typedef struct OsInnerRetTmp OsInnerRetTmp;
-
-/**
- * Type definition for temporary return value wrapping storage.
- *
- * The trait does not use return wrapping, thus is a typedef to `PhantomData`.
- *
- * Note that `cbindgen` will generate wrong structures for this type. It is important
- * to go inside the generated headers and fix it - all RetTmp structures without a
- * body should be completely deleted, both as types, and as fields in the
- * groups/objects. If C++11 templates are generated, it is important to define a
- * custom type for CGlueTraitObj that does not have `ret_tmp` defined, and change all
- * type aliases of this trait to use that particular structure.
- */
-typedef struct OsKeyboardInnerRetTmp OsKeyboardInnerRetTmp;
-
-/**
- * Type definition for temporary return value wrapping storage.
- *
- * The trait does not use return wrapping, thus is a typedef to `PhantomData`.
- *
- * Note that `cbindgen` will generate wrong structures for this type. It is important
- * to go inside the generated headers and fix it - all RetTmp structures without a
- * body should be completely deleted, both as types, and as fields in the
- * groups/objects. If C++11 templates are generated, it is important to define a
- * custom type for CGlueTraitObj that does not have `ret_tmp` defined, and change all
- * type aliases of this trait to use that particular structure.
- */
-typedef struct PhysicalMemoryRetTmp PhysicalMemoryRetTmp;
-
-typedef struct PhysicalReadData PhysicalReadData;
-
-typedef struct PhysicalWriteData PhysicalWriteData;
-
-/**
- * Type definition for temporary return value wrapping storage.
- *
- * The trait does not use return wrapping, thus is a typedef to `PhantomData`.
- *
- * Note that `cbindgen` will generate wrong structures for this type. It is important
- * to go inside the generated headers and fix it - all RetTmp structures without a
- * body should be completely deleted, both as types, and as fields in the
- * groups/objects. If C++11 templates are generated, it is important to define a
- * custom type for CGlueTraitObj that does not have `ret_tmp` defined, and change all
- * type aliases of this trait to use that particular structure.
- */
-typedef struct ProcessRetTmp ProcessRetTmp;
-
-/**
- * Type definition for temporary return value wrapping storage.
- *
- * The trait does not use return wrapping, thus is a typedef to `PhantomData`.
- *
- * Note that `cbindgen` will generate wrong structures for this type. It is important
- * to go inside the generated headers and fix it - all RetTmp structures without a
- * body should be completely deleted, both as types, and as fields in the
- * groups/objects. If C++11 templates are generated, it is important to define a
- * custom type for CGlueTraitObj that does not have `ret_tmp` defined, and change all
- * type aliases of this trait to use that particular structure.
- */
-typedef struct VirtualMemoryRetTmp VirtualMemoryRetTmp;
-
-typedef struct VirtualReadData VirtualReadData;
-
-typedef struct VirtualWriteData VirtualWriteData;
 
 /**
  * This type represents a address on the target system.
@@ -323,9 +175,35 @@ typedef struct CtxBox_c_void__COptArc_c_void {
  *
  * This virtual function table contains ABI-safe interface for the given trait.
  */
-typedef struct CloneVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____OpaqueTarget {
+typedef struct CloneVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void {
     struct CtxBox_c_void__COptArc_c_void (*clone)(const void *thisptr, const struct COptArc_c_void *cglue_ctx);
-} CloneVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____OpaqueTarget;
+} CloneVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void;
+
+/**
+ * Wrapper around mutable slices.
+ */
+typedef struct CSliceMut_u8 {
+    uint8_t *data;
+    uintptr_t len;
+} CSliceMut_u8;
+
+typedef struct PhysicalReadData {
+    struct PhysicalAddress _0;
+    struct CSliceMut_u8 _1;
+} PhysicalReadData;
+
+/**
+ * Wrapper around const slices.
+ */
+typedef struct CSliceRef_u8 {
+    const uint8_t *data;
+    uintptr_t len;
+} CSliceRef_u8;
+
+typedef struct PhysicalWriteData {
+    struct PhysicalAddress _0;
+    struct CSliceRef_u8 _1;
+} PhysicalWriteData;
 
 typedef struct PhysicalMemoryMetadata {
     uintptr_t size;
@@ -343,52 +221,106 @@ typedef struct PhysicalMemoryMapping {
  *
  * This virtual function table contains ABI-safe interface for the given trait.
  */
-typedef struct PhysicalMemoryVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____OpaqueTarget {
+typedef struct PhysicalMemoryVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void {
     int32_t (*phys_read_raw_list)(void *thisptr, struct PhysicalReadData *data, uintptr_t data_size);
     int32_t (*phys_write_raw_list)(void *thisptr, const struct PhysicalWriteData *data, uintptr_t data_size);
     struct PhysicalMemoryMetadata (*metadata)(const void *thisptr);
     void (*set_mem_map)(void *thisptr, const struct PhysicalMemoryMapping *mem_map, uintptr_t mem_map_size);
-} PhysicalMemoryVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____OpaqueTarget;
+} PhysicalMemoryVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void;
 
 /**
  * CGlue vtable for trait CpuState.
  *
  * This virtual function table contains ABI-safe interface for the given trait.
  */
-typedef struct CpuStateVtbl_CtxBox_c_void__OpaqueTarget_____c_void__OpaqueTarget__OpaqueTarget {
+typedef struct CpuStateVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void {
     void (*pause)(void *thisptr);
     void (*resume)(void *thisptr);
-} CpuStateVtbl_CtxBox_c_void__OpaqueTarget_____c_void__OpaqueTarget__OpaqueTarget;
+} CpuStateVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void;
+
+/**
+ * Simple CGlue trait object.
+ *
+ * This is the simplest form of trait object, represented by a this pointer, and a vtable for
+ * single trait.
+ *
+ * `instance` value usually is either a reference, or a mutable reference, or a `CBox`, which
+ * contains static reference to the instance, and a dedicated drop function for freeing resources.
+ */
+typedef struct CGlueTraitObj_CtxBox_c_void__COptArc_c_void________CpuStateVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void________CpuStateRetTmp {
+    struct CtxBox_c_void__COptArc_c_void instance;
+    const struct CpuStateVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void *vtbl;
+} CGlueTraitObj_CtxBox_c_void__COptArc_c_void________CpuStateVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void________CpuStateRetTmp;
 
 /**
  * Base CGlue trait object for trait CpuState.
  */
-typedef struct CGlueTraitObj_CtxBox_c_void__OpaqueTarget_____CpuStateVtbl_CtxBox_c_void__OpaqueTarget_____c_void__OpaqueTarget__OpaqueTarget_____CpuStateRetTmp CpuStateBase_CtxBox_c_void__OpaqueTarget_____c_void__OpaqueTarget__OpaqueTarget;
+typedef struct CGlueTraitObj_CtxBox_c_void__COptArc_c_void________CpuStateVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void________CpuStateRetTmp CpuStateBase_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void;
 
 /**
- * CGlue vtable for trait Clone.
+ * Trait group potentially implementing `:: cglue :: ext :: core :: clone :: Clone < > + CpuState < >` traits.
  *
- * This virtual function table contains ABI-safe interface for the given trait.
+ * Optional traits are not implemented here, however. There are numerous conversion
+ * functions available for safely retrieving a concrete collection of traits.
+ *
+ * `check_impl_` functions allow to check if the object implements the wanted traits.
+ *
+ * `into_impl_` functions consume the object and produce a new final structure that
+ * keeps only the required information.
+ *
+ * `cast_impl_` functions merely check and transform the object into a type that can
+ *be transformed back into `IntoCpuState` without losing data.
+ *
+ * `as_ref_`, and `as_mut_` functions obtain references to safe objects, but do not
+ * perform any memory transformations either. They are the safest to use, because
+ * there is no risk of accidentally consuming the whole object.
  */
-typedef struct CloneVtbl_CtxBox_c_void__OpaqueTarget_____c_void__OpaqueTarget__OpaqueTarget {
-    struct CtxBox_c_void__OpaqueTarget (*clone)(const void *thisptr, const void *cglue_ctx);
-} CloneVtbl_CtxBox_c_void__OpaqueTarget_____c_void__OpaqueTarget__OpaqueTarget;
+typedef struct IntoCpuState_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void {
+    struct CtxBox_c_void__COptArc_c_void instance;
+    const struct CloneVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void *vtbl_clone;
+    const struct CpuStateVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void *vtbl_cpustate;
+} IntoCpuState_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void;
 
 /**
  * CGlue vtable for trait ConnectorCpuStateInner.
  *
  * This virtual function table contains ABI-safe interface for the given trait.
  */
-typedef struct ConnectorCpuStateInnerVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____OpaqueTarget {
-    int32_t (*cpu_state)(void *thisptr, const struct COptArc_c_void *cglue_ctx, CpuStateBase_CtxBox_c_void__OpaqueTarget_____c_void__OpaqueTarget__OpaqueTarget *ok_out);
-    int32_t (*into_cpu_state)(struct CtxBox_c_void__COptArc_c_void thisobj, struct IntoCpuState_CtxBox_c_void__OpaqueTarget_____c_void__OpaqueTarget__OpaqueTarget *ok_out);
-} ConnectorCpuStateInnerVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____OpaqueTarget;
+typedef struct ConnectorCpuStateInnerVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void {
+    int32_t (*cpu_state)(void *thisptr, const struct COptArc_c_void *cglue_ctx, CpuStateBase_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void *ok_out);
+    int32_t (*into_cpu_state)(struct CtxBox_c_void__COptArc_c_void thisobj, struct IntoCpuState_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void *ok_out);
+} ConnectorCpuStateInnerVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void;
 
-typedef struct ConnectorInstance_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____OpaqueTarget ConnectorInstanceBaseCtxBox_c_void__COptArc_c_void;
+/**
+ * Trait group potentially implementing `:: cglue :: ext :: core :: clone :: Clone < > + PhysicalMemory < > + for < 'cglue_c > ConnectorCpuStateInner < 'cglue_c, >` traits.
+ *
+ * Optional traits are not implemented here, however. There are numerous conversion
+ * functions available for safely retrieving a concrete collection of traits.
+ *
+ * `check_impl_` functions allow to check if the object implements the wanted traits.
+ *
+ * `into_impl_` functions consume the object and produce a new final structure that
+ * keeps only the required information.
+ *
+ * `cast_impl_` functions merely check and transform the object into a type that can
+ *be transformed back into `ConnectorInstance` without losing data.
+ *
+ * `as_ref_`, and `as_mut_` functions obtain references to safe objects, but do not
+ * perform any memory transformations either. They are the safest to use, because
+ * there is no risk of accidentally consuming the whole object.
+ */
+typedef struct ConnectorInstance_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void {
+    struct CtxBox_c_void__COptArc_c_void instance;
+    const struct CloneVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void *vtbl_clone;
+    const struct PhysicalMemoryVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void *vtbl_physicalmemory;
+    const struct ConnectorCpuStateInnerVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void *vtbl_connectorcpustateinner;
+} ConnectorInstance_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void;
 
-typedef ConnectorInstanceBaseCtxBox_c_void__COptArc_c_void ConnectorInstanceBaseArcBox_c_void__c_void;
+typedef struct ConnectorInstance_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void ConnectorInstanceBase2CtxBox_c_void__COptArc_c_void_____COptArc_c_void;
 
-typedef ConnectorInstanceBaseArcBox_c_void__c_void ConnectorInstanceArcBox;
+typedef ConnectorInstanceBase2CtxBox_c_void__COptArc_c_void_____COptArc_c_void ConnectorInstanceBase2ArcBox_c_void__c_void__c_void;
+
+typedef ConnectorInstanceBase2ArcBox_c_void__c_void__c_void ConnectorInstanceArcBox;
 
 typedef ConnectorInstanceArcBox MuConnectorInstanceArcBox;
 
@@ -412,9 +344,9 @@ typedef uint32_t Pid;
 /**
  * Wrapper around null-terminated C-style strings.
  *
- * Analog to Rust's `String` & `str`, [`ReprCString`] owns the underlying data.
+ * Analog to Rust's `String`, [`ReprCString`] owns the underlying data.
  */
-typedef int8_t *ReprCString;
+typedef char *ReprCString;
 
 typedef enum ArchitectureIdent_Tag {
     /**
@@ -501,6 +433,16 @@ typedef struct ProcessInfo {
     struct ArchitectureIdent proc_arch;
 } ProcessInfo;
 
+typedef struct VirtualReadData {
+    Address _0;
+    struct CSliceMut_u8 _1;
+} VirtualReadData;
+
+typedef struct VirtualWriteData {
+    Address _0;
+    struct CSliceRef_u8 _1;
+} VirtualWriteData;
+
 /**
  * A `Page` holds information about a memory page.
  *
@@ -565,9 +507,23 @@ typedef struct VirtualMemoryVtbl_____c_void__c_void__NoContext__NoContext {
     int32_t (*virt_read_raw_list)(void *thisptr, struct VirtualReadData *data, uintptr_t data_size);
     int32_t (*virt_write_raw_list)(void *thisptr, const struct VirtualWriteData *data, uintptr_t data_size);
     int32_t (*virt_page_info)(void *thisptr, Address addr, struct Page *ok_out);
-    void (*virt_translation_map_range)(void *thisptr, Address start, Address end, VirtualTranslationRangeCallback callback);
-    void (*virt_page_map_range)(void *thisptr, uintptr_t gap_size, Address start, Address end, VirtualRangeCallback callback);
+    void (*virt_translation_map_range_callback)(void *thisptr, Address start, Address end, VirtualTranslationRangeCallback callback);
+    void (*virt_page_map_range_callback)(void *thisptr, uintptr_t gap_size, Address start, Address end, VirtualRangeCallback callback);
 } VirtualMemoryVtbl_____c_void__c_void__NoContext__NoContext;
+
+/**
+ * Simple CGlue trait object.
+ *
+ * This is the simplest form of trait object, represented by a this pointer, and a vtable for
+ * single trait.
+ *
+ * `instance` value usually is either a reference, or a mutable reference, or a `CBox`, which
+ * contains static reference to the instance, and a dedicated drop function for freeing resources.
+ */
+typedef struct CGlueTraitObj_____c_void__VirtualMemoryVtbl_____c_void__c_void__NoContext__NoContext_____VirtualMemoryRetTmp {
+    void *instance;
+    const struct VirtualMemoryVtbl_____c_void__c_void__NoContext__NoContext *vtbl;
+} CGlueTraitObj_____c_void__VirtualMemoryVtbl_____c_void__c_void__NoContext__NoContext_____VirtualMemoryRetTmp;
 
 /**
  * Base CGlue trait object for trait VirtualMemory.
@@ -579,9 +535,9 @@ typedef struct CGlueTraitObj_____c_void__VirtualMemoryVtbl_____c_void__c_void__N
  *
  * This virtual function table contains ABI-safe interface for the given trait.
  */
-typedef struct AsVirtualMemoryVtbl_CtxBox_c_void__OpaqueTarget_____c_void__OpaqueTarget__OpaqueTarget {
+typedef struct AsVirtualMemoryVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void {
     VirtualMemoryBase_____c_void__c_void__NoContext__NoContext *(*virt_mem)(void *thisptr, VirtualMemoryBase_____c_void__c_void__NoContext__NoContext *ret_tmp);
-} AsVirtualMemoryVtbl_CtxBox_c_void__OpaqueTarget_____c_void__OpaqueTarget__OpaqueTarget;
+} AsVirtualMemoryVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void;
 
 /**
  * Exit code of a process
@@ -759,7 +715,7 @@ typedef OpaqueCallback_SectionInfo SectionCallback;
  *
  * This virtual function table contains ABI-safe interface for the given trait.
  */
-typedef struct ProcessVtbl_CtxBox_c_void__OpaqueTarget_____c_void__OpaqueTarget__OpaqueTarget {
+typedef struct ProcessVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void {
     struct ProcessState (*state)(void *thisptr);
     int32_t (*module_address_list_callback)(void *thisptr, const struct ArchitectureIdent *target_arch, ModuleAddressCallback callback);
     int32_t (*module_by_address)(void *thisptr, Address address, struct ArchitectureIdent architecture, struct ModuleInfo *ok_out);
@@ -768,7 +724,69 @@ typedef struct ProcessVtbl_CtxBox_c_void__OpaqueTarget_____c_void__OpaqueTarget_
     int32_t (*module_export_list_callback)(void *thisptr, const struct ModuleInfo *info, ExportCallback callback);
     int32_t (*module_section_list_callback)(void *thisptr, const struct ModuleInfo *info, SectionCallback callback);
     const struct ProcessInfo *(*info)(const void *thisptr);
-} ProcessVtbl_CtxBox_c_void__OpaqueTarget_____c_void__OpaqueTarget__OpaqueTarget;
+} ProcessVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void;
+
+/**
+ * Temporary return value structure, for returning wrapped references.
+ *
+ * This structure contains data for each vtable function that returns a reference to
+ * an associated type. Note that these temporary values should not be accessed
+ * directly. Use the trait functions.
+ */
+typedef struct AsVirtualMemoryRetTmp {
+    VirtualMemoryBase_____c_void__c_void__NoContext__NoContext virt_mem;
+} AsVirtualMemoryRetTmp;
+
+/**
+ * Trait group potentially implementing `AsVirtualMemory < > + Process < >` traits.
+ *
+ * Optional traits are not implemented here, however. There are numerous conversion
+ * functions available for safely retrieving a concrete collection of traits.
+ *
+ * `check_impl_` functions allow to check if the object implements the wanted traits.
+ *
+ * `into_impl_` functions consume the object and produce a new final structure that
+ * keeps only the required information.
+ *
+ * `cast_impl_` functions merely check and transform the object into a type that can
+ *be transformed back into `ProcessInstance` without losing data.
+ *
+ * `as_ref_`, and `as_mut_` functions obtain references to safe objects, but do not
+ * perform any memory transformations either. They are the safest to use, because
+ * there is no risk of accidentally consuming the whole object.
+ */
+typedef struct ProcessInstance_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void {
+    struct CtxBox_c_void__COptArc_c_void instance;
+    const struct AsVirtualMemoryVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void *vtbl_asvirtualmemory;
+    const struct ProcessVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void *vtbl_process;
+    struct AsVirtualMemoryRetTmp ret_tmp_asvirtualmemory;
+} ProcessInstance_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void;
+
+/**
+ * Trait group potentially implementing `AsVirtualMemory < > + :: cglue :: ext :: core :: clone :: Clone < > + Process < >` traits.
+ *
+ * Optional traits are not implemented here, however. There are numerous conversion
+ * functions available for safely retrieving a concrete collection of traits.
+ *
+ * `check_impl_` functions allow to check if the object implements the wanted traits.
+ *
+ * `into_impl_` functions consume the object and produce a new final structure that
+ * keeps only the required information.
+ *
+ * `cast_impl_` functions merely check and transform the object into a type that can
+ *be transformed back into `IntoProcessInstance` without losing data.
+ *
+ * `as_ref_`, and `as_mut_` functions obtain references to safe objects, but do not
+ * perform any memory transformations either. They are the safest to use, because
+ * there is no risk of accidentally consuming the whole object.
+ */
+typedef struct IntoProcessInstance_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void {
+    struct CtxBox_c_void__COptArc_c_void instance;
+    const struct AsVirtualMemoryVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void *vtbl_asvirtualmemory;
+    const struct CloneVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void *vtbl_clone;
+    const struct ProcessVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void *vtbl_process;
+    struct AsVirtualMemoryRetTmp ret_tmp_asvirtualmemory;
+} IntoProcessInstance_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void;
 
 /**
  * Information block about OS
@@ -797,15 +815,15 @@ typedef struct OsInfo {
  *
  * This virtual function table contains ABI-safe interface for the given trait.
  */
-typedef struct OsInnerVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____OpaqueTarget {
+typedef struct OsInnerVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void {
     int32_t (*process_address_list_callback)(void *thisptr, AddressCallback callback);
     int32_t (*process_info_by_address)(void *thisptr, Address address, struct ProcessInfo *ok_out);
-    int32_t (*process_by_info)(void *thisptr, struct ProcessInfo info, const struct COptArc_c_void *cglue_ctx, struct ProcessInstance_CtxBox_c_void__OpaqueTarget_____c_void__OpaqueTarget__OpaqueTarget *ok_out);
-    int32_t (*into_process_by_info)(struct CtxBox_c_void__COptArc_c_void thisobj, struct ProcessInfo info, struct IntoProcessInstance_CtxBox_c_void__OpaqueTarget_____c_void__OpaqueTarget__OpaqueTarget *ok_out);
+    int32_t (*process_by_info)(void *thisptr, struct ProcessInfo info, const struct COptArc_c_void *cglue_ctx, struct ProcessInstance_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void *ok_out);
+    int32_t (*into_process_by_info)(struct CtxBox_c_void__COptArc_c_void thisobj, struct ProcessInfo info, struct IntoProcessInstance_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void *ok_out);
     int32_t (*module_address_list_callback)(void *thisptr, AddressCallback callback);
     int32_t (*module_by_address)(void *thisptr, Address address, struct ModuleInfo *ok_out);
     const struct OsInfo *(*info)(const void *thisptr);
-} OsInnerVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____OpaqueTarget;
+} OsInnerVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void;
 
 /**
  * CGlue vtable for trait PhysicalMemory.
@@ -820,6 +838,20 @@ typedef struct PhysicalMemoryVtbl_____c_void__c_void__NoContext__NoContext {
 } PhysicalMemoryVtbl_____c_void__c_void__NoContext__NoContext;
 
 /**
+ * Simple CGlue trait object.
+ *
+ * This is the simplest form of trait object, represented by a this pointer, and a vtable for
+ * single trait.
+ *
+ * `instance` value usually is either a reference, or a mutable reference, or a `CBox`, which
+ * contains static reference to the instance, and a dedicated drop function for freeing resources.
+ */
+typedef struct CGlueTraitObj_____c_void__PhysicalMemoryVtbl_____c_void__c_void__NoContext__NoContext_____PhysicalMemoryRetTmp {
+    void *instance;
+    const struct PhysicalMemoryVtbl_____c_void__c_void__NoContext__NoContext *vtbl;
+} CGlueTraitObj_____c_void__PhysicalMemoryVtbl_____c_void__c_void__NoContext__NoContext_____PhysicalMemoryRetTmp;
+
+/**
  * Base CGlue trait object for trait PhysicalMemory.
  */
 typedef struct CGlueTraitObj_____c_void__PhysicalMemoryVtbl_____c_void__c_void__NoContext__NoContext_____PhysicalMemoryRetTmp PhysicalMemoryBase_____c_void__c_void__NoContext__NoContext;
@@ -829,64 +861,147 @@ typedef struct CGlueTraitObj_____c_void__PhysicalMemoryVtbl_____c_void__c_void__
  *
  * This virtual function table contains ABI-safe interface for the given trait.
  */
-typedef struct AsPhysicalMemoryVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____OpaqueTarget {
+typedef struct AsPhysicalMemoryVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void {
     PhysicalMemoryBase_____c_void__c_void__NoContext__NoContext *(*phys_mem)(void *thisptr, PhysicalMemoryBase_____c_void__c_void__NoContext__NoContext *ret_tmp);
-} AsPhysicalMemoryVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____OpaqueTarget;
-
-/**
- * CGlue vtable for trait AsVirtualMemory.
- *
- * This virtual function table contains ABI-safe interface for the given trait.
- */
-typedef struct AsVirtualMemoryVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____OpaqueTarget {
-    VirtualMemoryBase_____c_void__c_void__NoContext__NoContext *(*virt_mem)(void *thisptr, VirtualMemoryBase_____c_void__c_void__NoContext__NoContext *ret_tmp);
-} AsVirtualMemoryVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____OpaqueTarget;
+} AsPhysicalMemoryVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void;
 
 /**
  * CGlue vtable for trait KeyboardState.
  *
  * This virtual function table contains ABI-safe interface for the given trait.
  */
-typedef struct KeyboardStateVtbl_CtxBox_c_void__OpaqueTarget_____c_void__OpaqueTarget__OpaqueTarget {
+typedef struct KeyboardStateVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void {
     bool (*is_down)(const void *thisptr, int32_t vk);
-} KeyboardStateVtbl_CtxBox_c_void__OpaqueTarget_____c_void__OpaqueTarget__OpaqueTarget;
+} KeyboardStateVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void;
+
+/**
+ * Simple CGlue trait object.
+ *
+ * This is the simplest form of trait object, represented by a this pointer, and a vtable for
+ * single trait.
+ *
+ * `instance` value usually is either a reference, or a mutable reference, or a `CBox`, which
+ * contains static reference to the instance, and a dedicated drop function for freeing resources.
+ */
+typedef struct CGlueTraitObj_CtxBox_c_void__COptArc_c_void________KeyboardStateVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void________KeyboardStateRetTmp {
+    struct CtxBox_c_void__COptArc_c_void instance;
+    const struct KeyboardStateVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void *vtbl;
+} CGlueTraitObj_CtxBox_c_void__COptArc_c_void________KeyboardStateVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void________KeyboardStateRetTmp;
 
 /**
  * Base CGlue trait object for trait KeyboardState.
  */
-typedef struct CGlueTraitObj_CtxBox_c_void__OpaqueTarget_____KeyboardStateVtbl_CtxBox_c_void__OpaqueTarget_____c_void__OpaqueTarget__OpaqueTarget_____KeyboardStateRetTmp KeyboardStateBase_CtxBox_c_void__OpaqueTarget_____c_void__OpaqueTarget__OpaqueTarget;
+typedef struct CGlueTraitObj_CtxBox_c_void__COptArc_c_void________KeyboardStateVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void________KeyboardStateRetTmp KeyboardStateBase_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void;
 
 /**
  * CGlue vtable for trait Keyboard.
  *
  * This virtual function table contains ABI-safe interface for the given trait.
  */
-typedef struct KeyboardVtbl_CtxBox_c_void__OpaqueTarget_____c_void__OpaqueTarget__OpaqueTarget {
+typedef struct KeyboardVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void {
     bool (*is_down)(void *thisptr, int32_t vk);
     void (*set_down)(void *thisptr, int32_t vk, bool down);
-    int32_t (*state)(void *thisptr, const void *cglue_ctx, KeyboardStateBase_CtxBox_c_void__OpaqueTarget_____c_void__OpaqueTarget__OpaqueTarget *ok_out);
-} KeyboardVtbl_CtxBox_c_void__OpaqueTarget_____c_void__OpaqueTarget__OpaqueTarget;
+    int32_t (*state)(void *thisptr, const struct COptArc_c_void *cglue_ctx, KeyboardStateBase_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void *ok_out);
+} KeyboardVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void;
+
+/**
+ * Simple CGlue trait object.
+ *
+ * This is the simplest form of trait object, represented by a this pointer, and a vtable for
+ * single trait.
+ *
+ * `instance` value usually is either a reference, or a mutable reference, or a `CBox`, which
+ * contains static reference to the instance, and a dedicated drop function for freeing resources.
+ */
+typedef struct CGlueTraitObj_CtxBox_c_void__COptArc_c_void________KeyboardVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void________KeyboardRetTmp {
+    struct CtxBox_c_void__COptArc_c_void instance;
+    const struct KeyboardVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void *vtbl;
+} CGlueTraitObj_CtxBox_c_void__COptArc_c_void________KeyboardVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void________KeyboardRetTmp;
 
 /**
  * Base CGlue trait object for trait Keyboard.
  */
-typedef struct CGlueTraitObj_CtxBox_c_void__OpaqueTarget_____KeyboardVtbl_CtxBox_c_void__OpaqueTarget_____c_void__OpaqueTarget__OpaqueTarget_____KeyboardRetTmp KeyboardBase_CtxBox_c_void__OpaqueTarget_____c_void__OpaqueTarget__OpaqueTarget;
+typedef struct CGlueTraitObj_CtxBox_c_void__COptArc_c_void________KeyboardVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void________KeyboardRetTmp KeyboardBase_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void;
+
+/**
+ * Trait group potentially implementing `:: cglue :: ext :: core :: clone :: Clone < > + Keyboard < >` traits.
+ *
+ * Optional traits are not implemented here, however. There are numerous conversion
+ * functions available for safely retrieving a concrete collection of traits.
+ *
+ * `check_impl_` functions allow to check if the object implements the wanted traits.
+ *
+ * `into_impl_` functions consume the object and produce a new final structure that
+ * keeps only the required information.
+ *
+ * `cast_impl_` functions merely check and transform the object into a type that can
+ *be transformed back into `IntoKeyboard` without losing data.
+ *
+ * `as_ref_`, and `as_mut_` functions obtain references to safe objects, but do not
+ * perform any memory transformations either. They are the safest to use, because
+ * there is no risk of accidentally consuming the whole object.
+ */
+typedef struct IntoKeyboard_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void {
+    struct CtxBox_c_void__COptArc_c_void instance;
+    const struct CloneVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void *vtbl_clone;
+    const struct KeyboardVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void *vtbl_keyboard;
+} IntoKeyboard_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void;
 
 /**
  * CGlue vtable for trait OsKeyboardInner.
  *
  * This virtual function table contains ABI-safe interface for the given trait.
  */
-typedef struct OsKeyboardInnerVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____OpaqueTarget {
-    int32_t (*keyboard)(void *thisptr, const struct COptArc_c_void *cglue_ctx, KeyboardBase_CtxBox_c_void__OpaqueTarget_____c_void__OpaqueTarget__OpaqueTarget *ok_out);
-    int32_t (*into_keyboard)(struct CtxBox_c_void__COptArc_c_void thisobj, struct IntoKeyboard_CtxBox_c_void__OpaqueTarget_____c_void__OpaqueTarget__OpaqueTarget *ok_out);
-} OsKeyboardInnerVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____OpaqueTarget;
+typedef struct OsKeyboardInnerVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void {
+    int32_t (*keyboard)(void *thisptr, const struct COptArc_c_void *cglue_ctx, KeyboardBase_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void *ok_out);
+    int32_t (*into_keyboard)(struct CtxBox_c_void__COptArc_c_void thisobj, struct IntoKeyboard_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void *ok_out);
+} OsKeyboardInnerVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void;
 
-typedef struct OsInstance_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____OpaqueTarget OsInstanceBaseCtxBox_c_void__COptArc_c_void;
+/**
+ * Temporary return value structure, for returning wrapped references.
+ *
+ * This structure contains data for each vtable function that returns a reference to
+ * an associated type. Note that these temporary values should not be accessed
+ * directly. Use the trait functions.
+ */
+typedef struct AsPhysicalMemoryRetTmp {
+    PhysicalMemoryBase_____c_void__c_void__NoContext__NoContext phys_mem;
+} AsPhysicalMemoryRetTmp;
 
-typedef OsInstanceBaseCtxBox_c_void__COptArc_c_void OsInstanceBaseArcBox_c_void__c_void;
+/**
+ * Trait group potentially implementing `:: cglue :: ext :: core :: clone :: Clone < > + for < 'cglue_c > OsInner < 'cglue_c, > + AsPhysicalMemory < > + AsVirtualMemory < > + for < 'cglue_c > OsKeyboardInner < 'cglue_c, >` traits.
+ *
+ * Optional traits are not implemented here, however. There are numerous conversion
+ * functions available for safely retrieving a concrete collection of traits.
+ *
+ * `check_impl_` functions allow to check if the object implements the wanted traits.
+ *
+ * `into_impl_` functions consume the object and produce a new final structure that
+ * keeps only the required information.
+ *
+ * `cast_impl_` functions merely check and transform the object into a type that can
+ *be transformed back into `OsInstance` without losing data.
+ *
+ * `as_ref_`, and `as_mut_` functions obtain references to safe objects, but do not
+ * perform any memory transformations either. They are the safest to use, because
+ * there is no risk of accidentally consuming the whole object.
+ */
+typedef struct OsInstance_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void {
+    struct CtxBox_c_void__COptArc_c_void instance;
+    const struct CloneVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void *vtbl_clone;
+    const struct OsInnerVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void *vtbl_osinner;
+    const struct AsPhysicalMemoryVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void *vtbl_asphysicalmemory;
+    const struct AsVirtualMemoryVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void *vtbl_asvirtualmemory;
+    const struct OsKeyboardInnerVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void *vtbl_oskeyboardinner;
+    struct AsPhysicalMemoryRetTmp ret_tmp_asphysicalmemory;
+    struct AsVirtualMemoryRetTmp ret_tmp_asvirtualmemory;
+} OsInstance_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void;
 
-typedef OsInstanceBaseArcBox_c_void__c_void OsInstanceArcBox;
+typedef struct OsInstance_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void OsInstanceBase2CtxBox_c_void__COptArc_c_void_____COptArc_c_void;
+
+typedef OsInstanceBase2CtxBox_c_void__COptArc_c_void_____COptArc_c_void OsInstanceBase2ArcBox_c_void__c_void__c_void;
+
+typedef OsInstanceBase2ArcBox_c_void__c_void__c_void OsInstanceArcBox;
 
 typedef OsInstanceArcBox MuOsInstanceArcBox;
 

@@ -1,3 +1,4 @@
+use crate::cglue::CSliceMut;
 use crate::types::Address;
 use std::iter::*;
 
@@ -194,6 +195,46 @@ impl<T> SplitAtIndex for &mut [T] {
                     ptr.add(mid),
                     self.len() - mid,
                 ))
+            } else {
+                None
+            },
+        )
+    }
+
+    fn length(&self) -> usize {
+        self.len()
+    }
+}
+
+impl<'a, T> SplitAtIndex for CSliceMut<'a, T> {
+    fn split_at(self, idx: usize) -> (Option<Self>, Option<Self>) {
+        let sliced = unsafe { core::slice::from_raw_parts_mut(self.as_mut_ptr(), self.len()) };
+        let (left, right) = (*sliced).split_at_mut(core::cmp::min(self.len(), idx));
+        (
+            if left.is_empty() {
+                None
+            } else {
+                Some(left.into())
+            },
+            if right.is_empty() {
+                None
+            } else {
+                Some(right.into())
+            },
+        )
+    }
+
+    unsafe fn split_at_mut(&mut self, idx: usize) -> (Option<Self>, Option<Self>) {
+        let mid = core::cmp::min(self.len(), idx);
+        let ptr = self.as_mut_ptr();
+        (
+            if mid != 0 {
+                Some(core::slice::from_raw_parts_mut(ptr, mid).into())
+            } else {
+                None
+            },
+            if mid != self.len() {
+                Some(core::slice::from_raw_parts_mut(ptr.add(mid), self.len() - mid).into())
             } else {
                 None
             },

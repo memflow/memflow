@@ -44,7 +44,7 @@ fn rwtest<T: VirtualMemory>(
                 bufs.extend(vbufs.iter_mut().map(|vec| {
                     VirtualReadData(
                         (base_addr + rng.gen_range(0..0x2000)).into(),
-                        vec.as_mut_slice(),
+                        vec.as_mut_slice().into(),
                     )
                 }));
 

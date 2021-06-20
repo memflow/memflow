@@ -48,7 +48,7 @@ impl<'a, T: VirtualMemory> VirtualMemoryBatcher<'a, T> {
 
     // read helpers
     pub fn read_raw_into<'b: 'a>(&mut self, addr: Address, out: &'b mut [u8]) -> &mut Self {
-        self.read_raw_iter(Some(VirtualReadData(addr, out)).into_iter())
+        self.read_raw_iter(Some(VirtualReadData(addr, out.into())).into_iter())
     }
 
     pub fn read_into<'b: 'a, F: Pod + ?Sized>(
@@ -61,7 +61,7 @@ impl<'a, T: VirtualMemory> VirtualMemoryBatcher<'a, T> {
 
     // write helpers
     pub fn write_raw_into<'b: 'a>(&mut self, addr: Address, out: &'b [u8]) -> &mut Self {
-        self.write_raw_iter(Some(VirtualWriteData(addr, out)).into_iter())
+        self.write_raw_iter(Some(VirtualWriteData(addr, out.into())).into_iter())
     }
 
     pub fn write_into<'b: 'a, F: Pod + ?Sized>(&mut self, addr: Address, out: &'b F) -> &mut Self {

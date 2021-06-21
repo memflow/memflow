@@ -32,7 +32,7 @@ itertools = { version = "0.10", default-features = false }
 memmap = { version = "0.7", optional = true }
 hashbrown = "0.11"
 fixed-slice-vec = "0.8.0"
-cglue = { git = "ssh://git@github.com/h33p/cglue.git", branch = "main" }
+cglue = "0.1.0"
 
 # plugins
 libloading = { version = "0.7", optional = true }

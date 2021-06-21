@@ -1,13 +1,16 @@
-use std::prelude::v1::*;
-
-use super::{CacheValidator, PageType};
 use crate::architecture::ArchitectureObj;
+use crate::cglue::CSliceMut;
 use crate::error::Result;
 use crate::iter::PageChunks;
 use crate::mem::phys_mem::{PhysicalMemory, PhysicalReadData, PhysicalReadIterator};
 use crate::types::{Address, PhysicalAddress};
-use bumpalo::{collections::Vec as BumpVec, Bump};
+
+use super::{CacheValidator, PageType};
+
 use std::alloc::{alloc, alloc_zeroed, dealloc, Layout};
+use std::prelude::v1::*;
+
+use bumpalo::{collections::Vec as BumpVec, Bump};
 
 pub enum PageValidity<'a> {
     Invalid,
@@ -178,11 +181,12 @@ impl<'a, T: CacheValidator> PageCache<'a, T> {
             })
     }
 
-    pub fn cached_read<F: PhysicalMemory>(
+    // TODO: do this properly
+    pub fn cached_read<'b, F: PhysicalMemory>(
         &mut self,
         mem: &mut F,
-        data: &mut [PhysicalReadData],
-        arena: &Bump,
+        data: &'b mut [PhysicalReadData],
+        arena: &'b Bump,
     ) -> Result<()> {
         let page_size = self.page_size;
 
@@ -195,8 +199,13 @@ impl<'a, T: CacheValidator> PageCache<'a, T> {
             let mut wlistcache = BumpVec::new_in(arena);
 
             while let Some(PhysicalReadData(addr, out)) = next {
+                // This alias is required because iter_mut() just returns mutable references of `out`.
+                // Due to the lifetime constraint of 'b on this function the borrow checker should prevent both references from being used.
+                let out_alias: CSliceMut<'b, u8> =
+                    unsafe { core::slice::from_raw_parts_mut(out.as_mut_ptr(), out.len()) }.into();
                 if self.is_cached_page_type(addr.page_type()) {
-                    out.page_chunks(addr.address(), page_size)
+                    out_alias
+                        .page_chunks(addr.address(), page_size)
                         .for_each(|(paddr, chunk)| {
                             let mut prd = PhysicalReadData(
                                 PhysicalAddress::with_page(
@@ -235,7 +244,7 @@ impl<'a, T: CacheValidator> PageCache<'a, T> {
                             }
                         });
                 } else {
-                    wlist.push(PhysicalReadData(*addr, *out));
+                    wlist.push(PhysicalReadData(*addr, out_alias));
                 }
 
                 next = iter.next();

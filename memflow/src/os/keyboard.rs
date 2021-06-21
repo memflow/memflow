@@ -11,25 +11,26 @@ use crate::prelude::v1::Result;
 pub trait OsKeyboard: for<'a> OsKeyboardInner<'a> {}
 impl<T: for<'a> OsKeyboardInner<'a>> OsKeyboard for T {}
 
-#[cglue_trait]
-#[int_result]
+#[cfg_attr(feature = "plugins", cglue_trait)]
+#[cfg_attr(feature = "plugins", int_result)]
 pub trait OsKeyboardInner<'a>: Send {
-    #[wrap_with_obj(crate::os::keyboard::Keyboard)]
+    #[cfg_attr(feature = "plugins", wrap_with_obj(crate::os::keyboard::Keyboard))]
     type KeyboardType: crate::os::keyboard::Keyboard + 'a;
-    #[wrap_with_group(crate::os::keyboard::IntoKeyboard)]
+    #[cfg_attr(feature = "plugins", wrap_with_group(crate::os::keyboard::IntoKeyboard))]
     type IntoKeyboardType: crate::os::keyboard::Keyboard + 'static;
 
     fn keyboard(&'a mut self) -> Result<Self::KeyboardType>;
     fn into_keyboard(self) -> Result<Self::IntoKeyboardType>;
 }
 
+#[cfg(feature = "plugins")]
 cglue_trait_group!(IntoKeyboard, { Keyboard, Clone }, {});
 
-#[cglue_trait]
-#[int_result]
-#[cglue_forward]
+#[cfg_attr(feature = "plugins", cglue_trait)]
+#[cfg_attr(feature = "plugins", int_result)]
+#[cfg_attr(feature = "plugins", cglue_forward)]
 pub trait Keyboard {
-    #[wrap_with_obj(crate::os::keyboard::KeyboardState)]
+    #[cfg_attr(feature = "plugins", wrap_with_obj(crate::os::keyboard::KeyboardState))]
     type KeyboardStateType: crate::os::keyboard::KeyboardState;
 
     fn is_down(&mut self, vk: i32) -> bool;
@@ -38,9 +39,9 @@ pub trait Keyboard {
     fn state(&mut self) -> Result<Self::KeyboardStateType>;
 }
 
-#[cglue_trait]
-#[int_result]
-#[cglue_forward]
+#[cfg_attr(feature = "plugins", cglue_trait)]
+#[cfg_attr(feature = "plugins", int_result)]
+#[cfg_attr(feature = "plugins", cglue_forward)]
 pub trait KeyboardState {
     fn is_down(&self, vk: i32) -> bool;
 }

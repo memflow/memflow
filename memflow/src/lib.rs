@@ -56,6 +56,7 @@ pub mod derive {
 }
 
 #[doc(hidden)]
+#[cfg(any(feature = "plugins"))]
 pub mod cglue {
     pub use ::cglue::prelude::v1::*;
 }
@@ -74,6 +75,7 @@ pub mod dummy;
 pub mod prelude {
     pub mod v1 {
         pub use crate::architecture::*;
+        #[cfg(any(feature = "plugins"))]
         pub use crate::cglue::*;
         pub use crate::connector::*;
         pub use crate::dataview::*;

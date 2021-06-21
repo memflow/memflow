@@ -32,7 +32,7 @@ itertools = { version = "0.10", default-features = false }
 memmap = { version = "0.7", optional = true }
 hashbrown = "0.11"
 fixed-slice-vec = "0.8.0"
-cglue = "0.1.0"
+cglue = { version = "0.1.0", default-features = false }
 
 # plugins
 libloading = { version = "0.7", optional = true }

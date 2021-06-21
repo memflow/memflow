@@ -26,3 +26,6 @@ sort_by = "None"
 
 [export.rename]
 "OptionMut_c_void" = "pvoid"
+
+[enum]
+prefix_with_name = true

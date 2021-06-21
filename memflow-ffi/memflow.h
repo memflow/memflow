@@ -23,17 +23,59 @@ enum Endianess
     /**
      * Little Endianess
      */
-    LittleEndian,
+    Endianess_LittleEndian,
     /**
      * Big Endianess
      */
-    BigEndian,
+    Endianess_BigEndian,
 };
 #ifndef __cplusplus
 typedef uint8_t Endianess;
 #endif // __cplusplus
 
 typedef struct ArchitectureObj ArchitectureObj;
+
+/**
+ * Type definition for temporary return value wrapping storage.
+ *
+ * The trait does not use return wrapping, thus is a typedef to `PhantomData`.
+ *
+ * Note that `cbindgen` will generate wrong structures for this type. It is important
+ * to go inside the generated headers and fix it - all RetTmp structures without a
+ * body should be completely deleted, both as types, and as fields in the
+ * groups/objects. If C++11 templates are generated, it is important to define a
+ * custom type for CGlueTraitObj that does not have `ret_tmp` defined, and change all
+ * type aliases of this trait to use that particular structure.
+ */
+typedef void CloneRetTmp;
+
+/**
+ * Type definition for temporary return value wrapping storage.
+ *
+ * The trait does not use return wrapping, thus is a typedef to `PhantomData`.
+ *
+ * Note that `cbindgen` will generate wrong structures for this type. It is important
+ * to go inside the generated headers and fix it - all RetTmp structures without a
+ * body should be completely deleted, both as types, and as fields in the
+ * groups/objects. If C++11 templates are generated, it is important to define a
+ * custom type for CGlueTraitObj that does not have `ret_tmp` defined, and change all
+ * type aliases of this trait to use that particular structure.
+ */
+typedef void ConnectorCpuStateInnerRetTmp;
+
+/**
+ * Type definition for temporary return value wrapping storage.
+ *
+ * The trait does not use return wrapping, thus is a typedef to `PhantomData`.
+ *
+ * Note that `cbindgen` will generate wrong structures for this type. It is important
+ * to go inside the generated headers and fix it - all RetTmp structures without a
+ * body should be completely deleted, both as types, and as fields in the
+ * groups/objects. If C++11 templates are generated, it is important to define a
+ * custom type for CGlueTraitObj that does not have `ret_tmp` defined, and change all
+ * type aliases of this trait to use that particular structure.
+ */
+typedef void CpuStateRetTmp;
 
 /**
  * The core of the plugin system
@@ -79,6 +121,104 @@ typedef struct ArchitectureObj ArchitectureObj;
  * ```
  */
 typedef struct Inventory Inventory;
+
+/**
+ * Type definition for temporary return value wrapping storage.
+ *
+ * The trait does not use return wrapping, thus is a typedef to `PhantomData`.
+ *
+ * Note that `cbindgen` will generate wrong structures for this type. It is important
+ * to go inside the generated headers and fix it - all RetTmp structures without a
+ * body should be completely deleted, both as types, and as fields in the
+ * groups/objects. If C++11 templates are generated, it is important to define a
+ * custom type for CGlueTraitObj that does not have `ret_tmp` defined, and change all
+ * type aliases of this trait to use that particular structure.
+ */
+typedef void KeyboardRetTmp;
+
+/**
+ * Type definition for temporary return value wrapping storage.
+ *
+ * The trait does not use return wrapping, thus is a typedef to `PhantomData`.
+ *
+ * Note that `cbindgen` will generate wrong structures for this type. It is important
+ * to go inside the generated headers and fix it - all RetTmp structures without a
+ * body should be completely deleted, both as types, and as fields in the
+ * groups/objects. If C++11 templates are generated, it is important to define a
+ * custom type for CGlueTraitObj that does not have `ret_tmp` defined, and change all
+ * type aliases of this trait to use that particular structure.
+ */
+typedef void KeyboardStateRetTmp;
+
+/**
+ * Type definition for temporary return value wrapping storage.
+ *
+ * The trait does not use return wrapping, thus is a typedef to `PhantomData`.
+ *
+ * Note that `cbindgen` will generate wrong structures for this type. It is important
+ * to go inside the generated headers and fix it - all RetTmp structures without a
+ * body should be completely deleted, both as types, and as fields in the
+ * groups/objects. If C++11 templates are generated, it is important to define a
+ * custom type for CGlueTraitObj that does not have `ret_tmp` defined, and change all
+ * type aliases of this trait to use that particular structure.
+ */
+typedef void OsInnerRetTmp;
+
+/**
+ * Type definition for temporary return value wrapping storage.
+ *
+ * The trait does not use return wrapping, thus is a typedef to `PhantomData`.
+ *
+ * Note that `cbindgen` will generate wrong structures for this type. It is important
+ * to go inside the generated headers and fix it - all RetTmp structures without a
+ * body should be completely deleted, both as types, and as fields in the
+ * groups/objects. If C++11 templates are generated, it is important to define a
+ * custom type for CGlueTraitObj that does not have `ret_tmp` defined, and change all
+ * type aliases of this trait to use that particular structure.
+ */
+typedef void OsKeyboardInnerRetTmp;
+
+/**
+ * Type definition for temporary return value wrapping storage.
+ *
+ * The trait does not use return wrapping, thus is a typedef to `PhantomData`.
+ *
+ * Note that `cbindgen` will generate wrong structures for this type. It is important
+ * to go inside the generated headers and fix it - all RetTmp structures without a
+ * body should be completely deleted, both as types, and as fields in the
+ * groups/objects. If C++11 templates are generated, it is important to define a
+ * custom type for CGlueTraitObj that does not have `ret_tmp` defined, and change all
+ * type aliases of this trait to use that particular structure.
+ */
+typedef void PhysicalMemoryRetTmp;
+
+/**
+ * Type definition for temporary return value wrapping storage.
+ *
+ * The trait does not use return wrapping, thus is a typedef to `PhantomData`.
+ *
+ * Note that `cbindgen` will generate wrong structures for this type. It is important
+ * to go inside the generated headers and fix it - all RetTmp structures without a
+ * body should be completely deleted, both as types, and as fields in the
+ * groups/objects. If C++11 templates are generated, it is important to define a
+ * custom type for CGlueTraitObj that does not have `ret_tmp` defined, and change all
+ * type aliases of this trait to use that particular structure.
+ */
+typedef void ProcessRetTmp;
+
+/**
+ * Type definition for temporary return value wrapping storage.
+ *
+ * The trait does not use return wrapping, thus is a typedef to `PhantomData`.
+ *
+ * Note that `cbindgen` will generate wrong structures for this type. It is important
+ * to go inside the generated headers and fix it - all RetTmp structures without a
+ * body should be completely deleted, both as types, and as fields in the
+ * groups/objects. If C++11 templates are generated, it is important to define a
+ * custom type for CGlueTraitObj that does not have `ret_tmp` defined, and change all
+ * type aliases of this trait to use that particular structure.
+ */
+typedef void VirtualMemoryRetTmp;
 
 /**
  * This type represents a address on the target system.
@@ -353,7 +493,7 @@ typedef enum ArchitectureIdent_Tag {
      * Unknown architecture. Could be third-party implemented. memflow knows how to work on them,
      * but is unable to instantiate them.
      */
-    Unknown,
+    ArchitectureIdent_Unknown,
     /**
      * X86 with specified bitness and address extensions
      *
@@ -361,24 +501,24 @@ typedef enum ArchitectureIdent_Tag {
      * Second argument - `address_extensions` control whether address extensions are
      * enabled (PAE on x32, or LA57 on x64). Warning: LA57 is currently unsupported.
      */
-    X86,
+    ArchitectureIdent_X86,
     /**
      * Arm 64-bit architecture with specified page size
      *
      * Valid page sizes are 4kb, 16kb, 64kb. Only 4kb is supported at the moment
      */
-    AArch64,
+    ArchitectureIdent_AArch64,
 } ArchitectureIdent_Tag;
 
-typedef struct X86_Body {
+typedef struct ArchitectureIdent_X86_Body {
     uint8_t _0;
     bool _1;
-} X86_Body;
+} ArchitectureIdent_X86_Body;
 
 typedef struct ArchitectureIdent {
     ArchitectureIdent_Tag tag;
     union {
-        X86_Body x86;
+        ArchitectureIdent_X86_Body x86;
         struct {
             uintptr_t a_arch64;
         };
@@ -552,9 +692,9 @@ typedef int32_t ExitCode;
  * In case the exit code isn't known ProcessState::Unknown is set.
  */
 typedef enum ProcessState_Tag {
-    Alive,
-    Dead,
-    UnknownState,
+    ProcessState_Unknown,
+    ProcessState_Alive,
+    ProcessState_Dead,
 } ProcessState_Tag;
 
 typedef struct ProcessState {

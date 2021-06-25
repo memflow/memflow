@@ -44,6 +44,7 @@ use memflow::types::Address;
 
 use pelite::{self, pe64::exports::Export, PeView};
 
+#[cfg(feature = "plugins")]
 cglue_impl_group!(Win32Keyboard<T>, IntoKeyboard);
 
 /// Interface for accessing the target's keyboard state.

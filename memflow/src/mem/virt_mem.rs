@@ -68,7 +68,7 @@ pub type VirtualRangeCallback<'a> = OpaqueCallback<'a, VirtualRangeInfo>;
 /// # let virt_base = proc.info().address;
 /// # read(proc.virt_mem(), virt_base);
 /// ```
-#[cglue_trait]
+#[cfg_attr(feature = "plugins", cglue_trait)]
 #[int_result]
 #[cglue_forward]
 pub trait VirtualMemory: Send {
@@ -409,7 +409,7 @@ impl<'a> From<VirtualWriteData<'a>> for (Address, &'a [u8]) {
 }
 
 /// Trait that allows to borrow an interior reference to a [`VirtualMemory`] object.
-#[cglue_trait]
+#[cfg_attr(feature = "plugins", cglue_trait)]
 pub trait AsVirtualMemory {
     #[wrap_with_obj_mut(crate::mem::virt_mem::VirtualMemory)]
     type VirtualMemoryType: crate::mem::virt_mem::VirtualMemory;

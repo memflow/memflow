@@ -16,7 +16,9 @@ use super::PhysicalMemoryCursor;
 // - check endianess here and return an error
 // - better would be to convert endianess with word alignment from addr
 
+#[cfg(feature = "plugins")]
 cglue_trait_group!(ConnectorInstance<'a>, { PhysicalMemory, Clone }, { ConnectorCpuStateInner<'a> });
+#[cfg(feature = "plugins")]
 pub type MuConnectorInstanceArcBox<'a> = std::mem::MaybeUninit<ConnectorInstanceArcBox<'a>>;
 
 /// The [`PhysicalMemory`] trait is implemented by memory backends
@@ -103,7 +105,7 @@ pub type MuConnectorInstanceArcBox<'a> = std::mem::MaybeUninit<ConnectorInstance
 /// # use memflow::types::size;
 /// # read(&mut DummyMemory::new(size::mb(4)));
 /// ```
-#[cglue_trait]
+#[cfg_attr(feature = "plugins", cglue_trait)]
 #[int_result]
 #[cglue_forward]
 pub trait PhysicalMemory: Send {
@@ -385,7 +387,7 @@ impl<'a> From<PhysicalWriteData<'a>> for (PhysicalAddress, &'a [u8]) {
 }
 
 /// Trait that allows to borrow an interior reference to a [`PhysicalMemory`] object.
-#[cglue_trait]
+#[cfg_attr(feature = "plugins", cglue_trait)]
 pub trait AsPhysicalMemory {
     #[wrap_with_obj_mut(crate::mem::phys_mem::PhysicalMemory)]
     type PhysicalMemoryType: crate::mem::phys_mem::PhysicalMemory;

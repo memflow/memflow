@@ -11,7 +11,9 @@ use crate::prelude::v1::{Result, *};
 use crate::cglue::*;
 use std::prelude::v1::*;
 
+#[cfg(feature = "plugins")]
 cglue_trait_group!(OsInstance<'a>, { OsInner<'a>, Clone }, { AsPhysicalMemory, AsVirtualMemory, OsKeyboardInner<'a> });
+#[cfg(feature = "plugins")]
 pub type MuOsInstanceArcBox<'a> = std::mem::MaybeUninit<OsInstanceArcBox<'a>>;
 
 /// OS supertrait for all possible lifetimes
@@ -28,7 +30,7 @@ impl<T: for<'a> OsInner<'a>> Os for T {}
 /// moving resources into processes.
 ///
 /// There are also methods for accessing system level modules.
-#[cglue_trait]
+#[cfg_attr(feature = "plugins", cglue_trait)]
 #[int_result]
 pub trait OsInner<'a>: Send {
     #[wrap_with_group(crate::os::process::ProcessInstance)]

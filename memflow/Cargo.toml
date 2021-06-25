@@ -33,7 +33,7 @@ memmap = { version = "0.7", optional = true }
 hashbrown = "0.11"
 fixed-slice-vec = "0.8.0"
 cglue = { version = "0.1.1", default-features = false }
-rangemap = "0.1"
+rangemap = { git = "https://github.com/h33p/rangemap" } # TODO: replaceme when merged
 
 # plugins
 libloading = { version = "0.7", optional = true }

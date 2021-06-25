@@ -8,6 +8,9 @@ use memflow::architecture::ArchitectureIdent;
 use memflow::cglue::*;
 use memflow::error::{Error, ErrorKind, ErrorOrigin, PartialResult, PartialResultExt, Result};
 use memflow::mem::virt_mem::*;
+use memflow::mem::virt_translate::{
+    MemoryRange, VirtualTranslate2, VirtualTranslationCallback, VirtualTranslationFailCallback,
+};
 use memflow::mem::{PhysicalMemory, VirtualDma, VirtualMemory, VirtualTranslate};
 use memflow::os::{
     ExportCallback, ExportInfo, ImportCallback, ImportInfo, ModuleAddressCallback,
@@ -20,9 +23,9 @@ use memflow::types::Address;
 #[cfg(feature = "plugins")]
 use memflow::cglue;
 #[cfg(feature = "plugins")]
-use memflow::os::process::*;
-#[cfg(feature = "plugins")]
 use memflow::mem::virt_translate::*;
+#[cfg(feature = "plugins")]
+use memflow::os::process::*;
 
 use goblin::pe::{options::ParseOptions, PE};
 

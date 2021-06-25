@@ -32,7 +32,8 @@ itertools = { version = "0.10", default-features = false }
 memmap = { version = "0.7", optional = true }
 hashbrown = "0.11"
 fixed-slice-vec = "0.8.0"
-cglue = { version = "0.1.0", default-features = false }
+#cglue = { version = "0.1.0", default-features = false }
+cglue = { path = "../../cglue/cglue", default-features = false }
 
 # plugins
 libloading = { version = "0.7", optional = true }
@@ -54,7 +55,7 @@ colored = "2.0"
 default = ["std", "serde_derive", "plugins", "filemap", "memmapfiles"]
 trace_mmu = [] # enables debug traces in the mmu (very verbose)
 dummy_mem = ["rand", "rand_xorshift"]
-std = ["coarsetime", "no-std-compat/std"]
+std = ["coarsetime", "no-std-compat/std", "cglue/std"]
 collections = []
 alloc = []
 serde_derive = ["serde", "cglue/serde"]

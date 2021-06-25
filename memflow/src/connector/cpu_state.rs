@@ -12,11 +12,11 @@ pub trait ConnectorCpuState: for<'a> ConnectorCpuStateInner<'a> {}
 impl<T: for<'a> ConnectorCpuStateInner<'a>> ConnectorCpuState for T {}
 
 #[cfg_attr(feature = "plugins", cglue_trait)]
-#[cfg_attr(feature = "plugins", int_result)]
+#[int_result]
 pub trait ConnectorCpuStateInner<'a>: Send {
-    #[cfg_attr(feature = "plugins", wrap_with_obj(crate::connector::cpu_state::CpuState))]
+    #[wrap_with_obj(crate::connector::cpu_state::CpuState)]
     type CpuStateType: crate::connector::cpu_state::CpuState + 'a;
-    #[cfg_attr(feature = "plugins", wrap_with_group(crate::connector::cpu_state::IntoCpuState))]
+    #[wrap_with_group(crate::connector::cpu_state::IntoCpuState)]
     type IntoCpuStateType: crate::connector::cpu_state::CpuState + 'static;
 
     fn cpu_state(&'a mut self) -> Result<Self::CpuStateType>;
@@ -26,8 +26,8 @@ pub trait ConnectorCpuStateInner<'a>: Send {
 cglue_trait_group!(IntoCpuState, { CpuState, Clone }, {});
 
 #[cfg_attr(feature = "plugins", cglue_trait)]
-#[cfg_attr(feature = "plugins", int_result)]
-#[cfg_attr(feature = "plugins", cglue_forward)]
+#[int_result]
+#[cglue_forward]
 pub trait CpuState {
     // TODO:
     // max cpu index

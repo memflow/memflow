@@ -69,13 +69,13 @@ pub type VirtualRangeCallback<'a> = OpaqueCallback<'a, VirtualRangeInfo>;
 /// # read(proc.virt_mem(), virt_base);
 /// ```
 #[cfg_attr(feature = "plugins", cglue_trait)]
-#[cfg_attr(feature = "plugins", int_result)]
-#[cfg_attr(feature = "plugins", cglue_forward)]
+#[int_result]
+#[cglue_forward]
 pub trait VirtualMemory: Send {
-    #[cfg_attr(feature = "plugins", int_result(PartialResult))]
+    #[int_result(PartialResult)]
     fn virt_read_raw_list(&mut self, data: &mut [VirtualReadData]) -> PartialResult<()>;
 
-    #[cfg_attr(feature = "plugins", int_result(PartialResult))]
+    #[int_result(PartialResult)]
     fn virt_write_raw_list(&mut self, data: &[VirtualWriteData]) -> PartialResult<()>;
 
     fn virt_page_info(&mut self, addr: Address) -> Result<Page>;
@@ -96,12 +96,12 @@ pub trait VirtualMemory: Send {
     );
 
     // read helpers
-    #[cfg_attr(feature = "plugins", skip_func)]
+    #[skip_func]
     fn virt_read_raw_into(&mut self, addr: Address, out: &mut [u8]) -> PartialResult<()> {
         self.virt_read_raw_list(&mut [VirtualReadData(addr, out.into())])
     }
 
-    #[cfg_attr(feature = "plugins", skip_func)]
+    #[skip_func]
     fn virt_read_into<T: Pod + ?Sized>(&mut self, addr: Address, out: &mut T) -> PartialResult<()>
     where
         Self: Sized,
@@ -109,7 +109,7 @@ pub trait VirtualMemory: Send {
         self.virt_read_raw_into(addr, out.as_bytes_mut())
     }
 
-    #[cfg_attr(feature = "plugins", skip_func)]
+    #[skip_func]
     fn virt_read_raw(&mut self, addr: Address, len: usize) -> PartialResult<Vec<u8>> {
         let mut buf = vec![0u8; len];
         self.virt_read_raw_into(addr, &mut *buf).map_data(|_| buf)
@@ -119,7 +119,7 @@ pub trait VirtualMemory: Send {
     ///
     /// this function will overwrite the contents of 'obj' so we can just allocate an unitialized memory section.
     /// this function should only be used with [repr(C)] structs.
-    #[cfg_attr(feature = "plugins", skip_func)]
+    #[skip_func]
     #[allow(clippy::uninit_assumed_init)]
     fn virt_read<T: Pod + Sized>(&mut self, addr: Address) -> PartialResult<T>
     where
@@ -130,12 +130,12 @@ pub trait VirtualMemory: Send {
     }
 
     // write helpers
-    #[cfg_attr(feature = "plugins", skip_func)]
+    #[skip_func]
     fn virt_write_raw(&mut self, addr: Address, data: &[u8]) -> PartialResult<()> {
         self.virt_write_raw_list(&[VirtualWriteData(addr, data.into())])
     }
 
-    #[cfg_attr(feature = "plugins", skip_func)]
+    #[skip_func]
     fn virt_write<T: Pod + ?Sized>(&mut self, addr: Address, data: &T) -> PartialResult<()>
     where
         Self: Sized,
@@ -144,7 +144,7 @@ pub trait VirtualMemory: Send {
     }
 
     // page map helpers
-    #[cfg_attr(feature = "plugins", skip_func)]
+    #[skip_func]
     fn virt_translation_map_range(
         &mut self,
         start: Address,
@@ -155,7 +155,7 @@ pub trait VirtualMemory: Send {
         ret
     }
 
-    #[cfg_attr(feature = "plugins", skip_func)]
+    #[skip_func]
     fn virt_page_map_range(
         &mut self,
         gap_size: usize,
@@ -167,18 +167,18 @@ pub trait VirtualMemory: Send {
         ret
     }
 
-    #[cfg_attr(feature = "plugins", skip_func)]
+    #[skip_func]
     fn virt_translation_map(&mut self) -> Vec<VirtualTranslationRangeInfo> {
         self.virt_translation_map_range(Address::null(), Address::invalid())
     }
 
-    #[cfg_attr(feature = "plugins", skip_func)]
+    #[skip_func]
     fn virt_page_map(&mut self, gap_size: usize) -> Vec<VirtualRangeInfo> {
         self.virt_page_map_range(gap_size, Address::null(), Address::invalid())
     }
 
     // specific read helpers
-    #[cfg_attr(feature = "plugins", skip_func)]
+    #[skip_func]
     fn virt_read_addr32(&mut self, addr: Address) -> PartialResult<Address>
     where
         Self: Sized,
@@ -186,7 +186,7 @@ pub trait VirtualMemory: Send {
         self.virt_read::<u32>(addr).map_data(|d| d.into())
     }
 
-    #[cfg_attr(feature = "plugins", skip_func)]
+    #[skip_func]
     fn virt_read_addr64(&mut self, addr: Address) -> PartialResult<Address>
     where
         Self: Sized,
@@ -194,7 +194,7 @@ pub trait VirtualMemory: Send {
         self.virt_read::<u64>(addr).map_data(|d| d.into())
     }
 
-    #[cfg_attr(feature = "plugins", skip_func)]
+    #[skip_func]
     fn virt_read_addr_arch(
         &mut self,
         arch: ArchitectureObj,
@@ -214,7 +214,7 @@ pub trait VirtualMemory: Send {
     }
 
     // read pointer wrappers
-    #[cfg_attr(feature = "plugins", skip_func)]
+    #[skip_func]
     fn virt_read_ptr32_into<U: Pod + ?Sized>(
         &mut self,
         ptr: Pointer32<U>,
@@ -226,7 +226,7 @@ pub trait VirtualMemory: Send {
         self.virt_read_into(ptr.address.into(), out)
     }
 
-    #[cfg_attr(feature = "plugins", skip_func)]
+    #[skip_func]
     fn virt_read_ptr32<U: Pod + Sized>(&mut self, ptr: Pointer32<U>) -> PartialResult<U>
     where
         Self: Sized,
@@ -234,7 +234,7 @@ pub trait VirtualMemory: Send {
         self.virt_read(ptr.address.into())
     }
 
-    #[cfg_attr(feature = "plugins", skip_func)]
+    #[skip_func]
     fn virt_read_ptr64_into<U: Pod + ?Sized>(
         &mut self,
         ptr: Pointer64<U>,
@@ -246,7 +246,7 @@ pub trait VirtualMemory: Send {
         self.virt_read_into(ptr.address.into(), out)
     }
 
-    #[cfg_attr(feature = "plugins", skip_func)]
+    #[skip_func]
     fn virt_read_ptr64<U: Pod + Sized>(&mut self, ptr: Pointer64<U>) -> PartialResult<U>
     where
         Self: Sized,
@@ -255,7 +255,7 @@ pub trait VirtualMemory: Send {
     }
 
     // write pointer wrappers
-    #[cfg_attr(feature = "plugins", skip_func)]
+    #[skip_func]
     fn virt_write_ptr32<U: Pod + Sized>(&mut self, ptr: Pointer32<U>, data: &U) -> PartialResult<()>
     where
         Self: Sized,
@@ -263,7 +263,7 @@ pub trait VirtualMemory: Send {
         self.virt_write(ptr.address.into(), data)
     }
 
-    #[cfg_attr(feature = "plugins", skip_func)]
+    #[skip_func]
     fn virt_write_ptr64<U: Pod + Sized>(&mut self, ptr: Pointer64<U>, data: &U) -> PartialResult<()>
     where
         Self: Sized,
@@ -278,7 +278,7 @@ pub trait VirtualMemory: Send {
     /// The string does not have to be null-terminated.
     /// If a null terminator is found the string is truncated to the terminator.
     /// If no null terminator is found the resulting string is exactly `len` characters long.
-    #[cfg_attr(feature = "plugins", skip_func)]
+    #[skip_func]
     fn virt_read_char_array(&mut self, addr: Address, len: usize) -> PartialResult<String> {
         let mut buf = vec![0; len];
         self.virt_read_raw_into(addr, &mut buf).data_part()?;
@@ -301,7 +301,7 @@ pub trait VirtualMemory: Send {
     /// If no null terminator is found the this function will return an error.
     ///
     /// For reading fixed-size char arrays the [`virt_read_char_array`] should be used.
-    #[cfg_attr(feature = "plugins", skip_func)]
+    #[skip_func]
     fn virt_read_char_string_n(&mut self, addr: Address, n: usize) -> PartialResult<String> {
         let mut buf = vec![0; 32];
 
@@ -334,12 +334,12 @@ pub trait VirtualMemory: Send {
     /// # Arguments
     ///
     /// * `addr` - target address to read from
-    #[cfg_attr(feature = "plugins", skip_func)]
+    #[skip_func]
     fn virt_read_char_string(&mut self, addr: Address) -> PartialResult<String> {
         self.virt_read_char_string_n(addr, 4096)
     }
 
-    #[cfg_attr(feature = "plugins", skip_func)]
+    #[skip_func]
     fn virt_batcher(&mut self) -> VirtualMemoryBatcher<Self>
     where
         Self: Sized,
@@ -348,7 +348,7 @@ pub trait VirtualMemory: Send {
     }
 
     #[cfg(feature = "std")]
-    #[cfg_attr(feature = "plugins", skip_func)]
+    #[skip_func]
     fn virt_cursor(&mut self) -> VirtualMemoryCursor<Fwd<&mut Self>>
     where
         Self: Sized,
@@ -357,7 +357,7 @@ pub trait VirtualMemory: Send {
     }
 
     #[cfg(feature = "std")]
-    #[cfg_attr(feature = "plugins", skip_func)]
+    #[skip_func]
     fn into_virt_cursor(self) -> VirtualMemoryCursor<Self>
     where
         Self: Sized,
@@ -366,7 +366,7 @@ pub trait VirtualMemory: Send {
     }
 
     #[cfg(feature = "std")]
-    #[cfg_attr(feature = "plugins", skip_func)]
+    #[skip_func]
     fn virt_cursor_at(&mut self, address: Address) -> VirtualMemoryCursor<Fwd<&mut Self>>
     where
         Self: Sized,
@@ -375,7 +375,7 @@ pub trait VirtualMemory: Send {
     }
 
     #[cfg(feature = "std")]
-    #[cfg_attr(feature = "plugins", skip_func)]
+    #[skip_func]
     fn into_virt_cursor_at(self, address: Address) -> VirtualMemoryCursor<Self>
     where
         Self: Sized,
@@ -411,7 +411,7 @@ impl<'a> From<VirtualWriteData<'a>> for (Address, &'a [u8]) {
 /// Trait that allows to borrow an interior reference to a [`VirtualMemory`] object.
 #[cfg_attr(feature = "plugins", cglue_trait)]
 pub trait AsVirtualMemory {
-    #[cfg_attr(feature = "plugins", wrap_with_obj_mut(crate::mem::virt_mem::VirtualMemory))]
+    #[wrap_with_obj_mut(crate::mem::virt_mem::VirtualMemory)]
     type VirtualMemoryType: crate::mem::virt_mem::VirtualMemory;
 
     /// Returns a mutable reference to the [`VirtualMemory`] object.

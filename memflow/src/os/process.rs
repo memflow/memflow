@@ -58,7 +58,7 @@ impl ProcessState {
 ///
 /// Future expansions could include threads, keyboard input, and more.
 #[cfg_attr(feature = "plugins", cglue_trait)]
-#[cfg_attr(feature = "plugins", int_result)]
+#[int_result]
 pub trait Process: Send {
     /// Retrieves the state of the process
     fn state(&mut self) -> ProcessState;
@@ -82,7 +82,7 @@ pub trait Process: Send {
     /// * `target_arch` - sets which architecture to retrieve the modules for (if emulated). Choose
     /// between `Some(ProcessInfo::sys_arch())`, and `Some(ProcessInfo::proc_arch())`. `None` for all.
     /// * `callback` - where to pass each matching module to. This is an opaque callback.
-    #[cfg_attr(feature = "plugins", skip_func)]
+    #[skip_func]
     fn module_list_callback(
         &mut self,
         target_arch: Option<&ArchitectureIdent>,
@@ -128,7 +128,7 @@ pub trait Process: Send {
     /// # Arguments
     /// * `name` - name of the module to find
     /// * `architecture` - architecture of the module. Should be either `ProcessInfo::proc_arch`, or `ProcessInfo::sys_arch`, or None for both.
-    #[cfg_attr(feature = "plugins", skip_func)]
+    #[skip_func]
     fn module_by_name_arch(
         &mut self,
         name: &str,
@@ -153,7 +153,7 @@ pub trait Process: Send {
     ///
     /// # Arguments
     /// * `name` - name of the module to find
-    #[cfg_attr(feature = "plugins", skip_func)]
+    #[skip_func]
     fn module_by_name(&mut self, name: &str) -> Result<ModuleInfo> {
         self.module_by_name_arch(name, None)
     }
@@ -163,7 +163,7 @@ pub trait Process: Send {
     /// # Arguments
     /// * `target_arch` - sets which architecture to retrieve the modules for (if emulated). Choose
     /// between `Some(ProcessInfo::sys_arch())`, and `Some(ProcessInfo::proc_arch())`. `None` for all.
-    #[cfg_attr(feature = "plugins", skip_func)]
+    #[skip_func]
     fn module_list_arch(
         &mut self,
         target_arch: Option<&ArchitectureIdent>,
@@ -176,7 +176,7 @@ pub trait Process: Send {
     /// Retrieves a module list for the process
     ///
     /// This is equivalent to `Process::module_list_arch(None)`
-    #[cfg_attr(feature = "plugins", skip_func)]
+    #[skip_func]
     fn module_list(&mut self) -> Result<Vec<ModuleInfo>> {
         self.module_list_arch(None)
     }
@@ -189,7 +189,7 @@ pub trait Process: Send {
     /// Retrieves information for the primary module of the process
     ///
     /// This will generally be the initial executable that was run
-    #[cfg_attr(feature = "plugins", skip_func)]
+    #[skip_func]
     fn primary_module(&mut self) -> Result<ModuleInfo> {
         let addr = self.primary_module_address()?;
         self.module_by_address(addr, self.info().proc_arch)
@@ -217,7 +217,7 @@ pub trait Process: Send {
     ) -> Result<()>;
 
     /// Retrieves a list of all imports of a given module
-    #[cfg_attr(feature = "plugins", skip_func)]
+    #[skip_func]
     fn module_import_list(&mut self, info: &ModuleInfo) -> Result<Vec<ImportInfo>> {
         let mut ret = vec![];
         self.module_import_list_callback(info, (&mut ret).into())?;
@@ -225,7 +225,7 @@ pub trait Process: Send {
     }
 
     /// Retrieves a list of all exports of a given module
-    #[cfg_attr(feature = "plugins", skip_func)]
+    #[skip_func]
     fn module_export_list(&mut self, info: &ModuleInfo) -> Result<Vec<ExportInfo>> {
         let mut ret = vec![];
         self.module_export_list_callback(info, (&mut ret).into())?;
@@ -233,7 +233,7 @@ pub trait Process: Send {
     }
 
     /// Retrieves a list of all sections of a given module
-    #[cfg_attr(feature = "plugins", skip_func)]
+    #[skip_func]
     fn module_section_list(&mut self, info: &ModuleInfo) -> Result<Vec<SectionInfo>> {
         let mut ret = vec![];
         self.module_section_list_callback(info, (&mut ret).into())?;
@@ -241,7 +241,7 @@ pub trait Process: Send {
     }
 
     /// Finds a single import of a given module by its name
-    #[cfg_attr(feature = "plugins", skip_func)]
+    #[skip_func]
     fn module_import_by_name(&mut self, info: &ModuleInfo, name: &str) -> Result<ImportInfo> {
         let mut ret = Err(Error(ErrorOrigin::OsLayer, ErrorKind::ImportNotFound));
         let callback = &mut |data: ImportInfo| {
@@ -257,7 +257,7 @@ pub trait Process: Send {
     }
 
     /// Finds a single export of a given module by its name
-    #[cfg_attr(feature = "plugins", skip_func)]
+    #[skip_func]
     fn module_export_by_name(&mut self, info: &ModuleInfo, name: &str) -> Result<ExportInfo> {
         let mut ret = Err(Error(ErrorOrigin::OsLayer, ErrorKind::ImportNotFound));
         let callback = &mut |data: ExportInfo| {
@@ -273,7 +273,7 @@ pub trait Process: Send {
     }
 
     /// Finds a single section of a given module by its name
-    #[cfg_attr(feature = "plugins", skip_func)]
+    #[skip_func]
     fn module_section_by_name(&mut self, info: &ModuleInfo, name: &str) -> Result<SectionInfo> {
         let mut ret = Err(Error(ErrorOrigin::OsLayer, ErrorKind::ImportNotFound));
         let callback = &mut |data: SectionInfo| {

@@ -104,8 +104,8 @@ pub type MuConnectorInstanceArcBox<'a> = std::mem::MaybeUninit<ConnectorInstance
 /// # read(&mut DummyMemory::new(size::mb(4)));
 /// ```
 #[cfg_attr(feature = "plugins", cglue_trait)]
-#[cfg_attr(feature = "plugins", int_result)]
-#[cfg_attr(feature = "plugins", cglue_forward)]
+#[int_result]
+#[cglue_forward]
 pub trait PhysicalMemory: Send {
     fn phys_read_raw_list(&mut self, data: &mut [PhysicalReadData]) -> Result<()>;
     fn phys_write_raw_list(&mut self, data: &[PhysicalWriteData]) -> Result<()>;
@@ -136,12 +136,12 @@ pub trait PhysicalMemory: Send {
     fn set_mem_map(&mut self, mem_map: &[PhysicalMemoryMapping]);
 
     // read helpers
-    #[cfg_attr(feature = "plugins", skip_func)]
+    #[skip_func]
     fn phys_read_raw_into(&mut self, addr: PhysicalAddress, out: &mut [u8]) -> Result<()> {
         self.phys_read_raw_list(&mut [PhysicalReadData(addr, out.into())])
     }
 
-    #[cfg_attr(feature = "plugins", skip_func)]
+    #[skip_func]
     fn phys_read_into<T: Pod + ?Sized>(&mut self, addr: PhysicalAddress, out: &mut T) -> Result<()>
     where
         Self: Sized,
@@ -149,7 +149,7 @@ pub trait PhysicalMemory: Send {
         self.phys_read_raw_into(addr, out.as_bytes_mut())
     }
 
-    #[cfg_attr(feature = "plugins", skip_func)]
+    #[skip_func]
     fn phys_read_raw(&mut self, addr: PhysicalAddress, len: usize) -> Result<Vec<u8>> {
         let mut buf = vec![0u8; len];
         self.phys_read_raw_into(addr, &mut *buf)?;
@@ -160,7 +160,7 @@ pub trait PhysicalMemory: Send {
     ///
     /// this function will overwrite the contents of 'obj' so we can just allocate an unitialized memory section.
     /// this function should only be used with [repr(C)] structs.
-    #[cfg_attr(feature = "plugins", skip_func)]
+    #[skip_func]
     #[allow(clippy::uninit_assumed_init)]
     fn phys_read<T: Pod + Sized>(&mut self, addr: PhysicalAddress) -> Result<T>
     where
@@ -172,12 +172,12 @@ pub trait PhysicalMemory: Send {
     }
 
     // write helpers
-    #[cfg_attr(feature = "plugins", skip_func)]
+    #[skip_func]
     fn phys_write_raw(&mut self, addr: PhysicalAddress, data: &[u8]) -> Result<()> {
         self.phys_write_raw_list(&[PhysicalWriteData(addr, data.into())])
     }
 
-    #[cfg_attr(feature = "plugins", skip_func)]
+    #[skip_func]
     fn phys_write<T: Pod + ?Sized>(&mut self, addr: PhysicalAddress, data: &T) -> Result<()>
     where
         Self: Sized,
@@ -186,7 +186,7 @@ pub trait PhysicalMemory: Send {
     }
 
     // read pointer wrappers
-    #[cfg_attr(feature = "plugins", skip_func)]
+    #[skip_func]
     fn phys_read_ptr32_into<U: Pod + ?Sized>(
         &mut self,
         ptr: Pointer32<U>,
@@ -198,7 +198,7 @@ pub trait PhysicalMemory: Send {
         self.phys_read_into(ptr.address.into(), out)
     }
 
-    #[cfg_attr(feature = "plugins", skip_func)]
+    #[skip_func]
     fn phys_read_ptr32<U: Pod + Sized>(&mut self, ptr: Pointer32<U>) -> Result<U>
     where
         Self: Sized,
@@ -206,7 +206,7 @@ pub trait PhysicalMemory: Send {
         self.phys_read(ptr.address.into())
     }
 
-    #[cfg_attr(feature = "plugins", skip_func)]
+    #[skip_func]
     fn phys_read_ptr64_into<U: Pod + ?Sized>(
         &mut self,
         ptr: Pointer64<U>,
@@ -218,7 +218,7 @@ pub trait PhysicalMemory: Send {
         self.phys_read_into(ptr.address.into(), out)
     }
 
-    #[cfg_attr(feature = "plugins", skip_func)]
+    #[skip_func]
     fn phys_read_ptr64<U: Pod + Sized>(&mut self, ptr: Pointer64<U>) -> Result<U>
     where
         Self: Sized,
@@ -227,7 +227,7 @@ pub trait PhysicalMemory: Send {
     }
 
     // write pointer wrappers
-    #[cfg_attr(feature = "plugins", skip_func)]
+    #[skip_func]
     fn phys_write_ptr32<U: Pod + Sized>(&mut self, ptr: Pointer32<U>, data: &U) -> Result<()>
     where
         Self: Sized,
@@ -235,7 +235,7 @@ pub trait PhysicalMemory: Send {
         self.phys_write(ptr.address.into(), data)
     }
 
-    #[cfg_attr(feature = "plugins", skip_func)]
+    #[skip_func]
     fn phys_write_ptr64<U: Pod + Sized>(&mut self, ptr: Pointer64<U>, data: &U) -> Result<()>
     where
         Self: Sized,
@@ -250,7 +250,7 @@ pub trait PhysicalMemory: Send {
     /// The string does not have to be null-terminated.
     /// If a null terminator is found the string is truncated to the terminator.
     /// If no null terminator is found the resulting string is exactly `len` characters long.
-    #[cfg_attr(feature = "plugins", skip_func)]
+    #[skip_func]
     fn phys_read_char_array(&mut self, addr: PhysicalAddress, len: usize) -> Result<String> {
         let mut buf = vec![0; len];
         self.phys_read_raw_into(addr, &mut buf)?;
@@ -273,7 +273,7 @@ pub trait PhysicalMemory: Send {
     /// If no null terminator is found the this function will return an error.
     ///
     /// For reading fixed-size char arrays the [`virt_read_char_array`] should be used.
-    #[cfg_attr(feature = "plugins", skip_func)]
+    #[skip_func]
     fn phys_read_char_string_n(&mut self, addr: PhysicalAddress, n: usize) -> Result<String> {
         let mut buf = vec![0; 32];
 
@@ -304,12 +304,12 @@ pub trait PhysicalMemory: Send {
     /// # Arguments
     ///
     /// * `addr` - target address to read from
-    #[cfg_attr(feature = "plugins", skip_func)]
+    #[skip_func]
     fn phys_read_char_string(&mut self, addr: PhysicalAddress) -> Result<String> {
         self.phys_read_char_string_n(addr, 4096)
     }
 
-    #[cfg_attr(feature = "plugins", skip_func)]
+    #[skip_func]
     fn phys_batcher(&mut self) -> PhysicalMemoryBatcher<Self>
     where
         Self: Sized,
@@ -318,7 +318,7 @@ pub trait PhysicalMemory: Send {
     }
 
     #[cfg(feature = "std")]
-    #[cfg_attr(feature = "plugins", skip_func)]
+    #[skip_func]
     fn phys_cursor(&mut self) -> PhysicalMemoryCursor<Fwd<&mut Self>>
     where
         Self: Sized,
@@ -327,7 +327,7 @@ pub trait PhysicalMemory: Send {
     }
 
     #[cfg(feature = "std")]
-    #[cfg_attr(feature = "plugins", skip_func)]
+    #[skip_func]
     fn into_phys_cursor(self) -> PhysicalMemoryCursor<Self>
     where
         Self: Sized,
@@ -336,7 +336,7 @@ pub trait PhysicalMemory: Send {
     }
 
     #[cfg(feature = "std")]
-    #[cfg_attr(feature = "plugins", skip_func)]
+    #[skip_func]
     fn phys_cursor_at(&mut self, address: PhysicalAddress) -> PhysicalMemoryCursor<Fwd<&mut Self>>
     where
         Self: Sized,
@@ -345,7 +345,7 @@ pub trait PhysicalMemory: Send {
     }
 
     #[cfg(feature = "std")]
-    #[cfg_attr(feature = "plugins", skip_func)]
+    #[skip_func]
     fn into_phys_cursor_at(self, address: PhysicalAddress) -> PhysicalMemoryCursor<Self>
     where
         Self: Sized,
@@ -389,7 +389,7 @@ impl<'a> From<PhysicalWriteData<'a>> for (PhysicalAddress, &'a [u8]) {
 /// Trait that allows to borrow an interior reference to a [`PhysicalMemory`] object.
 #[cfg_attr(feature = "plugins", cglue_trait)]
 pub trait AsPhysicalMemory {
-    #[cfg_attr(feature = "plugins", wrap_with_obj_mut(crate::mem::phys_mem::PhysicalMemory))]
+    #[wrap_with_obj_mut(crate::mem::phys_mem::PhysicalMemory)]
     type PhysicalMemoryType: crate::mem::phys_mem::PhysicalMemory;
 
     /// Returns a mutable reference to the [`PhysicalMemory`] object.

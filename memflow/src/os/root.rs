@@ -31,11 +31,11 @@ impl<T: for<'a> OsInner<'a>> Os for T {}
 ///
 /// There are also methods for accessing system level modules.
 #[cfg_attr(feature = "plugins", cglue_trait)]
-#[cfg_attr(feature = "plugins", int_result)]
+#[int_result]
 pub trait OsInner<'a>: Send {
-    #[cfg_attr(feature = "plugins", wrap_with_group(crate::os::process::ProcessInstance))]
+    #[wrap_with_group(crate::os::process::ProcessInstance)]
     type ProcessType: crate::os::process::Process + crate::mem::virt_mem::AsVirtualMemory + 'a;
-    #[cfg_attr(feature = "plugins", wrap_with_group(crate::os::process::IntoProcessInstance))]
+    #[wrap_with_group(crate::os::process::IntoProcessInstance)]
     type IntoProcessType: crate::os::process::Process
         + crate::mem::virt_mem::AsVirtualMemory
         + 'static;
@@ -48,7 +48,7 @@ pub trait OsInner<'a>: Send {
     /// Retrieves a process address list
     ///
     /// This will be a list of unique internal addresses for underlying process structures
-    #[cfg_attr(feature = "plugins", skip_func)]
+    #[skip_func]
     fn process_address_list(&mut self) -> Result<Vec<Address>> {
         let mut ret = vec![];
         self.process_address_list_callback((&mut ret).into())?;
@@ -58,7 +58,7 @@ pub trait OsInner<'a>: Send {
     /// Walks a process list and calls a callback for each process
     ///
     /// The callback is fully opaque. We need this style so that C FFI can work seamlessly.
-    #[cfg_attr(feature = "plugins", skip_func)]
+    #[skip_func]
     fn process_info_list_callback(&mut self, mut callback: ProcessInfoCallback) -> Result<()> {
         // This is safe, because control will flow back to the callback.
         let sptr = self as *mut Self;
@@ -77,7 +77,7 @@ pub trait OsInner<'a>: Send {
     }
 
     /// Retrieves a process list
-    #[cfg_attr(feature = "plugins", skip_func)]
+    #[skip_func]
     fn process_info_list(&mut self) -> Result<Vec<ProcessInfo>> {
         let mut ret = vec![];
         self.process_info_list_callback((&mut ret).into())?;
@@ -88,7 +88,7 @@ pub trait OsInner<'a>: Send {
     fn process_info_by_address(&mut self, address: Address) -> Result<ProcessInfo>;
 
     /// Find process information by its name
-    #[cfg_attr(feature = "plugins", skip_func)]
+    #[skip_func]
     fn process_info_by_name(&mut self, name: &str) -> Result<ProcessInfo> {
         let mut ret = Err(Error(ErrorOrigin::OsLayer, ErrorKind::ProcessNotFound));
         let callback = &mut |data: ProcessInfo| {
@@ -104,7 +104,7 @@ pub trait OsInner<'a>: Send {
     }
 
     /// Find process information by its ID
-    #[cfg_attr(feature = "plugins", skip_func)]
+    #[skip_func]
     fn process_info_by_pid(&mut self, pid: Pid) -> Result<ProcessInfo> {
         let mut ret = Err(Error(ErrorOrigin::OsLayer, ErrorKind::ProcessNotFound));
         let callback = &mut |data: ProcessInfo| {
@@ -135,7 +135,7 @@ pub trait OsInner<'a>: Send {
     /// If no process with the specified address can be found this function will return an Error.
     ///
     /// This function can be useful for quickly accessing a process.
-    #[cfg_attr(feature = "plugins", skip_func)]
+    #[skip_func]
     fn process_by_address(&'a mut self, addr: Address) -> Result<Self::ProcessType> {
         self.process_info_by_address(addr)
             .and_then(move |i| self.process_by_info(i))
@@ -147,7 +147,7 @@ pub trait OsInner<'a>: Send {
     /// If no process with the specified name can be found this function will return an Error.
     ///
     /// This function can be useful for quickly accessing a process.
-    #[cfg_attr(feature = "plugins", skip_func)]
+    #[skip_func]
     fn process_by_name(&'a mut self, name: &str) -> Result<Self::ProcessType> {
         self.process_info_by_name(name)
             .and_then(move |i| self.process_by_info(i))
@@ -159,7 +159,7 @@ pub trait OsInner<'a>: Send {
     /// If no process with the specified ID can be found this function will return an Error.
     ///
     /// This function can be useful for quickly accessing a process.
-    #[cfg_attr(feature = "plugins", skip_func)]
+    #[skip_func]
     fn process_by_pid(&'a mut self, pid: Pid) -> Result<Self::ProcessType> {
         self.process_info_by_pid(pid)
             .and_then(move |i| self.process_by_info(i))
@@ -172,7 +172,7 @@ pub trait OsInner<'a>: Send {
     /// If no process with the specified address can be found this function will return an Error.
     ///
     /// This function can be useful for quickly accessing a process.
-    #[cfg_attr(feature = "plugins", skip_func)]
+    #[skip_func]
     fn into_process_by_address(mut self, addr: Address) -> Result<Self::IntoProcessType>
     where
         Self: Sized,
@@ -187,7 +187,7 @@ pub trait OsInner<'a>: Send {
     /// If no process with the specified name can be found this function will return an Error.
     ///
     /// This function can be useful for quickly accessing a process.
-    #[cfg_attr(feature = "plugins", skip_func)]
+    #[skip_func]
     fn into_process_by_name(mut self, name: &str) -> Result<Self::IntoProcessType>
     where
         Self: Sized,
@@ -202,7 +202,7 @@ pub trait OsInner<'a>: Send {
     /// If no process with the specified ID can be found this function will return an Error.
     ///
     /// This function can be useful for quickly accessing a process.
-    #[cfg_attr(feature = "plugins", skip_func)]
+    #[skip_func]
     fn into_process_by_pid(mut self, pid: Pid) -> Result<Self::IntoProcessType>
     where
         Self: Sized,
@@ -222,7 +222,7 @@ pub trait OsInner<'a>: Send {
     ///
     /// # Arguments
     /// * `callback` - where to pass each matching module to. This is an opaque callback.
-    #[cfg_attr(feature = "plugins", skip_func)]
+    #[skip_func]
     fn module_list_callback(&mut self, mut callback: ModuleInfoCallback) -> Result<()> {
         // This is safe, because control will flow back to the callback.
         let sptr = self as *mut Self;
@@ -245,7 +245,7 @@ pub trait OsInner<'a>: Send {
     }
 
     /// Retrieves a module list for the OS
-    #[cfg_attr(feature = "plugins", skip_func)]
+    #[skip_func]
     fn module_list(&mut self) -> Result<Vec<ModuleInfo>> {
         let mut ret = vec![];
         self.module_list_callback((&mut ret).into())?;
@@ -261,7 +261,7 @@ pub trait OsInner<'a>: Send {
     /// Finds a OS module by its name
     ///
     /// This function can be useful for quickly accessing a specific module
-    #[cfg_attr(feature = "plugins", skip_func)]
+    #[skip_func]
     fn module_by_name(&mut self, name: &str) -> Result<ModuleInfo> {
         let mut ret = Err(Error(ErrorOrigin::OsLayer, ErrorKind::ProcessNotFound));
         let callback = &mut |data: ModuleInfo| {

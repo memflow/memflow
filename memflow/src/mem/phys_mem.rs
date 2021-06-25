@@ -136,7 +136,6 @@ pub trait PhysicalMemory: Send {
     fn set_mem_map(&mut self, mem_map: &[PhysicalMemoryMapping]);
 
     // read helpers
-    #[skip_func]
     fn phys_read_raw_into(&mut self, addr: PhysicalAddress, out: &mut [u8]) -> Result<()> {
         self.phys_read_raw_list(&mut [PhysicalReadData(addr, out.into())])
     }
@@ -172,7 +171,6 @@ pub trait PhysicalMemory: Send {
     }
 
     // write helpers
-    #[skip_func]
     fn phys_write_raw(&mut self, addr: PhysicalAddress, data: &[u8]) -> Result<()> {
         self.phys_write_raw_list(&[PhysicalWriteData(addr, data.into())])
     }

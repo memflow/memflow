@@ -15,10 +15,11 @@ use std::fmt;
 
 use memflow::architecture::{ArchitectureIdent, ArchitectureObj};
 use memflow::cglue::*;
-use memflow::error::{Error, ErrorKind, ErrorOrigin, Result};
+use memflow::error::{Error, Result, *};
+use memflow::mem::mem_map::PhysicalMemoryMapping;
 use memflow::mem::phys_mem::*;
 use memflow::mem::virt_mem::*;
-use memflow::mem::{DirectTranslate, VirtualDma, VirtualTranslate};
+use memflow::mem::{DirectTranslate, VirtualDma, VirtualTranslate2};
 use memflow::os::keyboard::*;
 use memflow::os::root::*;
 use memflow::os::*;
@@ -35,7 +36,7 @@ mod mem_map;
 const MAX_ITER_COUNT: usize = 65536;
 
 #[cfg(feature = "plugins")]
-cglue_impl_group!(Win32Kernel<T, V>, OsInstance<'a>, { AsPhysicalMemory, AsVirtualMemory, OsKeyboardInner<'a> });
+cglue_impl_group!(Win32Kernel<T, V>, OsInstance<'a>, { PhysicalMemory, VirtualMemory, OsKeyboardInner<'a> });
 
 #[derive(Clone)]
 pub struct Win32Kernel<T, V> {
@@ -48,7 +49,7 @@ pub struct Win32Kernel<T, V> {
     pub kernel_modules: Option<Win32ModuleListInfo>,
 }
 
-impl<T: 'static + PhysicalMemory, V: 'static + VirtualTranslate> Win32Kernel<T, V> {
+impl<T: 'static + PhysicalMemory, V: 'static + VirtualTranslate2> Win32Kernel<T, V> {
     pub fn new(phys_mem: T, vat: V, offsets: Win32Offsets, kernel_info: Win32KernelInfo) -> Self {
         let mut virt_mem = VirtualDma::with_vat(
             phys_mem,
@@ -342,14 +343,13 @@ impl<T: 'static + PhysicalMemory, V: 'static + VirtualTranslate> Win32Kernel<T, 
         // get process_parameters
         let offsets = Win32ArchOffsets::from(info.base_info.proc_arch);
         let (path, command_line) = if let Some(Ok(peb_process_params)) = info.peb().map(|peb| {
-            process.virt_mem().virt_read_addr_arch(
+            process.virt_read_addr_arch(
                 info.base_info.proc_arch.into(),
                 peb + offsets.peb_process_params,
             )
         }) {
             trace!("peb_process_params={:x}", peb_process_params);
             let image_path_name = process
-                .virt_mem()
                 .virt_read_unicode_string(
                     info.base_info.proc_arch.into(),
                     peb_process_params + offsets.ppm_image_path_name,
@@ -357,7 +357,6 @@ impl<T: 'static + PhysicalMemory, V: 'static + VirtualTranslate> Win32Kernel<T, 
                 .unwrap_or_default();
 
             let command_line = process
-                .virt_mem()
                 .virt_read_unicode_string(
                     info.base_info.proc_arch.into(),
                     peb_process_params + offsets.ppm_command_line,
@@ -441,13 +440,13 @@ impl<T: PhysicalMemory> Win32Kernel<T, DirectTranslate> {
     }
 }
 
-impl<T: PhysicalMemory, V: VirtualTranslate> AsMut<T> for Win32Kernel<T, V> {
+impl<T: PhysicalMemory, V: VirtualTranslate2> AsMut<T> for Win32Kernel<T, V> {
     fn as_mut(&mut self) -> &mut T {
         self.virt_mem.phys_mem()
     }
 }
 
-impl<T: PhysicalMemory, V: VirtualTranslate> AsMut<VirtualDma<T, V, Win32VirtualTranslate>>
+impl<T: PhysicalMemory, V: VirtualTranslate2> AsMut<VirtualDma<T, V, Win32VirtualTranslate>>
     for Win32Kernel<T, V>
 {
     fn as_mut(&mut self) -> &mut VirtualDma<T, V, Win32VirtualTranslate> {
@@ -455,23 +454,35 @@ impl<T: PhysicalMemory, V: VirtualTranslate> AsMut<VirtualDma<T, V, Win32Virtual
     }
 }
 
-impl<T: PhysicalMemory, V: VirtualTranslate> AsPhysicalMemory for Win32Kernel<T, V> {
-    type PhysicalMemoryType = T;
+impl<T: PhysicalMemory, V: VirtualTranslate2> PhysicalMemory for Win32Kernel<T, V> {
+    fn phys_read_raw_list(&mut self, data: &mut [PhysicalReadData]) -> Result<()> {
+        self.virt_mem.phys_mem().phys_read_raw_list(data)
+    }
 
-    fn phys_mem(&mut self) -> &mut Self::PhysicalMemoryType {
-        self.virt_mem.phys_mem()
+    fn phys_write_raw_list(&mut self, data: &[PhysicalWriteData]) -> Result<()> {
+        self.virt_mem.phys_mem().phys_write_raw_list(data)
+    }
+
+    fn metadata(&self) -> PhysicalMemoryMetadata {
+        self.virt_mem.phys_mem_ref().metadata()
+    }
+
+    fn set_mem_map(&mut self, mem_map: &[PhysicalMemoryMapping]) {
+        self.virt_mem.phys_mem().set_mem_map(mem_map)
     }
 }
 
-impl<T: PhysicalMemory, V: VirtualTranslate> AsVirtualMemory for Win32Kernel<T, V> {
-    type VirtualMemoryType = VirtualDma<T, V, Win32VirtualTranslate>;
+impl<T: PhysicalMemory, V: VirtualTranslate2> VirtualMemory for Win32Kernel<T, V> {
+    fn virt_read_raw_list(&mut self, data: &mut [VirtualReadData]) -> PartialResult<()> {
+        self.virt_mem.virt_read_raw_list(data)
+    }
 
-    fn virt_mem(&mut self) -> &mut Self::VirtualMemoryType {
-        &mut self.virt_mem
+    fn virt_write_raw_list(&mut self, data: &[VirtualWriteData]) -> PartialResult<()> {
+        self.virt_mem.virt_write_raw_list(data)
     }
 }
 
-impl<'a, T: 'static + PhysicalMemory, V: 'static + VirtualTranslate> OsInner<'a>
+impl<'a, T: 'static + PhysicalMemory, V: 'static + VirtualTranslate2> OsInner<'a>
     for Win32Kernel<T, V>
 {
     type ProcessType =
@@ -599,7 +610,7 @@ impl<'a, T: 'static + PhysicalMemory, V: 'static + VirtualTranslate> OsInner<'a>
     }
 }
 
-impl<'a, T: 'static + PhysicalMemory, V: 'static + VirtualTranslate> OsKeyboardInner<'a>
+impl<'a, T: 'static + PhysicalMemory, V: 'static + VirtualTranslate2> OsKeyboardInner<'a>
     for Win32Kernel<T, V>
 {
     type KeyboardType =
@@ -615,7 +626,7 @@ impl<'a, T: 'static + PhysicalMemory, V: 'static + VirtualTranslate> OsKeyboardI
     }
 }
 
-impl<T: PhysicalMemory, V: VirtualTranslate> fmt::Debug for Win32Kernel<T, V> {
+impl<T: PhysicalMemory, V: VirtualTranslate2> fmt::Debug for Win32Kernel<T, V> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{:?}", self.kernel_info)
     }

@@ -388,13 +388,3 @@ impl<'a> From<PhysicalWriteData<'a>> for (PhysicalAddress, &'a [u8]) {
         (a, b.into())
     }
 }
-
-/// Trait that allows to borrow an interior reference to a [`PhysicalMemory`] object.
-#[cfg_attr(feature = "plugins", cglue_trait)]
-pub trait AsPhysicalMemory {
-    #[wrap_with_obj_mut(crate::mem::phys_mem::PhysicalMemory)]
-    type PhysicalMemoryType: crate::mem::phys_mem::PhysicalMemory;
-
-    /// Returns a mutable reference to the [`PhysicalMemory`] object.
-    fn phys_mem(&mut self) -> &mut Self::PhysicalMemoryType;
-}

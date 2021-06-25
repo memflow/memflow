@@ -44,15 +44,11 @@ fn main() -> Result<()> {
         let os_base = os.info().base;
 
         let mut out = [0u8; 32];
-        let phys_mem = as_mut!(os impl AsPhysicalMemory)
-            .expect("no phys mem found")
-            .phys_mem();
+        let phys_mem = as_mut!(os impl PhysicalMemory).expect("no phys mem found");
         phys_mem.phys_read_into(0x1000.into(), &mut out).unwrap();
         println!("Kernel Physical Read: {:?}", out);
 
-        let virt_mem = as_mut!(os impl AsVirtualMemory)
-            .expect("no virt mem found")
-            .virt_mem();
+        let virt_mem = as_mut!(os impl VirtualMemory).expect("no virt mem found");
         virt_mem.virt_read_into(os_base, &mut out).unwrap();
         println!("Kernel Virtual Read: {:?}", out);
     }

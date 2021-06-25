@@ -1,10 +1,10 @@
 use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 
 use super::tlb_cache::TlbCache;
-use crate::architecture::{ArchitectureObj, ScopedVirtualTranslate};
+use crate::architecture::{ArchitectureObj, VirtualTranslate3};
 use crate::iter::{PageChunks, SplitAtIndex};
 use crate::mem::cache::{CacheValidator, DefaultCacheValidator};
-use crate::mem::virt_translate::VirtualTranslate;
+use crate::mem::virt_translate::VirtualTranslate2;
 use crate::mem::PhysicalMemory;
 use crate::types::{Address, PhysicalAddress};
 
@@ -24,7 +24,7 @@ use bumpalo::{collections::Vec as BumpVec, Bump};
 /// use memflow::mem::cache::CachedVirtualTranslate;
 /// # use memflow::architecture::x86::x64;
 /// # use memflow::dummy::{DummyMemory, DummyOs};
-/// # use memflow::mem::{DirectTranslate, VirtualDma, VirtualMemory, VirtualTranslate};
+/// # use memflow::mem::{DirectTranslate, VirtualDma, VirtualMemory, VirtualTranslate2};
 /// # use memflow::types::size;
 /// # let mem = DummyMemory::new(size::mb(32));
 /// # let mut os = DummyOs::new(mem);
@@ -46,7 +46,7 @@ use bumpalo::{collections::Vec as BumpVec, Bump};
 /// # use memflow::mem::cache::CachedVirtualTranslate;
 /// # use memflow::architecture::x86::x64;
 /// # use memflow::dummy::{DummyMemory, DummyOs};
-/// # use memflow::mem::{DirectTranslate, VirtualDma, VirtualMemory, VirtualTranslate};
+/// # use memflow::mem::{DirectTranslate, VirtualDma, VirtualMemory, VirtualTranslate2};
 /// # use memflow::types::size;
 /// # let mem = DummyMemory::new(size::mb(32));
 /// # let mut os = DummyOs::new(mem);
@@ -99,7 +99,7 @@ pub struct CachedVirtualTranslate<V, Q> {
     pub misc: usize,
 }
 
-impl<V: VirtualTranslate, Q: CacheValidator> CachedVirtualTranslate<V, Q> {
+impl<V: VirtualTranslate2, Q: CacheValidator> CachedVirtualTranslate<V, Q> {
     pub fn new(vat: V, tlb: TlbCache<Q>, arch: ArchitectureObj) -> Self {
         Self {
             vat,
@@ -112,13 +112,13 @@ impl<V: VirtualTranslate, Q: CacheValidator> CachedVirtualTranslate<V, Q> {
     }
 }
 
-impl<V: VirtualTranslate> CachedVirtualTranslate<V, DefaultCacheValidator> {
+impl<V: VirtualTranslate2> CachedVirtualTranslate<V, DefaultCacheValidator> {
     pub fn builder(vat: V) -> CachedVirtualTranslateBuilder<V, DefaultCacheValidator> {
         CachedVirtualTranslateBuilder::new(vat)
     }
 }
 
-impl<V: VirtualTranslate + Clone, Q: CacheValidator + Clone> Clone
+impl<V: VirtualTranslate2 + Clone, Q: CacheValidator + Clone> Clone
     for CachedVirtualTranslate<V, Q>
 {
     fn clone(&self) -> Self {
@@ -133,7 +133,7 @@ impl<V: VirtualTranslate + Clone, Q: CacheValidator + Clone> Clone
     }
 }
 
-impl<V: VirtualTranslate, Q: CacheValidator> VirtualTranslate for CachedVirtualTranslate<V, Q> {
+impl<V: VirtualTranslate2, Q: CacheValidator> VirtualTranslate2 for CachedVirtualTranslate<V, Q> {
     fn virt_to_phys_iter<T, B, D, VI, VO, FO>(
         &mut self,
         phys_mem: &mut T,
@@ -144,7 +144,7 @@ impl<V: VirtualTranslate, Q: CacheValidator> VirtualTranslate for CachedVirtualT
     ) where
         T: PhysicalMemory + ?Sized,
         B: SplitAtIndex,
-        D: ScopedVirtualTranslate,
+        D: VirtualTranslate3,
         VI: Iterator<Item = (Address, B)>,
         VO: Extend<(PhysicalAddress, B)>,
         FO: Extend<(Error, Address, B)>,
@@ -232,7 +232,7 @@ pub struct CachedVirtualTranslateBuilder<V, Q> {
     arch: Option<ArchitectureObj>,
 }
 
-impl<V: VirtualTranslate> CachedVirtualTranslateBuilder<V, DefaultCacheValidator> {
+impl<V: VirtualTranslate2> CachedVirtualTranslateBuilder<V, DefaultCacheValidator> {
     fn new(vat: V) -> Self {
         Self {
             vat,
@@ -243,7 +243,7 @@ impl<V: VirtualTranslate> CachedVirtualTranslateBuilder<V, DefaultCacheValidator
     }
 }
 
-impl<V: VirtualTranslate, Q: CacheValidator> CachedVirtualTranslateBuilder<V, Q> {
+impl<V: VirtualTranslate2, Q: CacheValidator> CachedVirtualTranslateBuilder<V, Q> {
     pub fn build(self) -> Result<CachedVirtualTranslate<V, Q>> {
         Ok(CachedVirtualTranslate::new(
             self.vat,

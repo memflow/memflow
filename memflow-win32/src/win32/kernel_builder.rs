@@ -11,7 +11,7 @@ use memflow::cglue::forward::ForwardMut;
 use memflow::error::Result;
 use memflow::mem::{
     CachedMemoryAccess, CachedVirtualTranslate, DefaultCacheValidator, DirectTranslate,
-    PhysicalMemory, VirtualTranslate,
+    PhysicalMemory, VirtualTranslate2,
 };
 use memflow::types::Address;
 
@@ -23,8 +23,8 @@ use memflow::types::Address;
 /// This function is a high level abstraction over the individual parts of initialization a Windows target:
 /// - Scanning for the ntoskrnl and retrieving the `Win32KernelInfo` struct.
 /// - Retrieving the Offsets for the target Windows version.
-/// - Creating a struct which implements `VirtualTranslate` for virtual to physical address translations.
-/// - Optionally wrapping the Connector or the `VirtualTranslate` object into a cached object.
+/// - Creating a struct which implements `VirtualTranslate2` for virtual to physical address translations.
+/// - Optionally wrapping the Connector or the `VirtualTranslate2` object into a cached object.
 /// - Initialization of the Kernel structure itself.
 ///
 /// # Examples
@@ -149,7 +149,7 @@ impl<'a, T, TK, VK> Win32KernelBuilder<T, TK, VK>
 where
     T: PhysicalMemory,
     TK: 'static + PhysicalMemory + Clone,
-    VK: 'static + VirtualTranslate + Clone,
+    VK: 'static + VirtualTranslate2 + Clone,
 {
     pub fn build(mut self) -> Result<Win32Kernel<TK, VK>> {
         // find kernel_info
@@ -388,7 +388,7 @@ where
         func: F,
     ) -> Win32KernelBuilder<T, TK, VKN>
     where
-        VKN: VirtualTranslate,
+        VKN: VirtualTranslate2,
     {
         Win32KernelBuilder {
             connector: self.connector,

@@ -4,9 +4,10 @@ use std::time::{Duration, Instant};
 use clap::*;
 use log::Level;
 
+use cglue::*;
 use memflow::error::{Error, ErrorKind, ErrorOrigin, Result};
 use memflow::mem::*;
-use memflow::os::{ModuleInfo, Os, Process};
+use memflow::os::{ModuleInfo, OsInner, OsInstanceArcBox, Process};
 use memflow::plugins::*;
 use memflow::types::*;
 
@@ -14,7 +15,7 @@ use rand::{Rng, SeedableRng};
 use rand_xorshift::XorShiftRng as CurRng;
 
 fn rwtest(
-    mut proc: impl Process + AsVirtualMemory,
+    mut proc: impl Process + VirtualMemory,
     module: &ModuleInfo,
     chunk_sizes: &[usize],
     chunk_counts: &[usize],
@@ -56,7 +57,7 @@ fn rwtest(
 
                 let now = Instant::now();
                 {
-                    let mut batcher = proc.virt_mem().virt_batcher();
+                    let mut batcher = proc.virt_batcher();
 
                     for (buf, addr) in bufs.iter_mut() {
                         batcher.read_raw_into(Address::from(*addr), buf);
@@ -88,7 +89,7 @@ fn rwtest(
     );
 }
 
-fn read_bench(mut kernel: impl Os) -> Result<()> {
+fn read_bench(mut kernel: OsInstanceArcBox) -> Result<()> {
     let proc_list = kernel.process_info_list()?;
     let mut rng = CurRng::seed_from_u64(rand::thread_rng().gen_range(0..!0u64));
     loop {
@@ -110,16 +111,16 @@ fn read_bench(mut kernel: impl Os) -> Result<()> {
                 prc.info().name,
             );
 
-            let mem_map = prc.virt_mem().virt_page_map(size::gb(1));
+            let mem_map = {
+                let prc = as_mut!(prc impl VirtualTranslate)
+                    .ok_or(ErrorKind::UnsupportedOptionalFeature)?;
+                prc.virt_page_map_vec(size::gb(1))
+            };
 
             println!("Memory map (with up to 1GB gaps):");
 
             for map in mem_map {
-                println!(
-                    "{:x}-{:x}",
-                    map.virt_address,
-                    map.virt_address + map.virt_size
-                );
+                println!("{:x}-{:x}", map.address, map.address + map.size);
             }
 
             rwtest(

@@ -2,10 +2,10 @@ use criterion::*;
 
 use memflow::mem::{
     CachedMemoryAccess, CachedVirtualTranslate, PhysicalMemory, VirtualDma, VirtualMemory,
-    VirtualReadData, VirtualTranslate,
+    VirtualReadData, VirtualTranslate2,
 };
 
-use memflow::architecture::ScopedVirtualTranslate;
+use memflow::architecture::VirtualTranslate3;
 use memflow::error::Result;
 use memflow::os::*;
 use memflow::types::*;
@@ -78,7 +78,7 @@ pub fn read_test_with_mem<T: VirtualMemory>(
     ));
 }
 
-fn read_test_with_ctx<T: PhysicalMemory, V: VirtualTranslate, S: ScopedVirtualTranslate>(
+fn read_test_with_ctx<T: PhysicalMemory, V: VirtualTranslate2, S: VirtualTranslate3>(
     bench: &mut Bencher,
     cache_size: u64,
     chunk_size: usize,
@@ -118,7 +118,7 @@ fn read_test_with_ctx<T: PhysicalMemory, V: VirtualTranslate, S: ScopedVirtualTr
     }
 }
 
-fn seq_read_params<T: PhysicalMemory, V: VirtualTranslate, S: ScopedVirtualTranslate>(
+fn seq_read_params<T: PhysicalMemory, V: VirtualTranslate2, S: VirtualTranslate3>(
     group: &mut BenchmarkGroup<'_, measurement::WallTime>,
     func_name: String,
     cache_size: u64,
@@ -144,7 +144,7 @@ fn seq_read_params<T: PhysicalMemory, V: VirtualTranslate, S: ScopedVirtualTrans
     }
 }
 
-fn chunk_read_params<T: PhysicalMemory, V: VirtualTranslate, S: ScopedVirtualTranslate>(
+fn chunk_read_params<T: PhysicalMemory, V: VirtualTranslate2, S: VirtualTranslate3>(
     group: &mut BenchmarkGroup<'_, measurement::WallTime>,
     func_name: String,
     cache_size: u64,
@@ -172,7 +172,7 @@ fn chunk_read_params<T: PhysicalMemory, V: VirtualTranslate, S: ScopedVirtualTra
     }
 }
 
-pub fn seq_read<T: PhysicalMemory, V: VirtualTranslate, S: ScopedVirtualTranslate>(
+pub fn seq_read<T: PhysicalMemory, V: VirtualTranslate2, S: VirtualTranslate3>(
     c: &mut Criterion,
     backend_name: &str,
     initialize_ctx: &dyn Fn() -> Result<(T, V, ProcessInfo, S, ModuleInfo)>,
@@ -214,7 +214,7 @@ pub fn seq_read<T: PhysicalMemory, V: VirtualTranslate, S: ScopedVirtualTranslat
     );
 }
 
-pub fn chunk_read<T: PhysicalMemory, V: VirtualTranslate, S: ScopedVirtualTranslate>(
+pub fn chunk_read<T: PhysicalMemory, V: VirtualTranslate2, S: VirtualTranslate3>(
     c: &mut Criterion,
     backend_name: &str,
     initialize_ctx: &dyn Fn() -> Result<(T, V, ProcessInfo, S, ModuleInfo)>,

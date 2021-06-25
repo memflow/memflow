@@ -29,17 +29,17 @@ pub use mem_map::{MemoryMap, PhysicalMemoryMapping};
 pub use phys_mem::ConnectorInstanceArcBox;
 #[doc(hidden)]
 pub use phys_mem::{
-    AsPhysicalMemory, PhysicalMemory, PhysicalMemoryMetadata, PhysicalReadData,
-    PhysicalReadIterator, PhysicalWriteData, PhysicalWriteIterator,
+    PhysicalMemory, PhysicalMemoryMetadata, PhysicalReadData, PhysicalReadIterator,
+    PhysicalWriteData, PhysicalWriteIterator,
 };
 #[doc(hidden)]
 pub use phys_mem_batcher::PhysicalMemoryBatcher;
 #[doc(hidden)]
-pub use virt_mem::{AsVirtualMemory, VirtualDma, VirtualMemory, VirtualReadData, VirtualWriteData};
+pub use virt_mem::{VirtualDma, VirtualMemory, VirtualReadData, VirtualWriteData};
 #[doc(hidden)]
 pub use virt_mem_batcher::VirtualMemoryBatcher;
 #[doc(hidden)]
-pub use virt_translate::{DirectTranslate, VirtualTranslate};
+pub use virt_translate::{DirectTranslate, VirtualTranslate, VirtualTranslate2};
 
 #[cfg(feature = "std")]
 #[doc(hidden)]

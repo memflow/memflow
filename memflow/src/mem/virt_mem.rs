@@ -4,10 +4,8 @@ pub use virtual_dma::VirtualDma;
 use crate::architecture::ArchitectureObj;
 use crate::cglue::*;
 use crate::dataview::Pod;
-use crate::error::{
-    Error, ErrorKind, ErrorOrigin, PartialError, PartialResult, PartialResultExt, Result,
-};
-use crate::types::{Address, Page, PhysicalAddress, Pointer32, Pointer64};
+use crate::error::*;
+use crate::types::{Address, Pointer32, Pointer64};
 
 use super::VirtualMemoryBatcher;
 
@@ -16,27 +14,6 @@ use std::prelude::v1::*;
 
 #[cfg(feature = "std")]
 use super::VirtualMemoryCursor;
-
-/// Virtual page range information with physical mappings used for callbacks
-#[repr(C)]
-#[derive(Clone, Debug, PartialEq)]
-pub struct VirtualTranslationRangeInfo {
-    pub virt_address: Address,
-    pub virt_size: usize,
-    pub phys_address: PhysicalAddress,
-}
-
-pub type VirtualTranslationRangeCallback<'a> = OpaqueCallback<'a, VirtualTranslationRangeInfo>;
-
-/// Virtual page range information used for callbacks
-#[repr(C)]
-#[derive(Clone, Debug, PartialEq)]
-pub struct VirtualRangeInfo {
-    pub virt_address: Address,
-    pub virt_size: usize,
-}
-
-pub type VirtualRangeCallback<'a> = OpaqueCallback<'a, VirtualRangeInfo>;
 
 /// The `VirtualMemory` trait implements access to virtual memory for a specific process
 /// and provides a generic way to read and write from/to that processes virtual memory.
@@ -53,7 +30,7 @@ pub type VirtualRangeCallback<'a> = OpaqueCallback<'a, VirtualRangeInfo>;
 /// Reading from `VirtualMemory`:
 /// ```
 /// use memflow::types::Address;
-/// use memflow::mem::{VirtualMemory, AsVirtualMemory};
+/// use memflow::mem::VirtualMemory;
 ///
 /// fn read(virt_mem: &mut impl VirtualMemory, read_addr: Address) {
 ///     let mut addr = 0u64;
@@ -66,34 +43,15 @@ pub type VirtualRangeCallback<'a> = OpaqueCallback<'a, VirtualRangeInfo>;
 /// # use memflow::types::size;
 /// # let mut proc = DummyOs::quick_process(size::mb(2), &[255, 0, 255, 0, 255, 0, 255, 0]);
 /// # let virt_base = proc.info().address;
-/// # read(proc.virt_mem(), virt_base);
+/// # read(&mut proc, virt_base);
 /// ```
 #[cfg_attr(feature = "plugins", cglue_trait)]
-#[int_result]
+#[int_result(PartialResult)]
 #[cglue_forward]
 pub trait VirtualMemory: Send {
-    #[int_result(PartialResult)]
     fn virt_read_raw_list(&mut self, data: &mut [VirtualReadData]) -> PartialResult<()>;
 
-    #[int_result(PartialResult)]
     fn virt_write_raw_list(&mut self, data: &[VirtualWriteData]) -> PartialResult<()>;
-
-    fn virt_page_info(&mut self, addr: Address) -> Result<Page>;
-
-    fn virt_translation_map_range_callback(
-        &mut self,
-        start: Address,
-        end: Address,
-        callback: VirtualTranslationRangeCallback,
-    );
-
-    fn virt_page_map_range_callback(
-        &mut self,
-        gap_size: usize,
-        start: Address,
-        end: Address,
-        callback: VirtualRangeCallback,
-    );
 
     // read helpers
     #[int_result(PartialResult)]
@@ -141,40 +99,6 @@ pub trait VirtualMemory: Send {
         Self: Sized,
     {
         self.virt_write_raw(addr, data.as_bytes())
-    }
-
-    // page map helpers
-    #[skip_func]
-    fn virt_translation_map_range(
-        &mut self,
-        start: Address,
-        end: Address,
-    ) -> Vec<VirtualTranslationRangeInfo> {
-        let mut ret = vec![];
-        self.virt_translation_map_range_callback(start, end, (&mut ret).into());
-        ret
-    }
-
-    #[skip_func]
-    fn virt_page_map_range(
-        &mut self,
-        gap_size: usize,
-        start: Address,
-        end: Address,
-    ) -> Vec<VirtualRangeInfo> {
-        let mut ret = vec![];
-        self.virt_page_map_range_callback(gap_size, start, end, (&mut ret).into());
-        ret
-    }
-
-    #[skip_func]
-    fn virt_translation_map(&mut self) -> Vec<VirtualTranslationRangeInfo> {
-        self.virt_translation_map_range(Address::null(), Address::invalid())
-    }
-
-    #[skip_func]
-    fn virt_page_map(&mut self, gap_size: usize) -> Vec<VirtualRangeInfo> {
-        self.virt_page_map_range(gap_size, Address::null(), Address::invalid())
     }
 
     // specific read helpers
@@ -406,14 +330,4 @@ impl<'a> From<VirtualWriteData<'a>> for (Address, &'a [u8]) {
     fn from(VirtualWriteData(a, b): VirtualWriteData<'a>) -> Self {
         (a, b.into())
     }
-}
-
-/// Trait that allows to borrow an interior reference to a [`VirtualMemory`] object.
-#[cfg_attr(feature = "plugins", cglue_trait)]
-pub trait AsVirtualMemory {
-    #[wrap_with_obj_mut(crate::mem::virt_mem::VirtualMemory)]
-    type VirtualMemoryType: crate::mem::virt_mem::VirtualMemory;
-
-    /// Returns a mutable reference to the [`VirtualMemory`] object.
-    fn virt_mem(&mut self) -> &mut Self::VirtualMemoryType;
 }

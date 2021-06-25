@@ -1,6 +1,6 @@
 use super::{
     super::{ArchMmuDef, ArchitectureObj, Endianess},
-    X86Architecture, X86ScopedVirtualTranslate,
+    X86Architecture, X86VirtualTranslate,
 };
 
 use crate::types::Address;
@@ -24,8 +24,8 @@ pub(super) static ARCH_SPEC: X86Architecture = X86Architecture {
 
 pub static ARCH: ArchitectureObj = &ARCH_SPEC;
 
-pub fn new_translator(dtb: Address) -> X86ScopedVirtualTranslate {
-    X86ScopedVirtualTranslate::new(&ARCH_SPEC, dtb)
+pub fn new_translator(dtb: Address) -> X86VirtualTranslate {
+    X86VirtualTranslate::new(&ARCH_SPEC, dtb)
 }
 
 #[cfg(test)]

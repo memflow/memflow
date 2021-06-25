@@ -8,13 +8,20 @@ fn main() -> Result<()> {
 
     // create connector + os
     let inventory = Inventory::scan();
-    let mut os = inventory
-        .builder()
-        .connector(&conn_name)
-        .args(conn_args)
-        .os(&os_name)
-        .args(os_args)
-        .build()?;
+    let mut os = {
+        let builder = inventory.builder();
+
+        if let Some(conn_name) = conn_name {
+            builder
+                .connector(&conn_name)
+                .args(conn_args)
+                .os(&os_name)
+                .args(os_args)
+                .build()
+        } else {
+            builder.os(&os_name).args(os_args).build()
+        }
+    }?;
 
     let process_list = os.process_info_list()?;
 
@@ -34,7 +41,7 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn parse_args() -> Result<(String, Args, String, Args)> {
+fn parse_args() -> Result<(Option<String>, Args, String, Args)> {
     let matches = App::new("mfps")
         .version(crate_version!())
         .author(crate_authors!())
@@ -86,7 +93,7 @@ fn parse_args() -> Result<(String, Args, String, Args)> {
         .unwrap();
 
     Ok((
-        matches.value_of("connector").unwrap_or("").into(),
+        matches.value_of("connector").map(ToString::to_string),
         Args::parse(matches.value_of("conn-args").ok_or_else(|| {
             Error(ErrorOrigin::Other, ErrorKind::Configuration)
                 .log_error("failed to parse connector args")

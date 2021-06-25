@@ -11,12 +11,14 @@ use std::prelude::v1::*;
 // those only required when compiling cglue code
 #[cfg(feature = "plugins")]
 use crate::mem::virt_mem::*;
+#[cfg(feature = "plugins")]
+use crate::mem::virt_translate::*;
 
-// ProcessInstance group for Process and AsVirtualMemory
+// ProcessInstance group for Process and VirtualMemory
 #[cfg(feature = "plugins")]
-cglue_trait_group!(ProcessInstance, { Process, AsVirtualMemory }, {});
+cglue_trait_group!(ProcessInstance, { Process, VirtualMemory }, { VirtualTranslate });
 #[cfg(feature = "plugins")]
-cglue_trait_group!(IntoProcessInstance, { Process, AsVirtualMemory, Clone }, {});
+cglue_trait_group!(IntoProcessInstance, { Process, VirtualMemory, Clone }, { VirtualTranslate });
 
 /// Type meant for process IDs
 ///

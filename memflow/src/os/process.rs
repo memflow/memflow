@@ -6,12 +6,13 @@ use super::{
 };
 use crate::cglue::*;
 use crate::mem::virt_mem::*;
+use crate::mem::virt_translate::*;
 use crate::prelude::v1::{Result, *};
 use std::prelude::v1::*;
 
-// ProcessInstance group for Process and AsVirtualMemory
-cglue_trait_group!(ProcessInstance, { Process, AsVirtualMemory }, {});
-cglue_trait_group!(IntoProcessInstance, { Process, AsVirtualMemory, Clone }, {});
+// ProcessInstance group for Process and VirtualMemory
+cglue_trait_group!(ProcessInstance, { Process, VirtualMemory }, { VirtualTranslate });
+cglue_trait_group!(IntoProcessInstance, { Process, VirtualMemory, Clone }, { VirtualTranslate });
 
 /// Type meant for process IDs
 ///

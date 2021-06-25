@@ -1,6 +1,6 @@
 use crate::architecture::x86::x64;
-use crate::architecture::ScopedVirtualTranslate;
-use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
+use crate::architecture::VirtualTranslate3;
+use crate::error::*;
 
 use crate::architecture::ArchitectureIdent;
 use crate::mem::virt_mem::*;
@@ -34,7 +34,7 @@ impl DummyProcessInfo {
         }
     }
 
-    pub fn translator(&self) -> impl ScopedVirtualTranslate {
+    pub fn translator(&self) -> impl VirtualTranslate3 {
         x64::new_translator(self.dtb)
     }
 }
@@ -137,11 +137,12 @@ impl<T: VirtualMemory> Process for DummyProcess<T> {
     }
 }
 
-impl<T: VirtualMemory> AsVirtualMemory for DummyProcess<T> {
-    type VirtualMemoryType = T;
+impl<T: VirtualMemory> VirtualMemory for DummyProcess<T> {
+    fn virt_read_raw_list(&mut self, data: &mut [VirtualReadData]) -> PartialResult<()> {
+        self.mem.virt_read_raw_list(data)
+    }
 
-    /// Retrieves virtual memory object for the process
-    fn virt_mem(&mut self) -> &mut Self::VirtualMemoryType {
-        &mut self.mem
+    fn virt_write_raw_list(&mut self, data: &[VirtualWriteData]) -> PartialResult<()> {
+        self.mem.virt_write_raw_list(data)
     }
 }

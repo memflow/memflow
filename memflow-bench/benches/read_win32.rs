@@ -20,7 +20,7 @@ fn initialize_virt_ctx() -> Result<(
     impl PhysicalMemory,
     DirectTranslate,
     ProcessInfo,
-    impl ScopedVirtualTranslate,
+    impl VirtualTranslate3,
     ModuleInfo,
 )> {
     let mut phys_mem = create_connector(&Args::new())?;

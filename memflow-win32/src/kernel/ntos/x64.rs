@@ -9,12 +9,12 @@ use memflow::architecture::{x86::x64, ArchitectureObj};
 use memflow::dataview::Pod;
 use memflow::error::{Error, ErrorKind, ErrorOrigin, PartialResultExt, Result};
 use memflow::iter::PageChunks;
-use memflow::mem::VirtualMemory;
+use memflow::mem::{VirtualMemory, VirtualTranslate};
 use memflow::types::{size, Address};
 
 use pelite::image::IMAGE_DOS_HEADER;
 
-pub fn find_with_va_hint<T: VirtualMemory>(
+pub fn find_with_va_hint<T: VirtualMemory + VirtualTranslate>(
     virt_mem: &mut T,
     start_block: &StartBlock,
 ) -> Result<(Address, usize)> {
@@ -44,7 +44,7 @@ pub fn find_with_va_hint<T: VirtualMemory>(
         .log_trace("x64::find_with_va_hint: unable to locate ntoskrnl.exe via va hint"))
 }
 
-fn find_with_va<T: VirtualMemory>(virt_mem: &mut T, va_base: u64) -> Result<u64> {
+fn find_with_va<T: VirtualMemory + VirtualTranslate>(virt_mem: &mut T, va_base: u64) -> Result<u64> {
     let mut buf = vec![0; size::mb(2)];
     virt_mem
         .virt_read_raw_into(Address::from(va_base), &mut buf)
@@ -76,13 +76,13 @@ fn find_with_va<T: VirtualMemory>(virt_mem: &mut T, va_base: u64) -> Result<u64>
         })
 }
 
-pub fn find<T: VirtualMemory>(
+pub fn find<T: VirtualMemory + VirtualTranslate>(
     virt_mem: &mut T,
     start_block: &StartBlock,
 ) -> Result<(Address, usize)> {
     debug!("x64::find: trying to find ntoskrnl.exe with page map",);
 
-    let page_map = virt_mem.virt_page_map_range(
+    let page_map = virt_mem.virt_page_map_range_vec(
         size::mb(2),
         (!0u64 - (1u64 << (ArchitectureObj::from(start_block.arch).address_space_bits() - 1)))
             .into(),
@@ -91,7 +91,7 @@ pub fn find<T: VirtualMemory>(
 
     match page_map
         .into_iter()
-        .flat_map(|map| map.virt_size.page_chunks(map.virt_address, size::mb(2)))
+        .flat_map(|map| map.size.page_chunks(map.address, size::mb(2)))
         .filter(|(_, size)| *size > size::kb(256))
         .filter_map(|(va, _)| find_with_va(virt_mem, va.as_u64()).ok())
         .next()

@@ -30,7 +30,7 @@ pub fn build_kernel(
 fn build_final<
     A: 'static + PhysicalMemory + Clone,
     B: 'static + PhysicalMemory + Clone,
-    C: 'static + VirtualTranslate + Clone,
+    C: 'static + VirtualTranslate2 + Clone,
 >(
     kernel_builder: Win32KernelBuilder<A, B, C>,
     _: &Args,
@@ -47,7 +47,7 @@ fn build_final<
 fn build_arch<
     A: 'static + PhysicalMemory + Clone,
     B: 'static + PhysicalMemory + Clone,
-    C: 'static + VirtualTranslate + Clone,
+    C: 'static + VirtualTranslate2 + Clone,
 >(
     builder: Win32KernelBuilder<A, B, C>,
     args: &Args,
@@ -69,7 +69,7 @@ fn build_arch<
 fn build_symstore<
     A: 'static + PhysicalMemory + Clone,
     B: 'static + PhysicalMemory + Clone,
-    C: 'static + VirtualTranslate + Clone,
+    C: 'static + VirtualTranslate2 + Clone,
 >(
     builder: Win32KernelBuilder<A, B, C>,
     args: &Args,
@@ -89,7 +89,7 @@ fn build_symstore<
 fn build_kernel_hint<
     A: 'static + PhysicalMemory + Clone,
     B: 'static + PhysicalMemory + Clone,
-    C: 'static + VirtualTranslate + Clone,
+    C: 'static + VirtualTranslate2 + Clone,
 >(
     builder: Win32KernelBuilder<A, B, C>,
     args: &Args,
@@ -107,7 +107,7 @@ fn build_kernel_hint<
 fn build_page_cache<
     A: 'static + PhysicalMemory + Clone,
     B: 'static + PhysicalMemory + Clone,
-    C: 'static + VirtualTranslate + Clone,
+    C: 'static + VirtualTranslate2 + Clone,
 >(
     builder: Win32KernelBuilder<A, B, C>,
     mode: &str,
@@ -192,7 +192,7 @@ fn build_page_cache<
 fn build_vat<
     A: 'static + PhysicalMemory + Clone,
     B: 'static + PhysicalMemory + Clone,
-    C: 'static + VirtualTranslate + Clone,
+    C: 'static + VirtualTranslate2 + Clone,
 >(
     builder: Win32KernelBuilder<A, B, C>,
     mode: &str,
@@ -251,7 +251,7 @@ fn build_vat<
 fn build_caches<
     A: 'static + PhysicalMemory + Clone,
     B: 'static + PhysicalMemory + Clone,
-    C: 'static + VirtualTranslate + Clone,
+    C: 'static + VirtualTranslate2 + Clone,
 >(
     builder: Win32KernelBuilder<A, B, C>,
     args: &Args,
@@ -267,7 +267,7 @@ fn build_caches<
 fn build_dtb<
     A: 'static + PhysicalMemory + Clone,
     B: 'static + PhysicalMemory + Clone,
-    C: 'static + VirtualTranslate + Clone,
+    C: 'static + VirtualTranslate2 + Clone,
 >(
     builder: Win32KernelBuilder<A, B, C>,
     args: &Args,

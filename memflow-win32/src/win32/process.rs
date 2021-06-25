@@ -6,9 +6,10 @@ use std::fmt;
 
 use memflow::architecture::ArchitectureIdent;
 use memflow::cglue::{self, *};
-use memflow::error::{Error, ErrorKind, ErrorOrigin, PartialResultExt, Result};
+use memflow::error::{Error, Result, *};
 use memflow::mem::virt_mem::*;
-use memflow::mem::{PhysicalMemory, VirtualDma, VirtualMemory, VirtualTranslate};
+use memflow::mem::{PhysicalMemory, VirtualDma, VirtualMemory};
+use memflow::mem::virt_translate::*;
 use memflow::os::process::*;
 use memflow::os::{
     ExportCallback, ExportInfo, ImportCallback, ImportInfo, ModuleAddressCallback,
@@ -100,8 +101,8 @@ impl Win32ProcessInfo {
     }
 }
 
-cglue_impl_group!(Win32Process<T>, ProcessInstance);
-cglue_impl_group!(Win32Process<T>, IntoProcessInstance);
+cglue_impl_group!(Win32Process<T>, ProcessInstance, { VirtualTranslate });
+cglue_impl_group!(Win32Process<T>, IntoProcessInstance, { VirtualTranslate });
 
 pub struct Win32Process<T> {
     pub virt_mem: T,
@@ -126,13 +127,25 @@ impl<V: VirtualMemory> AsMut<V> for Win32Process<V> {
     }
 }
 
-impl<T: VirtualMemory> AsVirtualMemory for Win32Process<T> {
-    type VirtualMemoryType = T;
-    //type VirtualTranslateType: VirtualTranslate;
+impl<T: VirtualMemory> VirtualMemory for Win32Process<T> {
+    fn virt_read_raw_list(&mut self, data: &mut [VirtualReadData]) -> PartialResult<()> {
+        self.virt_mem.virt_read_raw_list(data)
+    }
 
-    /// Retrieves virtual memory object for the process
-    fn virt_mem(&mut self) -> &mut Self::VirtualMemoryType {
-        &mut self.virt_mem
+    fn virt_write_raw_list(&mut self, data: &[VirtualWriteData]) -> PartialResult<()> {
+        self.virt_mem.virt_write_raw_list(data)
+    }
+}
+
+impl<T: PhysicalMemory, V: VirtualTranslate2>
+    VirtualTranslate for Win32Process<VirtualDma<T, V, Win32VirtualTranslate>> {
+    fn virt_to_phys_list(
+        &mut self,
+        addrs: &[MemoryRange],
+        out: VirtualTranslationCallback,
+        out_fail: VirtualTranslationFailCallback,
+    ) {
+        self.virt_mem.virt_to_phys_list(addrs, out, out_fail)
     }
 }
 
@@ -335,7 +348,7 @@ impl<T: VirtualMemory> Process for Win32Process<T> {
 
 // TODO: replace the following impls with a dedicated builder
 // TODO: add non cloneable thing
-impl<'a, T: PhysicalMemory, V: VirtualTranslate>
+impl<'a, T: PhysicalMemory, V: VirtualTranslate2>
     Win32Process<VirtualDma<T, V, Win32VirtualTranslate>>
 {
     pub fn with_kernel(kernel: Win32Kernel<T, V>, proc_info: Win32ProcessInfo) -> Self {
@@ -360,7 +373,7 @@ impl<'a, T: PhysicalMemory, V: VirtualTranslate>
     }
 }
 
-impl<'a, T: PhysicalMemory, V: VirtualTranslate>
+impl<'a, T: PhysicalMemory, V: VirtualTranslate2>
     Win32Process<VirtualDma<Fwd<&'a mut T>, Fwd<&'a mut V>, Win32VirtualTranslate>>
 {
     /// Constructs a new process by borrowing a kernel object.

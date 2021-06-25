@@ -1,7 +1,7 @@
 use std::prelude::v1::*;
 
 use super::CacheValidator;
-use crate::architecture::{ArchitectureObj, ScopedVirtualTranslate};
+use crate::architecture::{ArchitectureObj, VirtualTranslate3};
 use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 use crate::types::{Address, PhysicalAddress};
 
@@ -64,7 +64,7 @@ impl<T: CacheValidator> TlbCache<T> {
     }
 
     #[inline]
-    pub fn try_entry<D: ScopedVirtualTranslate>(
+    pub fn try_entry<D: VirtualTranslate3>(
         &self,
         translator: &D,
         addr: Address,
@@ -100,7 +100,7 @@ impl<T: CacheValidator> TlbCache<T> {
     }
 
     #[inline]
-    pub fn cache_entry<D: ScopedVirtualTranslate>(
+    pub fn cache_entry<D: VirtualTranslate3>(
         &mut self,
         translator: &D,
         in_addr: Address,
@@ -119,7 +119,7 @@ impl<T: CacheValidator> TlbCache<T> {
     }
 
     #[inline]
-    pub fn cache_invalid_if_uncached<D: ScopedVirtualTranslate>(
+    pub fn cache_invalid_if_uncached<D: VirtualTranslate3>(
         &mut self,
         translator: &D,
         in_addr: Address,

@@ -20,7 +20,7 @@ use rand_xorshift::XorShiftRng;
 use std::collections::VecDeque;
 use std::ffi::c_void;
 
-use crate::architecture::x86::{x64, X86ScopedVirtualTranslate};
+use crate::architecture::x86::{x64, X86VirtualTranslate};
 
 use x86_64::{
     structures::paging,
@@ -88,7 +88,7 @@ impl PageInfo {
     }
 }
 
-cglue_impl_group!(DummyOs, OsInstance<'a>, AsPhysicalMemory);
+cglue_impl_group!(DummyOs, OsInstance<'a>, PhysicalMemory);
 
 pub struct DummyOs {
     mem: DummyMemory,
@@ -154,12 +154,6 @@ impl DummyOs {
         let pid = os.alloc_process(virt_size, buffer);
         os.into_process_by_pid(pid).unwrap()
     }
-
-    /*pub fn new_virt(size: usize, virt_size: usize, buffer: &[u8]) -> (impl VirtualMemory, Address) {
-        let (ret, dtb, virt_base) = Self::new_and_dtb(size, virt_size, buffer);
-        let virt = VirtualDma::new(ret.mem, x64::ARCH, x64::new_translator(dtb));
-        (virt, virt_base)
-    }*/
 
     pub fn new(mem: DummyMemory) -> Self {
         Self::with_rng(mem, SeedableRng::from_rng(thread_rng()).unwrap())
@@ -407,7 +401,7 @@ impl DummyOs {
     }
 }
 
-pub type DummyVirtMem<T> = VirtualDma<T, DirectTranslate, X86ScopedVirtualTranslate>;
+pub type DummyVirtMem<T> = VirtualDma<T, DirectTranslate, X86VirtualTranslate>;
 
 impl<'a> OsInner<'a> for DummyOs {
     type ProcessType = DummyProcess<DummyVirtMem<Fwd<&'a mut DummyMemory>>>;
@@ -497,11 +491,21 @@ impl<'a> OsInner<'a> for DummyOs {
     }
 }
 
-impl AsPhysicalMemory for DummyOs {
-    type PhysicalMemoryType = DummyMemory;
+impl PhysicalMemory for DummyOs {
+    fn phys_read_raw_list(&mut self, data: &mut [PhysicalReadData]) -> Result<()> {
+        self.mem.phys_read_raw_list(data)
+    }
 
-    fn phys_mem(&mut self) -> &mut Self::PhysicalMemoryType {
-        &mut self.mem
+    fn phys_write_raw_list(&mut self, data: &[PhysicalWriteData]) -> Result<()> {
+        self.mem.phys_write_raw_list(data)
+    }
+
+    fn metadata(&self) -> PhysicalMemoryMetadata {
+        self.mem.metadata()
+    }
+
+    fn set_mem_map(&mut self, mem_map: &[PhysicalMemoryMapping]) {
+        self.mem.set_mem_map(mem_map)
     }
 }
 

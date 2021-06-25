@@ -13,7 +13,7 @@ fn initialize_virt_ctx() -> Result<(
     Memory,
     DirectTranslate,
     ProcessInfo,
-    impl ScopedVirtualTranslate,
+    impl VirtualTranslate3,
     ModuleInfo,
 )> {
     let mem = Memory::new(size::mb(64));

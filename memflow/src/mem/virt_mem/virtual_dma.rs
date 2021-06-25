@@ -1,24 +1,19 @@
 use std::prelude::v1::*;
 
 use super::{VirtualReadData, VirtualWriteData};
-use crate::architecture::{ArchitectureObj, ScopedVirtualTranslate};
-use crate::error::{Error, ErrorKind, ErrorOrigin, PartialError, PartialResult, Result};
+use crate::architecture::{ArchitectureObj, VirtualTranslate3};
+use crate::error::{Error, *};
 use crate::iter::FnExtend;
 use crate::mem::{
-    virt_mem::{
-        VirtualRangeCallback, VirtualRangeInfo, VirtualTranslationRangeCallback,
-        VirtualTranslationRangeInfo,
-    },
-    virt_translate::{DirectTranslate, VirtualTranslate},
+    virt_translate::{DirectTranslate, VirtualTranslate, VirtualTranslate2, MemoryRange, VirtualTranslationCallback, VirtualTranslationFailCallback, VirtualTranslation, VirtualTranslationFail},
     PhysicalMemory, PhysicalReadData, PhysicalWriteData, VirtualMemory,
 };
-use crate::types::{Address, Page};
+use crate::types::{Address, PhysicalAddress};
 
 use bumpalo::{collections::Vec as BumpVec, Bump};
-use itertools::Itertools;
 
 /// The VirtualDma struct provides a default implementation to access virtual memory
-/// from user provided [`PhysicalMemory`] and [`VirtualTranslate`] objects.
+/// from user provided [`PhysicalMemory`] and [`VirtualTranslate2`] objects.
 ///
 /// This struct implements [`VirtualMemory`] and allows the user to access the virtual memory of a process.
 pub struct VirtualDma<T, V, D> {
@@ -29,12 +24,12 @@ pub struct VirtualDma<T, V, D> {
     arena: Bump,
 }
 
-impl<T: PhysicalMemory, D: ScopedVirtualTranslate> VirtualDma<T, DirectTranslate, D> {
+impl<T: PhysicalMemory, D: VirtualTranslate3> VirtualDma<T, DirectTranslate, D> {
     /// Constructs a `VirtualDma` object from user supplied architectures and DTB.
-    /// It creates a default `VirtualTranslate` object using the `DirectTranslate` struct.
+    /// It creates a default `VirtualTranslate2` object using the `DirectTranslate` struct.
     ///
     /// If you want to use a cache for translating virtual to physical memory
-    /// consider using the `VirtualDma::with_vat()` function and supply your own `VirtualTranslate` object.
+    /// consider using the `VirtualDma::with_vat()` function and supply your own `VirtualTranslate2` object.
     ///
     /// # Examples
     ///
@@ -42,10 +37,10 @@ impl<T: PhysicalMemory, D: ScopedVirtualTranslate> VirtualDma<T, DirectTranslate
     /// ```
     /// use memflow::types::Address;
     /// use memflow::architecture::x86::x64;
-    /// use memflow::mem::{PhysicalMemory, VirtualTranslate, VirtualMemory, VirtualDma};
+    /// use memflow::mem::{PhysicalMemory, VirtualTranslate2, VirtualMemory, VirtualDma};
     /// use memflow::cglue::Fwd;
     ///
-    /// fn read(phys_mem: Fwd<&mut impl PhysicalMemory>, vat: &mut impl VirtualTranslate, dtb: Address, read_addr: Address) {
+    /// fn read(phys_mem: Fwd<&mut impl PhysicalMemory>, vat: &mut impl VirtualTranslate2, dtb: Address, read_addr: Address) {
     ///     let arch = x64::ARCH;
     ///     let translator = x64::new_translator(dtb);
     ///
@@ -58,12 +53,12 @@ impl<T: PhysicalMemory, D: ScopedVirtualTranslate> VirtualDma<T, DirectTranslate
     /// }
     /// # use memflow::dummy::{DummyMemory, DummyOs};
     /// # use memflow::types::size;
-    /// # use memflow::mem::{DirectTranslate, AsPhysicalMemory};
+    /// # use memflow::mem::DirectTranslate;
     /// # use memflow::cglue::ForwardMut;
     /// # let mem = DummyMemory::new(size::mb(4));
     /// # let (mut os, dtb, virt_base) = DummyOs::new_and_dtb(mem, size::mb(2), &[255, 0, 255, 0, 255, 0, 255, 0]);
     /// # let mut vat = DirectTranslate::new();
-    /// # read(os.phys_mem().forward_mut(), &mut vat, dtb, virt_base);
+    /// # read(os.forward_mut(), &mut vat, dtb, virt_base);
     /// ```
     pub fn new(phys_mem: T, arch: impl Into<ArchitectureObj>, translator: D) -> Self {
         Self {
@@ -76,8 +71,8 @@ impl<T: PhysicalMemory, D: ScopedVirtualTranslate> VirtualDma<T, DirectTranslate
     }
 }
 
-impl<T: PhysicalMemory, V: VirtualTranslate, D: ScopedVirtualTranslate> VirtualDma<T, V, D> {
-    /// This function constructs a `VirtualDma` instance with a user supplied `VirtualTranslate` object.
+impl<T: PhysicalMemory, V: VirtualTranslate2, D: VirtualTranslate3> VirtualDma<T, V, D> {
+    /// This function constructs a `VirtualDma` instance with a user supplied `VirtualTranslate2` object.
     /// It can be used when working with cached virtual to physical translations such as a Tlb.
     ///
     /// # Examples
@@ -86,10 +81,10 @@ impl<T: PhysicalMemory, V: VirtualTranslate, D: ScopedVirtualTranslate> VirtualD
     /// ```
     /// use memflow::types::Address;
     /// use memflow::architecture::x86::x64;
-    /// use memflow::mem::{PhysicalMemory, VirtualTranslate, VirtualMemory, VirtualDma};
+    /// use memflow::mem::{PhysicalMemory, VirtualTranslate2, VirtualMemory, VirtualDma};
     /// use memflow::cglue::Fwd;
     ///
-    /// fn read(phys_mem: Fwd<&mut impl PhysicalMemory>, vat: impl VirtualTranslate, dtb: Address, read_addr: Address) {
+    /// fn read(phys_mem: Fwd<&mut impl PhysicalMemory>, vat: impl VirtualTranslate2, dtb: Address, read_addr: Address) {
     ///     let arch = x64::ARCH;
     ///     let translator = x64::new_translator(dtb);
     ///
@@ -102,12 +97,12 @@ impl<T: PhysicalMemory, V: VirtualTranslate, D: ScopedVirtualTranslate> VirtualD
     /// }
     /// # use memflow::dummy::{DummyMemory, DummyOs};
     /// # use memflow::types::size;
-    /// # use memflow::mem::{DirectTranslate, AsPhysicalMemory};
+    /// # use memflow::mem::DirectTranslate;
     /// # use memflow::cglue::ForwardMut;
     /// # let mem = DummyMemory::new(size::mb(4));
     /// # let (mut os, dtb, virt_base) = DummyOs::new_and_dtb(mem, size::mb(2), &[255, 0, 255, 0, 255, 0, 255, 0]);
     /// # let mut vat = DirectTranslate::new();
-    /// # read(os.phys_mem().forward_mut(), &mut vat, dtb, virt_base);
+    /// # read(os.forward_mut(), &mut vat, dtb, virt_base);
     /// ```
     pub fn with_vat(phys_mem: T, arch: impl Into<ArchitectureObj>, translator: D, vat: V) -> Self {
         Self {
@@ -130,7 +125,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate, D: ScopedVirtualTranslate> VirtualD
     }
 
     /// Returns the Directory Table Base of this process.
-    pub fn translator(&self) -> &impl ScopedVirtualTranslate {
+    pub fn translator(&self) -> &impl VirtualTranslate3 {
         &self.translator
     }
 
@@ -158,6 +153,10 @@ impl<T: PhysicalMemory, V: VirtualTranslate, D: ScopedVirtualTranslate> VirtualD
     pub fn phys_mem(&mut self) -> &mut T {
         &mut self.phys_mem
     }
+    
+    pub fn phys_mem_ref(&self) -> &T {
+        &self.phys_mem
+    }
 
     pub fn vat(&mut self) -> &mut V {
         &mut self.vat
@@ -181,7 +180,7 @@ where
     }
 }
 
-impl<T: PhysicalMemory, V: VirtualTranslate, D: ScopedVirtualTranslate> VirtualMemory
+impl<T: PhysicalMemory, V: VirtualTranslate2, D: VirtualTranslate3> VirtualMemory
     for VirtualDma<T, V, D>
 {
     fn virt_read_raw_list(&mut self, data: &mut [VirtualReadData]) -> PartialResult<()> {
@@ -238,86 +237,32 @@ impl<T: PhysicalMemory, V: VirtualTranslate, D: ScopedVirtualTranslate> VirtualM
             Err(PartialError::PartialVirtualRead(()))
         }
     }
+}
 
-    fn virt_page_info(&mut self, addr: Address) -> Result<Page> {
-        let paddr = self
-            .vat
-            .virt_to_phys(&mut self.phys_mem, &self.translator, addr)?;
-        Ok(paddr.containing_page())
-    }
-
-    fn virt_translation_map_range_callback(
+impl<T: PhysicalMemory, V: VirtualTranslate2, D: VirtualTranslate3> VirtualTranslate
+    for VirtualDma<T, V, D>
+{
+    fn virt_to_phys_list(
         &mut self,
-        start: Address,
-        end: Address,
-        mut callback: VirtualTranslationRangeCallback,
+        addrs: &[MemoryRange],
+        mut out: VirtualTranslationCallback,
+        mut out_fail: VirtualTranslationFailCallback,
     ) {
-        self.arena.reset();
-        let mut out = BumpVec::new_in(&self.arena);
-
         self.vat.virt_to_phys_iter(
             &mut self.phys_mem,
             &self.translator,
-            Some((start, (start, end - start))).into_iter(),
-            &mut out,
-            &mut FnExtend::void(),
-        );
-
-        out.sort_by(|(_, (a, _)), (_, (b, _))| a.cmp(b));
-
-        out.into_iter()
-            .coalesce(|(ap, av), (bp, bv)| {
-                if bv.0 == (av.0 + av.1) && bp.address() == (ap.address() + av.1) {
-                    Ok((ap, (av.0, bv.0 + bv.1 - av.0)))
-                } else {
-                    Err(((ap, av), (bp, bv)))
-                }
-            })
-            .take_while(|(p, (v, s))| {
-                callback.call(VirtualTranslationRangeInfo {
-                    virt_address: *v,
-                    virt_size: *s,
-                    phys_address: *p,
-                })
-            })
-            .for_each(|_| {});
-    }
-
-    fn virt_page_map_range_callback(
-        &mut self,
-        gap_length: usize,
-        start: Address,
-        end: Address,
-        mut callback: VirtualRangeCallback,
-    ) {
-        self.arena.reset();
-        let mut out = BumpVec::new_in(&self.arena);
-
-        self.vat.virt_to_phys_iter(
-            &mut self.phys_mem,
-            &self.translator,
-            Some((start, (start, end - start))).into_iter(),
-            &mut out,
-            &mut FnExtend::void(),
-        );
-
-        out.sort_by(|(_, (a, _)), (_, (b, _))| a.cmp(b));
-
-        out.into_iter()
-            .map(|(_, a)| a)
-            .coalesce(|a, b| {
-                if b.0 - (a.0 + a.1) <= gap_length {
-                    Ok((a.0, b.0 + b.1 - a.0))
-                } else {
-                    Err((a, b))
-                }
-            })
-            .take_while(|(v, s)| {
-                callback.call(VirtualRangeInfo {
-                    virt_address: *v,
-                    virt_size: *s,
-                })
-            })
-            .for_each(|_| {});
+            addrs.iter().map(|v| (v.address, (v.address, v.size))),
+            &mut FnExtend::new(|(a, b): (PhysicalAddress, (Address, usize))| {
+                let _ = out.call(VirtualTranslation {
+                    in_virtual: b.0,
+                    size: b.1,
+                    out_physical: a,
+                });
+            }),
+            &mut FnExtend::new(|(_e, from, (_, size))| {
+                let _ = out_fail.call(VirtualTranslationFail { from, size });
+            }),
+        )
     }
 }
+

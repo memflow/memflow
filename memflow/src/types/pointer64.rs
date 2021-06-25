@@ -26,7 +26,7 @@ use std::{cmp, fmt, hash, ops};
 ///
 /// ```
 /// use memflow::types::Pointer64;
-/// use memflow::mem::{VirtualMemory, AsVirtualMemory};
+/// use memflow::mem::VirtualMemory;
 /// use memflow::dataview::Pod;
 ///
 /// #[repr(C)]
@@ -50,12 +50,12 @@ use std::{cmp, fmt, hash, ops};
 /// # use memflow::types::size;
 /// # use memflow::dummy::DummyOs;
 /// # use memflow::os::Process;
-/// # read_foo_bar(DummyOs::quick_process(size::mb(2), &[]).virt_mem());
+/// # read_foo_bar(&mut DummyOs::quick_process(size::mb(2), &[]));
 /// ```
 ///
 /// ```
 /// use memflow::types::Pointer64;
-/// use memflow::mem::{VirtualMemory, AsVirtualMemory};
+/// use memflow::mem::VirtualMemory;
 /// use memflow::dataview::Pod;
 ///
 /// #[repr(C)]
@@ -79,7 +79,7 @@ use std::{cmp, fmt, hash, ops};
 /// # use memflow::dummy::DummyOs;
 /// # use memflow::os::Process;
 /// # use memflow::types::size;
-/// # read_foo_bar(DummyOs::quick_process(size::mb(2), &[]).virt_mem());
+/// # read_foo_bar(&mut DummyOs::quick_process(size::mb(2), &[]));
 /// ```
 #[repr(transparent)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize))]

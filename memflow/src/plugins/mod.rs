@@ -38,7 +38,7 @@ use std::path::{Path, PathBuf};
 use libloading::Library;
 
 /// Exported memflow plugins version
-pub const MEMFLOW_PLUGIN_VERSION: i32 = 1;
+pub const MEMFLOW_PLUGIN_VERSION: i32 = -1;
 
 /// Help and Target callbacks
 pub type HelpCallback<'a> = OpaqueCallback<'a, ReprCString>;
@@ -240,7 +240,7 @@ pub trait Loadable: Sized {
 ///
 /// Creating a OS instance, the recommended way:
 ///
-/// ```
+/// ```no_run
 /// use memflow::plugins::Inventory;
 /// # use memflow::error::Result;
 /// # use memflow::os::OsInstanceArcBox;
@@ -256,7 +256,7 @@ pub trait Loadable: Sized {
 /// ```
 ///
 /// Nesting connectors and os plugins:
-/// ```
+/// ```no_run
 /// use memflow::plugins::{Inventory, Args};
 /// # use memflow::error::Result;
 /// # fn test() -> Result<()> {
@@ -496,7 +496,7 @@ impl Inventory {
     /// # Examples
     ///
     /// Create a connector:
-    /// ```
+    /// ```no_run
     /// use memflow::plugins::Inventory;
     ///
     /// let inventory = Inventory::scan();
@@ -507,7 +507,7 @@ impl Inventory {
     /// ```
     ///
     /// Create a Connector with arguments:
-    /// ```
+    /// ```no_run
     /// use memflow::plugins::{Inventory, Args};
     ///
     /// let inventory = Inventory::scan();
@@ -519,7 +519,7 @@ impl Inventory {
     /// ```
     ///
     /// Create a Connector and OS with arguments:
-    /// ```
+    /// ```no_run
     /// use memflow::plugins::{Inventory, Args};
     ///
     /// let inventory = Inventory::scan();
@@ -532,7 +532,7 @@ impl Inventory {
     /// ```
     ///
     /// Create a OS without a connector and arguments:
-    /// ```
+    /// ```no_run
     /// use memflow::plugins::Inventory;
     ///
     /// let inventory = Inventory::scan();
@@ -613,6 +613,7 @@ impl Inventory {
     /// let args = Args::parse("4m").unwrap();
     /// let connector = inventory.create_os("dummy", None, &args)
     ///     .unwrap();
+    /// std::mem::drop(connector);
     /// ```
     pub fn create_os(
         &self,

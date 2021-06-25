@@ -1,5 +1,5 @@
-use super::VirtualTranslate;
-use crate::architecture::ScopedVirtualTranslate;
+use super::VirtualTranslate2;
+use crate::architecture::VirtualTranslate3;
 use crate::error::Error;
 use crate::iter::SplitAtIndex;
 use crate::mem::PhysicalMemory;
@@ -7,7 +7,7 @@ use crate::types::{size, Address, PhysicalAddress};
 use std::prelude::v1::*;
 
 /*
-The `DirectTranslate` struct provides a default implementation for `VirtualTranslate` for physical memory.
+The `DirectTranslate` struct provides a default implementation for `VirtualTranslate2` for physical memory.
 */
 #[derive(Debug, Default)]
 pub struct DirectTranslate {
@@ -32,7 +32,7 @@ impl Clone for DirectTranslate {
     }
 }
 
-impl VirtualTranslate for DirectTranslate {
+impl VirtualTranslate2 for DirectTranslate {
     fn virt_to_phys_iter<T, B, D, VI, VO, FO>(
         &mut self,
         phys_mem: &mut T,
@@ -43,7 +43,7 @@ impl VirtualTranslate for DirectTranslate {
     ) where
         T: PhysicalMemory + ?Sized,
         B: SplitAtIndex,
-        D: ScopedVirtualTranslate,
+        D: VirtualTranslate3,
         VI: Iterator<Item = (Address, B)>,
         VO: Extend<(PhysicalAddress, B)>,
         FO: Extend<(Error, Address, B)>,

@@ -33,6 +33,7 @@ memmap = { version = "0.7", optional = true }
 hashbrown = "0.11"
 fixed-slice-vec = "0.8.0"
 cglue = "0.1.0"
+rangemap = "0.1"
 
 # plugins
 libloading = { version = "0.7", optional = true }

@@ -5,7 +5,7 @@ use super::{
         translate_data::{TranslateDataVec, TranslationChunk},
         ArchMmuSpec, MmuTranslationBase,
     },
-    Architecture, ArchitectureIdent, ArchitectureObj, Endianess, ScopedVirtualTranslate,
+    Architecture, ArchitectureIdent, ArchitectureObj, Endianess, VirtualTranslate3,
 };
 
 use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
@@ -48,12 +48,12 @@ impl Architecture for ArmArchitecture {
 
 // TODO: Add granularity
 #[derive(Clone, Copy)]
-pub struct ArmScopedVirtualTranslate {
+pub struct ArmVirtualTranslate {
     arch: &'static ArmArchitecture,
     dtb: ArmPageTableBase,
 }
 
-impl ArmScopedVirtualTranslate {
+impl ArmVirtualTranslate {
     pub fn new(arch: &'static ArmArchitecture, dtb1: Address, dtb2: Address) -> Self {
         Self {
             arch,
@@ -101,7 +101,7 @@ impl MmuTranslationBase for ArmPageTableBase {
     }
 }
 
-impl ScopedVirtualTranslate for ArmScopedVirtualTranslate {
+impl VirtualTranslate3 for ArmVirtualTranslate {
     fn virt_to_phys_iter<
         T: PhysicalMemory + ?Sized,
         B: SplitAtIndex,
@@ -148,16 +148,16 @@ pub fn new_translator(
     dtb1: Address,
     dtb2: Address,
     arch: ArchitectureObj,
-) -> Result<impl ScopedVirtualTranslate> {
+) -> Result<impl VirtualTranslate3> {
     let arch =
         underlying_arch(arch).ok_or(Error(ErrorOrigin::Mmu, ErrorKind::InvalidArchitecture))?;
-    Ok(ArmScopedVirtualTranslate::new(arch, dtb1, dtb2))
+    Ok(ArmVirtualTranslate::new(arch, dtb1, dtb2))
 }
 
 pub fn new_translator_nonsplit(
     dtb: Address,
     arch: ArchitectureObj,
-) -> Result<impl ScopedVirtualTranslate> {
+) -> Result<impl VirtualTranslate3> {
     // TODO: Handle 32 bit arm
     new_translator(dtb, dtb + size::kb(2), arch)
 }

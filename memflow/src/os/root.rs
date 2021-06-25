@@ -11,7 +11,7 @@ use crate::prelude::v1::{Result, *};
 use crate::cglue::*;
 use std::prelude::v1::*;
 
-cglue_trait_group!(OsInstance<'a>, { OsInner<'a>, Clone }, { AsPhysicalMemory, AsVirtualMemory, OsKeyboardInner<'a> });
+cglue_trait_group!(OsInstance<'a>, { OsInner<'a>, Clone }, { PhysicalMemory, VirtualMemory, OsKeyboardInner<'a> });
 pub type MuOsInstanceArcBox<'a> = std::mem::MaybeUninit<OsInstanceArcBox<'a>>;
 
 /// OS supertrait for all possible lifetimes
@@ -32,10 +32,10 @@ impl<T: for<'a> OsInner<'a>> Os for T {}
 #[int_result]
 pub trait OsInner<'a>: Send {
     #[wrap_with_group(crate::os::process::ProcessInstance)]
-    type ProcessType: crate::os::process::Process + crate::mem::virt_mem::AsVirtualMemory + 'a;
+    type ProcessType: crate::os::process::Process + crate::mem::virt_mem::VirtualMemory + 'a;
     #[wrap_with_group(crate::os::process::IntoProcessInstance)]
     type IntoProcessType: crate::os::process::Process
-        + crate::mem::virt_mem::AsVirtualMemory
+        + crate::mem::virt_mem::VirtualMemory
         + 'static;
 
     /// Walks a process list and calls a callback for each process structure address

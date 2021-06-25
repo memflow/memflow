@@ -146,3 +146,23 @@ impl<T: VirtualMemory> VirtualMemory for DummyProcess<T> {
         self.mem.virt_write_raw_list(data)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::super::*;
+    use crate::os::{OsInner, Process};
+    use crate::types::size;
+
+    #[test]
+    pub fn primary_module() {
+        let mem = DummyMemory::new(size::mb(64));
+        let mut os = DummyOs::new(mem);
+
+        let pid = os.alloc_process(size::mb(60), &[]);
+        let mut prc = os.process_by_pid(pid).unwrap();
+        prc.proc.add_modules(10, size::kb(1));
+
+        let module = prc.primary_module();
+        assert!(module.is_ok())
+    }
+}

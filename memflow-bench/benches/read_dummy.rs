@@ -23,6 +23,8 @@ fn initialize_virt_ctx() -> Result<(
 
     let pid = os.alloc_process(size::mb(60), &[]);
     let mut prc = os.process_by_pid(pid).unwrap();
+    prc.proc.add_modules(10, size::kb(1));
+
     let module = prc.primary_module().unwrap();
     let translator = prc.proc.translator();
     let info = prc.proc.info;

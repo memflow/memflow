@@ -100,7 +100,9 @@ impl Win32ProcessInfo {
     }
 }
 
+#[cfg(feature = "plugins")]
 cglue_impl_group!(Win32Process<T>, ProcessInstance);
+#[cfg(feature = "plugins")]
 cglue_impl_group!(Win32Process<T>, IntoProcessInstance);
 
 pub struct Win32Process<T> {

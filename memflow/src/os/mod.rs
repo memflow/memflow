@@ -20,19 +20,38 @@ pub mod module;
 pub mod process;
 pub mod root;
 
+#[doc(hidden)]
 pub use keyboard::{
-    IntoKeyboardArcBox, Keyboard, KeyboardArcBox, KeyboardState, KeyboardStateArcBox, OsKeyboard,
+    Keyboard, KeyboardState, OsKeyboard,
     OsKeyboardInner,
 };
+#[doc(hidden)]
+#[cfg(feature = "plugins")]
+pub use keyboard::{
+    IntoKeyboardArcBox, KeyboardArcBox, KeyboardStateArcBox,
+};
+
+#[doc(hidden)]
 pub use module::{
     ExportCallback, ExportInfo, ImportCallback, ImportInfo, ModuleAddressCallback,
     ModuleAddressInfo, ModuleInfo, ModuleInfoCallback, SectionCallback, SectionInfo,
 };
+#[doc(hidden)]
 pub use process::{
-    IntoProcessInstance, IntoProcessInstanceArcBox, Pid, Process, ProcessInfo, ProcessInfoCallback,
-    ProcessInstance, ProcessInstanceArcBox, ProcessState,
+    Pid, Process, ProcessInfo, ProcessInfoCallback,
+    ProcessState,
 };
-pub use root::{Os, OsInfo, OsInner, OsInstance, OsInstanceArcBox};
+#[doc(hidden)]
+#[cfg(feature = "plugins")]
+pub use process::{
+    IntoProcessInstance, IntoProcessInstanceArcBox, ProcessInstance, ProcessInstanceArcBox,
+};
+
+#[doc(hidden)]
+pub use root::{Os, OsInfo, OsInner};
+#[doc(hidden)]
+#[cfg(feature = "plugins")]
+pub use root::{OsInstance, OsInstanceArcBox};
 
 use crate::types::Address;
 

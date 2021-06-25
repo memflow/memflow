@@ -23,6 +23,7 @@ pub trait ConnectorCpuStateInner<'a>: Send {
     fn into_cpu_state(self) -> Result<Self::IntoCpuStateType>;
 }
 
+#[cfg(feature = "plugins")]
 cglue_trait_group!(IntoCpuState, { CpuState, Clone }, {});
 
 #[cfg_attr(feature = "plugins", cglue_trait)]

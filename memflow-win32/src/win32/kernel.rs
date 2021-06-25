@@ -30,6 +30,7 @@ mod mem_map;
 
 const MAX_ITER_COUNT: usize = 65536;
 
+#[cfg(feature = "plugins")]
 cglue_impl_group!(Win32Kernel<T, V>, OsInstance<'a>, { AsPhysicalMemory, AsVirtualMemory, OsKeyboardInner<'a> });
 
 #[derive(Clone)]

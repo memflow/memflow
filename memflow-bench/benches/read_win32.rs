@@ -13,7 +13,15 @@ use rand::{Rng, SeedableRng};
 use rand_xorshift::XorShiftRng as CurRng;
 
 fn create_connector(args: &Args) -> Result<impl PhysicalMemory + Clone> {
-    Inventory::scan().create_connector("qemu_procfs", None, args)
+    // this workaround is to prevent loaded libraries
+    // from spitting out to much log information and skewing benchmarks
+    let filter = log::max_level();
+    log::set_max_level(log::Level::Error.to_level_filter());
+
+    let result = Inventory::scan().create_connector("qemu_procfs", None, args)?;
+
+    log::set_max_level(filter);
+    Ok(result)
 }
 
 fn initialize_virt_ctx() -> Result<(
@@ -86,8 +94,8 @@ fn win32_read_group(c: &mut Criterion) {
 criterion_group! {
     name = win32_read;
     config = Criterion::default()
-        .warm_up_time(std::time::Duration::from_millis(300))
-        .measurement_time(std::time::Duration::from_millis(2700));
+        .warm_up_time(std::time::Duration::from_millis(500))
+        .measurement_time(std::time::Duration::from_millis(5000));
     targets = win32_read_group
 }
 

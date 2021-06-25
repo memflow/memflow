@@ -2,8 +2,8 @@ use std::prelude::v1::*;
 
 use std::cmp::*;
 
-use itertools::Itertools;
 use cglue::prelude::v1::*;
+use itertools::Itertools;
 
 pub mod direct_translate;
 use crate::iter::SplitAtIndex;
@@ -12,18 +12,17 @@ pub use direct_translate::DirectTranslate;
 #[cfg(test)]
 mod tests;
 
-use crate::error::{*, Result};
+use crate::error::{Result, *};
 
 use crate::iter::FnExtend;
 use crate::mem::PhysicalMemory;
-use crate::types::{Address, PhysicalAddress, Page};
+use crate::types::{Address, Page, PhysicalAddress};
 
 use crate::architecture::VirtualTranslate3;
 
 #[cglue_trait]
 #[int_result]
-pub trait VirtualTranslate: Send
-{
+pub trait VirtualTranslate: Send {
     fn virt_to_phys_list(
         &mut self,
         addrs: &[MemoryRange],
@@ -31,7 +30,12 @@ pub trait VirtualTranslate: Send
         out_fail: VirtualTranslationFailCallback,
     );
 
-    fn virt_to_phys_range(&mut self, start: Address, end: Address, out: VirtualTranslationCallback) {
+    fn virt_to_phys_range(
+        &mut self,
+        start: Address,
+        end: Address,
+        out: VirtualTranslationCallback,
+    ) {
         self.virt_to_phys_list(
             &[MemoryRange {
                 address: start,
@@ -60,21 +64,23 @@ pub trait VirtualTranslate: Send
                 .into(),
         );
 
-        set.into_iter().coalesce(|a, b| {
-            // TODO: Probably make the page size reflect the merge
-            if b.in_virtual == (a.in_virtual + a.size)
-                && b.out_physical.address() == (a.out_physical.address() + a.size)
-                && a.out_physical.page_type() == b.out_physical.page_type()
-            {
-                Ok(VirtualTranslation {
-                    in_virtual: a.in_virtual,
-                    size: a.size + b.size,
-                    out_physical: a.out_physical,
-                })
-            } else {
-                Err((a, b))
-            }
-        }).feed_into(out);
+        set.into_iter()
+            .coalesce(|a, b| {
+                // TODO: Probably make the page size reflect the merge
+                if b.in_virtual == (a.in_virtual + a.size)
+                    && b.out_physical.address() == (a.out_physical.address() + a.size)
+                    && a.out_physical.page_type() == b.out_physical.page_type()
+                {
+                    Ok(VirtualTranslation {
+                        in_virtual: a.in_virtual,
+                        size: a.size + b.size,
+                        out_physical: a.out_physical,
+                    })
+                } else {
+                    Err((a, b))
+                }
+            })
+            .feed_into(out);
     }
 
     fn virt_page_map_range(
@@ -89,7 +95,11 @@ pub trait VirtualTranslate: Send
         self.virt_to_phys_range(
             start,
             end,
-            (&mut |VirtualTranslation { in_virtual, size, out_physical: _ }| {
+            (&mut |VirtualTranslation {
+                       in_virtual,
+                       size,
+                       out_physical: _,
+                   }| {
                 set.insert(in_virtual..(in_virtual + size));
                 true
             })
@@ -132,13 +142,13 @@ pub trait VirtualTranslate: Send
     }
 
     fn virt_page_info(&mut self, addr: Address) -> Result<Page> {
-        let paddr = self
-            .virt_to_phys(addr)?;
+        let paddr = self.virt_to_phys(addr)?;
         Ok(paddr.containing_page())
     }
 
     #[skip_func]
-    fn virt_page_map_range_vec(&mut self,
+    fn virt_page_map_range_vec(
+        &mut self,
         gap_size: usize,
         start: Address,
         end: Address,
@@ -165,9 +175,7 @@ pub trait VirtualTranslate: Send
     }
 
     #[skip_func]
-    fn virt_page_map_vec(&mut self,
-        gap_size: usize,
-    ) -> Vec<MemoryRange> {
+    fn virt_page_map_vec(&mut self, gap_size: usize) -> Vec<MemoryRange> {
         let mut out = vec![];
         self.virt_page_map(gap_size, (&mut out).into());
         out
@@ -212,7 +220,6 @@ pub struct MemoryRange {
     pub address: Address,
     pub size: usize,
 }
-
 
 #[repr(C)]
 pub struct VirtualTranslationFail {

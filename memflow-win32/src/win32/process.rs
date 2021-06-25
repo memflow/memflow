@@ -8,8 +8,8 @@ use memflow::architecture::ArchitectureIdent;
 use memflow::cglue::{self, *};
 use memflow::error::{Error, Result, *};
 use memflow::mem::virt_mem::*;
-use memflow::mem::{PhysicalMemory, VirtualDma, VirtualMemory};
 use memflow::mem::virt_translate::*;
+use memflow::mem::{PhysicalMemory, VirtualDma, VirtualMemory};
 use memflow::os::process::*;
 use memflow::os::{
     ExportCallback, ExportInfo, ImportCallback, ImportInfo, ModuleAddressCallback,
@@ -137,8 +137,9 @@ impl<T: VirtualMemory> VirtualMemory for Win32Process<T> {
     }
 }
 
-impl<T: PhysicalMemory, V: VirtualTranslate2>
-    VirtualTranslate for Win32Process<VirtualDma<T, V, Win32VirtualTranslate>> {
+impl<T: PhysicalMemory, V: VirtualTranslate2> VirtualTranslate
+    for Win32Process<VirtualDma<T, V, Win32VirtualTranslate>>
+{
     fn virt_to_phys_list(
         &mut self,
         addrs: &[MemoryRange],

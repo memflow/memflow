@@ -385,4 +385,3 @@ impl<'a> From<PhysicalWriteData<'a>> for (PhysicalAddress, &'a [u8]) {
         (a, b.into())
     }
 }
-

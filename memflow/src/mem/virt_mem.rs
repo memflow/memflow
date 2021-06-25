@@ -331,4 +331,3 @@ impl<'a> From<VirtualWriteData<'a>> for (Address, &'a [u8]) {
         (a, b.into())
     }
 }
-

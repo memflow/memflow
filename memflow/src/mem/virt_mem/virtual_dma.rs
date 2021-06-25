@@ -5,7 +5,10 @@ use crate::architecture::{ArchitectureObj, VirtualTranslate3};
 use crate::error::{Error, *};
 use crate::iter::FnExtend;
 use crate::mem::{
-    virt_translate::{DirectTranslate, VirtualTranslate, VirtualTranslate2, MemoryRange, VirtualTranslationCallback, VirtualTranslationFailCallback, VirtualTranslation, VirtualTranslationFail},
+    virt_translate::{
+        DirectTranslate, MemoryRange, VirtualTranslate, VirtualTranslate2, VirtualTranslation,
+        VirtualTranslationCallback, VirtualTranslationFail, VirtualTranslationFailCallback,
+    },
     PhysicalMemory, PhysicalReadData, PhysicalWriteData, VirtualMemory,
 };
 use crate::types::{Address, PhysicalAddress};
@@ -153,7 +156,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate2, D: VirtualTranslate3> VirtualDma<T
     pub fn phys_mem(&mut self) -> &mut T {
         &mut self.phys_mem
     }
-    
+
     pub fn phys_mem_ref(&self) -> &T {
         &self.phys_mem
     }
@@ -265,4 +268,3 @@ impl<T: PhysicalMemory, V: VirtualTranslate2, D: VirtualTranslate3> VirtualTrans
         )
     }
 }
-

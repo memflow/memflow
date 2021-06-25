@@ -44,7 +44,10 @@ pub fn find_with_va_hint<T: VirtualMemory + VirtualTranslate>(
         .log_trace("x64::find_with_va_hint: unable to locate ntoskrnl.exe via va hint"))
 }
 
-fn find_with_va<T: VirtualMemory + VirtualTranslate>(virt_mem: &mut T, va_base: u64) -> Result<u64> {
+fn find_with_va<T: VirtualMemory + VirtualTranslate>(
+    virt_mem: &mut T,
+    va_base: u64,
+) -> Result<u64> {
     let mut buf = vec![0; size::mb(2)];
     virt_mem
         .virt_read_raw_into(Address::from(va_base), &mut buf)

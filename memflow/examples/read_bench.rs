@@ -4,12 +4,12 @@ use std::time::{Duration, Instant};
 use clap::*;
 use log::Level;
 
+use cglue::*;
 use memflow::error::{Error, ErrorKind, ErrorOrigin, Result};
 use memflow::mem::*;
-use memflow::os::{ModuleInfo, Process, OsInstanceArcBox, OsInner};
+use memflow::os::{ModuleInfo, OsInner, OsInstanceArcBox, Process};
 use memflow::plugins::*;
 use memflow::types::*;
-use cglue::*;
 
 use rand::{Rng, SeedableRng};
 use rand_xorshift::XorShiftRng as CurRng;
@@ -112,18 +112,15 @@ fn read_bench(mut kernel: OsInstanceArcBox) -> Result<()> {
             );
 
             let mem_map = {
-                let prc = as_mut!(prc impl VirtualTranslate).ok_or(ErrorKind::UnsupportedOptionalFeature)?;
+                let prc = as_mut!(prc impl VirtualTranslate)
+                    .ok_or(ErrorKind::UnsupportedOptionalFeature)?;
                 prc.virt_page_map_vec(size::gb(1))
-            }; 
+            };
 
             println!("Memory map (with up to 1GB gaps):");
 
             for map in mem_map {
-                println!(
-                    "{:x}-{:x}",
-                    map.address,
-                    map.address + map.size
-                );
+                println!("{:x}-{:x}", map.address, map.address + map.size);
             }
 
             rwtest(

@@ -347,9 +347,7 @@ mod tests {
     use crate::architecture::x86;
     use crate::cglue::ForwardMut;
     use crate::dummy::{DummyMemory, DummyOs};
-    use crate::mem::{
-        CachedMemoryAccess, TimedCacheValidator, VirtualDma, VirtualMemory,
-    };
+    use crate::mem::{CachedMemoryAccess, TimedCacheValidator, VirtualDma, VirtualMemory};
     use crate::types::{size, Address, PhysicalAddress};
 
     use coarsetime::Duration;
@@ -443,8 +441,7 @@ mod tests {
 
             let mut buf_nocache = vec![0_u8; test_buf.len()];
             {
-                let mut virt_mem =
-                    VirtualDma::new(dummy_os.forward_mut(), arch, translator);
+                let mut virt_mem = VirtualDma::new(dummy_os.forward_mut(), arch, translator);
                 virt_mem
                     .virt_read_raw_into(virt_base, buf_nocache.as_mut_slice())
                     .unwrap();

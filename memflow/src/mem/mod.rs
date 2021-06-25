@@ -25,9 +25,12 @@ pub use cache::*;
 #[doc(hidden)]
 pub use mem_map::{MemoryMap, PhysicalMemoryMapping};
 #[doc(hidden)]
+#[cfg(feature = "plugins")]
+pub use phys_mem::ConnectorInstanceArcBox;
+#[doc(hidden)]
 pub use phys_mem::{
-    ConnectorInstanceArcBox, PhysicalMemory, PhysicalMemoryMetadata, PhysicalReadData,
-    PhysicalReadIterator, PhysicalWriteData, PhysicalWriteIterator,
+    PhysicalMemory, PhysicalMemoryMetadata, PhysicalReadData, PhysicalReadIterator,
+    PhysicalWriteData, PhysicalWriteIterator,
 };
 #[doc(hidden)]
 pub use phys_mem_batcher::PhysicalMemoryBatcher;

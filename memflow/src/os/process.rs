@@ -5,13 +5,19 @@ use super::{
     ModuleInfoCallback, SectionCallback, SectionInfo,
 };
 use crate::cglue::*;
-use crate::mem::virt_mem::*;
-use crate::mem::virt_translate::*;
 use crate::prelude::v1::{Result, *};
 use std::prelude::v1::*;
 
+// those only required when compiling cglue code
+#[cfg(feature = "plugins")]
+use crate::mem::virt_mem::*;
+#[cfg(feature = "plugins")]
+use crate::mem::virt_translate::*;
+
 // ProcessInstance group for Process and VirtualMemory
+#[cfg(feature = "plugins")]
 cglue_trait_group!(ProcessInstance, { Process, VirtualMemory }, { VirtualTranslate });
+#[cfg(feature = "plugins")]
 cglue_trait_group!(IntoProcessInstance, { Process, VirtualMemory, Clone }, { VirtualTranslate });
 
 /// Type meant for process IDs
@@ -56,7 +62,7 @@ impl ProcessState {
 /// This trait provides a lot of typical functionality for processes, such as memory access, module lists, and basic information.
 ///
 /// Future expansions could include threads, keyboard input, and more.
-#[cglue_trait]
+#[cfg_attr(feature = "plugins", cglue_trait)]
 #[int_result]
 pub trait Process: Send {
     /// Retrieves the state of the process

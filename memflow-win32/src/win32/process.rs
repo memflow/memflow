@@ -5,18 +5,27 @@ use super::{Win32Kernel, Win32ModuleListInfo};
 use std::fmt;
 
 use memflow::architecture::ArchitectureIdent;
-use memflow::cglue::{self, *};
-use memflow::error::{Error, Result, *};
+use memflow::cglue::*;
+use memflow::error::{Error, ErrorKind, ErrorOrigin, PartialResult, PartialResultExt, Result};
 use memflow::mem::virt_mem::*;
-use memflow::mem::virt_translate::*;
-use memflow::mem::{PhysicalMemory, VirtualDma, VirtualMemory};
-use memflow::os::process::*;
+use memflow::mem::virt_translate::{
+    MemoryRange, VirtualTranslate2, VirtualTranslationCallback, VirtualTranslationFailCallback,
+};
+use memflow::mem::{PhysicalMemory, VirtualDma, VirtualMemory, VirtualTranslate};
 use memflow::os::{
     ExportCallback, ExportInfo, ImportCallback, ImportInfo, ModuleAddressCallback,
     ModuleAddressInfo, ModuleInfo, Process, ProcessInfo, ProcessState, SectionCallback,
     SectionInfo,
 };
 use memflow::types::Address;
+
+// those only required when compiling cglue code
+#[cfg(feature = "plugins")]
+use memflow::cglue;
+#[cfg(feature = "plugins")]
+use memflow::mem::virt_translate::*;
+#[cfg(feature = "plugins")]
+use memflow::os::process::*;
 
 use goblin::pe::{options::ParseOptions, PE};
 
@@ -101,7 +110,9 @@ impl Win32ProcessInfo {
     }
 }
 
+#[cfg(feature = "plugins")]
 cglue_impl_group!(Win32Process<T>, ProcessInstance, { VirtualTranslate });
+#[cfg(feature = "plugins")]
 cglue_impl_group!(Win32Process<T>, IntoProcessInstance, { VirtualTranslate });
 
 pub struct Win32Process<T> {

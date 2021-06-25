@@ -1,17 +1,24 @@
 //! Describes the root of the Operating System
 
-use super::keyboard::*;
 use super::process::*;
 use super::{AddressCallback, ProcessInfo, ProcessInfoCallback};
 
-use crate::mem::phys_mem::*;
-use crate::mem::virt_mem::*;
 use crate::prelude::v1::{Result, *};
+
+// those only required when compiling cglue code
+#[cfg(feature = "plugins")]
+use super::keyboard::*;
+#[cfg(feature = "plugins")]
+use crate::mem::phys_mem::*;
+#[cfg(feature = "plugins")]
+use crate::mem::virt_mem::*;
 
 use crate::cglue::*;
 use std::prelude::v1::*;
 
+#[cfg(feature = "plugins")]
 cglue_trait_group!(OsInstance<'a>, { OsInner<'a>, Clone }, { PhysicalMemory, VirtualMemory, OsKeyboardInner<'a> });
+#[cfg(feature = "plugins")]
 pub type MuOsInstanceArcBox<'a> = std::mem::MaybeUninit<OsInstanceArcBox<'a>>;
 
 /// OS supertrait for all possible lifetimes
@@ -28,7 +35,7 @@ impl<T: for<'a> OsInner<'a>> Os for T {}
 /// moving resources into processes.
 ///
 /// There are also methods for accessing system level modules.
-#[cglue_trait]
+#[cfg_attr(feature = "plugins", cglue_trait)]
 #[int_result]
 pub trait OsInner<'a>: Send {
     #[wrap_with_group(crate::os::process::ProcessInstance)]

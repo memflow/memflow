@@ -45,7 +45,7 @@ use super::VirtualMemoryCursor;
 /// # let virt_base = proc.info().address;
 /// # read(&mut proc, virt_base);
 /// ```
-#[cglue_trait]
+#[cfg_attr(feature = "plugins", cglue_trait)]
 #[int_result(PartialResult)]
 #[cglue_forward]
 pub trait VirtualMemory: Send {
@@ -54,7 +54,7 @@ pub trait VirtualMemory: Send {
     fn virt_write_raw_list(&mut self, data: &[VirtualWriteData]) -> PartialResult<()>;
 
     // read helpers
-    #[skip_func]
+    #[int_result(PartialResult)]
     fn virt_read_raw_into(&mut self, addr: Address, out: &mut [u8]) -> PartialResult<()> {
         self.virt_read_raw_list(&mut [VirtualReadData(addr, out.into())])
     }
@@ -88,7 +88,7 @@ pub trait VirtualMemory: Send {
     }
 
     // write helpers
-    #[skip_func]
+    #[int_result(PartialResult)]
     fn virt_write_raw(&mut self, addr: Address, data: &[u8]) -> PartialResult<()> {
         self.virt_write_raw_list(&[VirtualWriteData(addr, data.into())])
     }

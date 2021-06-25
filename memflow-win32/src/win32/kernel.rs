@@ -14,7 +14,7 @@ use log::{info, trace};
 use std::fmt;
 
 use memflow::architecture::{ArchitectureIdent, ArchitectureObj};
-use memflow::cglue::{self, *};
+use memflow::cglue::*;
 use memflow::error::{Error, Result, *};
 use memflow::mem::mem_map::PhysicalMemoryMapping;
 use memflow::mem::phys_mem::*;
@@ -25,12 +25,17 @@ use memflow::os::root::*;
 use memflow::os::*;
 use memflow::types::Address;
 
+// those only required when compiling cglue code
+#[cfg(feature = "plugins")]
+use memflow::cglue;
+
 use pelite::{self, pe64::exports::Export, PeView};
 
 mod mem_map;
 
 const MAX_ITER_COUNT: usize = 65536;
 
+#[cfg(feature = "plugins")]
 cglue_impl_group!(Win32Kernel<T, V>, OsInstance<'a>, { PhysicalMemory, VirtualMemory, OsKeyboardInner<'a> });
 
 #[derive(Clone)]

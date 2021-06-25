@@ -1,4 +1,3 @@
-use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 use crate::iter::SplitAtIndex;
 use crate::types::{Address, PhysicalAddress};
 
@@ -6,6 +5,10 @@ use std::cmp::Ordering;
 use std::default::Default;
 use std::fmt;
 use std::prelude::v1::*;
+
+// those only required when compiling under std environment
+#[cfg(feature = "std")]
+use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 
 /// The `MemoryMap`struct provides a mechanism to map addresses from the linear address space
 /// that memflow uses internally to hardware specific memory regions.
@@ -184,6 +187,7 @@ impl<M: SplitAtIndex> MemoryMap<M> {
 }
 
 #[cfg(feature = "serde")]
+#[allow(unused)]
 #[derive(::serde::Deserialize)]
 struct MemoryMapFile {
     #[serde(rename = "range")]
@@ -191,6 +195,7 @@ struct MemoryMapFile {
 }
 
 #[cfg(feature = "serde")]
+#[allow(unused)]
 #[derive(::serde::Deserialize)]
 struct MemoryMapFileRange {
     base: u64,

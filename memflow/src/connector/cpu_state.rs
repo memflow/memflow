@@ -11,7 +11,7 @@ use crate::prelude::v1::Result;
 pub trait ConnectorCpuState: for<'a> ConnectorCpuStateInner<'a> {}
 impl<T: for<'a> ConnectorCpuStateInner<'a>> ConnectorCpuState for T {}
 
-#[cglue_trait]
+#[cfg_attr(feature = "plugins", cglue_trait)]
 #[int_result]
 pub trait ConnectorCpuStateInner<'a>: Send {
     #[wrap_with_obj(crate::connector::cpu_state::CpuState)]
@@ -23,9 +23,10 @@ pub trait ConnectorCpuStateInner<'a>: Send {
     fn into_cpu_state(self) -> Result<Self::IntoCpuStateType>;
 }
 
+#[cfg(feature = "plugins")]
 cglue_trait_group!(IntoCpuState, { CpuState, Clone }, {});
 
-#[cglue_trait]
+#[cfg_attr(feature = "plugins", cglue_trait)]
 #[int_result]
 #[cglue_forward]
 pub trait CpuState {

@@ -32,8 +32,8 @@ itertools = { version = "0.10", default-features = false }
 memmap = { version = "0.7", optional = true }
 hashbrown = "0.11"
 fixed-slice-vec = "0.8.0"
-cglue = "0.1.0"
-rangemap = "0.1"
+cglue = { version = "0.1.1", default-features = false }
+rangemap = { git = "https://github.com/h33p/rangemap" } # TODO: replaceme when merged
 
 # plugins
 libloading = { version = "0.7", optional = true }
@@ -55,9 +55,7 @@ colored = "2.0"
 default = ["std", "serde_derive", "plugins", "filemap", "memmapfiles"]
 trace_mmu = [] # enables debug traces in the mmu (very verbose)
 dummy_mem = ["rand", "rand_xorshift"]
-std = ["coarsetime", "no-std-compat/std"]
-collections = []
-alloc = []
+std = ["coarsetime", "no-std-compat/std", "cglue/std"]
 serde_derive = ["serde", "cglue/serde"]
 memmapfiles = ["toml", "serde_derive"]
 plugins = ["libloading", "dirs", "goblin"]

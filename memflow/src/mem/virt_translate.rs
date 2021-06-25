@@ -170,6 +170,55 @@ pub trait VirtualTranslate: Send {
         out
     }
 
+    /// Attempt to translate a physical address into a virtual one.
+    ///
+    /// This function is the reverse of [`virt_to_phys`](VirtualTranslate::virt_to_phys). Note, that there could be multiple virtual
+    /// addresses for one physical address. If all candidates are needed, use
+    /// [`phys_to_virt_vec`](VirtualTranslate::phys_to_virt_vec) function.
+    fn phys_to_virt(&mut self, phys: Address) -> Option<Address> {
+        let mut virt = None;
+
+        let callback = &mut |VirtualTranslation {
+                                 in_virtual,
+                                 size: _,
+                                 out_physical,
+                             }| {
+            if out_physical.address() == phys {
+                virt = Some(in_virtual);
+                false
+            } else {
+                true
+            }
+        };
+
+        self.virt_translation_map(callback.into());
+
+        virt
+    }
+
+    /// Retrieve all virtual address that map into a given physical address.
+    #[skip_func]
+    fn phys_to_virt_vec(&mut self, phys: Address) -> Vec<Address> {
+        let mut virt = vec![];
+
+        let callback = &mut |VirtualTranslation {
+                                 in_virtual,
+                                 size: _,
+                                 out_physical,
+                             }| {
+            if out_physical.address() == phys {
+                virt.push(in_virtual);
+                true
+            } else {
+                true
+            }
+        };
+
+        self.virt_translation_map(callback.into());
+
+        virt
+    }
+
     fn virt_page_map(&mut self, gap_size: usize, out: MemoryRangeCallback) {
         self.virt_page_map_range(gap_size, Address::null(), Address::invalid(), out)
     }

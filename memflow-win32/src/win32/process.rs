@@ -5,17 +5,22 @@ use super::{Win32Kernel, Win32ModuleListInfo};
 use std::fmt;
 
 use memflow::architecture::ArchitectureIdent;
-use memflow::cglue::{self, *};
+use memflow::cglue::*;
 use memflow::error::{Error, ErrorKind, ErrorOrigin, PartialResultExt, Result};
 use memflow::mem::virt_mem::*;
 use memflow::mem::{PhysicalMemory, VirtualDma, VirtualMemory, VirtualTranslate};
-use memflow::os::process::*;
 use memflow::os::{
     ExportCallback, ExportInfo, ImportCallback, ImportInfo, ModuleAddressCallback,
     ModuleAddressInfo, ModuleInfo, Process, ProcessInfo, ProcessState, SectionCallback,
     SectionInfo,
 };
 use memflow::types::Address;
+
+// those only required when compiling cglue code
+#[cfg(feature = "plugins")]
+use memflow::cglue;
+#[cfg(feature = "plugins")]
+use memflow::os::process::*;
 
 use goblin::pe::{options::ParseOptions, PE};
 

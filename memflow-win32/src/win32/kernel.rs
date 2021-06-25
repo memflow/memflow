@@ -14,7 +14,7 @@ use log::{info, trace};
 use std::fmt;
 
 use memflow::architecture::{ArchitectureIdent, ArchitectureObj};
-use memflow::cglue::{self, *};
+use memflow::cglue::*;
 use memflow::error::{Error, ErrorKind, ErrorOrigin, Result};
 use memflow::mem::phys_mem::*;
 use memflow::mem::virt_mem::*;
@@ -23,6 +23,10 @@ use memflow::os::keyboard::*;
 use memflow::os::root::*;
 use memflow::os::*;
 use memflow::types::Address;
+
+// those only required when compiling cglue code
+#[cfg(feature = "plugins")]
+use memflow::cglue;
 
 use pelite::{self, pe64::exports::Export, PeView};
 

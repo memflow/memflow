@@ -5,9 +5,12 @@ use super::{
     ModuleInfoCallback, SectionCallback, SectionInfo,
 };
 use crate::cglue::*;
-use crate::mem::virt_mem::*;
 use crate::prelude::v1::{Result, *};
 use std::prelude::v1::*;
+
+// those only required when compiling cglue code
+#[cfg(feature = "plugins")]
+use crate::mem::virt_mem::*;
 
 // ProcessInstance group for Process and AsVirtualMemory
 #[cfg(feature = "plugins")]

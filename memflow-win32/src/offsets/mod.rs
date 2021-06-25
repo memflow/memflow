@@ -18,13 +18,15 @@ pub use {
 
 use std::prelude::v1::*;
 
+use memflow::architecture::ArchitectureIdent;
+
+// those only required when compiling under std environment
+#[cfg(feature = "std")]
+use crate::kernel::Win32Guid;
+#[cfg(feature = "std")]
+use memflow::error::{Error, ErrorKind, ErrorOrigin, Result};
 #[cfg(feature = "std")]
 use std::{fs::File, io::Read, path::Path};
-
-use crate::kernel::Win32Guid;
-
-use memflow::architecture::ArchitectureIdent;
-use memflow::error::{Error, ErrorKind, ErrorOrigin, Result};
 
 #[derive(Debug, Copy, Clone)]
 #[repr(C)]

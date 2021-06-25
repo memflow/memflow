@@ -321,6 +321,9 @@ typedef struct CloneVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_
 
 /**
  * Wrapper around mutable slices.
+ *
+ * This is meant as a safe type to pass across the FFI boundary with similar semantics as regular
+ * slice. However, not all functionality is present, use the slice conversion functions.
  */
 typedef struct CSliceMut_u8 {
     uint8_t *data;
@@ -333,7 +336,21 @@ typedef struct PhysicalReadData {
 } PhysicalReadData;
 
 /**
+ * Wrapper around mutable slices.
+ *
+ * This is meant as a safe type to pass across the FFI boundary with similar semantics as regular
+ * slice. However, not all functionality is present, use the slice conversion functions.
+ */
+typedef struct CSliceMut_PhysicalReadData {
+    struct PhysicalReadData *data;
+    uintptr_t len;
+} CSliceMut_PhysicalReadData;
+
+/**
  * Wrapper around const slices.
+ *
+ * This is meant as a safe type to pass across the FFI boundary with similar semantics as regular
+ * slice. However, not all functionality is present, use the slice conversion functions.
  */
 typedef struct CSliceRef_u8 {
     const uint8_t *data;
@@ -344,6 +361,17 @@ typedef struct PhysicalWriteData {
     struct PhysicalAddress _0;
     struct CSliceRef_u8 _1;
 } PhysicalWriteData;
+
+/**
+ * Wrapper around const slices.
+ *
+ * This is meant as a safe type to pass across the FFI boundary with similar semantics as regular
+ * slice. However, not all functionality is present, use the slice conversion functions.
+ */
+typedef struct CSliceRef_PhysicalWriteData {
+    const struct PhysicalWriteData *data;
+    uintptr_t len;
+} CSliceRef_PhysicalWriteData;
 
 typedef struct PhysicalMemoryMetadata {
     uintptr_t size;
@@ -357,15 +385,28 @@ typedef struct PhysicalMemoryMapping {
 } PhysicalMemoryMapping;
 
 /**
+ * Wrapper around const slices.
+ *
+ * This is meant as a safe type to pass across the FFI boundary with similar semantics as regular
+ * slice. However, not all functionality is present, use the slice conversion functions.
+ */
+typedef struct CSliceRef_PhysicalMemoryMapping {
+    const struct PhysicalMemoryMapping *data;
+    uintptr_t len;
+} CSliceRef_PhysicalMemoryMapping;
+
+/**
  * CGlue vtable for trait PhysicalMemory.
  *
  * This virtual function table contains ABI-safe interface for the given trait.
  */
 typedef struct PhysicalMemoryVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void {
-    int32_t (*phys_read_raw_list)(void *thisptr, struct PhysicalReadData *data, uintptr_t data_size);
-    int32_t (*phys_write_raw_list)(void *thisptr, const struct PhysicalWriteData *data, uintptr_t data_size);
+    int32_t (*phys_read_raw_list)(void *thisptr, struct CSliceMut_PhysicalReadData data);
+    int32_t (*phys_write_raw_list)(void *thisptr, struct CSliceRef_PhysicalWriteData data);
     struct PhysicalMemoryMetadata (*metadata)(const void *thisptr);
-    void (*set_mem_map)(void *thisptr, const struct PhysicalMemoryMapping *mem_map, uintptr_t mem_map_size);
+    void (*set_mem_map)(void *thisptr, struct CSliceRef_PhysicalMemoryMapping mem_map);
+    int32_t (*phys_read_raw_into)(void *thisptr, struct PhysicalAddress addr, struct CSliceMut_u8 out);
+    int32_t (*phys_write_raw)(void *thisptr, struct PhysicalAddress addr, struct CSliceRef_u8 data);
 } PhysicalMemoryVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void;
 
 /**
@@ -578,10 +619,32 @@ typedef struct VirtualReadData {
     struct CSliceMut_u8 _1;
 } VirtualReadData;
 
+/**
+ * Wrapper around mutable slices.
+ *
+ * This is meant as a safe type to pass across the FFI boundary with similar semantics as regular
+ * slice. However, not all functionality is present, use the slice conversion functions.
+ */
+typedef struct CSliceMut_VirtualReadData {
+    struct VirtualReadData *data;
+    uintptr_t len;
+} CSliceMut_VirtualReadData;
+
 typedef struct VirtualWriteData {
     Address _0;
     struct CSliceRef_u8 _1;
 } VirtualWriteData;
+
+/**
+ * Wrapper around const slices.
+ *
+ * This is meant as a safe type to pass across the FFI boundary with similar semantics as regular
+ * slice. However, not all functionality is present, use the slice conversion functions.
+ */
+typedef struct CSliceRef_VirtualWriteData {
+    const struct VirtualWriteData *data;
+    uintptr_t len;
+} CSliceRef_VirtualWriteData;
 
 /**
  * A `Page` holds information about a memory page.
@@ -644,11 +707,13 @@ typedef OpaqueCallback_VirtualRangeInfo VirtualRangeCallback;
  * This virtual function table contains ABI-safe interface for the given trait.
  */
 typedef struct VirtualMemoryVtbl_____c_void__c_void__NoContext__NoContext {
-    int32_t (*virt_read_raw_list)(void *thisptr, struct VirtualReadData *data, uintptr_t data_size);
-    int32_t (*virt_write_raw_list)(void *thisptr, const struct VirtualWriteData *data, uintptr_t data_size);
+    int32_t (*virt_read_raw_list)(void *thisptr, struct CSliceMut_VirtualReadData data);
+    int32_t (*virt_write_raw_list)(void *thisptr, struct CSliceRef_VirtualWriteData data);
     int32_t (*virt_page_info)(void *thisptr, Address addr, struct Page *ok_out);
     void (*virt_translation_map_range_callback)(void *thisptr, Address start, Address end, VirtualTranslationRangeCallback callback);
     void (*virt_page_map_range_callback)(void *thisptr, uintptr_t gap_size, Address start, Address end, VirtualRangeCallback callback);
+    int32_t (*virt_read_raw_into)(void *thisptr, Address addr, struct CSliceMut_u8 out);
+    int32_t (*virt_write_raw)(void *thisptr, Address addr, struct CSliceRef_u8 data);
 } VirtualMemoryVtbl_____c_void__c_void__NoContext__NoContext;
 
 /**
@@ -971,10 +1036,12 @@ typedef struct OsInnerVtbl_CtxBox_c_void__COptArc_c_void________c_void__COptArc_
  * This virtual function table contains ABI-safe interface for the given trait.
  */
 typedef struct PhysicalMemoryVtbl_____c_void__c_void__NoContext__NoContext {
-    int32_t (*phys_read_raw_list)(void *thisptr, struct PhysicalReadData *data, uintptr_t data_size);
-    int32_t (*phys_write_raw_list)(void *thisptr, const struct PhysicalWriteData *data, uintptr_t data_size);
+    int32_t (*phys_read_raw_list)(void *thisptr, struct CSliceMut_PhysicalReadData data);
+    int32_t (*phys_write_raw_list)(void *thisptr, struct CSliceRef_PhysicalWriteData data);
     struct PhysicalMemoryMetadata (*metadata)(const void *thisptr);
-    void (*set_mem_map)(void *thisptr, const struct PhysicalMemoryMapping *mem_map, uintptr_t mem_map_size);
+    void (*set_mem_map)(void *thisptr, struct CSliceRef_PhysicalMemoryMapping mem_map);
+    int32_t (*phys_read_raw_into)(void *thisptr, struct PhysicalAddress addr, struct CSliceMut_u8 out);
+    int32_t (*phys_write_raw)(void *thisptr, struct PhysicalAddress addr, struct CSliceRef_u8 data);
 } PhysicalMemoryVtbl_____c_void__c_void__NoContext__NoContext;
 
 /**

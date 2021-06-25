@@ -1,12 +1,17 @@
 //! Describes the root of the Operating System
 
-use super::keyboard::*;
 use super::process::*;
 use super::{AddressCallback, ProcessInfo, ProcessInfoCallback};
 
-use crate::mem::phys_mem::*;
-use crate::mem::virt_mem::*;
 use crate::prelude::v1::{Result, *};
+
+// those only required when compiling cglue code
+#[cfg(feature = "plugins")]
+use crate::mem::phys_mem::*;
+#[cfg(feature = "plugins")]
+use crate::mem::virt_mem::*;
+#[cfg(feature = "plugins")]
+use super::keyboard::*;
 
 use crate::cglue::*;
 use std::prelude::v1::*;

@@ -21,15 +21,10 @@ pub mod process;
 pub mod root;
 
 #[doc(hidden)]
-pub use keyboard::{
-    Keyboard, KeyboardState, OsKeyboard,
-    OsKeyboardInner,
-};
-#[doc(hidden)]
 #[cfg(feature = "plugins")]
-pub use keyboard::{
-    IntoKeyboardArcBox, KeyboardArcBox, KeyboardStateArcBox,
-};
+pub use keyboard::{IntoKeyboardArcBox, KeyboardArcBox, KeyboardStateArcBox};
+#[doc(hidden)]
+pub use keyboard::{Keyboard, KeyboardState, OsKeyboard, OsKeyboardInner};
 
 #[doc(hidden)]
 pub use module::{
@@ -37,15 +32,12 @@ pub use module::{
     ModuleAddressInfo, ModuleInfo, ModuleInfoCallback, SectionCallback, SectionInfo,
 };
 #[doc(hidden)]
-pub use process::{
-    Pid, Process, ProcessInfo, ProcessInfoCallback,
-    ProcessState,
-};
-#[doc(hidden)]
 #[cfg(feature = "plugins")]
 pub use process::{
     IntoProcessInstance, IntoProcessInstanceArcBox, ProcessInstance, ProcessInstanceArcBox,
 };
+#[doc(hidden)]
+pub use process::{Pid, Process, ProcessInfo, ProcessInfoCallback, ProcessState};
 
 #[doc(hidden)]
 pub use root::{Os, OsInfo, OsInner};

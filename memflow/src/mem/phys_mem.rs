@@ -1,5 +1,4 @@
 use crate::cglue::*;
-use crate::connector::cpu_state::*;
 use crate::dataview::Pod;
 use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 use crate::types::{PhysicalAddress, Pointer32, Pointer64};
@@ -11,6 +10,10 @@ use std::prelude::v1::*;
 
 #[cfg(feature = "std")]
 use super::PhysicalMemoryCursor;
+
+// those only required when compiling cglue code
+#[cfg(feature = "plugins")]
+use crate::connector::cpu_state::*;
 
 // TODO:
 // - check endianess here and return an error

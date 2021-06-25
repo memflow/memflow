@@ -29,13 +29,15 @@ fn test<T: 'static + PhysicalMemory, V: 'static + VirtualTranslate>(kernel: &mut
 */
 use super::{Win32Kernel, Win32ProcessInfo, Win32VirtualTranslate};
 
-use memflow::cglue::{self, *};
+use memflow::cglue::*;
 use memflow::error::{Error, ErrorKind, ErrorOrigin, Result};
 use memflow::mem::{AsVirtualMemory, PhysicalMemory, VirtualDma, VirtualMemory, VirtualTranslate};
 use memflow::os::keyboard::*;
 use memflow::prelude::OsInner;
 
-use std::convert::TryInto;
+// those only required when compiling cglue code
+#[cfg(feature = "plugins")]
+use memflow::cglue;
 
 use log::debug;
 
@@ -167,6 +169,7 @@ impl<T> Win32Keyboard<T> {
     #[cfg(feature = "regex")]
     fn find_gaf_sig(module_buf: &[u8]) -> Result<usize> {
         use ::regex::bytes::*;
+        use std::convert::TryInto;
 
         // 48 8B 05 ? ? ? ? 48 89 81 ? ? 00 00 48 8B 8F + 0x3
         let re = Regex::new("(?-u)\\x48\\x8B\\x05(?s:.)(?s:.)(?s:.)(?s:.)\\x48\\x89\\x81(?s:.)(?s:.)\\x00\\x00\\x48\\x8B\\x8F")
@@ -189,7 +192,7 @@ impl<T> Win32Keyboard<T> {
     }
 
     #[cfg(not(feature = "regex"))]
-    fn find_gaf_sig(module_buf: &[u8]) -> Result<usize> {
+    fn find_gaf_sig(_module_buf: &[u8]) -> Result<usize> {
         Err(
             Error(ErrorOrigin::OsLayer, ErrorKind::UnsupportedOptionalFeature)
                 .log_error("signature scanning requires std"),

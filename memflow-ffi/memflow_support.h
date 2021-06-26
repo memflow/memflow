@@ -6,7 +6,7 @@
 // global support functions
 #define this(obj) ((obj)->instance.inner.instance)
 #define ctx(obj) (&(obj)->instance.ctx)
-#define str(literal) ((struct CSliceRef_u8){ (literal), sizeof(literal) - 1 })
+#define str(string, len) ((struct CSliceRef_u8){ (string), (len) })
 
 // connector support functions
 typedef ConnectorInstanceArcBox ConnectorInstance;

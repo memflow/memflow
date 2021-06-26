@@ -3,75 +3,46 @@
 
 #include "memflow.h"
 
-// `ConnectorInstance` helpers
-/*
-int32_t connector_read_raw_list(struct ConnectorInstance *phys, struct PhysicalReadData *read_data, uintptr_t read_data_count) {
-    return phys->vtable.phys->phys_read_raw_list(phys->instance, read_data, read_data_count);
+// global support functions
+#define this(obj) ((obj)->instance.inner.instance)
+#define ctx(obj) (&(obj)->instance.ctx)
+#define str(string, len) ((struct CSliceRef_u8){ (string), (len) })
+
+// connector support functions
+typedef ConnectorInstanceArcBox ConnectorInstance;
+
+void mf_clone_connector(const ConnectorInstance *conn, ConnectorInstance *out) {
+	(*out) = *conn;
+	(*out).instance = conn->vtbl_clone->clone(this(conn), ctx(conn));
+}
+#define mf_connector_free(conn) (conn).instance.inner.drop(this(&conn))
+
+// os support functions
+typedef OsInstanceArcBox OsInstance;
+
+void mf_clone_os(const OsInstance *conn, OsInstance *out) {
+	(*out) = *conn;
+    (*out).instance = conn->vtbl_clone->clone(this(conn), ctx(conn));
+}
+#define mf_os_free(os) (os).instance.inner.drop(this(&os))
+
+// process support functions
+typedef ProcessInstance_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void ProcessInstance;
+typedef IntoProcessInstance_CtxBox_c_void__COptArc_c_void________c_void__COptArc_c_void_____COptArc_c_void IntoProcessInstance;
+
+void mf_clone_process(const IntoProcessInstance *conn, IntoProcessInstance *out) {
+	(*out) = *conn;
+    (*out).instance = conn->vtbl_clone->clone(this(conn), ctx(conn));
 }
 
-int32_t connector_write_raw_list(struct ConnectorInstance *phys, const struct PhysicalWriteData *write_data, uintptr_t write_data_count) {
-    return phys->vtable.phys->phys_write_raw_list(phys->instance, write_data, write_data_count);
-}
+#define mf_cb_address(context, func) ((AddressCallback){ (context), (bool (*)(void *, Address))(func) })
+#define mf_cb_process_info(context, func) ((ProcessInfoCallback){ (context), (bool (*)(void *, struct ProcessInfo))(func) })
 
-struct PhysicalMemoryMetadata connector_metadata(struct ConnectorInstance *phys) {
-    return phys->vtable.phys->metadata(phys->instance);
-}
-
-void connector_set_mem_map(struct ConnectorInstance *phys, const struct PhysicalMemoryMapping *mem_maps, uintptr_t mem_maps_count) {
-    phys->vtable.phys->set_mem_map(phys->instance, mem_maps, mem_maps_count);
-}
-
-void connector_read_raw(struct ConnectorInstance *phys, struct PhysicalAddress addr, uint8_t *out, uintptr_t len) {
-    struct PhysicalReadData read_data = {
-        .base = addr,
-        .size = len;
-        Address real_base;
-    };
-    phys->vtable.phys->set_mem_map(phys->instance, mem_maps, mem_maps_count);
-}
-*/
-
-
-// `PhysicalMemory` helpers
-/*
-int32_t phys_read_raw_list(struct ConnectorInstance *mem, struct PhysicalReadData *data, uintptr_t len) {
-    struct PhysicalMemoryInstance phys = {
-        .instance = mem->instance,
-        .vtable = mem->vtable.phys,
-    };
-    return phys_read_raw_list(&phys, data, len);
-}
-
-int32_t phys_write_raw_list(struct ConnectorInstance *mem, const struct PhysicalWriteData *data, uintptr_t len) {
-    struct PhysicalMemoryInstance phys = {
-        .instance = mem->instance,
-        .vtable = mem->vtable.phys,
-    };
-    return phys_write_raw_list(&phys, data, len);
-}
-
-struct PhysicalMemoryMetadata phys_metadata(struct ConnectorInstance *mem) {
-    struct PhysicalMemoryInstance phys = {
-        .instance = mem->instance,
-        .vtable = mem->vtable.phys,
-    };
-    return phys_metadata(&phys);
-}
-
-void phys_set_mem_map(struct ConnectorInstance *mem, const struct PhysicalMemoryMapping *maps, uintptr_t len) {
-    struct PhysicalMemoryInstance phys = {
-        .instance = mem->instance,
-        .vtable = mem->vtable.phys,
-    };
-    return phys_set_mem_map(&phys, data, len);
-}
-*/
-
-
-// `VirtualMemory` helpers
-
-// `ConnectorInstance` helpers
-
-// `OsInner` helpers
+// module support functions
+#define mf_cb_module_address(context, func) ((ModuleAddressCallback){ (context), (bool (*)(void *, struct ModuleAddressInfo))(func) })
+#define mf_cb_module_info(context, func) ((ModuleInfoCallback){ (context), (bool (*)(void *, struct ModuleInfo))(func) })
+#define mf_cb_import(context, func) ((ImportCallback){ (context), (bool (*)(void *, struct ImportInfo))(func) })
+#define mf_cb_export(context, func) ((ExportCallback){ (context), (bool (*)(void *, struct ExportInfo))(func) })
+#define mf_cb_section(context, func) ((SectionCallback){ (context), (bool (*)(void *, struct SectionInfo))(func) })
 
 #endif

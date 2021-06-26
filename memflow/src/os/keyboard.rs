@@ -11,7 +11,7 @@ use crate::prelude::v1::Result;
 pub trait OsKeyboard: for<'a> OsKeyboardInner<'a> {}
 impl<T: for<'a> OsKeyboardInner<'a>> OsKeyboard for T {}
 
-#[cglue_trait]
+#[cfg_attr(feature = "plugins", cglue_trait)]
 #[int_result]
 pub trait OsKeyboardInner<'a>: Send {
     #[wrap_with_obj(crate::os::keyboard::Keyboard)]
@@ -23,9 +23,10 @@ pub trait OsKeyboardInner<'a>: Send {
     fn into_keyboard(self) -> Result<Self::IntoKeyboardType>;
 }
 
+#[cfg(feature = "plugins")]
 cglue_trait_group!(IntoKeyboard, { Keyboard, Clone }, {});
 
-#[cglue_trait]
+#[cfg_attr(feature = "plugins", cglue_trait)]
 #[int_result]
 #[cglue_forward]
 pub trait Keyboard {
@@ -38,7 +39,7 @@ pub trait Keyboard {
     fn state(&mut self) -> Result<Self::KeyboardStateType>;
 }
 
-#[cglue_trait]
+#[cfg_attr(feature = "plugins", cglue_trait)]
 #[int_result]
 #[cglue_forward]
 pub trait KeyboardState {

@@ -1,8 +1,8 @@
 use memflow::{
-    architecture::{arm, x86, ArchitectureIdent, ArchitectureObj, ScopedVirtualTranslate},
+    architecture::{arm, x86, ArchitectureIdent, ArchitectureObj, VirtualTranslate3},
     error::Error,
     iter::SplitAtIndex,
-    mem::{PhysicalMemory, VirtualDma, VirtualMemory, VirtualTranslate},
+    mem::{PhysicalMemory, VirtualDma, VirtualMemory, VirtualTranslate2},
     types::{Address, PhysicalAddress},
 };
 
@@ -20,7 +20,7 @@ impl Win32VirtualTranslate {
         }
     }
 
-    pub fn virt_mem<T: PhysicalMemory, V: VirtualTranslate>(
+    pub fn virt_mem<T: PhysicalMemory, V: VirtualTranslate2>(
         self,
         mem: T,
         vat: V,
@@ -30,7 +30,7 @@ impl Win32VirtualTranslate {
     }
 }
 
-impl ScopedVirtualTranslate for Win32VirtualTranslate {
+impl VirtualTranslate3 for Win32VirtualTranslate {
     fn virt_to_phys_iter<
         T: PhysicalMemory + ?Sized,
         B: SplitAtIndex,

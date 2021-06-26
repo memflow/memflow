@@ -4,7 +4,7 @@ pub mod x64;
 
 use super::{
     mmu::ArchMmuSpec, Architecture, ArchitectureIdent, ArchitectureObj, Endianess,
-    ScopedVirtualTranslate,
+    VirtualTranslate3,
 };
 
 use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
@@ -51,18 +51,18 @@ impl Architecture for X86Architecture {
 }
 
 #[derive(Clone, Copy)]
-pub struct X86ScopedVirtualTranslate {
+pub struct X86VirtualTranslate {
     arch: &'static X86Architecture,
     dtb: Address,
 }
 
-impl X86ScopedVirtualTranslate {
+impl X86VirtualTranslate {
     pub fn new(arch: &'static X86Architecture, dtb: Address) -> Self {
         Self { arch, dtb }
     }
 }
 
-impl ScopedVirtualTranslate for X86ScopedVirtualTranslate {
+impl VirtualTranslate3 for X86VirtualTranslate {
     fn virt_to_phys_iter<
         T: PhysicalMemory + ?Sized,
         B: SplitAtIndex,
@@ -105,10 +105,10 @@ fn underlying_arch(arch: ArchitectureObj) -> Option<&'static X86Architecture> {
     }
 }
 
-pub fn new_translator(dtb: Address, arch: ArchitectureObj) -> Result<X86ScopedVirtualTranslate> {
+pub fn new_translator(dtb: Address, arch: ArchitectureObj) -> Result<X86VirtualTranslate> {
     let arch =
         underlying_arch(arch).ok_or(Error(ErrorOrigin::Mmu, ErrorKind::InvalidArchitecture))?;
-    Ok(X86ScopedVirtualTranslate::new(arch, dtb))
+    Ok(X86VirtualTranslate::new(arch, dtb))
 }
 
 pub fn is_x86_arch(arch: ArchitectureObj) -> bool {

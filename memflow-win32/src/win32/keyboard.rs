@@ -12,11 +12,11 @@ Therefor the Keyboard will by default find the winlogon.exe or wininit.exe proce
 ```
 use std::{thread, time};
 
-use memflow::mem::{PhysicalMemory, VirtualTranslate};
+use memflow::mem::{PhysicalMemory, VirtualTranslate2};
 use memflow::os::{Keyboard, KeyboardState};
 use memflow_win32::win32::{Win32Kernel, Win32Keyboard};
 
-fn test<T: 'static + PhysicalMemory, V: 'static + VirtualTranslate>(kernel: &mut Win32Kernel<T, V>) {
+fn test<T: 'static + PhysicalMemory, V: 'static + VirtualTranslate2>(kernel: &mut Win32Kernel<T, V>) {
     let mut kbd = Win32Keyboard::with_kernel_ref(kernel).unwrap();
 
     loop {
@@ -29,13 +29,15 @@ fn test<T: 'static + PhysicalMemory, V: 'static + VirtualTranslate>(kernel: &mut
 */
 use super::{Win32Kernel, Win32ProcessInfo, Win32VirtualTranslate};
 
-use memflow::cglue::{self, *};
+use memflow::cglue::*;
 use memflow::error::{Error, ErrorKind, ErrorOrigin, Result};
-use memflow::mem::{AsVirtualMemory, PhysicalMemory, VirtualDma, VirtualMemory, VirtualTranslate};
+use memflow::mem::{PhysicalMemory, VirtualDma, VirtualMemory, VirtualTranslate2};
 use memflow::os::keyboard::*;
 use memflow::prelude::OsInner;
 
-use std::convert::TryInto;
+// those only required when compiling cglue code
+#[cfg(feature = "plugins")]
+use memflow::cglue;
 
 use log::debug;
 
@@ -44,6 +46,7 @@ use memflow::types::Address;
 
 use pelite::{self, pe64::exports::Export, PeView};
 
+#[cfg(feature = "plugins")]
 cglue_impl_group!(Win32Keyboard<T>, IntoKeyboard);
 
 /// Interface for accessing the target's keyboard state.
@@ -54,7 +57,7 @@ pub struct Win32Keyboard<T> {
     key_state_addr: Address,
 }
 
-impl<'a, T: 'static + PhysicalMemory, V: 'static + VirtualTranslate>
+impl<'a, T: 'static + PhysicalMemory, V: 'static + VirtualTranslate2>
     Win32Keyboard<VirtualDma<T, V, Win32VirtualTranslate>>
 {
     pub fn with_kernel(mut kernel: Win32Kernel<T, V>) -> Result<Self> {
@@ -81,7 +84,7 @@ impl<'a, T: 'static + PhysicalMemory, V: 'static + VirtualTranslate>
     }
 }
 
-impl<'a, T: 'static + PhysicalMemory, V: 'static + VirtualTranslate>
+impl<'a, T: 'static + PhysicalMemory, V: 'static + VirtualTranslate2>
     Win32Keyboard<VirtualDma<Fwd<&'a mut T>, Fwd<&'a mut V>, Win32VirtualTranslate>>
 {
     /// Constructs a new keyboard object by borrowing a kernel object.
@@ -113,7 +116,7 @@ impl<'a, T: 'static + PhysicalMemory, V: 'static + VirtualTranslate>
 }
 
 impl<T> Win32Keyboard<T> {
-    fn find_keystate<P: 'static + PhysicalMemory, V: 'static + VirtualTranslate>(
+    fn find_keystate<P: 'static + PhysicalMemory, V: 'static + VirtualTranslate2>(
         kernel: &mut Win32Kernel<P, V>,
     ) -> Result<(Win32ProcessInfo, Address)> {
         let win32kbase_module_info = kernel.module_by_name("win32kbase.sys")?;
@@ -130,7 +133,6 @@ impl<T> Win32Keyboard<T> {
 
         // read with user_process dtb
         let module_buf = user_process
-            .virt_mem()
             .virt_read_raw(win32kbase_module_info.base, win32kbase_module_info.size)
             .data_part()?;
         debug!("fetched {:x} bytes from win32kbase.sys", module_buf.len());
@@ -166,6 +168,7 @@ impl<T> Win32Keyboard<T> {
     #[cfg(feature = "regex")]
     fn find_gaf_sig(module_buf: &[u8]) -> Result<usize> {
         use ::regex::bytes::*;
+        use std::convert::TryInto;
 
         // 48 8B 05 ? ? ? ? 48 89 81 ? ? 00 00 48 8B 8F + 0x3
         let re = Regex::new("(?-u)\\x48\\x8B\\x05(?s:.)(?s:.)(?s:.)(?s:.)\\x48\\x89\\x81(?s:.)(?s:.)\\x00\\x00\\x48\\x8B\\x8F")
@@ -188,7 +191,7 @@ impl<T> Win32Keyboard<T> {
     }
 
     #[cfg(not(feature = "regex"))]
-    fn find_gaf_sig(module_buf: &[u8]) -> Result<usize> {
+    fn find_gaf_sig(_module_buf: &[u8]) -> Result<usize> {
         Err(
             Error(ErrorOrigin::OsLayer, ErrorKind::UnsupportedOptionalFeature)
                 .log_error("signature scanning requires std"),

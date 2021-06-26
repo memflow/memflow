@@ -5,10 +5,11 @@ Basic connector which works on file i/o operations (`Seek`, `Read`, `Write`).
 use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 use crate::iter::FnExtend;
 use crate::mem::{
-    MemoryMap, PhysicalMemory, PhysicalMemoryMapping, PhysicalMemoryMetadata, PhysicalReadData,
-    PhysicalWriteData,
+    phys_mem::*, MemoryMap, PhysicalMemory, PhysicalMemoryMapping, PhysicalMemoryMetadata,
+    PhysicalReadData, PhysicalWriteData,
 };
 use crate::types::Address;
+use cglue::*;
 
 use std::fs::File;
 use std::io::{self, Read, Seek, SeekFrom, Write};
@@ -178,3 +179,9 @@ impl<T: Seek + Read + Write + Send> PhysicalMemory for FileIoMemory<T> {
         self.mem_map.merge(map);
     }
 }
+
+cglue_impl_group!(
+    FileIoMemory<T: Read + Seek + Write + Send>,
+    ConnectorInstance,
+    {}
+);

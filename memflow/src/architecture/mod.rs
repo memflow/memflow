@@ -5,7 +5,7 @@ Each architecture implements the `Architecture` trait
 and all function calls are dispatched into their own
 architecture specific sub-modules.
 
-Virtual address translations are done using `ScopedVirtualTranslate`
+Virtual address translations are done using `VirtualTranslate3`
 trait, which is linked to a particular architecture.
 
 Each architecture also has a `ByteOrder` assigned to it.
@@ -48,7 +48,7 @@ pub enum Endianess {
 /// This trait abstracts virtual address translation for a single virtual memory scope.
 /// On x86 architectures, it is a single `Address` - a CR3 register. But other architectures may
 /// use multiple translation bases, or use a completely different translation mechanism (MIPS).
-pub trait ScopedVirtualTranslate: Clone + Copy + Send {
+pub trait VirtualTranslate3: Clone + Copy + Send {
     /// Translate a single virtual address
     ///
     /// # Examples
@@ -56,7 +56,7 @@ pub trait ScopedVirtualTranslate: Clone + Copy + Send {
     /// # use memflow::error::Result;
     /// # use memflow::types::{PhysicalAddress, Address};
     /// # use memflow::dummy::{DummyMemory, DummyOs};
-    /// use memflow::architecture::ScopedVirtualTranslate;
+    /// use memflow::architecture::VirtualTranslate3;
     /// use memflow::architecture::x86::x64;
     /// use memflow::types::size;
     ///

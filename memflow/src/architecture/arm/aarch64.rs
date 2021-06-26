@@ -1,6 +1,6 @@
 use super::{
-    super::{ArchMmuDef, ArchitectureObj, Endianess, ScopedVirtualTranslate},
-    ArmArchitecture, ArmScopedVirtualTranslate,
+    super::{ArchMmuDef, ArchitectureObj, Endianess, VirtualTranslate3},
+    ArmArchitecture, ArmVirtualTranslate,
 };
 
 use crate::types::Address;
@@ -24,6 +24,6 @@ pub(super) static ARCH_SPEC: ArmArchitecture = ArmArchitecture {
 
 pub static ARCH: ArchitectureObj = &ARCH_SPEC;
 
-pub fn new_translator(dtb1: Address, dtb2: Address) -> impl ScopedVirtualTranslate {
-    ArmScopedVirtualTranslate::new(&ARCH_SPEC, dtb1, dtb2)
+pub fn new_translator(dtb1: Address, dtb2: Address) -> impl VirtualTranslate3 {
+    ArmVirtualTranslate::new(&ARCH_SPEC, dtb1, dtb2)
 }

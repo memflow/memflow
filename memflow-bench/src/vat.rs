@@ -1,8 +1,8 @@
 use criterion::*;
 
-use memflow::mem::{CachedMemoryAccess, CachedVirtualTranslate, PhysicalMemory, VirtualTranslate};
+use memflow::mem::{CachedMemoryAccess, CachedVirtualTranslate, PhysicalMemory, VirtualTranslate2};
 
-use memflow::architecture::ScopedVirtualTranslate;
+use memflow::architecture::VirtualTranslate3;
 
 use memflow::error::Result;
 use memflow::iter::FnExtend;
@@ -13,7 +13,7 @@ use rand::prelude::*;
 use rand::{Rng, SeedableRng};
 use rand_xorshift::XorShiftRng as CurRng;
 
-fn vat_test_with_mem<T: PhysicalMemory, V: VirtualTranslate, S: ScopedVirtualTranslate>(
+fn vat_test_with_mem<T: PhysicalMemory, V: VirtualTranslate2, S: VirtualTranslate3>(
     bench: &mut Bencher,
     phys_mem: &mut T,
     vat: &mut V,
@@ -50,7 +50,7 @@ fn vat_test_with_mem<T: PhysicalMemory, V: VirtualTranslate, S: ScopedVirtualTra
     });
 }
 
-fn vat_test_with_ctx<T: PhysicalMemory, V: VirtualTranslate, S: ScopedVirtualTranslate>(
+fn vat_test_with_ctx<T: PhysicalMemory, V: VirtualTranslate2, S: VirtualTranslate3>(
     bench: &mut Bencher,
     cache_size: u64,
     chunks: usize,
@@ -118,7 +118,7 @@ fn vat_test_with_ctx<T: PhysicalMemory, V: VirtualTranslate, S: ScopedVirtualTra
     }
 }
 
-fn chunk_vat_params<T: PhysicalMemory, V: VirtualTranslate, S: ScopedVirtualTranslate>(
+fn chunk_vat_params<T: PhysicalMemory, V: VirtualTranslate2, S: VirtualTranslate3>(
     group: &mut BenchmarkGroup<'_, measurement::WallTime>,
     func_name: String,
     cache_size: u64,
@@ -145,7 +145,7 @@ fn chunk_vat_params<T: PhysicalMemory, V: VirtualTranslate, S: ScopedVirtualTran
     }
 }
 
-pub fn chunk_vat<T: PhysicalMemory, V: VirtualTranslate, S: ScopedVirtualTranslate>(
+pub fn chunk_vat<T: PhysicalMemory, V: VirtualTranslate2, S: VirtualTranslate3>(
     c: &mut Criterion,
     backend_name: &str,
     initialize_ctx: &dyn Fn() -> Result<(T, V, ProcessInfo, S, ModuleInfo)>,

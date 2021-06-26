@@ -12,12 +12,12 @@ use log::{info, warn};
 
 use memflow::architecture::ArchitectureObj;
 use memflow::error::{Error, ErrorKind, ErrorOrigin, PartialResultExt, Result};
-use memflow::mem::VirtualMemory;
+use memflow::mem::{VirtualMemory, VirtualTranslate};
 use memflow::types::Address;
 
 use pelite::{self, pe64::debug::CodeView, pe64::exports::Export, PeView};
 
-pub fn find<T: VirtualMemory>(
+pub fn find<T: VirtualMemory + VirtualTranslate>(
     virt_mem: &mut T,
     start_block: &StartBlock,
 ) -> Result<(Address, usize)> {

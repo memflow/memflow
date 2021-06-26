@@ -1,5 +1,4 @@
 use crate::cglue::*;
-use crate::connector::cpu_state::*;
 use crate::dataview::Pod;
 use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 use crate::types::{PhysicalAddress, Pointer32, Pointer64};
@@ -12,11 +11,17 @@ use std::prelude::v1::*;
 #[cfg(feature = "std")]
 use super::PhysicalMemoryCursor;
 
+// those only required when compiling cglue code
+#[cfg(feature = "plugins")]
+use crate::connector::cpu_state::*;
+
 // TODO:
 // - check endianess here and return an error
 // - better would be to convert endianess with word alignment from addr
 
+#[cfg(feature = "plugins")]
 cglue_trait_group!(ConnectorInstance<'a>, { PhysicalMemory, Clone }, { ConnectorCpuStateInner<'a> });
+#[cfg(feature = "plugins")]
 pub type MuConnectorInstanceArcBox<'a> = std::mem::MaybeUninit<ConnectorInstanceArcBox<'a>>;
 
 /// The [`PhysicalMemory`] trait is implemented by memory backends
@@ -103,7 +108,7 @@ pub type MuConnectorInstanceArcBox<'a> = std::mem::MaybeUninit<ConnectorInstance
 /// # use memflow::types::size;
 /// # read(&mut DummyMemory::new(size::mb(4)));
 /// ```
-#[cglue_trait]
+#[cfg_attr(feature = "plugins", cglue_trait)]
 #[int_result]
 #[cglue_forward]
 pub trait PhysicalMemory: Send {
@@ -136,7 +141,6 @@ pub trait PhysicalMemory: Send {
     fn set_mem_map(&mut self, mem_map: &[PhysicalMemoryMapping]);
 
     // read helpers
-    #[skip_func]
     fn phys_read_raw_into(&mut self, addr: PhysicalAddress, out: &mut [u8]) -> Result<()> {
         self.phys_read_raw_list(&mut [PhysicalReadData(addr, out.into())])
     }
@@ -172,7 +176,6 @@ pub trait PhysicalMemory: Send {
     }
 
     // write helpers
-    #[skip_func]
     fn phys_write_raw(&mut self, addr: PhysicalAddress, data: &[u8]) -> Result<()> {
         self.phys_write_raw_list(&[PhysicalWriteData(addr, data.into())])
     }
@@ -384,14 +387,4 @@ impl<'a> From<PhysicalWriteData<'a>> for (PhysicalAddress, &'a [u8]) {
     fn from(PhysicalWriteData(a, b): PhysicalWriteData<'a>) -> Self {
         (a, b.into())
     }
-}
-
-/// Trait that allows to borrow an interior reference to a [`PhysicalMemory`] object.
-#[cglue_trait]
-pub trait AsPhysicalMemory {
-    #[wrap_with_obj_mut(crate::mem::phys_mem::PhysicalMemory)]
-    type PhysicalMemoryType: crate::mem::phys_mem::PhysicalMemory;
-
-    /// Returns a mutable reference to the [`PhysicalMemory`] object.
-    fn phys_mem(&mut self) -> &mut Self::PhysicalMemoryType;
 }

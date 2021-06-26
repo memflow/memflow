@@ -603,7 +603,7 @@ mod tests {
     use crate::cglue::ForwardMut;
 
     use super::*;
-    use crate::architecture::x86::{x64, X86ScopedVirtualTranslate};
+    use crate::architecture::x86::{x64, X86VirtualTranslate};
     use crate::dummy::{DummyMemory, DummyOs};
     use crate::mem::{DirectTranslate, VirtualDma};
     use crate::types::size;
@@ -663,7 +663,7 @@ mod tests {
     }
 
     fn dummy_virt_mem() -> (
-        VirtualDma<DummyMemory, DirectTranslate, X86ScopedVirtualTranslate>,
+        VirtualDma<DummyMemory, DirectTranslate, X86VirtualTranslate>,
         Address,
     ) {
         let phys_mem = DummyMemory::new(size::mb(1));

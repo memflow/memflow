@@ -159,8 +159,8 @@ fn chunk_read<T: PhysicalMemory>(
 criterion_group! {
     name = dummy_read;
     config = Criterion::default()
-        .warm_up_time(std::time::Duration::from_millis(300))
-        .measurement_time(std::time::Duration::from_millis(2700));
+        .warm_up_time(std::time::Duration::from_millis(500))
+        .measurement_time(std::time::Duration::from_millis(5000));
     targets = dummy_read_group
 }
 

@@ -63,7 +63,6 @@ pub trait OsInner<'a>: Send {
     /// Walks a process list and calls a callback for each process
     ///
     /// The callback is fully opaque. We need this style so that C FFI can work seamlessly.
-    #[skip_func]
     fn process_info_list_callback(&mut self, mut callback: ProcessInfoCallback) -> Result<()> {
         // This is safe, because control will flow back to the callback.
         let sptr = self as *mut Self;
@@ -93,7 +92,6 @@ pub trait OsInner<'a>: Send {
     fn process_info_by_address(&mut self, address: Address) -> Result<ProcessInfo>;
 
     /// Find process information by its name
-    #[skip_func]
     fn process_info_by_name(&mut self, name: &str) -> Result<ProcessInfo> {
         let mut ret = Err(Error(ErrorOrigin::OsLayer, ErrorKind::ProcessNotFound));
         let callback = &mut |data: ProcessInfo| {
@@ -109,7 +107,6 @@ pub trait OsInner<'a>: Send {
     }
 
     /// Find process information by its ID
-    #[skip_func]
     fn process_info_by_pid(&mut self, pid: Pid) -> Result<ProcessInfo> {
         let mut ret = Err(Error(ErrorOrigin::OsLayer, ErrorKind::ProcessNotFound));
         let callback = &mut |data: ProcessInfo| {
@@ -140,7 +137,6 @@ pub trait OsInner<'a>: Send {
     /// If no process with the specified address can be found this function will return an Error.
     ///
     /// This function can be useful for quickly accessing a process.
-    #[skip_func]
     fn process_by_address(&'a mut self, addr: Address) -> Result<Self::ProcessType> {
         self.process_info_by_address(addr)
             .and_then(move |i| self.process_by_info(i))
@@ -152,7 +148,6 @@ pub trait OsInner<'a>: Send {
     /// If no process with the specified name can be found this function will return an Error.
     ///
     /// This function can be useful for quickly accessing a process.
-    #[skip_func]
     fn process_by_name(&'a mut self, name: &str) -> Result<Self::ProcessType> {
         self.process_info_by_name(name)
             .and_then(move |i| self.process_by_info(i))
@@ -164,7 +159,6 @@ pub trait OsInner<'a>: Send {
     /// If no process with the specified ID can be found this function will return an Error.
     ///
     /// This function can be useful for quickly accessing a process.
-    #[skip_func]
     fn process_by_pid(&'a mut self, pid: Pid) -> Result<Self::ProcessType> {
         self.process_info_by_pid(pid)
             .and_then(move |i| self.process_by_info(i))
@@ -177,7 +171,6 @@ pub trait OsInner<'a>: Send {
     /// If no process with the specified address can be found this function will return an Error.
     ///
     /// This function can be useful for quickly accessing a process.
-    #[skip_func]
     fn into_process_by_address(mut self, addr: Address) -> Result<Self::IntoProcessType>
     where
         Self: Sized,
@@ -192,7 +185,6 @@ pub trait OsInner<'a>: Send {
     /// If no process with the specified name can be found this function will return an Error.
     ///
     /// This function can be useful for quickly accessing a process.
-    #[skip_func]
     fn into_process_by_name(mut self, name: &str) -> Result<Self::IntoProcessType>
     where
         Self: Sized,
@@ -207,7 +199,6 @@ pub trait OsInner<'a>: Send {
     /// If no process with the specified ID can be found this function will return an Error.
     ///
     /// This function can be useful for quickly accessing a process.
-    #[skip_func]
     fn into_process_by_pid(mut self, pid: Pid) -> Result<Self::IntoProcessType>
     where
         Self: Sized,
@@ -227,7 +218,6 @@ pub trait OsInner<'a>: Send {
     ///
     /// # Arguments
     /// * `callback` - where to pass each matching module to. This is an opaque callback.
-    #[skip_func]
     fn module_list_callback(&mut self, mut callback: ModuleInfoCallback) -> Result<()> {
         // This is safe, because control will flow back to the callback.
         let sptr = self as *mut Self;
@@ -266,7 +256,6 @@ pub trait OsInner<'a>: Send {
     /// Finds a OS module by its name
     ///
     /// This function can be useful for quickly accessing a specific module
-    #[skip_func]
     fn module_by_name(&mut self, name: &str) -> Result<ModuleInfo> {
         let mut ret = Err(Error(ErrorOrigin::OsLayer, ErrorKind::ProcessNotFound));
         let callback = &mut |data: ModuleInfo| {

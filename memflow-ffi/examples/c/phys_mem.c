@@ -1,5 +1,6 @@
 #include "memflow.h"
 #include "memflow_support.h"
+
 #include <stdio.h>
 
 int main(int argc, char *argv[]) {
@@ -18,7 +19,7 @@ int main(int argc, char *argv[]) {
       uint8_t buffer[0x1000];
 
       // mf_connector_phys_read_raw_list(conn, &read_data, 1);
-      ConnectorInstanceArcBox conn_cloned;
+      ConnectorInstance conn_cloned;
       mf_clone_connector(&conn, &conn_cloned);
 
       // most simple read

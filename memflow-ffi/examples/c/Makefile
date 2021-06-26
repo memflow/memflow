@@ -10,14 +10,14 @@ ODIR=./
 phys_mem.out: phys_mem.o
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
 
-#os.out: os.o
-#	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
-
 process_list.out: process_list.o
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
 
+find_process.out: find_process.o
+	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
+
 .PHONY: all
-all: phys_mem.out process_list.out
+all: phys_mem.out process_list.out find_process.out
 
 .DEFAULT_GOAL := all
 

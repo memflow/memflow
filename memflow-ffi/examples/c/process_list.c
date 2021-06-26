@@ -7,7 +7,7 @@ bool list_modules(ProcessInstance *process, struct ModuleInfo module_info) {
   return true;
 }
 
-bool list_processes(OsInstanceArcBox *os, Address addr) {
+bool list_processes(OsInstance *os, Address addr) {
   ProcessInstance process;
   if (os->vtbl_osinner->process_by_address(this(os), addr, ctx(os), &process) <
       0) {
@@ -43,7 +43,7 @@ int main(int argc, char *argv[]) {
   const char *conn_arg = argc > 2 ? argv[2] : "";
 
   // initialize the connector plugin
-  ConnectorInstanceArcBox connector;
+  ConnectorInstance connector;
   if (inventory_create_connector(inventory, conn_name, conn_arg, &connector) <
       0) {
     printf("unable to initialize connector\n");
@@ -53,7 +53,7 @@ int main(int argc, char *argv[]) {
   printf("connector initialized: %p\n", this(&connector));
 
   // initialize the OS plugin
-  OsInstanceArcBox os;
+  OsInstance os;
   if (inventory_create_os(inventory, "win32", "", connector, &os) < 0) {
     printf("unable to initialize os plugin\n");
     mf_connector_free(connector);

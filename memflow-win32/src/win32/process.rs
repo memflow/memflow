@@ -262,7 +262,7 @@ impl<T: VirtualMemory> Process for Win32Process<T> {
                 .module_base_from_entry(address, &mut s.virt_mem, arch)
                 .map(|b| (b, b == s.proc_info.section_base))
             {
-                ret = Ok(addr);
+                ret = Ok(address);
                 false
             } else {
                 true

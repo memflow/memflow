@@ -62,10 +62,9 @@ int main(int argc, char *argv[]) {
   }
   printf("os plugin initialized: %p\n", this(&os));
 
-  // find a specific process based on it's name
-  // this could easily be replaced by process_by_name but
-  // is being used here as a demo for other use cases which
-  // should return a specific process.
+  // find a specific process based on it's name.
+  // this can easily be replaced by process_by_name but
+  // is being used here as a demonstration.
   ProcessInstance target_process;
   struct FindProcessContext find_context = {
       &os,
@@ -76,6 +75,19 @@ int main(int argc, char *argv[]) {
   os.vtbl_osinner->process_address_list_callback(
       this(&os), mf_cb_address(&find_context, find_process));
   if (find_context.found) {
+    const struct ProcessInfo *info =
+        target_process.vtbl_process->info(this(&target_process));
+
+    printf("Calculator.exe process found: 0x%x] %d %s %s\n", info->address,
+           info->pid, info->name, info->path);
+  } else {
+    printf("Unable to find Calculator.exe\n");
+  }
+
+  // find a specific process based on its name
+  // via process_by_name
+  if (os.vtbl_osinner->process_by_name(this(&os), str("Calculator.exe"),
+                                       ctx(&os), &target_process) == 0) {
     const struct ProcessInfo *info =
         target_process.vtbl_process->info(this(&target_process));
 

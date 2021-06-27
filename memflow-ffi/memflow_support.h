@@ -6,7 +6,10 @@
 // global support functions
 #define this(obj) ((obj)->instance.inner.instance)
 #define ctx(obj) (&(obj)->instance.ctx)
-#define str(string, len) ((struct CSliceRef_u8){(string), (len)})
+
+// Constructs a slice from a string for memflow
+// Note that strlen() is optimized out for string literals here
+#define str(string) ((struct CSliceRef_u8){(string), (sizeof(string) == sizeof(char *) ? strlen(string) : (sizeof(string) - 1))})
 
 // connector support functions
 typedef ConnectorInstanceArcBox ConnectorInstance;

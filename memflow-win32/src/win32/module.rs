@@ -85,6 +85,7 @@ impl Win32ModuleListInfo {
             if list_entry.is_null()
                 || (list_entry.as_u64() & 0b111) != 0
                 || list_entry == self.module_base
+                || (list_entry.as_u64()) > 0x7FF000000000
             {
                 break;
             }

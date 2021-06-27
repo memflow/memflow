@@ -459,22 +459,22 @@ mod tests {
     #[test]
     pub fn part_error_from_i32_invalid() {
         let mut result: PartialResult<()> = from_int_result_empty(-1);
-        assert_eq!(result.is_ok(), false);
+        assert!(result.is_err());
         assert_eq!(
             result.err().unwrap(),
             PartialError::Error(Error(ErrorOrigin::Other, ErrorKind::Unknown))
         );
 
         result = from_int_result_empty(-2);
-        assert_eq!(result.is_ok(), false);
+        assert!(result.is_err());
         assert_eq!(result.err().unwrap(), PartialError::PartialVirtualRead(()));
 
         result = from_int_result_empty(-3);
-        assert_eq!(result.is_ok(), false);
+        assert!(result.is_err());
         assert_eq!(result.err().unwrap(), PartialError::PartialVirtualWrite);
 
         result = from_int_result_empty(-4);
-        assert_eq!(result.is_ok(), false);
+        assert!(result.is_err());
         assert_eq!(
             result.err().unwrap(),
             PartialError::Error(Error(ErrorOrigin::Ffi, ErrorKind::Unknown))
@@ -494,7 +494,7 @@ mod tests {
     pub fn result_ok_void_ffi() {
         let r: Result<()> = Ok(());
         let result: Result<()> = from_int_result_empty(into_int_result(r));
-        assert_eq!(result.is_ok(), true);
+        assert!(result.is_ok());
     }
 
     #[test]
@@ -502,7 +502,7 @@ mod tests {
         let r: Result<i32> = Ok(1234i32);
         let mut out = MaybeUninit::<i32>::uninit();
         let result: Result<i32> = unsafe { from_int_result(into_int_out_result(r, &mut out), out) };
-        assert_eq!(result.is_ok(), true);
+        assert!(result.is_ok());
         assert_eq!(result.unwrap(), 1234i32);
     }
 
@@ -510,7 +510,7 @@ mod tests {
     pub fn result_error_void_ffi() {
         let r: Result<i32> = Err(Error(ErrorOrigin::Other, ErrorKind::InvalidExeFile));
         let result: Result<()> = from_int_result_empty(into_int_result(r));
-        assert_eq!(result.is_ok(), false);
+        assert!(result.is_err());
         assert_eq!(result.err().unwrap().0, ErrorOrigin::Other);
         assert_eq!(result.err().unwrap().1, ErrorKind::InvalidExeFile);
     }
@@ -520,7 +520,7 @@ mod tests {
         let r: Result<i32> = Err(Error(ErrorOrigin::Other, ErrorKind::InvalidExeFile));
         let mut out = MaybeUninit::<i32>::uninit();
         let result: Result<i32> = unsafe { from_int_result(into_int_out_result(r, &mut out), out) };
-        assert_eq!(result.is_ok(), false);
+        assert!(result.is_err());
         assert_eq!(result.err().unwrap().0, ErrorOrigin::Other);
         assert_eq!(result.err().unwrap().1, ErrorKind::InvalidExeFile);
     }
@@ -529,7 +529,7 @@ mod tests {
     pub fn part_result_ok_void_ffi() {
         let r: PartialResult<()> = Ok(());
         let result: PartialResult<()> = from_int_result_empty(into_int_result(r));
-        assert_eq!(result.is_ok(), true);
+        assert!(result.is_ok());
     }
 
     #[test]
@@ -539,7 +539,7 @@ mod tests {
             ErrorKind::InvalidExeFile,
         )));
         let result: PartialResult<()> = from_int_result_empty(into_int_result(r));
-        assert_eq!(result.is_ok(), false);
+        assert!(result.is_err());
         assert_eq!(
             result.err().unwrap(),
             PartialError::Error(Error(ErrorOrigin::Other, ErrorKind::InvalidExeFile))
@@ -550,7 +550,7 @@ mod tests {
     pub fn part_result_part_error_read_ffi() {
         let r: PartialResult<()> = Err(PartialError::PartialVirtualRead(()));
         let result: PartialResult<()> = from_int_result_empty(into_int_result(r));
-        assert_eq!(result.is_ok(), false);
+        assert!(result.is_err());
         assert_eq!(result.err().unwrap(), PartialError::PartialVirtualRead(()));
     }
 
@@ -558,7 +558,7 @@ mod tests {
     pub fn part_result_part_error_write_ffi() {
         let r: PartialResult<()> = Err(PartialError::PartialVirtualWrite);
         let result: PartialResult<()> = from_int_result_empty(into_int_result(r));
-        assert_eq!(result.is_ok(), false);
+        assert!(result.is_err());
         assert_eq!(result.err().unwrap(), PartialError::PartialVirtualWrite);
     }
 }

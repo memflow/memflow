@@ -227,7 +227,7 @@ pub trait VirtualMemory: Send {
     /// For reading fixed-size char arrays the [`virt_read_char_array`] should be used.
     #[skip_func]
     fn virt_read_char_string_n(&mut self, addr: Address, n: usize) -> PartialResult<String> {
-        let mut buf = vec![0; 32];
+        let mut buf = vec![0; std::cmp::min(32, n)];
 
         let mut last_n = 0;
 

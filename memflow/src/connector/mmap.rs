@@ -4,11 +4,13 @@ Basic connector which works on mapped memory.
 
 use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 use crate::iter::FnExtend;
+use crate::mem::phys_mem::*;
 use crate::mem::{
     MemoryMap, PhysicalMemory, PhysicalMemoryMapping, PhysicalMemoryMetadata, PhysicalReadData,
     PhysicalWriteData,
 };
 use crate::types::Address;
+use cglue::*;
 
 pub struct MappedPhysicalMemory<T, F> {
     info: F,
@@ -166,3 +168,14 @@ impl<'a, F: AsRef<MemoryMap<&'a [u8]>> + Send> PhysicalMemory
     // This is a no-op for u8 slices.
     fn set_mem_map(&mut self, _mem_map: &[PhysicalMemoryMapping]) {}
 }
+
+cglue_impl_group!(
+    MappedPhysicalMemory<T = &'cglue_a mut [u8], F: AsRef<MemoryMap<&'cglue_a mut [u8]>>>,
+    ConnectorInstance,
+    {}
+);
+cglue_impl_group!(
+    MappedPhysicalMemory<T = &'cglue_a [u8], F: AsRef<MemoryMap<&'cglue_a [u8]>>>,
+    ConnectorInstance,
+    {}
+);

@@ -128,11 +128,3 @@ impl<'a> MmapInfoMut<'a> {
 }
 
 pub type WriteMappedFilePhysicalMemory<'a> = MappedPhysicalMemory<&'a mut [u8], MmapInfoMut<'a>>;
-
-cglue_impl_group!(ReadMappedFilePhysicalMemory<'cglue_a>, ConnectorInstance, {
-});
-cglue_impl_group!(
-    WriteMappedFilePhysicalMemory<'cglue_a>,
-    ConnectorInstance,
-    {}
-);

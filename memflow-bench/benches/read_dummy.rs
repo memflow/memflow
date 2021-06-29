@@ -23,6 +23,8 @@ fn initialize_virt_ctx() -> Result<(
 
     let pid = os.alloc_process(size::mb(60), &[]);
     let mut prc = os.process_by_pid(pid).unwrap();
+    prc.proc.add_modules(10, size::kb(1));
+
     let module = prc.primary_module().unwrap();
     let translator = prc.proc.translator();
     let info = prc.proc.info;
@@ -40,8 +42,8 @@ fn dummy_read_group(c: &mut Criterion) {
 criterion_group! {
     name = dummy_read;
     config = Criterion::default()
-        .warm_up_time(std::time::Duration::from_millis(300))
-        .measurement_time(std::time::Duration::from_millis(2700));
+        .warm_up_time(std::time::Duration::from_millis(500))
+        .measurement_time(std::time::Duration::from_millis(5000));
     targets = dummy_read_group
 }
 

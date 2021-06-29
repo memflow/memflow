@@ -14,6 +14,7 @@ publish = false
 
 [dependencies]
 memflow = { path = "../memflow", features = ["dummy_mem"] }
+log = "0.4"
 rand = "0.8"
 rand_xorshift = "0.3"
 

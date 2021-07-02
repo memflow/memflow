@@ -43,6 +43,7 @@ pub trait OsInner<'a>: Send {
     #[wrap_with_group(crate::os::process::IntoProcessInstance)]
     type IntoProcessType: crate::os::process::Process
         + crate::mem::virt_mem::VirtualMemory
+        + Clone
         + 'static;
 
     /// Walks a process list and calls a callback for each process structure address

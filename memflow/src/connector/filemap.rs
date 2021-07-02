@@ -1,8 +1,6 @@
 use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
-use crate::mem::phys_mem::*;
 use crate::mem::MemoryMap;
 use crate::types::Address;
-use cglue::*;
 use memmap::{Mmap, MmapMut, MmapOptions};
 
 use std::fs::File;

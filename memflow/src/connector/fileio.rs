@@ -9,11 +9,13 @@ use crate::mem::{
     PhysicalReadData, PhysicalWriteData,
 };
 use crate::types::Address;
-use cglue::*;
 
 use std::fs::File;
 use std::io::{self, Read, Seek, SeekFrom, Write};
 use std::ops::{Deref, DerefMut};
+
+#[cfg(feature = "plugins")]
+use crate::cglue::*;
 
 /// File that implements Clone
 ///

@@ -4,13 +4,16 @@ Basic connector which works on mapped memory.
 
 use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 use crate::iter::FnExtend;
-use crate::mem::phys_mem::*;
 use crate::mem::{
     MemoryMap, PhysicalMemory, PhysicalMemoryMapping, PhysicalMemoryMetadata, PhysicalReadData,
     PhysicalWriteData,
 };
 use crate::types::Address;
-use cglue::*;
+
+#[cfg(feature = "plugins")]
+use crate::cglue::*;
+#[cfg(feature = "plugins")]
+use crate::mem::phys_mem::*;
 
 pub struct MappedPhysicalMemory<T, F> {
     info: F,
@@ -169,11 +172,13 @@ impl<'a, F: AsRef<MemoryMap<&'a [u8]>> + Send> PhysicalMemory
     fn set_mem_map(&mut self, _mem_map: &[PhysicalMemoryMapping]) {}
 }
 
+#[cfg(feature = "plugins")]
 cglue_impl_group!(
     MappedPhysicalMemory<T = &'cglue_a mut [u8], F: AsRef<MemoryMap<&'cglue_a mut [u8]>>>,
     ConnectorInstance,
     {}
 );
+#[cfg(feature = "plugins")]
 cglue_impl_group!(
     MappedPhysicalMemory<T = &'cglue_a [u8], F: AsRef<MemoryMap<&'cglue_a [u8]>>>,
     ConnectorInstance,

@@ -49,7 +49,9 @@ pub struct Win32Kernel<T, V> {
     pub kernel_modules: Option<Win32ModuleListInfo>,
 }
 
-impl<T: 'static + PhysicalMemory, V: 'static + VirtualTranslate2> Win32Kernel<T, V> {
+impl<T: 'static + PhysicalMemory + Clone, V: 'static + VirtualTranslate2 + Clone>
+    Win32Kernel<T, V>
+{
     pub fn new(phys_mem: T, vat: V, offsets: Win32Offsets, kernel_info: Win32KernelInfo) -> Self {
         let mut virt_mem = VirtualDma::with_vat(
             phys_mem,
@@ -482,7 +484,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate2> VirtualMemory for Win32Kernel<T, V
     }
 }
 
-impl<'a, T: 'static + PhysicalMemory, V: 'static + VirtualTranslate2> OsInner<'a>
+impl<'a, T: 'static + PhysicalMemory + Clone, V: 'static + VirtualTranslate2 + Clone> OsInner<'a>
     for Win32Kernel<T, V>
 {
     type ProcessType =
@@ -610,8 +612,8 @@ impl<'a, T: 'static + PhysicalMemory, V: 'static + VirtualTranslate2> OsInner<'a
     }
 }
 
-impl<'a, T: 'static + PhysicalMemory, V: 'static + VirtualTranslate2> OsKeyboardInner<'a>
-    for Win32Kernel<T, V>
+impl<'a, T: 'static + PhysicalMemory + Clone, V: 'static + VirtualTranslate2 + Clone>
+    OsKeyboardInner<'a> for Win32Kernel<T, V>
 {
     type KeyboardType =
         Win32Keyboard<VirtualDma<Fwd<&'a mut T>, Fwd<&'a mut V>, Win32VirtualTranslate>>;

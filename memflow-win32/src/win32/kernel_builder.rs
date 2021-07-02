@@ -85,7 +85,7 @@ use memflow::types::Address;
 /// use memflow::prelude::v1::*;
 /// use memflow_win32::prelude::{Win32KernelInfo, Win32Offsets, Win32Kernel};
 ///
-/// fn test<T: 'static + PhysicalMemory>(mut connector: T) {
+/// fn test<T: 'static + PhysicalMemory + Clone>(mut connector: T) {
 ///     // Use the ntoskrnl scanner to find the relevant KernelInfo (start_block, arch, dtb, ntoskrnl, etc)
 ///     let kernel_info = Win32KernelInfo::scanner(connector.forward_mut()).scan().unwrap();
 ///     // Download the corresponding pdb from the default symbol store

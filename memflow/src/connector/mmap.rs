@@ -10,6 +10,11 @@ use crate::mem::{
 };
 use crate::types::Address;
 
+#[cfg(feature = "plugins")]
+use crate::cglue::*;
+#[cfg(feature = "plugins")]
+use crate::mem::phys_mem::*;
+
 pub struct MappedPhysicalMemory<T, F> {
     info: F,
     marker: std::marker::PhantomData<T>,
@@ -166,3 +171,16 @@ impl<'a, F: AsRef<MemoryMap<&'a [u8]>> + Send> PhysicalMemory
     // This is a no-op for u8 slices.
     fn set_mem_map(&mut self, _mem_map: &[PhysicalMemoryMapping]) {}
 }
+
+#[cfg(feature = "plugins")]
+cglue_impl_group!(
+    MappedPhysicalMemory<T = &'cglue_a mut [u8], F: AsRef<MemoryMap<&'cglue_a mut [u8]>>>,
+    ConnectorInstance,
+    {}
+);
+#[cfg(feature = "plugins")]
+cglue_impl_group!(
+    MappedPhysicalMemory<T = &'cglue_a [u8], F: AsRef<MemoryMap<&'cglue_a [u8]>>>,
+    ConnectorInstance,
+    {}
+);

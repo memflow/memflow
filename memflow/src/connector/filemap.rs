@@ -1,8 +1,6 @@
 use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
-use crate::mem::phys_mem::*;
 use crate::mem::MemoryMap;
 use crate::types::Address;
-use cglue::*;
 use memmap::{Mmap, MmapMut, MmapOptions};
 
 use std::fs::File;
@@ -128,11 +126,3 @@ impl<'a> MmapInfoMut<'a> {
 }
 
 pub type WriteMappedFilePhysicalMemory<'a> = MappedPhysicalMemory<&'a mut [u8], MmapInfoMut<'a>>;
-
-cglue_impl_group!(ReadMappedFilePhysicalMemory<'cglue_a>, ConnectorInstance, {
-});
-cglue_impl_group!(
-    WriteMappedFilePhysicalMemory<'cglue_a>,
-    ConnectorInstance,
-    {}
-);

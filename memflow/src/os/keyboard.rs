@@ -17,7 +17,7 @@ pub trait OsKeyboardInner<'a>: Send {
     #[wrap_with_obj(crate::os::keyboard::Keyboard)]
     type KeyboardType: crate::os::keyboard::Keyboard + 'a;
     #[wrap_with_group(crate::os::keyboard::IntoKeyboard)]
-    type IntoKeyboardType: crate::os::keyboard::Keyboard + 'static;
+    type IntoKeyboardType: crate::os::keyboard::Keyboard + Clone + 'static;
 
     fn keyboard(&'a mut self) -> Result<Self::KeyboardType>;
     fn into_keyboard(self) -> Result<Self::IntoKeyboardType>;

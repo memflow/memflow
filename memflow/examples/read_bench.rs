@@ -4,7 +4,7 @@ use std::time::{Duration, Instant};
 use clap::*;
 use log::Level;
 
-use cglue::*;
+use memflow::cglue::*;
 use memflow::error::{Error, ErrorKind, ErrorOrigin, Result};
 use memflow::mem::*;
 use memflow::os::{ModuleInfo, OsInner, OsInstanceArcBox, Process};

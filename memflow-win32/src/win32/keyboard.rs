@@ -16,7 +16,7 @@ use memflow::mem::{PhysicalMemory, VirtualTranslate2};
 use memflow::os::{Keyboard, KeyboardState};
 use memflow_win32::win32::{Win32Kernel, Win32Keyboard};
 
-fn test<T: 'static + PhysicalMemory, V: 'static + VirtualTranslate2>(kernel: &mut Win32Kernel<T, V>) {
+fn test<T: 'static + PhysicalMemory + Clone, V: 'static + VirtualTranslate2 + Clone>(kernel: &mut Win32Kernel<T, V>) {
     let mut kbd = Win32Keyboard::with_kernel_ref(kernel).unwrap();
 
     loop {
@@ -57,7 +57,7 @@ pub struct Win32Keyboard<T> {
     key_state_addr: Address,
 }
 
-impl<'a, T: 'static + PhysicalMemory, V: 'static + VirtualTranslate2>
+impl<'a, T: 'static + PhysicalMemory + Clone, V: 'static + VirtualTranslate2 + Clone>
     Win32Keyboard<VirtualDma<T, V, Win32VirtualTranslate>>
 {
     pub fn with_kernel(mut kernel: Win32Kernel<T, V>) -> Result<Self> {
@@ -84,7 +84,7 @@ impl<'a, T: 'static + PhysicalMemory, V: 'static + VirtualTranslate2>
     }
 }
 
-impl<'a, T: 'static + PhysicalMemory, V: 'static + VirtualTranslate2>
+impl<'a, T: 'static + PhysicalMemory + Clone, V: 'static + VirtualTranslate2 + Clone>
     Win32Keyboard<VirtualDma<Fwd<&'a mut T>, Fwd<&'a mut V>, Win32VirtualTranslate>>
 {
     /// Constructs a new keyboard object by borrowing a kernel object.
@@ -116,7 +116,10 @@ impl<'a, T: 'static + PhysicalMemory, V: 'static + VirtualTranslate2>
 }
 
 impl<T> Win32Keyboard<T> {
-    fn find_keystate<P: 'static + PhysicalMemory, V: 'static + VirtualTranslate2>(
+    fn find_keystate<
+        P: 'static + PhysicalMemory + Clone,
+        V: 'static + VirtualTranslate2 + Clone,
+    >(
         kernel: &mut Win32Kernel<P, V>,
     ) -> Result<(Win32ProcessInfo, Address)> {
         let win32kbase_module_info = kernel.module_by_name("win32kbase.sys")?;

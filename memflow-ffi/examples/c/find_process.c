@@ -56,7 +56,6 @@ int main(int argc, char *argv[]) {
   OsInstance os;
   if (inventory_create_os(inventory, "win32", "", connector, &os) < 0) {
     printf("unable to initialize os plugin\n");
-    mf_connector_free(connector);
     inventory_free(inventory);
     return 1;
   }
@@ -68,7 +67,7 @@ int main(int argc, char *argv[]) {
   ProcessInstance target_process;
   struct FindProcessContext find_context = {
       &os,
-      "Calculator.exe",
+      "notepad.exe",
       &target_process,
       false,
   };
@@ -78,23 +77,23 @@ int main(int argc, char *argv[]) {
     const struct ProcessInfo *info =
         target_process.vtbl_process->info(this(&target_process));
 
-    printf("Calculator.exe process found: 0x%x] %d %s %s\n", info->address,
+    printf("notepad.exe process found: 0x%x] %d %s %s\n", info->address,
            info->pid, info->name, info->path);
   } else {
-    printf("Unable to find Calculator.exe\n");
+    printf("Unable to find notepad.exe\n");
   }
 
   // find a specific process based on its name
   // via process_by_name
-  if (os.vtbl_osinner->process_by_name(this(&os), str("Calculator.exe"),
+  if (os.vtbl_osinner->process_by_name(this(&os), str("notepad.exe"),
                                        ctx(&os), &target_process) == 0) {
     const struct ProcessInfo *info =
         target_process.vtbl_process->info(this(&target_process));
 
-    printf("Calculator.exe process found: 0x%x] %d %s %s\n", info->address,
+    printf("notepad.exe process found: 0x%x] %d %s %s\n", info->address,
            info->pid, info->name, info->path);
   } else {
-    printf("Unable to find Calculator.exe\n");
+    printf("Unable to find notepad.exe\n");
   }
 
   // mf_os_free will also free the connector here

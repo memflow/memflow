@@ -9,7 +9,7 @@
 
 // Constructs a slice from a string for memflow
 // Note that strlen() is optimized out for string literals here
-#define str(string) ((struct CSliceRef_u8){(string), (sizeof(string) == sizeof(char *) ? strlen(string) : (sizeof(string) - 1))})
+#define str(string) ((struct CSliceRef_u8){(string), strlen(string)})
 
 // connector support functions
 typedef ConnectorInstanceArcBox ConnectorInstance;

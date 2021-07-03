@@ -450,8 +450,8 @@ mod tests {
 
     #[test]
     fn test_null_valid() {
-        assert_eq!(Address::null().is_null(), true);
-        assert_eq!(Address::invalid().is_valid(), false);
+        assert!(Address::null().is_null());
+        assert!(!Address::invalid().is_valid());
     }
 
     #[test]
@@ -474,20 +474,20 @@ mod tests {
 
     #[test]
     fn test_bits() {
-        assert_eq!(Address::from(1).bit_at(0), true);
-        assert_eq!(Address::from(1).bit_at(1), false);
-        assert_eq!(Address::from(1).bit_at(2), false);
-        assert_eq!(Address::from(1).bit_at(3), false);
+        assert!(Address::from(1).bit_at(0));
+        assert!(!Address::from(1).bit_at(1));
+        assert!(!Address::from(1).bit_at(2));
+        assert!(!Address::from(1).bit_at(3));
 
-        assert_eq!(Address::from(2).bit_at(0), false);
-        assert_eq!(Address::from(2).bit_at(1), true);
-        assert_eq!(Address::from(2).bit_at(2), false);
-        assert_eq!(Address::from(2).bit_at(3), false);
+        assert!(!Address::from(2).bit_at(0));
+        assert!(Address::from(2).bit_at(1));
+        assert!(!Address::from(2).bit_at(2));
+        assert!(!Address::from(2).bit_at(3));
 
-        assert_eq!(Address::from(13).bit_at(0), true);
-        assert_eq!(Address::from(13).bit_at(1), false);
-        assert_eq!(Address::from(13).bit_at(2), true);
-        assert_eq!(Address::from(13).bit_at(3), true);
+        assert!(Address::from(13).bit_at(0));
+        assert!(!Address::from(13).bit_at(1));
+        assert!(Address::from(13).bit_at(2));
+        assert!(Address::from(13).bit_at(3));
     }
 
     #[test]

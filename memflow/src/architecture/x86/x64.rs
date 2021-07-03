@@ -178,31 +178,35 @@ mod tests {
     #[test]
     fn x64_check_entry() {
         let mmu = get_mmu_spec();
+
         let pte_address = 1.into();
-        assert_eq!(mmu.check_entry(pte_address, 0), true);
-        assert_eq!(mmu.check_entry(pte_address, 1), true);
-        assert_eq!(mmu.check_entry(pte_address, 2), true);
-        assert_eq!(mmu.check_entry(pte_address, 3), true);
-        assert_eq!(mmu.check_entry(pte_address, 4), true);
+        assert!(mmu.check_entry(pte_address, 0));
+        assert!(mmu.check_entry(pte_address, 1));
+        assert!(mmu.check_entry(pte_address, 2));
+        assert!(mmu.check_entry(pte_address, 3));
+        assert!(mmu.check_entry(pte_address, 4));
+
         let pte_address = 0.into();
-        assert_eq!(mmu.check_entry(pte_address, 0), true);
-        assert_eq!(mmu.check_entry(pte_address, 3), false);
+        assert!(mmu.check_entry(pte_address, 0));
+        assert!(!mmu.check_entry(pte_address, 3));
     }
 
     #[test]
     fn x64_is_final_mapping() {
         let mmu = get_mmu_spec();
+
         let pte_address = (1 << 7).into();
-        assert_eq!(mmu.is_final_mapping(pte_address, 0), false);
-        assert_eq!(mmu.is_final_mapping(pte_address, 1), false);
-        assert_eq!(mmu.is_final_mapping(pte_address, 2), true);
-        assert_eq!(mmu.is_final_mapping(pte_address, 3), true);
-        assert_eq!(mmu.is_final_mapping(pte_address, 4), true);
+        assert!(!mmu.is_final_mapping(pte_address, 0));
+        assert!(!mmu.is_final_mapping(pte_address, 1));
+        assert!(mmu.is_final_mapping(pte_address, 2));
+        assert!(mmu.is_final_mapping(pte_address, 3));
+        assert!(mmu.is_final_mapping(pte_address, 4));
+
         let pte_address = 0.into();
-        assert_eq!(mmu.is_final_mapping(pte_address, 0), false);
-        assert_eq!(mmu.is_final_mapping(pte_address, 1), false);
-        assert_eq!(mmu.is_final_mapping(pte_address, 2), false);
-        assert_eq!(mmu.is_final_mapping(pte_address, 3), false);
-        assert_eq!(mmu.is_final_mapping(pte_address, 4), true);
+        assert!(!mmu.is_final_mapping(pte_address, 0));
+        assert!(!mmu.is_final_mapping(pte_address, 1));
+        assert!(!mmu.is_final_mapping(pte_address, 2));
+        assert!(!mmu.is_final_mapping(pte_address, 3));
+        assert!(mmu.is_final_mapping(pte_address, 4));
     }
 }

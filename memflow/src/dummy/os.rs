@@ -167,7 +167,7 @@ impl DummyOs {
         let mut page_prelist = vec![];
 
         let mut i = Address::from(0);
-        let size_addr = Address::from(mem.metadata().size);
+        let size_addr = mem.metadata().max_address + 1;
 
         while i < size_addr {
             if let Some(page_info) = {

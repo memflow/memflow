@@ -170,7 +170,8 @@ impl<T: Seek + Read + Write + Send> PhysicalMemory for FileIoMemory<T> {
 
     fn metadata(&self) -> PhysicalMemoryMetadata {
         PhysicalMemoryMetadata {
-            size: self.mem_map.max_address().as_usize(),
+            max_address: self.mem_map.max_address(),
+            real_size: self.mem_map.real_size(),
             readonly: false,
         }
     }

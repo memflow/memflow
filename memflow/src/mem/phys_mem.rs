@@ -1,7 +1,7 @@
 use crate::cglue::*;
 use crate::dataview::Pod;
 use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
-use crate::types::{PhysicalAddress, Pointer32, Pointer64};
+use crate::types::{Address, PhysicalAddress, Pointer32, Pointer64};
 
 use super::{PhysicalMemoryBatcher, PhysicalMemoryMapping};
 
@@ -83,7 +83,8 @@ pub type MuConnectorInstanceArcBox<'a> = std::mem::MaybeUninit<ConnectorInstance
 ///
 ///     fn metadata(&self) -> PhysicalMemoryMetadata {
 ///         PhysicalMemoryMetadata {
-///             size: self.mem.len(),
+///             max_address: (self.mem.len() - 1).into(),
+///             real_size: self.mem.len() as u64,
 ///             readonly: false
 ///         }
 ///     }
@@ -129,7 +130,8 @@ pub trait PhysicalMemory: Send {
     ///
     /// let metadata = mem.metadata();
     ///
-    /// assert_eq!(metadata.size, size::mb(16));
+    /// assert_eq!(metadata.max_address.as_usize(), size::mb(16) - 1);
+    /// assert_eq!(metadata.real_size, size::mb(16) as u64);
     /// assert_eq!(metadata.readonly, false);
     /// ```
     fn metadata(&self) -> PhysicalMemoryMetadata;
@@ -361,7 +363,8 @@ pub trait PhysicalMemory: Send {
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 #[repr(C)]
 pub struct PhysicalMemoryMetadata {
-    pub size: usize,
+    pub max_address: Address,
+    pub real_size: u64,
     pub readonly: bool,
 }
 

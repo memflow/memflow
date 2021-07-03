@@ -119,14 +119,22 @@ impl<'a, F: AsRef<MemoryMap<&'a mut [u8]>> + Send> PhysicalMemory
     }
 
     fn metadata(&self) -> PhysicalMemoryMetadata {
+        let max_address = self
+            .info
+            .as_ref()
+            .iter()
+            .last()
+            .map(|map| map.base().as_usize() + map.output().len())
+            .unwrap()
+            - 1;
+        let real_size = self
+            .info
+            .as_ref()
+            .iter()
+            .fold(0, |s, m| s + m.output().len() as u64);
         PhysicalMemoryMetadata {
-            size: self
-                .info
-                .as_ref()
-                .iter()
-                .last()
-                .map(|map| map.base().as_usize() + map.output().len())
-                .unwrap(),
+            max_address: max_address.into(),
+            real_size,
             readonly: false,
         }
     }
@@ -156,14 +164,22 @@ impl<'a, F: AsRef<MemoryMap<&'a [u8]>> + Send> PhysicalMemory
     }
 
     fn metadata(&self) -> PhysicalMemoryMetadata {
+        let max_address = self
+            .info
+            .as_ref()
+            .iter()
+            .last()
+            .map(|map| map.base().as_usize() + map.output().len())
+            .unwrap()
+            - 1;
+        let real_size = self
+            .info
+            .as_ref()
+            .iter()
+            .fold(0, |s, m| s + m.output().len() as u64);
         PhysicalMemoryMetadata {
-            size: self
-                .info
-                .as_ref()
-                .iter()
-                .last()
-                .map(|map| map.base().as_usize() + map.output().len())
-                .unwrap(),
+            max_address: max_address.into(),
+            real_size,
             readonly: true,
         }
     }

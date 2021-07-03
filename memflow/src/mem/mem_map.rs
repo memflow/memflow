@@ -264,6 +264,14 @@ impl MemoryMap<(Address, usize)> {
             .map(|m| m.base() + m.output.borrow().1)
             .max()
             .unwrap_or_else(|| u64::MAX.into())
+            - 1
+    }
+
+    // Returns the real size the current memory mappings cover
+    pub fn real_size(&self) -> u64 {
+        self.mappings
+            .iter()
+            .fold(0, |s, m| s + m.output.borrow().1 as u64)
     }
 
     /// Adds a new memory mapping to this memory map by specifying base address and size of the mapping.
@@ -667,6 +675,23 @@ mod tests {
 
         // should panic
         map.push_range(0x2000.into(), 0x20ff.into(), 0.into());
+    }
+
+    #[test]
+    fn test_max_address() {
+        let mut map = MemoryMap::new();
+        map.push_remap(0x1000.into(), 0x1000, 0.into());
+        map.push_remap(0x3000.into(), 0x1000, 0x2000.into());
+        assert_eq!(map.max_address(), Address::from(0x3FFF));
+    }
+
+    #[test]
+    fn test_real_size() {
+        let mut map = MemoryMap::new();
+        map.push_remap(0x1000.into(), 0x1000, 0.into());
+        map.push_remap(0x3000.into(), 0x1000, 0x2000.into());
+        map.push_remap(0x6000.into(), 0x2000, 0x3000.into());
+        assert_eq!(map.real_size(), 0x4000);
     }
 
     #[cfg(feature = "memmapfiles")]

@@ -85,7 +85,8 @@ pub type MuConnectorInstanceArcBox<'a> = std::mem::MaybeUninit<ConnectorInstance
 ///         PhysicalMemoryMetadata {
 ///             max_address: (self.mem.len() - 1).into(),
 ///             real_size: self.mem.len() as u64,
-///             readonly: false
+///             readonly: false,
+///             max_batch_size: u32::MAX
 ///         }
 ///     }
 ///
@@ -366,6 +367,7 @@ pub struct PhysicalMemoryMetadata {
     pub max_address: Address,
     pub real_size: u64,
     pub readonly: bool,
+    pub max_batch_size: u32,
 }
 
 // iterator helpers

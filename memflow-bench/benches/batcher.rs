@@ -25,8 +25,10 @@ impl PhysicalMemory for NullMem {
 
     fn metadata(&self) -> PhysicalMemoryMetadata {
         PhysicalMemoryMetadata {
-            size: 0,
+            max_address: Address::NULL,
+            real_size: 0,
             readonly: true,
+            ideal_batch_size: u32::MAX,
         }
     }
 

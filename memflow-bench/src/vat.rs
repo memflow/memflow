@@ -64,8 +64,8 @@ fn vat_test_with_ctx<T: PhysicalMemory, V: VirtualTranslate2, S: VirtualTranslat
             .cache_size(size::mb(cache_size as usize))
             .page_type_mask(PageType::PAGE_TABLE | PageType::READ_ONLY | PageType::WRITEABLE);
 
+        let mut mem = cache.build().unwrap();
         if use_tlb {
-            let mut mem = cache.build().unwrap();
             let mut vat = CachedVirtualTranslate::builder(vat)
                 .arch(prc.sys_arch)
                 .build()
@@ -80,7 +80,6 @@ fn vat_test_with_ctx<T: PhysicalMemory, V: VirtualTranslate2, S: VirtualTranslat
                 tmod,
             );
         } else {
-            let mut mem = cache.build().unwrap();
             vat_test_with_mem(
                 bench,
                 &mut mem,

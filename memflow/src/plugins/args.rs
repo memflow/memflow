@@ -163,9 +163,9 @@ impl TryFrom<String> for Args {
     }
 }
 
-impl Into<String> for Args {
-    fn into(self) -> String {
-        self.to_string()
+impl From<Args> for String {
+    fn from(args: Args) -> Self {
+        args.to_string()
     }
 }
 
@@ -207,7 +207,7 @@ impl ArgsValidator {
     pub fn validate(&self, args: &Args) -> Result<()> {
         // check if all given args exist
         for arg in args.map.iter() {
-            if self.args.iter().find(|a| a.name == *arg.0).is_none() {
+            if !self.args.iter().any(|a| a.name == *arg.0) {
                 return Err(Error(ErrorOrigin::ArgsValidator, ErrorKind::ArgNotExists)
                     .log_error(format!("argument {} does not exist", arg.0)));
             }

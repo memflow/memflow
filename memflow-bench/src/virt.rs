@@ -92,8 +92,8 @@ fn read_test_with_ctx<T: PhysicalMemory, V: VirtualTranslate2, S: VirtualTransla
             .cache_size(size::mb(cache_size as usize))
             .page_type_mask(PageType::PAGE_TABLE | PageType::READ_ONLY | PageType::WRITEABLE);
 
+        let mem = cache.build().unwrap();
         if use_tlb {
-            let mem = cache.build().unwrap();
             let vat = CachedVirtualTranslate::builder(vat)
                 .arch(proc.sys_arch)
                 .build()
@@ -101,7 +101,6 @@ fn read_test_with_ctx<T: PhysicalMemory, V: VirtualTranslate2, S: VirtualTransla
             let mut virt_mem = VirtualDma::with_vat(mem, proc.proc_arch, translator, vat);
             read_test_with_mem(bench, &mut virt_mem, chunk_size, chunks, tmod);
         } else {
-            let mem = cache.build().unwrap();
             let mut virt_mem = VirtualDma::with_vat(mem, proc.proc_arch, translator, vat);
             read_test_with_mem(bench, &mut virt_mem, chunk_size, chunks, tmod);
         }

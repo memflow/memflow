@@ -136,7 +136,7 @@ impl<'a, F: AsRef<MemoryMap<&'a mut [u8]>> + Send> PhysicalMemory
             max_address: max_address.into(),
             real_size,
             readonly: false,
-            max_batch_size: u32::MAX,
+            ideal_batch_size: u32::MAX,
         }
     }
 
@@ -182,7 +182,7 @@ impl<'a, F: AsRef<MemoryMap<&'a [u8]>> + Send> PhysicalMemory
             max_address: max_address.into(),
             real_size,
             readonly: true,
-            max_batch_size: u32::MAX,
+            ideal_batch_size: u32::MAX,
         }
     }
 

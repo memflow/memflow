@@ -173,7 +173,7 @@ impl<T: Seek + Read + Write + Send> PhysicalMemory for FileIoMemory<T> {
             max_address: self.mem_map.max_address(),
             real_size: self.mem_map.real_size(),
             readonly: false,
-            max_batch_size: u32::MAX,
+            ideal_batch_size: u32::MAX,
         }
     }
 

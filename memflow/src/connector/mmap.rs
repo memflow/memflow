@@ -9,9 +9,7 @@ use crate::mem::{
 };
 use crate::types::Address;
 
-#[cfg(feature = "plugins")]
 use crate::cglue::*;
-#[cfg(feature = "plugins")]
 use crate::mem::phys_mem::*;
 
 pub struct MappedPhysicalMemory<T, F> {

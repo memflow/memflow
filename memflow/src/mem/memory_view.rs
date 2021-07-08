@@ -1,5 +1,6 @@
-use crate::prelude::v1::*;
+use crate::prelude::v1::{Result, *};
 use std::mem::MaybeUninit;
+use std::prelude::v1::*;
 
 use super::mem_data::*;
 

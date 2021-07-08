@@ -364,8 +364,6 @@ impl<T: MemoryView> Seek for MemoryCursor<T> {
 
 #[cfg(test)]
 mod tests {
-    use crate::cglue::ForwardMut;
-
     use super::*;
     use crate::architecture::x86::{x64, X86VirtualTranslate};
     use crate::dummy::{DummyMemory, DummyOs};

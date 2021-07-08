@@ -20,6 +20,11 @@ impl<'a, T: MemoryView> MemoryViewBatcher<'a, T> {
         }
     }
 
+    pub fn read_prealloc(&mut self, capacity: usize) -> &mut Self {
+        self.read_list.reserve(capacity);
+        self
+    }
+
     pub fn commit_rw(&mut self) -> PartialResult<()> {
         if !self.read_list.is_empty() {
             self.vmem.read_raw_list(&mut self.read_list)?;

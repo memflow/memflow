@@ -1,19 +1,17 @@
 use std::prelude::v1::*;
 
+use super::*;
 use crate::dataview::Pod;
 use crate::error::PartialResult;
-use crate::mem::virt_mem::{
-    VirtualMemory, VirtualReadData, VirtualReadIterator, VirtualWriteData, VirtualWriteIterator,
-};
 use crate::types::Address;
 
-pub struct VirtualMemoryBatcher<'a, T: VirtualMemory> {
+pub struct MemoryViewBatcher<'a, T: MemoryView> {
     vmem: &'a mut T,
-    read_list: Vec<VirtualReadData<'a>>,
-    write_list: Vec<VirtualWriteData<'a>>,
+    read_list: Vec<ReadData<'a>>,
+    write_list: Vec<WriteData<'a>>,
 }
 
-impl<'a, T: VirtualMemory> VirtualMemoryBatcher<'a, T> {
+impl<'a, T: MemoryView> MemoryViewBatcher<'a, T> {
     pub fn new(vmem: &'a mut T) -> Self {
         Self {
             vmem,
@@ -24,31 +22,31 @@ impl<'a, T: VirtualMemory> VirtualMemoryBatcher<'a, T> {
 
     pub fn commit_rw(&mut self) -> PartialResult<()> {
         if !self.read_list.is_empty() {
-            self.vmem.virt_read_raw_list(&mut self.read_list)?;
+            self.vmem.read_raw_list(&mut self.read_list)?;
             self.read_list.clear();
         }
 
         if !self.write_list.is_empty() {
-            self.vmem.virt_write_raw_list(&self.write_list)?;
+            self.vmem.write_raw_list(&self.write_list)?;
             self.write_list.clear();
         }
 
         Ok(())
     }
 
-    pub fn read_raw_iter<VI: VirtualReadIterator<'a>>(&mut self, iter: VI) -> &mut Self {
+    pub fn read_raw_iter(&mut self, iter: impl ReadIterator<'a>) -> &mut Self {
         self.read_list.extend(iter);
         self
     }
 
-    pub fn write_raw_iter<VI: VirtualWriteIterator<'a>>(&mut self, iter: VI) -> &mut Self {
+    pub fn write_raw_iter(&mut self, iter: impl WriteIterator<'a>) -> &mut Self {
         self.write_list.extend(iter);
         self
     }
 
     // read helpers
     pub fn read_raw_into<'b: 'a>(&mut self, addr: Address, out: &'b mut [u8]) -> &mut Self {
-        self.read_raw_iter(Some(VirtualReadData(addr, out.into())).into_iter())
+        self.read_raw_iter(Some(ReadData(addr, out.into())).into_iter())
     }
 
     pub fn read_into<'b: 'a, F: Pod + ?Sized>(
@@ -61,7 +59,7 @@ impl<'a, T: VirtualMemory> VirtualMemoryBatcher<'a, T> {
 
     // write helpers
     pub fn write_raw_into<'b: 'a>(&mut self, addr: Address, out: &'b [u8]) -> &mut Self {
-        self.write_raw_iter(Some(VirtualWriteData(addr, out.into())).into_iter())
+        self.write_raw_iter(Some(WriteData(addr, out.into())).into_iter())
     }
 
     pub fn write_into<'b: 'a, F: Pod + ?Sized>(&mut self, addr: Address, out: &'b F) -> &mut Self {
@@ -69,7 +67,7 @@ impl<'a, T: VirtualMemory> VirtualMemoryBatcher<'a, T> {
     }
 }
 
-impl<'a, T: VirtualMemory> Drop for VirtualMemoryBatcher<'a, T> {
+impl<'a, T: MemoryView> Drop for MemoryViewBatcher<'a, T> {
     fn drop(&mut self) {
         let _ = self.commit_rw();
     }

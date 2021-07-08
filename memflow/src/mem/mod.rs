@@ -11,10 +11,9 @@ TODO: more documentation
 
 pub mod cache;
 pub mod mem_map;
+pub mod memory_view;
 pub mod phys_mem;
-pub mod phys_mem_batcher;
 pub mod virt_mem;
-pub mod virt_mem_batcher;
 pub mod virt_translate;
 
 #[cfg(feature = "std")]
@@ -33,14 +32,14 @@ pub use phys_mem::{
     PhysicalWriteData, PhysicalWriteIterator,
 };
 #[doc(hidden)]
-pub use phys_mem_batcher::PhysicalMemoryBatcher;
-#[doc(hidden)]
-pub use virt_mem::{VirtualDma, VirtualMemory, VirtualReadData, VirtualWriteData};
-#[doc(hidden)]
-pub use virt_mem_batcher::VirtualMemoryBatcher;
+pub use virt_mem::VirtualDma;
+//#[doc(hidden)]
+//pub use virt_mem_batcher::VirtualMemoryBatcher;
 #[doc(hidden)]
 pub use virt_translate::{DirectTranslate, VirtualTranslate, VirtualTranslate2};
 
+pub use memory_view::{MemoryView, MemoryViewMetadata, ReadData, WriteData};
+
 #[cfg(feature = "std")]
 #[doc(hidden)]
-pub use cursor::{PhysicalMemoryCursor, VirtualMemoryCursor};
+pub use cursor::MemoryCursor;

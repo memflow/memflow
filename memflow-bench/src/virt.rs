@@ -1,8 +1,8 @@
 use criterion::*;
 
 use memflow::mem::{
-    CachedMemoryAccess, CachedVirtualTranslate, PhysicalMemory, VirtualDma, VirtualMemory,
-    VirtualReadData, VirtualTranslate2,
+    CachedMemoryAccess, CachedVirtualTranslate, MemoryView, PhysicalMemory, ReadData, VirtualDma,
+    VirtualTranslate2,
 };
 
 use memflow::architecture::VirtualTranslate3;
@@ -14,7 +14,7 @@ use rand::prelude::*;
 use rand::{Rng, SeedableRng};
 use rand_xorshift::XorShiftRng as CurRng;
 
-fn rwtest<T: VirtualMemory>(
+fn rwtest<T: MemoryView>(
     bench: &mut Bencher,
     virt_mem: &mut T,
     module: &ModuleInfo,
@@ -37,19 +37,19 @@ fn rwtest<T: VirtualMemory>(
 
                 let mut bufs = Vec::with_capacity(*o);
 
-                for VirtualReadData(addr, _) in bufs.iter_mut() {
+                for ReadData(addr, _) in bufs.iter_mut() {
                     *addr = (base_addr + rng.gen_range(0..0x2000)).into();
                 }
 
                 bufs.extend(vbufs.iter_mut().map(|vec| {
-                    VirtualReadData(
+                    ReadData(
                         (base_addr + rng.gen_range(0..0x2000)).into(),
                         vec.as_mut_slice().into(),
                     )
                 }));
 
                 bench.iter(|| {
-                    let _ = black_box(virt_mem.virt_read_raw_list(bufs.as_mut_slice()));
+                    let _ = black_box(virt_mem.read_raw_list(bufs.as_mut_slice()));
                 });
                 done_size += *i * *o;
             }
@@ -61,7 +61,7 @@ fn rwtest<T: VirtualMemory>(
     total_size
 }
 
-pub fn read_test_with_mem<T: VirtualMemory>(
+pub fn read_test_with_mem<T: MemoryView>(
     bench: &mut Bencher,
     virt_mem: &mut T,
     chunk_size: usize,

@@ -131,11 +131,17 @@ impl<T: Seek + Read + Write + Send> FileIoMemory<T> {
 }
 
 impl<T: Seek + Read + Write + Send> PhysicalMemory for FileIoMemory<T> {
-    fn phys_read_raw_list(&mut self, data: &mut [PhysicalReadData]) -> Result<()> {
-        let mut void = FnExtend::void();
+    fn phys_read_raw_iter<'a>(
+        &mut self,
+        data: CIterator<PhysicalReadData<'a>>,
+        out_fail: &mut PhysicalReadFailCallback<'_, 'a>,
+    ) -> Result<()> {
+        let mut void = FnExtend::new(|(addr, buf): (Address, &mut [u8])| {
+            // TODO: manage not to lose physical page information here???
+            let _ = out_fail.call(PhysicalReadData(addr.into(), buf.into()));
+        });
         for ((file_off, _), buf) in self.mem_map.map_iter(
-            data.iter_mut()
-                .map(|PhysicalReadData(addr, buf)| (*addr, &mut **buf)),
+            data.map(|PhysicalReadData(addr, buf)| (addr, buf.into())),
             &mut void,
         ) {
             self.reader
@@ -150,12 +156,16 @@ impl<T: Seek + Read + Write + Send> PhysicalMemory for FileIoMemory<T> {
         Ok(())
     }
 
-    fn phys_write_raw_list(&mut self, data: &[PhysicalWriteData]) -> Result<()> {
-        let mut void = FnExtend::void();
-        for ((file_off, _), buf) in self
-            .mem_map
-            .map_iter(data.iter().copied().map(<_>::from), &mut void)
-        {
+    fn phys_write_raw_iter<'a>(
+        &mut self,
+        data: CIterator<PhysicalWriteData<'a>>,
+        out_fail: &mut PhysicalWriteFailCallback<'_, 'a>,
+    ) -> Result<()> {
+        let mut void = FnExtend::new(|(addr, buf): (Address, &[u8])| {
+            // TODO: manage not to lose physical page information here???
+            let _ = out_fail.call(PhysicalWriteData(addr.into(), buf.into()));
+        });
+        for ((file_off, _), buf) in self.mem_map.map_iter(data.map(<_>::from), &mut void) {
             self.reader
                 .seek(SeekFrom::Start(file_off.as_u64()))
                 .map_err(|err| {

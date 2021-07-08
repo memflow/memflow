@@ -3,7 +3,7 @@ use std::prelude::v1::*;
 use log::{info, trace};
 use std::fmt;
 
-use memflow::mem::{MemoryMap, VirtualMemory};
+use memflow::mem::{MemoryMap, MemoryView};
 use memflow::types::{size, Address};
 
 use memflow::dataview::Pod;
@@ -32,14 +32,14 @@ unsafe impl<T: Pod + fmt::Debug> Pod for PhysicalMemoryDescriptor<T> {}
 const _: [(); std::mem::size_of::<PhysicalMemoryDescriptor<u32>>()] = [(); 0x108];
 const _: [(); std::mem::size_of::<PhysicalMemoryDescriptor<u64>>()] = [(); 0x210];
 
-pub fn parse<T: VirtualMemory, U: Pod + Copy + fmt::Debug + fmt::LowerHex + Into<u64>>(
+pub fn parse<T: MemoryView, U: Pod + Copy + fmt::Debug + fmt::LowerHex + Into<u64>>(
     virt_mem: &mut T,
     descriptor_ptr_ptr: Address,
 ) -> Option<MemoryMap<(Address, usize)>> {
-    let descriptor_ptr = virt_mem.virt_read_addr64(descriptor_ptr_ptr).ok()?;
+    let descriptor_ptr = virt_mem.read_addr64(descriptor_ptr_ptr).ok()?;
 
     trace!("found phys_mem_block pointer at: {}", descriptor_ptr);
-    let descriptor: PhysicalMemoryDescriptor<U> = virt_mem.virt_read(descriptor_ptr).ok()?;
+    let descriptor: PhysicalMemoryDescriptor<U> = virt_mem.read(descriptor_ptr).ok()?;
 
     trace!("found phys_mem_block: {:?}", descriptor);
     if descriptor.number_of_runs <= PHYSICAL_MEMORY_MAX_RUNS as u32 {

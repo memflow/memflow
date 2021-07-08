@@ -17,8 +17,8 @@ use memflow::architecture::{ArchitectureIdent, ArchitectureObj};
 use memflow::cglue::*;
 use memflow::error::{Error, Result, *};
 use memflow::mem::mem_map::PhysicalMemoryMapping;
+use memflow::mem::memory_view::*;
 use memflow::mem::phys_mem::*;
-use memflow::mem::virt_mem::*;
 use memflow::mem::{DirectTranslate, VirtualDma, VirtualTranslate2};
 use memflow::os::keyboard::*;
 use memflow::os::root::*;
@@ -36,7 +36,7 @@ mod mem_map;
 const MAX_ITER_COUNT: usize = 65536;
 
 #[cfg(feature = "plugins")]
-cglue_impl_group!(Win32Kernel<T, V>, OsInstance<'a>, { PhysicalMemory, VirtualMemory, OsKeyboardInner<'a> });
+cglue_impl_group!(Win32Kernel<T, V>, OsInstance<'a>, { PhysicalMemory, MemoryView, OsKeyboardInner<'a> });
 
 #[derive(Clone)]
 pub struct Win32Kernel<T, V> {
@@ -105,7 +105,7 @@ impl<T: 'static + PhysicalMemory + Clone, V: 'static + VirtualTranslate2 + Clone
         // In case of a failure this will fall back to the winload dtb.
         // Read dtb of first process in eprocess list:
         let sysproc_dtb = if let Some(Some(dtb)) = virt_mem
-            .virt_read_addr_arch(
+            .read_addr_arch(
                 kernel_info.os_info.arch.into(),
                 kernel_info.eprocess_base + offsets.kproc_dtb(),
             )
@@ -141,7 +141,7 @@ impl<T: 'static + PhysicalMemory + Clone, V: 'static + VirtualTranslate2 + Clone
         } else {
             let image = self
                 .virt_mem
-                .virt_read_raw(self.kernel_info.os_info.base, self.kernel_info.os_info.size)?;
+                .read_raw(self.kernel_info.os_info.base, self.kernel_info.os_info.size)?;
             let pe = PeView::from_bytes(&image).map_err(|err| {
                 Error(ErrorOrigin::OsLayer, ErrorKind::InvalidExeFile).log_info(err)
             })?;
@@ -157,7 +157,7 @@ impl<T: 'static + PhysicalMemory + Clone, V: 'static + VirtualTranslate2 + Clone
 
             let addr = self
                 .virt_mem
-                .virt_read_addr_arch(self.kernel_info.os_info.arch.into(), addr)?;
+                .read_addr_arch(self.kernel_info.os_info.arch.into(), addr)?;
 
             let info = Win32ModuleListInfo::with_base(addr, self.kernel_info.os_info.arch)?;
 
@@ -204,20 +204,20 @@ impl<T: 'static + PhysicalMemory + Clone, V: 'static + VirtualTranslate2 + Clone
         &mut self,
         base_info: ProcessInfo,
     ) -> Result<Win32ProcessInfo> {
-        let dtb = self.virt_mem.virt_read_addr_arch(
+        let dtb = self.virt_mem.read_addr_arch(
             self.kernel_info.os_info.arch.into(),
             base_info.address + self.offsets.kproc_dtb(),
         )?;
         trace!("dtb={:x}", dtb);
 
-        let section_base = self.virt_mem.virt_read_addr_arch(
+        let section_base = self.virt_mem.read_addr_arch(
             self.kernel_info.os_info.arch.into(),
             base_info.address + self.offsets.eproc_section_base(),
         )?;
         trace!("section_base={:x}", section_base);
 
         // find first ethread
-        let ethread = self.virt_mem.virt_read_addr_arch(
+        let ethread = self.virt_mem.read_addr_arch(
             self.kernel_info.os_info.arch.into(),
             base_info.address + self.offsets.eproc_thread_list(),
         )? - self.offsets.ethread_list_entry();
@@ -225,7 +225,7 @@ impl<T: 'static + PhysicalMemory + Clone, V: 'static + VirtualTranslate2 + Clone
 
         let peb_native = self
             .virt_mem
-            .virt_read_addr_arch(
+            .read_addr_arch(
                 self.kernel_info.os_info.arch.into(),
                 base_info.address + self.offsets.eproc_peb(),
             )?
@@ -240,7 +240,7 @@ impl<T: 'static + PhysicalMemory + Clone, V: 'static + VirtualTranslate2 + Clone
                 "eproc_wow64={:x}; trying to read wow64 pointer",
                 self.offsets.eproc_wow64()
             );
-            self.virt_mem.virt_read_addr_arch(
+            self.virt_mem.read_addr_arch(
                 self.kernel_info.os_info.arch.into(),
                 base_info.address + self.offsets.eproc_wow64(),
             )?
@@ -251,7 +251,7 @@ impl<T: 'static + PhysicalMemory + Clone, V: 'static + VirtualTranslate2 + Clone
 
         // TODO: does this need to be read with the process ctx?
         let (teb, teb_wow64) = if self.kernel_info.kernel_winver >= (6, 2).into() {
-            let teb = self.virt_mem.virt_read_addr_arch(
+            let teb = self.virt_mem.read_addr_arch(
                 self.kernel_info.os_info.arch.into(),
                 ethread + self.offsets.kthread_teb(),
             )?;
@@ -288,7 +288,7 @@ impl<T: 'static + PhysicalMemory + Clone, V: 'static + VirtualTranslate2 + Clone
             // from here on out we are in the process context
             // we will be using the process type architecture now
             peb_wow64 = proc_reader
-                .virt_read_addr_arch(
+                .read_addr_arch(
                     self.kernel_info.os_info.arch.into(),
                     teb + self.offsets.teb_peb_x86(),
                 )?
@@ -345,21 +345,21 @@ impl<T: 'static + PhysicalMemory + Clone, V: 'static + VirtualTranslate2 + Clone
         // get process_parameters
         let offsets = Win32ArchOffsets::from(info.base_info.proc_arch);
         let (path, command_line) = if let Some(Ok(peb_process_params)) = info.peb().map(|peb| {
-            process.virt_read_addr_arch(
+            process.read_addr_arch(
                 info.base_info.proc_arch.into(),
                 peb + offsets.peb_process_params,
             )
         }) {
             trace!("peb_process_params={:x}", peb_process_params);
             let image_path_name = process
-                .virt_read_unicode_string(
+                .read_unicode_string(
                     info.base_info.proc_arch.into(),
                     peb_process_params + offsets.ppm_image_path_name,
                 )
                 .unwrap_or_default();
 
             let command_line = process
-                .virt_read_unicode_string(
+                .read_unicode_string(
                     info.base_info.proc_arch.into(),
                     peb_process_params + offsets.ppm_command_line,
                 )
@@ -382,14 +382,12 @@ impl<T: 'static + PhysicalMemory + Clone, V: 'static + VirtualTranslate2 + Clone
     }
 
     fn process_info_base_by_address(&mut self, address: Address) -> Result<ProcessInfo> {
-        let pid: Pid = self
-            .virt_mem
-            .virt_read(address + self.offsets.eproc_pid())?;
+        let pid: Pid = self.virt_mem.read(address + self.offsets.eproc_pid())?;
         trace!("pid={}", pid);
 
         let name: ReprCString = self
             .virt_mem
-            .virt_read_char_array(address + self.offsets.eproc_name(), IMAGE_FILE_NAME_LENGTH)?
+            .read_char_array(address + self.offsets.eproc_name(), IMAGE_FILE_NAME_LENGTH)?
             .into();
         trace!("name={}", name);
 
@@ -401,7 +399,7 @@ impl<T: 'static + PhysicalMemory + Clone, V: 'static + VirtualTranslate2 + Clone
                 "eproc_wow64={:x}; trying to read wow64 pointer",
                 self.offsets.eproc_wow64()
             );
-            self.virt_mem.virt_read_addr_arch(
+            self.virt_mem.read_addr_arch(
                 self.kernel_info.os_info.arch.into(),
                 address + self.offsets.eproc_wow64(),
             )?
@@ -457,12 +455,20 @@ impl<T: PhysicalMemory, V: VirtualTranslate2> AsMut<VirtualDma<T, V, Win32Virtua
 }
 
 impl<T: PhysicalMemory, V: VirtualTranslate2> PhysicalMemory for Win32Kernel<T, V> {
-    fn phys_read_raw_list(&mut self, data: &mut [PhysicalReadData]) -> Result<()> {
-        self.virt_mem.phys_mem().phys_read_raw_list(data)
+    fn phys_read_raw_iter<'a>(
+        &mut self,
+        data: CIterator<PhysicalReadData<'a>>,
+        out_fail: &mut PhysicalReadFailCallback<'_, 'a>,
+    ) -> Result<()> {
+        self.virt_mem.phys_mem().phys_read_raw_iter(data, out_fail)
     }
 
-    fn phys_write_raw_list(&mut self, data: &[PhysicalWriteData]) -> Result<()> {
-        self.virt_mem.phys_mem().phys_write_raw_list(data)
+    fn phys_write_raw_iter<'a>(
+        &mut self,
+        data: CIterator<PhysicalWriteData<'a>>,
+        out_fail: &mut PhysicalWriteFailCallback<'_, 'a>,
+    ) -> Result<()> {
+        self.virt_mem.phys_mem().phys_write_raw_iter(data, out_fail)
     }
 
     fn metadata(&self) -> PhysicalMemoryMetadata {
@@ -474,13 +480,25 @@ impl<T: PhysicalMemory, V: VirtualTranslate2> PhysicalMemory for Win32Kernel<T, 
     }
 }
 
-impl<T: PhysicalMemory, V: VirtualTranslate2> VirtualMemory for Win32Kernel<T, V> {
-    fn virt_read_raw_list(&mut self, data: &mut [VirtualReadData]) -> PartialResult<()> {
-        self.virt_mem.virt_read_raw_list(data)
+impl<T: PhysicalMemory, V: VirtualTranslate2> MemoryView for Win32Kernel<T, V> {
+    fn read_raw_iter<'a>(
+        &mut self,
+        data: CIterator<ReadData<'a>>,
+        out_fail: &mut ReadFailCallback<'_, 'a>,
+    ) -> Result<()> {
+        self.virt_mem.read_raw_iter(data, out_fail)
     }
 
-    fn virt_write_raw_list(&mut self, data: &[VirtualWriteData]) -> PartialResult<()> {
-        self.virt_mem.virt_write_raw_list(data)
+    fn write_raw_iter<'a>(
+        &mut self,
+        data: CIterator<WriteData<'a>>,
+        out_fail: &mut WriteFailCallback<'_, 'a>,
+    ) -> Result<()> {
+        self.virt_mem.write_raw_iter(data, out_fail)
+    }
+
+    fn metadata(&self) -> MemoryViewMetadata {
+        self.virt_mem.metadata()
     }
 }
 
@@ -508,9 +526,9 @@ impl<'a, T: 'static + PhysicalMemory + Clone, V: 'static + VirtualTranslate2 + C
             // test flink + blink before adding the process
             let flink_entry = self
                 .virt_mem
-                .virt_read_addr_arch(self.kernel_info.os_info.arch.into(), list_entry)?;
+                .read_addr_arch(self.kernel_info.os_info.arch.into(), list_entry)?;
             trace!("flink_entry={}", flink_entry);
-            let blink_entry = self.virt_mem.virt_read_addr_arch(
+            let blink_entry = self.virt_mem.read_addr_arch(
                 self.kernel_info.os_info.arch.into(),
                 list_entry + self.offsets.list_blink(),
             )?;

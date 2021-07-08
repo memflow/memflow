@@ -307,7 +307,7 @@ pub enum PartialError<T> {
     ///
     /// Error when a write from virtual memory only completed partially.
     /// This can usually happen when trying to read a page that is currently paged out.
-    PartialVirtualWrite,
+    PartialVirtualWrite(T),
 }
 
 /// Convert from Error
@@ -323,7 +323,7 @@ impl<T> PartialError<T> {
         match self {
             PartialError::Error(e) => e.as_str(),
             PartialError::PartialVirtualRead(_) => "partial virtual read",
-            PartialError::PartialVirtualWrite => "partial virtual write",
+            PartialError::PartialVirtualWrite(_) => "partial virtual write",
         }
     }
 
@@ -338,7 +338,7 @@ impl IntError for PartialError<()> {
         match self {
             PartialError::Error(err) => err.into_int_err(),
             PartialError::PartialVirtualRead(_) => NonZeroI32::new(-2).unwrap(),
-            PartialError::PartialVirtualWrite => NonZeroI32::new(-3).unwrap(),
+            PartialError::PartialVirtualWrite(_) => NonZeroI32::new(-3).unwrap(),
         }
     }
 
@@ -347,7 +347,7 @@ impl IntError for PartialError<()> {
         match errc {
             1 => PartialError::Error(Error::from_int_err(err)),
             2 => PartialError::PartialVirtualRead(()),
-            3 => PartialError::PartialVirtualWrite,
+            3 => PartialError::PartialVirtualWrite(()),
             _ => PartialError::Error(Error(ErrorOrigin::Ffi, ErrorKind::Unknown)),
         }
     }
@@ -412,9 +412,8 @@ impl<T> PartialResultExt<T> for PartialResult<T> {
         match self {
             Ok(data) => Ok(data),
             Err(PartialError::PartialVirtualRead(data)) => Ok(data),
+            Err(PartialError::PartialVirtualWrite(data)) => Ok(data),
             Err(PartialError::Error(e)) => Err(e),
-            //Err(Error::PartialVirtualWrite(data)) => Ok(data),
-            _ => Err(Error(ErrorOrigin::Memory, ErrorKind::PartialData)),
         }
     }
 
@@ -423,7 +422,7 @@ impl<T> PartialResultExt<T> for PartialResult<T> {
             Ok(data) => Ok(func(data)),
             Err(PartialError::Error(e)) => Err(PartialError::Error(e)),
             Err(PartialError::PartialVirtualRead(data)) => Ok(func(data)),
-            Err(PartialError::PartialVirtualWrite) => Err(PartialError::PartialVirtualWrite),
+            Err(PartialError::PartialVirtualWrite(data)) => Ok(func(data)),
         }
     }
 }
@@ -471,7 +470,7 @@ mod tests {
 
         result = from_int_result_empty(-3);
         assert!(result.is_err());
-        assert_eq!(result.err().unwrap(), PartialError::PartialVirtualWrite);
+        assert_eq!(result.err().unwrap(), PartialError::PartialVirtualWrite(()));
 
         result = from_int_result_empty(-4);
         assert!(result.is_err());
@@ -556,9 +555,9 @@ mod tests {
 
     #[test]
     pub fn part_result_part_error_write_ffi() {
-        let r: PartialResult<()> = Err(PartialError::PartialVirtualWrite);
+        let r: PartialResult<()> = Err(PartialError::PartialVirtualWrite(()));
         let result: PartialResult<()> = from_int_result_empty(into_int_result(r));
         assert!(result.is_err());
-        assert_eq!(result.err().unwrap(), PartialError::PartialVirtualWrite);
+        assert_eq!(result.err().unwrap(), PartialError::PartialVirtualWrite(()));
     }
 }

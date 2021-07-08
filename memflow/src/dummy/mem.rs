@@ -51,12 +51,20 @@ impl Clone for DummyMemory {
 }
 
 impl PhysicalMemory for DummyMemory {
-    fn phys_read_raw_list(&mut self, data: &mut [PhysicalReadData]) -> Result<()> {
-        self.mem.phys_read_raw_list(data)
+    fn phys_read_raw_iter<'a>(
+        &mut self,
+        data: CIterator<PhysicalReadData<'a>>,
+        out_fail: &mut PhysicalReadFailCallback<'_, 'a>,
+    ) -> Result<()> {
+        self.mem.phys_read_raw_iter(data, out_fail)
     }
 
-    fn phys_write_raw_list(&mut self, data: &[PhysicalWriteData]) -> Result<()> {
-        self.mem.phys_write_raw_list(data)
+    fn phys_write_raw_iter<'a>(
+        &mut self,
+        data: CIterator<PhysicalWriteData<'a>>,
+        out_fail: &mut PhysicalWriteFailCallback<'_, 'a>,
+    ) -> Result<()> {
+        self.mem.phys_write_raw_iter(data, out_fail)
     }
 
     fn metadata(&self) -> PhysicalMemoryMetadata {

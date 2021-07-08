@@ -31,7 +31,7 @@ use super::{Win32Kernel, Win32ProcessInfo, Win32VirtualTranslate};
 
 use memflow::cglue::*;
 use memflow::error::{Error, ErrorKind, ErrorOrigin, Result};
-use memflow::mem::{PhysicalMemory, VirtualDma, VirtualMemory, VirtualTranslate2};
+use memflow::mem::{MemoryView, PhysicalMemory, VirtualDma, VirtualTranslate2};
 use memflow::os::keyboard::*;
 use memflow::prelude::OsInner;
 
@@ -136,7 +136,7 @@ impl<T> Win32Keyboard<T> {
 
         // read with user_process dtb
         let module_buf = user_process
-            .virt_read_raw(win32kbase_module_info.base, win32kbase_module_info.size)
+            .read_raw(win32kbase_module_info.base, win32kbase_module_info.size)
             .data_part()?;
         debug!("fetched {:x} bytes from win32kbase.sys", module_buf.len());
 
@@ -230,10 +230,7 @@ macro_rules! set_key_down {
     };
 }
 
-impl<T> Keyboard for Win32Keyboard<T>
-where
-    T: VirtualMemory,
-{
+impl<T: MemoryView> Keyboard for Win32Keyboard<T> {
     type KeyboardStateType = Win32KeyboardState;
 
     /// Reads the gafAsyncKeyState global from the win32kbase.sys kernel module and
@@ -247,7 +244,7 @@ where
             false
         } else if let Ok(buffer) = self
             .virt_mem
-            .virt_read::<[u8; 256 * 2 / 8]>(self.key_state_addr)
+            .read::<[u8; 256 * 2 / 8]>(self.key_state_addr)
             .data_part()
         {
             is_key_down!(buffer, vk)
@@ -264,19 +261,16 @@ where
     /// It will only modify calls to GetKeyState / GetAsyncKeyState.
     fn set_down(&mut self, vk: i32, down: bool) {
         if (0..=256).contains(&vk) {
-            if let Ok(mut buffer) = self
-                .virt_mem
-                .virt_read::<[u8; 256 * 2 / 8]>(self.key_state_addr)
-            {
+            if let Ok(mut buffer) = self.virt_mem.read::<[u8; 256 * 2 / 8]>(self.key_state_addr) {
                 set_key_down!(buffer, vk, down);
-                self.virt_mem.virt_write(self.key_state_addr, &buffer).ok();
+                self.virt_mem.write(self.key_state_addr, &buffer).ok();
             }
         }
     }
 
     /// Reads the gafAsyncKeyState global from the win32kbase.sys kernel module.
     fn state(&mut self) -> memflow::error::Result<Self::KeyboardStateType> {
-        let buffer: [u8; 256 * 2 / 8] = self.virt_mem.virt_read(self.key_state_addr)?;
+        let buffer: [u8; 256 * 2 / 8] = self.virt_mem.read(self.key_state_addr)?;
         Ok(Win32KeyboardState { buffer })
     }
 }

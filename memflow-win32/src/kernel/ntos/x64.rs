@@ -9,12 +9,12 @@ use memflow::architecture::{x86::x64, ArchitectureObj};
 use memflow::dataview::Pod;
 use memflow::error::{Error, ErrorKind, ErrorOrigin, PartialResultExt, Result};
 use memflow::iter::PageChunks;
-use memflow::mem::{VirtualMemory, VirtualTranslate};
+use memflow::mem::{MemoryView, VirtualTranslate};
 use memflow::types::{size, Address};
 
 use pelite::image::IMAGE_DOS_HEADER;
 
-pub fn find_with_va_hint<T: VirtualMemory + VirtualTranslate>(
+pub fn find_with_va_hint<T: MemoryView + VirtualTranslate>(
     virt_mem: &mut T,
     start_block: &StartBlock,
 ) -> Result<(Address, usize)> {
@@ -44,13 +44,10 @@ pub fn find_with_va_hint<T: VirtualMemory + VirtualTranslate>(
         .log_trace("x64::find_with_va_hint: unable to locate ntoskrnl.exe via va hint"))
 }
 
-fn find_with_va<T: VirtualMemory + VirtualTranslate>(
-    virt_mem: &mut T,
-    va_base: u64,
-) -> Result<u64> {
+fn find_with_va<T: MemoryView + VirtualTranslate>(virt_mem: &mut T, va_base: u64) -> Result<u64> {
     let mut buf = vec![0; size::mb(2)];
     virt_mem
-        .virt_read_raw_into(Address::from(va_base), &mut buf)
+        .read_raw_into(Address::from(va_base), &mut buf)
         .data_part()?;
 
     buf.chunks_exact(x64::ARCH.page_size())
@@ -79,7 +76,7 @@ fn find_with_va<T: VirtualMemory + VirtualTranslate>(
         })
 }
 
-pub fn find<T: VirtualMemory + VirtualTranslate>(
+pub fn find<T: MemoryView + VirtualTranslate>(
     virt_mem: &mut T,
     start_block: &StartBlock,
 ) -> Result<(Address, usize)> {

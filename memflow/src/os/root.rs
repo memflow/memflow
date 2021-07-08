@@ -9,15 +9,15 @@ use crate::prelude::v1::{Result, *};
 #[cfg(feature = "plugins")]
 use super::keyboard::*;
 #[cfg(feature = "plugins")]
-use crate::mem::phys_mem::*;
+use crate::mem::memory_view::*;
 #[cfg(feature = "plugins")]
-use crate::mem::virt_mem::*;
+use crate::mem::phys_mem::*;
 
 use crate::cglue::*;
 use std::prelude::v1::*;
 
 #[cfg(feature = "plugins")]
-cglue_trait_group!(OsInstance<'a>, { OsInner<'a>, Clone }, { PhysicalMemory, VirtualMemory, OsKeyboardInner<'a> });
+cglue_trait_group!(OsInstance<'a>, { OsInner<'a>, Clone }, { PhysicalMemory, MemoryView, OsKeyboardInner<'a> });
 #[cfg(feature = "plugins")]
 pub type MuOsInstanceArcBox<'a> = std::mem::MaybeUninit<OsInstanceArcBox<'a>>;
 
@@ -39,12 +39,9 @@ impl<T: for<'a> OsInner<'a>> Os for T {}
 #[int_result]
 pub trait OsInner<'a>: Send {
     #[wrap_with_group(crate::os::process::ProcessInstance)]
-    type ProcessType: crate::os::process::Process + crate::mem::virt_mem::VirtualMemory + 'a;
+    type ProcessType: crate::os::process::Process + MemoryView + 'a;
     #[wrap_with_group(crate::os::process::IntoProcessInstance)]
-    type IntoProcessType: crate::os::process::Process
-        + crate::mem::virt_mem::VirtualMemory
-        + Clone
-        + 'static;
+    type IntoProcessType: crate::os::process::Process + MemoryView + Clone + 'static;
 
     /// Walks a process list and calls a callback for each process structure address
     ///

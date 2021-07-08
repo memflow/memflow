@@ -29,7 +29,7 @@ pub fn find_fallback<T: PhysicalMemory>(
         ArchitectureIdent::X86(64, _) => {
             // read low 16mb stub
             let mut low16m = vec![0; size::mb(16)];
-            mem.phys_read_raw_into(PhysicalAddress::NULL, &mut low16m)?;
+            mem.phys_read_into(PhysicalAddress::NULL, low16m.as_mut_slice())?;
 
             x64::find(&low16m)
         }
@@ -38,7 +38,7 @@ pub fn find_fallback<T: PhysicalMemory>(
             let mut low16m = vec![0; size::mb(16)];
 
             //TODO: configure this, but so far arm null starts at this address
-            mem.phys_read_raw_into(aarch64::PHYS_BASE.into(), &mut low16m)?;
+            mem.phys_read_into(aarch64::PHYS_BASE.into(), low16m.as_mut_slice())?;
 
             aarch64::find(&low16m)
         }
@@ -54,7 +54,7 @@ pub fn find<T: PhysicalMemory>(mem: &mut T, arch: Option<ArchitectureIdent>) -> 
             ArchitectureIdent::X86(64, _) => {
                 // read low 1mb stub
                 let mut low1m = vec![0; size::mb(1)];
-                mem.phys_read_raw_into(PhysicalAddress::NULL, &mut low1m)?;
+                mem.phys_read_into(PhysicalAddress::NULL, low1m.as_mut_slice())?;
 
                 // find x64 dtb in low stub < 1M
                 match x64::find_lowstub(&low1m) {
@@ -70,12 +70,12 @@ pub fn find<T: PhysicalMemory>(mem: &mut T, arch: Option<ArchitectureIdent>) -> 
             }
             ArchitectureIdent::X86(32, true) => {
                 let mut low16m = vec![0; size::mb(16)];
-                mem.phys_read_raw_into(PhysicalAddress::NULL, &mut low16m)?;
+                mem.phys_read_into(PhysicalAddress::NULL, low16m.as_mut_slice())?;
                 x86pae::find(&low16m)
             }
             ArchitectureIdent::X86(32, false) => {
                 let mut low16m = vec![0; size::mb(16)];
-                mem.phys_read_raw_into(PhysicalAddress::NULL, &mut low16m)?;
+                mem.phys_read_into(PhysicalAddress::NULL, low16m.as_mut_slice())?;
                 x86::find(&low16m)
             }
             ArchitectureIdent::AArch64(_) => find_fallback(mem, arch),

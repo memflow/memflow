@@ -48,7 +48,12 @@ fn rwtest(
                 }));
 
                 bench.iter(|| {
-                    let _ = black_box(mem.phys_read_raw_list(&mut bufs));
+                    let mut iter = bufs
+                        .iter_mut()
+                        .map(|PhysicalReadData(a, d)| PhysicalReadData(*a, d.into()));
+                    let _ = black_box(
+                        mem.phys_read_raw_iter((&mut iter).into(), &mut (&mut |_| false).into()),
+                    );
                 });
 
                 done_size += *i * *o;

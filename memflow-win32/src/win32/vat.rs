@@ -2,7 +2,7 @@ use memflow::{
     architecture::{arm, x86, ArchitectureIdent, ArchitectureObj, VirtualTranslate3},
     error::Error,
     iter::SplitAtIndex,
-    mem::{PhysicalMemory, VirtualDma, VirtualMemory, VirtualTranslate2},
+    mem::{MemoryView, PhysicalMemory, VirtualDma, VirtualTranslate2},
     types::{Address, PhysicalAddress},
 };
 
@@ -25,7 +25,7 @@ impl Win32VirtualTranslate {
         mem: T,
         vat: V,
         proc_arch: ArchitectureObj,
-    ) -> impl VirtualMemory {
+    ) -> impl MemoryView {
         VirtualDma::with_vat(mem, proc_arch, self, vat)
     }
 }

@@ -537,7 +537,13 @@ impl ArchMmuSpec {
             ));
         }
 
-        mem.phys_read_raw_list(&mut pt_read)?;
+        let mut pt_iter = pt_read
+            .iter_mut()
+            .map(|PhysicalReadData(a, d)| PhysicalReadData(*a, d.into()));
+
+        let out_fail = &mut |_| false;
+
+        mem.phys_read_raw_iter((&mut pt_iter).into(), &mut out_fail.into())?;
 
         // Move the read value into the chunk
         for (ref mut chunk, PhysicalReadData(_, buf)) in chunks.iter_mut().zip(pt_read.iter()) {

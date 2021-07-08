@@ -92,11 +92,14 @@ impl<T: AsRef<[u8]>, F: AsRef<MemoryMap<T>>> MappedPhysicalMemory<T, F> {
 impl<'a, F: AsRef<MemoryMap<&'a mut [u8]>> + Send> PhysicalMemory
     for MappedPhysicalMemory<&'a mut [u8], F>
 {
-    fn phys_read_raw_list(&mut self, data: &mut [PhysicalReadData]) -> Result<()> {
+    fn phys_read_raw_iter<'b>(
+        &mut self,
+        data: CIterator<PhysicalReadData<'b>>,
+        _out_fail: &mut PhysicalReadFailCallback<'_, 'b>,
+    ) -> Result<()> {
         let mut void = FnExtend::void();
-        for (mapped_buf, buf) in self.info.as_ref().map_iter(
-            data.iter_mut()
-                .map(|PhysicalReadData(addr, buf)| (*addr, &mut **buf)),
+        for (mapped_buf, mut buf) in self.info.as_ref().map_iter(
+            data.map(|PhysicalReadData(addr, buf)| (addr, buf)),
             &mut void,
         ) {
             buf.copy_from_slice(mapped_buf.as_ref());
@@ -104,14 +107,14 @@ impl<'a, F: AsRef<MemoryMap<&'a mut [u8]>> + Send> PhysicalMemory
         Ok(())
     }
 
-    fn phys_write_raw_list(&mut self, data: &[PhysicalWriteData]) -> Result<()> {
+    fn phys_write_raw_iter<'b>(
+        &mut self,
+        data: CIterator<PhysicalWriteData<'b>>,
+        _out_fail: &mut PhysicalWriteFailCallback<'_, 'b>,
+    ) -> Result<()> {
         let mut void = FnExtend::void();
 
-        for (mapped_buf, buf) in self
-            .info
-            .as_ref()
-            .map_iter(data.iter().copied().map(<_>::from), &mut void)
-        {
+        for (mapped_buf, buf) in self.info.as_ref().map_iter(data.map(<_>::from), &mut void) {
             mapped_buf.as_mut().copy_from_slice(buf);
         }
 
@@ -147,11 +150,14 @@ impl<'a, F: AsRef<MemoryMap<&'a mut [u8]>> + Send> PhysicalMemory
 impl<'a, F: AsRef<MemoryMap<&'a [u8]>> + Send> PhysicalMemory
     for MappedPhysicalMemory<&'a [u8], F>
 {
-    fn phys_read_raw_list(&mut self, data: &mut [PhysicalReadData]) -> Result<()> {
+    fn phys_read_raw_iter<'b>(
+        &mut self,
+        data: CIterator<PhysicalReadData<'b>>,
+        _out_fail: &mut PhysicalReadFailCallback<'_, 'b>,
+    ) -> Result<()> {
         let mut void = FnExtend::void();
-        for (mapped_buf, buf) in self.info.as_ref().map_iter(
-            data.iter_mut()
-                .map(|PhysicalReadData(addr, buf)| (*addr, &mut **buf)),
+        for (mapped_buf, mut buf) in self.info.as_ref().map_iter(
+            data.map(|PhysicalReadData(addr, buf)| (addr, buf)),
             &mut void,
         ) {
             buf.copy_from_slice(mapped_buf.as_ref());
@@ -159,7 +165,11 @@ impl<'a, F: AsRef<MemoryMap<&'a [u8]>> + Send> PhysicalMemory
         Ok(())
     }
 
-    fn phys_write_raw_list(&mut self, _data: &[PhysicalWriteData]) -> Result<()> {
+    fn phys_write_raw_iter<'b>(
+        &mut self,
+        _data: CIterator<PhysicalWriteData<'b>>,
+        _out_fail: &mut PhysicalWriteFailCallback<'_, 'b>,
+    ) -> Result<()> {
         Err(Error(ErrorOrigin::Connector, ErrorKind::ReadOnly)
             .log_error("target mapping is not writeable"))
     }

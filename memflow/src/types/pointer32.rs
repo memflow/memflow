@@ -4,8 +4,8 @@
 
 use crate::cglue::ReprCString;
 use crate::dataview::Pod;
-use crate::error::{Error, ErrorKind, ErrorOrigin, PartialError, PartialResult, Result};
-use crate::mem::{PhysicalMemory, VirtualMemory};
+use crate::error::{Error, ErrorKind, ErrorOrigin, PartialError, PartialResult};
+use crate::mem::MemoryView;
 use crate::types::{Address, ByteSwap};
 
 use std::convert::TryFrom;
@@ -26,7 +26,7 @@ use std::{cmp, fmt, hash, ops};
 ///
 /// ```
 /// use memflow::types::Pointer32;
-/// use memflow::mem::VirtualMemory;
+/// use memflow::mem::MemoryView;
 /// use memflow::dataview::Pod;
 ///
 /// #[repr(C)]
@@ -41,9 +41,9 @@ use std::{cmp, fmt, hash, ops};
 ///     pub foo_ptr: Pointer32<Foo>,
 /// }
 ///
-/// fn read_foo_bar(virt_mem: &mut impl VirtualMemory) {
-///     let bar: Bar = virt_mem.virt_read(0x1234.into()).unwrap();
-///     let foo = bar.foo_ptr.virt_read(virt_mem).unwrap();
+/// fn read_foo_bar(mem: &mut impl MemoryView) {
+///     let bar: Bar = mem.read(0x1234.into()).unwrap();
+///     let foo = bar.foo_ptr.read(mem).unwrap();
 ///     println!("value: {}", foo.some_value);
 /// }
 ///
@@ -56,7 +56,7 @@ use std::{cmp, fmt, hash, ops};
 ///
 /// ```
 /// use memflow::types::Pointer32;
-/// use memflow::mem::VirtualMemory;
+/// use memflow::mem::MemoryView;
 /// use memflow::dataview::Pod;
 ///
 /// #[repr(C)]
@@ -71,9 +71,9 @@ use std::{cmp, fmt, hash, ops};
 ///     pub foo_ptr: Pointer32<Foo>,
 /// }
 ///
-/// fn read_foo_bar(virt_mem: &mut impl VirtualMemory) {
-///     let bar: Bar = virt_mem.virt_read(0x1234.into()).unwrap();
-///     let foo = virt_mem.virt_read_ptr32(bar.foo_ptr).unwrap();
+/// fn read_foo_bar(mem: &mut impl MemoryView) {
+///     let bar: Bar = mem.read(0x1234.into()).unwrap();
+///     let foo = mem.read_ptr32(bar.foo_ptr).unwrap();
 ///     println!("value: {}", foo.some_value);
 /// }
 ///
@@ -266,50 +266,33 @@ impl<T: Sized> Pointer32<T> {
 
 /// Implement special phys/virt read/write for Pod types
 impl<T: Pod + ?Sized> Pointer32<T> {
-    pub fn phys_read_into<U: PhysicalMemory>(self, mem: &mut U, out: &mut T) -> Result<()> {
-        mem.phys_read_ptr32_into(self, out)
-    }
-
-    pub fn virt_read_into<U: VirtualMemory>(self, mem: &mut U, out: &mut T) -> PartialResult<()> {
-        mem.virt_read_ptr32_into(self, out)
+    pub fn read_into<U: MemoryView>(self, mem: &mut U, out: &mut T) -> PartialResult<()> {
+        mem.read_ptr32_into(self, out)
     }
 }
 
 impl<T: Pod + Sized> Pointer32<T> {
-    pub fn phys_read<U: PhysicalMemory>(self, mem: &mut U) -> Result<T> {
-        mem.phys_read_ptr32(self)
+    pub fn read<U: MemoryView>(self, mem: &mut U) -> PartialResult<T> {
+        mem.read_ptr32(self)
     }
 
-    pub fn virt_read<U: VirtualMemory>(self, mem: &mut U) -> PartialResult<T> {
-        mem.virt_read_ptr32(self)
-    }
-
-    pub fn phys_write<U: PhysicalMemory>(self, mem: &mut U, data: &T) -> Result<()> {
-        mem.phys_write_ptr32(self, data)
-    }
-
-    pub fn virt_write<U: VirtualMemory>(self, mem: &mut U, data: &T) -> PartialResult<()> {
-        mem.virt_write_ptr32(self, data)
+    pub fn write<U: MemoryView>(self, mem: &mut U, data: &T) -> PartialResult<()> {
+        mem.write_ptr32(self, data)
     }
 }
 
 /// Implement special phys/virt read/write for CReprStr
 impl Pointer32<ReprCString> {
-    pub fn phys_read_string<U: PhysicalMemory>(self, mem: &mut U) -> Result<ReprCString> {
-        match mem.phys_read_char_string(self.address.into()) {
-            Ok(s) => Ok(s.into()),
-            Err(e) => Err(e),
-        }
-    }
-
-    pub fn virt_read_string<U: VirtualMemory>(self, mem: &mut U) -> PartialResult<ReprCString> {
-        match mem.virt_read_char_string(self.address.into()) {
+    pub fn read_string<U: MemoryView>(self, mem: &mut U) -> PartialResult<ReprCString> {
+        match mem.read_char_string(self.address.into()) {
             Ok(s) => Ok(s.into()),
             Err(PartialError::Error(e)) => Err(PartialError::Error(e)),
             Err(PartialError::PartialVirtualRead(s)) => {
                 Err(PartialError::PartialVirtualRead(s.into()))
             }
-            Err(PartialError::PartialVirtualWrite) => Err(PartialError::PartialVirtualWrite),
+            Err(PartialError::PartialVirtualWrite(s)) => {
+                Err(PartialError::PartialVirtualWrite(s.into()))
+            }
         }
     }
 }

@@ -24,7 +24,7 @@ use bumpalo::{collections::Vec as BumpVec, Bump};
 /// use memflow::mem::cache::CachedVirtualTranslate;
 /// # use memflow::architecture::x86::x64;
 /// # use memflow::dummy::{DummyMemory, DummyOs};
-/// # use memflow::mem::{DirectTranslate, VirtualDma, VirtualMemory, VirtualTranslate2};
+/// # use memflow::mem::{DirectTranslate, VirtualDma, MemoryView, VirtualTranslate2};
 /// # use memflow::types::size;
 /// # let mem = DummyMemory::new(size::mb(32));
 /// # let mut os = DummyOs::new(mem);
@@ -46,7 +46,7 @@ use bumpalo::{collections::Vec as BumpVec, Bump};
 /// # use memflow::mem::cache::CachedVirtualTranslate;
 /// # use memflow::architecture::x86::x64;
 /// # use memflow::dummy::{DummyMemory, DummyOs};
-/// # use memflow::mem::{DirectTranslate, VirtualDma, VirtualMemory, VirtualTranslate2};
+/// # use memflow::mem::{DirectTranslate, VirtualDma, MemoryView, VirtualTranslate2};
 /// # use memflow::types::size;
 /// # let mem = DummyMemory::new(size::mb(32));
 /// # let mut os = DummyOs::new(mem);
@@ -293,7 +293,7 @@ mod tests {
     use crate::mem::cache::cached_vat::CachedVirtualTranslate;
     use crate::mem::cache::timed_validator::TimedCacheValidator;
     use crate::mem::{DirectTranslate, PhysicalMemory};
-    use crate::mem::{VirtualDma, VirtualMemory};
+    use crate::mem::{MemoryView, VirtualDma};
     use crate::types::{size, Address};
     use coarsetime::Duration;
 
@@ -301,7 +301,7 @@ mod tests {
         buf: &[u8],
     ) -> (
         impl PhysicalMemory,
-        impl VirtualMemory + Clone,
+        impl MemoryView + Clone,
         Address,
         Address,
     ) {
@@ -339,16 +339,16 @@ mod tests {
         let (mut mem, mut vmem, virt_base, dtb) = build_mem(&buffer);
 
         let mut read_into = vec![0; size::mb(2)];
-        vmem.virt_read_raw_into(virt_base, &mut read_into)
+        vmem.read_raw_into(virt_base, &mut read_into)
             .data()
             .unwrap();
         assert!(read_into == buffer);
 
         // Destroy the page tables
-        mem.phys_write_raw(dtb.into(), &vec![0; size::kb(4)])
+        mem.phys_write(dtb.into(), vec![0u8; size::kb(4)].as_slice())
             .unwrap();
 
-        vmem.virt_read_raw_into(virt_base, &mut read_into)
+        vmem.read_raw_into(virt_base, &mut read_into)
             .data()
             .unwrap();
         assert!(read_into == buffer);
@@ -357,12 +357,12 @@ mod tests {
         let mut vmem_cloned = vmem.clone();
 
         vmem_cloned
-            .virt_read_raw_into(virt_base, &mut read_into)
+            .read_raw_into(virt_base, &mut read_into)
             .data()
             .unwrap();
         assert!(read_into == buffer);
 
-        vmem.virt_read_raw_into(virt_base, &mut read_into)
+        vmem.read_raw_into(virt_base, &mut read_into)
             .data()
             .unwrap();
         assert!(read_into == buffer);

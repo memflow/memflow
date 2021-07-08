@@ -3,7 +3,7 @@ use crate::architecture::VirtualTranslate3;
 use crate::error::*;
 
 use crate::architecture::ArchitectureIdent;
-use crate::mem::memory_view::*;
+use crate::mem::{mem_data::*, memory_view::*};
 use crate::os::process::*;
 use crate::os::*;
 use crate::types::Address;

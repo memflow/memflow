@@ -37,7 +37,7 @@ use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 use crate::iter::PageChunks;
 use crate::mem::{
     phys_mem::{PhysicalReadFailCallback, PhysicalWriteFailCallback},
-    PhysicalMemory, PhysicalMemoryMapping, PhysicalMemoryMetadata, PhysicalReadData,
+    MemData, PhysicalMemory, PhysicalMemoryMapping, PhysicalMemoryMetadata, PhysicalReadData,
     PhysicalWriteData,
 };
 
@@ -151,20 +151,20 @@ impl<'a, T: PhysicalMemory, Q: CacheValidator> PhysicalMemory for CachedMemoryAc
         let cache = &mut self.cache;
         let mem = &mut self.mem;
 
-        let mut data = data.map(move |PhysicalWriteData(addr, data)| {
+        let mut data = data.map(move |MemData(addr, data)| {
             if cache.is_cached_page_type(addr.page_type()) {
                 for (paddr, data_chunk) in data.page_chunks(addr.address(), cache.page_size()) {
                     let mut cached_page = cache.cached_page_mut(paddr, false);
                     if let PageValidity::Valid(buf) = &mut cached_page.validity {
                         // write-back into still valid cache pages
                         let start = paddr - cached_page.address;
-                        buf[start..(start + data_chunk.len())].copy_from_slice(data_chunk);
+                        buf[start..(start + data_chunk.len())].copy_from_slice(data_chunk.into());
                     }
 
                     cache.put_entry(cached_page);
                 }
             }
-            PhysicalWriteData(addr, data)
+            MemData(addr, data)
         });
 
         mem.phys_write_raw_iter((&mut data).into(), out_fail)

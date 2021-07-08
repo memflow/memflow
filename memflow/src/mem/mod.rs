@@ -10,6 +10,7 @@ TODO: more documentation
 */
 
 pub mod cache;
+pub mod mem_data;
 pub mod mem_map;
 pub mod memory_view;
 pub mod phys_mem;
@@ -28,8 +29,7 @@ pub use mem_map::{MemoryMap, PhysicalMemoryMapping};
 pub use phys_mem::ConnectorInstanceArcBox;
 #[doc(hidden)]
 pub use phys_mem::{
-    PhysicalMemory, PhysicalMemoryMetadata, PhysicalReadData, PhysicalReadIterator,
-    PhysicalWriteData, PhysicalWriteIterator,
+    PhysicalMemory, PhysicalMemoryMetadata, PhysicalReadFailCallback, PhysicalWriteFailCallback,
 };
 #[doc(hidden)]
 pub use virt_mem::VirtualDma;
@@ -38,7 +38,11 @@ pub use virt_mem::VirtualDma;
 #[doc(hidden)]
 pub use virt_translate::{DirectTranslate, VirtualTranslate, VirtualTranslate2};
 
-pub use memory_view::{MemoryView, MemoryViewMetadata, ReadData, WriteData};
+#[doc(hidden)]
+pub use memory_view::{MemoryView, MemoryViewMetadata, ReadFailCallback, WriteFailCallback};
+
+#[doc(hidden)]
+pub use mem_data::*;
 
 #[cfg(feature = "std")]
 #[doc(hidden)]

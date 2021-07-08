@@ -3,6 +3,7 @@ use crate::dataview::Pod;
 use crate::error::Result;
 use crate::types::{Address, PhysicalAddress};
 
+use super::mem_data::*;
 use super::PhysicalMemoryMapping;
 
 use std::prelude::v1::*;
@@ -40,13 +41,16 @@ pub type MuConnectorInstanceArcBox<'a> = std::mem::MaybeUninit<ConnectorInstance
 /// use memflow::mem::{
 ///     MemoryMap,
 ///     PhysicalMemoryMapping,
+///     MemData,
 ///     phys_mem::{
 ///         PhysicalMemory,
-///         PhysicalReadData,
-///         PhysicalWriteData,
 ///         PhysicalReadFailCallback,
 ///         PhysicalWriteFailCallback,
 ///         PhysicalMemoryMetadata,
+///     },
+///     mem_data::{
+///         PhysicalReadData,
+///         PhysicalWriteData,
 ///     }
 /// };
 ///
@@ -66,7 +70,7 @@ pub type MuConnectorInstanceArcBox<'a> = std::mem::MaybeUninit<ConnectorInstance
 ///         _: &mut PhysicalReadFailCallback<'_, 'a>
 ///     ) -> Result<()> {
 ///         data
-///             .for_each(|PhysicalReadData(addr, mut out)| {
+///             .for_each(|MemData(addr, mut out)| {
 ///                 let len = out.len();
 ///                 out.copy_from_slice(&self.mem[addr.as_usize()..(addr.as_usize() + len)])
 ///             });
@@ -79,7 +83,7 @@ pub type MuConnectorInstanceArcBox<'a> = std::mem::MaybeUninit<ConnectorInstance
 ///         _: &mut PhysicalWriteFailCallback<'_, 'a>
 ///     ) -> Result<()> {
 ///         data
-///             .for_each(|PhysicalWriteData(addr, data)| self
+///             .for_each(|MemData(addr, data)| self
 ///                 .mem[addr.as_usize()..(addr.as_usize() + data.len())].copy_from_slice(&data)
 ///             );
 ///         Ok(())
@@ -160,10 +164,10 @@ pub trait PhysicalMemory: Send {
     where
         Self: Sized,
     {
-        let mut iter = Some(PhysicalReadData(addr, out.as_bytes_mut().into())).into_iter();
+        let mut iter = Some(MemData(addr, out.as_bytes_mut().into())).into_iter();
         self.phys_read_raw_iter(
             (&mut iter).into(),
-            &mut (&mut |PhysicalReadData(_, mut d)| {
+            &mut (&mut |MemData(_, mut d): PhysicalReadData| {
                 d.iter_mut().for_each(|b| *b = 0);
                 true
             })
@@ -176,9 +180,8 @@ pub trait PhysicalMemory: Send {
     where
         Self: Sized,
     {
-        println!("{:x}", data.as_bytes().len());
-        let mut iter = Some(PhysicalWriteData(addr, data.as_bytes().into())).into_iter();
-        self.phys_write_raw_iter((&mut iter).into(), &mut (&mut |_| false).into())
+        let mut iter = Some(MemData(addr, data.as_bytes().into())).into_iter();
+        self.phys_write_raw_iter((&mut iter).into(), &mut (&mut |_| true).into())
     }
 
     // TODO: create FFI helpers for this
@@ -210,10 +213,11 @@ impl<T: PhysicalMemory> MemoryView for PhysicalMemoryView<T> {
         data: CIterator<ReadData<'a>>,
         out_fail: &mut ReadFailCallback<'_, 'a>,
     ) -> Result<()> {
-        let mut iter = data.map(|ReadData(addr, data)| PhysicalReadData(addr.into(), data));
+        let mut iter = data.map(|MemData(addr, data)| MemData(addr.into(), data));
 
-        let mut callback =
-            |PhysicalReadData(addr, data)| out_fail.call(ReadData(addr.address(), (&data).into()));
+        let mut callback = |MemData(addr, data): PhysicalReadData<'a>| {
+            out_fail.call(MemData(addr.address(), (&data).into()))
+        };
         let callback = &mut callback;
 
         self.mem
@@ -225,10 +229,11 @@ impl<T: PhysicalMemory> MemoryView for PhysicalMemoryView<T> {
         data: CIterator<WriteData<'a>>,
         out_fail: &mut WriteFailCallback<'_, 'a>,
     ) -> Result<()> {
-        let mut iter = data.map(|WriteData(addr, data)| PhysicalWriteData(addr.into(), data));
+        let mut iter = data.map(|MemData(addr, data)| MemData(addr.into(), data));
 
-        let mut callback =
-            |PhysicalWriteData(addr, data)| out_fail.call(WriteData(addr.address(), data));
+        let mut callback = |MemData(addr, data): PhysicalWriteData<'a>| {
+            out_fail.call(MemData(addr.address(), data))
+        };
         let callback = &mut callback;
 
         self.mem
@@ -262,30 +267,6 @@ pub struct PhysicalMemoryMetadata {
     pub ideal_batch_size: u32,
 }
 
-// iterator helpers
-#[repr(C)]
-pub struct PhysicalReadData<'a>(pub PhysicalAddress, pub CSliceMut<'a, u8>);
-pub trait PhysicalReadIterator<'a>: Iterator<Item = PhysicalReadData<'a>> + 'a {}
-impl<'a, T: Iterator<Item = PhysicalReadData<'a>> + 'a> PhysicalReadIterator<'a> for T {}
-
-impl<'a> From<PhysicalReadData<'a>> for (PhysicalAddress, &'a mut [u8]) {
-    fn from(PhysicalReadData(a, b): PhysicalReadData<'a>) -> Self {
-        (a, b.into())
-    }
-}
-
 pub type PhysicalReadFailCallback<'a, 'b> = OpaqueCallback<'a, PhysicalReadData<'b>>;
-
-#[repr(C)]
-#[derive(Clone, Copy)]
-pub struct PhysicalWriteData<'a>(pub PhysicalAddress, pub CSliceRef<'a, u8>);
-pub trait PhysicalWriteIterator<'a>: Iterator<Item = PhysicalWriteData<'a>> + 'a {}
-impl<'a, T: Iterator<Item = PhysicalWriteData<'a>> + 'a> PhysicalWriteIterator<'a> for T {}
-
-impl<'a> From<PhysicalWriteData<'a>> for (PhysicalAddress, &'a [u8]) {
-    fn from(PhysicalWriteData(a, b): PhysicalWriteData<'a>) -> Self {
-        (a, b.into())
-    }
-}
 
 pub type PhysicalWriteFailCallback<'a, 'b> = OpaqueCallback<'a, PhysicalWriteData<'b>>;

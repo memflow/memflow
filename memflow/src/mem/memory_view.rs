@@ -1,6 +1,7 @@
 use crate::prelude::v1::*;
-use cglue::prelude::v1::*;
 use std::mem::MaybeUninit;
+
+use super::mem_data::*;
 
 pub mod batcher;
 
@@ -61,7 +62,7 @@ pub trait MemoryView: Send {
     fn read_raw_list(&mut self, data: &mut [ReadData]) -> PartialResult<()> {
         let mut out = Ok(());
 
-        let callback = &mut |ReadData(_, mut d)| {
+        let callback = &mut |MemData(_, mut d): ReadData| {
             out = Err(PartialError::PartialVirtualRead(()));
 
             // Default behaviour is to zero out any failed data
@@ -72,7 +73,7 @@ pub trait MemoryView: Send {
             true
         };
 
-        let mut iter = data.iter().map(|ReadData(d1, d2)| ReadData(*d1, d2.into()));
+        let mut iter = data.iter().map(|MemData(d1, d2)| MemData(*d1, d2.into()));
 
         self.read_raw_iter((&mut iter).into(), &mut callback.into())?;
 
@@ -80,7 +81,7 @@ pub trait MemoryView: Send {
     }
 
     fn read_raw_into(&mut self, addr: Address, out: &mut [u8]) -> PartialResult<()> {
-        self.read_raw_list(&mut [ReadData(addr, out.into())])
+        self.read_raw_list(&mut [MemData(addr, out.into())])
     }
 
     #[skip_func]
@@ -198,7 +199,7 @@ pub trait MemoryView: Send {
     }
 
     fn write_raw(&mut self, addr: Address, data: &[u8]) -> PartialResult<()> {
-        self.write_raw_list(&[WriteData(addr, data.into())])
+        self.write_raw_list(&[MemData(addr, data.into())])
     }
 
     #[skip_func]
@@ -350,30 +351,6 @@ pub struct MemoryViewMetadata {
     pub ideal_batch_size: u32,
 }
 
-// iterator helpers
-#[repr(C)]
-pub struct ReadData<'a>(pub Address, pub CSliceMut<'a, u8>);
-pub trait ReadIterator<'a>: Iterator<Item = ReadData<'a>> + 'a {}
-impl<'a, T: Iterator<Item = ReadData<'a>> + 'a> ReadIterator<'a> for T {}
-
-impl<'a> From<ReadData<'a>> for (Address, &'a mut [u8]) {
-    fn from(ReadData(a, b): ReadData<'a>) -> Self {
-        (a, b.into())
-    }
-}
-
 pub type ReadFailCallback<'a, 'b> = OpaqueCallback<'a, ReadData<'b>>;
-
-#[repr(C)]
-#[derive(Clone, Copy)]
-pub struct WriteData<'a>(pub Address, pub CSliceRef<'a, u8>);
-pub trait WriteIterator<'a>: Iterator<Item = WriteData<'a>> + 'a {}
-impl<'a, T: Iterator<Item = WriteData<'a>> + 'a> WriteIterator<'a> for T {}
-
-impl<'a> From<WriteData<'a>> for (Address, &'a [u8]) {
-    fn from(WriteData(a, b): WriteData<'a>) -> Self {
-        (a, b.into())
-    }
-}
 
 pub type WriteFailCallback<'a, 'b> = OpaqueCallback<'a, WriteData<'b>>;

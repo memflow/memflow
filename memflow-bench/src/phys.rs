@@ -5,7 +5,7 @@ use memflow::mem::{CachedMemoryAccess, PhysicalMemory};
 use memflow::architecture;
 use memflow::cglue::*;
 use memflow::error::Result;
-use memflow::mem::PhysicalReadData;
+use memflow::mem::{MemData, PhysicalReadData};
 use memflow::types::*;
 
 use rand::prelude::*;
@@ -37,7 +37,7 @@ fn rwtest(
                 bufs.extend(vbufs.iter_mut().map(|vec| {
                     let addr = (base_addr + rng.gen_range(0..0x2000)).into();
 
-                    PhysicalReadData(
+                    MemData(
                         PhysicalAddress::with_page(
                             addr,
                             PageType::default().write(true),
@@ -50,7 +50,7 @@ fn rwtest(
                 bench.iter(|| {
                     let mut iter = bufs
                         .iter_mut()
-                        .map(|PhysicalReadData(a, d)| PhysicalReadData(*a, d.into()));
+                        .map(|MemData(a, d): &mut PhysicalReadData| MemData(*a, d.into()));
                     let _ = black_box(
                         mem.phys_read_raw_iter((&mut iter).into(), &mut (&mut |_| false).into()),
                     );

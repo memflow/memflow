@@ -2,19 +2,19 @@ use std::prelude::v1::*;
 
 use crate::architecture::{ArchitectureObj, VirtualTranslate3};
 use crate::error::{Error, Result, *};
-use crate::iter::FnExtend;
 use crate::mem::memory_view::*;
 use crate::mem::{
+    mem_data::*,
     virt_translate::{
         DirectTranslate, MemoryRange, VirtualTranslate, VirtualTranslate2, VirtualTranslation,
         VirtualTranslationCallback, VirtualTranslationFail, VirtualTranslationFailCallback,
     },
-    MemoryView, PhysicalMemory, PhysicalMemoryMetadata, PhysicalReadData, PhysicalWriteData,
+    MemoryView, PhysicalMemory, PhysicalMemoryMetadata,
 };
 use crate::types::{Address, PhysicalAddress};
 
 use bumpalo::{collections::Vec as BumpVec, Bump};
-use cglue::iter::CIterator;
+use cglue::{callback::FromExtend, iter::CIterator};
 
 /// The VirtualDma struct provides a default implementation to access virtual memory
 /// from user provided [`PhysicalMemory`] and [`VirtualTranslate2`] objects.
@@ -201,19 +201,15 @@ impl<T: PhysicalMemory, V: VirtualTranslate2, D: VirtualTranslate3> MemoryView
         self.vat.virt_to_phys_iter(
             &mut self.phys_mem,
             &self.translator,
-            data.map(|ReadData(a, b)| (a, b.into())),
-            &mut FnExtend::new(|(a, b): (_, &mut [u8])| {
-                translation.push(PhysicalReadData(a, b.into()))
-            }),
-            &mut FnExtend::new(|(_, vaddr, out): (_, Address, &mut [u8])| {
-                let _ = out_fail.call(ReadData(vaddr, out.into()));
-            }),
+            data,
+            &mut translation.from_extend(),
+            &mut (&mut |(_, rdata): (_, ReadData<'a>)| out_fail.call(rdata)).into(),
         );
 
         let mut iter = translation.into_iter();
 
         self.phys_mem
-            .phys_read_raw_iter((&mut iter).into(), &mut (&mut |_| false).into())
+            .phys_read_raw_iter((&mut iter).into(), &mut (&mut |_| true).into())
     }
 
     fn write_raw_iter<'a>(
@@ -227,19 +223,15 @@ impl<T: PhysicalMemory, V: VirtualTranslate2, D: VirtualTranslate3> MemoryView
         self.vat.virt_to_phys_iter(
             &mut self.phys_mem,
             &self.translator,
-            data.map(<_>::into),
-            &mut FnExtend::new(|(a, b): (_, &[u8])| {
-                translation.push(PhysicalWriteData(a, b.into()))
-            }),
-            &mut FnExtend::new(|(_, vaddr, input): (_, _, &[u8])| {
-                let _ = out_fail.call(WriteData(vaddr, input.into()));
-            }),
+            data,
+            &mut translation.from_extend(),
+            &mut (&mut |(_, wdata): (_, WriteData<'a>)| out_fail.call(wdata)).into(),
         );
 
         let mut iter = translation.into_iter();
 
         self.phys_mem
-            .phys_write_raw_iter((&mut iter).into(), &mut (&mut |_| false).into())
+            .phys_write_raw_iter((&mut iter).into(), &mut (&mut |_| true).into())
     }
 
     fn metadata(&self) -> MemoryViewMetadata {
@@ -271,17 +263,21 @@ impl<T: PhysicalMemory, V: VirtualTranslate2, D: VirtualTranslate3> VirtualTrans
         self.vat.virt_to_phys_iter(
             &mut self.phys_mem,
             &self.translator,
-            addrs.iter().map(|v| (v.address, (v.address, v.size))),
-            &mut FnExtend::new(|(a, b): (PhysicalAddress, (Address, usize))| {
-                let _ = out.call(VirtualTranslation {
+            addrs
+                .iter()
+                .map(|v| MemData(v.address, (v.address, v.size))),
+            &mut (&mut |MemData(a, b): MemData<PhysicalAddress, (Address, usize)>| {
+                out.call(VirtualTranslation {
                     in_virtual: b.0,
                     size: b.1,
                     out_physical: a,
-                });
-            }),
-            &mut FnExtend::new(|(_e, from, (_, size))| {
-                let _ = out_fail.call(VirtualTranslationFail { from, size });
-            }),
+                })
+            })
+                .into(),
+            &mut (&mut |(_e, MemData(from, (_, size)))| {
+                out_fail.call(VirtualTranslationFail { from, size })
+            })
+                .into(),
         )
     }
 }

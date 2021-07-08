@@ -46,7 +46,7 @@ impl<'a, T: MemoryView> MemoryViewBatcher<'a, T> {
 
     // read helpers
     pub fn read_raw_into<'b: 'a>(&mut self, addr: Address, out: &'b mut [u8]) -> &mut Self {
-        self.read_raw_iter(Some(ReadData(addr, out.into())).into_iter())
+        self.read_raw_iter(Some(MemData(addr, out.into())).into_iter())
     }
 
     pub fn read_into<'b: 'a, F: Pod + ?Sized>(
@@ -59,7 +59,7 @@ impl<'a, T: MemoryView> MemoryViewBatcher<'a, T> {
 
     // write helpers
     pub fn write_raw_into<'b: 'a>(&mut self, addr: Address, out: &'b [u8]) -> &mut Self {
-        self.write_raw_iter(Some(WriteData(addr, out.into())).into_iter())
+        self.write_raw_iter(Some(MemData(addr, out.into())).into_iter())
     }
 
     pub fn write_into<'b: 'a, F: Pod + ?Sized>(&mut self, addr: Address, out: &'b F) -> &mut Self {

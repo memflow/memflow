@@ -2,8 +2,9 @@ pub(crate) mod def;
 pub(crate) mod spec;
 pub(crate) mod translate_data;
 
-use crate::error::Error;
+use super::VtopFailureCallback;
 use crate::iter::SplitAtIndex;
+use crate::mem::MemData;
 use crate::types::Address;
 pub(crate) use def::ArchMmuDef;
 pub(crate) use fixed_slice_vec::FixedSliceVec as MVec;
@@ -24,25 +25,24 @@ pub trait MmuTranslationBase: Clone + Copy + core::fmt::Debug {
     /// 1-2 on Arm (Win32 Arm merges both page tables)
     fn pt_count(&self) -> usize;
 
-    fn virt_addr_filter<B: SplitAtIndex, O: Extend<(Error, Address, B)>>(
+    fn virt_addr_filter<B: SplitAtIndex>(
         &self,
         spec: &ArchMmuSpec,
-        addr: (Address, B),
+        addr: MemData<Address, B>,
         work_group: (&mut TranslationChunk<Self>, &mut TranslateDataVec<B>),
-        out_fail: &mut O,
+        out_fail: &mut VtopFailureCallback<B>,
     );
 
-    fn fill_init_chunk<VI, FO, B>(
+    fn fill_init_chunk<VI, B>(
         &self,
         spec: &ArchMmuSpec,
-        out_fail: &mut FO,
+        out_fail: &mut VtopFailureCallback<B>,
         addrs: &mut VI,
         (next_work_addrs, tmp_addrs): (&mut TranslateDataVec<B>, &mut TranslateDataVec<B>),
         work_vecs: &mut (TranslateVec, TranslateDataVec<B>),
         wait_vecs: &mut (TranslateVec, TranslateDataVec<B>),
     ) where
-        VI: Iterator<Item = (Address, B)>,
-        FO: Extend<(Error, Address, B)>,
+        VI: Iterator<Item = MemData<Address, B>>,
         B: SplitAtIndex,
     {
         let mut init_chunk = TranslationChunk::new(*self);
@@ -75,15 +75,14 @@ impl MmuTranslationBase for Address {
         1
     }
 
-    fn virt_addr_filter<B, O>(
+    fn virt_addr_filter<B>(
         &self,
         spec: &ArchMmuSpec,
-        addr: (Address, B),
+        addr: MemData<Address, B>,
         work_group: (&mut TranslationChunk<Self>, &mut TranslateDataVec<B>),
-        out_fail: &mut O,
+        out_fail: &mut VtopFailureCallback<B>,
     ) where
         B: SplitAtIndex,
-        O: Extend<(Error, Address, B)>,
     {
         spec.virt_addr_filter(addr, work_group, out_fail);
     }

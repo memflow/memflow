@@ -14,11 +14,10 @@ mod tests;
 
 use crate::error::{Result, *};
 
-use crate::iter::FnExtend;
-use crate::mem::PhysicalMemory;
+use crate::mem::{MemData, PhysicalMemory};
 use crate::types::{Address, Page, PhysicalAddress};
 
-use crate::architecture::VirtualTranslate3;
+use crate::architecture::{VirtualTranslate3, VtopFailureCallback, VtopOutputCallback};
 
 #[cglue_trait]
 #[int_result]
@@ -42,7 +41,7 @@ pub trait VirtualTranslate: Send {
                 size: end - start,
             }],
             out,
-            (&mut |_| false).into(),
+            (&mut |_| true).into(),
         )
     }
 
@@ -135,7 +134,7 @@ pub trait VirtualTranslate: Send {
                 false
             })
                 .into(),
-            (&mut |_| false).into(),
+            (&mut |_| true).into(),
         );
 
         out
@@ -294,10 +293,10 @@ where
     /// # use memflow::error::Result;
     /// # use memflow::types::{PhysicalAddress, Address};
     /// # use memflow::dummy::{DummyMemory, DummyOs};
-    /// use memflow::mem::{VirtualTranslate2, DirectTranslate};
+    /// use memflow::mem::{VirtualTranslate2, DirectTranslate, MemData};
     /// use memflow::types::size;
     /// use memflow::architecture::x86::x64;
-    /// use memflow::iter::FnExtend;
+    /// use memflow::cglue::FromExtend;
     ///
     /// # const VIRT_MEM_SIZE: usize = size::mb(8);
     /// # const CHUNK_SIZE: usize = 2;
@@ -318,10 +317,10 @@ where
     /// let addresses = buffer
     ///     .chunks_mut(CHUNK_SIZE)
     ///     .enumerate()
-    ///     .map(|(i, buf)| (virtual_base + ((i + 1) * size::kb(4) - 1), buf));
+    ///     .map(|(i, buf)| MemData(virtual_base + ((i + 1) * size::kb(4) - 1), buf));
     ///
     /// let mut translated_data = vec![];
-    /// let mut failed_translations = FnExtend::void();
+    /// let mut failed_translations = &mut |_| true;
     ///
     /// let mut direct_translate = DirectTranslate::new();
     ///
@@ -329,8 +328,8 @@ where
     ///     &mut mem,
     ///     &translator,
     ///     addresses,
-    ///     &mut translated_data,
-    ///     &mut failed_translations,
+    ///     &mut translated_data.from_extend(),
+    ///     &mut failed_translations.into(),
     /// );
     ///
     ///
@@ -339,20 +338,18 @@ where
     ///
     /// # Ok::<(), memflow::error::Error>(())
     /// ```
-    fn virt_to_phys_iter<T, B, D, VI, VO, FO>(
+    fn virt_to_phys_iter<T, B, D, VI>(
         &mut self,
         phys_mem: &mut T,
         translator: &D,
         addrs: VI,
-        out: &mut VO,
-        out_fail: &mut FO,
+        out: &mut VtopOutputCallback<B>,
+        out_fail: &mut VtopFailureCallback<B>,
     ) where
         T: PhysicalMemory + ?Sized,
         B: SplitAtIndex,
         D: VirtualTranslate3,
-        VI: Iterator<Item = (Address, B)>,
-        VO: Extend<(PhysicalAddress, B)>,
-        FO: Extend<(Error, Address, B)>;
+        VI: Iterator<Item = MemData<Address, B>>;
 
     /// Translate a single virtual address
     ///
@@ -407,20 +404,24 @@ where
         vaddr: Address,
     ) -> Result<PhysicalAddress> {
         let mut output = None;
-        let mut success = FnExtend::new(|elem: (PhysicalAddress, _)| {
+        let success = &mut |elem: MemData<PhysicalAddress, _>| {
             if output.is_none() {
                 output = Some(elem.0);
             }
-        });
+            false
+        };
         let mut output_err = None;
-        let mut fail = FnExtend::new(|elem: (Error, _, _)| output_err = Some(elem.0));
+        let fail = &mut |elem: (Error, _)| {
+            output_err = Some(elem.0);
+            true
+        };
 
         self.virt_to_phys_iter(
             phys_mem,
             translator,
-            Some((vaddr, 1)).into_iter(),
-            &mut success,
-            &mut fail,
+            Some(MemData(vaddr, 1)).into_iter(),
+            &mut success.into(),
+            &mut fail.into(),
         );
         output.map(Ok).unwrap_or_else(|| Err(output_err.unwrap()))
     }
@@ -433,20 +434,18 @@ where
     P: std::ops::DerefMut<Target = T> + Send,
 {
     #[inline]
-    fn virt_to_phys_iter<U, B, D, VI, VO, FO>(
+    fn virt_to_phys_iter<U, B, D, VI>(
         &mut self,
         phys_mem: &mut U,
         translator: &D,
         addrs: VI,
-        out: &mut VO,
-        out_fail: &mut FO,
+        out: &mut VtopOutputCallback<B>,
+        out_fail: &mut VtopFailureCallback<B>,
     ) where
         U: PhysicalMemory + ?Sized,
         B: SplitAtIndex,
         D: VirtualTranslate3,
-        VI: Iterator<Item = (Address, B)>,
-        VO: Extend<(PhysicalAddress, B)>,
-        FO: Extend<(Error, Address, B)>,
+        VI: Iterator<Item = MemData<Address, B>>,
     {
         (**self).virt_to_phys_iter(phys_mem, translator, addrs, out, out_fail)
     }

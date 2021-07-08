@@ -13,21 +13,13 @@ use crate::{
 use log::{info, trace};
 use std::fmt;
 
-use memflow::architecture::{ArchitectureIdent, ArchitectureObj};
-use memflow::cglue::*;
-use memflow::error::{Error, Result, *};
-use memflow::mem::mem_map::PhysicalMemoryMapping;
-use memflow::mem::memory_view::*;
-use memflow::mem::phys_mem::*;
-use memflow::mem::{DirectTranslate, VirtualDma, VirtualTranslate2};
-use memflow::os::keyboard::*;
-use memflow::os::root::*;
-use memflow::os::*;
-use memflow::types::Address;
-
-// those only required when compiling cglue code
 #[cfg(feature = "plugins")]
 use memflow::cglue;
+#[cfg(feature = "plugins")]
+use memflow::mem::{memory_view::*, phys_mem::*};
+#[cfg(feature = "plugins")]
+use memflow::os::{keyboard::*, root::*};
+use memflow::prelude::v1::{Result, *};
 
 use pelite::{self, pe64::exports::Export, PeView};
 

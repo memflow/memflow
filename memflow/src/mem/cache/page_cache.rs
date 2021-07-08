@@ -1,9 +1,8 @@
 use crate::architecture::ArchitectureObj;
 use crate::error::Result;
 use crate::iter::PageChunks;
-use crate::mem::phys_mem::{
-    PhysicalMemory, PhysicalReadData, PhysicalReadFailCallback, PhysicalReadIterator,
-};
+use crate::mem::mem_data::*;
+use crate::mem::phys_mem::{PhysicalMemory, PhysicalReadFailCallback};
 use crate::types::{Address, PhysicalAddress};
 
 use super::{CacheValidator, PageType};
@@ -171,12 +170,12 @@ impl<'a, T: CacheValidator> PageCache<'a, T> {
     }
 
     pub fn split_to_chunks(
-        PhysicalReadData(addr, out): PhysicalReadData<'_>,
+        MemData(addr, out): PhysicalReadData<'_>,
         page_size: usize,
     ) -> impl PhysicalReadIterator<'_> {
         out.page_chunks(addr.address(), page_size)
             .map(move |(paddr, chunk)| {
-                PhysicalReadData(
+                MemData(
                     PhysicalAddress::with_page(paddr, addr.page_type(), addr.page_size()),
                     chunk,
                 )
@@ -199,11 +198,11 @@ impl<'a, T: CacheValidator> PageCache<'a, T> {
             let mut wlist = BumpVec::new_in(arena);
             let mut wlistcache = BumpVec::new_in(arena);
 
-            while let Some(PhysicalReadData(addr, out)) = next {
+            while let Some(MemData(addr, out)) = next {
                 if self.is_cached_page_type(addr.page_type()) {
                     out.page_chunks(addr.address(), page_size)
                         .for_each(|(paddr, chunk)| {
-                            let mut prd = PhysicalReadData(
+                            let mut prd = MemData(
                                 PhysicalAddress::with_page(
                                     paddr,
                                     addr.page_type(),
@@ -225,7 +224,7 @@ impl<'a, T: CacheValidator> PageCache<'a, T> {
                                 }
                                 PageValidity::Validatable(buf) => {
                                     clist.push(prd);
-                                    wlistcache.push(PhysicalReadData(
+                                    wlistcache.push(MemData(
                                         PhysicalAddress::from(cached_page.address),
                                         buf.into(),
                                     ));
@@ -240,7 +239,7 @@ impl<'a, T: CacheValidator> PageCache<'a, T> {
                             }
                         });
                 } else {
-                    wlist.push(PhysicalReadData(addr, out));
+                    wlist.push(MemData(addr, out));
                 }
 
                 next = iter.next();
@@ -259,24 +258,25 @@ impl<'a, T: CacheValidator> PageCache<'a, T> {
                     }
 
                     if !wlistcache.is_empty() {
-                        let mut iter = wlistcache
-                            .iter()
-                            .map(|PhysicalReadData(addr, buf)| PhysicalReadData(*addr, buf.into()));
+                        let mut iter =
+                            wlistcache
+                                .iter()
+                                .map(|MemData(addr, buf): &PhysicalReadData| {
+                                    MemData(*addr, buf.into())
+                                });
 
-                        let callback = &mut |_| false;
+                        let callback = &mut |_| true;
 
                         mem.phys_read_raw_iter((&mut iter).into(), &mut callback.into())?;
 
-                        wlistcache
-                            .into_iter()
-                            .for_each(|PhysicalReadData(addr, buf)| {
-                                self.validate_page(addr.address(), buf.into())
-                            });
+                        wlistcache.into_iter().for_each(|MemData(addr, buf)| {
+                            self.validate_page(addr.address(), buf.into())
+                        });
 
                         wlistcache = BumpVec::new_in(arena);
                     }
 
-                    while let Some(PhysicalReadData(addr, mut out)) = clist.pop() {
+                    while let Some(MemData(addr, mut out)) = clist.pop() {
                         let cached_page = self.cached_page_mut(addr.address(), false);
                         let aligned_addr = cached_page.address.as_page_aligned(self.page_size);
 

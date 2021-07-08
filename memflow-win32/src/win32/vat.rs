@@ -1,9 +1,11 @@
 use memflow::{
-    architecture::{arm, x86, ArchitectureIdent, ArchitectureObj, VirtualTranslate3},
-    error::Error,
+    architecture::{
+        arm, x86, ArchitectureIdent, ArchitectureObj, VirtualTranslate3, VtopFailureCallback,
+        VtopOutputCallback,
+    },
     iter::SplitAtIndex,
-    mem::{MemoryView, PhysicalMemory, VirtualDma, VirtualTranslate2},
-    types::{Address, PhysicalAddress},
+    mem::{MemData, MemoryView, PhysicalMemory, VirtualDma, VirtualTranslate2},
+    types::Address,
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -34,15 +36,13 @@ impl VirtualTranslate3 for Win32VirtualTranslate {
     fn virt_to_phys_iter<
         T: PhysicalMemory + ?Sized,
         B: SplitAtIndex,
-        VI: Iterator<Item = (Address, B)>,
-        VO: Extend<(PhysicalAddress, B)>,
-        FO: Extend<(Error, Address, B)>,
+        VI: Iterator<Item = MemData<Address, B>>,
     >(
         &self,
         mem: &mut T,
         addrs: VI,
-        out: &mut VO,
-        out_fail: &mut FO,
+        out: &mut VtopOutputCallback<B>,
+        out_fail: &mut VtopFailureCallback<B>,
         tmp_buf: &mut [std::mem::MaybeUninit<u8>],
     ) {
         if let Ok(translator) = x86::new_translator(self.dtb, self.sys_arch) {

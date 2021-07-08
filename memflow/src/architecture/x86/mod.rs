@@ -4,13 +4,13 @@ pub mod x64;
 
 use super::{
     mmu::ArchMmuSpec, Architecture, ArchitectureIdent, ArchitectureObj, Endianess,
-    VirtualTranslate3,
+    VirtualTranslate3, VtopFailureCallback, VtopOutputCallback,
 };
 
 use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 use crate::iter::SplitAtIndex;
-use crate::mem::PhysicalMemory;
-use crate::types::{Address, PhysicalAddress};
+use crate::mem::{MemData, PhysicalMemory};
+use crate::types::Address;
 
 use std::ptr;
 
@@ -66,15 +66,13 @@ impl VirtualTranslate3 for X86VirtualTranslate {
     fn virt_to_phys_iter<
         T: PhysicalMemory + ?Sized,
         B: SplitAtIndex,
-        VI: Iterator<Item = (Address, B)>,
-        VO: Extend<(PhysicalAddress, B)>,
-        FO: Extend<(Error, Address, B)>,
+        VI: Iterator<Item = MemData<Address, B>>,
     >(
         &self,
         mem: &mut T,
         addrs: VI,
-        out: &mut VO,
-        out_fail: &mut FO,
+        out: &mut VtopOutputCallback<B>,
+        out_fail: &mut VtopFailureCallback<B>,
         tmp_buf: &mut [std::mem::MaybeUninit<u8>],
     ) {
         self.arch

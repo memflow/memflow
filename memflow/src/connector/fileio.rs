@@ -3,9 +3,8 @@ Basic connector which works on file i/o operations (`Seek`, `Read`, `Write`).
 */
 
 use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
-use crate::iter::FnExtend;
 use crate::mem::{
-    phys_mem::*, MemoryMap, PhysicalMemory, PhysicalMemoryMapping, PhysicalMemoryMetadata,
+    phys_mem::*, MemData, MemoryMap, PhysicalMemory, PhysicalMemoryMapping, PhysicalMemoryMetadata,
     PhysicalReadData, PhysicalWriteData,
 };
 use crate::types::Address;
@@ -136,20 +135,17 @@ impl<T: Seek + Read + Write + Send> PhysicalMemory for FileIoMemory<T> {
         data: CIterator<PhysicalReadData<'a>>,
         out_fail: &mut PhysicalReadFailCallback<'_, 'a>,
     ) -> Result<()> {
-        let mut void = FnExtend::new(|(addr, buf): (Address, &mut [u8])| {
+        let mut void = |(addr, buf): (Address, _)| {
             // TODO: manage not to lose physical page information here???
-            let _ = out_fail.call(PhysicalReadData(addr.into(), buf.into()));
-        });
-        for ((file_off, _), buf) in self.mem_map.map_iter(
-            data.map(|PhysicalReadData(addr, buf)| (addr, buf.into())),
-            &mut void,
-        ) {
+            out_fail.call(MemData(addr.into(), buf))
+        };
+        for ((file_off, _), buf) in self.mem_map.map_iter(data.map(<_>::into), &mut void) {
             self.reader
                 .seek(SeekFrom::Start(file_off.as_u64()))
                 .map_err(|err| {
                     Error(ErrorOrigin::Connector, ErrorKind::UnableToSeekFile).log_error(err)
                 })?;
-            self.reader.read_exact(buf).map_err(|err| {
+            self.reader.read_exact(buf.into()).map_err(|err| {
                 Error(ErrorOrigin::Connector, ErrorKind::UnableToWriteFile).log_error(err)
             })?;
         }
@@ -161,17 +157,17 @@ impl<T: Seek + Read + Write + Send> PhysicalMemory for FileIoMemory<T> {
         data: CIterator<PhysicalWriteData<'a>>,
         out_fail: &mut PhysicalWriteFailCallback<'_, 'a>,
     ) -> Result<()> {
-        let mut void = FnExtend::new(|(addr, buf): (Address, &[u8])| {
+        let void = &mut |(addr, buf): (Address, _)| {
             // TODO: manage not to lose physical page information here???
-            let _ = out_fail.call(PhysicalWriteData(addr.into(), buf.into()));
-        });
-        for ((file_off, _), buf) in self.mem_map.map_iter(data.map(<_>::from), &mut void) {
+            out_fail.call(MemData(addr.into(), buf))
+        };
+        for ((file_off, _), buf) in self.mem_map.map_iter(data.map(<_>::from), void) {
             self.reader
                 .seek(SeekFrom::Start(file_off.as_u64()))
                 .map_err(|err| {
                     Error(ErrorOrigin::Connector, ErrorKind::UnableToSeekFile).log_error(err)
                 })?;
-            self.reader.write(buf).map_err(|err| {
+            self.reader.write(buf.into()).map_err(|err| {
                 Error(ErrorOrigin::Connector, ErrorKind::UnableToWriteFile).log_error(err)
             })?;
         }

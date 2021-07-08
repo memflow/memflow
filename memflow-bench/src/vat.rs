@@ -1,11 +1,13 @@
 use criterion::*;
 
-use memflow::mem::{CachedMemoryAccess, CachedVirtualTranslate, PhysicalMemory, VirtualTranslate2};
+use memflow::mem::{
+    CachedMemoryAccess, CachedVirtualTranslate, MemData, PhysicalMemory, VirtualTranslate2,
+};
 
 use memflow::architecture::VirtualTranslate3;
 
+use memflow::cglue::*;
 use memflow::error::Result;
-use memflow::iter::FnExtend;
 use memflow::os::*;
 use memflow::types::*;
 
@@ -41,9 +43,9 @@ fn vat_test_with_mem<T: PhysicalMemory, V: VirtualTranslate2, S: VirtualTranslat
             vat.virt_to_phys_iter(
                 phys_mem,
                 &translator,
-                chunk.iter_mut().map(|x| (*x, 1)),
-                &mut out,
-                &mut FnExtend::new(|_| {}),
+                chunk.iter_mut().map(|x| MemData(*x, 1)),
+                &mut out.from_extend(),
+                &mut (&mut |_| true).into(),
             );
             black_box(&out);
         }

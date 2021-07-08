@@ -1,7 +1,7 @@
 use criterion::*;
 
 use memflow::mem::{
-    CachedMemoryAccess, CachedVirtualTranslate, MemoryView, PhysicalMemory, ReadData, VirtualDma,
+    CachedMemoryAccess, CachedVirtualTranslate, MemData, MemoryView, PhysicalMemory, VirtualDma,
     VirtualTranslate2,
 };
 
@@ -37,12 +37,12 @@ fn rwtest<T: MemoryView>(
 
                 let mut bufs = Vec::with_capacity(*o);
 
-                for ReadData(addr, _) in bufs.iter_mut() {
+                for MemData(addr, _) in bufs.iter_mut() {
                     *addr = (base_addr + rng.gen_range(0..0x2000)).into();
                 }
 
                 bufs.extend(vbufs.iter_mut().map(|vec| {
-                    ReadData(
+                    MemData(
                         (base_addr + rng.gen_range(0..0x2000)).into(),
                         vec.as_mut_slice().into(),
                     )

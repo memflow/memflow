@@ -4,7 +4,7 @@ use log::Level;
 use memflow::prelude::v1::*;
 
 fn main() -> Result<()> {
-    let (conn_name, conn_args, os_name, os_args) = parse_args()?;
+    let (conn_name, conn_args, os_name, os_args, proc_name) = parse_args()?;
 
     // create connector + os
     let inventory = Inventory::scan();
@@ -23,25 +23,32 @@ fn main() -> Result<()> {
         }
     }?;
 
-    let process_list = os.process_info_list()?;
+    let mut process = os
+        .into_process_by_name(&proc_name)
+        .expect("unable to find process");
+    println!("found process: {:?}", process.info());
 
-    // Print process list, formatted
+    let module_list = process
+        .module_list()
+        .expect("unable to retrieve module list");
+
+    // Print module list, formatted
     println!(
-        "{:>5} {:>10} {:>10} {:<}",
-        "PID", "SYS ARCH", "PROC ARCH", "NAME"
+        "{:>11} {:>11} {:>11} {:>11} {:<}",
+        "BASE", "SIZE", "MOD ARCH", "NAME", "PATH"
     );
 
-    for p in process_list {
+    for m in module_list {
         println!(
-            "{:>5} {:^10} {:^10} {} ({})",
-            p.pid, p.sys_arch, p.proc_arch, p.name, p.command_line
+            "0x{:x>8} 0x{:x>8} {:^10} {} ({})",
+            m.base, m.size, m.arch, m.name, m.path
         );
     }
 
     Ok(())
 }
 
-fn parse_args() -> Result<(Option<String>, Args, String, Args)> {
+fn parse_args() -> Result<(Option<String>, Args, String, Args, String)> {
     let matches = App::new("mfps")
         .version(crate_version!())
         .author(crate_authors!())
@@ -74,6 +81,13 @@ fn parse_args() -> Result<(Option<String>, Args, String, Args)> {
                 .takes_value(true)
                 .default_value(""),
         )
+        .arg(
+            Arg::with_name("process")
+                .long("process")
+                .short("p")
+                .takes_value(true)
+                .required(true),
+        )
         .get_matches();
 
     // set log level
@@ -96,16 +110,25 @@ fn parse_args() -> Result<(Option<String>, Args, String, Args)> {
         matches.value_of("connector").map(ToString::to_string),
         Args::parse(matches.value_of("conn-args").ok_or_else(|| {
             Error(ErrorOrigin::Other, ErrorKind::Configuration)
-                .log_error("failed to parse connector args")
+                .log_error("failed to parse connector-args argument")
         })?)?,
         matches
             .value_of("os")
             .ok_or_else(|| {
-                Error(ErrorOrigin::Other, ErrorKind::Configuration).log_error("failed to parse os")
+                Error(ErrorOrigin::Other, ErrorKind::Configuration)
+                    .log_error("failed to parse os argument")
             })?
             .into(),
         Args::parse(matches.value_of("os-args").ok_or_else(|| {
-            Error(ErrorOrigin::Other, ErrorKind::Configuration).log_error("failed to parse os args")
+            Error(ErrorOrigin::Other, ErrorKind::Configuration)
+                .log_error("failed to parse os-args argument")
         })?)?,
+        matches
+            .value_of("process")
+            .ok_or_else(|| {
+                Error(ErrorOrigin::Other, ErrorKind::Configuration)
+                    .log_error("failed to parse process argument")
+            })?
+            .into(),
     ))
 }

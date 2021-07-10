@@ -4,8 +4,10 @@ use std::prelude::v1::*;
 
 use super::mem_data::*;
 
+pub mod arch_overlay;
 pub mod batcher;
 
+pub use arch_overlay::ArchOverlayView;
 pub use batcher::MemoryViewBatcher;
 
 /// The `MemoryView` trait implements generic access to memory, no matter if it is a process
@@ -143,43 +145,31 @@ pub trait MemoryView: Send {
     }
 
     #[skip_func]
-    fn read_ptr32_into<U: Pod + ?Sized>(
-        &mut self,
-        ptr: Pointer32<U>,
-        out: &mut U,
-    ) -> PartialResult<()>
+    fn read_ptr_into<U: Pod + ?Sized>(&mut self, ptr: Pointer<U>, out: &mut U) -> PartialResult<()>
     where
         Self: Sized,
     {
-        self.read_into(ptr.address.into(), out)
+        let MemoryViewMetadata {
+            arch_bits,
+            little_endian,
+            ..
+        } = self.metadata();
+
+        self.read_into(ptr.address(arch_bits, little_endian), out)
     }
 
     #[skip_func]
-    fn read_ptr32<U: Pod + Sized>(&mut self, ptr: Pointer32<U>) -> PartialResult<U>
+    fn read_ptr<U: Pod + Sized>(&mut self, ptr: Pointer<U>) -> PartialResult<U>
     where
         Self: Sized,
     {
-        self.read(ptr.address.into())
-    }
+        let MemoryViewMetadata {
+            arch_bits,
+            little_endian,
+            ..
+        } = self.metadata();
 
-    #[skip_func]
-    fn read_ptr64_into<U: Pod + ?Sized>(
-        &mut self,
-        ptr: Pointer64<U>,
-        out: &mut U,
-    ) -> PartialResult<()>
-    where
-        Self: Sized,
-    {
-        self.read_into(ptr.address.into(), out)
-    }
-
-    #[skip_func]
-    fn read_ptr64<U: Pod + Sized>(&mut self, ptr: Pointer64<U>) -> PartialResult<U>
-    where
-        Self: Sized,
-    {
-        self.read(ptr.address.into())
+        self.read(ptr.address(arch_bits, little_endian))
     }
 
     // Write helpers
@@ -212,19 +202,17 @@ pub trait MemoryView: Send {
     }
 
     #[skip_func]
-    fn write_ptr32<U: Pod + Sized>(&mut self, ptr: Pointer32<U>, data: &U) -> PartialResult<()>
+    fn write_ptr<U: Pod + Sized>(&mut self, ptr: Pointer<U>, data: &U) -> PartialResult<()>
     where
         Self: Sized,
     {
-        self.write(ptr.address.into(), data)
-    }
+        let MemoryViewMetadata {
+            arch_bits,
+            little_endian,
+            ..
+        } = self.metadata();
 
-    #[skip_func]
-    fn write_ptr64<U: Pod + Sized>(&mut self, ptr: Pointer64<U>, data: &U) -> PartialResult<()>
-    where
-        Self: Sized,
-    {
-        self.write(ptr.address.into(), data)
+        self.write(ptr.address(arch_bits, little_endian), data)
     }
 
     /// Reads a fixed length string from the target.
@@ -340,6 +328,42 @@ pub trait MemoryView: Send {
     {
         MemoryViewBatcher::new(self)
     }
+
+    #[skip_func]
+    fn into_overlay_arch(self, arch: ArchitectureObj) -> ArchOverlayView<Self>
+    where
+        Self: Sized,
+    {
+        ArchOverlayView::new(self, arch)
+    }
+
+    #[skip_func]
+    fn overlay_arch(&mut self, arch: ArchitectureObj) -> ArchOverlayView<Fwd<&mut Self>>
+    where
+        Self: Sized,
+    {
+        ArchOverlayView::new(self.forward_mut(), arch)
+    }
+
+    #[skip_func]
+    fn into_overlay_arch_parts(self, arch_bits: u8, little_endian: bool) -> ArchOverlayView<Self>
+    where
+        Self: Sized,
+    {
+        ArchOverlayView::new_parts(self, arch_bits, little_endian)
+    }
+
+    #[skip_func]
+    fn overlay_arch_parts(
+        &mut self,
+        arch_bits: u8,
+        little_endian: bool,
+    ) -> ArchOverlayView<Fwd<&mut Self>>
+    where
+        Self: Sized,
+    {
+        ArchOverlayView::new_parts(self.forward_mut(), arch_bits, little_endian)
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -349,7 +373,8 @@ pub struct MemoryViewMetadata {
     pub max_address: Address,
     pub real_size: u64,
     pub readonly: bool,
-    pub ideal_batch_size: u32,
+    pub little_endian: bool,
+    pub arch_bits: u8,
 }
 
 pub type ReadFailCallback<'a, 'b> = OpaqueCallback<'a, ReadData<'b>>;

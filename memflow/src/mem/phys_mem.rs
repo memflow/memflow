@@ -245,20 +245,27 @@ impl<T: PhysicalMemory> MemoryView for PhysicalMemoryView<T> {
             max_address,
             real_size,
             readonly,
-            ideal_batch_size,
+            ..
         } = self.mem.metadata();
 
         MemoryViewMetadata {
             max_address,
             real_size,
             readonly,
-            ideal_batch_size,
+            #[cfg(target_pointer_width = "64")]
+            arch_bits: 64,
+            #[cfg(target_pointer_width = "32")]
+            arch_bits: 32,
+            #[cfg(target_endian = "little")]
+            little_endian: true,
+            #[cfg(target_endian = "big")]
+            little_endian: false,
         }
     }
 }
 
 #[derive(Debug, Clone, Copy)]
-#[cfg_attr(feature = "'serde", derive(::serde::Serialize, ::serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 #[repr(C)]
 pub struct PhysicalMemoryMetadata {
     pub max_address: Address,

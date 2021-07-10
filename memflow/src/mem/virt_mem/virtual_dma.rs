@@ -1,6 +1,6 @@
 use std::prelude::v1::*;
 
-use crate::architecture::{ArchitectureObj, VirtualTranslate3};
+use crate::architecture::{ArchitectureObj, Endianess, VirtualTranslate3};
 use crate::error::{Error, Result, *};
 use crate::mem::memory_view::*;
 use crate::mem::{
@@ -239,14 +239,15 @@ impl<T: PhysicalMemory, V: VirtualTranslate2, D: VirtualTranslate3> MemoryView
             max_address,
             real_size,
             readonly,
-            ideal_batch_size,
+            ..
         } = self.phys_mem.metadata();
 
         MemoryViewMetadata {
             max_address,
             real_size,
             readonly,
-            ideal_batch_size,
+            little_endian: self.proc_arch.endianess() == Endianess::LittleEndian,
+            arch_bits: self.proc_arch.bits(),
         }
     }
 }

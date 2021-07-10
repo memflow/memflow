@@ -2,6 +2,7 @@
 Abstraction over a address on the target system.
 */
 
+use crate::types::ByteSwap;
 use core::convert::TryInto;
 use std::default::Default;
 use std::fmt;
@@ -16,6 +17,12 @@ use std::ops;
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 #[repr(transparent)]
 pub struct Address(u64);
+
+impl ByteSwap for Address {
+    fn byte_swap(&mut self) {
+        self.0.byte_swap();
+    }
+}
 
 /// Constructs an `Address` from a `i32` value.
 impl From<i32> for Address {
@@ -297,6 +304,18 @@ impl Address {
     /// ```
     pub fn extract_bits<T: TryInto<u64>>(self, bits: ops::Range<T>) -> Address {
         (self.0 & Address::bit_mask(bits).as_u64()).into()
+    }
+
+    pub const fn wrapping_add(self, other: usize) -> Self {
+        Self {
+            0: self.0.wrapping_add(other as u64),
+        }
+    }
+
+    pub const fn wrapping_sub(self, other: usize) -> Self {
+        Self {
+            0: self.0.wrapping_sub(other as u64),
+        }
     }
 }
 

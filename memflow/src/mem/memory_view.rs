@@ -368,12 +368,18 @@ pub trait MemoryView: Send {
     }
 
     #[skip_func]
-    fn into_remap_view(self, mem_map: MemoryMap<(Address, usize)>) -> RemapView<Self> {
+    fn into_remap_view(self, mem_map: MemoryMap<(Address, usize)>) -> RemapView<Self>
+    where
+        Self: Sized,
+    {
         RemapView::new(self, mem_map)
     }
 
-    #[skip_view]
-    fn remap_view(&mut self, mem_map: MemoryMap<(Address, usize)>) -> RemapView<Fwd<&mut Self>> {
+    #[skip_func]
+    fn remap_view(&mut self, mem_map: MemoryMap<(Address, usize)>) -> RemapView<Fwd<&mut Self>>
+    where
+        Self: Sized,
+    {
         self.forward_mut().into_remap_view(mem_map)
     }
 }

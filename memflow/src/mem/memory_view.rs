@@ -6,9 +6,11 @@ use super::mem_data::*;
 
 pub mod arch_overlay;
 pub mod batcher;
+pub mod remap_view;
 
 pub use arch_overlay::ArchOverlayView;
 pub use batcher::MemoryViewBatcher;
+pub use remap_view::RemapView;
 
 /// The `MemoryView` trait implements generic access to memory, no matter if it is a process
 /// virtual memory, or machine's physical memory.
@@ -363,6 +365,16 @@ pub trait MemoryView: Send {
         Self: Sized,
     {
         ArchOverlayView::new_parts(self.forward_mut(), arch_bits, little_endian)
+    }
+
+    #[skip_func]
+    fn into_remap_view(self, mem_map: MemoryMap<(Address, usize)>) -> RemapView<Self> {
+        RemapView::new(self, mem_map)
+    }
+
+    #[skip_view]
+    fn remap_view(&mut self, mem_map: MemoryMap<(Address, usize)>) -> RemapView<Fwd<&mut Self>> {
+        self.forward_mut().into_remap_view(mem_map)
     }
 }
 

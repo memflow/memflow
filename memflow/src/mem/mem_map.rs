@@ -129,6 +129,24 @@ impl<M: SplitAtIndex> MemoryMap<M> {
         )
     }
 
+    /// Maps a address range iterator to an address range.
+    ///
+    /// Output element lengths will both match, so there is no need to do additonal clipping
+    /// (for buf-to-buf copies).
+    ///
+    /// Invalid regions get pushed to the `out_fail` parameter
+    pub fn map_base_iter<
+        'a,
+        T: 'a + SplitAtIndex,
+        I: 'a + Iterator<Item = (Address, T)>,
+        V: Into<MapFailCallback<'a, T>>,
+    >(
+        &'a self,
+        iter: I,
+        out_fail: V,
+    ) -> impl Iterator<Item = (M, T)> + 'a {
+        MemoryMapIterator::new(&self.mappings, iter, out_fail.into())
+    }
     /// Maps a address range iterator to a hardware address range.
     ///
     /// Output element lengths will both match, so there is no need to do additonal clipping

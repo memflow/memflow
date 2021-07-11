@@ -1,12 +1,13 @@
 use super::ArchMmuDef;
 use crate::architecture::Endianess;
 
+use super::super::{VtopFailureCallback, VtopOutputCallback};
 use super::translate_data::{TranslateData, TranslateDataVec, TranslateVec, TranslationChunk};
 use super::MmuTranslationBase;
 use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 use crate::iter::FlowIters;
 use crate::iter::SplitAtIndex;
-use crate::mem::{PhysicalMemory, PhysicalReadData};
+use crate::mem::{MemData, PhysicalMemory, PhysicalReadData};
 use crate::types::{Address, PageType, PhysicalAddress};
 pub(crate) use fixed_slice_vec::FixedSliceVec as MVec;
 use std::convert::TryInto;
@@ -113,15 +114,14 @@ impl ArchMmuSpec {
     ///
     /// This function cuts the input virtual address to be inside range `(-2^address_space_bits;
     /// +2^address_space_bits)`. It may result in 2 ranges, and it may have up to 2 failed ranges
-    pub(crate) fn virt_addr_filter<C, B, FO>(
+    pub(crate) fn virt_addr_filter<C, B>(
         &self,
-        (addr, buf): (Address, B),
+        MemData(addr, buf): MemData<Address, B>,
         (chunks, addrs_out): (&mut TranslationChunk<C>, &mut TranslateDataVec<B>),
-        fail_out: &mut FO,
+        fail_out: &mut VtopFailureCallback<B>,
     ) where
         B: SplitAtIndex,
         C: MmuTranslationBase,
-        FO: Extend<(Error, Address, B)>,
     {
         vtop_trace!("total {:x}+{:x}", addr, buf.length());
         let tr_data = TranslateData { addr, buf };
@@ -132,11 +132,11 @@ impl ArchMmuSpec {
         let left = left.unwrap();
 
         if let Some(data) = reject {
-            fail_out.extend(Some((
+            // TODO: handle condition
+            let _ = fail_out.call((
                 Error(ErrorOrigin::Mmu, ErrorKind::OutOfMemoryRange),
-                data.addr,
-                data.buf,
-            )));
+                MemData(data.addr, data.buf),
+            ));
         }
 
         let virt_bit_range = self.virt_addr_bit_ranges[0].1;
@@ -151,11 +151,11 @@ impl ArchMmuSpec {
                 data.split_at_address_rev((arch_bit_range.wrapping_sub(virt_range)).into());
 
             if let Some(data) = reject {
-                fail_out.extend(Some((
+                // TODO: handle condition
+                let _ = fail_out.call((
                     Error(ErrorOrigin::Mmu, ErrorKind::OutOfMemoryRange),
-                    data.addr,
-                    data.buf,
-                )));
+                    MemData(data.addr, data.buf),
+                ));
             }
 
             if let Some(higher) = higher {
@@ -168,11 +168,11 @@ impl ArchMmuSpec {
                     vtop_trace!("higher {:x}+{:x}", higher.addr, higher.length());
                     chunks.push_data(higher, addrs_out);
                 } else {
-                    fail_out.extend(Some((
+                    // TODO: handle condition
+                    let _ = fail_out.call((
                         Error(ErrorOrigin::Mmu, ErrorKind::OutOfMemoryRange),
-                        higher.addr,
-                        higher.buf,
-                    )));
+                        MemData(higher.addr, higher.buf),
+                    ));
                 }
             }
         }
@@ -309,21 +309,19 @@ impl ArchMmuSpec {
 
     /// This function will do a virtual to physical memory translation for the `ArchMmuSpec` in
     /// `MmuTranslationBase` scope, over multiple elements.
-    pub(crate) fn virt_to_phys_iter<T, B, D, VI, VO, FO>(
+    pub(crate) fn virt_to_phys_iter<T, B, D, VI>(
         &self,
         mem: &mut T,
         dtb: D,
         addrs: VI,
-        out: &mut VO,
-        out_fail: &mut FO,
+        out: &mut VtopOutputCallback<B>,
+        out_fail: &mut VtopFailureCallback<B>,
         slice: &mut [std::mem::MaybeUninit<u8>],
     ) where
         T: PhysicalMemory + ?Sized,
         B: SplitAtIndex,
         D: MmuTranslationBase,
-        VI: Iterator<Item = (Address, B)>,
-        VO: Extend<(PhysicalAddress, B)>,
-        FO: Extend<(Error, Address, B)>,
+        VI: Iterator<Item = MemData<Address, B>>,
     {
         vtop_trace!("virt_to_phys_iter_with_mmu");
 
@@ -456,11 +454,15 @@ impl ArchMmuSpec {
                 vtop_trace!("read_pt_address_iter failure: {}", err);
 
                 while let Some(data) = working_pair.1.pop() {
-                    out_fail.extend(Some((err, data.addr, data.buf)));
+                    if !out_fail.call((err, MemData(data.addr, data.buf))) {
+                        return;
+                    }
                 }
 
                 while let Some(data) = waiting_pair.1.pop() {
-                    out_fail.extend(Some((err, data.addr, data.buf)));
+                    if !out_fail.call((err, MemData(data.addr, data.buf))) {
+                        return;
+                    }
                 }
 
                 return;
@@ -527,7 +529,7 @@ impl ArchMmuSpec {
         pt_buf.extend((0..).map(|_| 0).take(pte_size * chunks.len()));
 
         for (chunk, tr_chunk) in pt_buf.chunks_exact_mut(pte_size).zip(chunks.iter()) {
-            pt_read.push(PhysicalReadData(
+            pt_read.push(MemData(
                 PhysicalAddress::with_page(
                     tr_chunk.pt_addr,
                     PageType::PAGE_TABLE,
@@ -537,10 +539,16 @@ impl ArchMmuSpec {
             ));
         }
 
-        mem.phys_read_raw_list(&mut pt_read)?;
+        let mut pt_iter = pt_read
+            .iter_mut()
+            .map(|MemData(a, d): &mut PhysicalReadData| MemData(*a, d.into()));
+
+        let out_fail = &mut |_| true;
+
+        mem.phys_read_raw_iter((&mut pt_iter).into(), &mut out_fail.into())?;
 
         // Move the read value into the chunk
-        for (ref mut chunk, PhysicalReadData(_, buf)) in chunks.iter_mut().zip(pt_read.iter()) {
+        for (ref mut chunk, MemData(_, buf)) in chunks.iter_mut().zip(pt_read.iter()) {
             let pt_addr = buf_to_addr(&*buf);
             chunk.pt_addr = pt_addr;
         }
@@ -549,19 +557,18 @@ impl ArchMmuSpec {
     }
 
     #[allow(clippy::too_many_arguments)]
-    fn refill_stack<B: SplitAtIndex, D, VI, FO>(
+    fn refill_stack<B: SplitAtIndex, D, VI>(
         &self,
         dtb: D,
         working_pair: &mut (TranslateVec, TranslateDataVec<B>),
         next_working_pair: &mut (TranslateVec, TranslateDataVec<B>),
-        out_fail: &mut FO,
+        out_fail: &mut VtopFailureCallback<B>,
         addrs: &mut VI,
         waiting_pair: &mut (TranslateVec, TranslateDataVec<B>),
         tmp_addrs: &mut TranslateDataVec<B>,
     ) where
         D: MmuTranslationBase,
-        FO: Extend<(Error, Address, B)>,
-        VI: Iterator<Item = (Address, B)>,
+        VI: Iterator<Item = MemData<Address, B>>,
     {
         // If there is a waiting stack, use it
         if !waiting_pair.0.is_empty() {
@@ -610,19 +617,16 @@ impl ArchMmuSpec {
 
     #[inline(never)]
     #[allow(clippy::too_many_arguments)]
-    fn work_through_stack<B: SplitAtIndex, VO, FO>(
+    fn work_through_stack<B: SplitAtIndex>(
         &self,
         (working_stack, working_addrs): &mut (TranslateVec, TranslateDataVec<B>),
         next_working_pair: &mut (TranslateVec, TranslateDataVec<B>),
-        out: &mut VO,
-        out_fail: &mut FO,
+        out: &mut VtopOutputCallback<B>,
+        out_fail: &mut VtopFailureCallback<B>,
         waiting_pair: &mut (TranslateVec, TranslateDataVec<B>),
         tmp_addrs: &mut TranslateDataVec<B>,
         prev_pt_address: &mut [(Address, Address)],
-    ) where
-        VO: Extend<(PhysicalAddress, B)>,
-        FO: Extend<(Error, Address, B)>,
-    {
+    ) {
         while let Some(mut chunk) = working_stack.pop() {
             vtop_trace!("chunk = {:x} {:x}", chunk.step, chunk.pt_addr);
 
@@ -656,21 +660,22 @@ impl ArchMmuSpec {
             {
                 // Failure
                 while let Some(entry) = chunk.pop_data(working_addrs) {
-                    out_fail.extend(Some((
+                    // TODO: handle condition..
+                    let _ = out_fail.call((
                         Error(ErrorOrigin::Mmu, ErrorKind::OutOfMemoryRange),
-                        entry.addr,
-                        entry.buf,
-                    )));
+                        MemData(entry.addr, entry.buf),
+                    ));
                 }
             } else if self.is_final_mapping(chunk.pt_addr, chunk.step) {
                 // Success!
                 let pt_addr = chunk.pt_addr;
                 let step = chunk.step;
                 while let Some(entry) = chunk.pop_data(working_addrs) {
-                    out.extend(Some((
+                    // TODO: handle condition..
+                    let _ = out.call(MemData(
                         self.get_phys_page(pt_addr, entry.addr, step),
                         entry.buf,
-                    )));
+                    ));
                 }
             } else {
                 // We still need to continue the page walk.

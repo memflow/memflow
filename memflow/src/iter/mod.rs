@@ -12,9 +12,6 @@ use double_buffered_iterator::*;
 mod doublepeek;
 pub use doublepeek::*;
 
-mod void;
-pub use void::FnExtend;
-
 pub trait FlowIters: Iterator {
     /// Split an iterator to chunks, process them, and produce another iterator back
     ///

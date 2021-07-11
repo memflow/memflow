@@ -1,12 +1,15 @@
 use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 
 use super::tlb_cache::TlbCache;
-use crate::architecture::{ArchitectureObj, VirtualTranslate3};
+use crate::architecture::{
+    ArchitectureObj, VirtualTranslate3, VtopFailureCallback, VtopOutputCallback,
+};
 use crate::iter::{PageChunks, SplitAtIndex};
 use crate::mem::cache::{CacheValidator, DefaultCacheValidator};
 use crate::mem::virt_translate::VirtualTranslate2;
-use crate::mem::PhysicalMemory;
-use crate::types::{Address, PhysicalAddress};
+use crate::mem::{MemData, PhysicalMemory};
+use crate::types::Address;
+use cglue::callback::FromExtend;
 
 use bumpalo::{collections::Vec as BumpVec, Bump};
 
@@ -24,7 +27,7 @@ use bumpalo::{collections::Vec as BumpVec, Bump};
 /// use memflow::mem::cache::CachedVirtualTranslate;
 /// # use memflow::architecture::x86::x64;
 /// # use memflow::dummy::{DummyMemory, DummyOs};
-/// # use memflow::mem::{DirectTranslate, VirtualDma, VirtualMemory, VirtualTranslate2};
+/// # use memflow::mem::{DirectTranslate, VirtualDma, MemoryView, VirtualTranslate2};
 /// # use memflow::types::size;
 /// # let mem = DummyMemory::new(size::mb(32));
 /// # let mut os = DummyOs::new(mem);
@@ -46,7 +49,7 @@ use bumpalo::{collections::Vec as BumpVec, Bump};
 /// # use memflow::mem::cache::CachedVirtualTranslate;
 /// # use memflow::architecture::x86::x64;
 /// # use memflow::dummy::{DummyMemory, DummyOs};
-/// # use memflow::mem::{DirectTranslate, VirtualDma, VirtualMemory, VirtualTranslate2};
+/// # use memflow::mem::{DirectTranslate, VirtualDma, MemoryView, VirtualTranslate2};
 /// # use memflow::types::size;
 /// # let mem = DummyMemory::new(size::mb(32));
 /// # let mut os = DummyOs::new(mem);
@@ -134,20 +137,18 @@ impl<V: VirtualTranslate2 + Clone, Q: CacheValidator + Clone> Clone
 }
 
 impl<V: VirtualTranslate2, Q: CacheValidator> VirtualTranslate2 for CachedVirtualTranslate<V, Q> {
-    fn virt_to_phys_iter<T, B, D, VI, VO, FO>(
+    fn virt_to_phys_iter<T, B, D, VI>(
         &mut self,
         phys_mem: &mut T,
         translator: &D,
         addrs: VI,
-        out: &mut VO,
-        out_fail: &mut FO,
+        out: &mut VtopOutputCallback<B>,
+        out_fail: &mut VtopFailureCallback<B>,
     ) where
         T: PhysicalMemory + ?Sized,
         B: SplitAtIndex,
         D: VirtualTranslate3,
-        VI: Iterator<Item = (Address, B)>,
-        VO: Extend<(PhysicalAddress, B)>,
-        FO: Extend<(Error, Address, B)>,
+        VI: Iterator<Item = MemData<Address, B>>,
     {
         self.tlb.validator.update_validity();
         self.arena.reset();
@@ -163,9 +164,9 @@ impl<V: VirtualTranslate2, Q: CacheValidator> VirtualTranslate2 for CachedVirtua
 
         let arch = self.arch;
         let mut addrs = addrs
-            .filter_map(|(addr, buf)| {
+            .filter_map(|MemData(addr, buf)| {
                 if tlb.is_read_too_long(arch, buf.length()) {
-                    uncached_in.push((addr, buf));
+                    uncached_in.push(MemData(addr, buf));
                     None
                 } else {
                     Some((addr, buf))
@@ -182,14 +183,15 @@ impl<V: VirtualTranslate2, Q: CacheValidator> VirtualTranslate2 for CachedVirtua
                 if let Some(entry) = tlb.try_entry(translator, addr, arch) {
                     hitc += 1;
                     debug_assert!(buf.length() <= arch.page_size());
-                    match entry {
-                        Ok(entry) => out.extend(Some((entry.phys_addr, buf))),
-                        Err(error) => out_fail.extend(Some((error, addr, buf))),
-                    }
+                    // TODO: handle case
+                    let _ = match entry {
+                        Ok(entry) => out.call(MemData(entry.phys_addr, buf)),
+                        Err(error) => out_fail.call((error, MemData(addr, buf))),
+                    };
                     None
                 } else {
                     misc += core::cmp::max(1, buf.length() / arch.page_size());
-                    Some((addr, (addr, buf)))
+                    Some(MemData(addr, (addr, buf)))
                 }
             })
             .peekable();
@@ -199,8 +201,8 @@ impl<V: VirtualTranslate2, Q: CacheValidator> VirtualTranslate2 for CachedVirtua
                 phys_mem,
                 translator,
                 addrs,
-                &mut uncached_out,
-                &mut uncached_out_fail,
+                &mut uncached_out.from_extend(),
+                &mut uncached_out_fail.from_extend(),
             );
         }
 
@@ -210,15 +212,19 @@ impl<V: VirtualTranslate2, Q: CacheValidator> VirtualTranslate2 for CachedVirtua
             vat.virt_to_phys_iter(phys_mem, translator, uncached_iter, out, out_fail);
         }
 
-        out.extend(uncached_out.into_iter().map(|(paddr, (addr, buf))| {
+        out.extend(uncached_out.into_iter().map(|MemData(paddr, (addr, buf))| {
             tlb.cache_entry(translator, addr, paddr, arch);
-            (paddr, buf)
+            MemData(paddr, buf)
         }));
 
-        out_fail.extend(uncached_out_fail.into_iter().map(|(err, vaddr, (_, buf))| {
-            tlb.cache_invalid_if_uncached(translator, vaddr, buf.length(), arch);
-            (err, vaddr, buf)
-        }));
+        out_fail.extend(
+            uncached_out_fail
+                .into_iter()
+                .map(|(err, MemData(vaddr, (_, buf)))| {
+                    tlb.cache_invalid_if_uncached(translator, vaddr, buf.length(), arch);
+                    (err, MemData(vaddr, buf))
+                }),
+        );
 
         self.hitc += hitc;
         self.misc += misc;
@@ -293,7 +299,7 @@ mod tests {
     use crate::mem::cache::cached_vat::CachedVirtualTranslate;
     use crate::mem::cache::timed_validator::TimedCacheValidator;
     use crate::mem::{DirectTranslate, PhysicalMemory};
-    use crate::mem::{VirtualDma, VirtualMemory};
+    use crate::mem::{MemoryView, VirtualDma};
     use crate::types::{size, Address};
     use coarsetime::Duration;
 
@@ -301,7 +307,7 @@ mod tests {
         buf: &[u8],
     ) -> (
         impl PhysicalMemory,
-        impl VirtualMemory + Clone,
+        impl MemoryView + Clone,
         Address,
         Address,
     ) {
@@ -338,17 +344,19 @@ mod tests {
         let buffer = standard_buffer(size::mb(2));
         let (mut mem, mut vmem, virt_base, dtb) = build_mem(&buffer);
 
-        let mut read_into = vec![0; size::mb(2)];
-        vmem.virt_read_raw_into(virt_base, &mut read_into)
+        let mut read_into = vec![0u8; size::mb(2)];
+
+        vmem.read_raw_into(virt_base, &mut read_into)
             .data()
             .unwrap();
+
         assert!(read_into == buffer);
 
         // Destroy the page tables
-        mem.phys_write_raw(dtb.into(), &vec![0; size::kb(4)])
+        mem.phys_write(dtb.into(), vec![0u8; size::kb(4)].as_slice())
             .unwrap();
 
-        vmem.virt_read_raw_into(virt_base, &mut read_into)
+        vmem.read_raw_into(virt_base, &mut read_into)
             .data()
             .unwrap();
         assert!(read_into == buffer);
@@ -357,12 +365,12 @@ mod tests {
         let mut vmem_cloned = vmem.clone();
 
         vmem_cloned
-            .virt_read_raw_into(virt_base, &mut read_into)
+            .read_raw_into(virt_base, &mut read_into)
             .data()
             .unwrap();
         assert!(read_into == buffer);
 
-        vmem.virt_read_raw_into(virt_base, &mut read_into)
+        vmem.read_raw_into(virt_base, &mut read_into)
             .data()
             .unwrap();
         assert!(read_into == buffer);

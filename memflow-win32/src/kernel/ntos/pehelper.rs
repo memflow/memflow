@@ -3,14 +3,14 @@ use std::prelude::v1::*;
 use log::{debug, info};
 
 use memflow::error::{Error, ErrorKind, ErrorOrigin, PartialResultExt, Result};
-use memflow::mem::VirtualMemory;
+use memflow::mem::MemoryView;
 use memflow::types::{size, Address};
 
 use pelite::{self, PeView};
 
-pub fn try_get_pe_size<T: VirtualMemory>(virt_mem: &mut T, probe_addr: Address) -> Result<usize> {
+pub fn try_get_pe_size<T: MemoryView>(mem: &mut T, probe_addr: Address) -> Result<usize> {
     let mut probe_buf = vec![0; size::kb(4)];
-    virt_mem.virt_read_raw_into(probe_addr, &mut probe_buf)?;
+    mem.read_raw_into(probe_addr, &mut probe_buf)?;
 
     let pe_probe = PeView::from_bytes(&probe_buf)
         .map_err(|err| Error(ErrorOrigin::OsLayer, ErrorKind::InvalidExeFile).log_trace(err))?;
@@ -32,18 +32,13 @@ pub fn try_get_pe_size<T: VirtualMemory>(virt_mem: &mut T, probe_addr: Address) 
     }
 }
 
-pub fn try_get_pe_image<T: VirtualMemory>(
-    virt_mem: &mut T,
-    probe_addr: Address,
-) -> Result<Vec<u8>> {
-    let size_of_image = try_get_pe_size(virt_mem, probe_addr)?;
-    virt_mem
-        .virt_read_raw(probe_addr, size_of_image)
-        .data_part()
+pub fn try_get_pe_image<T: MemoryView>(mem: &mut T, probe_addr: Address) -> Result<Vec<u8>> {
+    let size_of_image = try_get_pe_size(mem, probe_addr)?;
+    mem.read_raw(probe_addr, size_of_image).data_part()
 }
 
-pub fn try_get_pe_name<T: VirtualMemory>(virt_mem: &mut T, probe_addr: Address) -> Result<String> {
-    let image = try_get_pe_image(virt_mem, probe_addr)?;
+pub fn try_get_pe_name<T: MemoryView>(mem: &mut T, probe_addr: Address) -> Result<String> {
+    let image = try_get_pe_image(mem, probe_addr)?;
     let pe = PeView::from_bytes(&image)
         .map_err(|err| Error(ErrorOrigin::OsLayer, ErrorKind::InvalidExeFile).log_trace(err))?;
     let name = pe

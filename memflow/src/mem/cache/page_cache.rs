@@ -1,8 +1,8 @@
 use crate::architecture::ArchitectureObj;
-use crate::cglue::CSliceMut;
 use crate::error::Result;
 use crate::iter::PageChunks;
-use crate::mem::phys_mem::{PhysicalMemory, PhysicalReadData, PhysicalReadIterator};
+use crate::mem::mem_data::*;
+use crate::mem::phys_mem::{PhysicalMemory, PhysicalReadFailCallback};
 use crate::types::{Address, PhysicalAddress};
 
 use super::{CacheValidator, PageType};
@@ -11,6 +11,7 @@ use std::alloc::{alloc, alloc_zeroed, dealloc, Layout};
 use std::prelude::v1::*;
 
 use bumpalo::{collections::Vec as BumpVec, Bump};
+use cglue::iter::CIterator;
 
 pub enum PageValidity<'a> {
     Invalid,
@@ -169,12 +170,12 @@ impl<'a, T: CacheValidator> PageCache<'a, T> {
     }
 
     pub fn split_to_chunks(
-        PhysicalReadData(addr, out): PhysicalReadData<'_>,
+        MemData(addr, out): PhysicalReadData<'_>,
         page_size: usize,
     ) -> impl PhysicalReadIterator<'_> {
         out.page_chunks(addr.address(), page_size)
             .map(move |(paddr, chunk)| {
-                PhysicalReadData(
+                MemData(
                     PhysicalAddress::with_page(paddr, addr.page_type(), addr.page_size()),
                     chunk,
                 )
@@ -182,15 +183,14 @@ impl<'a, T: CacheValidator> PageCache<'a, T> {
     }
 
     // TODO: do this properly
-    pub fn cached_read<'b, F: PhysicalMemory>(
+    pub fn cached_read<'b, 'c, F: PhysicalMemory>(
         &mut self,
         mem: &mut F,
-        data: &'b mut [PhysicalReadData],
+        mut iter: CIterator<PhysicalReadData<'c>>,
+        out_fail: &'b mut PhysicalReadFailCallback<'_, 'c>,
         arena: &'b Bump,
     ) -> Result<()> {
         let page_size = self.page_size;
-
-        let mut iter = data.iter_mut();
 
         {
             let mut next = iter.next();
@@ -198,16 +198,11 @@ impl<'a, T: CacheValidator> PageCache<'a, T> {
             let mut wlist = BumpVec::new_in(arena);
             let mut wlistcache = BumpVec::new_in(arena);
 
-            while let Some(PhysicalReadData(addr, out)) = next {
-                // This alias is required because iter_mut() just returns mutable references of `out`.
-                // Due to the lifetime constraint of 'b on this function the borrow checker should prevent both references from being used.
-                let out_alias: CSliceMut<'b, u8> =
-                    unsafe { core::slice::from_raw_parts_mut(out.as_mut_ptr(), out.len()) }.into();
+            while let Some(MemData(addr, out)) = next {
                 if self.is_cached_page_type(addr.page_type()) {
-                    out_alias
-                        .page_chunks(addr.address(), page_size)
+                    out.page_chunks(addr.address(), page_size)
                         .for_each(|(paddr, chunk)| {
-                            let mut prd = PhysicalReadData(
+                            let mut prd = MemData(
                                 PhysicalAddress::with_page(
                                     paddr,
                                     addr.page_type(),
@@ -229,7 +224,7 @@ impl<'a, T: CacheValidator> PageCache<'a, T> {
                                 }
                                 PageValidity::Validatable(buf) => {
                                     clist.push(prd);
-                                    wlistcache.push(PhysicalReadData(
+                                    wlistcache.push(MemData(
                                         PhysicalAddress::from(cached_page.address),
                                         buf.into(),
                                     ));
@@ -244,7 +239,7 @@ impl<'a, T: CacheValidator> PageCache<'a, T> {
                             }
                         });
                 } else {
-                    wlist.push(PhysicalReadData(*addr, out_alias));
+                    wlist.push(MemData(addr, out));
                 }
 
                 next = iter.next();
@@ -255,23 +250,33 @@ impl<'a, T: CacheValidator> PageCache<'a, T> {
                     || clist.len() >= 64
                 {
                     if !wlist.is_empty() {
-                        mem.phys_read_raw_list(&mut wlist)?;
+                        {
+                            let mut drain = wlist.drain(..);
+                            mem.phys_read_raw_iter((&mut drain).into(), out_fail)?;
+                        }
                         wlist.clear();
                     }
 
                     if !wlistcache.is_empty() {
-                        mem.phys_read_raw_list(&mut wlistcache)?;
+                        let mut iter =
+                            wlistcache
+                                .iter()
+                                .map(|MemData(addr, buf): &PhysicalReadData| {
+                                    MemData(*addr, buf.into())
+                                });
 
-                        wlistcache
-                            .into_iter()
-                            .for_each(|PhysicalReadData(addr, buf)| {
-                                self.validate_page(addr.address(), buf.into())
-                            });
+                        let callback = &mut |_| true;
+
+                        mem.phys_read_raw_iter((&mut iter).into(), &mut callback.into())?;
+
+                        wlistcache.into_iter().for_each(|MemData(addr, buf)| {
+                            self.validate_page(addr.address(), buf.into())
+                        });
 
                         wlistcache = BumpVec::new_in(arena);
                     }
 
-                    while let Some(PhysicalReadData(addr, mut out)) = clist.pop() {
+                    while let Some(MemData(addr, mut out)) = clist.pop() {
                         let cached_page = self.cached_page_mut(addr.address(), false);
                         let aligned_addr = cached_page.address.as_page_aligned(self.page_size);
 
@@ -347,7 +352,7 @@ mod tests {
     use crate::architecture::x86;
     use crate::cglue::ForwardMut;
     use crate::dummy::{DummyMemory, DummyOs};
-    use crate::mem::{CachedMemoryAccess, TimedCacheValidator, VirtualDma, VirtualMemory};
+    use crate::mem::{CachedMemoryAccess, MemoryView, TimedCacheValidator, VirtualDma};
     use crate::types::{size, Address, PhysicalAddress};
 
     use coarsetime::Duration;
@@ -389,10 +394,7 @@ mod tests {
         let cmp_buf = [143u8; 16];
         let write_addr = 0.into();
 
-        dummy_os
-            .as_mut()
-            .phys_write_raw(write_addr, &cmp_buf)
-            .unwrap();
+        dummy_os.as_mut().phys_write(write_addr, &cmp_buf).unwrap();
         let arch = x86::x64::ARCH;
 
         let mut mem = CachedMemoryAccess::builder(dummy_os.into_inner())
@@ -403,14 +405,14 @@ mod tests {
             .unwrap();
 
         let mut read_buf = [0u8; 16];
-        mem.phys_read_raw_into(write_addr, &mut read_buf).unwrap();
+        mem.phys_read_into(write_addr, &mut read_buf).unwrap();
         assert_eq!(read_buf, cmp_buf);
 
         let mut cloned_mem = mem.clone();
 
         let mut cloned_read_buf = [0u8; 16];
         cloned_mem
-            .phys_read_raw_into(write_addr, &mut cloned_read_buf)
+            .phys_read_into(write_addr, &mut cloned_read_buf)
             .unwrap();
         assert_eq!(cloned_read_buf, cmp_buf);
     }
@@ -443,7 +445,7 @@ mod tests {
             {
                 let mut virt_mem = VirtualDma::new(dummy_os.forward_mut(), arch, translator);
                 virt_mem
-                    .virt_read_raw_into(virt_base, buf_nocache.as_mut_slice())
+                    .read_raw_into(virt_base, buf_nocache.as_mut_slice())
                     .unwrap();
             }
 
@@ -467,7 +469,7 @@ mod tests {
             {
                 let mut virt_mem = VirtualDma::new(mem_cache.forward_mut(), arch, translator);
                 virt_mem
-                    .virt_read_raw_into(virt_base, buf_cache.as_mut_slice())
+                    .read_raw_into(virt_base, buf_cache.as_mut_slice())
                     .unwrap();
             }
 
@@ -511,7 +513,7 @@ mod tests {
         {
             let mut virt_mem = VirtualDma::new(mem_cache.forward_mut(), arch, translator);
             virt_mem
-                .virt_read_raw_into(virt_base, cached_buf.as_mut_slice())
+                .read_raw_into(virt_base, cached_buf.as_mut_slice())
                 .unwrap();
         }
 
@@ -523,16 +525,14 @@ mod tests {
                 arch,
                 translator,
             );
-            virt_mem
-                .virt_write_raw(virt_base, write_buf.as_slice())
-                .unwrap();
+            virt_mem.write_raw(virt_base, write_buf.as_slice()).unwrap();
         }
 
         let mut check_buf = vec![0_u8; 64];
         {
             let mut virt_mem = VirtualDma::new(mem_cache.forward_mut(), arch, translator);
             virt_mem
-                .virt_read_raw_into(virt_base, check_buf.as_mut_slice())
+                .read_raw_into(virt_base, check_buf.as_mut_slice())
                 .unwrap();
         }
 
@@ -569,7 +569,7 @@ mod tests {
         {
             let mut virt_mem = VirtualDma::new(mem_cache.forward_mut(), arch, translator);
             virt_mem
-                .virt_read_raw_into(virt_base, cached_buf.as_mut_slice())
+                .read_raw_into(virt_base, cached_buf.as_mut_slice())
                 .unwrap();
         }
 
@@ -581,16 +581,14 @@ mod tests {
                 arch,
                 translator,
             );
-            virt_mem
-                .virt_write_raw(virt_base, write_buf.as_slice())
-                .unwrap();
+            virt_mem.write_raw(virt_base, write_buf.as_slice()).unwrap();
         }
 
         let mut check_buf = vec![0_u8; 64];
         {
             let mut virt_mem = VirtualDma::new(mem_cache.forward_mut(), arch, translator);
             virt_mem
-                .virt_read_raw_into(virt_base, check_buf.as_mut_slice())
+                .read_raw_into(virt_base, check_buf.as_mut_slice())
                 .unwrap();
         }
 
@@ -619,7 +617,7 @@ mod tests {
 
         dummy_os
             .as_mut()
-            .phys_write_raw(addr, buf_start.as_slice())
+            .phys_write(addr, buf_start.as_slice())
             .unwrap();
 
         let arch = x86::x64::ARCH;
@@ -678,7 +676,7 @@ mod tests {
 
         dummy_os
             .as_mut()
-            .phys_write_raw(addr, buf_start.as_slice())
+            .phys_write(addr, buf_start.as_slice())
             .unwrap();
 
         let arch = x86::x64::ARCH;
@@ -717,7 +715,7 @@ mod tests {
 
         dummy_os
             .as_mut()
-            .phys_write_raw(addr1, buf_start.as_slice())
+            .phys_write(addr1, buf_start.as_slice())
             .unwrap();
 
         let cache = PageCache::with_page_size(
@@ -775,27 +773,21 @@ mod tests {
         let mut virt_mem = VirtualDma::new(mem_cache, arch, translator);
 
         let mut buf_1 = vec![0_u8; 64];
-        virt_mem
-            .virt_read_into(virt_base, buf_1.as_mut_slice())
-            .unwrap();
+        virt_mem.read_into(virt_base, buf_1.as_mut_slice()).unwrap();
 
         assert_eq!(buf_start, buf_1);
         buf_1[16..20].copy_from_slice(&[255, 255, 255, 255]);
-        virt_mem.virt_write(virt_base + 16, &buf_1[16..20]).unwrap();
+        virt_mem.write(virt_base + 16, &buf_1[16..20]).unwrap();
 
         let mut buf_2 = vec![0_u8; 64];
-        virt_mem
-            .virt_read_into(virt_base, buf_2.as_mut_slice())
-            .unwrap();
+        virt_mem.read_into(virt_base, buf_2.as_mut_slice()).unwrap();
 
         assert_eq!(buf_1, buf_2);
         assert_ne!(buf_2, buf_start);
 
         let mut buf_3 = vec![0_u8; 64];
 
-        virt_mem
-            .virt_read_into(virt_base, buf_3.as_mut_slice())
-            .unwrap();
+        virt_mem.read_into(virt_base, buf_3.as_mut_slice()).unwrap();
         assert_eq!(buf_2, buf_3);
     }
 }

@@ -325,14 +325,14 @@ impl DummyOs {
 
             if test_buf.len() >= (cur_len + page_info.size.to_size()) {
                 self.mem
-                    .phys_write_raw(
+                    .phys_write(
                         page_info.addr.into(),
                         &test_buf[cur_len..(cur_len + page_info.size.to_size())],
                     )
                     .unwrap();
             } else if test_buf.len() > cur_len {
                 self.mem
-                    .phys_write_raw(page_info.addr.into(), &test_buf[cur_len..])
+                    .phys_write(page_info.addr.into(), &test_buf[cur_len..])
                     .unwrap();
             }
 
@@ -492,12 +492,20 @@ impl<'a> OsInner<'a> for DummyOs {
 }
 
 impl PhysicalMemory for DummyOs {
-    fn phys_read_raw_list(&mut self, data: &mut [PhysicalReadData]) -> Result<()> {
-        self.mem.phys_read_raw_list(data)
+    fn phys_read_raw_iter<'a>(
+        &mut self,
+        data: CIterator<PhysicalReadData<'a>>,
+        out_fail: &mut PhysicalReadFailCallback<'_, 'a>,
+    ) -> Result<()> {
+        self.mem.phys_read_raw_iter(data, out_fail)
     }
 
-    fn phys_write_raw_list(&mut self, data: &[PhysicalWriteData]) -> Result<()> {
-        self.mem.phys_write_raw_list(data)
+    fn phys_write_raw_iter<'a>(
+        &mut self,
+        data: CIterator<PhysicalWriteData<'a>>,
+        out_fail: &mut PhysicalWriteFailCallback<'_, 'a>,
+    ) -> Result<()> {
+        self.mem.phys_write_raw_iter(data, out_fail)
     }
 
     fn metadata(&self) -> PhysicalMemoryMetadata {

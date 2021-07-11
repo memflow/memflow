@@ -3,16 +3,13 @@ Basic connector which works on mapped memory.
 */
 
 use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
-use crate::iter::FnExtend;
 use crate::mem::{
-    MemoryMap, PhysicalMemory, PhysicalMemoryMapping, PhysicalMemoryMetadata, PhysicalReadData,
-    PhysicalWriteData,
+    MemData, MemoryMap, PhysicalMemory, PhysicalMemoryMapping, PhysicalMemoryMetadata,
+    PhysicalReadData, PhysicalWriteData,
 };
 use crate::types::Address;
 
-#[cfg(feature = "plugins")]
 use crate::cglue::*;
-#[cfg(feature = "plugins")]
 use crate::mem::phys_mem::*;
 
 pub struct MappedPhysicalMemory<T, F> {
@@ -92,27 +89,37 @@ impl<T: AsRef<[u8]>, F: AsRef<MemoryMap<T>>> MappedPhysicalMemory<T, F> {
 impl<'a, F: AsRef<MemoryMap<&'a mut [u8]>> + Send> PhysicalMemory
     for MappedPhysicalMemory<&'a mut [u8], F>
 {
-    fn phys_read_raw_list(&mut self, data: &mut [PhysicalReadData]) -> Result<()> {
-        let mut void = FnExtend::void();
-        for (mapped_buf, buf) in self.info.as_ref().map_iter(
-            data.iter_mut()
-                .map(|PhysicalReadData(addr, buf)| (*addr, &mut **buf)),
-            &mut void,
-        ) {
+    fn phys_read_raw_iter<'b>(
+        &mut self,
+        data: CIterator<PhysicalReadData<'b>>,
+        out_fail: &mut PhysicalReadFailCallback<'_, 'b>,
+    ) -> Result<()> {
+        let mut void = |(addr, buf): (Address, &'b mut [u8])| {
+            // TODO: manage not to lose physical page information here???
+            out_fail.call(MemData(addr.into(), buf.into()))
+        };
+        for (mapped_buf, buf) in self
+            .info
+            .as_ref()
+            .map_iter(data.map(|MemData(addr, buf)| (addr, buf.into())), &mut void)
+        {
             buf.copy_from_slice(mapped_buf.as_ref());
         }
         Ok(())
     }
 
-    fn phys_write_raw_list(&mut self, data: &[PhysicalWriteData]) -> Result<()> {
-        let mut void = FnExtend::void();
+    fn phys_write_raw_iter<'b>(
+        &mut self,
+        data: CIterator<PhysicalWriteData<'b>>,
+        out_fail: &mut PhysicalWriteFailCallback<'_, 'b>,
+    ) -> Result<()> {
+        let mut void = &mut |(addr, buf): (Address, _)| {
+            // TODO: manage not to lose physical page information here???
+            out_fail.call(MemData(addr.into(), buf))
+        };
 
-        for (mapped_buf, buf) in self
-            .info
-            .as_ref()
-            .map_iter(data.iter().copied().map(<_>::from), &mut void)
-        {
-            mapped_buf.as_mut().copy_from_slice(buf);
+        for (mapped_buf, buf) in self.info.as_ref().map_iter(data.map(<_>::from), &mut void) {
+            mapped_buf.as_mut().copy_from_slice(buf.into());
         }
 
         Ok(())
@@ -147,19 +154,26 @@ impl<'a, F: AsRef<MemoryMap<&'a mut [u8]>> + Send> PhysicalMemory
 impl<'a, F: AsRef<MemoryMap<&'a [u8]>> + Send> PhysicalMemory
     for MappedPhysicalMemory<&'a [u8], F>
 {
-    fn phys_read_raw_list(&mut self, data: &mut [PhysicalReadData]) -> Result<()> {
-        let mut void = FnExtend::void();
-        for (mapped_buf, buf) in self.info.as_ref().map_iter(
-            data.iter_mut()
-                .map(|PhysicalReadData(addr, buf)| (*addr, &mut **buf)),
-            &mut void,
-        ) {
+    fn phys_read_raw_iter<'b>(
+        &mut self,
+        data: CIterator<PhysicalReadData<'b>>,
+        out_fail: &mut PhysicalReadFailCallback<'_, 'b>,
+    ) -> Result<()> {
+        let mut void = |(addr, buf): (Address, _)| {
+            // TODO: manage not to lose physical page information here???
+            out_fail.call(MemData(addr.into(), buf))
+        };
+        for (mapped_buf, mut buf) in self.info.as_ref().map_iter(data.map(<_>::into), &mut void) {
             buf.copy_from_slice(mapped_buf.as_ref());
         }
         Ok(())
     }
 
-    fn phys_write_raw_list(&mut self, _data: &[PhysicalWriteData]) -> Result<()> {
+    fn phys_write_raw_iter<'b>(
+        &mut self,
+        _data: CIterator<PhysicalWriteData<'b>>,
+        _out_fail: &mut PhysicalWriteFailCallback<'_, 'b>,
+    ) -> Result<()> {
         Err(Error(ErrorOrigin::Connector, ErrorKind::ReadOnly)
             .log_error("target mapping is not writeable"))
     }

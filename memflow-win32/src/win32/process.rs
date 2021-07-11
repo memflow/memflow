@@ -4,26 +4,12 @@ use super::{Win32Kernel, Win32ModuleListInfo};
 
 use std::fmt;
 
-use memflow::architecture::ArchitectureIdent;
-use memflow::cglue::*;
-use memflow::error::{Error, ErrorKind, ErrorOrigin, PartialResult, PartialResultExt, Result};
-use memflow::mem::virt_mem::*;
-use memflow::mem::virt_translate::{
-    MemoryRange, VirtualTranslate2, VirtualTranslationCallback, VirtualTranslationFailCallback,
-};
-use memflow::mem::{PhysicalMemory, VirtualDma, VirtualMemory, VirtualTranslate};
-use memflow::os::{
-    ExportCallback, ExportInfo, ImportCallback, ImportInfo, ModuleAddressCallback,
-    ModuleAddressInfo, ModuleInfo, Process, ProcessInfo, ProcessState, SectionCallback,
-    SectionInfo,
-};
-use memflow::types::Address;
+use memflow::mem::virt_translate::*;
+use memflow::prelude::v1::{Result, *};
 
 // those only required when compiling cglue code
 #[cfg(feature = "plugins")]
 use memflow::cglue;
-#[cfg(feature = "plugins")]
-use memflow::mem::virt_translate::*;
 #[cfg(feature = "plugins")]
 use memflow::os::process::*;
 
@@ -132,19 +118,31 @@ impl<T: Clone> Clone for Win32Process<T> {
     }
 }
 
-impl<V: VirtualMemory> AsMut<V> for Win32Process<V> {
+impl<V: MemoryView> AsMut<V> for Win32Process<V> {
     fn as_mut(&mut self) -> &mut V {
         &mut self.virt_mem
     }
 }
 
-impl<T: VirtualMemory> VirtualMemory for Win32Process<T> {
-    fn virt_read_raw_list(&mut self, data: &mut [VirtualReadData]) -> PartialResult<()> {
-        self.virt_mem.virt_read_raw_list(data)
+impl<T: MemoryView> MemoryView for Win32Process<T> {
+    fn read_raw_iter<'a>(
+        &mut self,
+        data: CIterator<ReadData<'a>>,
+        out_fail: &mut ReadFailCallback<'_, 'a>,
+    ) -> Result<()> {
+        self.virt_mem.read_raw_iter(data, out_fail)
     }
 
-    fn virt_write_raw_list(&mut self, data: &[VirtualWriteData]) -> PartialResult<()> {
-        self.virt_mem.virt_write_raw_list(data)
+    fn write_raw_iter<'a>(
+        &mut self,
+        data: CIterator<WriteData<'a>>,
+        out_fail: &mut WriteFailCallback<'_, 'a>,
+    ) -> Result<()> {
+        self.virt_mem.write_raw_iter(data, out_fail)
+    }
+
+    fn metadata(&self) -> MemoryViewMetadata {
+        self.virt_mem.metadata()
     }
 }
 
@@ -161,13 +159,13 @@ impl<T: PhysicalMemory, V: VirtualTranslate2> VirtualTranslate
     }
 }
 
-impl<T: VirtualMemory> Process for Win32Process<T> {
+impl<T: MemoryView> Process for Win32Process<T> {
     /// Retrieves virtual address translator for the process (if applicable)
     //fn vat(&mut self) -> Option<&mut Self::VirtualTranslateType>;
 
     /// Retrieves the state of the process
     fn state(&mut self) -> ProcessState {
-        if let Ok(exit_status) = self.virt_mem.virt_read::<Win32ExitStatus>(
+        if let Ok(exit_status) = self.virt_mem.read::<Win32ExitStatus>(
             self.proc_info.base_info.address + self.offset_eproc_exit_status,
         ) {
             if exit_status == EXIT_STATUS_STILL_ACTIVE {
@@ -280,7 +278,7 @@ impl<T: VirtualMemory> Process for Win32Process<T> {
     ) -> Result<()> {
         let mut module_image = vec![0u8; info.size];
         self.virt_mem
-            .virt_read_raw_into(info.base, &mut module_image)
+            .read_raw_into(info.base, &mut module_image)
             .data_part()?;
 
         let pe = PE::parse_with_opts(&module_image, &ParseOptions { resolve_rva: false })
@@ -306,7 +304,7 @@ impl<T: VirtualMemory> Process for Win32Process<T> {
     ) -> Result<()> {
         let mut module_image = vec![0u8; info.size];
         self.virt_mem
-            .virt_read_raw_into(info.base, &mut module_image)
+            .read_raw_into(info.base, &mut module_image)
             .data_part()?;
 
         let pe = PE::parse_with_opts(&module_image, &ParseOptions { resolve_rva: false })
@@ -332,7 +330,7 @@ impl<T: VirtualMemory> Process for Win32Process<T> {
     ) -> Result<()> {
         let mut module_image = vec![0u8; info.size];
         self.virt_mem
-            .virt_read_raw_into(info.base, &mut module_image)
+            .read_raw_into(info.base, &mut module_image)
             .data_part()?;
 
         let pe = PE::parse_with_opts(&module_image, &ParseOptions { resolve_rva: false })
@@ -414,7 +412,7 @@ impl<'a, T: PhysicalMemory, V: VirtualTranslate2>
     }
 }
 
-impl<T: VirtualMemory> Win32Process<T> {
+impl<T: MemoryView> Win32Process<T> {
     fn module_address_list_with_infos_callback(
         &mut self,
         module_infos: impl Iterator<Item = (Win32ModuleListInfo, ArchitectureIdent)>,

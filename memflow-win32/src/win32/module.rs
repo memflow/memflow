@@ -7,7 +7,7 @@ use log::trace;
 
 use memflow::architecture::ArchitectureIdent;
 use memflow::error::Result;
-use memflow::mem::VirtualMemory;
+use memflow::mem::MemoryView;
 use memflow::os::{AddressCallback, ModuleInfo};
 use memflow::types::Address;
 
@@ -23,7 +23,7 @@ pub struct Win32ModuleListInfo {
 
 impl Win32ModuleListInfo {
     pub fn with_peb(
-        mem: &mut impl VirtualMemory,
+        mem: &mut impl MemoryView,
         env_block: Address,
         arch: ArchitectureIdent,
     ) -> Result<Self> {
@@ -33,10 +33,10 @@ impl Win32ModuleListInfo {
         trace!("peb_ldr_offs={:x}", offsets.peb_ldr);
         trace!("ldr_list_offs={:x}", offsets.ldr_list);
 
-        let env_block_ldr = mem.virt_read_addr_arch(arch_obj, env_block + offsets.peb_ldr)?;
+        let env_block_ldr = mem.read_addr_arch(arch_obj, env_block + offsets.peb_ldr)?;
         trace!("peb_ldr={:x}", env_block_ldr);
 
-        let module_base = mem.virt_read_addr_arch(arch_obj, env_block_ldr + offsets.ldr_list)?;
+        let module_base = mem.read_addr_arch(arch_obj, env_block_ldr + offsets.ldr_list)?;
 
         Self::with_base(module_base, arch)
     }
@@ -57,7 +57,7 @@ impl Win32ModuleListInfo {
         self.module_base
     }
 
-    pub fn module_entry_list<V: VirtualMemory>(
+    pub fn module_entry_list<V: MemoryView>(
         &self,
         mem: &mut impl AsMut<V>,
         arch: ArchitectureIdent,
@@ -67,7 +67,7 @@ impl Win32ModuleListInfo {
         Ok(out)
     }
 
-    pub fn module_entry_list_callback<M: AsMut<V>, V: VirtualMemory>(
+    pub fn module_entry_list_callback<M: AsMut<V>, V: MemoryView>(
         &self,
         mem: &mut M,
         arch: ArchitectureIdent,
@@ -80,7 +80,7 @@ impl Win32ModuleListInfo {
             if !callback.call(list_entry) {
                 break;
             }
-            list_entry = mem.as_mut().virt_read_addr_arch(arch_obj, list_entry)?;
+            list_entry = mem.as_mut().read_addr_arch(arch_obj, list_entry)?;
             // Break on misaligned entry. On NT 4.0 list end is misaligned, maybe it's a flag?
             if list_entry.is_null()
                 || (list_entry.as_u64() & 0b111) != 0
@@ -96,10 +96,10 @@ impl Win32ModuleListInfo {
     pub fn module_base_from_entry(
         &self,
         entry: Address,
-        mem: &mut impl VirtualMemory,
+        mem: &mut impl MemoryView,
         arch: ArchitectureIdent,
     ) -> Result<Address> {
-        mem.virt_read_addr_arch(arch.into(), entry + self.offsets.ldr_data_base)
+        mem.read_addr_arch(arch.into(), entry + self.offsets.ldr_data_base)
             .map_err(From::from)
     }
 
@@ -107,7 +107,7 @@ impl Win32ModuleListInfo {
         &self,
         entry: Address,
         parent_eprocess: Address,
-        mem: &mut impl VirtualMemory,
+        mem: &mut impl MemoryView,
         arch: ArchitectureIdent,
     ) -> Result<ModuleInfo> {
         let base = self.module_base_from_entry(entry, mem, arch)?;
@@ -116,17 +116,15 @@ impl Win32ModuleListInfo {
         trace!("base={:x}", base);
 
         let size = mem
-            .virt_read_addr_arch(arch_obj, entry + self.offsets.ldr_data_size)?
+            .read_addr_arch(arch_obj, entry + self.offsets.ldr_data_size)?
             .as_usize();
 
         trace!("size={:x}", size);
 
-        let path =
-            mem.virt_read_unicode_string(arch_obj, entry + self.offsets.ldr_data_full_name)?;
+        let path = mem.read_unicode_string(arch_obj, entry + self.offsets.ldr_data_full_name)?;
         trace!("path={}", path);
 
-        let name =
-            mem.virt_read_unicode_string(arch_obj, entry + self.offsets.ldr_data_base_name)?;
+        let name = mem.read_unicode_string(arch_obj, entry + self.offsets.ldr_data_base_name)?;
         trace!("name={}", name);
 
         Ok(ModuleInfo {

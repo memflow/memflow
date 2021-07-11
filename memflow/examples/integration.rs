@@ -48,8 +48,8 @@ fn main() -> Result<()> {
         phys_mem.phys_read_into(0x1000.into(), &mut out).unwrap();
         println!("Kernel Physical Read: {:?}", out);
 
-        let virt_mem = as_mut!(os impl VirtualMemory).expect("no virt mem found");
-        virt_mem.virt_read_into(os_base, &mut out).unwrap();
+        let virt_mem = as_mut!(os impl MemoryView).expect("no virt mem found");
+        virt_mem.read_into(os_base, &mut out).unwrap();
         println!("Kernel Virtual Read: {:?}", out);
     }
 

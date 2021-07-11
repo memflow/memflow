@@ -6,12 +6,13 @@ use super::{
         ArchMmuSpec, MmuTranslationBase,
     },
     Architecture, ArchitectureIdent, ArchitectureObj, Endianess, VirtualTranslate3,
+    VtopFailureCallback, VtopOutputCallback,
 };
 
 use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 use crate::iter::SplitAtIndex;
-use crate::mem::PhysicalMemory;
-use crate::types::{size, Address, PhysicalAddress};
+use crate::mem::{MemData, PhysicalMemory};
+use crate::types::{size, Address};
 
 pub struct ArmArchitecture {
     /// Defines how many bits does the native word size have
@@ -87,15 +88,14 @@ impl MmuTranslationBase for ArmPageTableBase {
         2
     }
 
-    fn virt_addr_filter<B, O>(
+    fn virt_addr_filter<B>(
         &self,
         spec: &ArchMmuSpec,
-        addr: (Address, B),
+        addr: MemData<Address, B>,
         work_group: (&mut TranslationChunk<Self>, &mut TranslateDataVec<B>),
-        out_fail: &mut O,
+        out_fail: &mut VtopFailureCallback<B>,
     ) where
         B: SplitAtIndex,
-        O: Extend<(Error, Address, B)>,
     {
         spec.virt_addr_filter(addr, work_group, out_fail);
     }
@@ -105,15 +105,13 @@ impl VirtualTranslate3 for ArmVirtualTranslate {
     fn virt_to_phys_iter<
         T: PhysicalMemory + ?Sized,
         B: SplitAtIndex,
-        VI: Iterator<Item = (Address, B)>,
-        VO: Extend<(PhysicalAddress, B)>,
-        FO: Extend<(Error, Address, B)>,
+        VI: Iterator<Item = MemData<Address, B>>,
     >(
         &self,
         mem: &mut T,
         addrs: VI,
-        out: &mut VO,
-        out_fail: &mut FO,
+        out: &mut VtopOutputCallback<B>,
+        out_fail: &mut VtopFailureCallback<B>,
         tmp_buf: &mut [std::mem::MaybeUninit<u8>],
     ) {
         self.arch

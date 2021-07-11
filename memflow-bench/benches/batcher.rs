@@ -13,13 +13,21 @@ impl NullMem {
 }
 
 impl PhysicalMemory for NullMem {
-    fn phys_read_raw_list(&mut self, data: &mut [PhysicalReadData]) -> Result<()> {
-        black_box(data.len());
+    fn phys_read_raw_iter<'a>(
+        &mut self,
+        data: CIterator<PhysicalReadData<'a>>,
+        out_fail: &mut PhysicalReadFailCallback<'_, 'a>,
+    ) -> Result<()> {
+        black_box((data, out_fail));
         Ok(())
     }
 
-    fn phys_write_raw_list(&mut self, data: &[PhysicalWriteData]) -> Result<()> {
-        black_box(data.len());
+    fn phys_write_raw_iter<'a>(
+        &mut self,
+        data: CIterator<PhysicalWriteData<'a>>,
+        out_fail: &mut PhysicalWriteFailCallback<'_, 'a>,
+    ) -> Result<()> {
+        black_box((data, out_fail));
         Ok(())
     }
 
@@ -44,31 +52,30 @@ use rand_xorshift::XorShiftRng as CurRng;
 
 static mut TSLICE: [[u8; 16]; 0x10000] = [[0; 16]; 0x10000];
 
-fn read_test_nobatcher<T: PhysicalMemory>(
+fn read_test_nobatcher<T: MemoryView>(
     chunk_size: usize,
     mem: &mut T,
     mut rng: CurRng,
     size: usize,
-    tbuf: &mut [PhysicalReadData],
+    tbuf: &mut [ReadData],
 ) {
     let base_addr = Address::from(rng.gen_range(0..size));
 
-    for PhysicalReadData(addr, _) in tbuf.iter_mut().take(chunk_size) {
+    for MemData(addr, _) in tbuf.iter_mut().take(chunk_size) {
         *addr = (base_addr + rng.gen_range(0..0x2000)).into();
     }
 
-    let _ = black_box(mem.phys_read_raw_list(&mut tbuf[..chunk_size]));
+    let mut iter = tbuf[..chunk_size]
+        .iter_mut()
+        .map(|MemData(a, b): &mut ReadData| MemData(*a, b.into()));
+
+    let _ = black_box(mem.read_raw_iter((&mut iter).into(), &mut (&mut |_| true).into()));
 }
 
-fn read_test_batcher<T: PhysicalMemory>(
-    chunk_size: usize,
-    mem: &mut T,
-    mut rng: CurRng,
-    size: usize,
-) {
+fn read_test_batcher<T: MemoryView>(chunk_size: usize, mem: &mut T, mut rng: CurRng, size: usize) {
     let base_addr = Address::from(rng.gen_range(0..size));
 
-    let mut batcher = mem.phys_batcher();
+    let mut batcher = mem.batcher();
     batcher.read_prealloc(chunk_size);
 
     for i in unsafe { TSLICE.iter_mut().take(chunk_size) } {
@@ -78,7 +85,7 @@ fn read_test_batcher<T: PhysicalMemory>(
     let _ = black_box(batcher.commit_rw());
 }
 
-fn read_test_with_ctx<T: PhysicalMemory>(
+fn read_test_with_ctx<T: MemoryView>(
     bench: &mut Bencher,
     chunk_size: usize,
     use_batcher: bool,
@@ -94,7 +101,7 @@ fn read_test_with_ctx<T: PhysicalMemory>(
         unsafe { TSLICE }
             .iter_mut()
             .map(|arr| {
-                PhysicalReadData(PhysicalAddress::INVALID, unsafe {
+                MemData(Address::INVALID, unsafe {
                     std::mem::transmute(&mut arr[..])
                 })
             })
@@ -126,7 +133,7 @@ fn chunk_read_params<T: PhysicalMemory>(
                     b,
                     black_box(chunk_size as usize),
                     use_batcher,
-                    &mut initialize_ctx(),
+                    &mut initialize_ctx().into_phys_view(),
                 )
             },
         );

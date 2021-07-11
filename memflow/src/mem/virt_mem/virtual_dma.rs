@@ -1,24 +1,25 @@
 use std::prelude::v1::*;
 
-use super::{VirtualReadData, VirtualWriteData};
-use crate::architecture::{ArchitectureObj, VirtualTranslate3};
-use crate::error::{Error, *};
-use crate::iter::FnExtend;
+use crate::architecture::{ArchitectureObj, Endianess, VirtualTranslate3};
+use crate::error::{Error, Result, *};
+use crate::mem::memory_view::*;
 use crate::mem::{
+    mem_data::*,
     virt_translate::{
         DirectTranslate, MemoryRange, VirtualTranslate, VirtualTranslate2, VirtualTranslation,
         VirtualTranslationCallback, VirtualTranslationFail, VirtualTranslationFailCallback,
     },
-    PhysicalMemory, PhysicalReadData, PhysicalWriteData, VirtualMemory,
+    MemoryView, PhysicalMemory, PhysicalMemoryMetadata,
 };
 use crate::types::{Address, PhysicalAddress};
 
 use bumpalo::{collections::Vec as BumpVec, Bump};
+use cglue::{callback::FromExtend, iter::CIterator};
 
 /// The VirtualDma struct provides a default implementation to access virtual memory
 /// from user provided [`PhysicalMemory`] and [`VirtualTranslate2`] objects.
 ///
-/// This struct implements [`VirtualMemory`] and allows the user to access the virtual memory of a process.
+/// This struct implements [`MemoryView`] and allows the user to access the virtual memory of a process.
 pub struct VirtualDma<T, V, D> {
     phys_mem: T,
     vat: V,
@@ -40,7 +41,7 @@ impl<T: PhysicalMemory, D: VirtualTranslate3> VirtualDma<T, DirectTranslate, D> 
     /// ```
     /// use memflow::types::Address;
     /// use memflow::architecture::x86::x64;
-    /// use memflow::mem::{PhysicalMemory, VirtualTranslate2, VirtualMemory, VirtualDma};
+    /// use memflow::mem::{PhysicalMemory, VirtualTranslate2, MemoryView, VirtualDma};
     /// use memflow::cglue::Fwd;
     ///
     /// fn read(phys_mem: Fwd<&mut impl PhysicalMemory>, vat: &mut impl VirtualTranslate2, dtb: Address, read_addr: Address) {
@@ -50,7 +51,7 @@ impl<T: PhysicalMemory, D: VirtualTranslate3> VirtualDma<T, DirectTranslate, D> 
     ///     let mut virt_mem = VirtualDma::new(phys_mem, arch, translator);
     ///
     ///     let mut addr = 0u64;
-    ///     virt_mem.virt_read_into(read_addr, &mut addr).unwrap();
+    ///     virt_mem.read_into(read_addr, &mut addr).unwrap();
     ///     println!("addr: {:x}", addr);
     ///     # assert_eq!(addr, 0x00ff_00ff_00ff_00ff);
     /// }
@@ -84,7 +85,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate2, D: VirtualTranslate3> VirtualDma<T
     /// ```
     /// use memflow::types::Address;
     /// use memflow::architecture::x86::x64;
-    /// use memflow::mem::{PhysicalMemory, VirtualTranslate2, VirtualMemory, VirtualDma};
+    /// use memflow::mem::{PhysicalMemory, VirtualTranslate2, MemoryView, VirtualDma};
     /// use memflow::cglue::Fwd;
     ///
     /// fn read(phys_mem: Fwd<&mut impl PhysicalMemory>, vat: impl VirtualTranslate2, dtb: Address, read_addr: Address) {
@@ -94,7 +95,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate2, D: VirtualTranslate3> VirtualDma<T
     ///     let mut virt_mem = VirtualDma::with_vat(phys_mem, arch, translator, vat);
     ///
     ///     let mut addr = 0u64;
-    ///     virt_mem.virt_read_into(read_addr, &mut addr).unwrap();
+    ///     virt_mem.read_into(read_addr, &mut addr).unwrap();
     ///     println!("addr: {:x}", addr);
     ///     # assert_eq!(addr, 0x00ff_00ff_00ff_00ff);
     /// }
@@ -132,11 +133,12 @@ impl<T: PhysicalMemory, V: VirtualTranslate2, D: VirtualTranslate3> VirtualDma<T
         &self.translator
     }
 
-    /// A wrapper around `virt_read_addr64` and `virt_read_addr32` that will use the pointer size of this context's process.
-    pub fn virt_read_addr(&mut self, addr: Address) -> PartialResult<Address> {
+    /// A wrapper around `read_addr64` and `read_addr32` that will use the pointer size of this context's process.
+    /// TODO: do this in virt mem
+    pub fn read_addr(&mut self, addr: Address) -> PartialResult<Address> {
         match self.proc_arch.bits() {
-            64 => self.virt_read_addr64(addr),
-            32 => self.virt_read_addr32(addr),
+            64 => self.read_addr64(addr),
+            32 => self.read_addr32(addr),
             _ => Err(PartialError::Error(Error(
                 ErrorOrigin::VirtualMemory,
                 ErrorKind::InvalidArchitecture,
@@ -183,61 +185,69 @@ where
     }
 }
 
-impl<T: PhysicalMemory, V: VirtualTranslate2, D: VirtualTranslate3> VirtualMemory
+impl<T: PhysicalMemory, V: VirtualTranslate2, D: VirtualTranslate3> MemoryView
     for VirtualDma<T, V, D>
 {
-    fn virt_read_raw_list(&mut self, data: &mut [VirtualReadData]) -> PartialResult<()> {
+    fn read_raw_iter<'a>(
+        &mut self,
+        data: CIterator<ReadData<'a>>,
+        out_fail: &mut ReadFailCallback<'_, 'a>,
+    ) -> Result<()> {
         self.arena.reset();
-        let mut translation = BumpVec::with_capacity_in(data.len(), &self.arena);
+        // TODO: size_hint
+        let mut translation = BumpVec::with_capacity_in(data.size_hint().0, &self.arena);
 
-        let mut partial_read = false;
+        //let mut partial_read = false;
         self.vat.virt_to_phys_iter(
             &mut self.phys_mem,
             &self.translator,
-            data.iter_mut()
-                .map(|VirtualReadData(a, b)| (*a, &mut b[..])),
-            &mut FnExtend::new(|(a, b): (_, &mut [u8])| {
-                translation.push(PhysicalReadData(a, b.into()))
-            }),
-            &mut FnExtend::new(|(_, _, out): (_, _, &mut [u8])| {
-                for v in out.iter_mut() {
-                    *v = 0;
-                }
-                partial_read = true;
-            }),
+            data,
+            &mut translation.from_extend(),
+            &mut (&mut |(_, rdata): (_, ReadData<'a>)| out_fail.call(rdata)).into(),
         );
 
-        self.phys_mem.phys_read_raw_list(&mut translation)?;
+        let mut iter = translation.into_iter();
 
-        if !partial_read {
-            Ok(())
-        } else {
-            Err(PartialError::PartialVirtualRead(()))
-        }
+        self.phys_mem
+            .phys_read_raw_iter((&mut iter).into(), &mut (&mut |_| true).into())
     }
 
-    fn virt_write_raw_list(&mut self, data: &[VirtualWriteData]) -> PartialResult<()> {
+    fn write_raw_iter<'a>(
+        &mut self,
+        data: CIterator<WriteData<'a>>,
+        out_fail: &mut WriteFailCallback<'_, 'a>,
+    ) -> Result<()> {
         self.arena.reset();
-        let mut translation = BumpVec::with_capacity_in(data.len(), &self.arena);
+        let mut translation = BumpVec::with_capacity_in(data.size_hint().0, &self.arena);
 
-        let mut partial_read = false;
         self.vat.virt_to_phys_iter(
             &mut self.phys_mem,
             &self.translator,
-            data.iter().copied().map(<_>::into),
-            &mut FnExtend::new(|(a, b): (_, &[u8])| {
-                translation.push(PhysicalWriteData(a, b.into()))
-            }),
-            &mut FnExtend::new(|(_, _, _): (_, _, _)| {
-                partial_read = true;
-            }),
+            data,
+            &mut translation.from_extend(),
+            &mut (&mut |(_, wdata): (_, WriteData<'a>)| out_fail.call(wdata)).into(),
         );
 
-        self.phys_mem.phys_write_raw_list(&translation)?;
-        if !partial_read {
-            Ok(())
-        } else {
-            Err(PartialError::PartialVirtualRead(()))
+        let mut iter = translation.into_iter();
+
+        self.phys_mem
+            .phys_write_raw_iter((&mut iter).into(), &mut (&mut |_| true).into())
+    }
+
+    fn metadata(&self) -> MemoryViewMetadata {
+        let PhysicalMemoryMetadata {
+            max_address,
+            real_size,
+            readonly,
+            ..
+        } = self.phys_mem.metadata();
+
+        MemoryViewMetadata {
+            max_address,
+            real_size,
+            readonly,
+            little_endian: self.proc_arch.endianess() == Endianess::LittleEndian,
+            arch_bits: self.proc_arch.bits(),
         }
     }
 }
@@ -254,17 +264,21 @@ impl<T: PhysicalMemory, V: VirtualTranslate2, D: VirtualTranslate3> VirtualTrans
         self.vat.virt_to_phys_iter(
             &mut self.phys_mem,
             &self.translator,
-            addrs.iter().map(|v| (v.address, (v.address, v.size))),
-            &mut FnExtend::new(|(a, b): (PhysicalAddress, (Address, usize))| {
-                let _ = out.call(VirtualTranslation {
+            addrs
+                .iter()
+                .map(|v| MemData(v.address, (v.address, v.size))),
+            &mut (&mut |MemData(a, b): MemData<PhysicalAddress, (Address, usize)>| {
+                out.call(VirtualTranslation {
                     in_virtual: b.0,
                     size: b.1,
                     out_physical: a,
-                });
-            }),
-            &mut FnExtend::new(|(_e, from, (_, size))| {
-                let _ = out_fail.call(VirtualTranslationFail { from, size });
-            }),
+                })
+            })
+                .into(),
+            &mut (&mut |(_e, MemData(from, (_, size)))| {
+                out_fail.call(VirtualTranslationFail { from, size })
+            })
+                .into(),
         )
     }
 }

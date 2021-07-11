@@ -21,11 +21,13 @@ mod mmu;
 pub(crate) use mmu::ArchMmuDef;
 
 use crate::error::{Error, Result};
-use crate::iter::{FnExtend, SplitAtIndex};
-use crate::mem::PhysicalMemory;
+use crate::iter::SplitAtIndex;
+use crate::mem::{MemData, PhysicalMemory};
 use crate::types::size;
 
 use crate::types::{Address, PhysicalAddress};
+
+use cglue::callback::OpaqueCallback;
 
 /// Identifies the byte order of a architecture
 ///
@@ -95,18 +97,22 @@ pub trait VirtualTranslate3: Clone + Copy + Send {
         let mut buf: [std::mem::MaybeUninit<u8>; 512] =
             unsafe { std::mem::MaybeUninit::uninit().assume_init() };
         let mut output = None;
-        let mut success = FnExtend::new(|elem: (PhysicalAddress, _)| {
+        let success = &mut |elem: MemData<PhysicalAddress, _>| {
             if output.is_none() {
                 output = Some(elem.0);
             }
-        });
+            false
+        };
         let mut output_err = None;
-        let mut fail = FnExtend::new(|elem: (Error, _, _)| output_err = Some(elem.0));
+        let fail = &mut |elem: (Error, _)| {
+            output_err = Some(elem.0);
+            true
+        };
         self.virt_to_phys_iter(
             mem,
-            Some((addr, 1)).into_iter(),
-            &mut success,
-            &mut fail,
+            Some(MemData(addr, 1)).into_iter(),
+            &mut success.into(),
+            &mut fail.into(),
             &mut buf,
         );
         output.map(Ok).unwrap_or_else(|| Err(output_err.unwrap()))
@@ -115,15 +121,13 @@ pub trait VirtualTranslate3: Clone + Copy + Send {
     fn virt_to_phys_iter<
         T: PhysicalMemory + ?Sized,
         B: SplitAtIndex,
-        VI: Iterator<Item = (Address, B)>,
-        VO: Extend<(PhysicalAddress, B)>,
-        FO: Extend<(Error, Address, B)>,
+        VI: Iterator<Item = MemData<Address, B>>,
     >(
         &self,
         mem: &mut T,
         addrs: VI,
-        out: &mut VO,
-        out_fail: &mut FO,
+        out: &mut VtopOutputCallback<B>,
+        out_fail: &mut VtopFailureCallback<B>,
         tmp_buf: &mut [std::mem::MaybeUninit<u8>],
     );
 
@@ -209,6 +213,9 @@ pub trait Architecture: Send + Sync + 'static {
     /// Returns a FFI-safe identifier
     fn ident(&self) -> ArchitectureIdent;
 }
+
+pub type VtopOutputCallback<'a, B> = OpaqueCallback<'a, MemData<PhysicalAddress, B>>;
+pub type VtopFailureCallback<'a, B> = OpaqueCallback<'a, (Error, MemData<Address, B>)>;
 
 impl std::fmt::Debug for ArchitectureObj {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

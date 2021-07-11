@@ -15,7 +15,7 @@ use rand::{Rng, SeedableRng};
 use rand_xorshift::XorShiftRng as CurRng;
 
 fn rwtest(
-    mut proc: impl Process + VirtualMemory,
+    mut proc: impl Process + MemoryView,
     module: &ModuleInfo,
     chunk_sizes: &[usize],
     chunk_counts: &[usize],
@@ -57,7 +57,7 @@ fn rwtest(
 
                 let now = Instant::now();
                 {
-                    let mut batcher = proc.virt_batcher();
+                    let mut batcher = proc.batcher();
 
                     for (buf, addr) in bufs.iter_mut() {
                         batcher.read_raw_into(Address::from(*addr), buf);

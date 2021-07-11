@@ -4,26 +4,18 @@ use std::convert::TryInto;
 
 use memflow::architecture::{ArchitectureObj, Endianess};
 use memflow::error::{Error, ErrorKind, ErrorOrigin, Result};
-use memflow::mem::VirtualMemory;
+use memflow::mem::MemoryView;
 use memflow::types::Address;
 
 use widestring::U16CString;
 
 pub trait VirtualReadUnicodeString {
-    fn virt_read_unicode_string(
-        &mut self,
-        proc_arch: ArchitectureObj,
-        addr: Address,
-    ) -> Result<String>;
+    fn read_unicode_string(&mut self, proc_arch: ArchitectureObj, addr: Address) -> Result<String>;
 }
 
 // TODO: split up cpu and proc arch in read_helper.rs
-impl<'a, T: VirtualMemory> VirtualReadUnicodeString for T {
-    fn virt_read_unicode_string(
-        &mut self,
-        proc_arch: ArchitectureObj,
-        addr: Address,
-    ) -> Result<String> {
+impl<'a, T: MemoryView> VirtualReadUnicodeString for T {
+    fn read_unicode_string(&mut self, proc_arch: ArchitectureObj, addr: Address) -> Result<String> {
         /*
         typedef struct _windows_unicode_string32 {
             uint16_t length;
@@ -41,7 +33,7 @@ impl<'a, T: VirtualMemory> VirtualReadUnicodeString for T {
 
         // length is always the first entry
         let mut length = 0u16;
-        self.virt_read_into(addr, &mut length)?;
+        self.read_into(addr, &mut length)?;
         if length == 0 {
             return Err(Error(ErrorOrigin::OsLayer, ErrorKind::Encoding)
                 .log_debug("unable to read unicode string length (length is zero)"));
@@ -50,8 +42,8 @@ impl<'a, T: VirtualMemory> VirtualReadUnicodeString for T {
         // TODO: chek if length exceeds limit
         // buffer is either aligned at 4 or 8
         let buffer = match proc_arch.bits() {
-            64 => self.virt_read_addr64(addr + 8)?,
-            32 => self.virt_read_addr32(addr + 4)?,
+            64 => self.read_addr64(addr + 8)?,
+            32 => self.read_addr32(addr + 4)?,
             _ => {
                 return Err(Error(ErrorOrigin::OsLayer, ErrorKind::InvalidArchitecture));
             }
@@ -69,7 +61,7 @@ impl<'a, T: VirtualMemory> VirtualReadUnicodeString for T {
 
         // read buffer
         let mut content = vec![0; length as usize + 2];
-        self.virt_read_raw_into(buffer, &mut content)?;
+        self.read_raw_into(buffer, &mut content)?;
         content[length as usize] = 0;
         content[length as usize + 1] = 0;
 

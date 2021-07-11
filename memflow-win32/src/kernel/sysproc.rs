@@ -9,12 +9,12 @@ use log::{debug, info, warn};
 
 use memflow::architecture::ArchitectureObj;
 use memflow::error::{Error, ErrorKind, ErrorOrigin, Result};
-use memflow::mem::VirtualMemory;
+use memflow::mem::MemoryView;
 use memflow::types::{size, Address};
 
 use pelite::{self, pe64::exports::Export, PeView};
 
-pub fn find<T: VirtualMemory>(
+pub fn find<T: MemoryView>(
     virt_mem: &mut T,
     start_block: &StartBlock,
     ntos: Address,
@@ -35,7 +35,7 @@ pub fn find<T: VirtualMemory>(
 }
 
 // find from exported symbol
-pub fn find_exported<T: VirtualMemory>(
+pub fn find_exported<T: MemoryView>(
     virt_mem: &mut T,
     start_block: &StartBlock,
     kernel_base: Address,
@@ -63,11 +63,11 @@ pub fn find_exported<T: VirtualMemory>(
     let mut buf = vec![0u8; arch_obj.size_addr()];
     let sys_proc_addr: Address = match arch_obj.bits() {
         64 => {
-            virt_mem.virt_read_raw_into(sys_proc, &mut buf)?;
+            virt_mem.read_raw_into(sys_proc, &mut buf)?;
             u64::from_le_bytes(buf[0..8].try_into().unwrap()).into()
         }
         32 => {
-            virt_mem.virt_read_raw_into(sys_proc, &mut buf)?;
+            virt_mem.read_raw_into(sys_proc, &mut buf)?;
             u32::from_le_bytes(buf[0..4].try_into().unwrap()).into()
         }
         _ => return Err(Error(ErrorOrigin::OsLayer, ErrorKind::InvalidArchitecture)),
@@ -78,7 +78,7 @@ pub fn find_exported<T: VirtualMemory>(
 // TODO: scan in pdb
 
 // scan in section
-pub fn find_in_section<T: VirtualMemory>(
+pub fn find_in_section<T: MemoryView>(
     virt_mem: &mut T,
     _start_block: &StartBlock,
     ntos: Address,
@@ -88,7 +88,7 @@ pub fn find_in_section<T: VirtualMemory>(
     // ... check if its 32 or 64bit
 
     let mut header_buf = vec![0; size::mb(32)];
-    virt_mem.virt_read_raw_into(ntos, &mut header_buf)?;
+    virt_mem.read_raw_into(ntos, &mut header_buf)?;
 
     /*
     let mut pe_opts = ParseOptions::default();

@@ -1,7 +1,7 @@
 use crate::architecture::x86::x64;
 use crate::cglue::ForwardMut;
 use crate::dummy::{DummyMemory, DummyOs};
-use crate::mem::{DirectTranslate, VirtualDma, VirtualMemory, VirtualTranslate, VirtualTranslate2};
+use crate::mem::{DirectTranslate, MemoryView, VirtualDma, VirtualTranslate, VirtualTranslate2};
 use crate::types::size;
 
 #[test]
@@ -90,7 +90,7 @@ fn test_virt_read_small() {
     let mut virt_mem = VirtualDma::new(dummy_os.forward_mut(), arch, translator);
 
     let mut out = vec![0u8; buf.len()];
-    virt_mem.virt_read_into(virt_base, &mut out[..]).unwrap();
+    virt_mem.read_into(virt_base, &mut out[..]).unwrap();
     assert_eq!(buf.len(), out.len());
     assert_eq!(buf, out);
 }
@@ -109,8 +109,8 @@ fn test_virt_write_small() {
     let arch = x64::ARCH;
     let mut virt_mem = VirtualDma::new(dummy_os.forward_mut(), arch, translator);
 
-    virt_mem.virt_write(virt_base, &input[..]).unwrap();
-    virt_mem.virt_read_into(virt_base, &mut buf[..]).unwrap();
+    virt_mem.write(virt_base, &input[..]).unwrap();
+    virt_mem.read_into(virt_base, &mut buf[..]).unwrap();
     assert_eq!(buf.len(), input.len());
     assert_eq!(buf, input);
 }
@@ -129,9 +129,7 @@ fn test_virt_read_small_shifted() {
     let mut virt_mem = VirtualDma::new(dummy_os.forward_mut(), arch, translator);
 
     let mut out = vec![0u8; buf.len() - 128];
-    virt_mem
-        .virt_read_into(virt_base + 128, &mut out[..])
-        .unwrap();
+    virt_mem.read_into(virt_base + 128, &mut out[..]).unwrap();
     assert_eq!(buf[128..].to_vec().len(), out.len());
     assert_eq!(buf[128..].to_vec(), out);
 }
@@ -150,10 +148,8 @@ fn test_virt_write_small_shifted() {
     let arch = x64::ARCH;
     let mut virt_mem = VirtualDma::new(dummy_os.forward_mut(), arch, translator);
 
-    virt_mem.virt_write(virt_base + 128, &input[..]).unwrap();
-    virt_mem
-        .virt_read_into(virt_base + 128, &mut buf[..])
-        .unwrap();
+    virt_mem.write(virt_base + 128, &input[..]).unwrap();
+    virt_mem.read_into(virt_base + 128, &mut buf[..]).unwrap();
     assert_eq!(buf.to_vec().len(), input.len());
     assert_eq!(buf.to_vec(), input);
 }
@@ -172,7 +168,7 @@ fn test_virt_read_medium() {
     let mut virt_mem = VirtualDma::new(dummy_os.forward_mut(), arch, translator);
 
     let mut out = vec![0u8; buf.len()];
-    virt_mem.virt_read_into(virt_base, &mut out[..]).unwrap();
+    virt_mem.read_into(virt_base, &mut out[..]).unwrap();
     assert_eq!(buf.len(), out.len());
     assert_eq!(buf, out);
 }
@@ -191,8 +187,8 @@ fn test_virt_write_medium() {
     let arch = x64::ARCH;
     let mut virt_mem = VirtualDma::new(dummy_os.forward_mut(), arch, translator);
 
-    virt_mem.virt_write(virt_base, &input[..]).unwrap();
-    virt_mem.virt_read_into(virt_base, &mut buf[..]).unwrap();
+    virt_mem.write(virt_base, &input[..]).unwrap();
+    virt_mem.read_into(virt_base, &mut buf[..]).unwrap();
     assert_eq!(buf.len(), input.len());
     assert_eq!(buf, input);
 }
@@ -211,9 +207,7 @@ fn test_virt_read_medium_shifted() {
     let mut virt_mem = VirtualDma::new(dummy_os.forward_mut(), arch, translator);
 
     let mut out = vec![0u8; buf.len() - 0x100];
-    virt_mem
-        .virt_read_into(virt_base + 0x100, &mut out[..])
-        .unwrap();
+    virt_mem.read_into(virt_base + 0x100, &mut out[..]).unwrap();
     assert_eq!(buf[0x100..].to_vec().len(), out.len());
     assert_eq!(buf[0x100..].to_vec(), out);
 }
@@ -232,10 +226,8 @@ fn test_virt_write_medium_shifted() {
     let arch = x64::ARCH;
     let mut virt_mem = VirtualDma::new(dummy_os.forward_mut(), arch, translator);
 
-    virt_mem.virt_write(virt_base + 0x100, &input[..]).unwrap();
-    virt_mem
-        .virt_read_into(virt_base + 0x100, &mut buf[..])
-        .unwrap();
+    virt_mem.write(virt_base + 0x100, &input[..]).unwrap();
+    virt_mem.read_into(virt_base + 0x100, &mut buf[..]).unwrap();
     assert_eq!(buf.to_vec().len(), input.len());
     assert_eq!(buf.to_vec(), input);
 }
@@ -254,7 +246,7 @@ fn test_virt_read_big() {
     let mut virt_mem = VirtualDma::new(dummy_os.forward_mut(), arch, translator);
 
     let mut out = vec![0u8; buf.len()];
-    virt_mem.virt_read_into(virt_base, &mut out[..]).unwrap();
+    virt_mem.read_into(virt_base, &mut out[..]).unwrap();
     assert_eq!(buf.len(), out.len());
     assert_eq!(buf, out);
 }
@@ -273,8 +265,8 @@ fn test_virt_write_big() {
     let arch = x64::ARCH;
     let mut virt_mem = VirtualDma::new(dummy_os.forward_mut(), arch, translator);
 
-    virt_mem.virt_write(virt_base, &input[..]).unwrap();
-    virt_mem.virt_read_into(virt_base, &mut buf[..]).unwrap();
+    virt_mem.write(virt_base, &input[..]).unwrap();
+    virt_mem.read_into(virt_base, &mut buf[..]).unwrap();
     assert_eq!(buf.len(), input.len());
     assert_eq!(buf, input);
 }
@@ -293,9 +285,7 @@ fn test_virt_read_big_shifted() {
     let mut virt_mem = VirtualDma::new(dummy_os.forward_mut(), arch, translator);
 
     let mut out = vec![0u8; buf.len() - 0x100];
-    virt_mem
-        .virt_read_into(virt_base + 0x100, &mut out[..])
-        .unwrap();
+    virt_mem.read_into(virt_base + 0x100, &mut out[..]).unwrap();
     assert_eq!(buf[0x100..].to_vec().len(), out.len());
     assert_eq!(buf[0x100..].to_vec(), out);
 }
@@ -314,10 +304,8 @@ fn test_virt_write_big_shifted() {
     let arch = x64::ARCH;
     let mut virt_mem = VirtualDma::new(dummy_os.forward_mut(), arch, translator);
 
-    virt_mem.virt_write(virt_base + 0x100, &input[..]).unwrap();
-    virt_mem
-        .virt_read_into(virt_base + 0x100, &mut buf[..])
-        .unwrap();
+    virt_mem.write(virt_base + 0x100, &input[..]).unwrap();
+    virt_mem.read_into(virt_base + 0x100, &mut buf[..]).unwrap();
     assert_eq!(buf.to_vec().len(), input.len());
     assert_eq!(buf.to_vec(), input);
 }

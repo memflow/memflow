@@ -12,12 +12,12 @@ use log::{info, warn};
 
 use memflow::architecture::ArchitectureObj;
 use memflow::error::{Error, ErrorKind, ErrorOrigin, PartialResultExt, Result};
-use memflow::mem::{VirtualMemory, VirtualTranslate};
+use memflow::mem::{MemoryView, VirtualTranslate};
 use memflow::types::Address;
 
 use pelite::{self, pe64::debug::CodeView, pe64::exports::Export, PeView};
 
-pub fn find<T: VirtualMemory + VirtualTranslate>(
+pub fn find<T: MemoryView + VirtualTranslate>(
     virt_mem: &mut T,
     start_block: &StartBlock,
 ) -> Result<(Address, usize)> {
@@ -46,8 +46,8 @@ pub fn find<T: VirtualMemory + VirtualTranslate>(
 }
 
 // TODO: move to pe::...
-pub fn find_guid<T: VirtualMemory>(virt_mem: &mut T, kernel_base: Address) -> Result<Win32Guid> {
-    let image = pehelper::try_get_pe_image(virt_mem, kernel_base)?;
+pub fn find_guid<T: MemoryView>(mem: &mut T, kernel_base: Address) -> Result<Win32Guid> {
+    let image = pehelper::try_get_pe_image(mem, kernel_base)?;
     let pe = PeView::from_bytes(&image)
         .map_err(|err| Error(ErrorOrigin::OsLayer, ErrorKind::InvalidExeFile).log_info(err))?;
 
@@ -106,11 +106,8 @@ fn get_export(pe: &PeView, name: &str) -> Result<usize> {
     Ok(export)
 }
 
-pub fn find_winver<T: VirtualMemory>(
-    virt_mem: &mut T,
-    kernel_base: Address,
-) -> Result<Win32Version> {
-    let image = pehelper::try_get_pe_image(virt_mem, kernel_base)?;
+pub fn find_winver<T: MemoryView>(mem: &mut T, kernel_base: Address) -> Result<Win32Version> {
+    let image = pehelper::try_get_pe_image(mem, kernel_base)?;
     let pe = PeView::from_bytes(&image)
         .map_err(|err| Error(ErrorOrigin::OsLayer, ErrorKind::InvalidExeFile).log_info(err))?;
 
@@ -118,7 +115,7 @@ pub fn find_winver<T: VirtualMemory>(
     let nt_build_number_ref = get_export(&pe, "NtBuildNumber")?;
     let rtl_get_version_ref = get_export(&pe, "RtlGetVersion");
 
-    let nt_build_number: u32 = virt_mem.virt_read(kernel_base + nt_build_number_ref)?;
+    let nt_build_number: u32 = mem.read(kernel_base + nt_build_number_ref)?;
     info!("nt_build_number: {}", nt_build_number);
     if nt_build_number == 0 {
         return Err(Error(ErrorOrigin::OsLayer, ErrorKind::InvalidExeFile)
@@ -128,18 +125,13 @@ pub fn find_winver<T: VirtualMemory>(
     // TODO: these reads should be optional
     // try to find major/minor version
     // read from KUSER_SHARED_DATA. these fields exist since nt 4.0 so they have to exist in case NtBuildNumber exists.
-    let mut nt_major_version: u32 = virt_mem
-        .virt_read((0x7ffe0000 + 0x026C).into())
-        .data_part()?;
-    let mut nt_minor_version: u32 = virt_mem
-        .virt_read((0x7ffe0000 + 0x0270).into())
-        .data_part()?;
+    let mut nt_major_version: u32 = mem.read((0x7ffe0000 + 0x026C).into()).data_part()?;
+    let mut nt_minor_version: u32 = mem.read((0x7ffe0000 + 0x0270).into()).data_part()?;
 
     // fallback on x64: try to parse RtlGetVersion assembly
     if nt_major_version == 0 && rtl_get_version_ref.is_ok() {
         let mut buf = [0u8; 0x100];
-        virt_mem
-            .virt_read_into(kernel_base + rtl_get_version_ref.unwrap(), &mut buf)
+        mem.read_into(kernel_base + rtl_get_version_ref.unwrap(), &mut buf)
             .data_part()?;
 
         nt_major_version = 0;

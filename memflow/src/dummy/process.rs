@@ -3,7 +3,7 @@ use crate::architecture::VirtualTranslate3;
 use crate::error::*;
 
 use crate::architecture::ArchitectureIdent;
-use crate::mem::virt_mem::*;
+use crate::mem::{mem_data::*, memory_view::*};
 use crate::os::process::*;
 use crate::os::*;
 use crate::types::Address;
@@ -48,7 +48,7 @@ pub struct DummyProcess<T> {
     pub mem: T,
 }
 
-impl<T: VirtualMemory> Process for DummyProcess<T> {
+impl<T: MemoryView> Process for DummyProcess<T> {
     /// Retrieves virtual address translator for the process (if applicable)
     //fn vat(&mut self) -> Option<&mut Self::VirtualTranslateType>;
 
@@ -137,13 +137,25 @@ impl<T: VirtualMemory> Process for DummyProcess<T> {
     }
 }
 
-impl<T: VirtualMemory> VirtualMemory for DummyProcess<T> {
-    fn virt_read_raw_list(&mut self, data: &mut [VirtualReadData]) -> PartialResult<()> {
-        self.mem.virt_read_raw_list(data)
+impl<T: MemoryView> MemoryView for DummyProcess<T> {
+    fn read_raw_iter<'a>(
+        &mut self,
+        data: CIterator<ReadData<'a>>,
+        out_fail: &mut ReadFailCallback<'_, 'a>,
+    ) -> Result<()> {
+        self.mem.read_raw_iter(data, out_fail)
     }
 
-    fn virt_write_raw_list(&mut self, data: &[VirtualWriteData]) -> PartialResult<()> {
-        self.mem.virt_write_raw_list(data)
+    fn write_raw_iter<'a>(
+        &mut self,
+        data: CIterator<WriteData<'a>>,
+        out_fail: &mut WriteFailCallback<'_, 'a>,
+    ) -> Result<()> {
+        self.mem.write_raw_iter(data, out_fail)
+    }
+
+    fn metadata(&self) -> MemoryViewMetadata {
+        self.mem.metadata()
     }
 }
 

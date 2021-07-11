@@ -20,13 +20,9 @@ pub mod physical_address;
 #[doc(hidden)]
 pub use physical_address::PhysicalAddress;
 
-pub mod pointer32;
+pub mod pointer;
 #[doc(hidden)]
-pub use pointer32::Pointer32;
-
-pub mod pointer64;
-#[doc(hidden)]
-pub use pointer64::Pointer64;
+pub use pointer::Pointer;
 
 pub mod byte_swap;
 #[doc(hidden)]

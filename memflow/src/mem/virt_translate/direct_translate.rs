@@ -1,9 +1,8 @@
 use super::VirtualTranslate2;
-use crate::architecture::VirtualTranslate3;
-use crate::error::Error;
+use crate::architecture::{VirtualTranslate3, VtopFailureCallback, VtopOutputCallback};
 use crate::iter::SplitAtIndex;
-use crate::mem::PhysicalMemory;
-use crate::types::{size, Address, PhysicalAddress};
+use crate::mem::{MemData, PhysicalMemory};
+use crate::types::{size, Address};
 use std::prelude::v1::*;
 
 /*
@@ -33,20 +32,18 @@ impl Clone for DirectTranslate {
 }
 
 impl VirtualTranslate2 for DirectTranslate {
-    fn virt_to_phys_iter<T, B, D, VI, VO, FO>(
+    fn virt_to_phys_iter<T, B, D, VI>(
         &mut self,
         phys_mem: &mut T,
         translator: &D,
         addrs: VI,
-        out: &mut VO,
-        out_fail: &mut FO,
+        out: &mut VtopOutputCallback<B>,
+        out_fail: &mut VtopFailureCallback<B>,
     ) where
         T: PhysicalMemory + ?Sized,
         B: SplitAtIndex,
         D: VirtualTranslate3,
-        VI: Iterator<Item = (Address, B)>,
-        VO: Extend<(PhysicalAddress, B)>,
-        FO: Extend<(Error, Address, B)>,
+        VI: Iterator<Item = MemData<Address, B>>,
     {
         translator.virt_to_phys_iter(phys_mem, addrs, out, out_fail, &mut self.tmp_buf)
     }

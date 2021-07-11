@@ -36,10 +36,13 @@ use crate::architecture::ArchitectureObj;
 use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 use crate::iter::PageChunks;
 use crate::mem::{
-    PhysicalMemory, PhysicalMemoryMapping, PhysicalMemoryMetadata, PhysicalReadData,
+    phys_mem::{PhysicalReadFailCallback, PhysicalWriteFailCallback},
+    MemData, PhysicalMemory, PhysicalMemoryMapping, PhysicalMemoryMetadata, PhysicalReadData,
     PhysicalWriteData,
 };
+
 use crate::types::{size, PageType};
+use cglue::iter::CIterator;
 
 use bumpalo::Bump;
 
@@ -92,7 +95,7 @@ impl<'a, T: PhysicalMemory, Q: CacheValidator> CachedMemoryAccess<'a, T, Q> {
     /// ```
     /// # const MAGIC_VALUE: u64 = 0x23bd_318f_f3a3_5821;
     /// use memflow::architecture::x86::x64;
-    /// use memflow::mem::{PhysicalMemory, CachedMemoryAccess};
+    /// use memflow::mem::{PhysicalMemory, CachedMemoryAccess, MemoryView};
     ///
     /// fn build<T: PhysicalMemory>(mem: T) -> T {
     ///     let mut cache = CachedMemoryAccess::builder(mem)
@@ -101,7 +104,7 @@ impl<'a, T: PhysicalMemory, Q: CacheValidator> CachedMemoryAccess<'a, T, Q> {
     ///         .unwrap();
     ///
     ///     // use the cache...
-    ///     let value: u64 = cache.phys_read(0.into()).unwrap();
+    ///     let value: u64 = cache.phys_view().read(0.into()).unwrap();
     ///     assert_eq!(value, MAGIC_VALUE);
     ///
     ///     // retrieve ownership of mem and return it back
@@ -127,34 +130,44 @@ impl<'a, T: PhysicalMemory> CachedMemoryAccess<'a, T, DefaultCacheValidator> {
 
 // forward PhysicalMemory trait fncs
 impl<'a, T: PhysicalMemory, Q: CacheValidator> PhysicalMemory for CachedMemoryAccess<'a, T, Q> {
-    fn phys_read_raw_list(&mut self, data: &mut [PhysicalReadData]) -> Result<()> {
+    fn phys_read_raw_iter<'b>(
+        &mut self,
+        data: CIterator<PhysicalReadData<'b>>,
+        out_fail: &mut PhysicalReadFailCallback<'_, 'b>,
+    ) -> Result<()> {
         self.cache.validator.update_validity();
         self.arena.reset();
-        self.cache.cached_read(&mut self.mem, data, &self.arena)
+        self.cache
+            .cached_read(&mut self.mem, data, out_fail, &self.arena)
     }
 
-    fn phys_write_raw_list(&mut self, data: &[PhysicalWriteData]) -> Result<()> {
+    fn phys_write_raw_iter<'b>(
+        &mut self,
+        data: CIterator<PhysicalWriteData<'b>>,
+        out_fail: &mut PhysicalWriteFailCallback<'_, 'b>,
+    ) -> Result<()> {
         self.cache.validator.update_validity();
 
         let cache = &mut self.cache;
         let mem = &mut self.mem;
 
-        data.iter().for_each(move |PhysicalWriteData(addr, data)| {
+        let mut data = data.map(move |MemData(addr, data)| {
             if cache.is_cached_page_type(addr.page_type()) {
                 for (paddr, data_chunk) in data.page_chunks(addr.address(), cache.page_size()) {
                     let mut cached_page = cache.cached_page_mut(paddr, false);
                     if let PageValidity::Valid(buf) = &mut cached_page.validity {
                         // write-back into still valid cache pages
                         let start = paddr - cached_page.address;
-                        buf[start..(start + data_chunk.len())].copy_from_slice(data_chunk);
+                        buf[start..(start + data_chunk.len())].copy_from_slice(data_chunk.into());
                     }
 
                     cache.put_entry(cached_page);
                 }
             }
+            MemData(addr, data)
         });
 
-        mem.phys_write_raw_list(data)
+        mem.phys_write_raw_iter((&mut data).into(), out_fail)
     }
 
     #[inline]
@@ -195,7 +208,7 @@ impl<T: PhysicalMemory> CachedMemoryAccessBuilder<T, DefaultCacheValidator> {
     /// ```
     /// # const MAGIC_VALUE: u64 = 0x23bd_318f_f3a3_5821;
     /// use memflow::architecture::x86::x64;
-    /// use memflow::mem::{PhysicalMemory, CachedMemoryAccess};
+    /// use memflow::mem::{PhysicalMemory, CachedMemoryAccess, MemoryView};
     ///
     /// fn build<T: PhysicalMemory>(mem: T) {
     ///     let mut cache = CachedMemoryAccess::builder(mem)
@@ -207,7 +220,7 @@ impl<T: PhysicalMemory> CachedMemoryAccessBuilder<T, DefaultCacheValidator> {
     ///
     ///     let mut mem = cache.into_inner();
     ///
-    ///     let value: u64 = mem.phys_read(0.into()).unwrap();
+    ///     let value: u64 = mem.phys_view().read(0.into()).unwrap();
     ///     assert_eq!(value, MAGIC_VALUE);
     /// }
     /// # use memflow::dummy::DummyMemory;
@@ -221,7 +234,7 @@ impl<T: PhysicalMemory> CachedMemoryAccessBuilder<T, DefaultCacheValidator> {
     /// ```
     /// # const MAGIC_VALUE: u64 = 0x23bd_318f_f3a3_5821;
     /// use memflow::architecture::x86::x64;
-    /// use memflow::mem::{PhysicalMemory, CachedMemoryAccess};
+    /// use memflow::mem::{PhysicalMemory, CachedMemoryAccess, MemoryView};
     /// use memflow::cglue::{Fwd, ForwardMut};
     ///
     /// fn build<T: PhysicalMemory>(mem: Fwd<&mut T>)
@@ -238,7 +251,7 @@ impl<T: PhysicalMemory> CachedMemoryAccessBuilder<T, DefaultCacheValidator> {
     /// # mem.phys_write(0.into(), &MAGIC_VALUE).unwrap();
     /// let mut cache = build(mem.forward_mut());
     ///
-    /// let value: u64 = cache.phys_read(0.into()).unwrap();
+    /// let value: u64 = cache.phys_view().read(0.into()).unwrap();
     /// assert_eq!(value, MAGIC_VALUE);
     ///
     /// cache.phys_write(0.into(), &0u64).unwrap();
@@ -246,7 +259,7 @@ impl<T: PhysicalMemory> CachedMemoryAccessBuilder<T, DefaultCacheValidator> {
     /// // We drop the cache and are able to use mem again
     /// std::mem::drop(cache);
     ///
-    /// let value: u64 = mem.phys_read(0.into()).unwrap();
+    /// let value: u64 = mem.phys_view().read(0.into()).unwrap();
     /// assert_ne!(value, MAGIC_VALUE);
     /// ```
     pub fn new(mem: T) -> Self {

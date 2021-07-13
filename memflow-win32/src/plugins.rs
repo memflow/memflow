@@ -2,6 +2,7 @@ use crate::offsets::SymbolStore;
 use crate::win32::{Win32Kernel, Win32KernelBuilder};
 
 use memflow::cglue;
+use memflow::plugins::args;
 use memflow::prelude::v1::*;
 
 use std::ffi::c_void;
@@ -110,81 +111,32 @@ fn build_page_cache<
     C: 'static + VirtualTranslate2 + Clone,
 >(
     builder: Win32KernelBuilder<A, B, C>,
-    mode: &str,
     args: &Args,
     lib: COptArc<c_void>,
 ) -> Result<OsInstanceArcBox<'static>> {
-    match mode.split('&').find(|s| s.contains("page")) {
-        Some(page) => match page.split(':').nth(1) {
-            Some(vargs) => {
-                let mut sp = vargs.splitn(2, ';');
-                let (size, time) = (
-                    sp.next().ok_or_else(|| {
-                        Error(ErrorOrigin::OsLayer, ErrorKind::Configuration)
-                            .log_error("Failed to parse Page Cache size")
-                    })?,
-                    sp.next().ok_or_else(|| {
-                        Error(ErrorOrigin::OsLayer, ErrorKind::Configuration)
-                            .log_error("Failed to parse Page Cache validator time")
-                    })?,
-                );
+    match args::parse_vatcache(args)? {
+        Some((0, _)) => build_kernel_hint(
+            builder
+                .build_page_cache(|v, a| CachedMemoryAccess::builder(v).arch(a).build().unwrap()),
+            args,
+            lib,
+        ),
+        Some((size, time)) => build_kernel_hint(
+            builder.build_page_cache(move |v, a| {
+                let builder = CachedMemoryAccess::builder(v).arch(a).cache_size(size);
 
-                let (size, size_mul) = {
-                    let mul_arr = &[
-                        (size::kb(1), ["kb", "k"]),
-                        (size::mb(1), ["mb", "m"]),
-                        (size::gb(1), ["gb", "g"]),
-                    ];
-
-                    mul_arr
-                        .iter()
-                        .flat_map(|(m, e)| e.iter().map(move |e| (*m, e)))
-                        .filter_map(|(m, e)| {
-                            if size.to_lowercase().ends_with(e) {
-                                Some((size.trim_end_matches(e), m))
-                            } else {
-                                None
-                            }
-                        })
-                        .next()
-                        .ok_or_else(|| {
-                            Error(ErrorOrigin::OsLayer, ErrorKind::Configuration)
-                                .log_error("Invalid Page Cache size unit (or none)!")
-                        })?
-                };
-
-                let size = usize::from_str_radix(size, 16).map_err(|_| {
-                    Error(ErrorOrigin::OsLayer, ErrorKind::Configuration)
-                        .log_error("Failed to parse Page Cache size")
-                })?;
-
-                let size = size * size_mul;
-
-                let time = time.parse::<u64>().map_err(|_| {
-                    Error(ErrorOrigin::OsLayer, ErrorKind::Configuration)
-                        .log_error("Failed to parse Page Cache validity time")
-                })?;
-                build_kernel_hint(
-                    builder.build_page_cache(move |v, a| {
-                        CachedMemoryAccess::builder(v)
-                            .arch(a)
-                            .cache_size(size)
-                            .validator(TimedCacheValidator::new(Duration::from_millis(time).into()))
-                            .build()
-                            .unwrap()
-                    }),
-                    args,
-                    lib,
-                )
-            }
-            None => build_kernel_hint(
-                builder.build_page_cache(|v, a| {
-                    CachedMemoryAccess::builder(v).arch(a).build().unwrap()
-                }),
-                args,
-                lib,
-            ),
-        },
+                if time > 0 {
+                    builder
+                        .validator(TimedCacheValidator::new(Duration::from_millis(time).into()))
+                        .build()
+                        .unwrap()
+                } else {
+                    builder.build().unwrap()
+                }
+            }),
+            args,
+            lib,
+        ),
         None => build_kernel_hint(builder, args, lib),
     }
 }
@@ -195,72 +147,34 @@ fn build_vat<
     C: 'static + VirtualTranslate2 + Clone,
 >(
     builder: Win32KernelBuilder<A, B, C>,
-    mode: &str,
     args: &Args,
     lib: COptArc<c_void>,
 ) -> Result<OsInstanceArcBox<'static>> {
-    match mode.split('&').find(|s| s.contains("vat")) {
-        Some(vat) => match vat.split(':').nth(1) {
-            Some(vargs) => {
-                let mut sp = vargs.splitn(2, ';');
-                let (size, time) = (
-                    sp.next().ok_or_else(|| {
-                        Error(ErrorOrigin::OsLayer, ErrorKind::Configuration)
-                            .log_error("Failed to parse VAT size")
-                    })?,
-                    sp.next().ok_or_else(|| {
-                        Error(ErrorOrigin::OsLayer, ErrorKind::Configuration)
-                            .log_error("Failed to parse VAT validator time")
-                    })?,
-                );
-                let size = usize::from_str_radix(size, 16).map_err(|_| {
-                    Error(ErrorOrigin::OsLayer, ErrorKind::Configuration)
-                        .log_error("Failed to parse VAT size")
-                })?;
-                let time = time.parse::<u64>().map_err(|_| {
-                    Error(ErrorOrigin::OsLayer, ErrorKind::Configuration)
-                        .log_error("Failed to parse VAT validity time")
-                })?;
-                build_page_cache(
-                    builder.build_vat_cache(move |v, a| {
-                        CachedVirtualTranslate::builder(v)
-                            .arch(a)
-                            .entries(size)
-                            .validator(TimedCacheValidator::new(Duration::from_millis(time).into()))
-                            .build()
-                            .unwrap()
-                    }),
-                    mode,
-                    args,
-                    lib,
-                )
-            }
-            None => build_page_cache(
-                builder.build_vat_cache(|v, a| {
-                    CachedVirtualTranslate::builder(v).arch(a).build().unwrap()
-                }),
-                mode,
-                args,
-                lib,
-            ),
-        },
-        None => build_page_cache(builder, mode, args, lib),
-    }
-}
+    match args::parse_vatcache(args)? {
+        Some((0, _)) => build_page_cache(
+            builder.build_vat_cache(|v, a| {
+                CachedVirtualTranslate::builder(v).arch(a).build().unwrap()
+            }),
+            args,
+            lib,
+        ),
+        Some((size, time)) => build_page_cache(
+            builder.build_vat_cache(move |v, a| {
+                let builder = CachedVirtualTranslate::builder(v).arch(a).entries(size);
 
-fn build_caches<
-    A: 'static + PhysicalMemory + Clone,
-    B: 'static + PhysicalMemory + Clone,
-    C: 'static + VirtualTranslate2 + Clone,
->(
-    builder: Win32KernelBuilder<A, B, C>,
-    args: &Args,
-    lib: COptArc<c_void>,
-) -> Result<OsInstanceArcBox<'static>> {
-    match args.get("memcache").unwrap_or("default") {
-        "default" => build_kernel_hint(builder.build_default_caches(), args, lib),
-        "none" => build_kernel_hint(builder, args, lib),
-        mode => build_vat(builder, mode, args, lib),
+                if time > 0 {
+                    builder
+                        .validator(TimedCacheValidator::new(Duration::from_millis(time).into()))
+                        .build()
+                        .unwrap()
+                } else {
+                    builder.build().unwrap()
+                }
+            }),
+            args,
+            lib,
+        ),
+        None => build_page_cache(builder, args, lib),
     }
 }
 
@@ -277,7 +191,7 @@ fn build_dtb<
         .get("dtb")
         .and_then(|d| u64::from_str_radix(d, 16).ok())
     {
-        Some(dtb) => build_caches(builder.dtb(Address::from(dtb)), args, lib),
-        _ => build_caches(builder, args, lib),
+        Some(dtb) => build_vat(builder.dtb(Address::from(dtb)), args, lib),
+        _ => build_vat(builder, args, lib),
     }
 }

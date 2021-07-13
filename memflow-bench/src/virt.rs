@@ -1,14 +1,9 @@
 use criterion::*;
 
-use memflow::mem::{
-    CachedMemoryAccess, CachedVirtualTranslate, MemData, MemoryView, PhysicalMemory, VirtualDma,
-    VirtualTranslate2,
-};
+use memflow::mem::{MemData, MemoryView};
 
-use memflow::architecture::VirtualTranslate3;
 use memflow::error::Result;
 use memflow::os::*;
-use memflow::types::*;
 
 use rand::prelude::*;
 use rand::{Rng, SeedableRng};
@@ -78,78 +73,44 @@ pub fn read_test_with_mem<T: MemoryView>(
     ));
 }
 
-fn read_test_with_ctx<T: PhysicalMemory, V: VirtualTranslate2, S: VirtualTranslate3>(
+fn read_test_with_os(
     bench: &mut Bencher,
-    cache_size: u64,
     chunk_size: usize,
     chunks: usize,
-    use_tlb: bool,
-    (mem, vat, proc, translator, tmod): (T, V, ProcessInfo, S, ModuleInfo),
+    os: &mut OsInstanceArcBox<'static>,
 ) {
-    if cache_size > 0 {
-        let cache = CachedMemoryAccess::builder(mem)
-            .arch(proc.sys_arch)
-            .cache_size(size::mb(cache_size as usize))
-            .page_type_mask(PageType::PAGE_TABLE | PageType::READ_ONLY | PageType::WRITEABLE);
-
-        let mem = cache.build().unwrap();
-        if use_tlb {
-            let vat = CachedVirtualTranslate::builder(vat)
-                .arch(proc.sys_arch)
-                .build()
-                .unwrap();
-            let mut virt_mem = VirtualDma::with_vat(mem, proc.proc_arch, translator, vat);
-            read_test_with_mem(bench, &mut virt_mem, chunk_size, chunks, tmod);
-        } else {
-            let mut virt_mem = VirtualDma::with_vat(mem, proc.proc_arch, translator, vat);
-            read_test_with_mem(bench, &mut virt_mem, chunk_size, chunks, tmod);
-        }
-    } else if use_tlb {
-        let vat = CachedVirtualTranslate::builder(vat)
-            .arch(proc.sys_arch)
-            .build()
-            .unwrap();
-        let mut virt_mem = VirtualDma::with_vat(mem, proc.proc_arch, translator, vat);
-        read_test_with_mem(bench, &mut virt_mem, chunk_size, chunks, tmod);
-    } else {
-        let mut virt_mem = VirtualDma::with_vat(mem, proc.proc_arch, translator, vat);
-        read_test_with_mem(bench, &mut virt_mem, chunk_size, chunks, tmod);
-    }
+    let (mut proc, module) = crate::util::find_proc(os).unwrap();
+    read_test_with_mem(bench, &mut proc, chunk_size, chunks, module);
 }
 
-fn seq_read_params<T: PhysicalMemory, V: VirtualTranslate2, S: VirtualTranslate3>(
+fn seq_read_params(
     group: &mut BenchmarkGroup<'_, measurement::WallTime>,
     func_name: String,
-    cache_size: u64,
+    cache_size: usize,
     use_tlb: bool,
-    initialize_ctx: &dyn Fn() -> Result<(T, V, ProcessInfo, S, ModuleInfo)>,
+    initialize_ctx: &dyn Fn(usize, bool) -> Result<OsInstanceArcBox<'static>>,
 ) {
+    let mut os = initialize_ctx(cache_size, use_tlb).unwrap();
+
     for &size in [0x8, 0x10, 0x100, 0x1000, 0x10000].iter() {
         group.throughput(Throughput::Bytes(size));
         group.bench_with_input(
             BenchmarkId::new(func_name.clone(), size),
             &size,
-            |b, &size| {
-                read_test_with_ctx(
-                    b,
-                    black_box(cache_size),
-                    black_box(size as usize),
-                    black_box(1),
-                    black_box(use_tlb),
-                    initialize_ctx().unwrap(),
-                )
-            },
+            |b, &size| read_test_with_os(b, black_box(size as usize), black_box(1), &mut os),
         );
     }
 }
 
-fn chunk_read_params<T: PhysicalMemory, V: VirtualTranslate2, S: VirtualTranslate3>(
+fn chunk_read_params(
     group: &mut BenchmarkGroup<'_, measurement::WallTime>,
     func_name: String,
-    cache_size: u64,
+    cache_size: usize,
     use_tlb: bool,
-    initialize_ctx: &dyn Fn() -> Result<(T, V, ProcessInfo, S, ModuleInfo)>,
+    initialize_ctx: &dyn Fn(usize, bool) -> Result<OsInstanceArcBox<'static>>,
 ) {
+    let mut os = initialize_ctx(cache_size, use_tlb).unwrap();
+
     for &size in [0x8, 0x10, 0x100, 0x1000].iter() {
         for &chunk_size in [1, 4, 16, 64].iter() {
             group.throughput(Throughput::Bytes(size * chunk_size));
@@ -157,13 +118,11 @@ fn chunk_read_params<T: PhysicalMemory, V: VirtualTranslate2, S: VirtualTranslat
                 BenchmarkId::new(format!("{}_s{:x}", func_name, size), size * chunk_size),
                 &size,
                 |b, &size| {
-                    read_test_with_ctx(
+                    read_test_with_os(
                         b,
-                        black_box(cache_size),
                         black_box(size as usize),
                         black_box(chunk_size as usize),
-                        black_box(use_tlb),
-                        initialize_ctx().unwrap(),
+                        &mut os,
                     )
                 },
             );
@@ -171,10 +130,11 @@ fn chunk_read_params<T: PhysicalMemory, V: VirtualTranslate2, S: VirtualTranslat
     }
 }
 
-pub fn seq_read<T: PhysicalMemory, V: VirtualTranslate2, S: VirtualTranslate3>(
+pub fn seq_read(
     c: &mut Criterion,
     backend_name: &str,
-    initialize_ctx: &dyn Fn() -> Result<(T, V, ProcessInfo, S, ModuleInfo)>,
+    initialize_ctx: &dyn Fn(usize, bool) -> Result<OsInstanceArcBox<'static>>,
+    use_caches: bool,
 ) {
     let plot_config = PlotConfiguration::default().summary_scale(AxisScale::Logarithmic);
 
@@ -190,33 +150,36 @@ pub fn seq_read<T: PhysicalMemory, V: VirtualTranslate2, S: VirtualTranslate3>(
         false,
         initialize_ctx,
     );
-    seq_read_params(
-        &mut group,
-        format!("{}_tlb_nocache", group_name),
-        0,
-        true,
-        initialize_ctx,
-    );
-    seq_read_params(
-        &mut group,
-        format!("{}_cache", group_name),
-        2,
-        false,
-        initialize_ctx,
-    );
-    seq_read_params(
-        &mut group,
-        format!("{}_tlb_cache", group_name),
-        2,
-        true,
-        initialize_ctx,
-    );
+    if use_caches {
+        seq_read_params(
+            &mut group,
+            format!("{}_tlb_nocache", group_name),
+            0,
+            true,
+            initialize_ctx,
+        );
+        seq_read_params(
+            &mut group,
+            format!("{}_cache", group_name),
+            2,
+            false,
+            initialize_ctx,
+        );
+        seq_read_params(
+            &mut group,
+            format!("{}_tlb_cache", group_name),
+            2,
+            true,
+            initialize_ctx,
+        );
+    }
 }
 
-pub fn chunk_read<T: PhysicalMemory, V: VirtualTranslate2, S: VirtualTranslate3>(
+pub fn chunk_read(
     c: &mut Criterion,
     backend_name: &str,
-    initialize_ctx: &dyn Fn() -> Result<(T, V, ProcessInfo, S, ModuleInfo)>,
+    initialize_ctx: &dyn Fn(usize, bool) -> Result<OsInstanceArcBox<'static>>,
+    use_caches: bool,
 ) {
     let plot_config = PlotConfiguration::default().summary_scale(AxisScale::Logarithmic);
 
@@ -232,25 +195,28 @@ pub fn chunk_read<T: PhysicalMemory, V: VirtualTranslate2, S: VirtualTranslate3>
         false,
         initialize_ctx,
     );
-    chunk_read_params(
-        &mut group,
-        format!("{}_tlb_nocache", group_name),
-        0,
-        true,
-        initialize_ctx,
-    );
-    chunk_read_params(
-        &mut group,
-        format!("{}_cache", group_name),
-        2,
-        false,
-        initialize_ctx,
-    );
-    chunk_read_params(
-        &mut group,
-        format!("{}_tlb_cache", group_name),
-        2,
-        true,
-        initialize_ctx,
-    );
+
+    if use_caches {
+        chunk_read_params(
+            &mut group,
+            format!("{}_tlb_nocache", group_name),
+            0,
+            true,
+            initialize_ctx,
+        );
+        chunk_read_params(
+            &mut group,
+            format!("{}_cache", group_name),
+            2,
+            false,
+            initialize_ctx,
+        );
+        chunk_read_params(
+            &mut group,
+            format!("{}_tlb_cache", group_name),
+            2,
+            true,
+            initialize_ctx,
+        );
+    }
 }

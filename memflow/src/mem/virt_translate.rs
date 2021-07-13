@@ -236,7 +236,7 @@ pub type VirtualTranslationFailCallback<'a> = OpaqueCallback<'a, VirtualTranslat
 
 /// Virtual page range information with physical mappings used for callbacks
 #[repr(C)]
-#[derive(Clone, Debug, Eq)]
+#[derive(Clone, Debug, Eq, Copy)]
 pub struct VirtualTranslation {
     pub in_virtual: Address,
     pub size: usize,
@@ -263,13 +263,14 @@ impl PartialEq for VirtualTranslation {
 
 /// Virtual page range information used for callbacks
 #[repr(C)]
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Copy)]
 pub struct MemoryRange {
     pub address: Address,
     pub size: usize,
 }
 
 #[repr(C)]
+#[derive(Clone, Copy)]
 pub struct VirtualTranslationFail {
     pub from: Address,
     pub size: usize,

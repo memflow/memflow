@@ -6,6 +6,7 @@ use std::fmt;
 use std::prelude::v1::*;
 
 use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
+use crate::types::size;
 
 use core::convert::TryFrom;
 use hashbrown::HashMap;
@@ -347,6 +348,89 @@ impl fmt::Debug for ArgDescriptor {
             if self.required { " (required)" } else { "" },
         )
     }
+}
+
+pub fn parse_pagecache(args: &Args) -> Result<Option<(usize, u64)>> {
+    match args.get("pagecache").unwrap_or("default") {
+        "default" => Ok(Some((0, 0))),
+        "none" => Ok(None),
+        size => Ok(Some(parse_pagecache_args(size)?)),
+    }
+}
+
+fn parse_pagecache_args(vargs: &str) -> Result<(usize, u64)> {
+    let mut sp = vargs.splitn(2, ';');
+    let (size, time) = (
+        sp.next().ok_or_else(|| {
+            Error(ErrorOrigin::OsLayer, ErrorKind::Configuration)
+                .log_error("Failed to parse Page Cache size")
+        })?,
+        sp.next().unwrap_or("0"),
+    );
+
+    let (size, size_mul) = {
+        let mul_arr = &[
+            (size::kb(1), ["kb", "k"]),
+            (size::mb(1), ["mb", "m"]),
+            (size::gb(1), ["gb", "g"]),
+        ];
+
+        mul_arr
+            .iter()
+            .flat_map(|(m, e)| e.iter().map(move |e| (*m, e)))
+            .find_map(|(m, e)| {
+                if size.to_lowercase().ends_with(e) {
+                    Some((size.trim_end_matches(e), m))
+                } else {
+                    None
+                }
+            })
+            .ok_or_else(|| {
+                Error(ErrorOrigin::OsLayer, ErrorKind::Configuration)
+                    .log_error("Invalid Page Cache size unit (or none)!")
+            })?
+    };
+
+    let size = usize::from_str_radix(size, 16).map_err(|_| {
+        Error(ErrorOrigin::OsLayer, ErrorKind::Configuration)
+            .log_error("Failed to parse Page Cache size")
+    })?;
+
+    let size = size * size_mul;
+
+    let time = time.parse::<u64>().map_err(|_| {
+        Error(ErrorOrigin::OsLayer, ErrorKind::Configuration)
+            .log_error("Failed to parse Page Cache validity time")
+    })?;
+
+    Ok((size, time))
+}
+
+pub fn parse_vatcache(args: &Args) -> Result<Option<(usize, u64)>> {
+    match args.get("vatcache").unwrap_or("default") {
+        "default" => Ok(Some((0, 0))),
+        "none" => Ok(None),
+        size => Ok(Some(parse_vatcache_args(size)?)),
+    }
+}
+
+fn parse_vatcache_args(vargs: &str) -> Result<(usize, u64)> {
+    let mut sp = vargs.splitn(2, ';');
+    let (size, time) = (
+        sp.next().ok_or_else(|| {
+            Error(ErrorOrigin::OsLayer, ErrorKind::Configuration)
+                .log_error("Failed to parse VAT size")
+        })?,
+        sp.next().unwrap_or("0"),
+    );
+    let size = usize::from_str_radix(size, 16).map_err(|_| {
+        Error(ErrorOrigin::OsLayer, ErrorKind::Configuration).log_error("Failed to parse VAT size")
+    })?;
+    let time = time.parse::<u64>().map_err(|_| {
+        Error(ErrorOrigin::OsLayer, ErrorKind::Configuration)
+            .log_error("Failed to parse VAT validity time")
+    })?;
+    Ok((size, time))
 }
 
 #[cfg(test)]

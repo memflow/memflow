@@ -256,12 +256,12 @@ impl DummyOs {
             .map(|addr| Address::from(addr.as_u64()))
     }
 
-    pub fn alloc_process(&mut self, map_size: usize, test_buf: &[u8]) -> Pid {
+    fn internal_alloc_process(&mut self, map_size: usize, test_buf: &[u8]) -> DummyProcessInfo {
         let (dtb, address) = self.alloc_dtb(map_size, test_buf);
 
         self.last_pid += 1;
 
-        let proc = DummyProcessInfo {
+        DummyProcessInfo {
             info: ProcessInfo {
                 address,
                 pid: self.last_pid,
@@ -274,9 +274,25 @@ impl DummyOs {
             dtb,
             map_size,
             modules: vec![],
-        };
+        }
+    }
+
+    pub fn alloc_process(&mut self, map_size: usize, test_buf: &[u8]) -> Pid {
+        let proc = self.internal_alloc_process(map_size, test_buf);
 
         let ret = proc.info.pid;
+
+        self.processes.push(proc);
+
+        ret
+    }
+
+    pub fn alloc_process_with_module(&mut self, map_size: usize, test_buf: &[u8]) -> Pid {
+        let mut proc = self.internal_alloc_process(map_size, test_buf);
+
+        let ret = proc.info.pid;
+
+        proc.add_modules(1, map_size / 2);
 
         self.processes.push(proc);
 
@@ -548,7 +564,14 @@ pub fn build_dummy(
 ) -> Result<OsInstanceArcBox<'static>> {
     let size = super::mem::parse_size(args)?;
     let mem = DummyMemory::new(size);
-    let os = DummyOs::new(mem);
+    let mut os = DummyOs::new(mem);
+    os.alloc_process_with_module(
+        std::cmp::min(
+            size::mb(2),
+            size.saturating_sub(size::mb(2)) + size::kb(512),
+        ),
+        &[],
+    );
     let obj = group_obj!((os, lib) as OsInstance);
     Ok(obj)
 }

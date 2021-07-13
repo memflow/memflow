@@ -21,12 +21,14 @@ pub struct DummyProcessInfo {
 
 impl DummyProcessInfo {
     pub fn add_modules(&mut self, count: usize, min_size: usize) {
+        let base = self.info.address + thread_rng().gen_range(0..((self.map_size - min_size) / 2));
+
         for i in 0..count {
             self.modules.push(ModuleInfo {
                 address: Address::from(i * 1024),
                 parent_process: Address::INVALID,
-                base: self.info.address + thread_rng().gen_range(0..self.map_size / 2),
-                size: (thread_rng().gen_range(min_size..self.map_size) / 2),
+                base,
+                size: (thread_rng().gen_range(min_size..(self.map_size - base.as_usize()))),
                 name: "dummy.so".into(),
                 path: "/".into(),
                 arch: x64::ARCH.ident(),
@@ -60,18 +62,22 @@ impl<T: MemoryView> Process for DummyProcess<T> {
     fn module_address_list_callback(
         &mut self,
         target_arch: Option<&ArchitectureIdent>,
-        mut callback: ModuleAddressCallback,
+        callback: ModuleAddressCallback,
     ) -> Result<()> {
-        for m in self.proc.modules.iter() {
-            if Some(&m.arch) == target_arch
-                && !callback.call(ModuleAddressInfo {
-                    address: m.address,
-                    arch: m.arch,
-                })
-            {
-                break;
-            }
-        }
+        self.proc
+            .modules
+            .iter()
+            .filter_map(|m| {
+                if target_arch.is_none() || Some(&m.arch) == target_arch {
+                    Some(ModuleAddressInfo {
+                        address: m.address,
+                        arch: m.arch,
+                    })
+                } else {
+                    None
+                }
+            })
+            .feed_into(callback);
         Ok(())
     }
 

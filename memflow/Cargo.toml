@@ -53,7 +53,7 @@ colored = "2.0"
 
 [features]
 default = ["std", "serde_derive", "plugins", "filemap", "memmapfiles"]
-trace_mmu = [] # enables debug traces in the mmu (very verbose)
+#trace_mmu = [] # enables debug traces in the mmu (very verbose)
 dummy_mem = ["rand", "rand_xorshift"]
 std = ["coarsetime", "no-std-compat/std", "cglue/std"]
 serde_derive = ["serde", "cglue/serde"]

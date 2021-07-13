@@ -21,14 +21,16 @@ pub struct DummyProcessInfo {
 
 impl DummyProcessInfo {
     pub fn add_modules(&mut self, count: usize, min_size: usize) {
-        let base = self.info.address + thread_rng().gen_range(0..((self.map_size - min_size) / 2));
+        let base = self.info.address
+            + thread_rng().gen_range(0..((self.map_size.saturating_sub(min_size)) / 2));
 
         for i in 0..count {
             self.modules.push(ModuleInfo {
                 address: Address::from(i * 1024),
                 parent_process: Address::INVALID,
                 base,
-                size: (thread_rng().gen_range(min_size..(self.map_size - base.as_usize()))),
+                size: (thread_rng()
+                    .gen_range(min_size..(self.map_size - (base - self.info.address)))),
                 name: "dummy.so".into(),
                 path: "/".into(),
                 arch: x64::ARCH.ident(),

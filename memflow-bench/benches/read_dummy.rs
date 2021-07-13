@@ -4,8 +4,6 @@ use memflow_bench::*;
 use criterion::*;
 
 use memflow::dummy::DummyMemory as Memory;
-use memflow::dummy::DummyOs;
-use memflow::os::Process;
 use memflow::prelude::v1::*;
 
 fn initialize_virt_ctx(cache_size: usize, use_tlb: bool) -> Result<OsInstanceArcBox<'static>> {

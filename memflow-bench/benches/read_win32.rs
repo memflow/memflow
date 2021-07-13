@@ -3,14 +3,7 @@ use memflow_bench::{phys, util, vat, virt};
 
 use criterion::*;
 
-use memflow::error::{Error, Result};
 use memflow::prelude::v1::*;
-use memflow_win32::prelude::v1::*;
-use memflow_win32::win32::Win32Kernel;
-
-use rand::prelude::*;
-use rand::{Rng, SeedableRng};
-use rand_xorshift::XorShiftRng as CurRng;
 
 fn create_connector(args: &Args) -> Result<impl PhysicalMemory + Clone> {
     // this workaround is to prevent loaded libraries

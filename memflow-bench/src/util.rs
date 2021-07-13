@@ -30,7 +30,7 @@ pub fn build_os(
         args = args.insert("pagecache", "none")
     }
 
-    let ret = if conn_name == "" {
+    let ret = if conn_name.is_empty() {
         inventory.builder().os(os_name).args(args).build()
     } else {
         inventory
@@ -74,5 +74,5 @@ pub fn find_proc<T: Os>(os: &mut T) -> Result<(<T as OsInner<'_>>::ProcessType, 
     }
 
     data.and_then(move |(info, module)| Some((os.process_by_info(info).ok()?, module)))
-        .ok_or(ErrorKind::NotFound.into())
+        .ok_or_else(|| ErrorKind::NotFound.into())
 }

@@ -1,8 +1,11 @@
+use super::mem_data::*;
+
 use crate::prelude::v1::{Result, *};
+
 use std::mem::MaybeUninit;
 use std::prelude::v1::*;
 
-use super::mem_data::*;
+use num_traits::int::PrimInt;
 
 pub mod arch_overlay;
 pub mod batcher;
@@ -147,7 +150,11 @@ pub trait MemoryView: Send {
     }
 
     #[skip_func]
-    fn read_ptr_into<U: Pod + ?Sized>(&mut self, ptr: Pointer<U>, out: &mut U) -> PartialResult<()>
+    fn read_ptr_into<U: PrimInt, T: Pod + ?Sized>(
+        &mut self,
+        ptr: Pointer<U, T>,
+        out: &mut T,
+    ) -> PartialResult<()>
     where
         Self: Sized,
     {
@@ -161,7 +168,7 @@ pub trait MemoryView: Send {
     }
 
     #[skip_func]
-    fn read_ptr<U: Pod + Sized>(&mut self, ptr: Pointer<U>) -> PartialResult<U>
+    fn read_ptr<U: PrimInt, T: Pod + Sized>(&mut self, ptr: Pointer<U, T>) -> PartialResult<T>
     where
         Self: Sized,
     {
@@ -204,7 +211,11 @@ pub trait MemoryView: Send {
     }
 
     #[skip_func]
-    fn write_ptr<U: Pod + Sized>(&mut self, ptr: Pointer<U>, data: &U) -> PartialResult<()>
+    fn write_ptr<U: PrimInt, T: Pod + ?Sized>(
+        &mut self,
+        ptr: Pointer<U, T>,
+        data: &T,
+    ) -> PartialResult<()>
     where
         Self: Sized,
     {

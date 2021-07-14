@@ -23,7 +23,7 @@ pub fn find_export_by_prefix(
         .syms
         .iter()
         .filter_map(|s| {
-            if let Some(Ok(name)) = elf.strtab.get(s.st_name) {
+            if let Some(name) = elf.strtab.get_at(s.st_name) {
                 match name.starts_with(prefix) {
                     true => Some(name.to_owned()),
                     false => None,

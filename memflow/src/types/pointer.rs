@@ -13,6 +13,15 @@ use std::marker::PhantomData;
 use std::mem::size_of;
 use std::{cmp, fmt, hash, ops};
 
+use num_traits::int::PrimInt;
+use num_traits::ops::wrapping::{WrappingAdd, WrappingSub};
+
+pub type Pointer32<T> = Pointer<u32, T>;
+pub type Pointer64<T> = Pointer<u64, T>;
+
+const _: [(); std::mem::size_of::<Pointer32<()>>()] = [(); std::mem::size_of::<u32>()];
+const _: [(); std::mem::size_of::<Pointer64<()>>()] = [(); std::mem::size_of::<u64>()];
+
 /// This type can be used in structs that are being read from the target memory.
 /// It holds a phantom type that can be used to describe the proper type of the pointer
 /// and to read it in a more convenient way.
@@ -25,7 +34,7 @@ use std::{cmp, fmt, hash, ops};
 /// # Examples
 ///
 /// ```
-/// use memflow::types::Pointer;
+/// use memflow::types::Pointer64;
 /// use memflow::mem::MemoryView;
 /// use memflow::dataview::Pod;
 ///
@@ -54,7 +63,7 @@ use std::{cmp, fmt, hash, ops};
 /// ```
 ///
 /// ```
-/// use memflow::types::Pointer;
+/// use memflow::types::Pointer64;
 /// use memflow::mem::MemoryView;
 /// use memflow::dataview::Pod;
 ///
@@ -83,12 +92,13 @@ use std::{cmp, fmt, hash, ops};
 /// ```
 #[repr(transparent)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize))]
-pub struct Pointer<T: ?Sized = ()> {
-    pub address: Address,
+pub struct Pointer<U: Sized, T: ?Sized = ()> {
+    pub inner: U,
     phantom_data: PhantomData<fn() -> T>,
 }
+unsafe impl<U: Pod, T: ?Sized + 'static> Pod for Pointer<U, T> {}
 
-impl<T: ?Sized> Pointer<T> {
+impl<U: PrimInt, T: ?Sized> Pointer<U, T> {
     const PHANTOM_DATA: PhantomData<fn() -> T> = PhantomData;
 
     /// A pointer64 with the value of zero.
@@ -96,26 +106,31 @@ impl<T: ?Sized> Pointer<T> {
     /// # Examples
     ///
     /// ```
-    /// use memflow::types::Pointer;
+    /// use memflow::types::Pointer64;
     ///
-    /// println!("pointer: {}", Pointer::<()>::NULL);
+    /// // println!("pointer: {}", Pointer::<()>::NULL);
     /// ```
-    pub const NULL: Pointer<T> = Pointer {
-        address: Address::NULL,
+    /*
+    pub const NULL: Pointer<U, T> = Pointer {
+        inner: U::zero(),
         phantom_data: PhantomData,
     };
+    */
 
     /// Returns a pointer64 with a value of zero.
     ///
     /// # Examples
     ///
     /// ```
-    /// use memflow::types::Pointer;
+    /// use memflow::types::Pointer64;
     ///
-    /// println!("pointer: {}", Pointer::<()>::null());
+    /// println!("pointer: {}", Pointer64::<()>::null());
     /// ```
-    pub const fn null() -> Self {
-        Pointer::NULL
+    pub fn null() -> Self {
+        Pointer {
+            inner: U::zero(),
+            phantom_data: PhantomData,
+        }
     }
 
     /// Returns `true` if the pointer64 is null.
@@ -123,13 +138,13 @@ impl<T: ?Sized> Pointer<T> {
     /// # Examples
     ///
     /// ```
-    /// use memflow::types::Pointer;
+    /// use memflow::types::Pointer32;
     ///
-    /// let ptr = Pointer::<()>::from(0x1000u32);
+    /// let ptr = Pointer32::<()>::from(0x1000u32);
     /// assert!(!ptr.is_null());
     /// ```
-    pub const fn is_null(self) -> bool {
-        self.address.is_null()
+    pub fn is_null(self) -> bool {
+        self.inner.is_zero()
     }
 
     /// Converts the pointer64 to an Option that is None when it is null
@@ -137,13 +152,13 @@ impl<T: ?Sized> Pointer<T> {
     /// # Examples
     ///
     /// ```
-    /// use memflow::types::Pointer;
+    /// use memflow::types::Pointer64;
     ///
-    /// assert_eq!(Pointer::<()>::null().non_null(), None);
-    /// assert_eq!(Pointer::<()>::from(0x1000u64).non_null(), Some(Pointer::from(0x1000u64)));
+    /// assert_eq!(Pointer64::<()>::null().non_null(), None);
+    /// assert_eq!(Pointer64::<()>::from(0x1000u64).non_null(), Some(Pointer64::from(0x1000u64)));
     /// ```
     #[inline]
-    pub fn non_null(self) -> Option<Pointer<T>> {
+    pub fn non_null(self) -> Option<Pointer<U, T>> {
         if self.is_null() {
             None
         } else {
@@ -151,68 +166,9 @@ impl<T: ?Sized> Pointer<T> {
         }
     }
 
-    /// Converts the pointer64 into a `u32` value.
-    ///
-    /// # Remarks:
-    ///
-    /// This function internally uses `as u32` which can cause a wrap-around
-    /// in case the internal 64-bit value does not fit the 32-bit `u32`.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use memflow::types::Pointer;
-    ///
-    /// let ptr = Pointer::<()>::from(0x1000u64);
-    /// let ptr_u32: u32 = ptr.as_u32();
-    /// assert_eq!(ptr_u32, 0x1000);
-    /// ```
-    #[inline]
-    pub const fn as_u32(self) -> u32 {
-        self.address.as_u64() as u32
-    }
-
-    /// Converts the pointer64 into a `u64` value.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use memflow::types::Pointer;
-    ///
-    /// let ptr = Pointer::<()>::from(0x1000u64);
-    /// let ptr_u64: u64 = ptr.as_u64();
-    /// assert_eq!(ptr_u64, 0x1000);
-    /// ```
-    #[inline]
-    pub const fn as_u64(self) -> u64 {
-        self.address.as_u64()
-    }
-
-    /// Converts the pointer64 into a `usize` value.
-    ///
-    /// # Remarks:
-    ///
-    /// When compiling for a 32-bit architecture the size of `usize`
-    /// is only 32-bit. Since this function internally uses `as usize` it can cause a wrap-around
-    /// in case the internal 64-bit value does not fit in the 32-bit `usize`.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use memflow::types::Pointer;
-    ///
-    /// let ptr = Pointer::<()>::from(0x1000u64);
-    /// let ptr_usize: usize = ptr.as_usize();
-    /// assert_eq!(ptr_usize, 0x1000);
-    /// ```
-    #[inline]
-    pub const fn as_usize(self) -> usize {
-        self.address.as_u64() as usize
-    }
-
-    pub const fn address(&self, arch_bits: u8, little_endian: bool) -> Address {
-        let addr = self.address.as_u64();
-        let addr = addr & Address::bit_mask_u8(0..(arch_bits - 1)).as_u64();
+    pub fn address(&self, arch_bits: u8, little_endian: bool) -> Address {
+        // TODO: this conversion should use umem
+        let addr = self.inner.to_u64().unwrap() & Address::bit_mask_u8(0..(arch_bits - 1)).as_u64();
         // TODO: this swapping is probably wrong,
         // and it will probably need to be swapped automatically when reads are performed.
         let addr = if cfg!(target_endian = "little") != little_endian {
@@ -224,7 +180,64 @@ impl<T: ?Sized> Pointer<T> {
     }
 }
 
-impl<T: Sized> Pointer<T> {
+impl<T: ?Sized> Pointer32<T> {
+    /// Converts the pointer64 into a `u32` value.
+    ///
+    /// # Remarks:
+    ///
+    /// This function internally uses `as u32` which can cause a wrap-around
+    /// in case the internal 64-bit value does not fit the 32-bit `u32`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use memflow::types::Pointer32;
+    ///
+    /// let ptr = Pointer32::<()>::from(0x1000u32);
+    /// let ptr_u32: u32 = ptr.as_u32();
+    /// assert_eq!(ptr_u32, 0x1000);
+    /// ```
+    #[inline]
+    pub const fn as_u32(self) -> u32 {
+        self.inner
+    }
+
+    /// Converts the pointer64 into a `u64` value.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use memflow::types::Pointer32;
+    ///
+    /// let ptr = Pointer32::<()>::from(0x1000u32);
+    /// let ptr_u64: u64 = ptr.as_u64();
+    /// assert_eq!(ptr_u64, 0x1000);
+    /// ```
+    #[inline]
+    pub const fn as_u64(self) -> u64 {
+        self.inner as u64
+    }
+}
+
+impl<T: ?Sized> Pointer64<T> {
+    /// Converts the pointer64 into a `u64` value.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use memflow::types::Pointer64;
+    ///
+    /// let ptr = Pointer64::<()>::from(0x1000u64);
+    /// let ptr_u64: u64 = ptr.as_u64();
+    /// assert_eq!(ptr_u64, 0x1000);
+    /// ```
+    #[inline]
+    pub const fn as_u64(self) -> u64 {
+        self.inner
+    }
+}
+
+impl<U: PrimInt + WrappingAdd + WrappingSub, T: Sized> Pointer<U, T> {
     /// Calculates the offset from a pointer64
     ///
     /// `count` is in units of T; e.g., a `count` of 3 represents a pointer offset of `3 * size_of::<T>()` bytes.
@@ -238,9 +251,9 @@ impl<T: Sized> Pointer<T> {
     /// # Examples:
     ///
     /// ```
-    /// use memflow::types::Pointer;
+    /// use memflow::types::Pointer64;
     ///
-    /// let ptr = Pointer::<u16>::from(0x1000u64);
+    /// let ptr = Pointer64::<u16>::from(0x1000u64);
     ///
     /// println!("{:?}", ptr.offset(3));
     /// ```
@@ -249,12 +262,12 @@ impl<T: Sized> Pointer<T> {
         assert!(0 < pointee_size && pointee_size <= i64::MAX as usize);
 
         if count >= 0 {
-            self.address
-                .wrapping_add(pointee_size * count as usize)
+            self.inner
+                .wrapping_add(&U::from(pointee_size as i64 * count).unwrap())
                 .into()
         } else {
-            self.address
-                .wrapping_sub(pointee_size * (-count) as usize)
+            self.inner
+                .wrapping_sub(&U::from(pointee_size as i64 * (-count)).unwrap())
                 .into()
         }
     }
@@ -273,10 +286,10 @@ impl<T: Sized> Pointer<T> {
     /// # Examples:
     ///
     /// ```
-    /// use memflow::types::Pointer;
+    /// use memflow::types::Pointer64;
     ///
-    /// let ptr1 = Pointer::<u16>::from(0x1000u64);
-    /// let ptr2 = Pointer::<u16>::from(0x1008u64);
+    /// let ptr1 = Pointer64::<u16>::from(0x1000u64);
+    /// let ptr2 = Pointer64::<u16>::from(0x1008u64);
     ///
     /// assert_eq!(ptr2.offset_from(ptr1), 4);
     /// assert_eq!(ptr1.offset_from(ptr2), -4);
@@ -286,9 +299,10 @@ impl<T: Sized> Pointer<T> {
         assert!(0 < pointee_size && pointee_size <= i64::MAX as usize);
 
         let offset = self
-            .address
-            .wrapping_sub(origin.address.as_u64() as usize)
-            .as_u64() as i64;
+            .inner
+            .to_i64()
+            .unwrap()
+            .wrapping_sub(origin.inner.to_i64().unwrap());
         offset / pointee_size as i64
     }
 
@@ -306,9 +320,9 @@ impl<T: Sized> Pointer<T> {
     /// Basic usage:
     ///
     /// ```
-    /// use memflow::types::Pointer;
+    /// use memflow::types::Pointer64;
     ///
-    /// let ptr = Pointer::<u16>::from(0x1000u64);
+    /// let ptr = Pointer64::<u16>::from(0x1000u64);
     ///
     /// println!("{:?}", ptr.add(3));
     /// ```
@@ -332,9 +346,9 @@ impl<T: Sized> Pointer<T> {
     /// Basic usage:
     ///
     /// ```
-    /// use memflow::types::Pointer;
+    /// use memflow::types::Pointer64;
     ///
-    /// let ptr = Pointer::<u16>::from(0x1000u64);
+    /// let ptr = Pointer64::<u16>::from(0x1000u64);
     ///
     /// println!("{:?}", ptr.sub(3));
     /// ```
@@ -345,26 +359,26 @@ impl<T: Sized> Pointer<T> {
 }
 
 /// Implement special phys/virt read/write for Pod types
-impl<T: Pod + ?Sized> Pointer<T> {
-    pub fn read_into<U: MemoryView>(self, mem: &mut U, out: &mut T) -> PartialResult<()> {
+impl<U: PrimInt, T: Pod + ?Sized> Pointer<U, T> {
+    pub fn read_into<M: MemoryView>(self, mem: &mut M, out: &mut T) -> PartialResult<()> {
         mem.read_ptr_into(self, out)
     }
 }
 
-impl<T: Pod + Sized> Pointer<T> {
-    pub fn read<U: MemoryView>(self, mem: &mut U) -> PartialResult<T> {
+impl<U: PrimInt, T: Pod + Sized> Pointer<U, T> {
+    pub fn read<M: MemoryView>(self, mem: &mut M) -> PartialResult<T> {
         mem.read_ptr(self)
     }
 
-    pub fn write<U: MemoryView>(self, mem: &mut U, data: &T) -> PartialResult<()> {
+    pub fn write<M: MemoryView>(self, mem: &mut M, data: &T) -> PartialResult<()> {
         mem.write_ptr(self, data)
     }
 }
 
 /// Implement special phys/virt read/write for CReprStr
-impl Pointer<ReprCString> {
-    pub fn read_string<U: MemoryView>(self, mem: &mut U) -> PartialResult<ReprCString> {
-        match mem.read_char_string(self.address.into()) {
+impl<U: PrimInt> Pointer<U, ReprCString> {
+    pub fn read_string<M: MemoryView>(self, mem: &mut M) -> PartialResult<ReprCString> {
+        match mem.read_char_string(self.inner.to_u64().unwrap().into()) {
             Ok(s) => Ok(s.into()),
             Err(PartialError::Error(e)) => Err(PartialError::Error(e)),
             Err(PartialError::PartialVirtualRead(s)) => {
@@ -377,128 +391,121 @@ impl Pointer<ReprCString> {
     }
 }
 
-impl<T> Pointer<[T]> {
-    pub const fn decay(self) -> Pointer<T> {
+impl<U: PrimInt + WrappingAdd + WrappingSub, T> Pointer<U, [T]> {
+    pub fn decay(self) -> Pointer<U, T> {
         Pointer {
-            address: self.address,
-            phantom_data: Pointer::<T>::PHANTOM_DATA,
+            inner: self.inner,
+            phantom_data: Pointer::<U, T>::PHANTOM_DATA,
         }
     }
 
-    pub const fn at(self, i: usize) -> Pointer<T> {
-        let address = self.address.wrapping_add(i * size_of::<T>());
+    pub fn at(self, i: usize) -> Pointer<U, T> {
+        let inner = self
+            .inner
+            .wrapping_add(&U::from(i * size_of::<T>()).unwrap());
         Pointer {
-            address,
-            phantom_data: Pointer::<T>::PHANTOM_DATA,
+            inner,
+            phantom_data: Pointer::<U, T>::PHANTOM_DATA,
         }
     }
 }
 
-impl<T: ?Sized> Copy for Pointer<T> {}
-impl<T: ?Sized> Clone for Pointer<T> {
+impl<U: Copy, T: ?Sized> Copy for Pointer<U, T> {}
+impl<U: Copy, T: ?Sized> Clone for Pointer<U, T> {
     #[inline(always)]
-    fn clone(&self) -> Pointer<T> {
+    fn clone(&self) -> Pointer<U, T> {
         *self
     }
 }
-impl<T: ?Sized> Default for Pointer<T> {
+impl<U: PrimInt + WrappingAdd + WrappingSub, T: ?Sized> Default for Pointer<U, T> {
     #[inline(always)]
-    fn default() -> Pointer<T> {
-        Pointer::NULL
+    fn default() -> Pointer<U, T> {
+        Pointer::null()
     }
 }
-impl<T: ?Sized> Eq for Pointer<T> {}
-impl<T: ?Sized> PartialEq for Pointer<T> {
+impl<U: Eq, T: ?Sized> Eq for Pointer<U, T> {}
+impl<U: PartialEq, T: ?Sized> PartialEq for Pointer<U, T> {
     #[inline(always)]
-    fn eq(&self, rhs: &Pointer<T>) -> bool {
-        self.address == rhs.address
+    fn eq(&self, rhs: &Pointer<U, T>) -> bool {
+        self.inner == rhs.inner
     }
 }
-impl<T: ?Sized> PartialOrd for Pointer<T> {
+impl<U: PartialOrd, T: ?Sized> PartialOrd for Pointer<U, T> {
     #[inline(always)]
-    fn partial_cmp(&self, rhs: &Pointer<T>) -> Option<cmp::Ordering> {
-        self.address.partial_cmp(&rhs.address)
+    fn partial_cmp(&self, rhs: &Pointer<U, T>) -> Option<cmp::Ordering> {
+        self.inner.partial_cmp(&rhs.inner)
     }
 }
-impl<T: ?Sized> Ord for Pointer<T> {
+impl<U: Ord, T: ?Sized> Ord for Pointer<U, T> {
     #[inline(always)]
-    fn cmp(&self, rhs: &Pointer<T>) -> cmp::Ordering {
-        self.address.cmp(&rhs.address)
+    fn cmp(&self, rhs: &Pointer<U, T>) -> cmp::Ordering {
+        self.inner.cmp(&rhs.inner)
     }
 }
-impl<T: ?Sized> hash::Hash for Pointer<T> {
+impl<U: hash::Hash, T: ?Sized> hash::Hash for Pointer<U, T> {
     #[inline(always)]
     fn hash<H: hash::Hasher>(&self, state: &mut H) {
-        self.address.as_u64().hash(state)
+        self.inner.hash(state)
     }
 }
-impl<T: ?Sized> AsRef<Address> for Pointer<T> {
+impl<U: PrimInt, T: ?Sized> AsRef<U> for Pointer<U, T> {
     #[inline(always)]
-    fn as_ref(&self) -> &Address {
-        &self.address
+    fn as_ref(&self) -> &U {
+        &self.inner
     }
 }
-impl<T: ?Sized> AsMut<Address> for Pointer<T> {
+impl<U: PrimInt, T: ?Sized> AsMut<U> for Pointer<U, T> {
     #[inline(always)]
-    fn as_mut(&mut self) -> &mut Address {
-        &mut self.address
+    fn as_mut(&mut self) -> &mut U {
+        &mut self.inner
     }
 }
 
 // From implementations
-impl<T: ?Sized> From<u32> for Pointer<T> {
+impl<U: PrimInt, T: ?Sized> From<U> for Pointer<U, T> {
     #[inline(always)]
-    fn from(address: u32) -> Pointer<T> {
+    fn from(address: U) -> Pointer<U, T> {
         Pointer {
-            address: Address::from(address),
+            inner: address,
             phantom_data: PhantomData,
         }
     }
 }
 
-impl<T: ?Sized> From<u64> for Pointer<T> {
+impl<T: ?Sized> From<Address> for Pointer64<T> {
     #[inline(always)]
-    fn from(address: u64) -> Pointer<T> {
+    fn from(address: Address) -> Pointer64<T> {
         Pointer {
-            address: Address::from(address),
-            phantom_data: PhantomData,
-        }
-    }
-}
-
-impl<T: ?Sized> From<Address> for Pointer<T> {
-    #[inline(always)]
-    fn from(address: Address) -> Pointer<T> {
-        Pointer {
-            address,
+            inner: address.as_u64(),
             phantom_data: PhantomData,
         }
     }
 }
 
 // Into implementations
-impl<T: ?Sized> From<Pointer<T>> for Address {
+impl<U: Into<Address>, T: ?Sized> From<Pointer<U, T>> for Address {
     #[inline(always)]
-    fn from(ptr: Pointer<T>) -> Address {
-        ptr.address
+    fn from(ptr: Pointer<U, T>) -> Address {
+        ptr.inner.into()
     }
 }
 
-impl<T: ?Sized> From<Pointer<T>> for u64 {
+impl<U: Into<Address>, T: ?Sized> From<Pointer<U, T>> for u64 {
     #[inline(always)]
-    fn from(ptr: Pointer<T>) -> u64 {
-        ptr.address.as_u64()
+    fn from(ptr: Pointer<U, T>) -> u64 {
+        let address: Address = ptr.inner.into();
+        address.as_u64()
     }
 }
 
 /// Tries to convert a Pointer into a u32.
 /// The function will return an `Error::Bounds` error if the input value is greater than `u32::max_value()`.
-impl<T: ?Sized> TryFrom<Pointer<T>> for u32 {
+impl<U: PrimInt, T: ?Sized> TryFrom<Pointer<U, T>> for u32 {
     type Error = crate::error::Error;
 
-    fn try_from(ptr: Pointer<T>) -> std::result::Result<u32, Self::Error> {
-        if ptr.address <= Address::from(u32::max_value()) {
-            Ok(ptr.address.as_u64() as u32)
+    fn try_from(ptr: Pointer<U, T>) -> std::result::Result<u32, Self::Error> {
+        if ptr.inner.to_u64().unwrap() <= u32::max_value() as u64 {
+            Ok(ptr.inner.to_u32().unwrap())
         } else {
             Err(Error(ErrorOrigin::Pointer, ErrorKind::OutOfBounds))
         }
@@ -506,58 +513,55 @@ impl<T: ?Sized> TryFrom<Pointer<T>> for u32 {
 }
 
 // Arithmetic operations
-impl<T> ops::Add<usize> for Pointer<T> {
-    type Output = Pointer<T>;
+impl<U: PrimInt, T> ops::Add<usize> for Pointer<U, T> {
+    type Output = Pointer<U, T>;
     #[inline(always)]
-    fn add(self, other: usize) -> Pointer<T> {
-        let address = self.address + (other * size_of::<T>());
+    fn add(self, other: usize) -> Pointer<U, T> {
+        let address = self.inner + (U::from(other * size_of::<T>()).unwrap());
         Pointer {
-            address,
+            inner: address,
             phantom_data: self.phantom_data,
         }
     }
 }
-impl<T> ops::Sub<usize> for Pointer<T> {
-    type Output = Pointer<T>;
+impl<U: PrimInt, T> ops::Sub<usize> for Pointer<U, T> {
+    type Output = Pointer<U, T>;
     #[inline(always)]
-    fn sub(self, other: usize) -> Pointer<T> {
-        let address = self.address - (other * size_of::<T>());
+    fn sub(self, other: usize) -> Pointer<U, T> {
+        let address = self.inner - (U::from(other * size_of::<T>()).unwrap());
         Pointer {
-            address,
+            inner: address,
             phantom_data: self.phantom_data,
         }
     }
 }
 
-impl<T: ?Sized> fmt::Debug for Pointer<T> {
+impl<U: fmt::LowerHex, T: ?Sized> fmt::Debug for Pointer<U, T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:x}", self.address)
+        write!(f, "{:x}", self.inner)
     }
 }
-impl<T: ?Sized> fmt::UpperHex for Pointer<T> {
+impl<U: fmt::UpperHex, T: ?Sized> fmt::UpperHex for Pointer<U, T> {
     #[inline(always)]
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:X}", self.address)
+        write!(f, "{:X}", self.inner)
     }
 }
-impl<T: ?Sized> fmt::LowerHex for Pointer<T> {
+impl<U: fmt::LowerHex, T: ?Sized> fmt::LowerHex for Pointer<U, T> {
     #[inline(always)]
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:x}", self.address)
+        write!(f, "{:x}", self.inner)
     }
 }
-impl<T: ?Sized> fmt::Display for Pointer<T> {
+impl<U: fmt::LowerHex, T: ?Sized> fmt::Display for Pointer<U, T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:x}", self.address)
+        write!(f, "{:x}", self.inner)
     }
 }
 
-unsafe impl<T: ?Sized + 'static> Pod for Pointer<T> {}
-const _: [(); std::mem::size_of::<Pointer<()>>()] = [(); std::mem::size_of::<u64>()];
-
-impl<T: ?Sized + 'static> ByteSwap for Pointer<T> {
+impl<U: ByteSwap, T: ?Sized + 'static> ByteSwap for Pointer<U, T> {
     fn byte_swap(&mut self) {
-        self.address.byte_swap();
+        self.inner.byte_swap();
     }
 }
 
@@ -566,28 +570,43 @@ mod tests {
     use super::*;
 
     #[test]
-    fn offset() {
-        let ptr8 = Pointer::<u8>::from(0x1000u64);
+    fn offset32() {
+        let ptr8 = Pointer32::<u8>::from(0x1000u32);
+        assert_eq!(ptr8.offset(3).as_u32(), 0x1003u32);
+        assert_eq!(ptr8.offset(-5).as_u32(), 0xFFBu32);
+
+        let ptr16 = Pointer32::<u16>::from(0x1000u32);
+        assert_eq!(ptr16.offset(3).as_u32(), 0x1006u32);
+        assert_eq!(ptr16.offset(-5).as_u32(), 0xFF6u32);
+
+        let ptr32 = Pointer32::<u32>::from(0x1000u32);
+        assert_eq!(ptr32.offset(3).as_u32(), 0x100Cu32);
+        assert_eq!(ptr32.offset(-5).as_u32(), 0xFECu32);
+    }
+
+    #[test]
+    fn offset64() {
+        let ptr8 = Pointer64::<u8>::from(0x1000u64);
         assert_eq!(ptr8.offset(3).as_u64(), 0x1003u64);
         assert_eq!(ptr8.offset(-5).as_u64(), 0xFFBu64);
 
-        let ptr16 = Pointer::<u16>::from(0x1000u64);
+        let ptr16 = Pointer64::<u16>::from(0x1000u64);
         assert_eq!(ptr16.offset(3).as_u64(), 0x1006u64);
         assert_eq!(ptr16.offset(-5).as_u64(), 0xFF6u64);
 
-        let ptr32 = Pointer::<u32>::from(0x1000u64);
+        let ptr32 = Pointer64::<u32>::from(0x1000u64);
         assert_eq!(ptr32.offset(3).as_u64(), 0x100Cu64);
         assert_eq!(ptr32.offset(-5).as_u64(), 0xFECu64);
 
-        let ptr64 = Pointer::<u64>::from(0x1000u64);
+        let ptr64 = Pointer64::<u64>::from(0x1000u64);
         assert_eq!(ptr64.offset(3).as_u64(), 0x1018u64);
         assert_eq!(ptr64.offset(-5).as_u64(), 0xFD8u64);
     }
 
     #[test]
     fn offset_from() {
-        let ptr1 = Pointer::<u16>::from(0x1000u64);
-        let ptr2 = Pointer::<u16>::from(0x1008u64);
+        let ptr1 = Pointer64::<u16>::from(0x1000u64);
+        let ptr2 = Pointer64::<u16>::from(0x1008u64);
 
         assert_eq!(ptr2.offset_from(ptr1), 4);
         assert_eq!(ptr1.offset_from(ptr2), -4);

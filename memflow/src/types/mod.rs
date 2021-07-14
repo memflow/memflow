@@ -22,7 +22,7 @@ pub use physical_address::PhysicalAddress;
 
 pub mod pointer;
 #[doc(hidden)]
-pub use pointer::Pointer;
+pub use pointer::{Pointer, Pointer32, Pointer64};
 
 pub mod byte_swap;
 #[doc(hidden)]

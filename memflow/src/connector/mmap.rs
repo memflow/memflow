@@ -40,7 +40,7 @@ impl MappedPhysicalMemory<&'static mut [u8], MemoryMap<&'static mut [u8]>> {
             .map(|(base, (real_base, size))| {
                 (
                     base,
-                    std::slice::from_raw_parts_mut(real_base.as_u64() as _, size),
+                    std::slice::from_raw_parts_mut(real_base.to_umem() as _, size),
                 )
             })
             .for_each(|(base, buf)| {
@@ -65,7 +65,7 @@ impl MappedPhysicalMemory<&'static [u8], MemoryMap<&'static [u8]>> {
             .map(|(base, (real_base, size))| {
                 (
                     base,
-                    std::slice::from_raw_parts(real_base.as_u64() as _, size),
+                    std::slice::from_raw_parts(real_base.to_umem() as _, size),
                 )
             })
             .for_each(|(base, buf)| {
@@ -131,7 +131,7 @@ impl<'a, F: AsRef<MemoryMap<&'a mut [u8]>> + Send> PhysicalMemory
             .as_ref()
             .iter()
             .last()
-            .map(|map| map.base().as_usize() + map.output().len())
+            .map(|map| map.base().to_umem() + map.output().len())
             .unwrap()
             - 1;
         let real_size = self
@@ -184,7 +184,7 @@ impl<'a, F: AsRef<MemoryMap<&'a [u8]>> + Send> PhysicalMemory
             .as_ref()
             .iter()
             .last()
-            .map(|map| map.base().as_usize() + map.output().len())
+            .map(|map| map.base().to_umem() + map.output().len())
             .unwrap()
             - 1;
         let real_size = self

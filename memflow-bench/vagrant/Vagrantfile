@@ -1,0 +1,39 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+Vagrant.configure("2") do |config|
+  config.vm.provider :virtualbox do |v|
+    v.memory = 2048
+    v.cpus = 4
+    config.vm.synced_folder "../..", "/memflow", create: true, disabled: false
+  end
+  config.vm.provider :libvirt do |v|
+    v.memory = 2048
+    v.cpus = 4
+    v.qemu_use_session = false
+    config.vm.synced_folder "../..", "/memflow", type: 'nfs', nfs_udp: false, create: true, disabled: false
+  end
+
+  config.vm.box = "generic/ubuntu2004"
+  config.vm.provision :shell, privileged: true, inline: $install_updates
+  config.vm.provision :shell, privileged: false, inline: $install_memflow
+end
+
+$install_updates = <<-SCRIPT
+echo "installing updates"
+export DEBIAN_FRONTEND=noninteractive
+apt-get -qq update
+apt-get -qq install git build-essential
+SCRIPT
+
+$install_memflow = <<-SCRIPT
+echo "installing rust"
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+source $HOME/.cargo/env
+
+echo "building memflow"
+cd /memflow
+cargo build --release --workspace --all-features
+
+# TODO: install memflow-win32, memflow-coredump, etc
+SCRIPT

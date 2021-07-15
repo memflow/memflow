@@ -83,7 +83,7 @@ impl Win32ModuleListInfo {
             list_entry = mem.as_mut().read_addr_arch(arch_obj, list_entry)?;
             // Break on misaligned entry. On NT 4.0 list end is misaligned, maybe it's a flag?
             if list_entry.is_null()
-                || (list_entry.as_u64() & 0b111) != 0
+                || (list_entry.to_umem() & 0b111) != 0
                 || list_entry == self.module_base
             {
                 break;

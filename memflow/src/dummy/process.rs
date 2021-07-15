@@ -6,7 +6,7 @@ use crate::architecture::ArchitectureIdent;
 use crate::mem::{mem_data::*, memory_view::*};
 use crate::os::process::*;
 use crate::os::*;
-use crate::types::Address;
+use crate::types::{umem, Address};
 
 use crate::cglue::*;
 use rand::{thread_rng, Rng};
@@ -14,23 +14,24 @@ use rand::{thread_rng, Rng};
 #[derive(Clone)]
 pub struct DummyProcessInfo {
     pub info: ProcessInfo,
-    pub map_size: usize,
+    pub map_size: umem,
     pub dtb: Address,
     pub modules: Vec<ModuleInfo>,
 }
 
 impl DummyProcessInfo {
-    pub fn add_modules(&mut self, count: usize, min_size: usize) {
+    pub fn add_modules(&mut self, count: usize, min_size: umem) {
         let base = self.info.address
             + thread_rng().gen_range(0..((self.map_size.saturating_sub(min_size)) / 2));
 
         for i in 0..count {
             self.modules.push(ModuleInfo {
-                address: Address::from(i * 1024),
+                address: Address::from((i * 1024) as umem),
                 parent_process: Address::INVALID,
                 base,
-                size: (thread_rng()
-                    .gen_range(min_size..(self.map_size - (base - self.info.address)))),
+                size: (thread_rng().gen_range(
+                    min_size as usize..(self.map_size - (base - self.info.address)) as usize,
+                )),
                 name: "dummy.so".into(),
                 path: "/".into(),
                 arch: x64::ARCH.ident(),

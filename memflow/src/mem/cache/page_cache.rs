@@ -3,7 +3,7 @@ use crate::error::Result;
 use crate::iter::PageChunks;
 use crate::mem::mem_data::*;
 use crate::mem::phys_mem::{PhysicalMemory, PhysicalReadFailCallback};
-use crate::types::{Address, PhysicalAddress};
+use crate::types::{umem, Address, PhysicalAddress};
 
 use super::{CacheValidator, PageType};
 
@@ -50,8 +50,8 @@ impl<'a, T: CacheValidator> PageCache<'a, T> {
     }
 
     pub fn with_page_size(
-        page_size: usize,
-        size: usize,
+        page_size: umem,
+        size: umem,
         page_type_mask: PageType,
         mut validator: T,
     ) -> Self {

@@ -28,13 +28,13 @@ pub struct TranslateData<T> {
 
 impl<T: SplitAtIndex> TranslateData<T> {
     pub fn split_at_address(self, addr: Address) -> (Option<Self>, Option<Self>) {
-        let sub = self.addr.as_u64();
-        self.split_at(addr.as_u64().saturating_sub(sub) as usize)
+        let sub = self.addr.to_umem();
+        self.split_at(addr.to_umem().saturating_sub(sub) as usize)
     }
 
     pub fn split_at_address_rev(self, addr: Address) -> (Option<Self>, Option<Self>) {
         let base = self.addr + self.length();
-        self.split_at_rev(base.as_u64().saturating_sub(addr.as_u64()) as usize)
+        self.split_at_rev(base.to_umem().saturating_sub(addr.to_umem()) as usize)
     }
 }
 
@@ -189,8 +189,8 @@ impl<T: MmuTranslationBase> TranslationChunk<T> {
         //TODO: mask out the addresses to limit them within address space
         //this is in particular for the first step where addresses are split between positive and
         //negative sides
-        let upper: u64 = (self.max_addr - 1).as_page_aligned(step_size).as_u64();
-        let lower: u64 = self.min_addr.as_page_aligned(step_size).as_u64();
+        let upper: u64 = (self.max_addr - 1).as_page_aligned(step_size).to_umem();
+        let lower: u64 = self.min_addr.as_page_aligned(step_size).to_umem();
 
         let mut cur_max_addr = !0u64;
 
@@ -253,7 +253,7 @@ impl<T: MmuTranslationBase> TranslationChunk<T> {
                 // There was some leftover data
                 if let Some(data) = left {
                     cur_max_addr =
-                        std::cmp::max((data.addr + data.length()).as_u64(), cur_max_addr);
+                        std::cmp::max((data.addr + data.length()).to_umem(), cur_max_addr);
                     self.push_data(data, tmp_addr_stack);
                 }
             }

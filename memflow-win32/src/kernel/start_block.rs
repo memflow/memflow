@@ -59,7 +59,7 @@ pub fn find<T: PhysicalMemory>(mem: &mut T, arch: Option<ArchitectureIdent>) -> 
                 // find x64 dtb in low stub < 1M
                 match x64::find_lowstub(&low1m) {
                     Ok(d) => {
-                        if d.dtb.as_u64() != 0 {
+                        if d.dtb.to_umem() != 0 {
                             return Ok(d);
                         }
                     }

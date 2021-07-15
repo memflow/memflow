@@ -2,7 +2,7 @@
 This module contains data structures related to information about a page.
 */
 
-use super::Address;
+use super::{umem, Address};
 
 bitflags! {
     /// Describes the type of a page using a bitflag.
@@ -70,7 +70,7 @@ pub struct Page {
     /// Contains the base address of this page.
     pub page_base: Address,
     /// Contains the size of this page.
-    pub page_size: usize,
+    pub page_size: umem,
 }
 
 impl Page {

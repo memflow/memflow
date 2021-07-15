@@ -23,7 +23,7 @@ pub(crate) use mmu::ArchMmuDef;
 use crate::error::{Error, Result};
 use crate::iter::SplitAtIndex;
 use crate::mem::{MemData, PhysicalMemory};
-use crate::types::size;
+use crate::types::{size, umem};
 
 use crate::types::{Address, PhysicalAddress};
 
@@ -180,7 +180,7 @@ pub trait Architecture: Send + Sync + 'static {
     /// let arch = x64::ARCH;
     /// assert_eq!(arch.page_size(), size::kb(4));
     /// ```
-    fn page_size(&self) -> usize;
+    fn page_size(&self) -> umem;
 
     /// Returns the `usize` of a pointers width on a `Architecture`.
     ///
@@ -195,7 +195,7 @@ pub trait Architecture: Send + Sync + 'static {
     /// let arch = x32::ARCH;
     /// assert_eq!(arch.size_addr(), 4);
     /// ```
-    fn size_addr(&self) -> usize;
+    fn size_addr(&self) -> u8;
 
     /// Returns the address space range in bits for the `Architecture`.
     ///
@@ -256,7 +256,7 @@ pub enum ArchitectureIdent {
     /// Arm 64-bit architecture with specified page size
     ///
     /// Valid page sizes are 4kb, 16kb, 64kb. Only 4kb is supported at the moment
-    AArch64(usize),
+    AArch64(umem),
 }
 
 impl std::fmt::Display for ArchitectureIdent {
@@ -281,7 +281,7 @@ impl ArchitectureIdent {
 
 impl From<ArchitectureIdent> for ArchitectureObj {
     fn from(arch: ArchitectureIdent) -> ArchitectureObj {
-        const KB4: usize = size::kb(4);
+        const KB4: umem = size::kb(4);
         match arch {
             ArchitectureIdent::X86(32, false) => x86::x32::ARCH,
             ArchitectureIdent::X86(32, true) => x86::x32_pae::ARCH,

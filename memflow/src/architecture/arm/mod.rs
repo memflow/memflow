@@ -12,7 +12,7 @@ use super::{
 use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 use crate::iter::SplitAtIndex;
 use crate::mem::{MemData, PhysicalMemory};
-use crate::types::{size, Address};
+use crate::types::{size, umem, Address};
 
 pub struct ArmArchitecture {
     /// Defines how many bits does the native word size have
@@ -30,11 +30,11 @@ impl Architecture for ArmArchitecture {
         self.mmu.def.endianess
     }
 
-    fn page_size(&self) -> usize {
+    fn page_size(&self) -> umem {
         self.mmu.page_size_level(1)
     }
 
-    fn size_addr(&self) -> usize {
+    fn size_addr(&self) -> u8 {
         self.mmu.def.addr_size.into()
     }
 
@@ -69,7 +69,7 @@ pub struct ArmPageTableBase(Address, Address);
 impl MmuTranslationBase for ArmPageTableBase {
     fn get_pt_by_virt_addr(&self, addr: Address) -> Address {
         //TODO: handle for Arm 32
-        if (addr.as_u64().to_be() & 1) == 1 {
+        if (addr.to_umem().to_be() & 1) == 1 {
             self.1
         } else {
             self.0
@@ -122,7 +122,7 @@ impl VirtualTranslate3 for ArmVirtualTranslate {
     fn translation_table_id(&self, address: Address) -> usize {
         self.dtb
             .get_pt_by_virt_addr(address)
-            .as_u64()
+            .to_umem()
             .overflowing_shr(11)
             .0 as usize
     }

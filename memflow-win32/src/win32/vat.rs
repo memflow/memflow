@@ -55,7 +55,7 @@ impl VirtualTranslate3 for Win32VirtualTranslate {
     }
 
     fn translation_table_id(&self, _address: Address) -> usize {
-        self.dtb.as_u64().overflowing_shr(12).0 as usize
+        self.dtb.to_umem().overflowing_shr(12).0 as usize
     }
 
     fn arch(&self) -> ArchitectureObj {

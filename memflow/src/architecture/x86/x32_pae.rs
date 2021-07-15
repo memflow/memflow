@@ -44,15 +44,15 @@ mod tests {
         let mask_addr = Address::invalid();
         assert_eq!(
             mmu.pte_addr_mask(mask_addr, 0),
-            Address::bit_mask(5..35).as_u64()
+            Address::bit_mask(5..35).to_umem()
         );
         assert_eq!(
             mmu.pte_addr_mask(mask_addr, 1),
-            Address::bit_mask(12..35).as_u64()
+            Address::bit_mask(12..35).to_umem()
         );
         assert_eq!(
             mmu.pte_addr_mask(mask_addr, 2),
-            Address::bit_mask(12..35).as_u64()
+            Address::bit_mask(12..35).to_umem()
         );
     }
 

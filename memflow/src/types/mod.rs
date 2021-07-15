@@ -8,7 +8,7 @@ it exposes different size helpers.
 
 pub mod address;
 #[doc(hidden)]
-pub use address::Address;
+pub use address::{imem, umem, Address, PrimitiveAddress};
 
 pub mod size;
 

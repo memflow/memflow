@@ -9,4 +9,5 @@ Cargo.lock
 flow-bench/target
 nostd-test/target
 *.so
+.vagrant
 TODO.md

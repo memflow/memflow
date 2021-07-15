@@ -41,7 +41,7 @@ use crate::mem::{
     PhysicalWriteData,
 };
 
-use crate::types::{size, PageType};
+use crate::types::{size, umem, PageType};
 use cglue::iter::CIterator;
 
 use bumpalo::Bump;
@@ -157,7 +157,7 @@ impl<'a, T: PhysicalMemory, Q: CacheValidator> PhysicalMemory for CachedMemoryAc
                     let mut cached_page = cache.cached_page_mut(paddr, false);
                     if let PageValidity::Valid(buf) = &mut cached_page.validity {
                         // write-back into still valid cache pages
-                        let start = paddr - cached_page.address;
+                        let start = (paddr - cached_page.address) as usize;
                         buf[start..(start + data_chunk.len())].copy_from_slice(data_chunk.into());
                     }
 
@@ -185,8 +185,8 @@ impl<'a, T: PhysicalMemory, Q: CacheValidator> PhysicalMemory for CachedMemoryAc
 pub struct CachedMemoryAccessBuilder<T, Q> {
     mem: T,
     validator: Q,
-    page_size: Option<usize>,
-    cache_size: usize,
+    page_size: Option<umem>,
+    cache_size: umem,
     page_type_mask: PageType,
 }
 
@@ -351,7 +351,7 @@ impl<T: PhysicalMemory, Q: CacheValidator> CachedMemoryAccessBuilder<T, Q> {
     /// # let mut mem = DummyMemory::new(size::mb(4));
     /// # build(mem);
     /// ```
-    pub fn page_size(mut self, page_size: usize) -> Self {
+    pub fn page_size(mut self, page_size: umem) -> Self {
         self.page_size = Some(page_size);
         self
     }
@@ -413,7 +413,7 @@ impl<T: PhysicalMemory, Q: CacheValidator> CachedMemoryAccessBuilder<T, Q> {
     /// # let mut mem = DummyMemory::new(size::mb(4));
     /// # build(mem);
     /// ```
-    pub fn cache_size(mut self, cache_size: usize) -> Self {
+    pub fn cache_size(mut self, cache_size: umem) -> Self {
         self.cache_size = cache_size;
         self
     }

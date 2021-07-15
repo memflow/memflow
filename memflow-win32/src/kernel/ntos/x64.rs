@@ -20,12 +20,12 @@ pub fn find_with_va_hint<T: MemoryView + VirtualTranslate>(
 ) -> Result<(Address, usize)> {
     debug!(
         "x64::find_with_va_hint: trying to find ntoskrnl.exe with va hint at {:x}",
-        start_block.kernel_hint.as_u64()
+        start_block.kernel_hint.to_umem()
     );
 
     // va was found previously
-    let mut va_base = start_block.kernel_hint.as_u64() & !0x0001_ffff;
-    while va_base + size::mb(16) as u64 > start_block.kernel_hint.as_u64() {
+    let mut va_base = start_block.kernel_hint.to_umem() & !0x0001_ffff;
+    while va_base + size::mb(16) as u64 > start_block.kernel_hint.to_umem() {
         trace!("x64::find_with_va_hint: probing at {:x}", va_base);
 
         match find_with_va(virt_mem, va_base) {
@@ -93,7 +93,7 @@ pub fn find<T: MemoryView + VirtualTranslate>(
         .into_iter()
         .flat_map(|map| map.size.page_chunks(map.address, size::mb(2)))
         .filter(|(_, size)| *size > size::kb(256))
-        .filter_map(|(va, _)| find_with_va(virt_mem, va.as_u64()).ok())
+        .filter_map(|(va, _)| find_with_va(virt_mem, va.to_umem()).ok())
         .next()
     {
         Some(a) => {

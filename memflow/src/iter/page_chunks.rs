@@ -319,7 +319,7 @@ impl<T: SplitAtIndex, FS: FnMut(Address, &T, Option<&T>) -> bool> Iterator
             loop {
                 let end_len = Address::from(
                     self.cur_address
-                        .as_u64()
+                        .to_umem()
                         .wrapping_add(self.page_size as u64),
                 )
                 .as_page_aligned(self.page_size)

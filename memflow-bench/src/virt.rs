@@ -28,7 +28,7 @@ fn rwtest<T: MemoryView>(
 
             while done_size < read_size {
                 let base_addr = rng
-                    .gen_range(module.base.as_u64()..(module.base.as_u64() + module.size as u64));
+                    .gen_range(module.base.to_umem()..(module.base.to_umem() + module.size as u64));
 
                 let mut bufs = Vec::with_capacity(*o);
 

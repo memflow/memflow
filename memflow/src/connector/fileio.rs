@@ -141,7 +141,7 @@ impl<T: Seek + Read + Write + Send> PhysicalMemory for FileIoMemory<T> {
         };
         for ((file_off, _), buf) in self.mem_map.map_iter(data.map(<_>::into), &mut void) {
             self.reader
-                .seek(SeekFrom::Start(file_off.as_u64()))
+                .seek(SeekFrom::Start(file_off.to_umem()))
                 .map_err(|err| {
                     Error(ErrorOrigin::Connector, ErrorKind::UnableToSeekFile).log_error(err)
                 })?;
@@ -163,7 +163,7 @@ impl<T: Seek + Read + Write + Send> PhysicalMemory for FileIoMemory<T> {
         };
         for ((file_off, _), buf) in self.mem_map.map_iter(data.map(<_>::from), void) {
             self.reader
-                .seek(SeekFrom::Start(file_off.as_u64()))
+                .seek(SeekFrom::Start(file_off.to_umem()))
                 .map_err(|err| {
                     Error(ErrorOrigin::Connector, ErrorKind::UnableToSeekFile).log_error(err)
                 })?;

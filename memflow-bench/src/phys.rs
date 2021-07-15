@@ -30,7 +30,7 @@ fn rwtest(
             let mut done_size = 0;
 
             while done_size < read_size {
-                let base_addr = rng.gen_range(start.as_u64()..end.as_u64());
+                let base_addr = rng.gen_range(start.to_umem()..end.to_umem());
 
                 let mut bufs = Vec::with_capacity(*o);
 

@@ -26,7 +26,7 @@ fn vat_test_with_mem(
     ];
 
     let base_addr =
-        rng.gen_range(module.base.as_u64()..(module.base.as_u64() + module.size as u64));
+        rng.gen_range(module.base.to_umem()..(module.base.to_umem() + module.size as u64));
 
     for range in bufs.iter_mut() {
         range.address = (base_addr + rng.gen_range(0..0x2000)).into();

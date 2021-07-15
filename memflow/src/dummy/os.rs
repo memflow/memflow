@@ -126,7 +126,7 @@ where
 {
     fn allocate_frame(&mut self) -> Option<PhysFrame<S>> {
         let new_page = self.alloc_pt_page();
-        match PhysFrame::from_start_address(PhysAddr::new(new_page.addr.as_u64())) {
+        match PhysFrame::from_start_address(PhysAddr::new(new_page.addr.to_umem())) {
             Ok(s) => Some(s),
             _ => None,
         }
@@ -136,7 +136,7 @@ where
 impl DummyOs {
     pub fn new_and_dtb(
         mem: DummyMemory,
-        virt_size: usize,
+        virt_size: umem,
         buffer: &[u8],
     ) -> (Self, Address, Address) {
         let mut ret = Self::new(mem);
@@ -148,7 +148,7 @@ impl DummyOs {
         self.mem
     }
 
-    pub fn quick_process(virt_size: usize, buffer: &[u8]) -> <Self as OsInner>::IntoProcessType {
+    pub fn quick_process(virt_size: umem, buffer: &[u8]) -> <Self as OsInner>::IntoProcessType {
         let mem = DummyMemory::new(virt_size + size::mb(2));
         let mut os = Self::new(mem);
         let pid = os.alloc_process(virt_size, buffer);
@@ -166,8 +166,8 @@ impl DummyOs {
     pub fn with_rng(mem: DummyMemory, mut rng: XorShiftRng) -> Self {
         let mut page_prelist = vec![];
 
-        let mut i = Address::from(0);
-        let size_addr = mem.metadata().max_address + 1;
+        let mut i = Address::null();
+        let size_addr = mem.metadata().max_address + 1_usize;
 
         while i < size_addr {
             if let Some(page_info) = {
@@ -244,7 +244,7 @@ impl DummyOs {
                 .mem
                 .buf
                 .as_ptr()
-                .add(dtb_base.as_usize())
+                .add(dtb_base.to_umem() as usize)
                 .cast::<PageTable>() as *mut _)
         };
 
@@ -252,11 +252,11 @@ impl DummyOs {
             unsafe { OffsetPageTable::new(&mut pml4, VirtAddr::from_ptr(self.mem.buf.as_ptr())) };
 
         pt_mapper
-            .translate_addr(VirtAddr::new(virt_addr.as_u64()))
-            .map(|addr| Address::from(addr.as_u64()))
+            .translate_addr(VirtAddr::new(virt_addr.to_umem()))
+            .map(|addr| (addr.as_u64() as umem).into())
     }
 
-    fn internal_alloc_process(&mut self, map_size: usize, test_buf: &[u8]) -> DummyProcessInfo {
+    fn internal_alloc_process(&mut self, map_size: umem, test_buf: &[u8]) -> DummyProcessInfo {
         let (dtb, address) = self.alloc_dtb(map_size, test_buf);
 
         self.last_pid += 1;
@@ -277,7 +277,7 @@ impl DummyOs {
         }
     }
 
-    pub fn alloc_process(&mut self, map_size: usize, test_buf: &[u8]) -> Pid {
+    pub fn alloc_process(&mut self, map_size: umem, test_buf: &[u8]) -> Pid {
         let proc = self.internal_alloc_process(map_size, test_buf);
 
         let ret = proc.info.pid;
@@ -287,7 +287,7 @@ impl DummyOs {
         ret
     }
 
-    pub fn alloc_process_with_module(&mut self, map_size: usize, test_buf: &[u8]) -> Pid {
+    pub fn alloc_process_with_module(&mut self, map_size: umem, test_buf: &[u8]) -> Pid {
         let mut proc = self.internal_alloc_process(map_size, test_buf);
 
         let ret = proc.info.pid;
@@ -315,10 +315,10 @@ impl DummyOs {
     pub fn alloc_dtb_const_base(
         &mut self,
         virt_base: Address,
-        map_size: usize,
+        map_size: umem,
         test_buf: &[u8],
     ) -> Address {
-        let mut cur_len = 0;
+        let mut cur_len: umem = 0;
 
         let dtb = self.alloc_pt_page();
 
@@ -327,7 +327,7 @@ impl DummyOs {
                 .mem
                 .buf
                 .as_ptr()
-                .add(dtb.addr.as_usize())
+                .add(dtb.addr.to_umem() as usize)
                 .cast::<PageTable>() as *mut _)
         };
         *pml4 = PageTable::new();
@@ -339,16 +339,16 @@ impl DummyOs {
             let page_info = self.next_page_for_address(cur_len.into());
             let flags = PageTableFlags::PRESENT | PageTableFlags::WRITABLE;
 
-            if test_buf.len() >= (cur_len + page_info.size.to_size()) {
+            if test_buf.len() as umem >= (cur_len + page_info.size.to_size()) {
                 self.mem
                     .phys_write(
                         page_info.addr.into(),
-                        &test_buf[cur_len..(cur_len + page_info.size.to_size())],
+                        &test_buf[cur_len as usize..(cur_len + page_info.size.to_size()) as usize],
                     )
                     .unwrap();
-            } else if test_buf.len() > cur_len {
+            } else if test_buf.len() as umem > cur_len {
                 self.mem
-                    .phys_write(page_info.addr.into(), &test_buf[cur_len..])
+                    .phys_write(page_info.addr.into(), &test_buf[cur_len as usize..])
                     .unwrap();
             }
 
@@ -357,10 +357,10 @@ impl DummyOs {
                     X64PageSize::P1g => pt_mapper
                         .map_to(
                             paging::page::Page::<Size1GiB>::from_start_address_unchecked(
-                                VirtAddr::new((virt_base + cur_len).as_u64()),
+                                VirtAddr::new((virt_base + cur_len).to_umem()),
                             ),
                             PhysFrame::from_start_address_unchecked(PhysAddr::new(
-                                page_info.addr.as_u64(),
+                                page_info.addr.to_umem(),
                             )),
                             flags,
                             self,
@@ -369,10 +369,10 @@ impl DummyOs {
                     X64PageSize::P2m => pt_mapper
                         .map_to(
                             paging::page::Page::<Size2MiB>::from_start_address_unchecked(
-                                VirtAddr::new((virt_base + cur_len).as_u64()),
+                                VirtAddr::new((virt_base + cur_len).to_umem()),
                             ),
                             PhysFrame::from_start_address_unchecked(PhysAddr::new(
-                                page_info.addr.as_u64(),
+                                page_info.addr.to_umem(),
                             )),
                             flags,
                             self,
@@ -381,10 +381,10 @@ impl DummyOs {
                     X64PageSize::P4k => pt_mapper
                         .map_to(
                             paging::page::Page::<Size4KiB>::from_start_address_unchecked(
-                                VirtAddr::new((virt_base + cur_len).as_u64()),
+                                VirtAddr::new((virt_base + cur_len).to_umem()),
                             ),
                             PhysFrame::from_start_address_unchecked(PhysAddr::new(
-                                page_info.addr.as_u64(),
+                                page_info.addr.to_umem(),
                             )),
                             flags,
                             self,

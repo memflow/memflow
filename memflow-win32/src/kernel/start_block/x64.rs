@@ -47,7 +47,7 @@ fn find_pt(addr: Address, mem: &[u8]) -> Option<Address> {
     mem[0x800..]
         .chunks(8)
         .map(|c| u64::from_le_bytes(c.try_into().unwrap()))
-        .find(|a| (a ^ 0x0000_0000_0000_0063) & !(1u64 << 63) == addr.as_u64())?;
+        .find(|a| (a ^ 0x0000_0000_0000_0063) & !(1u64 << 63) == addr.to_umem())?;
 
     // A page table does need to have some entries, right? Particularly, kernel-side page table
     // entries must be marked as such

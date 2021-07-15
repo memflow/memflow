@@ -337,9 +337,7 @@ impl<U: PrimitiveAddress, T> Pointer<U, [T]> {
     }
 
     pub fn at(self, i: usize) -> Pointer<U, T> {
-        let inner = self
-            .inner
-            .wrapping_add(&U::from(i * size_of::<T>()).unwrap());
+        let inner = self.inner.wrapping_add(i * size_of::<T>());
         Pointer {
             inner,
             phantom_data: Pointer::<U, T>::PHANTOM_DATA,
@@ -435,20 +433,6 @@ impl<U: Into<Address>, T: ?Sized> From<Pointer<U, T>> for umem {
     }
 }
 
-/// Tries to convert a Pointer into a u32.
-/// The function will return an `Error::Bounds` error if the input value is greater than `u32::max_value()`.
-impl<U: PrimitiveAddress, T: ?Sized> TryFrom<Pointer<U, T>> for u32 {
-    type Error = crate::error::Error;
-
-    fn try_from(ptr: Pointer<U, T>) -> std::result::Result<u32, Self::Error> {
-        if ptr.inner.to_u64().unwrap() <= u32::max_value() as u64 {
-            Ok(ptr.inner.to_u32().unwrap())
-        } else {
-            Err(Error(ErrorOrigin::Pointer, ErrorKind::OutOfBounds))
-        }
-    }
-}
-
 // Arithmetic operations
 impl<U: PrimitiveAddress, T> ops::Add<usize> for Pointer<U, T> {
     type Output = Pointer<U, T>;
@@ -524,20 +508,20 @@ mod tests {
     #[test]
     fn offset64() {
         let ptr8 = Pointer64::<u8>::from(0x1000u64);
-        assert_eq!(ptr8.offset(3).as_u64(), 0x1003u64);
-        assert_eq!(ptr8.offset(-5).as_u64(), 0xFFBu64);
+        assert_eq!(ptr8.offset(3).to_umem(), 0x1003u64);
+        assert_eq!(ptr8.offset(-5).to_umem(), 0xFFBu64);
 
         let ptr16 = Pointer64::<u16>::from(0x1000u64);
-        assert_eq!(ptr16.offset(3).as_u64(), 0x1006u64);
-        assert_eq!(ptr16.offset(-5).as_u64(), 0xFF6u64);
+        assert_eq!(ptr16.offset(3).to_umem(), 0x1006u64);
+        assert_eq!(ptr16.offset(-5).to_umem(), 0xFF6u64);
 
         let ptr32 = Pointer64::<u32>::from(0x1000u64);
-        assert_eq!(ptr32.offset(3).as_u64(), 0x100Cu64);
-        assert_eq!(ptr32.offset(-5).as_u64(), 0xFECu64);
+        assert_eq!(ptr32.offset(3).to_umem(), 0x100Cu64);
+        assert_eq!(ptr32.offset(-5).to_umem(), 0xFECu64);
 
         let ptr64 = Pointer64::<u64>::from(0x1000u64);
-        assert_eq!(ptr64.offset(3).as_u64(), 0x1018u64);
-        assert_eq!(ptr64.offset(-5).as_u64(), 0xFD8u64);
+        assert_eq!(ptr64.offset(3).to_umem(), 0x1018u64);
+        assert_eq!(ptr64.offset(-5).to_umem(), 0xFD8u64);
     }
 
     #[test]

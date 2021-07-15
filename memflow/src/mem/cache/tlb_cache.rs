@@ -60,7 +60,7 @@ impl<T: CacheValidator> TlbCache<T> {
 
     #[inline]
     pub fn is_read_too_long(&self, arch: ArchitectureObj, size: umem) -> bool {
-        size / arch.page_size() > self.entries.len()
+        size / arch.page_size() > self.entries.len() as umem
     }
 
     #[inline]
@@ -123,16 +123,16 @@ impl<T: CacheValidator> TlbCache<T> {
         &mut self,
         translator: &D,
         in_addr: Address,
-        invalid_len: usize,
+        invalid_len: umem,
         arch: ArchitectureObj,
     ) {
         let pt_index = translator.translation_table_id(in_addr);
         let page_size = arch.page_size();
         let page_addr = in_addr.as_page_aligned(page_size);
-        let end_addr = (in_addr + invalid_len + 1).as_page_aligned(page_size);
+        let end_addr = (in_addr + invalid_len + 1_usize).as_page_aligned(page_size);
 
         for i in (page_addr.to_umem()..end_addr.to_umem())
-            .step_by(page_size)
+            .step_by(page_size as usize)
             .take(self.entries.len())
         {
             let cur_page = Address::from(i);

@@ -44,7 +44,7 @@ fn rwtest(
             let mut bufs = vec![(vec![0_u8; *i], 0); *o];
 
             let base_addr =
-                rng.gen_range(module.base.as_u64()..(module.base.as_u64() + module.size as u64));
+                rng.gen_range(module.base.to_umem()..(module.base.to_umem() + module.size as u64));
 
             // This code will increase the read size for higher number of chunks
             // Since optimized vtop should scale very well with chunk sizes.

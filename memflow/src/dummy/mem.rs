@@ -7,7 +7,7 @@ use crate::mem::{
     PhysicalWriteData,
 };
 use crate::plugins::*;
-use crate::types::{size, umem};
+use crate::types::{size, umem, Address};
 
 use crate::cglue::*;
 use std::sync::Arc;
@@ -24,7 +24,11 @@ impl DummyMemory {
         let buf = Arc::new(vec![0_u8; size as usize].into_boxed_slice());
 
         let mut map = MemoryMap::new();
-        map.push_range(0.into(), buf.len().into(), (buf.as_ptr() as u64).into());
+        map.push_range(
+            Address::null(),
+            (buf.len() as umem).into(),
+            (buf.as_ptr() as u64).into(),
+        );
 
         let buf_mem = unsafe { MappedPhysicalMemory::from_addrmap_mut(map) };
 
@@ -36,8 +40,8 @@ impl Clone for DummyMemory {
     fn clone(&self) -> Self {
         let mut map = MemoryMap::new();
         map.push_range(
-            0.into(),
-            self.buf.len().into(),
+            Address::null(),
+            (self.buf.len() as umem).into(),
             (self.buf.as_ptr() as u64).into(),
         );
 
@@ -76,7 +80,7 @@ impl PhysicalMemory for DummyMemory {
     }
 }
 
-pub fn parse_size(args: &Args) -> Result<usize> {
+pub fn parse_size(args: &Args) -> Result<umem> {
     let (size, size_mul) = {
         let size = args.get("size").unwrap_or("2m");
 
@@ -103,7 +107,7 @@ pub fn parse_size(args: &Args) -> Result<usize> {
             ))?
     };
 
-    let size = usize::from_str_radix(size, 16)
+    let size = umem::from_str_radix(size, 16)
         .map_err(|_| Error(ErrorOrigin::Connector, ErrorKind::InvalidMemorySize))?;
 
     Ok(size * size_mul)

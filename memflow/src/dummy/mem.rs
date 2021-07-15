@@ -7,7 +7,7 @@ use crate::mem::{
     PhysicalWriteData,
 };
 use crate::plugins::*;
-use crate::types::size;
+use crate::types::{size, umem};
 
 use crate::cglue::*;
 use std::sync::Arc;
@@ -20,8 +20,8 @@ pub struct DummyMemory {
 }
 
 impl DummyMemory {
-    pub fn new(size: usize) -> Self {
-        let buf = Arc::new(vec![0_u8; size].into_boxed_slice());
+    pub fn new(size: umem) -> Self {
+        let buf = Arc::new(vec![0_u8; size as usize].into_boxed_slice());
 
         let mut map = MemoryMap::new();
         map.push_range(0.into(), buf.len().into(), (buf.as_ptr() as u64).into());

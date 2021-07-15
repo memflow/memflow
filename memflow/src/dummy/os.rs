@@ -10,7 +10,7 @@ use crate::os::process::*;
 use crate::os::root::*;
 use crate::os::*;
 use crate::plugins::*;
-use crate::types::{size, Address};
+use crate::types::{size, umem, Address};
 
 use crate::cglue::*;
 use log::Level;
@@ -41,7 +41,7 @@ enum X64PageSize {
 }
 
 impl X64PageSize {
-    fn to_size(self) -> usize {
+    fn to_size(self) -> umem {
         match self {
             X64PageSize::P4k => size::kb(4),
             X64PageSize::P2m => size::mb(2),
@@ -299,7 +299,7 @@ impl DummyOs {
         ret
     }
 
-    pub fn alloc_dtb(&mut self, map_size: usize, test_buf: &[u8]) -> (Address, Address) {
+    pub fn alloc_dtb(&mut self, map_size: umem, test_buf: &[u8]) -> (Address, Address) {
         let virt_base = (Address::null()
             + self
                 .rng

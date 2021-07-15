@@ -2,7 +2,7 @@
 Abstraction over a physical address with optional page information.
 */
 
-use super::{Address, Page, PageType};
+use super::{umem, Address, Page, PageType, PrimitiveAddress};
 
 use std::fmt;
 
@@ -35,30 +35,9 @@ impl From<Address> for PhysicalAddress {
     }
 }
 
-/// Constructs an `PhysicalAddress` from a `i32` value.
-impl From<i32> for PhysicalAddress {
-    fn from(item: i32) -> Self {
-        Self::from(Address::from(item))
-    }
-}
-
-/// Constructs an `PhysicalAddress` from a `u32` value.
-impl From<u32> for PhysicalAddress {
-    fn from(item: u32) -> Self {
-        Self::from(Address::from(item))
-    }
-}
-
-/// Constructs an `PhysicalAddress` from a `u64` value.
-impl From<u64> for PhysicalAddress {
-    fn from(item: u64) -> Self {
-        Self::from(Address::from(item))
-    }
-}
-
-/// Constructs an `PhysicalAddress` from a `usize` value.
-impl From<usize> for PhysicalAddress {
-    fn from(item: usize) -> Self {
+/// Constructs an `PhysicalAddress` from any value that implements [`PrimitiveAddress`].
+impl<T: PrimitiveAddress> From<T> for PhysicalAddress {
+    fn from(item: T) -> Self {
         Self::from(Address::from(item))
     }
 }
@@ -66,7 +45,7 @@ impl From<usize> for PhysicalAddress {
 /// Converts a `PhysicalAddress` into a `Address`.
 impl From<PhysicalAddress> for Address {
     fn from(address: PhysicalAddress) -> Self {
-        Self::from(address.address.as_u64())
+        address.address
     }
 }
 
@@ -97,16 +76,15 @@ impl PhysicalAddress {
     ///
     /// Note: The page size must be a power of 2.
     #[inline]
-    pub fn with_page(address: Address, page_type: PageType, page_size: usize) -> Self {
+    pub fn with_page(address: Address, page_type: PageType, page_size: umem) -> Self {
         Self {
             address,
             page_type,
             // TODO: this should be replaced by rust's internal functions as this is not endian aware
             // once it is stabilizied in rust
             // see issue: https://github.com/rust-lang/rust/issues/70887
-            page_size_log2: (std::mem::size_of::<u64>() * 8
-                - (page_size as u64).to_le().leading_zeros() as usize)
-                as u8
+            page_size_log2: (std::mem::size_of::<umem>() * 8
+                - page_size.to_le().leading_zeros() as usize) as u8
                 - 2,
         }
     }
@@ -149,8 +127,8 @@ impl PhysicalAddress {
 
     /// Returns the size of the page this physical address is contained in.
     #[inline]
-    pub fn page_size(&self) -> usize {
-        (2 << self.page_size_log2) as usize
+    pub fn page_size(&self) -> umem {
+        (2 << self.page_size_log2) as umem
     }
 
     /// Returns the base address of the containing page.
@@ -172,22 +150,10 @@ impl PhysicalAddress {
         }
     }
 
-    /// Returns the containing address converted to a u32.
+    /// Returns the containing address converted to a raw [`umem`].
     #[inline]
-    pub const fn as_u32(&self) -> u32 {
-        self.address.as_u32()
-    }
-
-    /// Returns the internal u64 value of the address.
-    #[inline]
-    pub const fn as_u64(&self) -> u64 {
-        self.address.as_u64()
-    }
-
-    /// Returns the containing address converted to a usize.
-    #[inline]
-    pub const fn as_usize(&self) -> usize {
-        self.address.as_usize()
+    pub const fn to_umem(&self) -> umem {
+        self.address.to_umem()
     }
 }
 
@@ -228,17 +194,17 @@ mod tests {
 
     #[test]
     fn test_page_size() {
-        let pa = PhysicalAddress::with_page(Address::from(0x1234), PageType::UNKNOWN, 0x1000);
+        let pa = PhysicalAddress::with_page(Address::from(0x1234_u64), PageType::UNKNOWN, 0x1000);
         assert_eq!(pa.page_size(), 0x1000);
-        assert_eq!(pa.page_base(), Address::from(0x1000));
+        assert_eq!(pa.page_base(), Address::from(0x1000_u64));
     }
 
     #[test]
     fn test_page_size_invalid() {
-        let pa_42 = PhysicalAddress::with_page(Address::from(0x1234), PageType::UNKNOWN, 42);
+        let pa_42 = PhysicalAddress::with_page(Address::from(0x1234_u64), PageType::UNKNOWN, 42);
         assert_ne!(pa_42.page_size(), 42);
 
-        let pa_0 = PhysicalAddress::with_page(Address::from(0x1234), PageType::UNKNOWN, 42);
+        let pa_0 = PhysicalAddress::with_page(Address::from(0x1234_u64), PageType::UNKNOWN, 42);
         assert_ne!(pa_0.page_size(), 0);
     }
 
@@ -246,13 +212,16 @@ mod tests {
     #[allow(clippy::unreadable_literal)]
     fn test_page_size_huge() {
         let pa_2mb =
-            PhysicalAddress::with_page(Address::from(0x123456), PageType::UNKNOWN, size::mb(2));
+            PhysicalAddress::with_page(Address::from(0x123456_u64), PageType::UNKNOWN, size::mb(2));
         assert_eq!(pa_2mb.page_size(), size::mb(2));
-        assert_eq!(pa_2mb.page_base(), Address::from(0));
+        assert_eq!(pa_2mb.page_base(), Address::from(0_u64));
 
-        let pa_1gb =
-            PhysicalAddress::with_page(Address::from(0x1234567), PageType::UNKNOWN, size::gb(1));
+        let pa_1gb = PhysicalAddress::with_page(
+            Address::from(0x1234567_u64),
+            PageType::UNKNOWN,
+            size::gb(1),
+        );
         assert_eq!(pa_1gb.page_size(), size::gb(1));
-        assert_eq!(pa_1gb.page_base(), Address::from(0));
+        assert_eq!(pa_1gb.page_base(), Address::from(0_u64));
     }
 }

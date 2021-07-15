@@ -75,7 +75,7 @@ impl ArchMmuDef {
                 self.pte_size.to_le().trailing_zeros() as u8
             };
         let mask = Address::bit_mask(min..max);
-        pte_addr.as_u64() & u64::from_le(mask.as_u64())
+        pte_addr.to_umem() & u64::from_le(mask.to_umem())
     }
 
     pub(crate) const fn virt_addr_bit_range(&self, step: usize) -> (u8, u8) {

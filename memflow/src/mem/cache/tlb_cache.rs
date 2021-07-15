@@ -3,7 +3,7 @@ use std::prelude::v1::*;
 use super::CacheValidator;
 use crate::architecture::{ArchitectureObj, VirtualTranslate3};
 use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
-use crate::types::{Address, PhysicalAddress};
+use crate::types::{umem, Address, PhysicalAddress};
 
 #[derive(Clone, Copy)]
 pub struct TlbEntry {
@@ -54,12 +54,12 @@ impl<T: CacheValidator> TlbCache<T> {
     }
 
     #[inline]
-    fn get_cache_index(&self, page_addr: Address, page_size: usize) -> usize {
-        ((page_addr.as_u64() / (page_size as u64)) % (self.entries.len() as u64)) as usize
+    fn get_cache_index(&self, page_addr: Address, page_size: umem) -> usize {
+        ((page_addr.to_umem() / page_size) % (self.entries.len() as umem)) as usize
     }
 
     #[inline]
-    pub fn is_read_too_long(&self, arch: ArchitectureObj, size: usize) -> bool {
+    pub fn is_read_too_long(&self, arch: ArchitectureObj, size: umem) -> bool {
         size / arch.page_size() > self.entries.len()
     }
 
@@ -131,7 +131,7 @@ impl<T: CacheValidator> TlbCache<T> {
         let page_addr = in_addr.as_page_aligned(page_size);
         let end_addr = (in_addr + invalid_len + 1).as_page_aligned(page_size);
 
-        for i in (page_addr.as_u64()..end_addr.as_u64())
+        for i in (page_addr.to_umem()..end_addr.to_umem())
             .step_by(page_size)
             .take(self.entries.len())
         {

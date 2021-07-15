@@ -3,7 +3,7 @@ Special purpose iterators for memflow.
 */
 
 mod page_chunks;
-use crate::types::Address;
+use crate::types::{umem, Address};
 pub use page_chunks::*;
 
 mod double_buffered_iterator;
@@ -170,9 +170,9 @@ impl<T> PageChunks for T where T: SplitAtIndex {}
 mod tests {
     use crate::iter::PageChunks;
 
-    const PAGE_SIZE: usize = 97;
-    const OFF: usize = 26;
-    const ADDEND: usize = 17;
+    const PAGE_SIZE: umem = 97;
+    const OFF: umem = 26;
+    const ADDEND: umem = 17;
 
     #[test]
     fn pc_check_overflowing() {

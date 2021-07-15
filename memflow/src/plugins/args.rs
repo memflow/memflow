@@ -6,7 +6,7 @@ use std::fmt;
 use std::prelude::v1::*;
 
 use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
-use crate::types::size;
+use crate::types::{size, umem};
 
 use core::convert::TryFrom;
 use hashbrown::HashMap;
@@ -350,7 +350,7 @@ impl fmt::Debug for ArgDescriptor {
     }
 }
 
-pub fn parse_pagecache(args: &Args) -> Result<Option<(usize, u64)>> {
+pub fn parse_pagecache(args: &Args) -> Result<Option<(umem, umem)>> {
     match args.get("pagecache").unwrap_or("default") {
         "default" => Ok(Some((0, 0))),
         "none" => Ok(None),
@@ -358,7 +358,7 @@ pub fn parse_pagecache(args: &Args) -> Result<Option<(usize, u64)>> {
     }
 }
 
-fn parse_pagecache_args(vargs: &str) -> Result<(usize, u64)> {
+fn parse_pagecache_args(vargs: &str) -> Result<(umem, umem)> {
     let mut sp = vargs.splitn(2, ';');
     let (size, time) = (
         sp.next().ok_or_else(|| {
@@ -391,7 +391,7 @@ fn parse_pagecache_args(vargs: &str) -> Result<(usize, u64)> {
             })?
     };
 
-    let size = usize::from_str_radix(size, 16).map_err(|_| {
+    let size = umem::from_str_radix(size, 16).map_err(|_| {
         Error(ErrorOrigin::OsLayer, ErrorKind::Configuration)
             .log_error("Failed to parse Page Cache size")
     })?;
@@ -406,7 +406,7 @@ fn parse_pagecache_args(vargs: &str) -> Result<(usize, u64)> {
     Ok((size, time))
 }
 
-pub fn parse_vatcache(args: &Args) -> Result<Option<(usize, u64)>> {
+pub fn parse_vatcache(args: &Args) -> Result<Option<(umem, umem)>> {
     match args.get("vatcache").unwrap_or("default") {
         "default" => Ok(Some((0, 0))),
         "none" => Ok(None),
@@ -414,7 +414,7 @@ pub fn parse_vatcache(args: &Args) -> Result<Option<(usize, u64)>> {
     }
 }
 
-fn parse_vatcache_args(vargs: &str) -> Result<(usize, u64)> {
+fn parse_vatcache_args(vargs: &str) -> Result<(umem, umem)> {
     let mut sp = vargs.splitn(2, ';');
     let (size, time) = (
         sp.next().ok_or_else(|| {
@@ -423,7 +423,7 @@ fn parse_vatcache_args(vargs: &str) -> Result<(usize, u64)> {
         })?,
         sp.next().unwrap_or("0"),
     );
-    let size = usize::from_str_radix(size, 16).map_err(|_| {
+    let size = umem::from_str_radix(size, 16).map_err(|_| {
         Error(ErrorOrigin::OsLayer, ErrorKind::Configuration).log_error("Failed to parse VAT size")
     })?;
     let time = time.parse::<u64>().map_err(|_| {

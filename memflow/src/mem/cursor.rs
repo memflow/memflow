@@ -323,7 +323,7 @@ impl<T: MemoryView> Read for MemoryCursor<T> {
         self.mem
             .read_raw_into(self.address, buf)
             .map_err(|err| Error::new(ErrorKind::UnexpectedEof, err))?;
-        self.address = (self.address.as_u64() + buf.len() as u64).into();
+        self.address = (self.address.to_umem() + buf.len() as u64).into();
         Ok(buf.len())
     }
 }
@@ -333,7 +333,7 @@ impl<T: MemoryView> Write for MemoryCursor<T> {
         self.mem
             .write_raw(self.address, buf)
             .map_err(|err| Error::new(ErrorKind::UnexpectedEof, err))?;
-        self.address = (self.address.as_u64() + buf.len() as u64).into();
+        self.address = (self.address.to_umem() + buf.len() as u64).into();
         Ok(buf.len())
     }
 
@@ -351,10 +351,10 @@ impl<T: MemoryView> Seek for MemoryCursor<T> {
                 .mem
                 .metadata()
                 .max_address
-                .as_u64()
+                .to_umem()
                 .wrapping_add(1)
                 .wrapping_add(offs as u64),
-            SeekFrom::Current(offs) => self.address.as_u64().wrapping_add(offs as u64),
+            SeekFrom::Current(offs) => self.address.to_umem().wrapping_add(offs as u64),
         };
 
         self.address = target_pos.into();

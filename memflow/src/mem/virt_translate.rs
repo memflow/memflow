@@ -15,7 +15,7 @@ mod tests;
 use crate::error::{Result, *};
 
 use crate::mem::{MemData, PhysicalMemory};
-use crate::types::{Address, Page, PhysicalAddress};
+use crate::types::{umem, Address, Page, PhysicalAddress};
 
 use crate::architecture::{VirtualTranslate3, VtopFailureCallback, VtopOutputCallback};
 
@@ -84,7 +84,7 @@ pub trait VirtualTranslate: Send {
 
     fn virt_page_map_range(
         &mut self,
-        gap_size: usize,
+        gap_size: umem,
         start: Address,
         end: Address,
         out: MemoryRangeCallback,
@@ -148,7 +148,7 @@ pub trait VirtualTranslate: Send {
     #[skip_func]
     fn virt_page_map_range_vec(
         &mut self,
-        gap_size: usize,
+        gap_size: umem,
         start: Address,
         end: Address,
     ) -> Vec<MemoryRange> {
@@ -218,12 +218,12 @@ pub trait VirtualTranslate: Send {
         virt
     }
 
-    fn virt_page_map(&mut self, gap_size: usize, out: MemoryRangeCallback) {
+    fn virt_page_map(&mut self, gap_size: umem, out: MemoryRangeCallback) {
         self.virt_page_map_range(gap_size, Address::null(), Address::invalid(), out)
     }
 
     #[skip_func]
-    fn virt_page_map_vec(&mut self, gap_size: usize) -> Vec<MemoryRange> {
+    fn virt_page_map_vec(&mut self, gap_size: umem) -> Vec<MemoryRange> {
         let mut out = vec![];
         self.virt_page_map(gap_size, (&mut out).into());
         out
@@ -266,14 +266,14 @@ impl PartialEq for VirtualTranslation {
 #[derive(Clone, Debug, PartialEq, Copy)]
 pub struct MemoryRange {
     pub address: Address,
-    pub size: usize,
+    pub size: umem,
 }
 
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct VirtualTranslationFail {
     pub from: Address,
-    pub size: usize,
+    pub size: umem,
 }
 
 pub trait VirtualTranslate2

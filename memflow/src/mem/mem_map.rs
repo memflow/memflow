@@ -337,7 +337,7 @@ impl MemoryMap<(Address, usize)> {
             .map(|(base, (real_base, size))| {
                 (
                     base,
-                    std::slice::from_raw_parts_mut(real_base.as_u64() as _, size),
+                    std::slice::from_raw_parts_mut(real_base.to_umem() as _, size),
                 )
             })
             .for_each(|(base, buf)| {
@@ -361,7 +361,7 @@ impl MemoryMap<(Address, usize)> {
             .map(|(base, (real_base, size))| {
                 (
                     base,
-                    std::slice::from_raw_parts(real_base.as_u64() as _, size),
+                    std::slice::from_raw_parts(real_base.to_umem() as _, size),
                 )
             })
             .for_each(|(base, buf)| {
@@ -435,7 +435,7 @@ impl<'a, I: Iterator<Item = (Address, T)>, M: SplitAtIndex, T: SplitAtIndex>
             for (i, map_elem) in self.map.iter().enumerate().skip(self.cur_map_pos) {
                 let output = &mut *map_elem.output.borrow_mut();
                 if map_elem.base + output.length() > addr {
-                    let offset = map_elem.base.as_usize().saturating_sub(addr.as_usize());
+                    let offset = map_elem.base.to_umem().saturating_sub(addr.to_umem());
 
                     let (left_reject, right) = buf.split_at(offset);
 

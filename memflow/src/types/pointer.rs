@@ -8,6 +8,7 @@ use crate::error::{PartialError, PartialResult};
 use crate::mem::MemoryView;
 use crate::types::{imem, umem, Address, ByteSwap, PrimitiveAddress};
 
+use std::convert::TryInto;
 use std::marker::PhantomData;
 use std::mem::size_of;
 use std::{cmp, fmt, hash, ops};
@@ -43,7 +44,7 @@ const _: [(); std::mem::size_of::<Pointer64<()>>()] = [(); std::mem::size_of::<u
 /// #[repr(C)]
 /// #[derive(Clone, Debug, Pod)]
 /// struct Bar {
-///     pub foo_ptr: Pointer<Foo>,
+///     pub foo_ptr: Pointer64<Foo>,
 /// }
 ///
 /// fn read_foo_bar(mem: &mut impl MemoryView) {
@@ -72,7 +73,7 @@ const _: [(); std::mem::size_of::<Pointer64<()>>()] = [(); std::mem::size_of::<u
 /// #[repr(C)]
 /// #[derive(Clone, Debug, Pod)]
 /// struct Bar {
-///     pub foo_ptr: Pointer<Foo>,
+///     pub foo_ptr: Pointer64<Foo>,
 /// }
 ///
 /// fn read_foo_bar(mem: &mut impl MemoryView) {
@@ -229,9 +230,7 @@ impl<U: PrimitiveAddress, T: Sized> Pointer<U, T> {
     /// assert_eq!(ptr1.offset_from(ptr2), -4);
     /// ```
     pub fn offset_from(self, origin: Self) -> imem {
-        let pointee_size = size_of::<T>() as imem;
-        assert!(0 < pointee_size && pointee_size <= imem::MAX);
-
+        let pointee_size: imem = size_of::<T>().try_into().unwrap();
         let offset = self.inner.to_imem().wrapping_sub(origin.inner.to_imem());
         offset / pointee_size as imem
     }
@@ -406,7 +405,7 @@ impl<T: ?Sized> From<Address> for Pointer64<T> {
     #[inline(always)]
     fn from(address: Address) -> Pointer64<T> {
         Pointer {
-            inner: address.to_umem() as u64,
+            inner: address.to_umem(),
             phantom_data: PhantomData,
         }
     }

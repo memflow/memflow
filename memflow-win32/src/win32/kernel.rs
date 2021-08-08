@@ -1,17 +1,14 @@
-use std::prelude::v1::*;
-
-use super::{
-    process::IMAGE_FILE_NAME_LENGTH, Win32KernelBuilder, Win32KernelInfo, Win32Keyboard,
-    Win32ModuleListInfo, Win32Process, Win32ProcessInfo, Win32VirtualTranslate,
-};
+mod mem_map;
 
 use crate::{
     offsets::{Win32ArchOffsets, Win32Offsets},
     prelude::VirtualReadUnicodeString,
 };
 
-use log::{info, trace};
-use std::fmt;
+use super::{
+    process::IMAGE_FILE_NAME_LENGTH, Win32KernelBuilder, Win32KernelInfo, Win32Keyboard,
+    Win32ModuleListInfo, Win32Process, Win32ProcessInfo, Win32VirtualTranslate,
+};
 
 #[cfg(feature = "plugins")]
 use memflow::cglue;
@@ -21,9 +18,12 @@ use memflow::mem::{memory_view::*, phys_mem::*};
 use memflow::os::{keyboard::*, root::*};
 use memflow::prelude::v1::{Result, *};
 
-use pelite::{self, pe64::exports::Export, PeView};
+use log::{info, trace};
+use std::convert::TryInto;
+use std::fmt;
+use std::prelude::v1::*;
 
-mod mem_map;
+use pelite::{self, pe64::exports::Export, PeView};
 
 const MAX_ITER_COUNT: usize = 65536;
 
@@ -131,16 +131,17 @@ impl<T: 'static + PhysicalMemory + Clone, V: 'static + VirtualTranslate2 + Clone
         if let Some(info) = self.kernel_modules {
             Ok(info)
         } else {
-            let image = self
-                .virt_mem
-                .read_raw(self.kernel_info.os_info.base, self.kernel_info.os_info.size)?;
+            let image = self.virt_mem.read_raw(
+                self.kernel_info.os_info.base,
+                self.kernel_info.os_info.size.try_into().unwrap(),
+            )?;
             let pe = PeView::from_bytes(&image).map_err(|err| {
                 Error(ErrorOrigin::OsLayer, ErrorKind::InvalidExeFile).log_info(err)
             })?;
             let addr = match pe.get_export_by_name("PsLoadedModuleList").map_err(|err| {
                 Error(ErrorOrigin::OsLayer, ErrorKind::ExportNotFound).log_info(err)
             })? {
-                Export::Symbol(s) => self.kernel_info.os_info.base + *s as usize,
+                Export::Symbol(s) => self.kernel_info.os_info.base + *s as umem,
                 Export::Forward(_) => {
                     return Err(Error(ErrorOrigin::OsLayer, ErrorKind::ExportNotFound)
                         .log_info("PsLoadedModuleList found but it was a forwarded export"))
@@ -256,7 +257,7 @@ impl<T: 'static + PhysicalMemory + Clone, V: 'static + VirtualTranslate2 + Clone
                     if base_info.proc_arch == base_info.sys_arch {
                         None
                     } else {
-                        Some(teb + (0x2000 as umem))
+                        Some(teb + 0x2000)
                     },
                 )
             } else {

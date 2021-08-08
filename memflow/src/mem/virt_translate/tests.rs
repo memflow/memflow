@@ -24,7 +24,7 @@ fn test_vtop() {
         assert_eq!(vtop, dummy_vtop);
     }
 
-    for i in (0 as umem)..128 {
+    for i in 0_u64..128 {
         let virt_base = virt_base + virt_size + i;
         let vtop = match vat.virt_to_phys(dummy_os.as_mut(), &translator, virt_base) {
             Err(_) => None,

@@ -10,7 +10,7 @@ use log::{debug, info, warn};
 use memflow::architecture::ArchitectureObj;
 use memflow::error::{Error, ErrorKind, ErrorOrigin, Result};
 use memflow::mem::MemoryView;
-use memflow::types::{size, Address};
+use memflow::types::{size, umem, Address};
 
 use pelite::{self, pe64::exports::Export, PeView};
 
@@ -49,7 +49,7 @@ pub fn find_exported<T: MemoryView>(
         .get_export_by_name("PsInitialSystemProcess")
         .map_err(|err| Error(ErrorOrigin::OsLayer, ErrorKind::ExportNotFound).log_info(err))?
     {
-        Export::Symbol(s) => kernel_base + *s as usize,
+        Export::Symbol(s) => kernel_base + *s as umem,
         Export::Forward(_) => {
             return Err(Error(ErrorOrigin::OsLayer, ErrorKind::ExportNotFound)
                 .log_info("PsInitialSystemProcess found but it was a forwarded export"))

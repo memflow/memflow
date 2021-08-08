@@ -29,6 +29,8 @@ fn build<T: PhysicalMemory>(mem: T) {
 ```
 */
 
+use core::convert::TryInto;
+
 use super::{
     page_cache::PageCache, page_cache::PageValidity, CacheValidator, DefaultCacheValidator,
 };
@@ -157,7 +159,7 @@ impl<'a, T: PhysicalMemory, Q: CacheValidator> PhysicalMemory for CachedMemoryAc
                     let mut cached_page = cache.cached_page_mut(paddr, false);
                     if let PageValidity::Valid(buf) = &mut cached_page.validity {
                         // write-back into still valid cache pages
-                        let start = (paddr - cached_page.address) as usize;
+                        let start = (paddr - cached_page.address).try_into().unwrap();
                         buf[start..(start + data_chunk.len())].copy_from_slice(data_chunk.into());
                     }
 

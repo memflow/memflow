@@ -300,14 +300,16 @@ where
     ///
     /// ```
     /// # use memflow::error::Result;
-    /// # use memflow::types::{PhysicalAddress, Address};
+    /// # use memflow::types::{PhysicalAddress, Address, umem};
     /// # use memflow::dummy::{DummyMemory, DummyOs};
     /// use memflow::mem::{VirtualTranslate2, DirectTranslate, MemData};
     /// use memflow::types::size;
     /// use memflow::architecture::x86::x64;
     /// use memflow::cglue::FromExtend;
     ///
-    /// # const VIRT_MEM_SIZE: usize = size::mb(8);
+    /// use std::convert::TryInto;
+    ///
+    /// # const VIRT_MEM_SIZE: umem = size::mb(8);
     /// # const CHUNK_SIZE: usize = 2;
     /// #
     /// # let mem = DummyMemory::new(size::mb(16));
@@ -317,16 +319,17 @@ where
     /// # let translator = x64::new_translator(dtb);
     /// let arch = x64::ARCH;
     ///
-    /// let mut buffer = vec![0; VIRT_MEM_SIZE * CHUNK_SIZE / arch.page_size()];
+    /// let mut buffer = vec![0; (VIRT_MEM_SIZE * CHUNK_SIZE as umem / arch.page_size()).try_into().unwrap()];
     /// let buffer_length = buffer.len();
     ///
     /// // In this example, 8 megabytes starting from `virtual_base` are mapped in.
     /// // We translate 2 bytes chunks over the page boundaries. These bytes will be
     /// // split off into 2 separate translated chunks.
+    /// assert!(size::kb(4) < usize::MAX as umem);
     /// let addresses = buffer
     ///     .chunks_mut(CHUNK_SIZE)
     ///     .enumerate()
-    ///     .map(|(i, buf)| MemData(virtual_base + ((i + 1) * size::kb(4) - 1), buf));
+    ///     .map(|(i, buf)| MemData(virtual_base + ((i + 1) * size::kb(4) as usize - 1), buf));
     ///
     /// let mut translated_data = vec![];
     /// let mut failed_translations = &mut |_| true;
@@ -368,14 +371,14 @@ where
     /// # Examples
     /// ```
     /// # use memflow::error::Result;
-    /// # use memflow::types::{PhysicalAddress, Address};
+    /// # use memflow::types::{PhysicalAddress, Address, umem};
     /// # use memflow::dummy::{DummyMemory, DummyOs};
     /// # use memflow::types::size;
     /// # use memflow::architecture::VirtualTranslate3;
     /// use memflow::mem::{VirtualTranslate2, DirectTranslate};
     /// use memflow::architecture::x86::x64;
     ///
-    /// # const VIRT_MEM_SIZE: usize = size::mb(8);
+    /// # const VIRT_MEM_SIZE: umem = size::mb(8);
     /// # const CHUNK_SIZE: usize = 2;
     /// #
     /// # let mem = DummyMemory::new(size::mb(16));
@@ -428,7 +431,7 @@ where
         self.virt_to_phys_iter(
             phys_mem,
             translator,
-            Some(MemData(vaddr, 1 as umem)).into_iter(),
+            Some(MemData(vaddr, 1_u64)).into_iter(),
             &mut success.into(),
             &mut fail.into(),
         );

@@ -35,7 +35,7 @@ fn main() -> io::Result<()> {
 use std::io::{Error, ErrorKind, Read, Result, Seek, SeekFrom, Write};
 
 use super::MemoryView;
-use crate::types::Address;
+use crate::types::{umem, Address};
 
 /// MemoryCursor implments a Cursor around the [`VirtualMemory`] trait.
 ///
@@ -323,7 +323,7 @@ impl<T: MemoryView> Read for MemoryCursor<T> {
         self.mem
             .read_raw_into(self.address, buf)
             .map_err(|err| Error::new(ErrorKind::UnexpectedEof, err))?;
-        self.address = (self.address.to_umem() + buf.len() as u64).into();
+        self.address = (self.address.to_umem() + buf.len() as umem).into();
         Ok(buf.len())
     }
 }
@@ -333,7 +333,7 @@ impl<T: MemoryView> Write for MemoryCursor<T> {
         self.mem
             .write_raw(self.address, buf)
             .map_err(|err| Error::new(ErrorKind::UnexpectedEof, err))?;
-        self.address = (self.address.to_umem() + buf.len() as u64).into();
+        self.address = (self.address.to_umem() + buf.len() as umem).into();
         Ok(buf.len())
     }
 
@@ -343,7 +343,7 @@ impl<T: MemoryView> Write for MemoryCursor<T> {
 }
 
 impl<T: MemoryView> Seek for MemoryCursor<T> {
-    fn seek(&mut self, pos: SeekFrom) -> Result<u64> {
+    fn seek(&mut self, pos: SeekFrom) -> Result<umem> {
         let target_pos = match pos {
             SeekFrom::Start(offs) => offs,
             // TODO: do we need +1?
@@ -353,8 +353,8 @@ impl<T: MemoryView> Seek for MemoryCursor<T> {
                 .max_address
                 .to_umem()
                 .wrapping_add(1)
-                .wrapping_add(offs as u64),
-            SeekFrom::Current(offs) => self.address.to_umem().wrapping_add(offs as u64),
+                .wrapping_add(offs as umem),
+            SeekFrom::Current(offs) => self.address.to_umem().wrapping_add(offs as umem),
         };
 
         self.address = target_pos.into();
@@ -386,10 +386,7 @@ mod tests {
 
         assert_eq!(cursor.seek(SeekFrom::Start(512)).unwrap(), 512);
 
-        assert_eq!(
-            cursor.seek(SeekFrom::End(-512)).unwrap(),
-            size::mb(1) as u64 - 512
-        );
+        assert_eq!(cursor.seek(SeekFrom::End(-512)).unwrap(), size::mb(1) - 512);
     }
 
     #[test]

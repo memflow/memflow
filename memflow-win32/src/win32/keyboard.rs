@@ -30,10 +30,12 @@ fn test<T: 'static + PhysicalMemory + Clone, V: 'static + VirtualTranslate2 + Cl
 use super::{Win32Kernel, Win32ProcessInfo, Win32VirtualTranslate};
 
 use memflow::cglue::*;
+use memflow::error::PartialResultExt;
 use memflow::error::{Error, ErrorKind, ErrorOrigin, Result};
 use memflow::mem::{MemoryView, PhysicalMemory, VirtualDma, VirtualTranslate2};
 use memflow::os::keyboard::*;
 use memflow::prelude::OsInner;
+use memflow::types::{umem, Address};
 
 // those only required when compiling cglue code
 #[cfg(feature = "plugins")]
@@ -41,9 +43,6 @@ use memflow::cglue;
 
 use log::debug;
 use std::convert::TryInto;
-
-use memflow::error::PartialResultExt;
-use memflow::types::Address;
 
 use pelite::{self, pe64::exports::Export, PeView};
 
@@ -154,7 +153,7 @@ impl<T> Win32Keyboard<T> {
         ))
     }
 
-    fn find_gaf_pe(module_buf: &[u8]) -> Result<usize> {
+    fn find_gaf_pe(module_buf: &[u8]) -> Result<umem> {
         let pe = PeView::from_bytes(module_buf)
             .map_err(|err| Error(ErrorOrigin::OsLayer, ErrorKind::InvalidExeFile).log_info(err))?;
 
@@ -164,7 +163,7 @@ impl<T> Win32Keyboard<T> {
         })? {
             Export::Symbol(s) => {
                 debug!("gafAsyncKeyState export found at: {:x}", *s);
-                Ok(*s as usize)
+                Ok(*s as umem)
             }
             Export::Forward(_) => Err(Error(ErrorOrigin::OsLayer, ErrorKind::ExportNotFound)
                 .log_info("export gafAsyncKeyState found but it is forwarded")),
@@ -173,7 +172,7 @@ impl<T> Win32Keyboard<T> {
 
     // TODO: replace with a custom signature scanning crate
     #[cfg(feature = "regex")]
-    fn find_gaf_sig(module_buf: &[u8]) -> Result<usize> {
+    fn find_gaf_sig(module_buf: &[u8]) -> Result<umem> {
         use ::regex::bytes::*;
 
         // 48 8B 05 ? ? ? ? 48 89 81 ? ? 00 00 48 8B 8F + 0x3
@@ -193,11 +192,11 @@ impl<T> Win32Keyboard<T> {
             + u32::from_le_bytes(module_buf[buf_offs..buf_offs + 4].try_into().unwrap())
             + 0x4;
         debug!("gafAsyncKeyState export found at: {:x}", export_offs);
-        Ok(export_offs as usize)
+        Ok(export_offs as umem)
     }
 
     #[cfg(not(feature = "regex"))]
-    fn find_gaf_sig(_module_buf: &[u8]) -> Result<usize> {
+    fn find_gaf_sig(_module_buf: &[u8]) -> Result<umem> {
         Err(
             Error(ErrorOrigin::OsLayer, ErrorKind::UnsupportedOptionalFeature)
                 .log_error("signature scanning requires std"),

@@ -1,5 +1,6 @@
 use crate::cglue::{CSliceMut, CSliceRef};
 use crate::types::{imem, umem, Address};
+use core::convert::TryInto;
 use std::iter::*;
 
 pub trait SplitAtIndex {
@@ -134,7 +135,7 @@ impl SplitAtIndex for umem {
     }
 
     fn length(&self) -> usize {
-        *self as usize
+        (*self).try_into().unwrap()
     }
 
     fn size_hint(&self) -> usize {
@@ -344,7 +345,7 @@ impl<T: SplitAtIndex, FS: FnMut(Address, &T, Option<&T>) -> bool> Iterator
                 let end_len = Address::from(
                     self.cur_address
                         .to_umem()
-                        .wrapping_add(self.page_size as u64),
+                        .wrapping_add(self.page_size as umem),
                 )
                 .as_page_aligned(self.page_size)
                 .to_umem()
@@ -352,7 +353,8 @@ impl<T: SplitAtIndex, FS: FnMut(Address, &T, Option<&T>) -> bool> Iterator
                 .wrapping_sub(1)
                 .wrapping_add(self.cur_off);
 
-                let (head, tail) = unsafe { buf.split_inclusive_at_mut(end_len as usize) };
+                let (head, tail) =
+                    unsafe { buf.split_inclusive_at_mut(end_len.try_into().unwrap()) };
                 let head = head.unwrap();
                 if tail.is_some() && !(self.check_split_fn)(self.cur_address, &head, tail.as_ref())
                 {
@@ -375,12 +377,14 @@ impl<T: SplitAtIndex, FS: FnMut(Address, &T, Option<&T>) -> bool> Iterator
     #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
         if let Some(buf) = &self.v {
-            let n = ((self.cur_address + buf.size_hint() - 1_usize)
+            let n: usize = (((self.cur_address + buf.size_hint() - 1_usize)
                 .as_page_aligned(self.page_size)
                 - self.cur_address.as_page_aligned(self.page_size))
                 / self.page_size as imem
-                + 1;
-            (n as usize, Some(n as usize))
+                + 1)
+            .try_into()
+            .unwrap();
+            (n, Some(n))
         } else {
             (0, Some(0))
         }

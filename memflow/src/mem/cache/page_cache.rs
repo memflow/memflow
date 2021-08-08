@@ -153,7 +153,7 @@ impl<'a, T: CacheValidator> PageCache<'a, T> {
 
     pub fn mark_page_for_validation(&mut self, addr: Address) {
         let idx = self.page_index(addr);
-        let aligned_addr = addr.as_page_aligned(self.page_size.try_into().unwrap());
+        let aligned_addr = addr.as_page_aligned(self.page_size);
         self.address_once_validated[idx] = aligned_addr;
     }
 
@@ -683,7 +683,7 @@ mod tests {
             *item = (i % 256) as u8;
         }
 
-        let address = Address::from(0x5323 as umem);
+        let address = Address::from(0x5323);
 
         let addr = PhysicalAddress::with_page(address, PageType::default().write(false), 0x1000);
 
@@ -720,7 +720,7 @@ mod tests {
             *item = (i % 256) as u8;
         }
 
-        let address = Address::from(0x5323 as umem);
+        let address = Address::from(0x5323);
 
         let addr1 = PhysicalAddress::with_page(address, PageType::default().write(false), 0x1000);
 
@@ -790,9 +790,7 @@ mod tests {
 
         assert_eq!(buf_start, buf_1);
         buf_1[16..20].copy_from_slice(&[255, 255, 255, 255]);
-        virt_mem
-            .write(virt_base + (16 as umem), &buf_1[16..20])
-            .unwrap();
+        virt_mem.write(virt_base + 16_u64, &buf_1[16..20]).unwrap();
 
         let mut buf_2 = vec![0_u8; 64];
         virt_mem.read_into(virt_base, buf_2.as_mut_slice()).unwrap();

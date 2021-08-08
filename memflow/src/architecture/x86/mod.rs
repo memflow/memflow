@@ -12,6 +12,7 @@ use crate::iter::SplitAtIndex;
 use crate::mem::{MemData, PhysicalMemory};
 use crate::types::{umem, Address};
 
+use std::convert::TryInto;
 use std::ptr;
 
 pub struct X86Architecture {
@@ -81,7 +82,7 @@ impl VirtualTranslate3 for X86VirtualTranslate {
     }
 
     fn translation_table_id(&self, _address: Address) -> usize {
-        self.dtb.to_umem().overflowing_shr(12).0 as usize
+        self.dtb.to_umem().overflowing_shr(12).0.try_into().unwrap()
     }
 
     fn arch(&self) -> ArchitectureObj {

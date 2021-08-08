@@ -14,6 +14,8 @@ use crate::iter::SplitAtIndex;
 use crate::mem::{MemData, PhysicalMemory};
 use crate::types::{size, umem, Address};
 
+use std::convert::TryInto;
+
 pub struct ArmArchitecture {
     /// Defines how many bits does the native word size have
     bits: u8,
@@ -124,7 +126,9 @@ impl VirtualTranslate3 for ArmVirtualTranslate {
             .get_pt_by_virt_addr(address)
             .to_umem()
             .overflowing_shr(11)
-            .0 as usize
+            .0
+            .try_into()
+            .unwrap()
     }
 
     fn arch(&self) -> ArchitectureObj {

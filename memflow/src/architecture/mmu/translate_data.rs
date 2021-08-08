@@ -32,12 +32,17 @@ pub struct TranslateData<T> {
 impl<T: SplitAtIndex> TranslateData<T> {
     pub fn split_at_address(self, addr: Address) -> (Option<Self>, Option<Self>) {
         let sub = self.addr.to_umem();
-        self.split_at(addr.to_umem().saturating_sub(sub) as usize)
+        self.split_at(addr.to_umem().saturating_sub(sub).try_into().unwrap())
     }
 
     pub fn split_at_address_rev(self, addr: Address) -> (Option<Self>, Option<Self>) {
         let base = self.addr + self.length();
-        self.split_at_rev(base.to_umem().saturating_sub(addr.to_umem()) as usize)
+        self.split_at_rev(
+            base.to_umem()
+                .saturating_sub(addr.to_umem())
+                .try_into()
+                .unwrap(),
+        )
     }
 }
 

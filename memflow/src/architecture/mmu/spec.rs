@@ -215,7 +215,7 @@ impl ArchMmuSpec {
         u64::from_le(
             (virt_addr.to_umem().to_le() >> self.virt_addr_bit_ranges[step].0)
                 & self.virt_addr_masks[step],
-        ) * self.def.pte_size as u64
+        ) * self.def.pte_size
     }
 
     pub fn virt_addr_to_page_offset(&self, virt_addr: Address, step: usize) -> umem {

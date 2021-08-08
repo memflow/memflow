@@ -1,3 +1,4 @@
+use crate::cglue::*;
 use crate::connector::MappedPhysicalMemory;
 use crate::derive::connector;
 use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
@@ -9,7 +10,7 @@ use crate::mem::{
 use crate::plugins::*;
 use crate::types::{size, umem, Address};
 
-use crate::cglue::*;
+use std::convert::TryInto;
 use std::sync::Arc;
 
 cglue_impl_group!(DummyMemory, ConnectorInstance, {});
@@ -21,7 +22,7 @@ pub struct DummyMemory {
 
 impl DummyMemory {
     pub fn new(size: umem) -> Self {
-        let buf = Arc::new(vec![0_u8; size as usize].into_boxed_slice());
+        let buf = Arc::new(vec![0_u8; size.try_into().unwrap()].into_boxed_slice());
 
         let mut map = MemoryMap::new();
         map.push_range(

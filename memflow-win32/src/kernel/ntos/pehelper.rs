@@ -1,15 +1,15 @@
 use std::convert::TryInto;
 use std::prelude::v1::*;
 
-use log::{debug, info};
+use log::debug;
 
 use memflow::error::{Error, ErrorKind, ErrorOrigin, PartialResultExt, Result};
 use memflow::mem::MemoryView;
-use memflow::types::{size, Address};
+use memflow::types::{size, umem, Address};
 
 use pelite::{self, PeView};
 
-pub fn try_get_pe_size<T: MemoryView>(mem: &mut T, probe_addr: Address) -> Result<usize> {
+pub fn try_get_pe_size<T: MemoryView>(mem: &mut T, probe_addr: Address) -> Result<umem> {
     let mut probe_buf = vec![0; size::kb(4).try_into().unwrap()];
     mem.read_raw_into(probe_addr, &mut probe_buf)?;
 
@@ -26,7 +26,7 @@ pub fn try_get_pe_size<T: MemoryView>(mem: &mut T, probe_addr: Address) -> Resul
             "found pe header for image with a size of {} bytes.",
             size_of_image
         );
-        Ok(size_of_image as usize)
+        Ok(size_of_image as umem)
     } else {
         Err(Error(ErrorOrigin::OsLayer, ErrorKind::InvalidExeFile)
             .log_trace("pe size_of_image is zero"))
@@ -35,7 +35,8 @@ pub fn try_get_pe_size<T: MemoryView>(mem: &mut T, probe_addr: Address) -> Resul
 
 pub fn try_get_pe_image<T: MemoryView>(mem: &mut T, probe_addr: Address) -> Result<Vec<u8>> {
     let size_of_image = try_get_pe_size(mem, probe_addr)?;
-    mem.read_raw(probe_addr, size_of_image).data_part()
+    mem.read_raw(probe_addr, size_of_image.try_into().unwrap())
+        .data_part()
 }
 
 pub fn try_get_pe_name<T: MemoryView>(mem: &mut T, probe_addr: Address) -> Result<String> {
@@ -58,6 +59,6 @@ pub fn try_get_pe_name<T: MemoryView>(mem: &mut T, probe_addr: Address) -> Resul
             Error(ErrorOrigin::OsLayer, ErrorKind::Encoding)
                 .log_trace("unable to convert dll name string")
         })?;
-    info!("try_get_pe_name: found pe header for {}", name);
+    debug!("try_get_pe_name: found pe header for {}", name);
     Ok(name.to_string())
 }

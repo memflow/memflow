@@ -284,7 +284,7 @@ pub struct OsInfo {
     /// Base address of the OS kernel
     pub base: Address,
     /// Size of the OS kernel
-    pub size: usize,
+    pub size: umem,
     /// System architecture
     pub arch: ArchitectureIdent,
 }

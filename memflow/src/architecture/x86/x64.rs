@@ -109,7 +109,7 @@ mod tests {
         let virt_address = indices
             .iter()
             .rev()
-            .map(|i| *i as u64)
+            .map(|i| *i as umem)
             .enumerate()
             .fold(0, |state, (lvl, idx)| state | (idx << (12 + 9 * lvl)))
             .into();
@@ -140,9 +140,9 @@ mod tests {
         let virt_address = indices
             .iter()
             .rev()
-            .map(|i| *i as u64)
+            .map(|i| *i as umem)
             .enumerate()
-            .fold(page_offset as u64, |state, (lvl, idx)| {
+            .fold(page_offset as umem, |state, (lvl, idx)| {
                 state | (idx << (12 + 9 * lvl))
             })
             .into();

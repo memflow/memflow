@@ -143,7 +143,7 @@ impl<'a, F: AsRef<MemoryMap<&'a mut [u8]>> + Send> PhysicalMemory
             .info
             .as_ref()
             .iter()
-            .fold(0, |s, m| s + m.output().len() as u64);
+            .fold(0, |s, m| s + m.output().len() as umem);
         PhysicalMemoryMetadata {
             max_address: max_address.into(),
             real_size,
@@ -196,7 +196,7 @@ impl<'a, F: AsRef<MemoryMap<&'a [u8]>> + Send> PhysicalMemory
             .info
             .as_ref()
             .iter()
-            .fold(0, |s, m| s + m.output().len() as u64);
+            .fold(0, |s, m| s + m.output().len() as umem);
         PhysicalMemoryMetadata {
             max_address: max_address.into(),
             real_size,

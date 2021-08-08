@@ -143,7 +143,7 @@ impl ArchMmuDef {
             }
             accum
         };
-        (1 as umem) << max_index_bits
+        1_u64 << max_index_bits
     }
 
     /// Get the page size of a specific page walk step

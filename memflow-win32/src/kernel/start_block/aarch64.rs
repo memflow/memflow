@@ -11,7 +11,7 @@ pub const PHYS_BASE: umem = size::gb(1);
 // mem here has to be a single page (4kb sized)
 fn find_pt(addr: Address, mem: &[u8]) -> Option<Address> {
     // TODO: global define / config setting
-    let max_mem = size::gb(512) as u64;
+    let max_mem = size::gb(512);
 
     let pte = u64::from_le_bytes(mem[0..8].try_into().unwrap());
 

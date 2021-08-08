@@ -37,6 +37,7 @@ pub type MuConnectorInstanceArcBox<'a> = std::mem::MaybeUninit<ConnectorInstance
 /// Implementing [`PhysicalMemory`] for a memory backend:
 /// ```
 /// use std::vec::Vec;
+/// use std::convert::TryInto;
 ///
 /// use memflow::mem::{
 ///     MemoryMap,
@@ -56,7 +57,7 @@ pub type MuConnectorInstanceArcBox<'a> = std::mem::MaybeUninit<ConnectorInstance
 ///
 /// use memflow::cglue::CIterator;
 ///
-/// use memflow::types::{PhysicalAddress, Address};
+/// use memflow::types::{PhysicalAddress, Address, umem};
 /// use memflow::error::Result;
 ///
 /// pub struct MemoryBackend {
@@ -71,8 +72,9 @@ pub type MuConnectorInstanceArcBox<'a> = std::mem::MaybeUninit<ConnectorInstance
 ///     ) -> Result<()> {
 ///         data
 ///             .for_each(|MemData(addr, mut out)| {
+///                 let addr: usize = addr.to_umem().try_into().unwrap();
 ///                 let len = out.len();
-///                 out.copy_from_slice(&self.mem[addr.as_usize()..(addr.as_usize() + len)])
+///                 out.copy_from_slice(&self.mem[addr..(addr + len)])
 ///             });
 ///         Ok(())
 ///     }
@@ -83,16 +85,18 @@ pub type MuConnectorInstanceArcBox<'a> = std::mem::MaybeUninit<ConnectorInstance
 ///         _: &mut PhysicalWriteFailCallback<'_, 'a>
 ///     ) -> Result<()> {
 ///         data
-///             .for_each(|MemData(addr, data)| self
-///                 .mem[addr.as_usize()..(addr.as_usize() + data.len())].copy_from_slice(&data)
-///             );
+///             .for_each(|MemData(addr, data)| {
+///                 let addr: usize = addr.to_umem().try_into().unwrap();
+///                 let len = data.len();
+///                 self.mem[addr..(addr + len)].copy_from_slice(&data)
+///             });
 ///         Ok(())
 ///     }
 ///
 ///     fn metadata(&self) -> PhysicalMemoryMetadata {
 ///         PhysicalMemoryMetadata {
 ///             max_address: (self.mem.len() - 1).into(),
-///             real_size: self.mem.len() as u64,
+///             real_size: self.mem.len() as umem,
 ///             readonly: false,
 ///             ideal_batch_size: u32::MAX
 ///         }
@@ -147,8 +151,8 @@ pub trait PhysicalMemory: Send {
     ///
     /// let metadata = mem.metadata();
     ///
-    /// assert_eq!(metadata.max_address.as_usize(), size::mb(16) - 1);
-    /// assert_eq!(metadata.real_size, size::mb(16) as u64);
+    /// assert_eq!(metadata.max_address.to_umem(), size::mb(16) - 1);
+    /// assert_eq!(metadata.real_size, size::mb(16));
     /// assert_eq!(metadata.readonly, false);
     /// ```
     fn metadata(&self) -> PhysicalMemoryMetadata;

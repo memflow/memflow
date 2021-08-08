@@ -9,6 +9,8 @@ use rand::prelude::*;
 use rand::{Rng, SeedableRng};
 use rand_xorshift::XorShiftRng as CurRng;
 
+use std::convert::TryInto;
+
 fn rwtest<T: MemoryView>(
     bench: &mut Bencher,
     virt_mem: &mut T,
@@ -27,8 +29,8 @@ fn rwtest<T: MemoryView>(
             let mut done_size = 0;
 
             while done_size < read_size {
-                let base_addr = rng
-                    .gen_range(module.base.to_umem()..(module.base.to_umem() + module.size as u64));
+                let base_addr =
+                    rng.gen_range(module.base.to_umem()..(module.base.to_umem() + module.size));
 
                 let mut bufs = Vec::with_capacity(*o);
 
@@ -97,7 +99,14 @@ fn seq_read_params(
         group.bench_with_input(
             BenchmarkId::new(func_name.clone(), size),
             &size,
-            |b, &size| read_test_with_os(b, black_box(size as usize), black_box(1), &mut os),
+            |b, &size| {
+                read_test_with_os(
+                    b,
+                    black_box(size.try_into().unwrap()),
+                    black_box(1),
+                    &mut os,
+                )
+            },
         );
     }
 }
@@ -120,8 +129,8 @@ fn chunk_read_params(
                 |b, &size| {
                     read_test_with_os(
                         b,
-                        black_box(size as usize),
-                        black_box(chunk_size as usize),
+                        black_box(size.try_into().unwrap()),
+                        black_box(chunk_size.try_into().unwrap()),
                         &mut os,
                     )
                 },

@@ -20,7 +20,7 @@ use pelite::{self, pe64::debug::CodeView, pe64::exports::Export, PeView};
 pub fn find<T: MemoryView + VirtualTranslate>(
     virt_mem: &mut T,
     start_block: &StartBlock,
-) -> Result<(Address, usize)> {
+) -> Result<(Address, umem)> {
     let arch_obj = ArchitectureObj::from(start_block.arch);
     if arch_obj.bits() == 64 {
         if !start_block.kernel_hint.is_null() {
@@ -90,13 +90,13 @@ pub fn find_guid<T: MemoryView>(mem: &mut T, kernel_base: Address) -> Result<Win
     Ok(Win32Guid::new(file_name, &guid))
 }
 
-fn get_export(pe: &PeView, name: &str) -> Result<usize> {
+fn get_export(pe: &PeView, name: &str) -> Result<umem> {
     info!("trying to find {} export", name);
     let export = match pe
         .get_export_by_name(name)
         .map_err(|err| Error(ErrorOrigin::OsLayer, ErrorKind::ExportNotFound).log_info(err))?
     {
-        Export::Symbol(s) => *s as usize,
+        Export::Symbol(s) => *s as umem,
         Export::Forward(_) => {
             return Err(Error(ErrorOrigin::OsLayer, ErrorKind::ExportNotFound)
                 .log_info("Export found but it was a forwarded export"))
@@ -125,8 +125,8 @@ pub fn find_winver<T: MemoryView>(mem: &mut T, kernel_base: Address) -> Result<W
     // TODO: these reads should be optional
     // try to find major/minor version
     // read from KUSER_SHARED_DATA. these fields exist since nt 4.0 so they have to exist in case NtBuildNumber exists.
-    let mut nt_major_version: u32 = mem.read((0x7ffe0000 as umem + 0x026C).into()).data_part()?;
-    let mut nt_minor_version: u32 = mem.read((0x7ffe0000 as umem + 0x0270).into()).data_part()?;
+    let mut nt_major_version: u32 = mem.read((0x7ffe0000 + 0x026C).into()).data_part()?;
+    let mut nt_minor_version: u32 = mem.read((0x7ffe0000 + 0x0270).into()).data_part()?;
 
     // fallback on x64: try to parse RtlGetVersion assembly
     if nt_major_version == 0 && rtl_get_version_ref.is_ok() {

@@ -127,7 +127,7 @@ impl PhysicalAddress {
 
     /// Returns the containing address converted to a raw [`umem`].
     #[inline]
-    pub const fn to_umem(&self) -> umem {
+    pub const fn to_umem(self) -> umem {
         self.address.to_umem()
     }
 }

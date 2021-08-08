@@ -26,8 +26,7 @@ impl<T: MemoryView> MemoryView for RemapView<T> {
     ) -> Result<()> {
         let out_fail = std::cell::RefCell::new(out_fail);
 
-        let mut void =
-            |(addr, buf): (Address, _)| out_fail.borrow_mut().call(MemData(addr.into(), buf));
+        let mut void = |(addr, buf): (Address, _)| out_fail.borrow_mut().call(MemData(addr, buf));
         let mut out_fail = |data| out_fail.borrow_mut().call(data);
 
         let mut iter = self
@@ -46,8 +45,7 @@ impl<T: MemoryView> MemoryView for RemapView<T> {
     ) -> Result<()> {
         let out_fail = std::cell::RefCell::new(out_fail);
 
-        let mut void =
-            |(addr, buf): (Address, _)| out_fail.borrow_mut().call(MemData(addr.into(), buf));
+        let mut void = |(addr, buf): (Address, _)| out_fail.borrow_mut().call(MemData(addr, buf));
         let mut out_fail = |data| out_fail.borrow_mut().call(data);
 
         let mut iter = self

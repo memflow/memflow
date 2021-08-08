@@ -18,6 +18,7 @@ use rand::seq::SliceRandom;
 use rand::{thread_rng, Rng, SeedableRng};
 use rand_xorshift::XorShiftRng;
 use std::collections::VecDeque;
+use std::convert::TryInto;
 use std::ffi::c_void;
 
 use crate::architecture::x86::{x64, X86VirtualTranslate};
@@ -244,7 +245,7 @@ impl DummyOs {
                 .mem
                 .buf
                 .as_ptr()
-                .add(dtb_base.to_umem() as usize)
+                .add(dtb_base.to_umem().try_into().unwrap())
                 .cast::<PageTable>() as *mut _)
         };
 
@@ -327,7 +328,7 @@ impl DummyOs {
                 .mem
                 .buf
                 .as_ptr()
-                .add(dtb.addr.to_umem() as usize)
+                .add(dtb.addr.to_umem().try_into().unwrap())
                 .cast::<PageTable>() as *mut _)
         };
         *pml4 = PageTable::new();
@@ -343,12 +344,16 @@ impl DummyOs {
                 self.mem
                     .phys_write(
                         page_info.addr.into(),
-                        &test_buf[cur_len as usize..(cur_len + page_info.size.to_size()) as usize],
+                        &test_buf[cur_len.try_into().unwrap()
+                            ..(cur_len + page_info.size.to_size()).try_into().unwrap()],
                     )
                     .unwrap();
             } else if test_buf.len() as umem > cur_len {
                 self.mem
-                    .phys_write(page_info.addr.into(), &test_buf[cur_len as usize..])
+                    .phys_write(
+                        page_info.addr.into(),
+                        &test_buf[cur_len.try_into().unwrap()..],
+                    )
                     .unwrap();
             }
 

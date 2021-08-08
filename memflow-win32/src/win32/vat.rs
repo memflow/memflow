@@ -1,3 +1,5 @@
+use std::convert::TryInto;
+
 use memflow::{
     architecture::{
         arm, x86, ArchitectureIdent, ArchitectureObj, VirtualTranslate3, VtopFailureCallback,
@@ -55,7 +57,7 @@ impl VirtualTranslate3 for Win32VirtualTranslate {
     }
 
     fn translation_table_id(&self, _address: Address) -> usize {
-        self.dtb.to_umem().overflowing_shr(12).0 as usize
+        self.dtb.to_umem().overflowing_shr(12).0.try_into().unwrap()
     }
 
     fn arch(&self) -> ArchitectureObj {

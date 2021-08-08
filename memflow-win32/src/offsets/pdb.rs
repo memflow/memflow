@@ -1,5 +1,6 @@
 mod data;
 
+use std::convert::TryInto;
 use std::prelude::v1::*;
 
 use data::TypeSet;
@@ -99,7 +100,7 @@ impl PdbStruct {
                     f.name.to_string().into_owned(),
                     PdbField {
                         type_name: f.type_name.clone(),
-                        offset: f.offset as usize,
+                        offset: f.offset as usize, // u16 can always be safely converted into usize
                     },
                 );
             });
@@ -144,9 +145,9 @@ impl<'a, 's> Source<'s> for PdbSourceBuffer<'a> {
         let bytes = v.bytes.as_mut_slice();
         let mut output_offset: usize = 0;
         for slice in slices {
-            bytes[output_offset..(output_offset + slice.size)].copy_from_slice(
-                &self.bytes[slice.offset as usize..(slice.offset as usize + slice.size)],
-            );
+            let offset = slice.offset.try_into().unwrap();
+            bytes[output_offset..(output_offset + slice.size)]
+                .copy_from_slice(&self.bytes[offset..(offset + slice.size)]);
             output_offset += slice.size;
         }
 

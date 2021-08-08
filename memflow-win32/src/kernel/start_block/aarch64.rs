@@ -4,9 +4,9 @@ use std::convert::TryInto;
 
 use memflow::architecture::arm::aarch64;
 use memflow::error::{Error, ErrorKind, ErrorOrigin, Result};
-use memflow::types::{size, Address};
+use memflow::types::{size, umem, Address};
 
-pub const PHYS_BASE: Address = size::gb(1).into();
+pub const PHYS_BASE: umem = size::gb(1);
 
 // mem here has to be a single page (4kb sized)
 fn find_pt(addr: Address, mem: &[u8]) -> Option<Address> {
@@ -42,7 +42,7 @@ pub fn find(mem: &[u8]) -> Result<StartBlock> {
         .enumerate()
         .filter_map(|(i, c)| {
             find_pt(
-                PHYS_BASE + (i * aarch64::ARCH.page_size().try_into().unwrap()),
+                Address::from(PHYS_BASE) + (i as umem * aarch64::ARCH.page_size()),
                 c,
             )
         })

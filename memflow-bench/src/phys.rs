@@ -98,7 +98,7 @@ fn read_test_with_ctx(
     if cache_size > 0 {
         let mut cached_mem = CachedMemoryAccess::builder(mem)
             .arch(architecture::x86::x64::ARCH)
-            .cache_size(size::mb(cache_size as usize))
+            .cache_size(size::mb(cache_size))
             .page_type_mask(PageType::PAGE_TABLE | PageType::READ_ONLY | PageType::WRITEABLE)
             .build()
             .unwrap();

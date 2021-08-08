@@ -10,9 +10,11 @@ use memflow::dataview::Pod;
 use memflow::error::{Error, ErrorKind, ErrorOrigin, PartialResultExt, Result};
 use memflow::iter::PageChunks;
 use memflow::mem::{MemoryView, VirtualTranslate};
-use memflow::types::{size, Address};
+use memflow::types::{size, umem, Address};
 
 use pelite::image::IMAGE_DOS_HEADER;
+
+use std::convert::TryInto;
 
 pub fn find_with_va_hint<T: MemoryView + VirtualTranslate>(
     virt_mem: &mut T,
@@ -45,12 +47,12 @@ pub fn find_with_va_hint<T: MemoryView + VirtualTranslate>(
 }
 
 fn find_with_va<T: MemoryView + VirtualTranslate>(virt_mem: &mut T, va_base: u64) -> Result<u64> {
-    let mut buf = vec![0; size::mb(2)];
+    let mut buf = vec![0; size::mb(2).try_into().unwrap()];
     virt_mem
         .read_raw_into(Address::from(va_base), &mut buf)
         .data_part()?;
 
-    buf.chunks_exact(x64::ARCH.page_size())
+    buf.chunks_exact(x64::ARCH.page_size().try_into().unwrap())
         .enumerate()
         .map(|(i, c)| {
             let view = Pod::as_data_view(c);
@@ -61,7 +63,7 @@ fn find_with_va<T: MemoryView + VirtualTranslate>(virt_mem: &mut T, va_base: u64
         .inspect(|(i, _, _)| {
             trace!(
                 "x64::find_with_va: found potential header flags at offset {:x}",
-                i * x64::ARCH.page_size()
+                *i as umem * x64::ARCH.page_size()
             )
         })
         .find(|(i, _, _)| {

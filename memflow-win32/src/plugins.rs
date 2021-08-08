@@ -5,6 +5,7 @@ use memflow::cglue;
 use memflow::plugins::args;
 use memflow::prelude::v1::*;
 
+use std::convert::TryInto;
 use std::ffi::c_void;
 use std::time::Duration;
 

@@ -117,7 +117,7 @@ impl Win32ModuleListInfo {
 
         let size = mem
             .read_addr_arch(arch_obj, entry + self.offsets.ldr_data_size)?
-            .as_usize();
+            .to_umem();
 
         trace!("size={:x}", size);
 

@@ -256,7 +256,7 @@ impl<T: 'static + PhysicalMemory + Clone, V: 'static + VirtualTranslate2 + Clone
                     if base_info.proc_arch == base_info.sys_arch {
                         None
                     } else {
-                        Some(teb + 0x2000)
+                        Some(teb + (0x2000 as umem))
                     },
                 )
             } else {

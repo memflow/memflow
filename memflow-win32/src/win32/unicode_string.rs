@@ -5,7 +5,7 @@ use std::convert::TryInto;
 use memflow::architecture::{ArchitectureObj, Endianess};
 use memflow::error::{Error, ErrorKind, ErrorOrigin, Result};
 use memflow::mem::MemoryView;
-use memflow::types::Address;
+use memflow::types::{umem, Address};
 
 use widestring::U16CString;
 
@@ -42,8 +42,8 @@ impl<'a, T: MemoryView> VirtualReadUnicodeString for T {
         // TODO: chek if length exceeds limit
         // buffer is either aligned at 4 or 8
         let buffer = match proc_arch.bits() {
-            64 => self.read_addr64(addr + 8)?,
-            32 => self.read_addr32(addr + 4)?,
+            64 => self.read_addr64(addr + (8 as umem))?,
+            32 => self.read_addr32(addr + (4 as umem))?,
             _ => {
                 return Err(Error(ErrorOrigin::OsLayer, ErrorKind::InvalidArchitecture));
             }

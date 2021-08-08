@@ -1,3 +1,4 @@
+use std::convert::TryInto;
 use std::prelude::v1::*;
 
 use super::{Win32Kernel, Win32ModuleListInfo};
@@ -276,7 +277,7 @@ impl<T: MemoryView> Process for Win32Process<T> {
         info: &ModuleInfo,
         mut callback: ImportCallback,
     ) -> Result<()> {
-        let mut module_image = vec![0u8; info.size];
+        let mut module_image = vec![0u8; info.size.try_into().unwrap()];
         self.virt_mem
             .read_raw_into(info.base, &mut module_image)
             .data_part()?;
@@ -289,7 +290,7 @@ impl<T: MemoryView> Process for Win32Process<T> {
             .take_while(|i| {
                 callback.call(ImportInfo {
                     name: ReprCString::from(i.name.to_string()),
-                    offset: i.offset,
+                    offset: i.offset as umem,
                 })
             })
             .for_each(|_| ());
@@ -302,7 +303,7 @@ impl<T: MemoryView> Process for Win32Process<T> {
         info: &ModuleInfo,
         mut callback: ExportCallback,
     ) -> Result<()> {
-        let mut module_image = vec![0u8; info.size];
+        let mut module_image = vec![0u8; info.size.try_into().unwrap()];
         self.virt_mem
             .read_raw_into(info.base, &mut module_image)
             .data_part()?;
@@ -315,7 +316,7 @@ impl<T: MemoryView> Process for Win32Process<T> {
             .take_while(|e| {
                 callback.call(ExportInfo {
                     name: ReprCString::from(e.name.map(|n| n.to_string()).unwrap_or_default()),
-                    offset: e.offset,
+                    offset: e.offset as umem,
                 })
             })
             .for_each(|_| ());
@@ -328,7 +329,7 @@ impl<T: MemoryView> Process for Win32Process<T> {
         info: &ModuleInfo,
         mut callback: SectionCallback,
     ) -> Result<()> {
-        let mut module_image = vec![0u8; info.size];
+        let mut module_image = vec![0u8; info.size.try_into().unwrap()];
         self.virt_mem
             .read_raw_into(info.base, &mut module_image)
             .data_part()?;
@@ -341,8 +342,8 @@ impl<T: MemoryView> Process for Win32Process<T> {
             .take_while(|s| {
                 callback.call(SectionInfo {
                     name: ReprCString::from(&s.name[..]),
-                    base: info.base + s.virtual_address as usize,
-                    size: s.virtual_size as usize,
+                    base: info.base + s.virtual_address as umem,
+                    size: s.virtual_size as umem,
                 })
             })
             .for_each(|_| ());

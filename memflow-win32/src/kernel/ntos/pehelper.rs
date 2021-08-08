@@ -1,3 +1,4 @@
+use std::convert::TryInto;
 use std::prelude::v1::*;
 
 use log::{debug, info};
@@ -9,7 +10,7 @@ use memflow::types::{size, Address};
 use pelite::{self, PeView};
 
 pub fn try_get_pe_size<T: MemoryView>(mem: &mut T, probe_addr: Address) -> Result<usize> {
-    let mut probe_buf = vec![0; size::kb(4)];
+    let mut probe_buf = vec![0; size::kb(4).try_into().unwrap()];
     mem.read_raw_into(probe_addr, &mut probe_buf)?;
 
     let pe_probe = PeView::from_bytes(&probe_buf)

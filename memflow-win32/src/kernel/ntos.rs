@@ -13,7 +13,7 @@ use log::{info, warn};
 use memflow::architecture::ArchitectureObj;
 use memflow::error::{Error, ErrorKind, ErrorOrigin, PartialResultExt, Result};
 use memflow::mem::{MemoryView, VirtualTranslate};
-use memflow::types::Address;
+use memflow::types::{umem, Address};
 
 use pelite::{self, pe64::debug::CodeView, pe64::exports::Export, PeView};
 
@@ -125,8 +125,8 @@ pub fn find_winver<T: MemoryView>(mem: &mut T, kernel_base: Address) -> Result<W
     // TODO: these reads should be optional
     // try to find major/minor version
     // read from KUSER_SHARED_DATA. these fields exist since nt 4.0 so they have to exist in case NtBuildNumber exists.
-    let mut nt_major_version: u32 = mem.read((0x7ffe0000 + 0x026C).into()).data_part()?;
-    let mut nt_minor_version: u32 = mem.read((0x7ffe0000 + 0x0270).into()).data_part()?;
+    let mut nt_major_version: u32 = mem.read((0x7ffe0000 as umem + 0x026C).into()).data_part()?;
+    let mut nt_minor_version: u32 = mem.read((0x7ffe0000 as umem + 0x0270).into()).data_part()?;
 
     // fallback on x64: try to parse RtlGetVersion assembly
     if nt_major_version == 0 && rtl_get_version_ref.is_ok() {

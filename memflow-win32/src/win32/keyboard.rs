@@ -40,6 +40,7 @@ use memflow::prelude::OsInner;
 use memflow::cglue;
 
 use log::debug;
+use std::convert::TryInto;
 
 use memflow::error::PartialResultExt;
 use memflow::types::Address;
@@ -136,7 +137,10 @@ impl<T> Win32Keyboard<T> {
 
         // read with user_process dtb
         let module_buf = user_process
-            .read_raw(win32kbase_module_info.base, win32kbase_module_info.size)
+            .read_raw(
+                win32kbase_module_info.base,
+                win32kbase_module_info.size.try_into().unwrap(),
+            )
             .data_part()?;
         debug!("fetched {:x} bytes from win32kbase.sys", module_buf.len());
 
@@ -171,7 +175,6 @@ impl<T> Win32Keyboard<T> {
     #[cfg(feature = "regex")]
     fn find_gaf_sig(module_buf: &[u8]) -> Result<usize> {
         use ::regex::bytes::*;
-        use std::convert::TryInto;
 
         // 48 8B 05 ? ? ? ? 48 89 81 ? ? 00 00 48 8B 8F + 0x3
         let re = Regex::new("(?-u)\\x48\\x8B\\x05(?s:.)(?s:.)(?s:.)(?s:.)\\x48\\x89\\x81(?s:.)(?s:.)\\x00\\x00\\x48\\x8B\\x8F")

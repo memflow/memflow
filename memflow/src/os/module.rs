@@ -27,7 +27,7 @@ pub struct ModuleInfo {
     /// this module belongs to.
     pub base: Address,
     /// Size of the module
-    pub size: usize,
+    pub size: umem,
     /// Name of the module
     pub name: ReprCString,
     /// Path of the module
@@ -63,7 +63,7 @@ pub struct ImportInfo {
     /// Name of the import
     pub name: ReprCString,
     /// Offset of this import from the containing modules base address
-    pub offset: usize,
+    pub offset: umem,
 }
 
 pub type ImportCallback<'a> = OpaqueCallback<'a, ImportInfo>;
@@ -76,7 +76,7 @@ pub struct ExportInfo {
     /// Name of the export
     pub name: ReprCString,
     /// Offset of this export from the containing modules base address
-    pub offset: usize,
+    pub offset: umem,
 }
 
 pub type ExportCallback<'a> = OpaqueCallback<'a, ExportInfo>;
@@ -91,7 +91,7 @@ pub struct SectionInfo {
     /// Virtual address of this section (essentially module_info.base + virtual_address)
     pub base: Address,
     /// Size of this section
-    pub size: usize,
+    pub size: umem,
 }
 
 pub type SectionCallback<'a> = OpaqueCallback<'a, SectionInfo>;

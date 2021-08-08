@@ -8,7 +8,7 @@ use log::{debug, info};
 use memflow::dataview::Pod;
 use memflow::error::{Error, ErrorKind, ErrorOrigin, PartialResultExt, Result};
 use memflow::mem::MemoryView;
-use memflow::types::{size, umem, Address};
+use memflow::types::{size, Address};
 
 use pelite::image::IMAGE_DOS_HEADER;
 

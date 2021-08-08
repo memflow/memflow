@@ -4,7 +4,7 @@ use log::{info, trace};
 use std::fmt;
 
 use memflow::mem::{MemoryMap, MemoryView};
-use memflow::types::{size, Address};
+use memflow::types::{size, umem, Address};
 
 use memflow::dataview::Pod;
 
@@ -50,7 +50,7 @@ pub fn parse<T: MemoryView, U: Pod + Copy + fmt::Debug + fmt::LowerHex + Into<u6
             let size = descriptor.runs[i as usize].page_count.into() * SIZE_4KB;
 
             trace!("adding memory mapping: base={:x} size={:x}", base, size);
-            mem_map.push_remap(base.into(), size as usize, Address::from(base));
+            mem_map.push_remap(base.into(), size, Address::from(base));
         }
 
         Some(mem_map)

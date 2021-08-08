@@ -20,11 +20,11 @@ fn check_page(addr: Address, mem: &[u8]) -> bool {
 }
 
 pub fn find(mem: &[u8]) -> Result<StartBlock> {
-    mem.page_chunks(Address::from(0), x32_pae::ARCH.page_size())
+    mem.page_chunks(Address::NULL, x32_pae::ARCH.page_size())
         .find(|(a, c)| check_page(*a, c))
         .map(|(a, _)| StartBlock {
             arch: x32_pae::ARCH.ident(),
-            kernel_hint: 0.into(),
+            kernel_hint: Address::NULL,
             dtb: a,
         })
         .ok_or_else(|| {

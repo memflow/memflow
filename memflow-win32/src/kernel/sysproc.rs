@@ -87,7 +87,8 @@ pub fn find_in_section<T: MemoryView>(
     // scan for va of system process (dtb.va)
     // ... check if its 32 or 64bit
 
-    let mut header_buf = vec![0; size::mb(32).try_into().unwrap()];
+    assert!(size::mb(32) < usize::MAX as umem);
+    let mut header_buf = vec![0; size::mb(32) as usize];
     virt_mem.read_raw_into(ntos, &mut header_buf)?;
 
     /*

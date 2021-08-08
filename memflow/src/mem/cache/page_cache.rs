@@ -439,7 +439,8 @@ mod tests {
             let dummy_mem = DummyMemory::new(size::mb(512));
             let mut dummy_os = DummyOs::with_seed(dummy_mem, seed);
 
-            let virt_size = size::mb(18).try_into().unwrap();
+            assert!(size::mb(18) < usize::MAX as umem);
+            let virt_size = size::mb(18) as usize;
             let mut test_buf = vec![0_u64; virt_size / 8];
 
             for i in &mut test_buf {
@@ -618,7 +619,8 @@ mod tests {
         let dummy_mem = DummyMemory::new(size::mb(16));
         let mut dummy_os = DummyOs::new(dummy_mem);
 
-        let buf_size = size::kb(8).try_into().unwrap();
+        assert!(size::kb(8) < usize::MAX as umem);
+        let buf_size = size::kb(8) as usize;
         let mut buf_start = vec![0_u8; buf_size];
         for (i, item) in buf_start.iter_mut().enumerate() {
             *item = ((i / 115) % 256) as u8;

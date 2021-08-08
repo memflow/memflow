@@ -3,7 +3,6 @@ mod x64;
 mod x86;
 mod x86pae;
 
-use std::convert::TryInto;
 use std::prelude::v1::*;
 
 use log::warn;
@@ -11,7 +10,7 @@ use log::warn;
 use memflow::architecture::ArchitectureIdent;
 use memflow::error::{Error, ErrorKind, ErrorOrigin, Result};
 use memflow::mem::PhysicalMemory;
-use memflow::types::{size, Address, PhysicalAddress};
+use memflow::types::{size, umem, Address, PhysicalAddress};
 
 // PROCESSOR_START_BLOCK
 #[derive(Debug, Copy, Clone)]
@@ -29,14 +28,16 @@ pub fn find_fallback<T: PhysicalMemory>(
     match arch {
         ArchitectureIdent::X86(64, _) => {
             // read low 16mb stub
-            let mut low16m = vec![0; size::mb(16).try_into().unwrap()];
+            assert!(size::mb(16) < usize::MAX as umem);
+            let mut low16m = vec![0; size::mb(16) as usize];
             mem.phys_read_into(PhysicalAddress::NULL, low16m.as_mut_slice())?;
 
             x64::find(&low16m)
         }
         ArchitectureIdent::AArch64(_) => {
             // read low 16mb stub
-            let mut low16m = vec![0; size::mb(16).try_into().unwrap()];
+            assert!(size::mb(16) < usize::MAX as umem);
+            let mut low16m = vec![0; size::mb(16) as usize];
 
             //TODO: configure this, but so far arm null starts at this address
             mem.phys_read_into(aarch64::PHYS_BASE.into(), low16m.as_mut_slice())?;
@@ -54,7 +55,8 @@ pub fn find<T: PhysicalMemory>(mem: &mut T, arch: Option<ArchitectureIdent>) -> 
         match arch {
             ArchitectureIdent::X86(64, _) => {
                 // read low 1mb stub
-                let mut low1m = vec![0; size::mb(1).try_into().unwrap()];
+                assert!(size::mb(1) < usize::MAX as umem);
+                let mut low1m = vec![0; size::mb(1) as usize];
                 mem.phys_read_into(PhysicalAddress::NULL, low1m.as_mut_slice())?;
 
                 // find x64 dtb in low stub < 1M
@@ -70,12 +72,14 @@ pub fn find<T: PhysicalMemory>(mem: &mut T, arch: Option<ArchitectureIdent>) -> 
                 find_fallback(mem, arch)
             }
             ArchitectureIdent::X86(32, true) => {
-                let mut low16m = vec![0; size::mb(16).try_into().unwrap()];
+                assert!(size::mb(16) < usize::MAX as umem);
+                let mut low16m = vec![0; size::mb(16) as usize];
                 mem.phys_read_into(PhysicalAddress::NULL, low16m.as_mut_slice())?;
                 x86pae::find(&low16m)
             }
             ArchitectureIdent::X86(32, false) => {
-                let mut low16m = vec![0; size::mb(16).try_into().unwrap()];
+                assert!(size::mb(16) < usize::MAX as umem);
+                let mut low16m = vec![0; size::mb(16) as usize];
                 mem.phys_read_into(PhysicalAddress::NULL, low16m.as_mut_slice())?;
                 x86::find(&low16m)
             }

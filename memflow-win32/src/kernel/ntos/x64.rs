@@ -47,7 +47,8 @@ pub fn find_with_va_hint<T: MemoryView + VirtualTranslate>(
 }
 
 fn find_with_va<T: MemoryView + VirtualTranslate>(virt_mem: &mut T, va_base: umem) -> Result<umem> {
-    let mut buf = vec![0; size::mb(2).try_into().unwrap()];
+    assert!(size::mb(2) < usize::MAX as umem);
+    let mut buf = vec![0; size::mb(2) as usize];
     virt_mem
         .read_raw_into(Address::from(va_base), &mut buf)
         .data_part()?;

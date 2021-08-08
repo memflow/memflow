@@ -293,8 +293,6 @@ impl<V: VirtualTranslate2, Q: CacheValidator> CachedVirtualTranslateBuilder<V, Q
 
 #[cfg(test)]
 mod tests {
-    use core::convert::TryInto;
-
     use crate::architecture::x86;
     use crate::dummy::{DummyMemory, DummyOs};
     use crate::error::PartialResultExt;
@@ -347,7 +345,8 @@ mod tests {
         let buffer = standard_buffer(size::mb(2));
         let (mut mem, mut vmem, virt_base, dtb) = build_mem(&buffer);
 
-        let mut read_into = vec![0u8; size::mb(2).try_into().unwrap()];
+        assert!(size::mb(2) < usize::MAX as umem);
+        let mut read_into = vec![0u8; size::mb(2) as usize];
 
         vmem.read_raw_into(virt_base, &mut read_into)
             .data()
@@ -356,11 +355,9 @@ mod tests {
         assert!(read_into == buffer);
 
         // Destroy the page tables
-        mem.phys_write(
-            dtb.into(),
-            vec![0u8; size::kb(4).try_into().unwrap()].as_slice(),
-        )
-        .unwrap();
+        assert!(size::kb(4) < usize::MAX as umem);
+        mem.phys_write(dtb.into(), vec![0u8; size::kb(4) as usize].as_slice())
+            .unwrap();
 
         vmem.read_raw_into(virt_base, &mut read_into)
             .data()

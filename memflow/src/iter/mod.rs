@@ -97,7 +97,7 @@ pub trait PageChunks {
     fn page_chunks(
         self,
         start_address: Address,
-        page_size: usize,
+        page_size: umem,
     ) -> PageChunkIterator<Self, TrueFunc<Self>>
     where
         Self: SplitAtIndex + Sized,
@@ -154,7 +154,7 @@ pub trait PageChunks {
     fn page_chunks_by<F: FnMut(Address, &Self, Option<&Self>) -> bool>(
         self,
         start_address: Address,
-        page_size: usize,
+        page_size: umem,
         split_fn: F,
     ) -> PageChunkIterator<Self, F>
     where
@@ -169,6 +169,7 @@ impl<T> PageChunks for T where T: SplitAtIndex {}
 #[cfg(test)]
 mod tests {
     use crate::iter::PageChunks;
+    use crate::types::{umem, Address};
 
     const PAGE_SIZE: umem = 97;
     const OFF: umem = 26;
@@ -216,43 +217,43 @@ mod tests {
     fn pc_check_all_aligned_zero() {
         let arr = [0_u8; 0x1000];
 
-        for (addr, _chunk) in arr.page_chunks(0.into(), PAGE_SIZE) {
+        for (addr, _chunk) in arr.page_chunks(Address::null(), PAGE_SIZE) {
             assert_eq!(addr.as_page_aligned(PAGE_SIZE), addr);
         }
     }
 
     #[test]
     fn pc_check_all_chunks_equal() {
-        let arr = [0_u8; 100 * PAGE_SIZE];
+        let arr = [0_u8; (100 * PAGE_SIZE) as usize];
 
-        for (_addr, chunk) in arr.page_chunks(0.into(), PAGE_SIZE) {
+        for (_addr, chunk) in arr.page_chunks(Address::null(), PAGE_SIZE) {
             println!("{:x} {:x}", _addr, chunk.len());
-            assert_eq!(chunk.len(), PAGE_SIZE);
+            assert_eq!(chunk.len() as umem, PAGE_SIZE);
         }
     }
 
     #[test]
     fn pc_check_all_chunks_equal_first_not() {
-        const OFF: usize = 26;
-        let arr = [0_u8; 100 * PAGE_SIZE + (PAGE_SIZE - OFF)];
+        const OFF: umem = 26;
+        let arr = [0_u8; (100 * PAGE_SIZE + (PAGE_SIZE - OFF)) as usize];
 
         let mut page_iter = arr.page_chunks(OFF.into(), PAGE_SIZE);
 
         {
             let (addr, chunk) = page_iter.next().unwrap();
             assert_eq!(addr, OFF.into());
-            assert_eq!(chunk.len(), PAGE_SIZE - OFF);
+            assert_eq!(chunk.len() as umem, PAGE_SIZE - OFF);
         }
 
         for (_addr, chunk) in page_iter {
-            assert_eq!(chunk.len(), PAGE_SIZE);
+            assert_eq!(chunk.len() as umem, PAGE_SIZE);
         }
     }
 
     #[test]
     fn pc_check_everything() {
-        const TOTAL_LEN: usize = 100 * PAGE_SIZE + ADDEND - OFF;
-        let arr = [0_u8; TOTAL_LEN];
+        const TOTAL_LEN: umem = 100 * PAGE_SIZE + ADDEND - OFF;
+        let arr = [0_u8; TOTAL_LEN as usize];
 
         let mut cur_len = 0;
         let mut prev_len = 0;
@@ -262,32 +263,32 @@ mod tests {
         {
             let (addr, chunk) = page_iter.next().unwrap();
             assert_eq!(addr, OFF.into());
-            assert_eq!(chunk.len(), PAGE_SIZE - OFF);
+            assert_eq!(chunk.len() as umem, PAGE_SIZE - OFF);
             cur_len += chunk.len();
         }
 
         for (_addr, chunk) in page_iter {
-            if chunk.len() != ADDEND {
-                assert_eq!(chunk.len(), PAGE_SIZE);
+            if chunk.len() as umem != ADDEND {
+                assert_eq!(chunk.len() as umem, PAGE_SIZE);
             }
             prev_len = chunk.len();
             cur_len += prev_len;
         }
 
-        assert_eq!(prev_len, ADDEND);
-        assert_eq!(cur_len, TOTAL_LEN);
+        assert_eq!(prev_len as umem, ADDEND);
+        assert_eq!(cur_len as umem, TOTAL_LEN);
     }
 
     #[test]
     fn pc_check_size_hint() {
         const PAGE_COUNT: usize = 5;
-        let arr = [0_u8; PAGE_SIZE * PAGE_COUNT];
+        let arr = [0_u8; (PAGE_SIZE as usize * PAGE_COUNT)];
         assert_eq!(
-            arr.page_chunks(0.into(), PAGE_SIZE).size_hint().0,
+            arr.page_chunks(Address::null(), PAGE_SIZE).size_hint().0,
             PAGE_COUNT
         );
         assert_eq!(
-            arr.page_chunks(1.into(), PAGE_SIZE).size_hint().0,
+            arr.page_chunks((1 as umem).into(), PAGE_SIZE).size_hint().0,
             PAGE_COUNT + 1
         );
         assert_eq!(
@@ -305,6 +306,6 @@ mod tests {
     #[test]
     fn pc_check_empty() {
         let arr = [0_u8; 0];
-        let _ = arr.page_chunks(0.into(), PAGE_SIZE).next();
+        let _ = arr.page_chunks(Address::null(), PAGE_SIZE).next();
     }
 }

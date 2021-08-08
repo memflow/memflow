@@ -19,14 +19,26 @@ pub type imem = i64;
 /// The current implementations include `u32`, `u64` and later eventually `u128`.
 /// This trait can be used to abstract objects over the target pointer width.
 pub trait PrimitiveAddress:
-    Copy + Eq + PartialEq + Ord + PartialOrd + hash::Hash + fmt::LowerHex + fmt::UpperHex + ByteSwap
-// + From<umem> + From<imem>
+    Copy
+    + Eq
+    + PartialEq
+    + Ord
+    + PartialOrd
+    + hash::Hash
+    + fmt::LowerHex
+    + fmt::UpperHex
+    + ByteSwap
+    + ops::Add<Output = Self>
+    + ops::Sub<Output = Self>
 {
     fn null() -> Self;
     fn invalid() -> Self;
 
     fn min() -> Self;
     fn max() -> Self;
+
+    fn from_umem(frm: umem) -> Self;
+    fn from_imem(frm: imem) -> Self;
 
     fn wrapping_add(self, rhs: Self) -> Self;
     fn wrapping_sub(self, rhs: Self) -> Self;
@@ -42,109 +54,75 @@ pub trait PrimitiveAddress:
     }
 }
 
-impl PrimitiveAddress for u32 {
-    #[inline]
-    fn null() -> Self {
-        0u32
-    }
+#[macro_export]
+macro_rules! impl_primitive_address {
+    ($type_name:ident) => {
+        impl PrimitiveAddress for $type_name {
+            #[inline]
+            fn null() -> Self {
+                0 as $type_name
+            }
 
-    #[inline]
-    fn invalid() -> Self {
-        !0u32
-    }
+            #[inline]
+            fn invalid() -> Self {
+                !Self::null()
+            }
 
-    #[inline]
-    fn min() -> Self {
-        u32::MIN
-    }
+            #[inline]
+            fn min() -> Self {
+                Self::MIN
+            }
 
-    #[inline]
-    fn max() -> Self {
-        u32::MAX
-    }
+            #[inline]
+            fn max() -> Self {
+                Self::MAX
+            }
 
-    #[inline]
-    fn wrapping_add(self, rhs: Self) -> Self {
-        self.wrapping_add(rhs)
-    }
+            #[inline]
+            fn from_umem(frm: umem) -> Self {
+                frm as Self
+            }
 
-    #[inline]
-    fn wrapping_sub(self, rhs: Self) -> Self {
-        self.wrapping_sub(rhs)
-    }
+            #[inline]
+            fn from_imem(frm: imem) -> Self {
+                frm as Self
+            }
 
-    #[inline]
-    fn saturating_sub(self, rhs: Self) -> Self {
-        self.saturating_sub(rhs)
-    }
+            #[inline]
+            fn wrapping_add(self, rhs: Self) -> Self {
+                self.wrapping_add(rhs)
+            }
 
-    #[inline]
-    fn overflowing_shr(self, rhs: u32) -> (Self, bool) {
-        self.overflowing_shr(rhs)
-    }
+            #[inline]
+            fn wrapping_sub(self, rhs: Self) -> Self {
+                self.wrapping_sub(rhs)
+            }
 
-    #[inline]
-    fn to_umem(self) -> umem {
-        self as umem
-    }
+            #[inline]
+            fn saturating_sub(self, rhs: Self) -> Self {
+                self.saturating_sub(rhs)
+            }
 
-    #[inline]
-    fn to_imem(self) -> imem {
-        self as imem
-    }
+            #[inline]
+            fn overflowing_shr(self, rhs: u32) -> (Self, bool) {
+                self.overflowing_shr(rhs)
+            }
+
+            #[inline]
+            fn to_umem(self) -> umem {
+                self as umem
+            }
+
+            #[inline]
+            fn to_imem(self) -> imem {
+                self as imem
+            }
+        }
+    };
 }
 
-impl PrimitiveAddress for u64 {
-    #[inline]
-    fn null() -> Self {
-        0u64
-    }
-
-    #[inline]
-    fn invalid() -> Self {
-        !0u64
-    }
-
-    #[inline]
-    fn min() -> Self {
-        u64::MIN
-    }
-
-    #[inline]
-    fn max() -> Self {
-        u64::MAX
-    }
-
-    #[inline]
-    fn wrapping_add(self, rhs: Self) -> Self {
-        self.wrapping_add(rhs)
-    }
-
-    #[inline]
-    fn wrapping_sub(self, rhs: Self) -> Self {
-        self.wrapping_sub(rhs)
-    }
-
-    #[inline]
-    fn saturating_sub(self, rhs: Self) -> Self {
-        self.saturating_sub(rhs)
-    }
-
-    #[inline]
-    fn overflowing_shr(self, rhs: u32) -> (Self, bool) {
-        self.overflowing_shr(rhs)
-    }
-
-    #[inline]
-    fn to_umem(self) -> umem {
-        self as umem
-    }
-
-    #[inline]
-    fn to_imem(self) -> imem {
-        self as imem
-    }
-}
+impl_primitive_address!(u32);
+impl_primitive_address!(u64);
 
 /// This type represents a address on the target system.
 /// It internally holds a `umem` value but can also be used

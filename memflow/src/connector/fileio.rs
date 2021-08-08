@@ -7,7 +7,7 @@ use crate::mem::{
     phys_mem::*, MemData, MemoryMap, PhysicalMemory, PhysicalMemoryMapping, PhysicalMemoryMetadata,
     PhysicalReadData, PhysicalWriteData,
 };
-use crate::types::Address;
+use crate::types::{umem, Address};
 
 use std::fs::File;
 use std::io::{self, Read, Seek, SeekFrom, Write};
@@ -120,11 +120,11 @@ impl Write for &CloneFile {
 #[derive(Clone)]
 pub struct FileIoMemory<T> {
     reader: T,
-    mem_map: MemoryMap<(Address, usize)>,
+    mem_map: MemoryMap<(Address, umem)>,
 }
 
 impl<T: Seek + Read + Write + Send> FileIoMemory<T> {
-    pub fn try_with_reader(reader: T, mem_map: MemoryMap<(Address, usize)>) -> Result<Self> {
+    pub fn try_with_reader(reader: T, mem_map: MemoryMap<(Address, umem)>) -> Result<Self> {
         Ok(Self { reader, mem_map })
     }
 }
@@ -185,7 +185,7 @@ impl<T: Seek + Read + Write + Send> PhysicalMemory for FileIoMemory<T> {
 
     #[inline]
     fn set_mem_map(&mut self, mem_map: &[PhysicalMemoryMapping]) {
-        let map = MemoryMap::<(Address, usize)>::from_vec(mem_map.to_vec());
+        let map = MemoryMap::<(Address, umem)>::from_vec(mem_map.to_vec());
         self.mem_map.merge(map);
     }
 }

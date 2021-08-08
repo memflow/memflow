@@ -2,7 +2,7 @@ use super::VirtualTranslate2;
 use crate::architecture::{VirtualTranslate3, VtopFailureCallback, VtopOutputCallback};
 use crate::iter::SplitAtIndex;
 use crate::mem::{MemData, PhysicalMemory};
-use crate::types::{size, Address};
+use crate::types::{size, umem, Address};
 use std::prelude::v1::*;
 
 /*
@@ -15,7 +15,7 @@ pub struct DirectTranslate {
 
 impl DirectTranslate {
     pub fn new() -> Self {
-        Self::with_capacity(size::mb(64))
+        Self::with_capacity(size::mb(64) as usize)
     }
 
     pub fn with_capacity(size: usize) -> Self {

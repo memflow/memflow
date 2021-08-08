@@ -1,4 +1,5 @@
 use memflow::architecture::{ArchitectureObj, Endianess};
+use memflow::types::umem;
 
 pub mod x86;
 
@@ -13,7 +14,7 @@ pub extern "C" fn arch_endianess(arch: &ArchitectureObj) -> Endianess {
 }
 
 #[no_mangle]
-pub extern "C" fn arch_page_size(arch: &ArchitectureObj) -> usize {
+pub extern "C" fn arch_page_size(arch: &ArchitectureObj) -> umem {
     arch.page_size()
 }
 

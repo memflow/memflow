@@ -1,15 +1,17 @@
-use super::ArchMmuDef;
 use crate::architecture::Endianess;
-
-use super::super::{VtopFailureCallback, VtopOutputCallback};
-use super::translate_data::{TranslateData, TranslateDataVec, TranslateVec, TranslationChunk};
-use super::MmuTranslationBase;
 use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 use crate::iter::FlowIters;
 use crate::iter::SplitAtIndex;
 use crate::mem::{MemData, PhysicalMemory, PhysicalReadData};
 use crate::types::{umem, Address, PageType, PhysicalAddress};
+
+use super::super::{VtopFailureCallback, VtopOutputCallback};
+use super::translate_data::{TranslateData, TranslateDataVec, TranslateVec, TranslationChunk};
+use super::ArchMmuDef;
+use super::MmuTranslationBase;
+
 pub(crate) use fixed_slice_vec::FixedSliceVec as MVec;
+
 use std::convert::TryInto;
 
 #[cfg(feature = "trace_mmu")]
@@ -33,8 +35,8 @@ pub struct ArchMmuSpec {
     pub virt_addr_masks: [u64; MAX_LEVELS],
     pub virt_addr_page_masks: [u64; MAX_LEVELS],
     pub valid_final_page_steps: [bool; MAX_LEVELS],
-    pub pt_leaf_size: [usize; MAX_LEVELS],
-    pub page_size_step: [usize; MAX_LEVELS],
+    pub pt_leaf_size: [umem; MAX_LEVELS],
+    pub page_size_step: [umem; MAX_LEVELS],
     pub spare_allocs: usize,
 }
 
@@ -51,8 +53,8 @@ impl ArchMmuSpec {
         let mut virt_addr_masks = [0; MAX_LEVELS];
         let mut virt_addr_page_masks = [0; MAX_LEVELS];
         let mut valid_final_page_steps = [false; MAX_LEVELS];
-        let mut pt_leaf_size = [0; MAX_LEVELS];
-        let mut page_size_step = [0; MAX_LEVELS];
+        let mut pt_leaf_size: [umem; MAX_LEVELS] = [0; MAX_LEVELS];
+        let mut page_size_step: [umem; MAX_LEVELS] = [0; MAX_LEVELS];
         let spare_allocs = def.spare_allocs();
 
         let mut i = 0;
@@ -127,8 +129,12 @@ impl ArchMmuSpec {
         let tr_data = TranslateData { addr, buf };
 
         // Trim to virt address space limit
-        let (left, reject) = tr_data
-            .split_inclusive_at(Address::bit_mask(0..(self.def.addr_size * 8 - 1)).to_umem());
+        let (left, reject) = tr_data.split_inclusive_at(
+            Address::bit_mask(0..(self.def.addr_size * 8 - 1))
+                .to_umem()
+                .try_into()
+                .unwrap(),
+        );
         let left = left.unwrap();
 
         if let Some(data) = reject {
@@ -199,20 +205,20 @@ impl ArchMmuSpec {
     /// * `pte_addr` - input PTE address that was read the last time (or DTB)
     /// * `virt_addr` - virtual address we are translating
     /// * `step` - the current step in the page walk
-    pub fn vtop_step(&self, pte_addr: Address, virt_addr: Address, step: u8) -> Address {
+    pub fn vtop_step(&self, pte_addr: Address, virt_addr: Address, step: usize) -> Address {
         Address::from(
             self.pte_addr_mask(pte_addr, step) | self.virt_addr_to_pte_offset(virt_addr, step),
         )
     }
 
-    pub fn virt_addr_to_pte_offset(&self, virt_addr: Address, step: u8) -> umem {
+    pub fn virt_addr_to_pte_offset(&self, virt_addr: Address, step: usize) -> umem {
         u64::from_le(
             (virt_addr.to_umem().to_le() >> self.virt_addr_bit_ranges[step].0)
                 & self.virt_addr_masks[step],
         ) * self.def.pte_size as u64
     }
 
-    pub fn virt_addr_to_page_offset(&self, virt_addr: Address, step: u8) -> umem {
+    pub fn virt_addr_to_page_offset(&self, virt_addr: Address, step: usize) -> umem {
         virt_addr.to_umem() & u64::from_le(self.virt_addr_page_masks[step])
     }
 
@@ -221,7 +227,7 @@ impl ArchMmuSpec {
     /// # Arguments
     ///
     /// * `step` - the current step in the page walk
-    pub fn page_size_step_unchecked(&self, step: u8) -> umem {
+    pub fn page_size_step_unchecked(&self, step: usize) -> umem {
         self.page_size_step[step]
     }
 
@@ -233,7 +239,7 @@ impl ArchMmuSpec {
     /// # Arguments
     ///
     /// * `step` - the current step in the page walk
-    pub fn page_size_step(&self, step: umem) -> umem {
+    pub fn page_size_step(&self, step: usize) -> umem {
         debug_assert!(self.valid_final_page_steps[step]);
         self.page_size_step_unchecked(step)
     }
@@ -247,7 +253,7 @@ impl ArchMmuSpec {
     /// # Arguments
     ///
     /// * `level` - page mapping level to get the size of (1 meaning the smallest page)
-    pub fn page_size_level(&self, level: u8) -> umem {
+    pub fn page_size_level(&self, level: usize) -> umem {
         self.page_size_step(self.def.virtual_address_splits.len() - level)
     }
 
@@ -266,7 +272,7 @@ impl ArchMmuSpec {
         &self,
         pte_addr: Address,
         virt_addr: Address,
-        step: u8,
+        step: usize,
     ) -> PhysicalAddress {
         let phys_addr = Address::from(
             self.pte_addr_mask(pte_addr, step) | self.virt_addr_to_page_offset(virt_addr, step),
@@ -338,7 +344,7 @@ impl ArchMmuSpec {
         let chunk_size = std::mem::size_of::<TranslationChunk<Address>>();
         let data_size = std::mem::size_of::<TranslateData<B>>();
         let prd_size = std::mem::size_of::<PhysicalReadData>();
-        let pte_size = self.def.pte_size;
+        let pte_size: usize = self.def.pte_size.try_into().unwrap();
         let spare_allocs = self.spare_allocs;
 
         let total_chunks_mul = 1 + spare_allocs;
@@ -516,7 +522,7 @@ impl ArchMmuSpec {
     where
         T: PhysicalMemory + ?Sized,
     {
-        let pte_size = self.def.pte_size;
+        let pte_size: usize = self.def.pte_size.try_into().unwrap();
 
         // Create temporary read bufs.
         // We need extra bytes for alignment

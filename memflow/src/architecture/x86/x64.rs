@@ -31,7 +31,7 @@ pub fn new_translator(dtb: Address) -> X86VirtualTranslate {
 #[cfg(test)]
 mod tests {
     use crate::architecture::mmu::ArchMmuSpec;
-    use crate::types::{size, Address, PageType};
+    use crate::types::{size, umem, Address, PageType};
 
     fn get_mmu_spec() -> &'static ArchMmuSpec {
         &super::ARCH_SPEC.mmu
@@ -135,8 +135,8 @@ mod tests {
     #[test]
     fn x64_get_phys_page() {
         let mmu = get_mmu_spec();
-        let indices = [145_usize, 54, 64, 21];
-        let page_offset = 1243_usize;
+        let indices: [umem; 4] = [145, 54, 64, 21];
+        let page_offset: umem = 1243;
         let virt_address = indices
             .iter()
             .rev()
@@ -179,14 +179,14 @@ mod tests {
     fn x64_check_entry() {
         let mmu = get_mmu_spec();
 
-        let pte_address = 1.into();
+        let pte_address = (1 as umem).into();
         assert!(mmu.check_entry(pte_address, 0));
         assert!(mmu.check_entry(pte_address, 1));
         assert!(mmu.check_entry(pte_address, 2));
         assert!(mmu.check_entry(pte_address, 3));
         assert!(mmu.check_entry(pte_address, 4));
 
-        let pte_address = 0.into();
+        let pte_address = Address::null();
         assert!(mmu.check_entry(pte_address, 0));
         assert!(!mmu.check_entry(pte_address, 3));
     }
@@ -195,14 +195,14 @@ mod tests {
     fn x64_is_final_mapping() {
         let mmu = get_mmu_spec();
 
-        let pte_address = (1 << 7).into();
+        let pte_address = ((1 << 7) as umem).into();
         assert!(!mmu.is_final_mapping(pte_address, 0));
         assert!(!mmu.is_final_mapping(pte_address, 1));
         assert!(mmu.is_final_mapping(pte_address, 2));
         assert!(mmu.is_final_mapping(pte_address, 3));
         assert!(mmu.is_final_mapping(pte_address, 4));
 
-        let pte_address = 0.into();
+        let pte_address = Address::null();
         assert!(!mmu.is_final_mapping(pte_address, 0));
         assert!(!mmu.is_final_mapping(pte_address, 1));
         assert!(!mmu.is_final_mapping(pte_address, 2));

@@ -6,7 +6,7 @@ use memflow::architecture::arm::aarch64;
 use memflow::error::{Error, ErrorKind, ErrorOrigin, Result};
 use memflow::types::{size, Address};
 
-pub const PHYS_BASE: Address = Address::from_u64(size::gb(1) as u64);
+pub const PHYS_BASE: Address = size::gb(1).into();
 
 // mem here has to be a single page (4kb sized)
 fn find_pt(addr: Address, mem: &[u8]) -> Option<Address> {
@@ -38,12 +38,17 @@ fn find_pt(addr: Address, mem: &[u8]) -> Option<Address> {
 }
 
 pub fn find(mem: &[u8]) -> Result<StartBlock> {
-    mem.chunks_exact(aarch64::ARCH.page_size())
+    mem.chunks_exact(aarch64::ARCH.page_size().try_into().unwrap())
         .enumerate()
-        .filter_map(|(i, c)| find_pt(PHYS_BASE + (i * aarch64::ARCH.page_size()), c))
+        .filter_map(|(i, c)| {
+            find_pt(
+                PHYS_BASE + (i * aarch64::ARCH.page_size().try_into().unwrap()),
+                c,
+            )
+        })
         .map(|addr| StartBlock {
             arch: aarch64::ARCH.ident(),
-            kernel_hint: 0.into(),
+            kernel_hint: Address::NULL,
             dtb: addr,
         })
         .next()

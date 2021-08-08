@@ -239,7 +239,7 @@ pub type VirtualTranslationFailCallback<'a> = OpaqueCallback<'a, VirtualTranslat
 #[derive(Clone, Debug, Eq, Copy)]
 pub struct VirtualTranslation {
     pub in_virtual: Address,
-    pub size: usize,
+    pub size: umem,
     pub out_physical: PhysicalAddress,
 }
 
@@ -420,7 +420,7 @@ where
         self.virt_to_phys_iter(
             phys_mem,
             translator,
-            Some(MemData(vaddr, 1)).into_iter(),
+            Some(MemData(vaddr, 1 as umem)).into_iter(),
             &mut success.into(),
             &mut fail.into(),
         );

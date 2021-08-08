@@ -1,6 +1,9 @@
-use super::{ArchMmuSpec, MmuTranslationBase};
 use crate::iter::SplitAtIndex;
-use crate::types::Address;
+use crate::types::{umem, Address};
+
+use super::{ArchMmuSpec, MmuTranslationBase};
+
+use core::convert::TryInto;
 use std::cmp::Ordering;
 
 use super::MVec;
@@ -162,7 +165,8 @@ impl<T: MmuTranslationBase> TranslationChunk<T> {
             0
         };
 
-        self.addr_count * ((self.max_addr - self.min_addr) / step_size + add)
+        self.addr_count
+            * TryInto::<usize>::try_into((self.max_addr - self.min_addr) / step_size + add).unwrap()
     }
 
     /// Splits the chunk into multiple smaller ones for the next VTOP step.
@@ -189,14 +193,20 @@ impl<T: MmuTranslationBase> TranslationChunk<T> {
         //TODO: mask out the addresses to limit them within address space
         //this is in particular for the first step where addresses are split between positive and
         //negative sides
-        let upper: u64 = (self.max_addr - 1).as_page_aligned(step_size).to_umem();
+        let upper: u64 = (self.max_addr - (1 as umem))
+            .as_page_aligned(step_size)
+            .to_umem();
         let lower: u64 = self.min_addr.as_page_aligned(step_size).to_umem();
 
         let mut cur_max_addr = !0u64;
 
         // Walk in reverse so that lowest addresses always end up
         // first in the stack. This preserves translation order
-        for (cnt, addr) in (lower..=upper).rev().step_by(step_size).enumerate() {
+        for (cnt, addr) in (lower..=upper)
+            .rev()
+            .step_by(step_size.try_into().unwrap())
+            .enumerate()
+        {
             if addr > cur_max_addr {
                 continue;
             }
@@ -205,7 +215,7 @@ impl<T: MmuTranslationBase> TranslationChunk<T> {
 
             // Also, we need to push the upper elements to the waiting stack preemptively...
             // This might result in slight performance loss, but keeps the order
-            let remaining = (addr - lower) as usize / step_size + 1;
+            let remaining: usize = ((addr - lower) / step_size + 1).try_into().unwrap();
 
             let (chunks_out, addrs_out) = if out_target.0.capacity()
                 >= out_target.0.len() + remaining
@@ -218,7 +228,7 @@ impl<T: MmuTranslationBase> TranslationChunk<T> {
 
             let addr = Address::from(addr);
             let index = (addr - addr.as_page_aligned(align_as)) / step_size;
-            let (pt_addr, _) = self.pt_addr.get_pt_by_index(index);
+            let (pt_addr, _) = self.pt_addr.get_pt_by_index(index.try_into().unwrap());
             let pt_addr = spec.vtop_step(pt_addr, addr, self.step);
 
             let mut new_chunk = TranslationChunk::new(pt_addr);

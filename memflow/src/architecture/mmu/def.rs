@@ -1,6 +1,6 @@
 use super::ArchMmuSpec;
 use crate::architecture::Endianess;
-use crate::types::Address;
+use crate::types::{umem, Address};
 
 /// The `ArchMmuDef` structure defines how a real memory management unit should behave when
 /// translating virtual memory addresses to physical ones.
@@ -34,7 +34,7 @@ pub struct ArchMmuDef {
     /// native pointer size in bytes for the architecture.
     pub addr_size: u8,
     /// size of an individual page table entry in bytes.
-    pub pte_size: usize,
+    pub pte_size: umem,
     /// index of a bit in PTE defining whether the page is present or not.
     pub present_bit: fn(Address) -> bool,
     /// index of a bit in PTE defining if the page is writeable.
@@ -121,7 +121,7 @@ impl ArchMmuDef {
     /// # Arguments
     ///
     /// * `step` - the current step in the page walk
-    pub const fn pt_leaf_size(&self, step: usize) -> usize {
+    pub const fn pt_leaf_size(&self, step: usize) -> umem {
         let (min, max) = self.virt_addr_bit_range(step);
         (1 << (max - min)) * self.pte_size
     }
@@ -132,7 +132,7 @@ impl ArchMmuDef {
     ///
     /// * `step` - the current step in the page walk
     #[allow(unused)]
-    pub const fn page_size_step_unchecked(&self, step: usize) -> usize {
+    pub const fn page_size_step_unchecked(&self, step: usize) -> umem {
         let max_index_bits = {
             let subsl = &self.virtual_address_splits;
             let mut i = step;
@@ -143,7 +143,7 @@ impl ArchMmuDef {
             }
             accum
         };
-        (1u64 << max_index_bits) as usize
+        (1 as umem) << max_index_bits
     }
 
     /// Get the page size of a specific page walk step
@@ -155,7 +155,7 @@ impl ArchMmuDef {
     ///
     /// * `step` - the current step in the page walk
     #[allow(unused)]
-    pub fn page_size_step(&self, step: usize) -> usize {
+    pub fn page_size_step(&self, step: usize) -> umem {
         debug_assert!(self.valid_final_page_steps.binary_search(&step).is_ok());
         self.page_size_step_unchecked(step)
     }

@@ -10,7 +10,7 @@ use super::{
 use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 use crate::iter::SplitAtIndex;
 use crate::mem::{MemData, PhysicalMemory};
-use crate::types::Address;
+use crate::types::{umem, Address};
 
 use std::ptr;
 
@@ -30,7 +30,7 @@ impl Architecture for X86Architecture {
         self.mmu.def.endianess
     }
 
-    fn page_size(&self) -> usize {
+    fn page_size(&self) -> umem {
         self.mmu.page_size_level(1)
     }
 

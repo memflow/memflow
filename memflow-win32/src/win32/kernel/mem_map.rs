@@ -35,7 +35,7 @@ const _: [(); std::mem::size_of::<PhysicalMemoryDescriptor<u64>>()] = [(); 0x210
 pub fn parse<T: MemoryView, U: Pod + Copy + fmt::Debug + fmt::LowerHex + Into<u64>>(
     virt_mem: &mut T,
     descriptor_ptr_ptr: Address,
-) -> Option<MemoryMap<(Address, usize)>> {
+) -> Option<MemoryMap<(Address, umem)>> {
     let descriptor_ptr = virt_mem.read_addr64(descriptor_ptr_ptr).ok()?;
 
     trace!("found phys_mem_block pointer at: {}", descriptor_ptr);

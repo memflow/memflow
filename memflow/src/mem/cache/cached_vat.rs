@@ -8,7 +8,8 @@ use crate::iter::{PageChunks, SplitAtIndex};
 use crate::mem::cache::{CacheValidator, DefaultCacheValidator};
 use crate::mem::virt_translate::VirtualTranslate2;
 use crate::mem::{MemData, PhysicalMemory};
-use crate::types::Address;
+use crate::types::{umem, Address};
+
 use cglue::callback::FromExtend;
 
 use bumpalo::{collections::Vec as BumpVec, Bump};
@@ -98,8 +99,8 @@ pub struct CachedVirtualTranslate<V, Q> {
     tlb: TlbCache<Q>,
     arch: ArchitectureObj,
     arena: Bump,
-    pub hitc: usize,
-    pub misc: usize,
+    pub hitc: umem,
+    pub misc: umem,
 }
 
 impl<V: VirtualTranslate2, Q: CacheValidator> CachedVirtualTranslate<V, Q> {
@@ -165,7 +166,7 @@ impl<V: VirtualTranslate2, Q: CacheValidator> VirtualTranslate2 for CachedVirtua
         let arch = self.arch;
         let mut addrs = addrs
             .filter_map(|MemData(addr, buf)| {
-                if tlb.is_read_too_long(arch, buf.length()) {
+                if tlb.is_read_too_long(arch, buf.length() as umem) {
                     uncached_in.push(MemData(addr, buf));
                     None
                 } else {
@@ -182,7 +183,7 @@ impl<V: VirtualTranslate2, Q: CacheValidator> VirtualTranslate2 for CachedVirtua
             .filter_map(|(addr, buf)| {
                 if let Some(entry) = tlb.try_entry(translator, addr, arch) {
                     hitc += 1;
-                    debug_assert!(buf.length() <= arch.page_size());
+                    debug_assert!(buf.length() as umem <= arch.page_size());
                     // TODO: handle case
                     let _ = match entry {
                         Ok(entry) => out.call(MemData(entry.phys_addr, buf)),
@@ -190,7 +191,7 @@ impl<V: VirtualTranslate2, Q: CacheValidator> VirtualTranslate2 for CachedVirtua
                     };
                     None
                 } else {
-                    misc += core::cmp::max(1, buf.length() / arch.page_size());
+                    misc += core::cmp::max(1, buf.length() as umem / arch.page_size());
                     Some(MemData(addr, (addr, buf)))
                 }
             })
@@ -221,7 +222,7 @@ impl<V: VirtualTranslate2, Q: CacheValidator> VirtualTranslate2 for CachedVirtua
             uncached_out_fail
                 .into_iter()
                 .map(|(err, MemData(vaddr, (_, buf)))| {
-                    tlb.cache_invalid_if_uncached(translator, vaddr, buf.length(), arch);
+                    tlb.cache_invalid_if_uncached(translator, vaddr, buf.length() as umem, arch);
                     (err, MemData(vaddr, buf))
                 }),
         );
@@ -292,15 +293,17 @@ impl<V: VirtualTranslate2, Q: CacheValidator> CachedVirtualTranslateBuilder<V, Q
 
 #[cfg(test)]
 mod tests {
-    use crate::architecture::x86;
+    use core::convert::TryInto;
 
+    use crate::architecture::x86;
     use crate::dummy::{DummyMemory, DummyOs};
     use crate::error::PartialResultExt;
     use crate::mem::cache::cached_vat::CachedVirtualTranslate;
     use crate::mem::cache::timed_validator::TimedCacheValidator;
     use crate::mem::{DirectTranslate, PhysicalMemory};
     use crate::mem::{MemoryView, VirtualDma};
-    use crate::types::{size, Address};
+    use crate::types::{size, umem, Address};
+
     use coarsetime::Duration;
 
     fn build_mem(
@@ -311,8 +314,8 @@ mod tests {
         Address,
         Address,
     ) {
-        let mem = DummyMemory::new(buf.len() + size::mb(2));
-        let (os, dtb, virt_base) = DummyOs::new_and_dtb(mem, buf.len(), buf);
+        let mem = DummyMemory::new(buf.len() as umem + size::mb(2));
+        let (os, dtb, virt_base) = DummyOs::new_and_dtb(mem, buf.len() as umem, buf);
         let translator = x86::x64::new_translator(dtb);
 
         let vat = CachedVirtualTranslate::builder(DirectTranslate::new())
@@ -329,7 +332,7 @@ mod tests {
         (mem, vmem, virt_base, dtb)
     }
 
-    fn standard_buffer(size: usize) -> Vec<u8> {
+    fn standard_buffer(size: umem) -> Vec<u8> {
         (0..size)
             .step_by(std::mem::size_of_val(&size))
             .flat_map(|v| v.to_le_bytes().iter().copied().collect::<Vec<u8>>())
@@ -344,7 +347,7 @@ mod tests {
         let buffer = standard_buffer(size::mb(2));
         let (mut mem, mut vmem, virt_base, dtb) = build_mem(&buffer);
 
-        let mut read_into = vec![0u8; size::mb(2)];
+        let mut read_into = vec![0u8; size::mb(2).try_into().unwrap()];
 
         vmem.read_raw_into(virt_base, &mut read_into)
             .data()
@@ -353,8 +356,11 @@ mod tests {
         assert!(read_into == buffer);
 
         // Destroy the page tables
-        mem.phys_write(dtb.into(), vec![0u8; size::kb(4)].as_slice())
-            .unwrap();
+        mem.phys_write(
+            dtb.into(),
+            vec![0u8; size::kb(4).try_into().unwrap()].as_slice(),
+        )
+        .unwrap();
 
         vmem.read_raw_into(virt_base, &mut read_into)
             .data()

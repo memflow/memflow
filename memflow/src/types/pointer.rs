@@ -201,14 +201,16 @@ impl<U: PrimitiveAddress, T: Sized> Pointer<U, T> {
     /// println!("{:?}", ptr.offset(3));
     /// ```
     pub fn offset(self, count: imem) -> Self {
-        let pointee_size: U = (size_of::<T>() as umem).into();
-        assert!(U::null() < pointee_size && pointee_size <= U::max());
+        let pointee_size = U::from_umem(size_of::<T>() as umem);
+        assert!(U::null() < pointee_size && pointee_size <= PrimitiveAddress::max());
 
         if count >= 0 {
-            self.inner.wrapping_add(pointee_size as umem * count).into()
+            self.inner
+                .wrapping_add(U::from_umem((pointee_size.to_umem() * count as umem)))
+                .into()
         } else {
             self.inner
-                .wrapping_sub(pointee_size as umem * (-count))
+                .wrapping_sub(U::from_umem((pointee_size.to_umem() * (-count) as umem)))
                 .into()
         }
     }
@@ -336,8 +338,10 @@ impl<U: PrimitiveAddress, T> Pointer<U, [T]> {
         }
     }
 
-    pub fn at(self, i: usize) -> Pointer<U, T> {
-        let inner = self.inner.wrapping_add(i * size_of::<T>());
+    pub fn at(self, i: umem) -> Pointer<U, T> {
+        let inner = self
+            .inner
+            .wrapping_add(U::from_umem(size_of::<T>() as umem * i));
         Pointer {
             inner,
             phantom_data: Pointer::<U, T>::PHANTOM_DATA,
@@ -434,26 +438,41 @@ impl<U: Into<Address>, T: ?Sized> From<Pointer<U, T>> for umem {
 }
 
 // Arithmetic operations
-impl<U: PrimitiveAddress, T> ops::Add<usize> for Pointer<U, T> {
+impl<U: PrimitiveAddress, T> ops::Add<umem> for Pointer<U, T> {
     type Output = Pointer<U, T>;
     #[inline(always)]
-    fn add(self, other: usize) -> Pointer<U, T> {
-        let address = self.inner + (other * size_of::<T>());
+    fn add(self, other: umem) -> Pointer<U, T> {
+        let address = self.inner + U::from_umem(size_of::<T>() as umem * other);
         Pointer {
             inner: address,
             phantom_data: self.phantom_data,
         }
     }
 }
-impl<U: PrimitiveAddress, T> ops::Sub<usize> for Pointer<U, T> {
+impl<U: PrimitiveAddress, T> ops::Sub<umem> for Pointer<U, T> {
     type Output = Pointer<U, T>;
     #[inline(always)]
-    fn sub(self, other: usize) -> Pointer<U, T> {
-        let address = self.inner - (other * size_of::<T>());
+    fn sub(self, other: umem) -> Pointer<U, T> {
+        let address = self.inner - U::from_umem(size_of::<T>() as umem * other);
         Pointer {
             inner: address,
             phantom_data: self.phantom_data,
         }
+    }
+}
+
+impl<U: PrimitiveAddress, T> ops::Add<usize> for Pointer<U, T> {
+    type Output = Pointer<U, T>;
+    #[inline(always)]
+    fn add(self, other: usize) -> Pointer<U, T> {
+        self + other as umem
+    }
+}
+impl<U: PrimitiveAddress, T> ops::Sub<usize> for Pointer<U, T> {
+    type Output = Pointer<U, T>;
+    #[inline(always)]
+    fn sub(self, other: usize) -> Pointer<U, T> {
+        self - other as umem
     }
 }
 
@@ -493,16 +512,16 @@ mod tests {
     #[test]
     fn offset32() {
         let ptr8 = Pointer32::<u8>::from(0x1000u32);
-        assert_eq!(ptr8.offset(3).as_u32(), 0x1003u32);
-        assert_eq!(ptr8.offset(-5).as_u32(), 0xFFBu32);
+        assert_eq!(ptr8.offset(3).to_umem(), 0x1003);
+        assert_eq!(ptr8.offset(-5).to_umem(), 0xFFB);
 
         let ptr16 = Pointer32::<u16>::from(0x1000u32);
-        assert_eq!(ptr16.offset(3).as_u32(), 0x1006u32);
-        assert_eq!(ptr16.offset(-5).as_u32(), 0xFF6u32);
+        assert_eq!(ptr16.offset(3).to_umem(), 0x1006);
+        assert_eq!(ptr16.offset(-5).to_umem(), 0xFF6);
 
         let ptr32 = Pointer32::<u32>::from(0x1000u32);
-        assert_eq!(ptr32.offset(3).as_u32(), 0x100Cu32);
-        assert_eq!(ptr32.offset(-5).as_u32(), 0xFECu32);
+        assert_eq!(ptr32.offset(3).to_umem(), 0x100C);
+        assert_eq!(ptr32.offset(-5).to_umem(), 0xFEC);
     }
 
     #[test]

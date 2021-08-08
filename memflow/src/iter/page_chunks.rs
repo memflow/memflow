@@ -1,5 +1,5 @@
 use crate::cglue::{CSliceMut, CSliceRef};
-use crate::types::Address;
+use crate::types::{umem, Address};
 use std::iter::*;
 
 pub trait SplitAtIndex {
@@ -111,6 +111,30 @@ impl SplitAtIndex for usize {
 
     fn length(&self) -> usize {
         *self
+    }
+
+    fn size_hint(&self) -> usize {
+        1
+    }
+}
+
+impl SplitAtIndex for umem {
+    fn split_at(self, idx: usize) -> (Option<Self>, Option<Self>) {
+        if idx == 0 {
+            (None, Some(self))
+        } else if self <= idx as umem {
+            (Some(self), None)
+        } else {
+            (Some(idx as umem), Some(self - idx as umem))
+        }
+    }
+
+    unsafe fn split_at_mut(&mut self, idx: usize) -> (Option<Self>, Option<Self>) {
+        (*self).split_at(idx)
+    }
+
+    fn length(&self) -> usize {
+        *self as usize
     }
 
     fn size_hint(&self) -> usize {
@@ -289,13 +313,13 @@ impl<'a, T> SplitAtIndex for CSliceMut<'a, T> {
 pub struct PageChunkIterator<T: SplitAtIndex, FS> {
     v: Option<T>,
     cur_address: Address,
-    page_size: usize,
+    page_size: umem,
     check_split_fn: FS,
-    cur_off: usize,
+    cur_off: umem,
 }
 
 impl<T: SplitAtIndex, FS> PageChunkIterator<T, FS> {
-    pub fn new(buf: T, start_address: Address, page_size: usize, check_split_fn: FS) -> Self {
+    pub fn new(buf: T, start_address: Address, page_size: umem, check_split_fn: FS) -> Self {
         Self {
             v: if buf.length() == 0 { None } else { Some(buf) },
             cur_address: start_address,
@@ -323,12 +347,12 @@ impl<T: SplitAtIndex, FS: FnMut(Address, &T, Option<&T>) -> bool> Iterator
                         .wrapping_add(self.page_size as u64),
                 )
                 .as_page_aligned(self.page_size)
-                .as_usize()
-                .wrapping_sub(self.cur_address.as_usize())
+                .to_umem()
+                .wrapping_sub(self.cur_address.to_umem())
                 .wrapping_sub(1)
                 .wrapping_add(self.cur_off);
 
-                let (head, tail) = unsafe { buf.split_inclusive_at_mut(end_len) };
+                let (head, tail) = unsafe { buf.split_inclusive_at_mut(end_len as usize) };
                 let head = head.unwrap();
                 if tail.is_some() && !(self.check_split_fn)(self.cur_address, &head, tail.as_ref())
                 {
@@ -336,7 +360,7 @@ impl<T: SplitAtIndex, FS: FnMut(Address, &T, Option<&T>) -> bool> Iterator
                 } else {
                     self.v = tail;
                     let next_address =
-                        Address::from(self.cur_address.as_usize().wrapping_add(end_len + 1));
+                        Address::from(self.cur_address.to_umem().wrapping_add(end_len + 1));
                     let ret = Some((self.cur_address, head));
                     self.cur_address = next_address;
                     self.cur_off = 0;
@@ -351,11 +375,12 @@ impl<T: SplitAtIndex, FS: FnMut(Address, &T, Option<&T>) -> bool> Iterator
     #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
         if let Some(buf) = &self.v {
-            let n = ((self.cur_address + buf.size_hint() - 1).as_page_aligned(self.page_size)
+            let n = ((self.cur_address + buf.size_hint() - 1_usize)
+                .as_page_aligned(self.page_size)
                 - self.cur_address.as_page_aligned(self.page_size))
                 / self.page_size
                 + 1;
-            (n, Some(n))
+            (n as usize, Some(n as usize))
         } else {
             (0, Some(0))
         }

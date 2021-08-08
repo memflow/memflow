@@ -160,7 +160,9 @@ fn build_vat<
         ),
         Some((size, time)) => build_page_cache(
             builder.build_vat_cache(move |v, a| {
-                let builder = CachedVirtualTranslate::builder(v).arch(a).entries(size);
+                let builder = CachedVirtualTranslate::builder(v)
+                    .arch(a)
+                    .entries(size.try_into().unwrap());
 
                 if time > 0 {
                     builder

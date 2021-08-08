@@ -9,11 +9,11 @@ use super::*;
 /// structures.
 pub struct RemapView<T: MemoryView> {
     mem: T,
-    mem_map: MemoryMap<(Address, usize)>,
+    mem_map: MemoryMap<(Address, umem)>,
 }
 
 impl<T: MemoryView> RemapView<T> {
-    pub fn new(mem: T, mem_map: MemoryMap<(Address, usize)>) -> Self {
+    pub fn new(mem: T, mem_map: MemoryMap<(Address, umem)>) -> Self {
         Self { mem, mem_map }
     }
 }

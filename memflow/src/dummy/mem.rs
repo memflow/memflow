@@ -27,7 +27,7 @@ impl DummyMemory {
         map.push_range(
             Address::null(),
             (buf.len() as umem).into(),
-            (buf.as_ptr() as u64).into(),
+            (buf.as_ptr() as umem).into(),
         );
 
         let buf_mem = unsafe { MappedPhysicalMemory::from_addrmap_mut(map) };
@@ -42,7 +42,7 @@ impl Clone for DummyMemory {
         map.push_range(
             Address::null(),
             (self.buf.len() as umem).into(),
-            (self.buf.as_ptr() as u64).into(),
+            (self.buf.as_ptr() as umem).into(),
         );
 
         let mem = unsafe { MappedPhysicalMemory::from_addrmap_mut(map) };

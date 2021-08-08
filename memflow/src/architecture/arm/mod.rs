@@ -34,7 +34,7 @@ impl Architecture for ArmArchitecture {
         self.mmu.page_size_level(1)
     }
 
-    fn size_addr(&self) -> u8 {
+    fn size_addr(&self) -> usize {
         self.mmu.def.addr_size.into()
     }
 

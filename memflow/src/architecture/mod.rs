@@ -110,7 +110,7 @@ pub trait VirtualTranslate3: Clone + Copy + Send {
         };
         self.virt_to_phys_iter(
             mem,
-            Some(MemData(addr, 1)).into_iter(),
+            Some(MemData(addr, 1 as umem)).into_iter(),
             &mut success.into(),
             &mut fail.into(),
             &mut buf,
@@ -187,6 +187,10 @@ pub trait Architecture: Send + Sync + 'static {
     /// This function will return the pointer width as a `usize` value.
     /// See `Architecture::bits()` for more information.
     ///
+    /// # Remarks
+    ///
+    /// The pointer width will never overflow a `usize` value.
+    ///
     /// # Examples
     ///
     /// ```
@@ -195,7 +199,7 @@ pub trait Architecture: Send + Sync + 'static {
     /// let arch = x32::ARCH;
     /// assert_eq!(arch.size_addr(), 4);
     /// ```
-    fn size_addr(&self) -> u8;
+    fn size_addr(&self) -> usize;
 
     /// Returns the address space range in bits for the `Architecture`.
     ///

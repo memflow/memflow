@@ -8,13 +8,13 @@ use log::{debug, info};
 use memflow::dataview::Pod;
 use memflow::error::{Error, ErrorKind, ErrorOrigin, PartialResultExt, Result};
 use memflow::mem::MemoryView;
-use memflow::types::{size, Address};
+use memflow::types::{size, umem, Address};
 
 use pelite::image::IMAGE_DOS_HEADER;
 
-const SIZE_256MB: usize = size::mb(256);
-const SIZE_8MB: usize = size::mb(8);
-const SIZE_4KB: usize = size::kb(4);
+const SIZE_256MB: usize = size::mb(256) as usize;
+const SIZE_8MB: usize = size::mb(8) as usize;
+const SIZE_4KB: usize = size::kb(4) as usize;
 
 // https://github.com/ufrisk/MemProcFS/blob/f2d15cf4fe4f19cfeea3dad52971fae2e491064b/vmm/vmmwininit.c#L410
 pub fn find<T: MemoryView>(

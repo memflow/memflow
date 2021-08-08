@@ -10,7 +10,7 @@ use crate::os::process::*;
 use crate::os::root::*;
 use crate::os::*;
 use crate::plugins::*;
-use crate::types::{size, umem, Address};
+use crate::types::{imem, size, umem, Address};
 
 use crate::cglue::*;
 use log::Level;
@@ -171,17 +171,17 @@ impl DummyOs {
 
         while i < size_addr {
             if let Some(page_info) = {
-                if size_addr - i >= X64PageSize::P1g.to_size() {
+                if size_addr - i >= X64PageSize::P1g.to_size() as imem {
                     Some(PageInfo {
                         addr: i,
                         size: X64PageSize::P1g,
                     })
-                } else if size_addr - i >= X64PageSize::P2m.to_size() {
+                } else if size_addr - i >= X64PageSize::P2m.to_size() as imem {
                     Some(PageInfo {
                         addr: i,
                         size: X64PageSize::P2m,
                     })
-                } else if size_addr - i >= X64PageSize::P4k.to_size() {
+                } else if size_addr - i >= X64PageSize::P4k.to_size() as imem {
                     Some(PageInfo {
                         addr: i,
                         size: X64PageSize::P4k,
@@ -253,7 +253,7 @@ impl DummyOs {
 
         pt_mapper
             .translate_addr(VirtAddr::new(virt_addr.to_umem()))
-            .map(|addr| (addr.as_u64() as umem).into())
+            .map(|addr| addr.as_u64().into())
     }
 
     fn internal_alloc_process(&mut self, map_size: umem, test_buf: &[u8]) -> DummyProcessInfo {

@@ -288,7 +288,7 @@ mod tests {
             PAGE_COUNT
         );
         assert_eq!(
-            arr.page_chunks((1 as umem).into(), PAGE_SIZE).size_hint().0,
+            arr.page_chunks(1.into(), PAGE_SIZE).size_hint().0,
             PAGE_COUNT + 1
         );
         assert_eq!(

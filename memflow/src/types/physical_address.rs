@@ -2,7 +2,7 @@
 Abstraction over a physical address with optional page information.
 */
 
-use super::{umem, Address, Page, PageType, PrimitiveAddress};
+use super::{umem, Address, Page, PageType, Pointer, PrimitiveAddress};
 
 use std::fmt;
 
@@ -19,34 +19,9 @@ use std::fmt;
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 #[repr(C)]
 pub struct PhysicalAddress {
-    address: Address,
-    page_type: PageType,
+    pub address: Address,
+    pub page_type: PageType,
     page_size_log2: u8,
-}
-
-/// Converts a `Address` into a `PhysicalAddress` with no page information attached.
-impl From<Address> for PhysicalAddress {
-    fn from(address: Address) -> Self {
-        Self {
-            address,
-            page_type: PageType::UNKNOWN,
-            page_size_log2: 0,
-        }
-    }
-}
-
-/// Constructs an `PhysicalAddress` from any value that implements [`PrimitiveAddress`].
-impl<T: PrimitiveAddress> From<T> for PhysicalAddress {
-    fn from(item: T) -> Self {
-        Self::from(Address::from(item))
-    }
-}
-
-/// Converts a `PhysicalAddress` into a `Address`.
-impl From<PhysicalAddress> for Address {
-    fn from(address: PhysicalAddress) -> Self {
-        address.address
-    }
 }
 
 impl PhysicalAddress {
@@ -161,6 +136,76 @@ impl PhysicalAddress {
 impl Default for PhysicalAddress {
     fn default() -> Self {
         Self::NULL
+    }
+}
+
+#[macro_export]
+macro_rules! impl_physical_address_from {
+    ($type_name:ident) => {
+        impl From<$type_name> for PhysicalAddress {
+            fn from(item: $type_name) -> Self {
+                Self {
+                    address: (item as umem).into(),
+                    page_type: PageType::UNKNOWN,
+                    page_size_log2: 0,
+                }
+            }
+        }
+
+        impl<T: ?Sized> From<Pointer<$type_name, T>> for PhysicalAddress {
+            #[inline(always)]
+            fn from(ptr: Pointer<$type_name, T>) -> Self {
+                Self {
+                    address: (ptr.inner as umem).into(),
+                    page_type: PageType::UNKNOWN,
+                    page_size_log2: 0,
+                }
+            }
+        }
+    };
+}
+
+// u16, u32, u64 is handled by the PrimitiveAddress implementation below.
+impl_physical_address_from!(i8);
+impl_physical_address_from!(u8);
+impl_physical_address_from!(i16);
+//impl_physical_address_from!(u16);
+impl_physical_address_from!(i32);
+//impl_physical_address_from!(u32);
+impl_physical_address_from!(i64);
+//impl_physical_address_from!(u64);
+impl_physical_address_from!(usize);
+
+impl<U: PrimitiveAddress> From<U> for PhysicalAddress {
+    #[inline(always)]
+    fn from(val: U) -> Self {
+        Self {
+            address: val.to_umem().into(),
+            page_type: PageType::UNKNOWN,
+            page_size_log2: 0,
+        }
+    }
+}
+
+impl<U: PrimitiveAddress, T: ?Sized> From<Pointer<U, T>> for PhysicalAddress {
+    #[inline(always)]
+    fn from(ptr: Pointer<U, T>) -> Self {
+        Self {
+            address: ptr.inner.to_umem().into(),
+            page_type: PageType::UNKNOWN,
+            page_size_log2: 0,
+        }
+    }
+}
+
+/// Converts a `PhysicalAddress` into a `Address`.
+impl From<Address> for PhysicalAddress {
+    fn from(address: Address) -> Self {
+        Self {
+            address,
+            page_type: PageType::UNKNOWN,
+            page_size_log2: 0,
+        }
     }
 }
 

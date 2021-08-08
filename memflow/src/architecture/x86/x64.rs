@@ -179,7 +179,7 @@ mod tests {
     fn x64_check_entry() {
         let mmu = get_mmu_spec();
 
-        let pte_address = (1 as umem).into();
+        let pte_address = 1.into();
         assert!(mmu.check_entry(pte_address, 0));
         assert!(mmu.check_entry(pte_address, 1));
         assert!(mmu.check_entry(pte_address, 2));
@@ -195,7 +195,7 @@ mod tests {
     fn x64_is_final_mapping() {
         let mmu = get_mmu_spec();
 
-        let pte_address = ((1 << 7) as umem).into();
+        let pte_address = (1 << 7).into();
         assert!(!mmu.is_final_mapping(pte_address, 0));
         assert!(!mmu.is_final_mapping(pte_address, 1));
         assert!(mmu.is_final_mapping(pte_address, 2));

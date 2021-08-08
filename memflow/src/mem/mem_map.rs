@@ -314,7 +314,7 @@ impl MemoryMap<(Address, umem)> {
     /// If end < base, the function will do nothing
     pub fn push_range(&mut self, base: Address, end: Address, real_base: Address) -> &mut Self {
         if end > base {
-            self.push_remap(base, end - base, real_base)
+            self.push_remap(base, (end - base) as umem, real_base)
         } else {
             self
         }
@@ -563,11 +563,19 @@ mod tests {
 
         let mut void_panic = |x| panic!("Should not have mapped {:?}", x);
         assert_eq!(
-            (map.map(0x10ff.into(), 1, &mut void_panic).next().unwrap().0).0,
+            (map.map(0x10ff.into(), 1 as umem, &mut void_panic)
+                .next()
+                .unwrap()
+                .0)
+                .0,
             Address::from(0x00ff)
         );
         assert_eq!(
-            (map.map(0x30ff.into(), 1, &mut void_panic).next().unwrap().0).0,
+            (map.map(0x30ff.into(), 1 as umem, &mut void_panic)
+                .next()
+                .unwrap()
+                .0)
+                .0,
             Address::from(0x20ff)
         );
     }
@@ -582,15 +590,23 @@ mod tests {
         let mut void = |_| true;
 
         assert_eq!(
-            (map.map(0x3000.into(), 1, &mut void_panic).next().unwrap().0).0,
+            (map.map(0x3000.into(), 1 as umem, &mut void_panic)
+                .next()
+                .unwrap()
+                .0)
+                .0,
             Address::from(0x2000)
         );
         assert_eq!(
-            (map.map(0x3fff.into(), 1, &mut void_panic).next().unwrap().0).0,
+            (map.map(0x3fff.into(), 1 as umem, &mut void_panic)
+                .next()
+                .unwrap()
+                .0)
+                .0,
             Address::from(0x2fff)
         );
-        assert_eq!(map.map(0x2fff.into(), 1, &mut void).next(), None);
-        assert_eq!(map.map(0x4000.into(), 1, &mut void).next(), None);
+        assert_eq!(map.map(0x2fff.into(), 1 as umem, &mut void).next(), None);
+        assert_eq!(map.map(0x4000.into(), 1 as umem, &mut void).next(), None);
     }
 
     #[test]
@@ -600,10 +616,10 @@ mod tests {
         map.push_remap(0x3000.into(), 0x1000, 0x2000.into());
 
         let mut void = vec![];
-        assert_eq!(map.map(0x00ff.into(), 1, &mut void).next(), None);
-        assert_eq!(map.map(0x20ff.into(), 1, &mut void).next(), None);
-        assert_eq!(map.map(0x4000.into(), 1, &mut void).next(), None);
-        assert_eq!(map.map(0x40ff.into(), 1, &mut void).next(), None);
+        assert_eq!(map.map(0x00ff.into(), 1 as umem, &mut void).next(), None);
+        assert_eq!(map.map(0x20ff.into(), 1 as umem, &mut void).next(), None);
+        assert_eq!(map.map(0x4000.into(), 1 as umem, &mut void).next(), None);
+        assert_eq!(map.map(0x40ff.into(), 1 as umem, &mut void).next(), None);
 
         assert_eq!(void.len(), 4);
     }
@@ -616,11 +632,19 @@ mod tests {
 
         let mut void_panic = |x| panic!("Should not have mapped {:?}", x);
         assert_eq!(
-            (map.map(0x10ff.into(), 1, &mut void_panic).next().unwrap().0).0,
+            (map.map(0x10ff.into(), 1 as umem, &mut void_panic)
+                .next()
+                .unwrap()
+                .0)
+                .0,
             Address::from(0x00ff)
         );
         assert_eq!(
-            (map.map(0x30ff.into(), 1, &mut void_panic).next().unwrap().0).0,
+            (map.map(0x30ff.into(), 1 as umem, &mut void_panic)
+                .next()
+                .unwrap()
+                .0)
+                .0,
             Address::from(0x20ff)
         );
     }
@@ -635,15 +659,23 @@ mod tests {
         let mut void = |_| true;
 
         assert_eq!(
-            (map.map(0x3000.into(), 1, &mut void_panic).next().unwrap().0).0,
+            (map.map(0x3000.into(), 1 as umem, &mut void_panic)
+                .next()
+                .unwrap()
+                .0)
+                .0,
             Address::from(0x2000)
         );
         assert_eq!(
-            (map.map(0x3fff.into(), 1, &mut void_panic).next().unwrap().0).0,
+            (map.map(0x3fff.into(), 1 as umem, &mut void_panic)
+                .next()
+                .unwrap()
+                .0)
+                .0,
             Address::from(0x2fff)
         );
-        assert_eq!(map.map(0x2fff.into(), 1, &mut void).next(), None);
-        assert_eq!(map.map(0x4000.into(), 1, &mut void).next(), None);
+        assert_eq!(map.map(0x2fff.into(), 1 as umem, &mut void).next(), None);
+        assert_eq!(map.map(0x4000.into(), 1 as umem, &mut void).next(), None);
     }
 
     #[test]
@@ -656,15 +688,23 @@ mod tests {
         let mut void = |_| true;
 
         assert_eq!(
-            (map.map(0x2000.into(), 1, &mut void_panic).next().unwrap().0).0,
+            (map.map(0x2000.into(), 1 as umem, &mut void_panic)
+                .next()
+                .unwrap()
+                .0)
+                .0,
             Address::from(0x2000)
         );
         assert_eq!(
-            (map.map(0x2fff.into(), 1, &mut void_panic).next().unwrap().0).0,
+            (map.map(0x2fff.into(), 1 as umem, &mut void_panic)
+                .next()
+                .unwrap()
+                .0)
+                .0,
             Address::from(0x2fff)
         );
-        assert_eq!(map.map(0x3fff.into(), 1, &mut void).next(), None);
-        assert_eq!(map.map(0x3000.into(), 1, &mut void).next(), None);
+        assert_eq!(map.map(0x3fff.into(), 1 as umem, &mut void).next(), None);
+        assert_eq!(map.map(0x3000.into(), 1 as umem, &mut void).next(), None);
     }
 
     #[test]

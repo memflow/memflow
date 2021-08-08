@@ -1,5 +1,5 @@
 use crate::cglue::{CSliceMut, CSliceRef};
-use crate::types::{umem, Address};
+use crate::types::{imem, umem, Address};
 use std::iter::*;
 
 pub trait SplitAtIndex {
@@ -378,7 +378,7 @@ impl<T: SplitAtIndex, FS: FnMut(Address, &T, Option<&T>) -> bool> Iterator
             let n = ((self.cur_address + buf.size_hint() - 1_usize)
                 .as_page_aligned(self.page_size)
                 - self.cur_address.as_page_aligned(self.page_size))
-                / self.page_size
+                / self.page_size as imem
                 + 1;
             (n as usize, Some(n as usize))
         } else {

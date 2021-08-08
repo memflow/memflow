@@ -35,10 +35,11 @@ pub trait VirtualTranslate: Send {
         end: Address,
         out: VirtualTranslationCallback,
     ) {
+        assert!(end >= start);
         self.virt_to_phys_list(
             &[MemoryRange {
                 address: start,
-                size: end - start,
+                size: (end - start) as umem,
             }],
             out,
             (&mut |_| true).into(),
@@ -106,7 +107,10 @@ pub trait VirtualTranslate: Send {
         );
 
         set.gaps(&(start..end))
-            .filter(|r| r.end - r.start <= gap_size)
+            .filter(|r| {
+                assert!(r.end >= r.start);
+                (r.end - r.start) as umem <= gap_size
+            })
             .collect::<Vec<_>>()
             .into_iter()
             .for_each(|r| set.insert(r));
@@ -114,8 +118,12 @@ pub trait VirtualTranslate: Send {
         set.iter()
             .map(|r| {
                 let address = r.start;
+                assert!(r.end >= address);
                 let size = r.end - address;
-                MemoryRange { address, size }
+                MemoryRange {
+                    address,
+                    size: size as umem,
+                }
             })
             .feed_into(out);
     }

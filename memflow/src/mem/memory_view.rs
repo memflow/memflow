@@ -156,12 +156,6 @@ pub trait MemoryView: Send {
     where
         Self: Sized,
     {
-        let MemoryViewMetadata {
-            arch_bits,
-            little_endian,
-            ..
-        } = self.metadata();
-
         self.read_into(ptr.into(), out)
     }
 
@@ -173,12 +167,6 @@ pub trait MemoryView: Send {
     where
         Self: Sized,
     {
-        let MemoryViewMetadata {
-            arch_bits,
-            little_endian,
-            ..
-        } = self.metadata();
-
         self.read(ptr.into())
     }
 
@@ -220,12 +208,6 @@ pub trait MemoryView: Send {
     where
         Self: Sized,
     {
-        let MemoryViewMetadata {
-            arch_bits,
-            little_endian,
-            ..
-        } = self.metadata();
-
         self.write(ptr.into(), data)
     }
 

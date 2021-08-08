@@ -159,14 +159,11 @@ impl<T: MmuTranslationBase> TranslationChunk<T> {
     pub fn next_max_addr_count(&self, spec: &ArchMmuSpec) -> usize {
         let step_size = spec.page_size_step_unchecked(self.step + 1);
 
-        let add = if (self.max_addr - self.min_addr) % step_size != 0 {
-            1
-        } else {
-            0
-        };
+        assert!(self.max_addr >= self.min_addr);
+        let addr_diff = (self.max_addr - self.min_addr) as umem;
+        let add = if addr_diff % step_size != 0 { 1 } else { 0 };
 
-        self.addr_count
-            * TryInto::<usize>::try_into((self.max_addr - self.min_addr) / step_size + add).unwrap()
+        self.addr_count * TryInto::<usize>::try_into(addr_diff / step_size + add).unwrap()
     }
 
     /// Splits the chunk into multiple smaller ones for the next VTOP step.
@@ -193,7 +190,7 @@ impl<T: MmuTranslationBase> TranslationChunk<T> {
         //TODO: mask out the addresses to limit them within address space
         //this is in particular for the first step where addresses are split between positive and
         //negative sides
-        let upper: u64 = (self.max_addr - (1 as umem))
+        let upper: u64 = (self.max_addr - 1usize)
             .as_page_aligned(step_size)
             .to_umem();
         let lower: u64 = self.min_addr.as_page_aligned(step_size).to_umem();
@@ -227,7 +224,9 @@ impl<T: MmuTranslationBase> TranslationChunk<T> {
             };
 
             let addr = Address::from(addr);
-            let index = (addr - addr.as_page_aligned(align_as)) / step_size;
+            let addr_aligned = addr.as_page_aligned(align_as);
+            assert!(addr >= addr_aligned);
+            let index = (addr - addr_aligned) as umem / step_size;
             let (pt_addr, _) = self.pt_addr.get_pt_by_index(index.try_into().unwrap());
             let pt_addr = spec.vtop_step(pt_addr, addr, self.step);
 

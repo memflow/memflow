@@ -30,7 +30,7 @@ impl DummyProcessInfo {
                 parent_process: Address::INVALID,
                 base,
                 size: (thread_rng()
-                    .gen_range(min_size..(self.map_size - (base - self.info.address)))),
+                    .gen_range(min_size..(self.map_size - (base - self.info.address) as umem))),
                 name: "dummy.so".into(),
                 path: "/".into(),
                 arch: x64::ARCH.ident(),

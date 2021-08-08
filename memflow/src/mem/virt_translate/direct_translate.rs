@@ -2,7 +2,7 @@ use super::VirtualTranslate2;
 use crate::architecture::{VirtualTranslate3, VtopFailureCallback, VtopOutputCallback};
 use crate::iter::SplitAtIndex;
 use crate::mem::{MemData, PhysicalMemory};
-use crate::types::{size, umem, Address};
+use crate::types::{size, Address};
 use std::prelude::v1::*;
 
 /*

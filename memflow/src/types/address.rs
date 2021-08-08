@@ -2,7 +2,9 @@
 Abstraction over a address on the target system.
 */
 
+use super::{PhysicalAddress, Pointer};
 use crate::types::ByteSwap;
+
 use core::convert::TryInto;
 use std::default::Default;
 use std::fmt;
@@ -121,6 +123,7 @@ macro_rules! impl_primitive_address {
     };
 }
 
+impl_primitive_address!(u16);
 impl_primitive_address!(u32);
 impl_primitive_address!(u64);
 
@@ -364,28 +367,177 @@ impl ByteSwap for Address {
     }
 }
 
-/// Constructs an `Address` from any value that implements [`PrimitiveAddress`].
-impl<T: PrimitiveAddress> From<T> for Address {
-    fn from(item: T) -> Self {
-        Self { 0: item.to_umem() }
+#[macro_export]
+macro_rules! impl_address_from {
+    ($type_name:ident) => {
+        impl From<$type_name> for Address {
+            fn from(item: $type_name) -> Self {
+                Self { 0: item as umem }
+            }
+        }
+
+        impl<T: ?Sized> From<Pointer<$type_name, T>> for Address {
+            #[inline(always)]
+            fn from(ptr: Pointer<$type_name, T>) -> Self {
+                Self {
+                    0: ptr.inner as umem,
+                }
+            }
+        }
+    };
+}
+
+// u16, u32, u64 is handled by the PrimitiveAddress implementation below.
+impl_address_from!(i8);
+impl_address_from!(u8);
+impl_address_from!(i16);
+//impl_address_from!(u16);
+impl_address_from!(i32);
+//impl_address_from!(u32);
+impl_address_from!(i64);
+//impl_address_from!(u64);
+impl_address_from!(usize);
+
+/// Converts any `PrimitiveAddress` into an Address.
+impl<U: PrimitiveAddress> From<U> for Address {
+    #[inline(always)]
+    fn from(val: U) -> Self {
+        Self { 0: val.to_umem() }
     }
 }
 
-/// Adds a `umem` to a `Address` which results in a `Address`.
-/// # Examples
-/// ```
-/// use memflow::types::Address;
-/// assert_eq!(Address::from(10) + 5usize, Address::from(15));
-/// ```
-impl ops::Add<umem> for Address {
-    type Output = Self;
+/// Converts a `PhysicalAddress` into a `Address`.
+impl From<PhysicalAddress> for Address {
+    fn from(address: PhysicalAddress) -> Self {
+        address.address
+    }
+}
 
-    fn add(self, other: umem) -> Self {
+/// Converts any `Pointer` into an Address.
+impl<U: PrimitiveAddress, T: ?Sized> From<Pointer<U, T>> for Address {
+    #[inline(always)]
+    fn from(ptr: Pointer<U, T>) -> Self {
         Self {
-            0: self.0 + (other as umem),
+            0: ptr.inner.to_umem(),
         }
     }
 }
+
+#[macro_export]
+macro_rules! impl_address_arithmetic_unsigned {
+    ($type_name:ident) => {
+        impl ops::Add<$type_name> for Address {
+            type Output = Self;
+
+            fn add(self, other: $type_name) -> Self {
+                Self {
+                    0: self.0 + (other as umem),
+                }
+            }
+        }
+
+        impl ops::AddAssign<$type_name> for Address {
+            fn add_assign(&mut self, other: $type_name) {
+                *self = Self {
+                    0: self.0 + (other as umem),
+                }
+            }
+        }
+
+        impl ops::Sub<$type_name> for Address {
+            type Output = Address;
+
+            fn sub(self, other: $type_name) -> Address {
+                Self {
+                    0: self.0 - (other as umem),
+                }
+            }
+        }
+
+        impl ops::SubAssign<$type_name> for Address {
+            fn sub_assign(&mut self, other: $type_name) {
+                *self = Self {
+                    0: self.0 - (other as umem),
+                }
+            }
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! impl_address_arithmetic_signed {
+    ($type_name:ident) => {
+        impl ops::Add<$type_name> for Address {
+            type Output = Self;
+
+            fn add(self, other: $type_name) -> Self {
+                if other >= 0 {
+                    Self {
+                        0: self.0 + (other as umem),
+                    }
+                } else {
+                    Self {
+                        0: self.0 - (-other as umem),
+                    }
+                }
+            }
+        }
+
+        impl ops::AddAssign<$type_name> for Address {
+            fn add_assign(&mut self, other: $type_name) {
+                if other >= 0 {
+                    *self = Self {
+                        0: self.0 + (other as umem),
+                    }
+                } else {
+                    *self = Self {
+                        0: self.0 - (-other as umem),
+                    }
+                }
+            }
+        }
+
+        impl ops::Sub<$type_name> for Address {
+            type Output = Address;
+
+            fn sub(self, other: $type_name) -> Address {
+                if other >= 0 {
+                    Self {
+                        0: self.0 - (other as umem),
+                    }
+                } else {
+                    Self {
+                        0: self.0 + (-other as umem),
+                    }
+                }
+            }
+        }
+
+        impl ops::SubAssign<$type_name> for Address {
+            fn sub_assign(&mut self, other: $type_name) {
+                if other >= 0 {
+                    *self = Self {
+                        0: self.0 - (other as umem),
+                    }
+                } else {
+                    *self = Self {
+                        0: self.0 + (-other as umem),
+                    }
+                }
+            }
+        }
+    };
+}
+
+impl_address_arithmetic_signed!(i8);
+impl_address_arithmetic_signed!(i16);
+impl_address_arithmetic_signed!(i32);
+impl_address_arithmetic_signed!(i64);
+impl_address_arithmetic_unsigned!(u8);
+impl_address_arithmetic_unsigned!(u16);
+impl_address_arithmetic_unsigned!(u32);
+impl_address_arithmetic_unsigned!(u64);
+impl_address_arithmetic_unsigned!(usize);
 
 /// Adds any compatible type reference to Address
 impl<'a, T: Into<umem> + Copy> ops::Add<&'a T> for Address {
@@ -394,53 +546,6 @@ impl<'a, T: Into<umem> + Copy> ops::Add<&'a T> for Address {
     fn add(self, other: &'a T) -> Self {
         Self {
             0: self.0 + (*other).into(),
-        }
-    }
-}
-
-/// Adds a `umem` to a `Address`.
-///
-/// # Examples
-///
-/// ```
-/// use memflow::types::Address;
-///
-/// let mut addr = Address::from(10);
-/// addr += 5;
-/// assert_eq!(addr, Address::from(15));
-/// ```
-impl ops::AddAssign<umem> for Address {
-    fn add_assign(&mut self, other: umem) {
-        *self = Self {
-            0: self.0 + (other as umem),
-        }
-    }
-}
-
-/// Subtracts a `Address` from a `Address` resulting in a `umem`.
-///
-/// # Examples
-///
-/// ```
-/// use memflow::types::Address;
-///
-/// assert_eq!(Address::from(10) - 5, Address::from(5));
-/// ```
-impl ops::Sub for Address {
-    type Output = umem;
-
-    fn sub(self, other: Self) -> umem {
-        (self.0 - other.0) as umem
-    }
-}
-
-/// Subtracts a `umem` from a `Address` resulting in a `Address`.
-impl ops::Sub<umem> for Address {
-    type Output = Address;
-
-    fn sub(self, other: umem) -> Address {
-        Self {
-            0: self.0 - (other as umem),
         }
     }
 }
@@ -456,88 +561,23 @@ impl<'a, T: Into<umem> + Copy> ops::Sub<&'a T> for Address {
     }
 }
 
-/// Subtracts a `umem` from a `Address`.
+/// Subtracts a `Address` from a `Address` resulting in a `umem`.
 ///
 /// # Examples
 ///
 /// ```
 /// use memflow::types::Address;
 ///
-/// let mut addr = Address::from(10);
-/// addr -= 5;
-/// assert_eq!(addr, Address::from(5));
-///
+/// assert_eq!(Address::from(10) - 5, Address::from(5));
 /// ```
-impl ops::SubAssign<umem> for Address {
-    fn sub_assign(&mut self, other: umem) {
-        *self = Self {
-            0: self.0 - (other as umem),
-        }
-    }
-}
+impl ops::Sub for Address {
+    type Output = imem;
 
-/// Adds a `usize` to a `Address` which results in a `Address`.
-/// # Examples
-/// ```
-/// use memflow::types::Address;
-/// assert_eq!(Address::from(10) + 5usize, Address::from(15));
-/// ```
-impl ops::Add<usize> for Address {
-    type Output = Self;
-
-    fn add(self, other: usize) -> Self {
-        Self {
-            0: self.0 + (other as umem),
-        }
-    }
-}
-
-/// Adds a `usize` to a `Address`.
-///
-/// # Examples
-///
-/// ```
-/// use memflow::types::Address;
-///
-/// let mut addr = Address::from(10);
-/// addr += 5;
-/// assert_eq!(addr, Address::from(15));
-/// ```
-impl ops::AddAssign<usize> for Address {
-    fn add_assign(&mut self, other: usize) {
-        *self = Self {
-            0: self.0 + (other as umem),
-        }
-    }
-}
-
-/// Subtracts a `usize` from a `Address` resulting in a `Address`.
-impl ops::Sub<usize> for Address {
-    type Output = Address;
-
-    fn sub(self, other: usize) -> Address {
-        Self {
-            0: self.0 - (other as umem),
-        }
-    }
-}
-
-/// Subtracts a `usize` from a `Address`.
-///
-/// # Examples
-///
-/// ```
-/// use memflow::types::Address;
-///
-/// let mut addr = Address::from(10);
-/// addr -= 5;
-/// assert_eq!(addr, Address::from(5));
-///
-/// ```
-impl ops::SubAssign<usize> for Address {
-    fn sub_assign(&mut self, other: usize) {
-        *self = Self {
-            0: self.0 - (other as umem),
+    fn sub(self, other: Self) -> imem {
+        if self.0 > other.0 {
+            (self.0 - other.0) as imem
+        } else {
+            -((other.0 - self.0) as imem)
         }
     }
 }

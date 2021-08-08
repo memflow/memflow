@@ -4,11 +4,10 @@ Pointer abstraction.
 
 use crate::cglue::ReprCString;
 use crate::dataview::Pod;
-use crate::error::{Error, ErrorKind, ErrorOrigin, PartialError, PartialResult};
+use crate::error::{PartialError, PartialResult};
 use crate::mem::MemoryView;
 use crate::types::{imem, umem, Address, ByteSwap, PrimitiveAddress};
 
-use std::convert::TryFrom;
 use std::marker::PhantomData;
 use std::mem::size_of;
 use std::{cmp, fmt, hash, ops};
@@ -165,19 +164,11 @@ impl<U: PrimitiveAddress, T: ?Sized> Pointer<U, T> {
         self.inner.to_umem()
     }
 
-    // Returns the address this pointer holds converted into the architecture memflow runs on.
-    /*
-    pub fn address(&self, arch_bits: u8, little_endian: bool) -> Address {
-        let mut addr = self.inner.to_umem();
-        addr = if cfg!(target_endian = "little") != little_endian {
-            addr.swap_bytes()
-        } else {
-            addr
-        };
-        addr = self.inner.to_umem() & Address::bit_mask_u8(0..(arch_bits - 1)).to_umem();
-        Address::from_u64(addr)
+    // Returns the address this pointer holds.
+    #[inline]
+    pub fn address(&self) -> Address {
+        Address::from(self.inner)
     }
-    */
 }
 
 impl<U: PrimitiveAddress, T: Sized> Pointer<U, T> {
@@ -206,11 +197,11 @@ impl<U: PrimitiveAddress, T: Sized> Pointer<U, T> {
 
         if count >= 0 {
             self.inner
-                .wrapping_add(U::from_umem((pointee_size.to_umem() * count as umem)))
+                .wrapping_add(U::from_umem(pointee_size.to_umem() * count as umem))
                 .into()
         } else {
             self.inner
-                .wrapping_sub(U::from_umem((pointee_size.to_umem() * (-count) as umem)))
+                .wrapping_sub(U::from_umem(pointee_size.to_umem() * (-count) as umem))
                 .into()
         }
     }
@@ -422,13 +413,6 @@ impl<T: ?Sized> From<Address> for Pointer64<T> {
 }
 
 // Into implementations
-impl<U: Into<Address>, T: ?Sized> From<Pointer<U, T>> for Address {
-    #[inline(always)]
-    fn from(ptr: Pointer<U, T>) -> Address {
-        ptr.inner.into()
-    }
-}
-
 impl<U: Into<Address>, T: ?Sized> From<Pointer<U, T>> for umem {
     #[inline(always)]
     fn from(ptr: Pointer<U, T>) -> umem {

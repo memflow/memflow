@@ -300,7 +300,7 @@ mod tests {
     use crate::mem::cache::timed_validator::TimedCacheValidator;
     use crate::mem::{DirectTranslate, PhysicalMemory};
     use crate::mem::{MemoryView, VirtualDma};
-    use crate::types::{size, umem, Address};
+    use crate::types::{size, Address};
 
     use coarsetime::Duration;
 

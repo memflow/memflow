@@ -2,7 +2,7 @@ use crate::architecture::x86::x64;
 use crate::cglue::ForwardMut;
 use crate::dummy::{DummyMemory, DummyOs};
 use crate::mem::{DirectTranslate, MemoryView, VirtualDma, VirtualTranslate, VirtualTranslate2};
-use crate::types::{mem, size, umem};
+use crate::types::{mem, size};
 
 #[test]
 fn test_vtop() {

@@ -191,7 +191,7 @@ impl<T> PageChunks for T where T: SplitAtIndex {}
 #[cfg(test)]
 mod tests {
     use crate::iter::PageChunks;
-    use crate::types::{umem, Address};
+    use crate::types::Address;
 
     const PAGE_SIZE: usize = 97;
     const OFF: usize = 26;

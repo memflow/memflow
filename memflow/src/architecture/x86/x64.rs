@@ -31,7 +31,7 @@ pub fn new_translator(dtb: Address) -> X86VirtualTranslate {
 #[cfg(test)]
 mod tests {
     use crate::architecture::mmu::ArchMmuSpec;
-    use crate::types::{size, umem, Address, PageType};
+    use crate::types::{mem, size, umem, Address, PageType};
 
     fn get_mmu_spec() -> &'static ArchMmuSpec {
         &super::ARCH_SPEC.mmu
@@ -73,17 +73,17 @@ mod tests {
     #[test]
     fn x64_page_size_level() {
         let mmu = get_mmu_spec();
-        assert_eq!(mmu.page_size_level(1), size::kb(4));
-        assert_eq!(mmu.page_size_level(2), size::mb(2));
-        assert_eq!(mmu.page_size_level(3), size::gb(1));
+        assert_eq!(mmu.page_size_level(1), mem::kb(4));
+        assert_eq!(mmu.page_size_level(2), mem::mb(2));
+        assert_eq!(mmu.page_size_level(3), mem::gb(1));
     }
 
     #[test]
     fn x64_page_size_step() {
         let mmu = get_mmu_spec();
-        assert_eq!(mmu.page_size_step(2), size::gb(1));
-        assert_eq!(mmu.page_size_step(3), size::mb(2));
-        assert_eq!(mmu.page_size_step(4), size::kb(4));
+        assert_eq!(mmu.page_size_step(2), mem::gb(1));
+        assert_eq!(mmu.page_size_step(3), mem::mb(2));
+        assert_eq!(mmu.page_size_step(4), mem::kb(4));
     }
 
     #[test]
@@ -91,7 +91,7 @@ mod tests {
     #[cfg(debug_assertions)]
     fn x64_page_size_level_4() {
         let mmu = get_mmu_spec();
-        assert_eq!(mmu.page_size_level(4), size::gb(512));
+        assert_eq!(mmu.page_size_level(4), mem::gb(512));
     }
 
     #[test]
@@ -99,7 +99,7 @@ mod tests {
     #[cfg(debug_assertions)]
     fn x64_page_size_level_5() {
         let mmu = get_mmu_spec();
-        assert_eq!(mmu.page_size_level(5), size::gb(512 * 512));
+        assert_eq!(mmu.page_size_level(5), mem::gb(512 * 512));
     }
 
     #[test]
@@ -113,7 +113,7 @@ mod tests {
             .enumerate()
             .fold(0, |state, (lvl, idx)| state | (idx << (12 + 9 * lvl)))
             .into();
-        let pte_address = Address::from(size::kb(4 * 45));
+        let pte_address = Address::from(mem::kb(4 * 45));
         assert_eq!(
             mmu.vtop_step(pte_address, virt_address, 0),
             pte_address + (indices[0] * 8)
@@ -146,7 +146,7 @@ mod tests {
                 state | (idx << (12 + 9 * lvl))
             })
             .into();
-        let pte_address = Address::from(size::gb(57));
+        let pte_address = Address::from(mem::gb(57));
 
         assert_eq!(
             mmu.get_phys_page(pte_address, virt_address, 4).page_type(),
@@ -154,7 +154,7 @@ mod tests {
         );
         assert_eq!(
             mmu.get_phys_page(pte_address, virt_address, 4).page_size(),
-            size::kb(4)
+            mem::kb(4)
         );
         assert_eq!(
             mmu.get_phys_page(pte_address, virt_address, 2).page_base(),
@@ -167,11 +167,11 @@ mod tests {
         );
         assert_eq!(
             mmu.get_phys_page(pte_address, virt_address, 3).address(),
-            pte_address + size::kb(4 * indices[3]) + page_offset
+            pte_address + mem::kb(4 * indices[3]) + page_offset
         );
         assert_eq!(
             mmu.get_phys_page(pte_address, virt_address, 2).address(),
-            pte_address + size::mb(2 * indices[2]) + size::kb(4 * indices[3]) + page_offset
+            pte_address + mem::mb(2 * indices[2]) + mem::kb(4 * indices[3]) + page_offset
         );
     }
 

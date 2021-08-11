@@ -10,11 +10,9 @@ use memflow::dataview::Pod;
 use memflow::error::{Error, ErrorKind, ErrorOrigin, PartialResultExt, Result};
 use memflow::iter::PageChunks;
 use memflow::mem::{MemoryView, VirtualTranslate};
-use memflow::types::{size, umem, Address};
+use memflow::types::{mem, size, umem, Address};
 
 use pelite::image::IMAGE_DOS_HEADER;
-
-use std::convert::TryInto;
 
 pub fn find_with_va_hint<T: MemoryView + VirtualTranslate>(
     virt_mem: &mut T,
@@ -27,7 +25,7 @@ pub fn find_with_va_hint<T: MemoryView + VirtualTranslate>(
 
     // va was found previously
     let mut va_base = start_block.kernel_hint.to_umem() & !0x0001_ffff;
-    while va_base + size::mb(16) > start_block.kernel_hint.to_umem() {
+    while va_base + mem::mb(16) > start_block.kernel_hint.to_umem() {
         trace!("x64::find_with_va_hint: probing at {:x}", va_base);
 
         match find_with_va(virt_mem, va_base) {
@@ -39,7 +37,7 @@ pub fn find_with_va_hint<T: MemoryView + VirtualTranslate>(
             Err(e) => trace!("x64::find_with_va_hint: probe error {:?}", e),
         }
 
-        va_base -= size::mb(2);
+        va_base -= mem::mb(2);
     }
 
     Err(Error(ErrorOrigin::OsLayer, ErrorKind::ProcessNotFound)
@@ -47,13 +45,12 @@ pub fn find_with_va_hint<T: MemoryView + VirtualTranslate>(
 }
 
 fn find_with_va<T: MemoryView + VirtualTranslate>(virt_mem: &mut T, va_base: umem) -> Result<umem> {
-    assert!(size::mb(2) < usize::MAX as umem);
-    let mut buf = vec![0; size::mb(2) as usize];
+    let mut buf = vec![0; size::mb(2)];
     virt_mem
         .read_raw_into(Address::from(va_base), &mut buf)
         .data_part()?;
 
-    buf.chunks_exact(x64::ARCH.page_size().try_into().unwrap())
+    buf.chunks_exact(x64::ARCH.page_size())
         .enumerate()
         .map(|(i, c)| {
             let view = Pod::as_data_view(c);
@@ -64,15 +61,15 @@ fn find_with_va<T: MemoryView + VirtualTranslate>(virt_mem: &mut T, va_base: ume
         .inspect(|(i, _, _)| {
             trace!(
                 "x64::find_with_va: found potential header flags at offset {:x}",
-                *i as umem * x64::ARCH.page_size()
+                *i as umem * x64::ARCH.page_size() as umem
             )
         })
         .find(|(i, _, _)| {
-            let probe_addr = Address::from(va_base + (*i as umem) * x64::ARCH.page_size());
+            let probe_addr = Address::from(va_base + (*i as umem) * x64::ARCH.page_size() as umem);
             let name = pehelper::try_get_pe_name(virt_mem, probe_addr).unwrap_or_default();
             name == "ntoskrnl.exe"
         })
-        .map(|(i, _, _)| va_base + i as umem * x64::ARCH.page_size())
+        .map(|(i, _, _)| va_base + i as umem * x64::ARCH.page_size() as umem)
         .ok_or_else(|| {
             Error(ErrorOrigin::OsLayer, ErrorKind::ProcessNotFound)
                 .log_trace("unable to locate ntoskrnl.exe")
@@ -86,7 +83,7 @@ pub fn find<T: MemoryView + VirtualTranslate>(
     debug!("x64::find: trying to find ntoskrnl.exe with page map",);
 
     let page_map = virt_mem.virt_page_map_range_vec(
-        size::mb(2),
+        mem::mb(2),
         (!0u64 - (1u64 << (ArchitectureObj::from(start_block.arch).address_space_bits() - 1)))
             .into(),
         (!0u64).into(),
@@ -95,7 +92,7 @@ pub fn find<T: MemoryView + VirtualTranslate>(
     match page_map
         .into_iter()
         .flat_map(|map| map.size.page_chunks(map.address, size::mb(2)))
-        .filter(|(_, size)| *size > size::kb(256))
+        .filter(|(_, size)| *size > mem::kb(256))
         .filter_map(|(va, _)| find_with_va(virt_mem, va.to_umem()).ok())
         .next()
     {

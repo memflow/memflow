@@ -2,7 +2,7 @@ use crate::architecture::x86::x64;
 use crate::cglue::ForwardMut;
 use crate::dummy::{DummyMemory, DummyOs};
 use crate::mem::{DirectTranslate, MemoryView, VirtualDma, VirtualTranslate, VirtualTranslate2};
-use crate::types::{size, umem};
+use crate::types::{mem, size, umem};
 
 #[test]
 fn test_vtop() {
@@ -73,7 +73,7 @@ fn test_virt_page_map() {
 
     assert!(page_map.len() == 1);
     assert_eq!(page_map[0].address, virt_base);
-    assert_eq!(page_map[0].size, size::mb(2));
+    assert_eq!(page_map[0].size, mem::mb(2));
 }
 
 #[test]
@@ -84,7 +84,7 @@ fn test_virt_read_small() {
     for (i, item) in buf.iter_mut().enumerate() {
         *item = i as u8;
     }
-    let (dtb, virt_base) = dummy_os.alloc_dtb(buf.len() as umem, &buf);
+    let (dtb, virt_base) = dummy_os.alloc_dtb(buf.len(), &buf);
     let translator = x64::new_translator(dtb);
     let arch = x64::ARCH;
     let mut virt_mem = VirtualDma::new(dummy_os.forward_mut(), arch, translator);
@@ -104,7 +104,7 @@ fn test_virt_write_small() {
     for (i, item) in input.iter_mut().enumerate() {
         *item = i as u8;
     }
-    let (dtb, virt_base) = dummy_os.alloc_dtb(input.len() as umem, &input);
+    let (dtb, virt_base) = dummy_os.alloc_dtb(input.len(), &input);
     let translator = x64::new_translator(dtb);
     let arch = x64::ARCH;
     let mut virt_mem = VirtualDma::new(dummy_os.forward_mut(), arch, translator);
@@ -123,7 +123,7 @@ fn test_virt_read_small_shifted() {
     for (i, item) in buf.iter_mut().enumerate() {
         *item = i as u8;
     }
-    let (dtb, virt_base) = dummy_os.alloc_dtb(buf.len() as umem, &buf);
+    let (dtb, virt_base) = dummy_os.alloc_dtb(buf.len(), &buf);
     let translator = x64::new_translator(dtb);
     let arch = x64::ARCH;
     let mut virt_mem = VirtualDma::new(dummy_os.forward_mut(), arch, translator);
@@ -143,7 +143,7 @@ fn test_virt_write_small_shifted() {
     for (i, item) in input.iter_mut().enumerate() {
         *item = i as u8;
     }
-    let (dtb, virt_base) = dummy_os.alloc_dtb(input.len() as umem, &input);
+    let (dtb, virt_base) = dummy_os.alloc_dtb(input.len(), &input);
     let translator = x64::new_translator(dtb);
     let arch = x64::ARCH;
     let mut virt_mem = VirtualDma::new(dummy_os.forward_mut(), arch, translator);
@@ -162,7 +162,7 @@ fn test_virt_read_medium() {
     for (i, item) in buf.iter_mut().enumerate() {
         *item = i as u8;
     }
-    let (dtb, virt_base) = dummy_os.alloc_dtb(buf.len() as umem, &buf);
+    let (dtb, virt_base) = dummy_os.alloc_dtb(buf.len(), &buf);
     let translator = x64::new_translator(dtb);
     let arch = x64::ARCH;
     let mut virt_mem = VirtualDma::new(dummy_os.forward_mut(), arch, translator);
@@ -182,7 +182,7 @@ fn test_virt_write_medium() {
     for (i, item) in input.iter_mut().enumerate() {
         *item = i as u8;
     }
-    let (dtb, virt_base) = dummy_os.alloc_dtb(input.len() as umem, &input);
+    let (dtb, virt_base) = dummy_os.alloc_dtb(input.len(), &input);
     let translator = x64::new_translator(dtb);
     let arch = x64::ARCH;
     let mut virt_mem = VirtualDma::new(dummy_os.forward_mut(), arch, translator);
@@ -201,7 +201,7 @@ fn test_virt_read_medium_shifted() {
     for (i, item) in buf.iter_mut().enumerate() {
         *item = i as u8;
     }
-    let (dtb, virt_base) = dummy_os.alloc_dtb(buf.len() as umem, &buf);
+    let (dtb, virt_base) = dummy_os.alloc_dtb(buf.len(), &buf);
     let translator = x64::new_translator(dtb);
     let arch = x64::ARCH;
     let mut virt_mem = VirtualDma::new(dummy_os.forward_mut(), arch, translator);
@@ -221,7 +221,7 @@ fn test_virt_write_medium_shifted() {
     for (i, item) in input.iter_mut().enumerate() {
         *item = i as u8;
     }
-    let (dtb, virt_base) = dummy_os.alloc_dtb(input.len() as umem, &input);
+    let (dtb, virt_base) = dummy_os.alloc_dtb(input.len(), &input);
     let translator = x64::new_translator(dtb);
     let arch = x64::ARCH;
     let mut virt_mem = VirtualDma::new(dummy_os.forward_mut(), arch, translator);
@@ -240,7 +240,7 @@ fn test_virt_read_big() {
     for (i, item) in buf.iter_mut().enumerate() {
         *item = i as u8;
     }
-    let (dtb, virt_base) = dummy_os.alloc_dtb(buf.len() as umem, &buf);
+    let (dtb, virt_base) = dummy_os.alloc_dtb(buf.len(), &buf);
     let translator = x64::new_translator(dtb);
     let arch = x64::ARCH;
     let mut virt_mem = VirtualDma::new(dummy_os.forward_mut(), arch, translator);
@@ -260,7 +260,7 @@ fn test_virt_write_big() {
     for (i, item) in input.iter_mut().enumerate() {
         *item = i as u8;
     }
-    let (dtb, virt_base) = dummy_os.alloc_dtb(input.len() as umem, &input);
+    let (dtb, virt_base) = dummy_os.alloc_dtb(input.len(), &input);
     let translator = x64::new_translator(dtb);
     let arch = x64::ARCH;
     let mut virt_mem = VirtualDma::new(dummy_os.forward_mut(), arch, translator);
@@ -279,7 +279,7 @@ fn test_virt_read_big_shifted() {
     for (i, item) in buf.iter_mut().enumerate() {
         *item = i as u8;
     }
-    let (dtb, virt_base) = dummy_os.alloc_dtb(buf.len() as umem, &buf);
+    let (dtb, virt_base) = dummy_os.alloc_dtb(buf.len(), &buf);
     let translator = x64::new_translator(dtb);
     let arch = x64::ARCH;
     let mut virt_mem = VirtualDma::new(dummy_os.forward_mut(), arch, translator);
@@ -299,7 +299,7 @@ fn test_virt_write_big_shifted() {
     for (i, item) in input.iter_mut().enumerate() {
         *item = i as u8;
     }
-    let (dtb, virt_base) = dummy_os.alloc_dtb(input.len() as umem, &input);
+    let (dtb, virt_base) = dummy_os.alloc_dtb(input.len(), &input);
     let translator = x64::new_translator(dtb);
     let arch = x64::ARCH;
     let mut virt_mem = VirtualDma::new(dummy_os.forward_mut(), arch, translator);

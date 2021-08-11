@@ -62,7 +62,7 @@ pub trait VirtualTranslate3: Clone + Copy + Send {
     /// use memflow::architecture::x86::x64;
     /// use memflow::types::{size, umem};
     ///
-    /// # const VIRT_MEM_SIZE: umem = size::mb(8);
+    /// # const VIRT_MEM_SIZE: usize = size::mb(8);
     /// # const CHUNK_SIZE: usize = 2;
     /// #
     /// # let mem = DummyMemory::new(size::mb(16));
@@ -131,7 +131,7 @@ pub trait VirtualTranslate3: Clone + Copy + Send {
         tmp_buf: &mut [std::mem::MaybeUninit<u8>],
     );
 
-    fn translation_table_id(&self, address: Address) -> usize;
+    fn translation_table_id(&self, address: Address) -> umem;
 
     fn arch(&self) -> ArchitectureObj;
 }
@@ -180,7 +180,7 @@ pub trait Architecture: Send + Sync + 'static {
     /// let arch = x64::ARCH;
     /// assert_eq!(arch.page_size(), size::kb(4));
     /// ```
-    fn page_size(&self) -> umem;
+    fn page_size(&self) -> usize;
 
     /// Returns the `usize` of a pointers width on a `Architecture`.
     ///
@@ -250,7 +250,7 @@ impl std::cmp::PartialEq<ArchitectureObj> for ArchitectureObj {
 pub enum ArchitectureIdent {
     /// Unknown architecture. Could be third-party implemented. memflow knows how to work on them,
     /// but is unable to instantiate them.
-    Unknown,
+    Unknown(usize),
     /// X86 with specified bitness and address extensions
     ///
     /// First argument - `bitness` controls whether it's 32, or 64 bit variant.
@@ -260,7 +260,7 @@ pub enum ArchitectureIdent {
     /// Arm 64-bit architecture with specified page size
     ///
     /// Valid page sizes are 4kb, 16kb, 64kb. Only 4kb is supported at the moment
-    AArch64(umem),
+    AArch64(usize),
 }
 
 impl std::fmt::Display for ArchitectureIdent {
@@ -272,7 +272,7 @@ impl std::fmt::Display for ArchitectureIdent {
             ArchitectureIdent::X86(64, true) => f.pad("x86_64 LA57"),
             ArchitectureIdent::X86(_, _) => f.pad("x86"),
             ArchitectureIdent::AArch64(_) => f.pad("AArch64"),
-            ArchitectureIdent::Unknown => f.pad("Unknown"),
+            ArchitectureIdent::Unknown(id) => f.debug_tuple("Unknown").field(&id).finish(),
         }
     }
 }
@@ -285,7 +285,7 @@ impl ArchitectureIdent {
 
 impl From<ArchitectureIdent> for ArchitectureObj {
     fn from(arch: ArchitectureIdent) -> ArchitectureObj {
-        const KB4: umem = size::kb(4);
+        const KB4: usize = size::kb(4);
         match arch {
             ArchitectureIdent::X86(32, false) => x86::x32::ARCH,
             ArchitectureIdent::X86(32, true) => x86::x32_pae::ARCH,

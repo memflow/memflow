@@ -115,7 +115,7 @@ fn read_bench(mut kernel: OsInstanceArcBox) -> Result<()> {
             let mem_map = {
                 let prc = as_mut!(prc impl VirtualTranslate)
                     .ok_or(ErrorKind::UnsupportedOptionalFeature)?;
-                prc.virt_page_map_vec(size::gb(1))
+                prc.virt_page_map_vec(mem::gb(1))
             };
 
             println!("Memory map (with up to 1GB gaps):");

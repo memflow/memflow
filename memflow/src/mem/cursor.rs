@@ -368,7 +368,7 @@ mod tests {
     use crate::architecture::x86::{x64, X86VirtualTranslate};
     use crate::dummy::{DummyMemory, DummyOs};
     use crate::mem::{DirectTranslate, PhysicalMemory, VirtualDma};
-    use crate::types::size;
+    use crate::types::{mem, size};
 
     fn dummy_phys_mem() -> DummyMemory {
         DummyMemory::new(size::mb(1))
@@ -386,7 +386,7 @@ mod tests {
 
         assert_eq!(cursor.seek(SeekFrom::Start(512)).unwrap(), 512);
 
-        assert_eq!(cursor.seek(SeekFrom::End(-512)).unwrap(), size::mb(1) - 512);
+        assert_eq!(cursor.seek(SeekFrom::End(-512)).unwrap(), mem::mb(1) - 512);
     }
 
     #[test]

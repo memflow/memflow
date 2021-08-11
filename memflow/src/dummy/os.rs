@@ -10,7 +10,7 @@ use crate::os::process::*;
 use crate::os::root::*;
 use crate::os::*;
 use crate::plugins::*;
-use crate::types::{imem, size, umem, Address};
+use crate::types::{clamp_to_usize, imem, mem, size, umem, Address};
 
 use crate::cglue::*;
 use log::Level;
@@ -42,7 +42,7 @@ enum X64PageSize {
 }
 
 impl X64PageSize {
-    fn to_size(self) -> umem {
+    fn to_size(self) -> usize {
         match self {
             X64PageSize::P4k => size::kb(4),
             X64PageSize::P2m => size::mb(2),
@@ -77,7 +77,7 @@ impl PageInfo {
         let mut ret = vec![];
         for o in 0..(self.size.to_size() / new_size.to_size()) {
             ret.push(PageInfo {
-                addr: self.addr + new_size.to_size() * o,
+                addr: self.addr + new_size.to_size() as umem * o as umem,
                 size: new_size,
             });
         }
@@ -137,7 +137,7 @@ where
 impl DummyOs {
     pub fn new_and_dtb(
         mem: DummyMemory,
-        virt_size: umem,
+        virt_size: usize,
         buffer: &[u8],
     ) -> (Self, Address, Address) {
         let mut ret = Self::new(mem);
@@ -149,7 +149,7 @@ impl DummyOs {
         self.mem
     }
 
-    pub fn quick_process(virt_size: umem, buffer: &[u8]) -> <Self as OsInner>::IntoProcessType {
+    pub fn quick_process(virt_size: usize, buffer: &[u8]) -> <Self as OsInner>::IntoProcessType {
         let mem = DummyMemory::new(virt_size + size::mb(2));
         let mut os = Self::new(mem);
         let pid = os.alloc_process(virt_size, buffer);
@@ -257,7 +257,7 @@ impl DummyOs {
             .map(|addr| addr.as_u64().into())
     }
 
-    fn internal_alloc_process(&mut self, map_size: umem, test_buf: &[u8]) -> DummyProcessInfo {
+    fn internal_alloc_process(&mut self, map_size: usize, test_buf: &[u8]) -> DummyProcessInfo {
         let (dtb, address) = self.alloc_dtb(map_size, test_buf);
 
         self.last_pid += 1;
@@ -278,7 +278,7 @@ impl DummyOs {
         }
     }
 
-    pub fn alloc_process(&mut self, map_size: umem, test_buf: &[u8]) -> Pid {
+    pub fn alloc_process(&mut self, map_size: usize, test_buf: &[u8]) -> Pid {
         let proc = self.internal_alloc_process(map_size, test_buf);
 
         let ret = proc.info.pid;
@@ -288,7 +288,7 @@ impl DummyOs {
         ret
     }
 
-    pub fn alloc_process_with_module(&mut self, map_size: umem, test_buf: &[u8]) -> Pid {
+    pub fn alloc_process_with_module(&mut self, map_size: usize, test_buf: &[u8]) -> Pid {
         let mut proc = self.internal_alloc_process(map_size, test_buf);
 
         let ret = proc.info.pid;
@@ -300,12 +300,12 @@ impl DummyOs {
         ret
     }
 
-    pub fn alloc_dtb(&mut self, map_size: umem, test_buf: &[u8]) -> (Address, Address) {
+    pub fn alloc_dtb(&mut self, map_size: usize, test_buf: &[u8]) -> (Address, Address) {
         let virt_base = (Address::null()
             + self
                 .rng
                 .gen_range(0x0001_0000_0000_usize..((!0_usize) << 20) >> 20))
-        .as_page_aligned(size::gb(2));
+        .as_mem_aligned(mem::gb(2));
 
         (
             self.alloc_dtb_const_base(virt_base, map_size, test_buf),
@@ -316,10 +316,10 @@ impl DummyOs {
     pub fn alloc_dtb_const_base(
         &mut self,
         virt_base: Address,
-        map_size: umem,
+        map_size: usize,
         test_buf: &[u8],
     ) -> Address {
-        let mut cur_len: umem = 0;
+        let mut cur_len = 0;
 
         let dtb = self.alloc_pt_page();
 
@@ -328,7 +328,7 @@ impl DummyOs {
                 .mem
                 .buf
                 .as_ptr()
-                .add(dtb.addr.to_umem().try_into().unwrap())
+                .add(clamp_to_usize(dtb.addr.to_umem()))
                 .cast::<PageTable>() as *mut _)
         };
         *pml4 = PageTable::new();
@@ -340,20 +340,16 @@ impl DummyOs {
             let page_info = self.next_page_for_address(cur_len.into());
             let flags = PageTableFlags::PRESENT | PageTableFlags::WRITABLE;
 
-            if test_buf.len() as umem >= (cur_len + page_info.size.to_size()) {
+            if test_buf.len() >= (cur_len + page_info.size.to_size() as usize) {
                 self.mem
                     .phys_write(
                         page_info.addr.into(),
-                        &test_buf[cur_len.try_into().unwrap()
-                            ..(cur_len + page_info.size.to_size()).try_into().unwrap()],
+                        &test_buf[cur_len..(cur_len + page_info.size.to_size() as usize)],
                     )
                     .unwrap();
-            } else if test_buf.len() as umem > cur_len {
+            } else if test_buf.len() > cur_len {
                 self.mem
-                    .phys_write(
-                        page_info.addr.into(),
-                        &test_buf[cur_len.try_into().unwrap()..],
-                    )
+                    .phys_write(page_info.addr.into(), &test_buf[cur_len..])
                     .unwrap();
             }
 
@@ -397,7 +393,7 @@ impl DummyOs {
                         .is_ok(),
                 };
             }
-            cur_len += page_info.size.to_size();
+            cur_len += page_info.size.to_size() as usize;
         }
 
         dtb.addr

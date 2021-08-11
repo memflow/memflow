@@ -8,7 +8,7 @@ use crate::types::{umem, Address, PhysicalAddress};
 
 #[derive(Clone, Copy)]
 pub struct TlbEntry {
-    pub pt_index: usize,
+    pub pt_index: umem,
     pub virt_addr: Address,
     pub phys_addr: PhysicalAddress,
 }
@@ -25,7 +25,7 @@ impl TlbEntry {
 
 #[derive(Clone, Copy)]
 pub struct CachedEntry {
-    pt_index: usize,
+    pt_index: umem,
     virt_page: Address,
     phys_page: PhysicalAddress,
 }
@@ -55,15 +55,15 @@ impl<T: CacheValidator> TlbCache<T> {
     }
 
     #[inline]
-    fn get_cache_index(&self, page_addr: Address, page_size: umem) -> usize {
-        ((page_addr.to_umem() / page_size) % (self.entries.len() as umem))
+    fn get_cache_index(&self, page_addr: Address, page_size: usize) -> usize {
+        ((page_addr.to_umem() / page_size as umem) % (self.entries.len() as umem))
             .try_into()
             .unwrap()
     }
 
     #[inline]
     pub fn is_read_too_long(&self, arch: ArchitectureObj, size: umem) -> bool {
-        size / arch.page_size() > self.entries.len() as umem
+        size / arch.page_size() as umem > self.entries.len() as umem
     }
 
     #[inline]
@@ -91,7 +91,7 @@ impl<T: CacheValidator> TlbCache<T> {
                         entry.phys_page.address().as_page_aligned(page_size)
                             + (addr - page_address),
                         entry.phys_page.page_type(),
-                        page_size,
+                        page_size as umem,
                     ),
                 }))
             } else {
@@ -135,7 +135,7 @@ impl<T: CacheValidator> TlbCache<T> {
         let end_addr = (in_addr + invalid_len + 1_usize).as_page_aligned(page_size);
 
         for i in (page_addr.to_umem()..end_addr.to_umem())
-            .step_by(page_size.try_into().unwrap())
+            .step_by(page_size)
             .take(self.entries.len())
         {
             let cur_page = Address::from(i);

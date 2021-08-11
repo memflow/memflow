@@ -111,7 +111,7 @@ impl PhysicalAddress {
         if !self.has_page() {
             Address::INVALID
         } else {
-            self.address.as_page_aligned(self.page_size())
+            self.address.as_mem_aligned(self.page_size())
         }
     }
 
@@ -234,7 +234,7 @@ impl fmt::Display for PhysicalAddress {
 
 #[cfg(test)]
 mod tests {
-    use super::super::size;
+    use super::super::mem;
     use super::*;
 
     #[test]
@@ -257,16 +257,13 @@ mod tests {
     #[allow(clippy::unreadable_literal)]
     fn test_page_size_huge() {
         let pa_2mb =
-            PhysicalAddress::with_page(Address::from(0x123456_u64), PageType::UNKNOWN, size::mb(2));
-        assert_eq!(pa_2mb.page_size(), size::mb(2));
+            PhysicalAddress::with_page(Address::from(0x123456_u64), PageType::UNKNOWN, mem::mb(2));
+        assert_eq!(pa_2mb.page_size(), mem::mb(2));
         assert_eq!(pa_2mb.page_base(), Address::from(0_u64));
 
-        let pa_1gb = PhysicalAddress::with_page(
-            Address::from(0x1234567_u64),
-            PageType::UNKNOWN,
-            size::gb(1),
-        );
-        assert_eq!(pa_1gb.page_size(), size::gb(1));
+        let pa_1gb =
+            PhysicalAddress::with_page(Address::from(0x1234567_u64), PageType::UNKNOWN, mem::gb(1));
+        assert_eq!(pa_1gb.page_size(), mem::gb(1));
         assert_eq!(pa_1gb.page_base(), Address::from(0_u64));
     }
 }

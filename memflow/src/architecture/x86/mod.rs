@@ -12,7 +12,6 @@ use crate::iter::SplitAtIndex;
 use crate::mem::{MemData, PhysicalMemory};
 use crate::types::{umem, Address};
 
-use std::convert::TryInto;
 use std::ptr;
 
 pub struct X86Architecture {
@@ -31,8 +30,8 @@ impl Architecture for X86Architecture {
         self.mmu.def.endianess
     }
 
-    fn page_size(&self) -> umem {
-        self.mmu.page_size_level(1)
+    fn page_size(&self) -> usize {
+        self.mmu.page_size_level(1) as usize
     }
 
     fn size_addr(&self) -> usize {
@@ -81,8 +80,8 @@ impl VirtualTranslate3 for X86VirtualTranslate {
             .virt_to_phys_iter(mem, self.dtb, addrs, out, out_fail, tmp_buf)
     }
 
-    fn translation_table_id(&self, _address: Address) -> usize {
-        self.dtb.to_umem().overflowing_shr(12).0.try_into().unwrap()
+    fn translation_table_id(&self, _address: Address) -> umem {
+        self.dtb.to_umem().overflowing_shr(12).0
     }
 
     fn arch(&self) -> ArchitectureObj {

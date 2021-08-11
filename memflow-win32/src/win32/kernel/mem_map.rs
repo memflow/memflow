@@ -4,11 +4,11 @@ use log::{info, trace};
 use std::fmt;
 
 use memflow::mem::{MemoryMap, MemoryView};
-use memflow::types::{size, umem, Address};
+use memflow::types::{mem, umem, Address};
 
 use memflow::dataview::Pod;
 
-const SIZE_4KB: umem = size::kb(4);
+const SIZE_4KB: umem = mem::kb(4);
 
 /// The number of PhysicalMemoryRuns contained in the Header
 pub const PHYSICAL_MEMORY_MAX_RUNS: usize = 32;

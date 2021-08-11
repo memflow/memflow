@@ -10,7 +10,6 @@ use crate::mem::{
 use crate::plugins::*;
 use crate::types::{size, umem, Address};
 
-use std::convert::TryInto;
 use std::sync::Arc;
 
 cglue_impl_group!(DummyMemory, ConnectorInstance, {});
@@ -21,8 +20,8 @@ pub struct DummyMemory {
 }
 
 impl DummyMemory {
-    pub fn new(size: umem) -> Self {
-        let buf = Arc::new(vec![0_u8; size.try_into().unwrap()].into_boxed_slice());
+    pub fn new(size: usize) -> Self {
+        let buf = Arc::new(vec![0_u8; size].into_boxed_slice());
 
         let mut map = MemoryMap::new();
         map.push_range(
@@ -81,7 +80,7 @@ impl PhysicalMemory for DummyMemory {
     }
 }
 
-pub fn parse_size(args: &Args) -> Result<umem> {
+pub fn parse_size(args: &Args) -> Result<usize> {
     let (size, size_mul) = {
         let size = args.get("size").unwrap_or("2m");
 
@@ -108,7 +107,7 @@ pub fn parse_size(args: &Args) -> Result<umem> {
             ))?
     };
 
-    let size = umem::from_str_radix(size, 16)
+    let size = usize::from_str_radix(size, 16)
         .map_err(|_| Error(ErrorOrigin::Connector, ErrorKind::InvalidMemorySize))?;
 
     Ok(size * size_mul)

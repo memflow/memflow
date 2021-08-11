@@ -145,14 +145,14 @@ pub trait PhysicalMemory: Send {
     /// # Examples
     ///
     /// ```
-    /// use memflow::types::size;
+    /// use memflow::types::{size, mem};
     /// use memflow::mem::PhysicalMemory;
     /// # let mem = memflow::dummy::DummyMemory::new(size::mb(16));
     ///
     /// let metadata = mem.metadata();
     ///
-    /// assert_eq!(metadata.max_address.to_umem(), size::mb(16) - 1);
-    /// assert_eq!(metadata.real_size, size::mb(16));
+    /// assert_eq!(metadata.max_address.to_umem(), mem::mb(16) - 1);
+    /// assert_eq!(metadata.real_size, mem::mb(16));
     /// assert_eq!(metadata.readonly, false);
     /// ```
     fn metadata(&self) -> PhysicalMemoryMetadata;

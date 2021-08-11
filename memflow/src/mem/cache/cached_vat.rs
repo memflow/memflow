@@ -183,7 +183,7 @@ impl<V: VirtualTranslate2, Q: CacheValidator> VirtualTranslate2 for CachedVirtua
             .filter_map(|(addr, buf)| {
                 if let Some(entry) = tlb.try_entry(translator, addr, arch) {
                     hitc += 1;
-                    debug_assert!(buf.length() as umem <= arch.page_size());
+                    debug_assert!(buf.length() <= arch.page_size() as umem);
                     // TODO: handle case
                     let _ = match entry {
                         Ok(entry) => out.call(MemData(entry.phys_addr, buf)),
@@ -191,7 +191,7 @@ impl<V: VirtualTranslate2, Q: CacheValidator> VirtualTranslate2 for CachedVirtua
                     };
                     None
                 } else {
-                    misc += core::cmp::max(1, buf.length() as umem / arch.page_size());
+                    misc += core::cmp::max(1, buf.length() / arch.page_size() as umem);
                     Some(MemData(addr, (addr, buf)))
                 }
             })
@@ -312,8 +312,8 @@ mod tests {
         Address,
         Address,
     ) {
-        let mem = DummyMemory::new(buf.len() as umem + size::mb(2));
-        let (os, dtb, virt_base) = DummyOs::new_and_dtb(mem, buf.len() as umem, buf);
+        let mem = DummyMemory::new(buf.len() + size::mb(2));
+        let (os, dtb, virt_base) = DummyOs::new_and_dtb(mem, buf.len(), buf);
         let translator = x86::x64::new_translator(dtb);
 
         let vat = CachedVirtualTranslate::builder(DirectTranslate::new())
@@ -330,7 +330,7 @@ mod tests {
         (mem, vmem, virt_base, dtb)
     }
 
-    fn standard_buffer(size: umem) -> Vec<u8> {
+    fn standard_buffer(size: usize) -> Vec<u8> {
         (0..size)
             .step_by(std::mem::size_of_val(&size))
             .flat_map(|v| v.to_le_bytes().iter().copied().collect::<Vec<u8>>())
@@ -345,8 +345,7 @@ mod tests {
         let buffer = standard_buffer(size::mb(2));
         let (mut mem, mut vmem, virt_base, dtb) = build_mem(&buffer);
 
-        assert!(size::mb(2) < usize::MAX as umem);
-        let mut read_into = vec![0u8; size::mb(2) as usize];
+        let mut read_into = vec![0u8; size::mb(2)];
 
         vmem.read_raw_into(virt_base, &mut read_into)
             .data()
@@ -355,8 +354,7 @@ mod tests {
         assert!(read_into == buffer);
 
         // Destroy the page tables
-        assert!(size::kb(4) < usize::MAX as umem);
-        mem.phys_write(dtb.into(), vec![0u8; size::kb(4) as usize].as_slice())
+        mem.phys_write(dtb.into(), vec![0u8; size::kb(4)].as_slice())
             .unwrap();
 
         vmem.read_raw_into(virt_base, &mut read_into)

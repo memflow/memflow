@@ -32,17 +32,12 @@ pub struct TranslateData<T> {
 impl<T: SplitAtIndex> TranslateData<T> {
     pub fn split_at_address(self, addr: Address) -> (Option<Self>, Option<Self>) {
         let sub = self.addr.to_umem();
-        self.split_at(addr.to_umem().saturating_sub(sub).try_into().unwrap())
+        self.split_at(addr.to_umem().saturating_sub(sub))
     }
 
     pub fn split_at_address_rev(self, addr: Address) -> (Option<Self>, Option<Self>) {
         let base = self.addr + self.length();
-        self.split_at_rev(
-            base.to_umem()
-                .saturating_sub(addr.to_umem())
-                .try_into()
-                .unwrap(),
-        )
+        self.split_at_rev(base.to_umem().saturating_sub(addr.to_umem()))
     }
 }
 
@@ -67,7 +62,7 @@ impl<T> PartialEq for TranslateData<T> {
 }
 
 impl<T: SplitAtIndex> SplitAtIndex for TranslateData<T> {
-    fn split_at(self, idx: usize) -> (Option<Self>, Option<Self>)
+    fn split_at(self, idx: umem) -> (Option<Self>, Option<Self>)
     where
         Self: Sized,
     {
@@ -83,7 +78,7 @@ impl<T: SplitAtIndex> SplitAtIndex for TranslateData<T> {
         )
     }
 
-    unsafe fn split_at_mut(&mut self, idx: usize) -> (Option<Self>, Option<Self>)
+    unsafe fn split_at_mut(&mut self, idx: umem) -> (Option<Self>, Option<Self>)
     where
         Self: Sized,
     {
@@ -99,7 +94,7 @@ impl<T: SplitAtIndex> SplitAtIndex for TranslateData<T> {
         )
     }
 
-    fn length(&self) -> usize {
+    fn length(&self) -> umem {
         self.buf.length()
     }
 
@@ -195,18 +190,15 @@ impl<T: MmuTranslationBase> TranslationChunk<T> {
         //TODO: mask out the addresses to limit them within address space
         //this is in particular for the first step where addresses are split between positive and
         //negative sides
-        let upper: u64 = (self.max_addr - 1usize)
-            .as_page_aligned(step_size)
-            .to_umem();
-        let lower: u64 = self.min_addr.as_page_aligned(step_size).to_umem();
+        let upper = (self.max_addr - 1usize).as_mem_aligned(step_size).to_umem();
+        let lower = self.min_addr.as_mem_aligned(step_size).to_umem();
 
         let mut cur_max_addr = !0u64;
 
         // Walk in reverse so that lowest addresses always end up
         // first in the stack. This preserves translation order
-        for (cnt, addr) in (lower..=upper)
-            .rev()
-            .step_by(step_size.try_into().unwrap())
+        for (cnt, addr) in (0..=((upper - lower) / step_size))
+            .map(|i| upper - i * step_size)
             .enumerate()
         {
             if addr > cur_max_addr {
@@ -217,11 +209,12 @@ impl<T: MmuTranslationBase> TranslationChunk<T> {
 
             // Also, we need to push the upper elements to the waiting stack preemptively...
             // This might result in slight performance loss, but keeps the order
-            let remaining: usize = ((addr - lower) / step_size + 1).try_into().unwrap();
+            let remaining = (addr - lower) / step_size + 1;
 
-            let (chunks_out, addrs_out) = if out_target.0.capacity()
-                >= out_target.0.len() + remaining
-                && out_target.1.capacity() >= out_target.1.len() + self.addr_count * remaining
+            let (chunks_out, addrs_out) = if out_target.0.capacity() as umem
+                >= out_target.0.len() as umem + remaining
+                && out_target.1.capacity() as umem
+                    >= out_target.1.len() as umem + self.addr_count as umem * remaining
             {
                 &mut out_target
             } else {
@@ -229,10 +222,10 @@ impl<T: MmuTranslationBase> TranslationChunk<T> {
             };
 
             let addr = Address::from(addr);
-            let addr_aligned = addr.as_page_aligned(align_as);
+            let addr_aligned = addr.as_mem_aligned(align_as);
             assert!(addr >= addr_aligned);
             let index = (addr - addr_aligned) as umem / step_size;
-            let (pt_addr, _) = self.pt_addr.get_pt_by_index(index.try_into().unwrap());
+            let (pt_addr, _) = self.pt_addr.get_pt_by_index(index as usize);
             let pt_addr = spec.vtop_step(pt_addr, addr, self.step);
 
             let mut new_chunk = TranslationChunk::new(pt_addr);

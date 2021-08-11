@@ -43,7 +43,7 @@ fn rwtest(
                         PhysicalAddress::with_page(
                             addr,
                             PageType::default().write(true),
-                            size::kb(4),
+                            mem::kb(4),
                         ),
                         vec.as_mut_slice().into(),
                     )
@@ -100,7 +100,7 @@ fn read_test_with_ctx(
     if cache_size > 0 {
         let mut cached_mem = CachedMemoryAccess::builder(mem)
             .arch(architecture::x86::x64::ARCH)
-            .cache_size(size::mb(cache_size))
+            .cache_size(size::mb(cache_size as usize))
             .page_type_mask(PageType::PAGE_TABLE | PageType::READ_ONLY | PageType::WRITEABLE)
             .build()
             .unwrap();

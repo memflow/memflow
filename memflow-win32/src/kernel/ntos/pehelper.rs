@@ -10,8 +10,7 @@ use memflow::types::{size, umem, Address};
 use pelite::{self, PeView};
 
 pub fn try_get_pe_size<T: MemoryView>(mem: &mut T, probe_addr: Address) -> Result<umem> {
-    assert!(size::kb(4) < usize::MAX as umem);
-    let mut probe_buf = vec![0; size::kb(4) as usize];
+    let mut probe_buf = vec![0; size::kb(4)];
     mem.read_raw_into(probe_addr, &mut probe_buf)?;
 
     let pe_probe = PeView::from_bytes(&probe_buf)

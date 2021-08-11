@@ -7,7 +7,6 @@ use crate::types::{umem, Address, PhysicalAddress};
 
 use super::{CacheValidator, PageType};
 
-use core::convert::TryInto;
 use std::alloc::{alloc, alloc_zeroed, dealloc, Layout};
 use std::prelude::v1::*;
 
@@ -36,7 +35,7 @@ pub struct PageCache<'a, T> {
     address: Box<[Address]>,
     page_refs: Box<[Option<&'a mut [u8]>]>,
     address_once_validated: Box<[Address]>,
-    page_size: umem,
+    page_size: usize,
     page_type_mask: PageType,
     pub validator: T,
     cache_ptr: *mut u8,
@@ -46,18 +45,17 @@ pub struct PageCache<'a, T> {
 unsafe impl<'a, T> Send for PageCache<'a, T> {}
 
 impl<'a, T: CacheValidator> PageCache<'a, T> {
-    pub fn new(arch: ArchitectureObj, size: umem, page_type_mask: PageType, validator: T) -> Self {
+    pub fn new(arch: ArchitectureObj, size: usize, page_type_mask: PageType, validator: T) -> Self {
         Self::with_page_size(arch.page_size(), size, page_type_mask, validator)
     }
 
     pub fn with_page_size(
-        page_size: umem,
-        size: umem,
+        page_size: usize,
+        size: usize,
         page_type_mask: PageType,
         mut validator: T,
     ) -> Self {
-        let cache_entries: usize = (size / page_size).try_into().unwrap();
-        let page_size: usize = page_size.try_into().unwrap();
+        let cache_entries = size / page_size;
 
         let layout = Layout::from_size_align(cache_entries * page_size, page_size).unwrap();
 
@@ -79,7 +77,7 @@ impl<'a, T: CacheValidator> PageCache<'a, T> {
             address: vec![Address::INVALID; cache_entries].into_boxed_slice(),
             page_refs,
             address_once_validated: vec![Address::INVALID; cache_entries].into_boxed_slice(),
-            page_size: page_size as umem,
+            page_size,
             page_type_mask,
             validator,
             cache_ptr,
@@ -88,10 +86,8 @@ impl<'a, T: CacheValidator> PageCache<'a, T> {
     }
 
     fn page_index(&self, addr: Address) -> usize {
-        ((addr.as_page_aligned(self.page_size).to_umem() / self.page_size)
-            % (self.address.len() as umem))
-            .try_into()
-            .unwrap()
+        ((addr.as_page_aligned(self.page_size).to_umem() / self.page_size as umem)
+            % (self.address.len() as umem)) as usize
     }
 
     fn take_page(&mut self, addr: Address, skip_validator: bool) -> PageValidity<'a> {
@@ -125,7 +121,7 @@ impl<'a, T: CacheValidator> PageCache<'a, T> {
         self.page_refs[page_index] = Some(page);
     }
 
-    pub fn page_size(&self) -> umem {
+    pub fn page_size(&self) -> usize {
         self.page_size
     }
 
@@ -178,10 +174,10 @@ impl<'a, T: CacheValidator> PageCache<'a, T> {
         MemData(addr, out): PhysicalReadData<'_>,
         page_size: usize,
     ) -> impl PhysicalReadIterator<'_> {
-        out.page_chunks(addr.address(), page_size.try_into().unwrap())
+        out.page_chunks(addr.address(), page_size)
             .map(move |(paddr, chunk)| {
                 MemData(
-                    PhysicalAddress::with_page(paddr, addr.page_type(), addr.page_size()),
+                    PhysicalAddress::with_page(paddr, addr.page_type(), addr.page_size() as umem),
                     chunk,
                 )
             })
@@ -211,7 +207,7 @@ impl<'a, T: CacheValidator> PageCache<'a, T> {
                                 PhysicalAddress::with_page(
                                     paddr,
                                     addr.page_type(),
-                                    addr.page_size(),
+                                    addr.page_size() as umem,
                                 ),
                                 chunk,
                             );
@@ -223,7 +219,7 @@ impl<'a, T: CacheValidator> PageCache<'a, T> {
                                     let aligned_addr = paddr.as_page_aligned(self.page_size);
                                     let start = paddr - aligned_addr;
                                     let cached_buf = buf
-                                        .split_at_mut(start.try_into().unwrap())
+                                        .split_at_mut(start as usize)
                                         .1
                                         .split_at_mut(prd.1.len())
                                         .0;
@@ -286,17 +282,13 @@ impl<'a, T: CacheValidator> PageCache<'a, T> {
 
                     while let Some(MemData(addr, mut out)) = clist.pop() {
                         let cached_page = self.cached_page_mut(addr.address(), false);
-                        let aligned_addr =
-                            cached_page.address.as_page_aligned(self.page_size as umem);
+                        let aligned_addr = cached_page.address.as_page_aligned(self.page_size);
 
                         let start = addr.address() - aligned_addr;
 
                         if let PageValidity::Valid(buf) = cached_page.validity {
-                            let cached_buf = buf
-                                .split_at_mut(start.try_into().unwrap())
-                                .1
-                                .split_at_mut(out.len())
-                                .0;
+                            let cached_buf =
+                                buf.split_at_mut(start as usize).1.split_at_mut(out.len()).0;
                             out.copy_from_slice(cached_buf);
                             self.put_page(cached_page.address, buf);
                         }
@@ -314,7 +306,7 @@ where
     T: CacheValidator + Clone,
 {
     fn clone(&self) -> Self {
-        let page_size: usize = self.page_size.try_into().unwrap();
+        let page_size = self.page_size;
         let page_type_mask = self.page_type_mask;
         let validator = self.validator.clone();
 
@@ -342,7 +334,7 @@ where
             address: vec![Address::INVALID; cache_entries].into_boxed_slice(),
             page_refs,
             address_once_validated: vec![Address::INVALID; cache_entries].into_boxed_slice(),
-            page_size: self.page_size,
+            page_size,
             page_type_mask,
             validator,
             cache_ptr,
@@ -439,8 +431,7 @@ mod tests {
             let dummy_mem = DummyMemory::new(size::mb(512));
             let mut dummy_os = DummyOs::with_seed(dummy_mem, seed);
 
-            assert!(size::mb(18) < usize::MAX as umem);
-            let virt_size = size::mb(18) as usize;
+            let virt_size = size::mb(18);
             let mut test_buf = vec![0_u64; virt_size / 8];
 
             for i in &mut test_buf {
@@ -450,7 +441,7 @@ mod tests {
             let test_buf =
                 unsafe { std::slice::from_raw_parts(test_buf.as_ptr() as *const u8, virt_size) };
 
-            let (dtb, virt_base) = dummy_os.alloc_dtb(virt_size as umem, &test_buf);
+            let (dtb, virt_base) = dummy_os.alloc_dtb(virt_size, &test_buf);
             let arch = x86::x64::ARCH;
             println!("dtb={:x} virt_base={:x} seed={:x}", dtb, virt_base, seed);
             let translator = x86::x64::new_translator(dtb);
@@ -619,8 +610,7 @@ mod tests {
         let dummy_mem = DummyMemory::new(size::mb(16));
         let mut dummy_os = DummyOs::new(dummy_mem);
 
-        assert!(size::kb(8) < usize::MAX as umem);
-        let buf_size = size::kb(8) as usize;
+        let buf_size = size::kb(8);
         let mut buf_start = vec![0_u8; buf_size];
         for (i, item) in buf_start.iter_mut().enumerate() {
             *item = ((i / 115) % 256) as u8;

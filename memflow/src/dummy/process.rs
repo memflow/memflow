@@ -14,13 +14,13 @@ use rand::{thread_rng, Rng};
 #[derive(Clone)]
 pub struct DummyProcessInfo {
     pub info: ProcessInfo,
-    pub map_size: umem,
+    pub map_size: usize,
     pub dtb: Address,
     pub modules: Vec<ModuleInfo>,
 }
 
 impl DummyProcessInfo {
-    pub fn add_modules(&mut self, count: usize, min_size: umem) {
+    pub fn add_modules(&mut self, count: usize, min_size: usize) {
         let base = self.info.address
             + thread_rng().gen_range(0..((self.map_size.saturating_sub(min_size)) / 2));
 
@@ -29,8 +29,10 @@ impl DummyProcessInfo {
                 address: Address::from((i * 1024) as umem),
                 parent_process: Address::INVALID,
                 base,
-                size: (thread_rng()
-                    .gen_range(min_size..(self.map_size - (base - self.info.address) as umem))),
+                size: (thread_rng().gen_range(
+                    (min_size as umem)
+                        ..(self.map_size as umem - (base - self.info.address) as umem),
+                )),
                 name: "dummy.so".into(),
                 path: "/".into(),
                 arch: x64::ARCH.ident(),

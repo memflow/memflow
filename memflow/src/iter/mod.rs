@@ -80,29 +80,39 @@ pub trait PageChunks {
     ///
     /// // Misaligned buffer length
     /// let buffer = vec![0; 0x1492];
-    /// const PAGE_SIZE: umem = 0x100;
+    /// const PAGE_SIZE: usize = 0x100;
     ///
     /// // Misaligned starting address. Get the number of pages the buffer touches
     /// let page_count = buffer
     ///     .page_chunks(0x2c4.into(), PAGE_SIZE)
     ///     .count();
     ///
-    /// assert_eq!(buffer.len() as umem / PAGE_SIZE, 20);
+    /// assert_eq!(buffer.len() / PAGE_SIZE, 20);
     /// assert_eq!(page_count, 22);
     ///
     /// println!("{}", page_count);
     ///
     /// ```
-
     fn page_chunks(
         self,
         start_address: Address,
-        page_size: umem,
+        page_size: usize,
     ) -> PageChunkIterator<Self, TrueFunc<Self>>
     where
         Self: SplitAtIndex + Sized,
     {
-        PageChunkIterator::new(self, start_address, page_size, |_, _, _| true)
+        self.mem_chunks(start_address, page_size as umem)
+    }
+
+    fn mem_chunks(
+        self,
+        start_address: Address,
+        mem_size: umem,
+    ) -> PageChunkIterator<Self, TrueFunc<Self>>
+    where
+        Self: SplitAtIndex + Sized,
+    {
+        PageChunkIterator::new(self, start_address, mem_size, |_, _, _| true)
     }
 
     /// Craete a page aligned chunk iterator with configurable splitting
@@ -128,8 +138,8 @@ pub trait PageChunks {
     /// use memflow::prelude::{PageChunks, umem};
     ///
     /// let buffer = vec![0; 0x10000];
-    /// const PAGE_SIZE: umem = 0x100;
-    /// const PFN_MAGIC: umem = 6;
+    /// const PAGE_SIZE: usize = 0x100;
+    /// const PFN_MAGIC: usize = 6;
     ///
     /// // Normal chunk count
     /// let page_count = buffer.page_chunks(0.into(), PAGE_SIZE).count();
@@ -139,8 +149,8 @@ pub trait PageChunks {
     /// // The rest - kept as is, linear.
     /// let chunk_count = buffer
     ///     .page_chunks_by(0.into(), PAGE_SIZE, |addr, cur_split, _| {
-    ///         ((addr.to_umem() / PAGE_SIZE) % PFN_MAGIC) == 0
-    ///         || (((addr + cur_split.len()).to_umem() / PAGE_SIZE) % PFN_MAGIC) == 0
+    ///         ((addr.to_umem() as usize / PAGE_SIZE) % PFN_MAGIC) == 0
+    ///         || (((addr + cur_split.len()).to_umem() as usize / PAGE_SIZE) % PFN_MAGIC) == 0
     ///     })
     ///     .count();
     ///
@@ -154,13 +164,25 @@ pub trait PageChunks {
     fn page_chunks_by<F: FnMut(Address, &Self, Option<&Self>) -> bool>(
         self,
         start_address: Address,
-        page_size: umem,
+        page_size: usize,
         split_fn: F,
     ) -> PageChunkIterator<Self, F>
     where
         Self: SplitAtIndex + Sized,
     {
-        PageChunkIterator::new(self, start_address, page_size, split_fn)
+        self.mem_chunks_by(start_address, page_size as umem, split_fn)
+    }
+
+    fn mem_chunks_by<F: FnMut(Address, &Self, Option<&Self>) -> bool>(
+        self,
+        start_address: Address,
+        mem_size: umem,
+        split_fn: F,
+    ) -> PageChunkIterator<Self, F>
+    where
+        Self: SplitAtIndex + Sized,
+    {
+        PageChunkIterator::new(self, start_address, mem_size, split_fn)
     }
 }
 
@@ -171,9 +193,9 @@ mod tests {
     use crate::iter::PageChunks;
     use crate::types::{umem, Address};
 
-    const PAGE_SIZE: umem = 97;
-    const OFF: umem = 26;
-    const ADDEND: umem = 17;
+    const PAGE_SIZE: usize = 97;
+    const OFF: usize = 26;
+    const ADDEND: usize = 17;
 
     #[test]
     fn pc_check_overflowing() {
@@ -224,19 +246,17 @@ mod tests {
 
     #[test]
     fn pc_check_all_chunks_equal() {
-        assert!((100 * PAGE_SIZE) < usize::MAX as umem);
-        let arr = [0_u8; (100 * PAGE_SIZE) as usize];
+        let arr = [0_u8; (100 * PAGE_SIZE)];
 
         for (_addr, chunk) in arr.page_chunks(Address::null(), PAGE_SIZE) {
             println!("{:x} {:x}", _addr, chunk.len());
-            assert_eq!(chunk.len() as umem, PAGE_SIZE);
+            assert_eq!(chunk.len(), PAGE_SIZE);
         }
     }
 
     #[test]
     fn pc_check_all_chunks_equal_first_not() {
-        const OFF: umem = 26;
-        assert!((100 * PAGE_SIZE + (PAGE_SIZE - OFF)) < usize::MAX as umem);
+        const OFF: usize = 26;
         let arr = [0_u8; (100 * PAGE_SIZE + (PAGE_SIZE - OFF)) as usize];
 
         let mut page_iter = arr.page_chunks(OFF.into(), PAGE_SIZE);
@@ -244,18 +264,17 @@ mod tests {
         {
             let (addr, chunk) = page_iter.next().unwrap();
             assert_eq!(addr, OFF.into());
-            assert_eq!(chunk.len() as umem, PAGE_SIZE - OFF);
+            assert_eq!(chunk.len(), PAGE_SIZE - OFF);
         }
 
         for (_addr, chunk) in page_iter {
-            assert_eq!(chunk.len() as umem, PAGE_SIZE);
+            assert_eq!(chunk.len(), PAGE_SIZE);
         }
     }
 
     #[test]
     fn pc_check_everything() {
-        const TOTAL_LEN: umem = 100 * PAGE_SIZE + ADDEND - OFF;
-        assert!(TOTAL_LEN < usize::MAX as umem);
+        const TOTAL_LEN: usize = 100 * PAGE_SIZE + ADDEND - OFF;
         let arr = [0_u8; TOTAL_LEN as usize];
 
         let mut cur_len = 0;
@@ -266,26 +285,25 @@ mod tests {
         {
             let (addr, chunk) = page_iter.next().unwrap();
             assert_eq!(addr, OFF.into());
-            assert_eq!(chunk.len() as umem, PAGE_SIZE - OFF);
+            assert_eq!(chunk.len(), PAGE_SIZE - OFF);
             cur_len += chunk.len();
         }
 
         for (_addr, chunk) in page_iter {
-            if chunk.len() as umem != ADDEND {
-                assert_eq!(chunk.len() as umem, PAGE_SIZE);
+            if chunk.len() != ADDEND {
+                assert_eq!(chunk.len(), PAGE_SIZE);
             }
             prev_len = chunk.len();
             cur_len += prev_len;
         }
 
-        assert_eq!(prev_len as umem, ADDEND);
-        assert_eq!(cur_len as umem, TOTAL_LEN);
+        assert_eq!(prev_len, ADDEND);
+        assert_eq!(cur_len, TOTAL_LEN);
     }
 
     #[test]
     fn pc_check_size_hint() {
         const PAGE_COUNT: usize = 5;
-        assert!((PAGE_SIZE * PAGE_COUNT as umem) < usize::MAX as umem);
         let arr = [0_u8; (PAGE_SIZE as usize * PAGE_COUNT)];
         assert_eq!(
             arr.page_chunks(Address::null(), PAGE_SIZE).size_hint().0,

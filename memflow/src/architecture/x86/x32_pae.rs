@@ -32,7 +32,7 @@ pub fn new_translator(dtb: Address) -> X86VirtualTranslate {
 #[cfg(test)]
 mod tests {
     use crate::architecture::mmu::ArchMmuSpec;
-    use crate::types::{size, Address};
+    use crate::types::{mem, size, Address};
 
     fn get_mmu_spec() -> &'static ArchMmuSpec {
         &super::ARCH_SPEC.mmu
@@ -66,7 +66,7 @@ mod tests {
     #[test]
     fn x86_pae_page_size_level() {
         let mmu = get_mmu_spec();
-        assert_eq!(mmu.page_size_level(1), size::kb(4));
-        assert_eq!(mmu.page_size_level(2), size::mb(2));
+        assert_eq!(mmu.page_size_level(1), mem::kb(4));
+        assert_eq!(mmu.page_size_level(2), mem::mb(2));
     }
 }

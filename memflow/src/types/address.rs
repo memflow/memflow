@@ -12,10 +12,47 @@ use std::hash;
 use std::ops;
 
 /// The largest target memory type
+/// The following core rule is defined for these memory types:
+///
+/// `PAGE_SIZE < usize <= umem`
+///
+/// Where `PAGE_SIZE` is any lowest granularity page size, `usize` is the standard size type, and
+/// `umem` is memflow's memory size type.
+///
+/// This means that `usize` can always be safely cast to `umem`, while anything to do with page
+/// sizes can be cast to `umem` safely,
+///
 #[allow(non_camel_case_types)]
 pub type umem = u64;
 #[allow(non_camel_case_types)]
 pub type imem = i64;
+
+// Enforce the `umem` >= `usize` condition. Whenever a real 128-bit architecture is here, `umem`
+// should be expanded to 128 bits.
+const _: [u8; (core::mem::size_of::<usize>() <= core::mem::size_of::<umem>()) as usize] = [0; 1];
+
+pub const fn clamp_to_usize(val: umem) -> usize {
+    let max = core::usize::MAX as umem;
+
+    let ret = if max < val { max } else { val };
+
+    ret as usize
+}
+
+pub const fn clamp_to_isize(val: imem) -> isize {
+    let max = core::isize::MAX as imem;
+    let min = core::isize::MIN as imem;
+
+    let ret = if max < val {
+        max
+    } else if min > val {
+        min
+    } else {
+        val
+    };
+
+    ret as isize
+}
 
 /// `PrimitiveAddress` describes the address of a target system.
 /// The current implementations include `u32`, `u64` and later eventually `u128`.
@@ -289,16 +326,20 @@ impl Address {
     /// # Examples
     ///
     /// ```
-    /// use memflow::types::{Address, size};
+    /// use memflow::types::{Address, mem};
     ///
     /// let addr = Address::from(0x1234);
-    /// let aligned = addr.as_page_aligned(size::kb(4));
+    /// let aligned = addr.as_mem_aligned(mem::kb(4));
     /// assert_eq!(aligned, Address::from(0x1000));
     /// ```
-    pub const fn as_page_aligned(self, page_size: umem) -> Address {
+    pub const fn as_mem_aligned(self, mem_size: umem) -> Address {
         Address {
-            0: self.0 - self.0 % (page_size as umem),
+            0: self.0 - self.0 % mem_size,
         }
+    }
+
+    pub const fn as_page_aligned(self, page_size: usize) -> Address {
+        self.as_mem_aligned(page_size as umem)
     }
 
     /// Returns true or false wether the bit at the specified index is either 0 or 1.

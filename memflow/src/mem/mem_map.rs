@@ -437,9 +437,9 @@ impl<'a, I: Iterator<Item = (Address, T)>, M: SplitAtIndex, T: SplitAtIndex>
             for (i, map_elem) in self.map.iter().enumerate().skip(self.cur_map_pos) {
                 let output = &mut *map_elem.output.borrow_mut();
                 if map_elem.base + output.length() > addr {
-                    let offset = map_elem.base.to_umem().saturating_sub(addr.to_umem());
+                    let offset: umem = map_elem.base.to_umem().saturating_sub(addr.to_umem());
 
-                    let (left_reject, right) = buf.split_at(offset.try_into().unwrap());
+                    let (left_reject, right) = buf.split_at(offset);
 
                     if let Some(left_reject) = left_reject {
                         self.fail_out.extend(Some((addr, left_reject)));
@@ -448,8 +448,8 @@ impl<'a, I: Iterator<Item = (Address, T)>, M: SplitAtIndex, T: SplitAtIndex>
                     addr += offset;
 
                     if let Some(leftover) = right {
-                        let off = map_elem.base + output.length() - addr;
-                        let (ret, keep) = leftover.split_at(off.try_into().unwrap());
+                        let off = map_elem.base.to_umem() + output.length() - addr.to_umem();
+                        let (ret, keep) = leftover.split_at(off);
                         let ret_length = ret.as_ref().map(|r| r.length()).unwrap_or_default();
 
                         let cur_map_pos = &mut self.cur_map_pos;
@@ -467,8 +467,8 @@ impl<'a, I: Iterator<Item = (Address, T)>, M: SplitAtIndex, T: SplitAtIndex>
                                 in_iter.next()
                             });
 
-                        let off = addr - map_elem.base;
-                        let split_left = unsafe { output.split_at_mut(off.try_into().unwrap()).1 };
+                        let off = addr.to_umem() - map_elem.base.to_umem();
+                        let split_left = unsafe { output.split_at_mut(off).1 };
                         return split_left.unwrap().split_at(ret_length).0.zip(ret);
                     }
 

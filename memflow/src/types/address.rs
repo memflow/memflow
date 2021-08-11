@@ -373,15 +373,19 @@ impl Address {
         (self.0 & Address::bit_mask(bits).to_umem()).into()
     }
 
-    pub const fn wrapping_add(self, other: umem) -> Self {
+    /// Wrapping (modular) addition. Computes `self + rhs`,
+    /// wrapping around at the boundary of the type.
+    pub const fn wrapping_add(self, other: Self) -> Self {
         Self {
-            0: self.0.wrapping_add(other as umem),
+            0: self.0.wrapping_add(other.0),
         }
     }
 
-    pub const fn wrapping_sub(self, other: umem) -> Self {
+    /// Wrapping (modular) subtraction. Computes `self - rhs`,
+    /// wrapping around at the boundary of the type.
+    pub const fn wrapping_sub(self, other: Self) -> Self {
         Self {
-            0: self.0.wrapping_sub(other as umem),
+            0: self.0.wrapping_sub(other.0),
         }
     }
 }

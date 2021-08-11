@@ -164,8 +164,7 @@ impl<T: MmuTranslationBase> TranslationChunk<T> {
     pub fn next_max_addr_count(&self, spec: &ArchMmuSpec) -> usize {
         let step_size = spec.page_size_step_unchecked(self.step + 1);
 
-        assert!(self.max_addr >= self.min_addr);
-        let addr_diff = (self.max_addr - self.min_addr) as umem;
+        let addr_diff = (self.max_addr - self.min_addr).abs() as umem;
         let add = if addr_diff % step_size != 0 { 1 } else { 0 };
 
         self.addr_count * TryInto::<usize>::try_into(addr_diff / step_size + add).unwrap()

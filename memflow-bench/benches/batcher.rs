@@ -95,7 +95,7 @@ fn read_test_with_ctx<T: MemoryView>(
 ) {
     let rng = CurRng::from_rng(thread_rng()).unwrap();
 
-    let mem_size = size::mb(64);
+    let mem_size = mem::mb(64);
 
     let mut tbuf = vec![];
 
@@ -176,7 +176,7 @@ criterion_group! {
 }
 
 fn dummy_read_group(c: &mut Criterion) {
-    chunk_read(c, "dummy", &|| Memory::new(size::mb(64)));
+    chunk_read(c, "dummy", &|| Memory::new(mem::mb(64)));
 }
 
 criterion_main!(dummy_read);

@@ -55,7 +55,16 @@ mod tests {
         assert_eq!(size::kib(123), 15744);
         assert_eq!(size::mb(20), 20_971_520);
         assert_eq!(size::mib(52), 6_815_744);
-        assert_eq!(size::gb(20), 21_474_836_480);
-        assert_eq!(size::gib(52), 6_979_321_856);
+        assert_eq!(size::gb(2), 2_147_483_648);
+        #[cfg(pointer_width = "64")]
+        {
+            assert_eq!(size::gb(20), 21_474_836_480);
+            assert_eq!(size::gib(52), 6_979_321_856);
+        }
+        #[cfg(feature = "64_bit_mem")]
+        {
+            assert_eq!(mem::gb(20), 21_474_836_480);
+            assert_eq!(mem::gib(52), 6_979_321_856);
+        }
     }
 }

@@ -277,7 +277,13 @@ impl<T: MemoryView> Process for Win32Process<T> {
         info: &ModuleInfo,
         mut callback: ImportCallback,
     ) -> Result<()> {
-        let mut module_image = vec![0u8; info.size.try_into().unwrap()];
+        let mut module_image = vec![
+            0u8;
+            info.size.try_into().map_err(|_| Error(
+                ErrorOrigin::OsLayer,
+                ErrorKind::OutOfBounds
+            ))?
+        ];
         self.virt_mem
             .read_raw_into(info.base, &mut module_image)
             .data_part()?;
@@ -303,7 +309,13 @@ impl<T: MemoryView> Process for Win32Process<T> {
         info: &ModuleInfo,
         mut callback: ExportCallback,
     ) -> Result<()> {
-        let mut module_image = vec![0u8; info.size.try_into().unwrap()];
+        let mut module_image = vec![
+            0u8;
+            info.size.try_into().map_err(|_| Error(
+                ErrorOrigin::OsLayer,
+                ErrorKind::OutOfBounds
+            ))?
+        ];
         self.virt_mem
             .read_raw_into(info.base, &mut module_image)
             .data_part()?;
@@ -329,7 +341,13 @@ impl<T: MemoryView> Process for Win32Process<T> {
         info: &ModuleInfo,
         mut callback: SectionCallback,
     ) -> Result<()> {
-        let mut module_image = vec![0u8; info.size.try_into().unwrap()];
+        let mut module_image = vec![
+            0u8;
+            info.size.try_into().map_err(|_| Error(
+                ErrorOrigin::OsLayer,
+                ErrorKind::OutOfBounds
+            ))?
+        ];
         self.virt_mem
             .read_raw_into(info.base, &mut module_image)
             .data_part()?;

@@ -1,4 +1,3 @@
-use core::convert::TryInto;
 use std::prelude::v1::*;
 
 use super::CacheValidator;
@@ -56,9 +55,7 @@ impl<T: CacheValidator> TlbCache<T> {
 
     #[inline]
     fn get_cache_index(&self, page_addr: Address, page_size: usize) -> usize {
-        ((page_addr.to_umem() / page_size as umem) % (self.entries.len() as umem))
-            .try_into()
-            .unwrap()
+        ((page_addr.to_umem() / page_size as umem) % (self.entries.len() as umem)) as usize
     }
 
     #[inline]

@@ -3,7 +3,6 @@ use crate::types::{umem, Address};
 
 use super::{ArchMmuSpec, MmuTranslationBase};
 
-use core::convert::TryInto;
 use std::cmp::Ordering;
 
 use super::MVec;
@@ -156,13 +155,13 @@ impl<T: MmuTranslationBase> TranslationChunk<T> {
         }
     }
 
-    pub fn next_max_addr_count(&self, spec: &ArchMmuSpec) -> usize {
+    pub fn next_max_addr_count(&self, spec: &ArchMmuSpec) -> umem {
         let step_size = spec.page_size_step_unchecked(self.step + 1);
 
         let addr_diff = self.max_addr.wrapping_sub(self.min_addr).to_umem();
         let add = if addr_diff % step_size != 0 { 1 } else { 0 };
 
-        self.addr_count * TryInto::<usize>::try_into(addr_diff / step_size + add).unwrap()
+        self.addr_count as umem * (addr_diff / step_size + add)
     }
 
     /// Splits the chunk into multiple smaller ones for the next VTOP step.

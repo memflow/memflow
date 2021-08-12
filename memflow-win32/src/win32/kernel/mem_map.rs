@@ -24,7 +24,7 @@ unsafe impl<T: Pod + fmt::Debug> Pod for PhysicalMemoryRun<T> {}
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
 pub struct PhysicalMemoryDescriptor<T: Pod + fmt::Debug> {
-    pub number_of_runs: u32,
+    pub number_of_runs: T,
     pub number_of_pages: T,
     pub runs: [PhysicalMemoryRun<T>; PHYSICAL_MEMORY_MAX_RUNS],
 }
@@ -42,10 +42,10 @@ pub fn parse<T: MemoryView, U: Pod + Copy + fmt::Debug + fmt::LowerHex + Into<u6
     let descriptor: PhysicalMemoryDescriptor<U> = virt_mem.read(descriptor_ptr).ok()?;
 
     trace!("found phys_mem_block: {:?}", descriptor);
-    if descriptor.number_of_runs <= PHYSICAL_MEMORY_MAX_RUNS as u32 {
+    if descriptor.number_of_runs.into() <= PHYSICAL_MEMORY_MAX_RUNS as u64 {
         let mut mem_map = MemoryMap::new();
 
-        for i in 0..descriptor.number_of_runs {
+        for i in 0..descriptor.number_of_runs.into() {
             let base = descriptor.runs[i as usize].base_page.into() * SIZE_4KB;
             let size = descriptor.runs[i as usize].page_count.into() * SIZE_4KB;
 
@@ -57,7 +57,8 @@ pub fn parse<T: MemoryView, U: Pod + Copy + fmt::Debug + fmt::LowerHex + Into<u6
     } else {
         info!(
             "too many memory segments in phys_mem_block: {} found, {} expected",
-            descriptor.number_of_runs, PHYSICAL_MEMORY_MAX_RUNS
+            descriptor.number_of_runs.into(),
+            PHYSICAL_MEMORY_MAX_RUNS
         );
         None
     }

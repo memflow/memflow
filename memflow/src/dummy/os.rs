@@ -26,13 +26,15 @@ use crate::architecture::x86::{x64, X86VirtualTranslate};
 use x86_64::{
     structures::paging,
     structures::paging::{
-        mapper::{Mapper, OffsetPageTable},
+        mapper::Mapper,
         page::{PageSize, Size1GiB, Size2MiB, Size4KiB},
         page_table::{PageTable, PageTableFlags},
         FrameAllocator, PhysFrame, Translate,
     },
     PhysAddr, VirtAddr,
 };
+
+use super::OffsetPageTable;
 
 #[derive(Clone, Copy, Debug)]
 enum X64PageSize {
@@ -304,7 +306,7 @@ impl DummyOs {
         let virt_base = (Address::null()
             + self
                 .rng
-                .gen_range(0x0001_0000_0000_usize..((!0_usize) << 20) >> 20))
+                .gen_range(0x0001_0000_0000_u64..((!0_u64) << 20) >> 20))
         .as_mem_aligned(mem::gb(2));
 
         (

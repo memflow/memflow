@@ -8,7 +8,7 @@ use memflow::types::{mem, umem, Address};
 
 use memflow::dataview::Pod;
 
-const SIZE_4KB: umem = mem::kb(4);
+const SIZE_4KB: u64 = mem::kb(4) as u64;
 
 /// The number of PhysicalMemoryRuns contained in the Header
 pub const PHYSICAL_MEMORY_MAX_RUNS: usize = 32;
@@ -50,7 +50,7 @@ pub fn parse<T: MemoryView, U: Pod + Copy + fmt::Debug + fmt::LowerHex + Into<u6
             let size = descriptor.runs[i as usize].page_count.into() * SIZE_4KB;
 
             trace!("adding memory mapping: base={:x} size={:x}", base, size);
-            mem_map.push_remap(base.into(), size, Address::from(base));
+            mem_map.push_remap(base.into(), size as umem, Address::from(base));
         }
 
         Some(mem_map)

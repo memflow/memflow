@@ -66,7 +66,7 @@ impl ArchMmuDef {
     /// the page, instead of an offset that has to be multiplied by `pte_size`. We do that by
     /// subtracting `pte_size` logarithm from the split size.
     #[allow(unused)]
-    pub fn pte_addr_mask(&self, pte_addr: Address, step: usize) -> u64 {
+    pub fn pte_addr_mask(&self, pte_addr: Address, step: usize) -> umem {
         let max = self.address_space_bits - 1;
         let min = self.virtual_address_splits[step]
             + if step == self.virtual_address_splits.len() - 1 {
@@ -75,7 +75,7 @@ impl ArchMmuDef {
                 self.pte_size.to_le().trailing_zeros() as u8
             };
         let mask = Address::bit_mask(min..max);
-        pte_addr.to_umem() & u64::from_le(mask.to_umem())
+        pte_addr.to_umem() & umem::from_le(mask.to_umem())
     }
 
     pub(crate) const fn virt_addr_bit_range(&self, step: usize) -> (u8, u8) {
@@ -143,7 +143,7 @@ impl ArchMmuDef {
             }
             accum
         };
-        1_u64 << max_index_bits
+        1 << max_index_bits
     }
 
     /// Get the page size of a specific page walk step

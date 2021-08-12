@@ -191,7 +191,7 @@ impl<T: MmuTranslationBase> TranslationChunk<T> {
         let upper = (self.max_addr - 1usize).as_mem_aligned(step_size).to_umem();
         let lower = self.min_addr.as_mem_aligned(step_size).to_umem();
 
-        let mut cur_max_addr = !0u64;
+        let mut cur_max_addr: umem = !0;
 
         // Walk in reverse so that lowest addresses always end up
         // first in the stack. This preserves translation order

@@ -34,7 +34,7 @@ pub fn find_lowstub(stub: &[u8]) -> Result<StartBlock> {
 
 fn find_pt(addr: Address, mem: &[u8]) -> Option<Address> {
     // TODO: global define / config setting
-    let max_mem = mem::gb(512);
+    let max_mem = mem::gb(512) as u64;
 
     let pte = u64::from_le_bytes(mem[0..8].try_into().unwrap());
 
@@ -47,7 +47,7 @@ fn find_pt(addr: Address, mem: &[u8]) -> Option<Address> {
     mem[0x800..]
         .chunks(8)
         .map(|c| u64::from_le_bytes(c.try_into().unwrap()))
-        .find(|a| (a ^ 0x0000_0000_0000_0063) & !(1u64 << 63) == addr.to_umem())?;
+        .find(|a| (a ^ 0x0000_0000_0000_0063) & !(1u64 << 63) == addr.to_umem() as u64)?;
 
     // A page table does need to have some entries, right? Particularly, kernel-side page table
     // entries must be marked as such

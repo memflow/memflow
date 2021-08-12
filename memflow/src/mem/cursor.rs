@@ -65,14 +65,14 @@ use crate::types::{umem, Address};
 ///
 ///     // create the actual cursor and seek it to the dummy virt_base
 ///     let mut cursor = MemoryCursor::new(virt_mem);
-///     cursor.seek(io::SeekFrom::Start(virt_base.to_umem()))?;
+///     cursor.seek(io::SeekFrom::Start(virt_base.to_umem() as u64))?;
 ///
 ///     // read up to 10 bytes
 ///     let mut buffer = [0; 10];
 ///     cursor.read(&mut buffer)?;
 ///
 ///     // write the previously read 10 bytes again
-///     cursor.seek(io::SeekFrom::Start(virt_base.to_umem()))?;
+///     cursor.seek(io::SeekFrom::Start(virt_base.to_umem() as u64))?;
 ///     cursor.write(&buffer)?;
 ///
 ///     Ok(())
@@ -343,7 +343,7 @@ impl<T: MemoryView> Write for MemoryCursor<T> {
 }
 
 impl<T: MemoryView> Seek for MemoryCursor<T> {
-    fn seek(&mut self, pos: SeekFrom) -> Result<umem> {
+    fn seek(&mut self, pos: SeekFrom) -> Result<u64> {
         let target_pos = match pos {
             SeekFrom::Start(offs) => offs,
             // TODO: do we need +1?
@@ -353,8 +353,8 @@ impl<T: MemoryView> Seek for MemoryCursor<T> {
                 .max_address
                 .to_umem()
                 .wrapping_add(1)
-                .wrapping_add(offs as umem),
-            SeekFrom::Current(offs) => self.address.to_umem().wrapping_add(offs as umem),
+                .wrapping_add(offs as umem) as u64,
+            SeekFrom::Current(offs) => self.address.to_umem().wrapping_add(offs as umem) as u64,
         };
 
         self.address = target_pos.into();
@@ -386,7 +386,10 @@ mod tests {
 
         assert_eq!(cursor.seek(SeekFrom::Start(512)).unwrap(), 512);
 
-        assert_eq!(cursor.seek(SeekFrom::End(-512)).unwrap(), mem::mb(1) - 512);
+        assert_eq!(
+            cursor.seek(SeekFrom::End(-512)).unwrap(),
+            mem::mb(1) as u64 - 512
+        );
     }
 
     #[test]
@@ -453,19 +456,23 @@ mod tests {
 
         let write_buf = [0xAu8, 0xB, 0xC, 0xD];
         assert_eq!(
-            cursor.seek(SeekFrom::Start(virt_base.to_umem())).unwrap(),
-            virt_base.to_umem()
+            cursor
+                .seek(SeekFrom::Start(virt_base.to_umem() as u64))
+                .unwrap(),
+            virt_base.to_umem() as u64
         );
         assert_eq!(cursor.write(&write_buf).unwrap(), 4); // write 4 bytes from the start
         assert_eq!(
             cursor.seek(SeekFrom::Current(0)).unwrap(),
-            virt_base.to_umem() + 4
+            virt_base.to_umem() as u64 + 4
         ); // check if cursor moved 4 bytes
 
         let mut read_buf = [0u8; 4];
         assert_eq!(
-            cursor.seek(SeekFrom::Start(virt_base.to_umem())).unwrap(),
-            virt_base.to_umem()
+            cursor
+                .seek(SeekFrom::Start(virt_base.to_umem() as u64))
+                .unwrap(),
+            virt_base.to_umem() as u64
         ); // roll back cursor to start
         assert_eq!(cursor.read(&mut read_buf).unwrap(), 4); // read 4 bytes from the start
         assert_eq!(read_buf, write_buf); // compare buffers
@@ -478,24 +485,24 @@ mod tests {
 
         assert_eq!(
             cursor
-                .seek(SeekFrom::Start(virt_base.to_umem() + 512))
+                .seek(SeekFrom::Start(virt_base.to_umem() as u64 + 512))
                 .unwrap(),
-            virt_base.to_umem() + 512
+            virt_base.to_umem() as u64 + 512
         ); // seek to 512th byte
 
         let write_buf = [0xAu8, 0xB, 0xC, 0xD];
         assert_eq!(cursor.write(&write_buf).unwrap(), 4); // write 4 bytes from 512th byte
         assert_eq!(
             cursor.seek(SeekFrom::Current(0)).unwrap(),
-            virt_base.to_umem() + 512 + 4
+            virt_base.to_umem() as u64 + 512 + 4
         ); // check if cursor moved 4 bytes
 
         let mut read_buf = [0u8; 4];
         assert_eq!(
             cursor
-                .seek(SeekFrom::Start(virt_base.to_umem() + 512))
+                .seek(SeekFrom::Start(virt_base.to_umem() as u64 + 512))
                 .unwrap(),
-            virt_base.to_umem() + 512
+            virt_base.to_umem() as u64 + 512
         ); // roll back cursor to 512th byte
         assert_eq!(cursor.read(&mut read_buf).unwrap(), 4); // read 4 bytes from the 512th byte
         assert_eq!(read_buf, write_buf); // compare buffers

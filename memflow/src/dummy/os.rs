@@ -127,7 +127,7 @@ where
 {
     fn allocate_frame(&mut self) -> Option<PhysFrame<S>> {
         let new_page = self.alloc_pt_page();
-        match PhysFrame::from_start_address(PhysAddr::new(new_page.addr.to_umem())) {
+        match PhysFrame::from_start_address(PhysAddr::new(new_page.addr.to_umem() as u64)) {
             Ok(s) => Some(s),
             _ => None,
         }
@@ -253,7 +253,7 @@ impl DummyOs {
             unsafe { OffsetPageTable::new(&mut pml4, VirtAddr::from_ptr(self.mem.buf.as_ptr())) };
 
         pt_mapper
-            .translate_addr(VirtAddr::new(virt_addr.to_umem()))
+            .translate_addr(VirtAddr::new(virt_addr.to_umem() as u64))
             .map(|addr| addr.as_u64().into())
     }
 
@@ -358,10 +358,10 @@ impl DummyOs {
                     X64PageSize::P1g => pt_mapper
                         .map_to(
                             paging::page::Page::<Size1GiB>::from_start_address_unchecked(
-                                VirtAddr::new((virt_base + cur_len).to_umem()),
+                                VirtAddr::new((virt_base + cur_len).to_umem() as u64),
                             ),
                             PhysFrame::from_start_address_unchecked(PhysAddr::new(
-                                page_info.addr.to_umem(),
+                                page_info.addr.to_umem() as u64,
                             )),
                             flags,
                             self,
@@ -370,10 +370,10 @@ impl DummyOs {
                     X64PageSize::P2m => pt_mapper
                         .map_to(
                             paging::page::Page::<Size2MiB>::from_start_address_unchecked(
-                                VirtAddr::new((virt_base + cur_len).to_umem()),
+                                VirtAddr::new((virt_base + cur_len).to_umem() as u64),
                             ),
                             PhysFrame::from_start_address_unchecked(PhysAddr::new(
-                                page_info.addr.to_umem(),
+                                page_info.addr.to_umem() as u64,
                             )),
                             flags,
                             self,
@@ -382,10 +382,10 @@ impl DummyOs {
                     X64PageSize::P4k => pt_mapper
                         .map_to(
                             paging::page::Page::<Size4KiB>::from_start_address_unchecked(
-                                VirtAddr::new((virt_base + cur_len).to_umem()),
+                                VirtAddr::new((virt_base + cur_len).to_umem() as u64),
                             ),
                             PhysFrame::from_start_address_unchecked(PhysAddr::new(
-                                page_info.addr.to_umem(),
+                                page_info.addr.to_umem() as u64,
                             )),
                             flags,
                             self,

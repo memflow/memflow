@@ -5,12 +5,12 @@ use std::convert::TryInto;
 use memflow::architecture::x86::x32_pae;
 use memflow::error::{Error, ErrorKind, ErrorOrigin, Result};
 use memflow::iter::PageChunks;
-use memflow::types::{umem, Address};
+use memflow::types::Address;
 
 fn check_page(addr: Address, mem: &[u8]) -> bool {
     for (i, chunk) in mem.to_vec().chunks_exact(8).enumerate() {
         let qword = u64::from_le_bytes(chunk[0..8].try_into().unwrap());
-        if (i < 4 && qword != addr.to_umem() + ((i as umem * 8) << 9) + 0x1001)
+        if (i < 4 && qword != addr.to_umem() as u64 + ((i as u64 * 8) << 9) + 0x1001)
             || (i >= 4 && qword != 0)
         {
             return false;

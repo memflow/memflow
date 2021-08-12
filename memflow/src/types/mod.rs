@@ -8,7 +8,9 @@ it exposes different size helpers.
 
 pub mod address;
 #[doc(hidden)]
-pub use address::{clamp_to_isize, clamp_to_usize, imem, umem, Address, PrimitiveAddress};
+pub use address::{
+    clamp_to_isize, clamp_to_usize, imem, umem, Address, PrimitiveAddress, UMEM_BITS,
+};
 
 mod mem_units;
 pub use mem_units::*;

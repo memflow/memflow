@@ -383,7 +383,7 @@ pub trait MemoryView: Send {
 #[repr(C)]
 pub struct MemoryViewMetadata {
     pub max_address: Address,
-    pub real_size: u64,
+    pub real_size: umem,
     pub readonly: bool,
     pub little_endian: bool,
     pub arch_bits: u8,

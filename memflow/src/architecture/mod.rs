@@ -110,7 +110,7 @@ pub trait VirtualTranslate3: Clone + Copy + Send {
         };
         self.virt_to_phys_iter(
             mem,
-            Some(MemData(addr, 1_u64)).into_iter(),
+            Some(MemData::<_, umem>(addr, 1)).into_iter(),
             &mut success.into(),
             &mut fail.into(),
             &mut buf,

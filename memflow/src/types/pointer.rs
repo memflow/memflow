@@ -405,7 +405,7 @@ impl<T: ?Sized> From<Address> for Pointer64<T> {
     #[inline(always)]
     fn from(address: Address) -> Pointer64<T> {
         Pointer {
-            inner: address.to_umem(),
+            inner: address.to_umem() as u64,
             phantom_data: PhantomData,
         }
     }
@@ -444,6 +444,7 @@ impl<U: PrimitiveAddress, T> ops::Sub<umem> for Pointer<U, T> {
     }
 }
 
+#[cfg(feature = "64_bit_mem")]
 impl<U: PrimitiveAddress, T> ops::Add<usize> for Pointer<U, T> {
     type Output = Pointer<U, T>;
     #[inline(always)]
@@ -451,6 +452,7 @@ impl<U: PrimitiveAddress, T> ops::Add<usize> for Pointer<U, T> {
         self + other as umem
     }
 }
+#[cfg(feature = "64_bit_mem")]
 impl<U: PrimitiveAddress, T> ops::Sub<usize> for Pointer<U, T> {
     type Output = Pointer<U, T>;
     #[inline(always)]
@@ -510,20 +512,20 @@ mod tests {
     #[test]
     fn offset64() {
         let ptr8 = Pointer64::<u8>::from(0x1000u64);
-        assert_eq!(ptr8.offset(3).to_umem(), 0x1003u64);
-        assert_eq!(ptr8.offset(-5).to_umem(), 0xFFBu64);
+        assert_eq!(ptr8.offset(3).to_umem(), 0x1003);
+        assert_eq!(ptr8.offset(-5).to_umem(), 0xFFB);
 
         let ptr16 = Pointer64::<u16>::from(0x1000u64);
-        assert_eq!(ptr16.offset(3).to_umem(), 0x1006u64);
-        assert_eq!(ptr16.offset(-5).to_umem(), 0xFF6u64);
+        assert_eq!(ptr16.offset(3).to_umem(), 0x1006);
+        assert_eq!(ptr16.offset(-5).to_umem(), 0xFF6);
 
         let ptr32 = Pointer64::<u32>::from(0x1000u64);
-        assert_eq!(ptr32.offset(3).to_umem(), 0x100Cu64);
-        assert_eq!(ptr32.offset(-5).to_umem(), 0xFECu64);
+        assert_eq!(ptr32.offset(3).to_umem(), 0x100C);
+        assert_eq!(ptr32.offset(-5).to_umem(), 0xFEC);
 
         let ptr64 = Pointer64::<u64>::from(0x1000u64);
-        assert_eq!(ptr64.offset(3).to_umem(), 0x1018u64);
-        assert_eq!(ptr64.offset(-5).to_umem(), 0xFD8u64);
+        assert_eq!(ptr64.offset(3).to_umem(), 0x1018);
+        assert_eq!(ptr64.offset(-5).to_umem(), 0xFD8);
     }
 
     #[test]

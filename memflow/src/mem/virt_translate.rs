@@ -430,7 +430,7 @@ where
         self.virt_to_phys_iter(
             phys_mem,
             translator,
-            Some(MemData(vaddr, 1_u64)).into_iter(),
+            Some(MemData::<_, umem>(vaddr, 1)).into_iter(),
             &mut success.into(),
             &mut fail.into(),
         );

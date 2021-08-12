@@ -1,7 +1,7 @@
 use crate::cglue::*;
 use crate::dataview::Pod;
 use crate::error::Result;
-use crate::types::{Address, PhysicalAddress};
+use crate::types::{umem, Address, PhysicalAddress};
 
 use super::mem_data::*;
 use super::PhysicalMemoryMapping;
@@ -273,7 +273,7 @@ impl<T: PhysicalMemory> MemoryView for PhysicalMemoryView<T> {
 #[repr(C)]
 pub struct PhysicalMemoryMetadata {
     pub max_address: Address,
-    pub real_size: u64,
+    pub real_size: umem,
     pub readonly: bool,
     pub ideal_batch_size: u32,
 }

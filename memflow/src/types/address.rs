@@ -22,10 +22,26 @@ use std::ops;
 /// This means that `usize` can always be safely cast to `umem`, while anything to do with page
 /// sizes can be cast to `umem` safely,
 ///
+#[cfg(feature = "64_bit_mem")]
 #[allow(non_camel_case_types)]
 pub type umem = u64;
+#[cfg(feature = "128_bit_mem")]
+#[allow(non_camel_case_types)]
+pub type umem = u128;
+#[cfg(all(not(feature = "64_bit_mem"), not(feature = "128_bit_mem")))]
+#[allow(non_camel_case_types)]
+pub type umem = usize;
+#[cfg(feature = "64_bit_mem")]
 #[allow(non_camel_case_types)]
 pub type imem = i64;
+#[cfg(feature = "128_bit_mem")]
+#[allow(non_camel_case_types)]
+pub type imem = i128;
+#[cfg(all(not(feature = "64_bit_mem"), not(feature = "128_bit_mem")))]
+#[allow(non_camel_case_types)]
+pub type imem = isize;
+
+pub const UMEM_BITS: u8 = core::mem::size_of::<umem>() as u8 * 8;
 
 // Enforce the `umem` >= `usize` condition. Whenever a real 128-bit architecture is here, `umem`
 // should be expanded to 128 bits.
@@ -163,6 +179,8 @@ macro_rules! impl_primitive_address {
 impl_primitive_address!(u16);
 impl_primitive_address!(u32);
 impl_primitive_address!(u64);
+#[cfg(feature = "128_bit_mem")]
+impl_primitive_address!(u128);
 
 /// This type represents a address on the target system.
 /// It internally holds a `umem` value but can also be used
@@ -221,10 +239,11 @@ impl Address {
     ///
     /// println!("mask: {}", Address::bit_mask(0..11));
     /// ```
-    pub fn bit_mask<T: TryInto<umem>>(bits: ops::Range<T>) -> Address {
-        ((0xffff_ffff_ffff_ffff >> (63 - bits.end.try_into().ok().unwrap()))
-            & !(((1_u64) << bits.start.try_into().ok().unwrap()) - 1))
-            .into()
+    pub fn bit_mask<T: TryInto<u8>>(bits: ops::Range<T>) -> Address {
+        Address(
+            (!0 >> ((UMEM_BITS - 1) - bits.end.try_into().ok().unwrap()))
+                & !((1 << bits.start.try_into().ok().unwrap()) - 1),
+        )
     }
 
     /// Creates a a bit mask (const version with u8 range).
@@ -238,7 +257,7 @@ impl Address {
     /// println!("mask: {}", Address::bit_mask(0..11));
     /// ```
     pub const fn bit_mask_u8(bits: ops::Range<u8>) -> Address {
-        Address((0xffff_ffff_ffff_ffff >> (63 - bits.end)) & !(((1_u64) << bits.start) - 1))
+        Address((!0 >> (UMEM_BITS - 1 - bits.end)) & !((1 << bits.start) - 1))
     }
 
     /// Checks wether the address is zero or not.
@@ -355,7 +374,7 @@ impl Address {
     /// assert_eq!(bit, true);
     /// ```
     pub const fn bit_at(self, idx: u8) -> bool {
-        (self.0 & ((1_u64) << idx)) != 0
+        (self.0 & (1 << idx)) != 0
     }
 
     /// Extracts the given range of bits by applying a corresponding bitmask.
@@ -369,7 +388,7 @@ impl Address {
     /// let addr = Address::from(123456789);
     /// println!("bits[0..2] = {}", addr.extract_bits(0..2));
     /// ```
-    pub fn extract_bits<T: TryInto<umem>>(self, bits: ops::Range<T>) -> Address {
+    pub fn extract_bits<T: TryInto<u8>>(self, bits: ops::Range<T>) -> Address {
         (self.0 & Address::bit_mask(bits).to_umem()).into()
     }
 
@@ -442,6 +461,8 @@ impl_address_from!(i32);
 impl_address_from!(i64);
 //impl_address_from!(u64);
 impl_address_from!(usize);
+#[cfg(feature = "128_bit_mem")]
+impl_address_from!(i128);
 
 /// Converts any `PrimitiveAddress` into an Address.
 impl<U: PrimitiveAddress> From<U> for Address {
@@ -578,10 +599,15 @@ impl_address_arithmetic_signed!(i8);
 impl_address_arithmetic_signed!(i16);
 impl_address_arithmetic_signed!(i32);
 impl_address_arithmetic_signed!(i64);
+#[cfg(feature = "128_bit_mem")]
+impl_address_arithmetic_signed!(i128);
+impl_address_arithmetic_signed!(isize);
 impl_address_arithmetic_unsigned!(u8);
 impl_address_arithmetic_unsigned!(u16);
 impl_address_arithmetic_unsigned!(u32);
 impl_address_arithmetic_unsigned!(u64);
+#[cfg(feature = "128_bit_mem")]
+impl_address_arithmetic_unsigned!(u128);
 impl_address_arithmetic_unsigned!(usize);
 
 /// Adds any compatible type reference to Address

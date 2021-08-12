@@ -5,7 +5,6 @@ use memflow::cglue;
 use memflow::plugins::args;
 use memflow::prelude::v1::*;
 
-use std::convert::TryInto;
 use std::ffi::c_void;
 use std::time::Duration;
 
@@ -161,9 +160,7 @@ fn build_vat<
         ),
         Some((size, time)) => build_page_cache(
             builder.build_vat_cache(move |v, a| {
-                let builder = CachedVirtualTranslate::builder(v)
-                    .arch(a)
-                    .entries(size.try_into().unwrap());
+                let builder = CachedVirtualTranslate::builder(v).arch(a).entries(size);
 
                 if time > 0 {
                     builder

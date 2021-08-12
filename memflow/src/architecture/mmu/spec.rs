@@ -3,7 +3,7 @@ use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 use crate::iter::FlowIters;
 use crate::iter::SplitAtIndex;
 use crate::mem::{MemData, PhysicalMemory, PhysicalReadData};
-use crate::types::{umem, Address, PageType, PhysicalAddress};
+use crate::types::{umem, Address, PageType, PhysicalAddress, UMEM_BITS};
 
 use super::super::{VtopFailureCallback, VtopOutputCallback};
 use super::translate_data::{TranslateData, TranslateDataVec, TranslateVec, TranslationChunk};
@@ -30,10 +30,10 @@ const MAX_LEVELS: usize = 8;
 
 pub struct ArchMmuSpec {
     pub def: ArchMmuDef,
-    pub pte_addr_masks: [u64; MAX_LEVELS],
+    pub pte_addr_masks: [umem; MAX_LEVELS],
     pub virt_addr_bit_ranges: [(u8, u8); MAX_LEVELS],
-    pub virt_addr_masks: [u64; MAX_LEVELS],
-    pub virt_addr_page_masks: [u64; MAX_LEVELS],
+    pub virt_addr_masks: [umem; MAX_LEVELS],
+    pub virt_addr_page_masks: [umem; MAX_LEVELS],
     pub valid_final_page_steps: [bool; MAX_LEVELS],
     pub pt_leaf_size: [usize; MAX_LEVELS],
     pub page_size_step: [umem; MAX_LEVELS],
@@ -99,8 +99,8 @@ impl ArchMmuSpec {
         }
     }
 
-    pub fn pte_addr_mask(&self, pte_addr: Address, step: usize) -> u64 {
-        pte_addr.to_umem() & u64::from_le(self.pte_addr_masks[step])
+    pub fn pte_addr_mask(&self, pte_addr: Address, step: usize) -> umem {
+        pte_addr.to_umem() & umem::from_le(self.pte_addr_masks[step])
     }
 
     /// Filter out the input virtual address range to be in bounds
@@ -142,9 +142,9 @@ impl ArchMmuSpec {
         }
 
         let virt_bit_range = self.virt_addr_bit_ranges[0].1;
-        let virt_range = 1u64 << (virt_bit_range - 1);
+        let virt_range: umem = 1 << (virt_bit_range - 1);
         vtop_trace!("vbr {:x} | {:x}", virt_bit_range, virt_range);
-        let arch_bit_range = (!0u64) >> (64 - self.def.addr_size * 8);
+        let arch_bit_range: umem = (!0) >> (UMEM_BITS - self.def.addr_size * 8);
 
         let (lower, higher) = left.split_at_address(virt_range.into());
 
@@ -215,7 +215,7 @@ impl ArchMmuSpec {
     }
 
     pub fn virt_addr_to_page_offset(&self, virt_addr: Address, step: usize) -> umem {
-        virt_addr.to_umem() & u64::from_le(self.virt_addr_page_masks[step])
+        virt_addr.to_umem() & umem::from_le(self.virt_addr_page_masks[step])
     }
 
     /// Get the page size of a specific step without checking if such page could exist

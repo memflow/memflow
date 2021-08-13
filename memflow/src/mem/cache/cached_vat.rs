@@ -66,7 +66,7 @@ use bumpalo::{collections::Vec as BumpVec, Bump};
 ///
 /// let translation_address = virt_base;
 ///
-/// let iter_count = 512;
+/// let iter_count = 1024;
 ///
 /// let avg_cached = (0..iter_count).map(|_| {
 ///         let timer = Instant::now();
@@ -92,7 +92,7 @@ use bumpalo::{collections::Vec as BumpVec, Bump};
 ///
 /// println!("{:?}", avg_uncached);
 ///
-/// assert!(avg_cached * 2 <= avg_uncached);
+/// assert!(avg_cached * 9 <= avg_uncached * 7);
 /// ```
 pub struct CachedVirtualTranslate<V, Q> {
     vat: V,

@@ -95,7 +95,7 @@ pub trait SplitAtIndex {
     }
 }
 
-#[cfg(feature = "64_bit_mem")]
+#[cfg(any(feature = "64_bit_mem", feature = "128_bit_mem"))]
 impl SplitAtIndex for usize {
     fn split_at(self, idx: umem) -> (Option<Self>, Option<Self>) {
         if idx == 0 {

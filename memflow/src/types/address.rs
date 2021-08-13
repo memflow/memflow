@@ -25,7 +25,7 @@ use std::ops;
 #[cfg(feature = "64_bit_mem")]
 #[allow(non_camel_case_types)]
 pub type umem = u64;
-#[cfg(feature = "128_bit_mem")]
+#[cfg(all(feature = "128_bit_mem", not(feature = "64_bit_mem")))]
 #[allow(non_camel_case_types)]
 pub type umem = u128;
 #[cfg(all(not(feature = "64_bit_mem"), not(feature = "128_bit_mem")))]
@@ -34,7 +34,7 @@ pub type umem = usize;
 #[cfg(feature = "64_bit_mem")]
 #[allow(non_camel_case_types)]
 pub type imem = i64;
-#[cfg(feature = "128_bit_mem")]
+#[cfg(all(feature = "128_bit_mem", not(feature = "64_bit_mem")))]
 #[allow(non_camel_case_types)]
 pub type imem = i128;
 #[cfg(all(not(feature = "64_bit_mem"), not(feature = "128_bit_mem")))]
@@ -179,7 +179,7 @@ macro_rules! impl_primitive_address {
 impl_primitive_address!(u16);
 impl_primitive_address!(u32);
 impl_primitive_address!(u64);
-#[cfg(feature = "128_bit_mem")]
+#[cfg(all(feature = "128_bit_mem", not(feature = "64_bit_mem")))]
 impl_primitive_address!(u128);
 
 /// This type represents a address on the target system.
@@ -461,7 +461,7 @@ impl_address_from!(i32);
 impl_address_from!(i64);
 //impl_address_from!(u64);
 impl_address_from!(usize);
-#[cfg(feature = "128_bit_mem")]
+#[cfg(all(feature = "128_bit_mem", not(feature = "64_bit_mem")))]
 impl_address_from!(i128);
 
 /// Converts any `PrimitiveAddress` into an Address.
@@ -599,14 +599,14 @@ impl_address_arithmetic_signed!(i8);
 impl_address_arithmetic_signed!(i16);
 impl_address_arithmetic_signed!(i32);
 impl_address_arithmetic_signed!(i64);
-#[cfg(feature = "128_bit_mem")]
+#[cfg(all(feature = "128_bit_mem", not(feature = "64_bit_mem")))]
 impl_address_arithmetic_signed!(i128);
 impl_address_arithmetic_signed!(isize);
 impl_address_arithmetic_unsigned!(u8);
 impl_address_arithmetic_unsigned!(u16);
 impl_address_arithmetic_unsigned!(u32);
 impl_address_arithmetic_unsigned!(u64);
-#[cfg(feature = "128_bit_mem")]
+#[cfg(all(feature = "128_bit_mem", not(feature = "64_bit_mem")))]
 impl_address_arithmetic_unsigned!(u128);
 impl_address_arithmetic_unsigned!(usize);
 

@@ -61,7 +61,10 @@ memmapfiles = ["toml", "serde_derive"]
 plugins = ["libloading", "dirs", "goblin"]
 filemap = ["memmap"]
 64_bit_mem = []
-# 128_bit_mem = [] # use 128 bit addressing, is not exposed, because u128 is not FFI-safe, and there is no real-world arch that uses it yet.
+# use 128 bit addressing.
+# If 64_bit_mem is also enabled, 64-bit mode takes precedence.
+# This is because 128-bit mode is not necessary to date, and u128 is not FFI-safe.
+128_bit_mem = []
 
 [[example]]
 name = "read_bench"

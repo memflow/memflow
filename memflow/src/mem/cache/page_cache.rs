@@ -441,7 +441,7 @@ mod tests {
             let test_buf =
                 unsafe { std::slice::from_raw_parts(test_buf.as_ptr() as *const u8, virt_size) };
 
-            let (dtb, virt_base) = dummy_os.alloc_dtb(virt_size, &test_buf);
+            let (dtb, virt_base) = dummy_os.alloc_dtb(virt_size, test_buf);
             let arch = x86::x64::ARCH;
             println!("dtb={:x} virt_base={:x} seed={:x}", dtb, virt_base, seed);
             let translator = x86::x64::new_translator(dtb);

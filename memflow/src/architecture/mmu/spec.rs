@@ -418,7 +418,7 @@ impl ArchMmuSpec {
 
         // Fill up working_pair and waiting_pair from the iterator
         dtb.fill_init_chunk(
-            &self,
+            self,
             out_fail,
             &mut addrs,
             (&mut working_addrs2, &mut tmp_addrs),
@@ -607,7 +607,7 @@ impl ArchMmuSpec {
             }
         } else {
             dtb.fill_init_chunk(
-                &self,
+                self,
                 out_fail,
                 addrs,
                 (&mut next_working_pair.1, tmp_addrs),

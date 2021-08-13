@@ -221,7 +221,6 @@ impl<T: MmuTranslationBase> TranslationChunk<T> {
 
             let addr = Address::from(addr);
             let addr_aligned = addr.as_mem_aligned(align_as);
-            assert!(addr >= addr_aligned);
             let index = (addr - addr_aligned) as umem / step_size;
             let (pt_addr, _) = self.pt_addr.get_pt_by_index(index as usize);
             let pt_addr = spec.vtop_step(pt_addr, addr, self.step);

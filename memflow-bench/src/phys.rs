@@ -12,6 +12,8 @@ use rand::prelude::*;
 use rand::{Rng, SeedableRng};
 use rand_xorshift::XorShiftRng as CurRng;
 
+use std::convert::TryInto;
+
 fn rwtest(
     bench: &mut Bencher,
     mut mem: impl PhysicalMemory,
@@ -30,7 +32,7 @@ fn rwtest(
             let mut done_size = 0;
 
             while done_size < read_size {
-                let base_addr = rng.gen_range(start.as_u64()..end.as_u64());
+                let base_addr = rng.gen_range(start.to_umem()..end.to_umem());
 
                 let mut bufs = Vec::with_capacity(*o);
 
@@ -41,7 +43,7 @@ fn rwtest(
                         PhysicalAddress::with_page(
                             addr,
                             PageType::default().write(true),
-                            size::kb(4),
+                            mem::kb(4),
                         ),
                         vec.as_mut_slice().into(),
                     )
@@ -130,7 +132,7 @@ fn seq_read_params<T: PhysicalMemory>(
                 read_test_with_ctx(
                     b,
                     black_box(cache_size),
-                    black_box(size as usize),
+                    black_box(size.try_into().unwrap()),
                     black_box(1),
                     initialize_ctx().unwrap().forward_mut(),
                 )
@@ -155,8 +157,8 @@ fn chunk_read_params<T: PhysicalMemory>(
                     read_test_with_ctx(
                         b,
                         black_box(cache_size),
-                        black_box(size as usize),
-                        black_box(chunk_size as usize),
+                        black_box(size.try_into().unwrap()),
+                        black_box(chunk_size.try_into().unwrap()),
                         initialize_ctx().unwrap().forward_mut(),
                     )
                 },

@@ -3,7 +3,7 @@ use crate::error::Result;
 use crate::iter::PageChunks;
 use crate::mem::mem_data::*;
 use crate::mem::phys_mem::{PhysicalMemory, PhysicalReadFailCallback};
-use crate::types::{Address, PhysicalAddress};
+use crate::types::{umem, Address, PhysicalAddress};
 
 use super::{CacheValidator, PageType};
 
@@ -86,7 +86,8 @@ impl<'a, T: CacheValidator> PageCache<'a, T> {
     }
 
     fn page_index(&self, addr: Address) -> usize {
-        (addr.as_page_aligned(self.page_size).as_usize() / self.page_size) % self.address.len()
+        ((addr.as_page_aligned(self.page_size).to_umem() / self.page_size as umem)
+            % (self.address.len() as umem)) as usize
     }
 
     fn take_page(&mut self, addr: Address, skip_validator: bool) -> PageValidity<'a> {
@@ -176,7 +177,7 @@ impl<'a, T: CacheValidator> PageCache<'a, T> {
         out.page_chunks(addr.address(), page_size)
             .map(move |(paddr, chunk)| {
                 MemData(
-                    PhysicalAddress::with_page(paddr, addr.page_type(), addr.page_size()),
+                    PhysicalAddress::with_page(paddr, addr.page_type(), addr.page_size() as umem),
                     chunk,
                 )
             })
@@ -206,7 +207,7 @@ impl<'a, T: CacheValidator> PageCache<'a, T> {
                                 PhysicalAddress::with_page(
                                     paddr,
                                     addr.page_type(),
-                                    addr.page_size(),
+                                    addr.page_size() as umem,
                                 ),
                                 chunk,
                             );
@@ -217,8 +218,11 @@ impl<'a, T: CacheValidator> PageCache<'a, T> {
                                 PageValidity::Valid(buf) => {
                                     let aligned_addr = paddr.as_page_aligned(self.page_size);
                                     let start = paddr - aligned_addr;
-                                    let cached_buf =
-                                        buf.split_at_mut(start).1.split_at_mut(prd.1.len()).0;
+                                    let cached_buf = buf
+                                        .split_at_mut(start as usize)
+                                        .1
+                                        .split_at_mut(prd.1.len())
+                                        .0;
                                     prd.1.copy_from_slice(cached_buf);
                                     self.put_page(cached_page.address, buf);
                                 }
@@ -283,7 +287,8 @@ impl<'a, T: CacheValidator> PageCache<'a, T> {
                         let start = addr.address() - aligned_addr;
 
                         if let PageValidity::Valid(buf) = cached_page.validity {
-                            let cached_buf = buf.split_at_mut(start).1.split_at_mut(out.len()).0;
+                            let cached_buf =
+                                buf.split_at_mut(start as usize).1.split_at_mut(out.len()).0;
                             out.copy_from_slice(cached_buf);
                             self.put_page(cached_page.address, buf);
                         }
@@ -392,7 +397,7 @@ mod tests {
         let mut dummy_os = DummyOs::with_seed(mem, 0);
 
         let cmp_buf = [143u8; 16];
-        let write_addr = 0.into();
+        let write_addr = PhysicalAddress::NULL;
 
         dummy_os.as_mut().phys_write(write_addr, &cmp_buf).unwrap();
         let arch = x86::x64::ARCH;
@@ -436,7 +441,7 @@ mod tests {
             let test_buf =
                 unsafe { std::slice::from_raw_parts(test_buf.as_ptr() as *const u8, virt_size) };
 
-            let (dtb, virt_base) = dummy_os.alloc_dtb(virt_size, &test_buf);
+            let (dtb, virt_base) = dummy_os.alloc_dtb(virt_size, test_buf);
             let arch = x86::x64::ARCH;
             println!("dtb={:x} virt_base={:x} seed={:x}", dtb, virt_base, seed);
             let translator = x86::x64::new_translator(dtb);
@@ -611,7 +616,7 @@ mod tests {
             *item = ((i / 115) % 256) as u8;
         }
 
-        let address = Address::from(0);
+        let address = Address::NULL;
 
         let addr = PhysicalAddress::with_page(address, PageType::default().write(false), 0x1000);
 
@@ -777,7 +782,7 @@ mod tests {
 
         assert_eq!(buf_start, buf_1);
         buf_1[16..20].copy_from_slice(&[255, 255, 255, 255]);
-        virt_mem.write(virt_base + 16, &buf_1[16..20]).unwrap();
+        virt_mem.write(virt_base + 16_u64, &buf_1[16..20]).unwrap();
 
         let mut buf_2 = vec![0_u8; 64];
         virt_mem.read_into(virt_base, buf_2.as_mut_slice()).unwrap();

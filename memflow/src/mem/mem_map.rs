@@ -1,8 +1,9 @@
 use crate::iter::SplitAtIndex;
-use crate::types::{Address, PhysicalAddress};
+use crate::types::{umem, Address, PhysicalAddress};
 
 use cglue::callback::*;
 use std::cmp::Ordering;
+use std::convert::TryInto;
 use std::default::Default;
 use std::fmt;
 use std::prelude::v1::*;
@@ -19,7 +20,7 @@ use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 /// # Examples
 ///
 /// ```
-/// use memflow::mem::MemoryMap;
+/// use memflow::prelude::{MemoryMap, umem};
 ///
 /// let mut map = MemoryMap::new();
 /// map.push_remap(0x1000.into(), 0x1000, 0.into());      // push region from 0x1000 - 0x1FFF
@@ -33,7 +34,7 @@ use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 ///     true
 /// };
 ///
-/// let hw_addr = map.map(0x10ff.into(), 8, failed);
+/// let hw_addr = map.map(0x10ff.into(), 8 as umem, failed);
 /// ```
 #[derive(Clone)]
 pub struct MemoryMap<M> {
@@ -228,18 +229,18 @@ struct MemoryMapFileRange {
     real_base: Option<u64>,
 }
 
-// FFI Safe MemoryMapping type for `MemoryMap<(Address, usize)>`.
+// FFI Safe MemoryMapping type for `MemoryMap<(Address, umem)>`.
 // TODO: this could be removed if the RefCell requirement above would be removed.
 #[derive(Debug, Clone, Copy)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 #[repr(C)]
 pub struct PhysicalMemoryMapping {
     pub base: Address,
-    pub size: usize,
+    pub size: umem,
     pub real_base: Address,
 }
 
-impl MemoryMap<(Address, usize)> {
+impl MemoryMap<(Address, umem)> {
     /// Constructs a new memory map by parsing the mapping table from a [TOML](https://toml.io/) file.
     ///
     /// The file must contain a mapping table in the following format:
@@ -288,21 +289,19 @@ impl MemoryMap<(Address, usize)> {
             .iter()
             .map(|m| m.base() + m.output.borrow().1)
             .max()
-            .unwrap_or_else(|| u64::MAX.into())
-            - 1
+            .unwrap_or_else(|| umem::MAX.into())
+            - 1_usize
     }
 
     // Returns the real size the current memory mappings cover
-    pub fn real_size(&self) -> u64 {
-        self.mappings
-            .iter()
-            .fold(0, |s, m| s + m.output.borrow().1 as u64)
+    pub fn real_size(&self) -> umem {
+        self.mappings.iter().fold(0, |s, m| s + m.output.borrow().1)
     }
 
     /// Adds a new memory mapping to this memory map by specifying base address and size of the mapping.
     ///
     /// When adding overlapping memory regions this function will panic!
-    pub fn push_remap(&mut self, base: Address, size: usize, real_base: Address) -> &mut Self {
+    pub fn push_remap(&mut self, base: Address, size: umem, real_base: Address) -> &mut Self {
         self.push(base, (real_base, size))
     }
 
@@ -313,7 +312,7 @@ impl MemoryMap<(Address, usize)> {
     /// If end < base, the function will do nothing
     pub fn push_range(&mut self, base: Address, end: Address, real_base: Address) -> &mut Self {
         if end > base {
-            self.push_remap(base, end - base, real_base)
+            self.push_remap(base, (end - base) as umem, real_base)
         } else {
             self
         }
@@ -337,7 +336,10 @@ impl MemoryMap<(Address, usize)> {
             .map(|(base, (real_base, size))| {
                 (
                     base,
-                    std::slice::from_raw_parts_mut(real_base.as_u64() as _, size),
+                    std::slice::from_raw_parts_mut(
+                        real_base.to_umem() as _,
+                        size.try_into().unwrap(),
+                    ),
                 )
             })
             .for_each(|(base, buf)| {
@@ -361,7 +363,7 @@ impl MemoryMap<(Address, usize)> {
             .map(|(base, (real_base, size))| {
                 (
                     base,
-                    std::slice::from_raw_parts(real_base.as_u64() as _, size),
+                    std::slice::from_raw_parts(real_base.to_umem() as _, size.try_into().unwrap()),
                 )
             })
             .for_each(|(base, buf)| {
@@ -435,7 +437,7 @@ impl<'a, I: Iterator<Item = (Address, T)>, M: SplitAtIndex, T: SplitAtIndex>
             for (i, map_elem) in self.map.iter().enumerate().skip(self.cur_map_pos) {
                 let output = &mut *map_elem.output.borrow_mut();
                 if map_elem.base + output.length() > addr {
-                    let offset = map_elem.base.as_usize().saturating_sub(addr.as_usize());
+                    let offset: umem = map_elem.base.to_umem().saturating_sub(addr.to_umem());
 
                     let (left_reject, right) = buf.split_at(offset);
 
@@ -446,7 +448,7 @@ impl<'a, I: Iterator<Item = (Address, T)>, M: SplitAtIndex, T: SplitAtIndex>
                     addr += offset;
 
                     if let Some(leftover) = right {
-                        let off = map_elem.base + output.length() - addr;
+                        let off = map_elem.base.to_umem() + output.length() - addr.to_umem();
                         let (ret, keep) = leftover.split_at(off);
                         let ret_length = ret.as_ref().map(|r| r.length()).unwrap_or_default();
 
@@ -465,7 +467,7 @@ impl<'a, I: Iterator<Item = (Address, T)>, M: SplitAtIndex, T: SplitAtIndex>
                                 in_iter.next()
                             });
 
-                        let off = addr - map_elem.base;
+                        let off = addr.to_umem() - map_elem.base.to_umem();
                         let split_left = unsafe { output.split_at_mut(off).1 };
                         return split_left.unwrap().split_at(ret_length).0.zip(ret);
                     }
@@ -523,7 +525,7 @@ where
     }
 }
 
-impl fmt::Debug for MemoryMapping<(Address, usize)> {
+impl fmt::Debug for MemoryMapping<(Address, umem)> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
@@ -559,11 +561,19 @@ mod tests {
 
         let mut void_panic = |x| panic!("Should not have mapped {:?}", x);
         assert_eq!(
-            (map.map(0x10ff.into(), 1, &mut void_panic).next().unwrap().0).0,
+            (map.map::<umem, _>(0x10ff.into(), 1, &mut void_panic)
+                .next()
+                .unwrap()
+                .0)
+                .0,
             Address::from(0x00ff)
         );
         assert_eq!(
-            (map.map(0x30ff.into(), 1, &mut void_panic).next().unwrap().0).0,
+            (map.map::<umem, _>(0x30ff.into(), 1, &mut void_panic)
+                .next()
+                .unwrap()
+                .0)
+                .0,
             Address::from(0x20ff)
         );
     }
@@ -578,15 +588,23 @@ mod tests {
         let mut void = |_| true;
 
         assert_eq!(
-            (map.map(0x3000.into(), 1, &mut void_panic).next().unwrap().0).0,
+            (map.map::<umem, _>(0x3000.into(), 1, &mut void_panic)
+                .next()
+                .unwrap()
+                .0)
+                .0,
             Address::from(0x2000)
         );
         assert_eq!(
-            (map.map(0x3fff.into(), 1, &mut void_panic).next().unwrap().0).0,
+            (map.map::<umem, _>(0x3fff.into(), 1, &mut void_panic)
+                .next()
+                .unwrap()
+                .0)
+                .0,
             Address::from(0x2fff)
         );
-        assert_eq!(map.map(0x2fff.into(), 1, &mut void).next(), None);
-        assert_eq!(map.map(0x4000.into(), 1, &mut void).next(), None);
+        assert_eq!(map.map::<umem, _>(0x2fff.into(), 1, &mut void).next(), None);
+        assert_eq!(map.map::<umem, _>(0x4000.into(), 1, &mut void).next(), None);
     }
 
     #[test]
@@ -596,10 +614,10 @@ mod tests {
         map.push_remap(0x3000.into(), 0x1000, 0x2000.into());
 
         let mut void = vec![];
-        assert_eq!(map.map(0x00ff.into(), 1, &mut void).next(), None);
-        assert_eq!(map.map(0x20ff.into(), 1, &mut void).next(), None);
-        assert_eq!(map.map(0x4000.into(), 1, &mut void).next(), None);
-        assert_eq!(map.map(0x40ff.into(), 1, &mut void).next(), None);
+        assert_eq!(map.map::<umem, _>(0x00ff.into(), 1, &mut void).next(), None);
+        assert_eq!(map.map::<umem, _>(0x20ff.into(), 1, &mut void).next(), None);
+        assert_eq!(map.map::<umem, _>(0x4000.into(), 1, &mut void).next(), None);
+        assert_eq!(map.map::<umem, _>(0x40ff.into(), 1, &mut void).next(), None);
 
         assert_eq!(void.len(), 4);
     }
@@ -612,11 +630,19 @@ mod tests {
 
         let mut void_panic = |x| panic!("Should not have mapped {:?}", x);
         assert_eq!(
-            (map.map(0x10ff.into(), 1, &mut void_panic).next().unwrap().0).0,
+            (map.map::<umem, _>(0x10ff.into(), 1, &mut void_panic)
+                .next()
+                .unwrap()
+                .0)
+                .0,
             Address::from(0x00ff)
         );
         assert_eq!(
-            (map.map(0x30ff.into(), 1, &mut void_panic).next().unwrap().0).0,
+            (map.map::<umem, _>(0x30ff.into(), 1, &mut void_panic)
+                .next()
+                .unwrap()
+                .0)
+                .0,
             Address::from(0x20ff)
         );
     }
@@ -631,15 +657,23 @@ mod tests {
         let mut void = |_| true;
 
         assert_eq!(
-            (map.map(0x3000.into(), 1, &mut void_panic).next().unwrap().0).0,
+            (map.map::<umem, _>(0x3000.into(), 1, &mut void_panic)
+                .next()
+                .unwrap()
+                .0)
+                .0,
             Address::from(0x2000)
         );
         assert_eq!(
-            (map.map(0x3fff.into(), 1, &mut void_panic).next().unwrap().0).0,
+            (map.map::<umem, _>(0x3fff.into(), 1, &mut void_panic)
+                .next()
+                .unwrap()
+                .0)
+                .0,
             Address::from(0x2fff)
         );
-        assert_eq!(map.map(0x2fff.into(), 1, &mut void).next(), None);
-        assert_eq!(map.map(0x4000.into(), 1, &mut void).next(), None);
+        assert_eq!(map.map::<umem, _>(0x2fff.into(), 1, &mut void).next(), None);
+        assert_eq!(map.map::<umem, _>(0x4000.into(), 1, &mut void).next(), None);
     }
 
     #[test]
@@ -652,15 +686,23 @@ mod tests {
         let mut void = |_| true;
 
         assert_eq!(
-            (map.map(0x2000.into(), 1, &mut void_panic).next().unwrap().0).0,
+            (map.map::<umem, _>(0x2000.into(), 1, &mut void_panic)
+                .next()
+                .unwrap()
+                .0)
+                .0,
             Address::from(0x2000)
         );
         assert_eq!(
-            (map.map(0x2fff.into(), 1, &mut void_panic).next().unwrap().0).0,
+            (map.map::<umem, _>(0x2fff.into(), 1, &mut void_panic)
+                .next()
+                .unwrap()
+                .0)
+                .0,
             Address::from(0x2fff)
         );
-        assert_eq!(map.map(0x3fff.into(), 1, &mut void).next(), None);
-        assert_eq!(map.map(0x3000.into(), 1, &mut void).next(), None);
+        assert_eq!(map.map::<umem, _>(0x3fff.into(), 1, &mut void).next(), None);
+        assert_eq!(map.map::<umem, _>(0x3000.into(), 1, &mut void).next(), None);
     }
 
     #[test]

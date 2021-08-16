@@ -8,7 +8,8 @@ use crate::iter::{PageChunks, SplitAtIndex};
 use crate::mem::cache::{CacheValidator, DefaultCacheValidator};
 use crate::mem::virt_translate::VirtualTranslate2;
 use crate::mem::{MemData, PhysicalMemory};
-use crate::types::Address;
+use crate::types::{umem, Address};
+
 use cglue::callback::FromExtend;
 
 use bumpalo::{collections::Vec as BumpVec, Bump};
@@ -65,7 +66,7 @@ use bumpalo::{collections::Vec as BumpVec, Bump};
 ///
 /// let translation_address = virt_base;
 ///
-/// let iter_count = 512;
+/// let iter_count = 1024;
 ///
 /// let avg_cached = (0..iter_count).map(|_| {
 ///         let timer = Instant::now();
@@ -91,15 +92,15 @@ use bumpalo::{collections::Vec as BumpVec, Bump};
 ///
 /// println!("{:?}", avg_uncached);
 ///
-/// assert!(avg_cached * 2 <= avg_uncached);
+/// assert!(avg_cached * 9 <= avg_uncached * 7);
 /// ```
 pub struct CachedVirtualTranslate<V, Q> {
     vat: V,
     tlb: TlbCache<Q>,
     arch: ArchitectureObj,
     arena: Bump,
-    pub hitc: usize,
-    pub misc: usize,
+    pub hitc: umem,
+    pub misc: umem,
 }
 
 impl<V: VirtualTranslate2, Q: CacheValidator> CachedVirtualTranslate<V, Q> {
@@ -165,7 +166,7 @@ impl<V: VirtualTranslate2, Q: CacheValidator> VirtualTranslate2 for CachedVirtua
         let arch = self.arch;
         let mut addrs = addrs
             .filter_map(|MemData(addr, buf)| {
-                if tlb.is_read_too_long(arch, buf.length()) {
+                if tlb.is_read_too_long(arch, buf.length() as umem) {
                     uncached_in.push(MemData(addr, buf));
                     None
                 } else {
@@ -182,7 +183,7 @@ impl<V: VirtualTranslate2, Q: CacheValidator> VirtualTranslate2 for CachedVirtua
             .filter_map(|(addr, buf)| {
                 if let Some(entry) = tlb.try_entry(translator, addr, arch) {
                     hitc += 1;
-                    debug_assert!(buf.length() <= arch.page_size());
+                    debug_assert!(buf.length() <= arch.page_size() as umem);
                     // TODO: handle case
                     let _ = match entry {
                         Ok(entry) => out.call(MemData(entry.phys_addr, buf)),
@@ -190,7 +191,7 @@ impl<V: VirtualTranslate2, Q: CacheValidator> VirtualTranslate2 for CachedVirtua
                     };
                     None
                 } else {
-                    misc += core::cmp::max(1, buf.length() / arch.page_size());
+                    misc += core::cmp::max(1, buf.length() / arch.page_size() as umem);
                     Some(MemData(addr, (addr, buf)))
                 }
             })
@@ -221,7 +222,7 @@ impl<V: VirtualTranslate2, Q: CacheValidator> VirtualTranslate2 for CachedVirtua
             uncached_out_fail
                 .into_iter()
                 .map(|(err, MemData(vaddr, (_, buf)))| {
-                    tlb.cache_invalid_if_uncached(translator, vaddr, buf.length(), arch);
+                    tlb.cache_invalid_if_uncached(translator, vaddr, buf.length() as umem, arch);
                     (err, MemData(vaddr, buf))
                 }),
         );
@@ -293,7 +294,6 @@ impl<V: VirtualTranslate2, Q: CacheValidator> CachedVirtualTranslateBuilder<V, Q
 #[cfg(test)]
 mod tests {
     use crate::architecture::x86;
-
     use crate::dummy::{DummyMemory, DummyOs};
     use crate::error::PartialResultExt;
     use crate::mem::cache::cached_vat::CachedVirtualTranslate;
@@ -301,6 +301,7 @@ mod tests {
     use crate::mem::{DirectTranslate, PhysicalMemory};
     use crate::mem::{MemoryView, VirtualDma};
     use crate::types::{size, Address};
+
     use coarsetime::Duration;
 
     fn build_mem(

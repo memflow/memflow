@@ -3,7 +3,7 @@ Special purpose iterators for memflow.
 */
 
 mod page_chunks;
-use crate::types::Address;
+use crate::types::{umem, Address};
 pub use page_chunks::*;
 
 mod double_buffered_iterator;
@@ -76,7 +76,7 @@ pub trait PageChunks {
     /// # Examples
     ///
     /// ```
-    /// use memflow::iter::PageChunks;
+    /// use memflow::prelude::{PageChunks, umem};
     ///
     /// // Misaligned buffer length
     /// let buffer = vec![0; 0x1492];
@@ -93,7 +93,6 @@ pub trait PageChunks {
     /// println!("{}", page_count);
     ///
     /// ```
-
     fn page_chunks(
         self,
         start_address: Address,
@@ -102,7 +101,18 @@ pub trait PageChunks {
     where
         Self: SplitAtIndex + Sized,
     {
-        PageChunkIterator::new(self, start_address, page_size, |_, _, _| true)
+        self.mem_chunks(start_address, page_size as umem)
+    }
+
+    fn mem_chunks(
+        self,
+        start_address: Address,
+        mem_size: umem,
+    ) -> PageChunkIterator<Self, TrueFunc<Self>>
+    where
+        Self: SplitAtIndex + Sized,
+    {
+        PageChunkIterator::new(self, start_address, mem_size, |_, _, _| true)
     }
 
     /// Craete a page aligned chunk iterator with configurable splitting
@@ -125,7 +135,7 @@ pub trait PageChunks {
     /// # Examples
     ///
     /// ```
-    /// use memflow::iter::PageChunks;
+    /// use memflow::prelude::{PageChunks, umem};
     ///
     /// let buffer = vec![0; 0x10000];
     /// const PAGE_SIZE: usize = 0x100;
@@ -139,8 +149,8 @@ pub trait PageChunks {
     /// // The rest - kept as is, linear.
     /// let chunk_count = buffer
     ///     .page_chunks_by(0.into(), PAGE_SIZE, |addr, cur_split, _| {
-    ///         ((addr.as_usize() / PAGE_SIZE) % PFN_MAGIC) == 0
-    ///         || (((addr + cur_split.len()).as_usize() / PAGE_SIZE) % PFN_MAGIC) == 0
+    ///         ((addr.to_umem() as usize / PAGE_SIZE) % PFN_MAGIC) == 0
+    ///         || (((addr + cur_split.len()).to_umem() as usize / PAGE_SIZE) % PFN_MAGIC) == 0
     ///     })
     ///     .count();
     ///
@@ -160,7 +170,19 @@ pub trait PageChunks {
     where
         Self: SplitAtIndex + Sized,
     {
-        PageChunkIterator::new(self, start_address, page_size, split_fn)
+        self.mem_chunks_by(start_address, page_size as umem, split_fn)
+    }
+
+    fn mem_chunks_by<F: FnMut(Address, &Self, Option<&Self>) -> bool>(
+        self,
+        start_address: Address,
+        mem_size: umem,
+        split_fn: F,
+    ) -> PageChunkIterator<Self, F>
+    where
+        Self: SplitAtIndex + Sized,
+    {
+        PageChunkIterator::new(self, start_address, mem_size, split_fn)
     }
 }
 
@@ -169,6 +191,7 @@ impl<T> PageChunks for T where T: SplitAtIndex {}
 #[cfg(test)]
 mod tests {
     use crate::iter::PageChunks;
+    use crate::types::Address;
 
     const PAGE_SIZE: usize = 97;
     const OFF: usize = 26;
@@ -216,16 +239,16 @@ mod tests {
     fn pc_check_all_aligned_zero() {
         let arr = [0_u8; 0x1000];
 
-        for (addr, _chunk) in arr.page_chunks(0.into(), PAGE_SIZE) {
+        for (addr, _chunk) in arr.page_chunks(Address::null(), PAGE_SIZE) {
             assert_eq!(addr.as_page_aligned(PAGE_SIZE), addr);
         }
     }
 
     #[test]
     fn pc_check_all_chunks_equal() {
-        let arr = [0_u8; 100 * PAGE_SIZE];
+        let arr = [0_u8; (100 * PAGE_SIZE)];
 
-        for (_addr, chunk) in arr.page_chunks(0.into(), PAGE_SIZE) {
+        for (_addr, chunk) in arr.page_chunks(Address::null(), PAGE_SIZE) {
             println!("{:x} {:x}", _addr, chunk.len());
             assert_eq!(chunk.len(), PAGE_SIZE);
         }
@@ -234,7 +257,7 @@ mod tests {
     #[test]
     fn pc_check_all_chunks_equal_first_not() {
         const OFF: usize = 26;
-        let arr = [0_u8; 100 * PAGE_SIZE + (PAGE_SIZE - OFF)];
+        let arr = [0_u8; (100 * PAGE_SIZE + (PAGE_SIZE - OFF)) as usize];
 
         let mut page_iter = arr.page_chunks(OFF.into(), PAGE_SIZE);
 
@@ -252,7 +275,7 @@ mod tests {
     #[test]
     fn pc_check_everything() {
         const TOTAL_LEN: usize = 100 * PAGE_SIZE + ADDEND - OFF;
-        let arr = [0_u8; TOTAL_LEN];
+        let arr = [0_u8; TOTAL_LEN as usize];
 
         let mut cur_len = 0;
         let mut prev_len = 0;
@@ -281,9 +304,9 @@ mod tests {
     #[test]
     fn pc_check_size_hint() {
         const PAGE_COUNT: usize = 5;
-        let arr = [0_u8; PAGE_SIZE * PAGE_COUNT];
+        let arr = [0_u8; (PAGE_SIZE as usize * PAGE_COUNT)];
         assert_eq!(
-            arr.page_chunks(0.into(), PAGE_SIZE).size_hint().0,
+            arr.page_chunks(Address::null(), PAGE_SIZE).size_hint().0,
             PAGE_COUNT
         );
         assert_eq!(
@@ -305,6 +328,6 @@ mod tests {
     #[test]
     fn pc_check_empty() {
         let arr = [0_u8; 0];
-        let _ = arr.page_chunks(0.into(), PAGE_SIZE).next();
+        let _ = arr.page_chunks(Address::null(), PAGE_SIZE).next();
     }
 }

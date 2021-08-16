@@ -7,10 +7,12 @@ use crate::mem::{
     MemData, MemoryMap, PhysicalMemory, PhysicalMemoryMapping, PhysicalMemoryMetadata,
     PhysicalReadData, PhysicalWriteData,
 };
-use crate::types::Address;
+use crate::types::{umem, Address};
 
 use crate::cglue::*;
 use crate::mem::phys_mem::*;
+
+use std::convert::TryInto;
 
 pub struct MappedPhysicalMemory<T, F> {
     info: F,
@@ -33,14 +35,17 @@ impl MappedPhysicalMemory<&'static mut [u8], MemoryMap<&'static mut [u8]>> {
     ///
     /// This connector assumes the memory map is valid, and writeable. Failure for these conditions
     /// to be met leads to undefined behaviour (most likely a segfault) when reading/writing.
-    pub unsafe fn from_addrmap_mut(map: MemoryMap<(Address, usize)>) -> Self {
+    pub unsafe fn from_addrmap_mut(map: MemoryMap<(Address, umem)>) -> Self {
         let mut ret_map = MemoryMap::new();
 
         map.into_iter()
             .map(|(base, (real_base, size))| {
                 (
                     base,
-                    std::slice::from_raw_parts_mut(real_base.as_u64() as _, size),
+                    std::slice::from_raw_parts_mut(
+                        real_base.to_umem() as _,
+                        size.try_into().unwrap(),
+                    ),
                 )
             })
             .for_each(|(base, buf)| {
@@ -58,14 +63,14 @@ impl MappedPhysicalMemory<&'static [u8], MemoryMap<&'static [u8]>> {
     ///
     /// This connector assumes the memory map is valid. Failure for this condition to be met leads
     /// to undefined behaviour (most likely a segfault) when reading.
-    pub unsafe fn from_addrmap(map: MemoryMap<(Address, usize)>) -> Self {
+    pub unsafe fn from_addrmap(map: MemoryMap<(Address, umem)>) -> Self {
         let mut ret_map = MemoryMap::new();
 
         map.into_iter()
             .map(|(base, (real_base, size))| {
                 (
                     base,
-                    std::slice::from_raw_parts(real_base.as_u64() as _, size),
+                    std::slice::from_raw_parts(real_base.to_umem() as _, size.try_into().unwrap()),
                 )
             })
             .for_each(|(base, buf)| {
@@ -131,14 +136,14 @@ impl<'a, F: AsRef<MemoryMap<&'a mut [u8]>> + Send> PhysicalMemory
             .as_ref()
             .iter()
             .last()
-            .map(|map| map.base().as_usize() + map.output().len())
+            .map(|map| map.base().to_umem() + map.output().len() as umem)
             .unwrap()
             - 1;
         let real_size = self
             .info
             .as_ref()
             .iter()
-            .fold(0, |s, m| s + m.output().len() as u64);
+            .fold(0, |s, m| s + m.output().len() as umem);
         PhysicalMemoryMetadata {
             max_address: max_address.into(),
             real_size,
@@ -184,14 +189,14 @@ impl<'a, F: AsRef<MemoryMap<&'a [u8]>> + Send> PhysicalMemory
             .as_ref()
             .iter()
             .last()
-            .map(|map| map.base().as_usize() + map.output().len())
+            .map(|map| map.base().to_umem() + map.output().len() as umem)
             .unwrap()
             - 1;
         let real_size = self
             .info
             .as_ref()
             .iter()
-            .fold(0, |s, m| s + m.output().len() as u64);
+            .fold(0, |s, m| s + m.output().len() as umem);
         PhysicalMemoryMetadata {
             max_address: max_address.into(),
             real_size,

@@ -5,8 +5,6 @@ use crate::prelude::v1::{Result, *};
 use std::mem::MaybeUninit;
 use std::prelude::v1::*;
 
-use num_traits::int::PrimInt;
-
 pub mod arch_overlay;
 pub mod batcher;
 pub mod remap_view;
@@ -150,7 +148,7 @@ pub trait MemoryView: Send {
     }
 
     #[skip_func]
-    fn read_ptr_into<U: PrimInt, T: Pod + ?Sized>(
+    fn read_ptr_into<U: PrimitiveAddress, T: Pod + ?Sized>(
         &mut self,
         ptr: Pointer<U, T>,
         out: &mut T,
@@ -158,27 +156,18 @@ pub trait MemoryView: Send {
     where
         Self: Sized,
     {
-        let MemoryViewMetadata {
-            arch_bits,
-            little_endian,
-            ..
-        } = self.metadata();
-
-        self.read_into(ptr.address(arch_bits, little_endian), out)
+        self.read_into(ptr.into(), out)
     }
 
     #[skip_func]
-    fn read_ptr<U: PrimInt, T: Pod + Sized>(&mut self, ptr: Pointer<U, T>) -> PartialResult<T>
+    fn read_ptr<U: PrimitiveAddress, T: Pod + Sized>(
+        &mut self,
+        ptr: Pointer<U, T>,
+    ) -> PartialResult<T>
     where
         Self: Sized,
     {
-        let MemoryViewMetadata {
-            arch_bits,
-            little_endian,
-            ..
-        } = self.metadata();
-
-        self.read(ptr.address(arch_bits, little_endian))
+        self.read(ptr.into())
     }
 
     // Write helpers
@@ -211,7 +200,7 @@ pub trait MemoryView: Send {
     }
 
     #[skip_func]
-    fn write_ptr<U: PrimInt, T: Pod + ?Sized>(
+    fn write_ptr<U: PrimitiveAddress, T: Pod + ?Sized>(
         &mut self,
         ptr: Pointer<U, T>,
         data: &T,
@@ -219,13 +208,7 @@ pub trait MemoryView: Send {
     where
         Self: Sized,
     {
-        let MemoryViewMetadata {
-            arch_bits,
-            little_endian,
-            ..
-        } = self.metadata();
-
-        self.write(ptr.address(arch_bits, little_endian), data)
+        self.write(ptr.into(), data)
     }
 
     /// Reads a fixed length string from the target.
@@ -379,7 +362,7 @@ pub trait MemoryView: Send {
     }
 
     #[skip_func]
-    fn into_remap_view(self, mem_map: MemoryMap<(Address, usize)>) -> RemapView<Self>
+    fn into_remap_view(self, mem_map: MemoryMap<(Address, umem)>) -> RemapView<Self>
     where
         Self: Sized,
     {
@@ -387,7 +370,7 @@ pub trait MemoryView: Send {
     }
 
     #[skip_func]
-    fn remap_view(&mut self, mem_map: MemoryMap<(Address, usize)>) -> RemapView<Fwd<&mut Self>>
+    fn remap_view(&mut self, mem_map: MemoryMap<(Address, umem)>) -> RemapView<Fwd<&mut Self>>
     where
         Self: Sized,
     {
@@ -400,7 +383,7 @@ pub trait MemoryView: Send {
 #[repr(C)]
 pub struct MemoryViewMetadata {
     pub max_address: Address,
-    pub real_size: u64,
+    pub real_size: umem,
     pub readonly: bool,
     pub little_endian: bool,
     pub arch_bits: u8,

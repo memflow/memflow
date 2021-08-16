@@ -10,7 +10,7 @@ use super::{
 use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 use crate::iter::SplitAtIndex;
 use crate::mem::{MemData, PhysicalMemory};
-use crate::types::Address;
+use crate::types::{umem, Address};
 
 use std::ptr;
 
@@ -31,7 +31,7 @@ impl Architecture for X86Architecture {
     }
 
     fn page_size(&self) -> usize {
-        self.mmu.page_size_level(1)
+        self.mmu.page_size_level(1) as usize
     }
 
     fn size_addr(&self) -> usize {
@@ -80,8 +80,8 @@ impl VirtualTranslate3 for X86VirtualTranslate {
             .virt_to_phys_iter(mem, self.dtb, addrs, out, out_fail, tmp_buf)
     }
 
-    fn translation_table_id(&self, _address: Address) -> usize {
-        self.dtb.as_u64().overflowing_shr(12).0 as usize
+    fn translation_table_id(&self, _address: Address) -> umem {
+        self.dtb.to_umem().overflowing_shr(12).0
     }
 
     fn arch(&self) -> ArchitectureObj {

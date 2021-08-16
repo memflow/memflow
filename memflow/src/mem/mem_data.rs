@@ -1,7 +1,7 @@
 //! Generic address and buffer association structure.
 
 use crate::iter::SplitAtIndex;
-use crate::types::{Address, PhysicalAddress};
+use crate::types::{umem, Address, PhysicalAddress};
 
 use cglue::slice::*;
 
@@ -26,7 +26,7 @@ impl<A, T> From<(A, T)> for MemData<A, T> {
 }
 
 impl<T: SplitAtIndex> SplitAtIndex for MemData<Address, T> {
-    fn split_at(self, idx: usize) -> (Option<Self>, Option<Self>) {
+    fn split_at(self, idx: umem) -> (Option<Self>, Option<Self>) {
         let (left, right) = self.1.split_at(idx);
 
         if let Some(left) = left {
@@ -40,7 +40,7 @@ impl<T: SplitAtIndex> SplitAtIndex for MemData<Address, T> {
         }
     }
 
-    unsafe fn split_at_mut(&mut self, idx: usize) -> (Option<Self>, Option<Self>) {
+    unsafe fn split_at_mut(&mut self, idx: umem) -> (Option<Self>, Option<Self>) {
         let (left, right) = self.1.split_at_mut(idx);
 
         if let Some(left) = left {
@@ -54,7 +54,7 @@ impl<T: SplitAtIndex> SplitAtIndex for MemData<Address, T> {
         }
     }
 
-    fn length(&self) -> usize {
+    fn length(&self) -> umem {
         self.1.length()
     }
 

@@ -5,7 +5,7 @@ pub(crate) mod translate_data;
 use super::VtopFailureCallback;
 use crate::iter::SplitAtIndex;
 use crate::mem::MemData;
-use crate::types::Address;
+use crate::types::{umem, Address};
 pub(crate) use def::ArchMmuDef;
 pub(crate) use fixed_slice_vec::FixedSliceVec as MVec;
 pub(crate) use spec::ArchMmuSpec;
@@ -51,7 +51,7 @@ pub trait MmuTranslationBase: Clone + Copy + core::fmt::Debug {
 
         for (_, data) in (0..working_addr_count).zip(addrs) {
             self.virt_addr_filter(spec, data, (&mut init_chunk, next_work_addrs), out_fail);
-            if init_chunk.next_max_addr_count(spec) >= working_addr_count {
+            if init_chunk.next_max_addr_count(spec) >= working_addr_count as umem {
                 break;
             }
         }

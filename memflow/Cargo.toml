@@ -26,7 +26,6 @@ smallvec = { version = "1.4", default-features = false }
 x86_64 = { version = "0.14.2", default-features = false }
 rand = { version = "0.8", optional = true }
 rand_xorshift = { version = "0.3", optional = true }
-num-traits = "0.2"
 bumpalo = { version = "3.6", features = ["collections"] }
 no-std-compat = { version = "0.4", features = ["alloc"] }
 itertools = { version = "0.10", default-features = false }
@@ -53,7 +52,7 @@ rayon = "1.3.1"
 colored = "2.0"
 
 [features]
-default = ["std", "serde_derive", "plugins", "filemap", "memmapfiles"]
+default = ["std", "serde_derive", "plugins", "filemap", "memmapfiles", "64_bit_mem"]
 #trace_mmu = [] # enables debug traces in the mmu (very verbose)
 dummy_mem = ["rand", "rand_xorshift"]
 std = ["coarsetime", "no-std-compat/std", "cglue/std"]
@@ -61,6 +60,11 @@ serde_derive = ["serde", "cglue/serde"]
 memmapfiles = ["toml", "serde_derive"]
 plugins = ["libloading", "dirs", "goblin"]
 filemap = ["memmap"]
+64_bit_mem = []
+# use 128 bit addressing.
+# If 64_bit_mem is also enabled, 64-bit mode takes precedence.
+# This is because 128-bit mode is not necessary to date, and u128 is not FFI-safe.
+128_bit_mem = []
 
 [[example]]
 name = "read_bench"

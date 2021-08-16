@@ -10,7 +10,7 @@ use crate::os::process::*;
 use crate::os::root::*;
 use crate::os::*;
 use crate::plugins::*;
-use crate::types::{size, Address};
+use crate::types::{clamp_to_usize, imem, mem, size, umem, Address};
 
 use crate::cglue::*;
 use log::Level;
@@ -18,6 +18,7 @@ use rand::seq::SliceRandom;
 use rand::{thread_rng, Rng, SeedableRng};
 use rand_xorshift::XorShiftRng;
 use std::collections::VecDeque;
+use std::convert::TryInto;
 use std::ffi::c_void;
 
 use crate::architecture::x86::{x64, X86VirtualTranslate};
@@ -25,13 +26,15 @@ use crate::architecture::x86::{x64, X86VirtualTranslate};
 use x86_64::{
     structures::paging,
     structures::paging::{
-        mapper::{Mapper, OffsetPageTable},
+        mapper::Mapper,
         page::{PageSize, Size1GiB, Size2MiB, Size4KiB},
         page_table::{PageTable, PageTableFlags},
         FrameAllocator, PhysFrame, Translate,
     },
     PhysAddr, VirtAddr,
 };
+
+use super::OffsetPageTable;
 
 #[derive(Clone, Copy, Debug)]
 enum X64PageSize {
@@ -76,7 +79,7 @@ impl PageInfo {
         let mut ret = vec![];
         for o in 0..(self.size.to_size() / new_size.to_size()) {
             ret.push(PageInfo {
-                addr: self.addr + new_size.to_size() * o,
+                addr: self.addr + new_size.to_size() as umem * o as umem,
                 size: new_size,
             });
         }
@@ -126,7 +129,7 @@ where
 {
     fn allocate_frame(&mut self) -> Option<PhysFrame<S>> {
         let new_page = self.alloc_pt_page();
-        match PhysFrame::from_start_address(PhysAddr::new(new_page.addr.as_u64())) {
+        match PhysFrame::from_start_address(PhysAddr::new(new_page.addr.to_umem() as u64)) {
             Ok(s) => Some(s),
             _ => None,
         }
@@ -166,22 +169,22 @@ impl DummyOs {
     pub fn with_rng(mem: DummyMemory, mut rng: XorShiftRng) -> Self {
         let mut page_prelist = vec![];
 
-        let mut i = Address::from(0);
-        let size_addr = mem.metadata().max_address + 1;
+        let mut i = Address::null();
+        let size_addr = mem.metadata().max_address + 1_usize;
 
         while i < size_addr {
             if let Some(page_info) = {
-                if size_addr - i >= X64PageSize::P1g.to_size() {
+                if size_addr - i >= X64PageSize::P1g.to_size() as imem {
                     Some(PageInfo {
                         addr: i,
                         size: X64PageSize::P1g,
                     })
-                } else if size_addr - i >= X64PageSize::P2m.to_size() {
+                } else if size_addr - i >= X64PageSize::P2m.to_size() as imem {
                     Some(PageInfo {
                         addr: i,
                         size: X64PageSize::P2m,
                     })
-                } else if size_addr - i >= X64PageSize::P4k.to_size() {
+                } else if size_addr - i >= X64PageSize::P4k.to_size() as imem {
                     Some(PageInfo {
                         addr: i,
                         size: X64PageSize::P4k,
@@ -244,7 +247,7 @@ impl DummyOs {
                 .mem
                 .buf
                 .as_ptr()
-                .add(dtb_base.as_usize())
+                .add(dtb_base.to_umem().try_into().unwrap())
                 .cast::<PageTable>() as *mut _)
         };
 
@@ -252,8 +255,8 @@ impl DummyOs {
             unsafe { OffsetPageTable::new(&mut pml4, VirtAddr::from_ptr(self.mem.buf.as_ptr())) };
 
         pt_mapper
-            .translate_addr(VirtAddr::new(virt_addr.as_u64()))
-            .map(|addr| Address::from(addr.as_u64()))
+            .translate_addr(VirtAddr::new(virt_addr.to_umem() as u64))
+            .map(|addr| addr.as_u64().into())
     }
 
     fn internal_alloc_process(&mut self, map_size: usize, test_buf: &[u8]) -> DummyProcessInfo {
@@ -303,8 +306,8 @@ impl DummyOs {
         let virt_base = (Address::null()
             + self
                 .rng
-                .gen_range(0x0001_0000_0000_usize..((!0_usize) << 20) >> 20))
-        .as_page_aligned(size::gb(2));
+                .gen_range(0x0001_0000_0000_u64..((!0_u64) << 20) >> 20))
+        .as_mem_aligned(mem::gb(2));
 
         (
             self.alloc_dtb_const_base(virt_base, map_size, test_buf),
@@ -327,7 +330,7 @@ impl DummyOs {
                 .mem
                 .buf
                 .as_ptr()
-                .add(dtb.addr.as_usize())
+                .add(clamp_to_usize(dtb.addr.to_umem()))
                 .cast::<PageTable>() as *mut _)
         };
         *pml4 = PageTable::new();
@@ -339,11 +342,11 @@ impl DummyOs {
             let page_info = self.next_page_for_address(cur_len.into());
             let flags = PageTableFlags::PRESENT | PageTableFlags::WRITABLE;
 
-            if test_buf.len() >= (cur_len + page_info.size.to_size()) {
+            if test_buf.len() >= (cur_len + page_info.size.to_size() as usize) {
                 self.mem
                     .phys_write(
                         page_info.addr.into(),
-                        &test_buf[cur_len..(cur_len + page_info.size.to_size())],
+                        &test_buf[cur_len..(cur_len + page_info.size.to_size() as usize)],
                     )
                     .unwrap();
             } else if test_buf.len() > cur_len {
@@ -357,10 +360,10 @@ impl DummyOs {
                     X64PageSize::P1g => pt_mapper
                         .map_to(
                             paging::page::Page::<Size1GiB>::from_start_address_unchecked(
-                                VirtAddr::new((virt_base + cur_len).as_u64()),
+                                VirtAddr::new((virt_base + cur_len).to_umem() as u64),
                             ),
                             PhysFrame::from_start_address_unchecked(PhysAddr::new(
-                                page_info.addr.as_u64(),
+                                page_info.addr.to_umem() as u64,
                             )),
                             flags,
                             self,
@@ -369,10 +372,10 @@ impl DummyOs {
                     X64PageSize::P2m => pt_mapper
                         .map_to(
                             paging::page::Page::<Size2MiB>::from_start_address_unchecked(
-                                VirtAddr::new((virt_base + cur_len).as_u64()),
+                                VirtAddr::new((virt_base + cur_len).to_umem() as u64),
                             ),
                             PhysFrame::from_start_address_unchecked(PhysAddr::new(
-                                page_info.addr.as_u64(),
+                                page_info.addr.to_umem() as u64,
                             )),
                             flags,
                             self,
@@ -381,10 +384,10 @@ impl DummyOs {
                     X64PageSize::P4k => pt_mapper
                         .map_to(
                             paging::page::Page::<Size4KiB>::from_start_address_unchecked(
-                                VirtAddr::new((virt_base + cur_len).as_u64()),
+                                VirtAddr::new((virt_base + cur_len).to_umem() as u64),
                             ),
                             PhysFrame::from_start_address_unchecked(PhysAddr::new(
-                                page_info.addr.as_u64(),
+                                page_info.addr.to_umem() as u64,
                             )),
                             flags,
                             self,
@@ -392,7 +395,7 @@ impl DummyOs {
                         .is_ok(),
                 };
             }
-            cur_len += page_info.size.to_size();
+            cur_len += page_info.size.to_size() as usize;
         }
 
         dtb.addr

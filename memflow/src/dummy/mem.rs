@@ -1,3 +1,4 @@
+use crate::cglue::*;
 use crate::connector::MappedPhysicalMemory;
 use crate::derive::connector;
 use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
@@ -7,9 +8,8 @@ use crate::mem::{
     PhysicalWriteData,
 };
 use crate::plugins::*;
-use crate::types::size;
+use crate::types::{size, umem, Address};
 
-use crate::cglue::*;
 use std::sync::Arc;
 
 cglue_impl_group!(DummyMemory, ConnectorInstance, {});
@@ -24,7 +24,11 @@ impl DummyMemory {
         let buf = Arc::new(vec![0_u8; size].into_boxed_slice());
 
         let mut map = MemoryMap::new();
-        map.push_range(0.into(), buf.len().into(), (buf.as_ptr() as u64).into());
+        map.push_range(
+            Address::null(),
+            buf.len().into(),
+            (buf.as_ptr() as umem).into(),
+        );
 
         let buf_mem = unsafe { MappedPhysicalMemory::from_addrmap_mut(map) };
 
@@ -36,9 +40,9 @@ impl Clone for DummyMemory {
     fn clone(&self) -> Self {
         let mut map = MemoryMap::new();
         map.push_range(
-            0.into(),
+            Address::null(),
             self.buf.len().into(),
-            (self.buf.as_ptr() as u64).into(),
+            (self.buf.as_ptr() as usize).into(),
         );
 
         let mem = unsafe { MappedPhysicalMemory::from_addrmap_mut(map) };

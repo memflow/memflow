@@ -5,7 +5,7 @@ use memflow::{
     },
     iter::SplitAtIndex,
     mem::{MemData, MemoryView, PhysicalMemory, VirtualDma, VirtualTranslate2},
-    types::Address,
+    types::{umem, Address},
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -54,8 +54,8 @@ impl VirtualTranslate3 for Win32VirtualTranslate {
         }
     }
 
-    fn translation_table_id(&self, _address: Address) -> usize {
-        self.dtb.as_u64().overflowing_shr(12).0 as usize
+    fn translation_table_id(&self, _address: Address) -> umem {
+        self.dtb.to_umem().overflowing_shr(12).0
     }
 
     fn arch(&self) -> ArchitectureObj {

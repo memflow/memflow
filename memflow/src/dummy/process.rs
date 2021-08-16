@@ -6,7 +6,7 @@ use crate::architecture::ArchitectureIdent;
 use crate::mem::{mem_data::*, memory_view::*};
 use crate::os::process::*;
 use crate::os::*;
-use crate::types::Address;
+use crate::types::{umem, Address};
 
 use crate::cglue::*;
 use rand::{thread_rng, Rng};
@@ -26,11 +26,13 @@ impl DummyProcessInfo {
 
         for i in 0..count {
             self.modules.push(ModuleInfo {
-                address: Address::from(i * 1024),
+                address: Address::from((i * 1024) as umem),
                 parent_process: Address::INVALID,
                 base,
-                size: (thread_rng()
-                    .gen_range(min_size..(self.map_size - (base - self.info.address)))),
+                size: (thread_rng().gen_range(
+                    (min_size as umem)
+                        ..(self.map_size as umem - (base - self.info.address) as umem),
+                )),
                 name: "dummy.so".into(),
                 path: "/".into(),
                 arch: x64::ARCH.ident(),

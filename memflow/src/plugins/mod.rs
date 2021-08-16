@@ -608,6 +608,16 @@ impl Inventory {
     /// use memflow::plugins::{Inventory, Args};
     ///
     /// # let mut inventory = Inventory::scan();
+    /// # let paths = std::fs::read_dir("../target/").unwrap();
+    /// # for path in paths {
+    /// #     match path.unwrap().file_name().to_str() {
+    /// #         Some("release") | Some("debug") | None => {},
+    /// #         Some(x) => {
+    /// #             inventory.add_dir_filtered(format!("../target/{}/release/deps", x).into(), "ffi").ok();
+    /// #             inventory.add_dir_filtered(format!("../target/{}/debug/deps", x).into(), "ffi").ok();
+    /// #         }
+    /// #     }
+    /// # }
     /// # inventory.add_dir_filtered("../target/release/deps".into(), "ffi").ok();
     /// # inventory.add_dir_filtered("../target/debug/deps".into(), "ffi").ok();
     /// let args = Args::parse("4m").unwrap();

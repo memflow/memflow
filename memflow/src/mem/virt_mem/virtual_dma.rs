@@ -11,7 +11,7 @@ use crate::mem::{
     },
     MemoryView, PhysicalMemory, PhysicalMemoryMetadata,
 };
-use crate::types::{Address, PhysicalAddress};
+use crate::types::{umem, Address, PhysicalAddress};
 
 use bumpalo::{collections::Vec as BumpVec, Bump};
 use cglue::{callback::FromExtend, iter::CIterator};
@@ -267,7 +267,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate2, D: VirtualTranslate3> VirtualTrans
             addrs
                 .iter()
                 .map(|v| MemData(v.address, (v.address, v.size))),
-            &mut (&mut |MemData(a, b): MemData<PhysicalAddress, (Address, usize)>| {
+            &mut (&mut |MemData(a, b): MemData<PhysicalAddress, (Address, umem)>| {
                 out.call(VirtualTranslation {
                     in_virtual: b.0,
                     size: b.1,

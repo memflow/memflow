@@ -2,7 +2,7 @@ use crate::architecture::x86::x64;
 use crate::cglue::ForwardMut;
 use crate::dummy::{DummyMemory, DummyOs};
 use crate::mem::{DirectTranslate, MemoryView, VirtualDma, VirtualTranslate, VirtualTranslate2};
-use crate::types::size;
+use crate::types::{mem, size};
 
 #[test]
 fn test_vtop() {
@@ -24,7 +24,7 @@ fn test_vtop() {
         assert_eq!(vtop, dummy_vtop);
     }
 
-    for i in 0..128 {
+    for i in 0_u64..128 {
         let virt_base = virt_base + virt_size + i;
         let vtop = match vat.virt_to_phys(dummy_os.as_mut(), &translator, virt_base) {
             Err(_) => None,
@@ -73,7 +73,7 @@ fn test_virt_page_map() {
 
     assert!(page_map.len() == 1);
     assert_eq!(page_map[0].address, virt_base);
-    assert_eq!(page_map[0].size, size::mb(2));
+    assert_eq!(page_map[0].size, mem::mb(2));
 }
 
 #[test]

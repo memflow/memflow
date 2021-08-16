@@ -2,12 +2,14 @@ use criterion::*;
 
 use memflow::prelude::v1::*;
 
+use std::convert::TryInto;
+
 //use memflow::dummy::DummyMemory as Memory;
 
 struct NullMem {}
 
 impl NullMem {
-    pub fn new(_: usize) -> Self {
+    pub fn new(_: umem) -> Self {
         Self {}
     }
 }
@@ -56,13 +58,13 @@ fn read_test_nobatcher<T: MemoryView>(
     chunk_size: usize,
     mem: &mut T,
     mut rng: CurRng,
-    size: usize,
+    size: umem,
     tbuf: &mut [ReadData],
 ) {
     let base_addr = Address::from(rng.gen_range(0..size));
 
     for MemData(addr, _) in tbuf.iter_mut().take(chunk_size) {
-        *addr = (base_addr + rng.gen_range(0..0x2000)).into();
+        *addr = base_addr + rng.gen_range(0usize..0x2000);
     }
 
     let mut iter = tbuf[..chunk_size]
@@ -72,14 +74,14 @@ fn read_test_nobatcher<T: MemoryView>(
     let _ = black_box(mem.read_raw_iter((&mut iter).into(), &mut (&mut |_| true).into()));
 }
 
-fn read_test_batcher<T: MemoryView>(chunk_size: usize, mem: &mut T, mut rng: CurRng, size: usize) {
+fn read_test_batcher<T: MemoryView>(chunk_size: usize, mem: &mut T, mut rng: CurRng, size: umem) {
     let base_addr = Address::from(rng.gen_range(0..size));
 
     let mut batcher = mem.batcher();
     batcher.read_prealloc(chunk_size);
 
     for i in unsafe { TSLICE.iter_mut().take(chunk_size) } {
-        batcher.read_into((base_addr + rng.gen_range(0..0x2000)).into(), i);
+        batcher.read_into(base_addr + rng.gen_range(0usize..0x2000), i);
     }
 
     let _ = black_box(batcher.commit_rw());
@@ -93,7 +95,7 @@ fn read_test_with_ctx<T: MemoryView>(
 ) {
     let rng = CurRng::from_rng(thread_rng()).unwrap();
 
-    let mem_size = size::mb(64);
+    let mem_size = mem::mb(64);
 
     let mut tbuf = vec![];
 
@@ -131,7 +133,7 @@ fn chunk_read_params<T: PhysicalMemory>(
             |b, &chunk_size| {
                 read_test_with_ctx(
                     b,
-                    black_box(chunk_size as usize),
+                    black_box(chunk_size.try_into().unwrap()),
                     use_batcher,
                     &mut initialize_ctx().into_phys_view(),
                 )
@@ -174,7 +176,7 @@ criterion_group! {
 }
 
 fn dummy_read_group(c: &mut Criterion) {
-    chunk_read(c, "dummy", &|| Memory::new(size::mb(64)));
+    chunk_read(c, "dummy", &|| Memory::new(mem::mb(64)));
 }
 
 criterion_main!(dummy_read);

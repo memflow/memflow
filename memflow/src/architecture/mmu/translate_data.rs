@@ -1,6 +1,8 @@
-use super::{ArchMmuSpec, MmuTranslationBase};
 use crate::iter::SplitAtIndex;
-use crate::types::Address;
+use crate::types::{umem, Address};
+
+use super::{ArchMmuSpec, MmuTranslationBase};
+
 use std::cmp::Ordering;
 
 use super::MVec;
@@ -28,13 +30,13 @@ pub struct TranslateData<T> {
 
 impl<T: SplitAtIndex> TranslateData<T> {
     pub fn split_at_address(self, addr: Address) -> (Option<Self>, Option<Self>) {
-        let sub = self.addr.as_u64();
-        self.split_at(addr.as_u64().saturating_sub(sub) as usize)
+        let sub = self.addr.to_umem();
+        self.split_at(addr.to_umem().saturating_sub(sub))
     }
 
     pub fn split_at_address_rev(self, addr: Address) -> (Option<Self>, Option<Self>) {
         let base = self.addr + self.length();
-        self.split_at_rev(base.as_u64().saturating_sub(addr.as_u64()) as usize)
+        self.split_at_rev(base.to_umem().saturating_sub(addr.to_umem()))
     }
 }
 
@@ -59,7 +61,7 @@ impl<T> PartialEq for TranslateData<T> {
 }
 
 impl<T: SplitAtIndex> SplitAtIndex for TranslateData<T> {
-    fn split_at(self, idx: usize) -> (Option<Self>, Option<Self>)
+    fn split_at(self, idx: umem) -> (Option<Self>, Option<Self>)
     where
         Self: Sized,
     {
@@ -75,7 +77,7 @@ impl<T: SplitAtIndex> SplitAtIndex for TranslateData<T> {
         )
     }
 
-    unsafe fn split_at_mut(&mut self, idx: usize) -> (Option<Self>, Option<Self>)
+    unsafe fn split_at_mut(&mut self, idx: umem) -> (Option<Self>, Option<Self>)
     where
         Self: Sized,
     {
@@ -91,7 +93,7 @@ impl<T: SplitAtIndex> SplitAtIndex for TranslateData<T> {
         )
     }
 
-    fn length(&self) -> usize {
+    fn length(&self) -> umem {
         self.buf.length()
     }
 
@@ -153,16 +155,13 @@ impl<T: MmuTranslationBase> TranslationChunk<T> {
         }
     }
 
-    pub fn next_max_addr_count(&self, spec: &ArchMmuSpec) -> usize {
+    pub fn next_max_addr_count(&self, spec: &ArchMmuSpec) -> umem {
         let step_size = spec.page_size_step_unchecked(self.step + 1);
 
-        let add = if (self.max_addr - self.min_addr) % step_size != 0 {
-            1
-        } else {
-            0
-        };
+        let addr_diff = self.max_addr.wrapping_sub(self.min_addr).to_umem();
+        let add = if addr_diff % step_size != 0 { 1 } else { 0 };
 
-        self.addr_count * ((self.max_addr - self.min_addr) / step_size + add)
+        self.addr_count as umem * (addr_diff / step_size + add)
     }
 
     /// Splits the chunk into multiple smaller ones for the next VTOP step.
@@ -189,14 +188,17 @@ impl<T: MmuTranslationBase> TranslationChunk<T> {
         //TODO: mask out the addresses to limit them within address space
         //this is in particular for the first step where addresses are split between positive and
         //negative sides
-        let upper: u64 = (self.max_addr - 1).as_page_aligned(step_size).as_u64();
-        let lower: u64 = self.min_addr.as_page_aligned(step_size).as_u64();
+        let upper = (self.max_addr - 1usize).as_mem_aligned(step_size).to_umem();
+        let lower = self.min_addr.as_mem_aligned(step_size).to_umem();
 
-        let mut cur_max_addr = !0u64;
+        let mut cur_max_addr: umem = !0;
 
         // Walk in reverse so that lowest addresses always end up
         // first in the stack. This preserves translation order
-        for (cnt, addr) in (lower..=upper).rev().step_by(step_size).enumerate() {
+        for (cnt, addr) in (0..=((upper - lower) / step_size))
+            .map(|i| upper - i * step_size)
+            .enumerate()
+        {
             if addr > cur_max_addr {
                 continue;
             }
@@ -205,11 +207,12 @@ impl<T: MmuTranslationBase> TranslationChunk<T> {
 
             // Also, we need to push the upper elements to the waiting stack preemptively...
             // This might result in slight performance loss, but keeps the order
-            let remaining = (addr - lower) as usize / step_size + 1;
+            let remaining = (addr - lower) / step_size + 1;
 
-            let (chunks_out, addrs_out) = if out_target.0.capacity()
-                >= out_target.0.len() + remaining
-                && out_target.1.capacity() >= out_target.1.len() + self.addr_count * remaining
+            let (chunks_out, addrs_out) = if out_target.0.capacity() as umem
+                >= out_target.0.len() as umem + remaining
+                && out_target.1.capacity() as umem
+                    >= out_target.1.len() as umem + self.addr_count as umem * remaining
             {
                 &mut out_target
             } else {
@@ -217,8 +220,9 @@ impl<T: MmuTranslationBase> TranslationChunk<T> {
             };
 
             let addr = Address::from(addr);
-            let index = (addr - addr.as_page_aligned(align_as)) / step_size;
-            let (pt_addr, _) = self.pt_addr.get_pt_by_index(index);
+            let addr_aligned = addr.as_mem_aligned(align_as);
+            let index = (addr - addr_aligned) as umem / step_size;
+            let (pt_addr, _) = self.pt_addr.get_pt_by_index(index as usize);
             let pt_addr = spec.vtop_step(pt_addr, addr, self.step);
 
             let mut new_chunk = TranslationChunk::new(pt_addr);
@@ -253,7 +257,7 @@ impl<T: MmuTranslationBase> TranslationChunk<T> {
                 // There was some leftover data
                 if let Some(data) = left {
                     cur_max_addr =
-                        std::cmp::max((data.addr + data.length()).as_u64(), cur_max_addr);
+                        std::cmp::max((data.addr + data.length()).to_umem(), cur_max_addr);
                     self.push_data(data, tmp_addr_stack);
                 }
             }

@@ -44,10 +44,11 @@ fn rwtest(
             let mut bufs = vec![(vec![0_u8; *i], 0); *o];
 
             let base_addr =
-                rng.gen_range(module.base.as_u64()..(module.base.as_u64() + module.size as u64));
+                rng.gen_range(module.base.to_umem()..(module.base.to_umem() + module.size));
 
             // This code will increase the read size for higher number of chunks
             // Since optimized vtop should scale very well with chunk sizes.
+            assert!((i.trailing_zeros() as umem) < usize::MAX as umem);
             let chunk_multiplier = *o * (i.trailing_zeros() as usize + 1);
 
             while done_size < read_size * chunk_multiplier {
@@ -114,7 +115,7 @@ fn read_bench(mut kernel: OsInstanceArcBox) -> Result<()> {
             let mem_map = {
                 let prc = as_mut!(prc impl VirtualTranslate)
                     .ok_or(ErrorKind::UnsupportedOptionalFeature)?;
-                prc.virt_page_map_vec(size::gb(1))
+                prc.virt_page_map_vec(mem::gb(1))
             };
 
             println!("Memory map (with up to 1GB gaps):");

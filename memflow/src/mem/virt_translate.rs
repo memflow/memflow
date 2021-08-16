@@ -15,7 +15,7 @@ mod tests;
 use crate::error::{Result, *};
 
 use crate::mem::{MemData, PhysicalMemory};
-use crate::types::{Address, Page, PhysicalAddress};
+use crate::types::{umem, Address, Page, PhysicalAddress};
 
 use crate::architecture::{VirtualTranslate3, VtopFailureCallback, VtopOutputCallback};
 
@@ -35,10 +35,11 @@ pub trait VirtualTranslate: Send {
         end: Address,
         out: VirtualTranslationCallback,
     ) {
+        assert!(end >= start);
         self.virt_to_phys_list(
             &[MemoryRange {
                 address: start,
-                size: end - start,
+                size: (end - start) as umem,
             }],
             out,
             (&mut |_| true).into(),
@@ -84,7 +85,7 @@ pub trait VirtualTranslate: Send {
 
     fn virt_page_map_range(
         &mut self,
-        gap_size: usize,
+        gap_size: umem,
         start: Address,
         end: Address,
         out: MemoryRangeCallback,
@@ -106,7 +107,10 @@ pub trait VirtualTranslate: Send {
         );
 
         set.gaps(&(start..end))
-            .filter(|r| r.end - r.start <= gap_size)
+            .filter(|r| {
+                assert!(r.end >= r.start);
+                (r.end - r.start) as umem <= gap_size
+            })
             .collect::<Vec<_>>()
             .into_iter()
             .for_each(|r| set.insert(r));
@@ -114,8 +118,12 @@ pub trait VirtualTranslate: Send {
         set.iter()
             .map(|r| {
                 let address = r.start;
+                assert!(r.end >= address);
                 let size = r.end - address;
-                MemoryRange { address, size }
+                MemoryRange {
+                    address,
+                    size: size as umem,
+                }
             })
             .feed_into(out);
     }
@@ -148,7 +156,7 @@ pub trait VirtualTranslate: Send {
     #[skip_func]
     fn virt_page_map_range_vec(
         &mut self,
-        gap_size: usize,
+        gap_size: umem,
         start: Address,
         end: Address,
     ) -> Vec<MemoryRange> {
@@ -218,12 +226,12 @@ pub trait VirtualTranslate: Send {
         virt
     }
 
-    fn virt_page_map(&mut self, gap_size: usize, out: MemoryRangeCallback) {
+    fn virt_page_map(&mut self, gap_size: umem, out: MemoryRangeCallback) {
         self.virt_page_map_range(gap_size, Address::null(), Address::invalid(), out)
     }
 
     #[skip_func]
-    fn virt_page_map_vec(&mut self, gap_size: usize) -> Vec<MemoryRange> {
+    fn virt_page_map_vec(&mut self, gap_size: umem) -> Vec<MemoryRange> {
         let mut out = vec![];
         self.virt_page_map(gap_size, (&mut out).into());
         out
@@ -239,7 +247,7 @@ pub type VirtualTranslationFailCallback<'a> = OpaqueCallback<'a, VirtualTranslat
 #[derive(Clone, Debug, Eq, Copy)]
 pub struct VirtualTranslation {
     pub in_virtual: Address,
-    pub size: usize,
+    pub size: umem,
     pub out_physical: PhysicalAddress,
 }
 
@@ -266,14 +274,14 @@ impl PartialEq for VirtualTranslation {
 #[derive(Clone, Debug, PartialEq, Copy)]
 pub struct MemoryRange {
     pub address: Address,
-    pub size: usize,
+    pub size: umem,
 }
 
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct VirtualTranslationFail {
     pub from: Address,
-    pub size: usize,
+    pub size: umem,
 }
 
 pub trait VirtualTranslate2
@@ -292,14 +300,16 @@ where
     ///
     /// ```
     /// # use memflow::error::Result;
-    /// # use memflow::types::{PhysicalAddress, Address};
+    /// # use memflow::types::{PhysicalAddress, Address, umem};
     /// # use memflow::dummy::{DummyMemory, DummyOs};
     /// use memflow::mem::{VirtualTranslate2, DirectTranslate, MemData};
     /// use memflow::types::size;
     /// use memflow::architecture::x86::x64;
     /// use memflow::cglue::FromExtend;
     ///
-    /// # const VIRT_MEM_SIZE: usize = size::mb(8);
+    /// use std::convert::TryInto;
+    ///
+    /// # const VIRT_MEM_SIZE: usize = size::mb(8) as usize;
     /// # const CHUNK_SIZE: usize = 2;
     /// #
     /// # let mem = DummyMemory::new(size::mb(16));
@@ -360,7 +370,7 @@ where
     /// # Examples
     /// ```
     /// # use memflow::error::Result;
-    /// # use memflow::types::{PhysicalAddress, Address};
+    /// # use memflow::types::{PhysicalAddress, Address, umem};
     /// # use memflow::dummy::{DummyMemory, DummyOs};
     /// # use memflow::types::size;
     /// # use memflow::architecture::VirtualTranslate3;
@@ -420,7 +430,7 @@ where
         self.virt_to_phys_iter(
             phys_mem,
             translator,
-            Some(MemData(vaddr, 1)).into_iter(),
+            Some(MemData::<_, umem>(vaddr, 1)).into_iter(),
             &mut success.into(),
             &mut fail.into(),
         );

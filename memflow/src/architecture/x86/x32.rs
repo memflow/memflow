@@ -32,7 +32,7 @@ pub fn new_translator(dtb: Address) -> X86VirtualTranslate {
 #[cfg(test)]
 mod tests {
     use crate::architecture::mmu::ArchMmuSpec;
-    use crate::types::{size, Address};
+    use crate::types::{mem, size, Address};
 
     fn get_mmu_spec() -> &'static ArchMmuSpec {
         &super::ARCH_SPEC.mmu
@@ -44,15 +44,15 @@ mod tests {
         let mask_addr = Address::invalid();
         assert_eq!(
             mmu.pte_addr_mask(mask_addr, 0),
-            Address::bit_mask(12..31).as_u64()
+            Address::bit_mask(12..31).to_umem()
         );
         assert_eq!(
             mmu.pte_addr_mask(mask_addr, 1),
-            Address::bit_mask(12..31).as_u64()
+            Address::bit_mask(12..31).to_umem()
         );
         assert_eq!(
             mmu.pte_addr_mask(mask_addr, 2),
-            Address::bit_mask(12..31).as_u64()
+            Address::bit_mask(12..31).to_umem()
         );
     }
 
@@ -66,7 +66,7 @@ mod tests {
     #[test]
     fn x86_page_size_level() {
         let mmu = get_mmu_spec();
-        assert_eq!(mmu.page_size_level(1), size::kb(4));
-        assert_eq!(mmu.page_size_level(2), size::mb(4));
+        assert_eq!(mmu.page_size_level(1), mem::kb(4));
+        assert_eq!(mmu.page_size_level(2), mem::mb(4));
     }
 }

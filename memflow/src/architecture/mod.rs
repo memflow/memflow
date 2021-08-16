@@ -23,7 +23,7 @@ pub(crate) use mmu::ArchMmuDef;
 use crate::error::{Error, Result};
 use crate::iter::SplitAtIndex;
 use crate::mem::{MemData, PhysicalMemory};
-use crate::types::size;
+use crate::types::{size, umem};
 
 use crate::types::{Address, PhysicalAddress};
 
@@ -60,7 +60,7 @@ pub trait VirtualTranslate3: Clone + Copy + Send {
     /// # use memflow::dummy::{DummyMemory, DummyOs};
     /// use memflow::architecture::VirtualTranslate3;
     /// use memflow::architecture::x86::x64;
-    /// use memflow::types::size;
+    /// use memflow::types::{size, umem};
     ///
     /// # const VIRT_MEM_SIZE: usize = size::mb(8);
     /// # const CHUNK_SIZE: usize = 2;
@@ -110,7 +110,7 @@ pub trait VirtualTranslate3: Clone + Copy + Send {
         };
         self.virt_to_phys_iter(
             mem,
-            Some(MemData(addr, 1)).into_iter(),
+            Some(MemData::<_, umem>(addr, 1)).into_iter(),
             &mut success.into(),
             &mut fail.into(),
             &mut buf,
@@ -131,7 +131,7 @@ pub trait VirtualTranslate3: Clone + Copy + Send {
         tmp_buf: &mut [std::mem::MaybeUninit<u8>],
     );
 
-    fn translation_table_id(&self, address: Address) -> usize;
+    fn translation_table_id(&self, address: Address) -> umem;
 
     fn arch(&self) -> ArchitectureObj;
 }
@@ -186,6 +186,10 @@ pub trait Architecture: Send + Sync + 'static {
     ///
     /// This function will return the pointer width as a `usize` value.
     /// See `Architecture::bits()` for more information.
+    ///
+    /// # Remarks
+    ///
+    /// The pointer width will never overflow a `usize` value.
     ///
     /// # Examples
     ///
@@ -246,7 +250,7 @@ impl std::cmp::PartialEq<ArchitectureObj> for ArchitectureObj {
 pub enum ArchitectureIdent {
     /// Unknown architecture. Could be third-party implemented. memflow knows how to work on them,
     /// but is unable to instantiate them.
-    Unknown,
+    Unknown(usize),
     /// X86 with specified bitness and address extensions
     ///
     /// First argument - `bitness` controls whether it's 32, or 64 bit variant.
@@ -268,7 +272,7 @@ impl std::fmt::Display for ArchitectureIdent {
             ArchitectureIdent::X86(64, true) => f.pad("x86_64 LA57"),
             ArchitectureIdent::X86(_, _) => f.pad("x86"),
             ArchitectureIdent::AArch64(_) => f.pad("AArch64"),
-            ArchitectureIdent::Unknown => f.pad("Unknown"),
+            ArchitectureIdent::Unknown(id) => f.debug_tuple("Unknown").field(&id).finish(),
         }
     }
 }

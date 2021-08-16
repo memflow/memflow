@@ -13,14 +13,14 @@ use log::{info, warn};
 use memflow::architecture::ArchitectureObj;
 use memflow::error::{Error, ErrorKind, ErrorOrigin, PartialResultExt, Result};
 use memflow::mem::{MemoryView, VirtualTranslate};
-use memflow::types::Address;
+use memflow::types::{umem, Address};
 
 use pelite::{self, pe64::debug::CodeView, pe64::exports::Export, PeView};
 
 pub fn find<T: MemoryView + VirtualTranslate>(
     virt_mem: &mut T,
     start_block: &StartBlock,
-) -> Result<(Address, usize)> {
+) -> Result<(Address, umem)> {
     let arch_obj = ArchitectureObj::from(start_block.arch);
     if arch_obj.bits() == 64 {
         if !start_block.kernel_hint.is_null() {
@@ -90,13 +90,13 @@ pub fn find_guid<T: MemoryView>(mem: &mut T, kernel_base: Address) -> Result<Win
     Ok(Win32Guid::new(file_name, &guid))
 }
 
-fn get_export(pe: &PeView, name: &str) -> Result<usize> {
+fn get_export(pe: &PeView, name: &str) -> Result<umem> {
     info!("trying to find {} export", name);
     let export = match pe
         .get_export_by_name(name)
         .map_err(|err| Error(ErrorOrigin::OsLayer, ErrorKind::ExportNotFound).log_info(err))?
     {
-        Export::Symbol(s) => *s as usize,
+        Export::Symbol(s) => *s as umem,
         Export::Forward(_) => {
             return Err(Error(ErrorOrigin::OsLayer, ErrorKind::ExportNotFound)
                 .log_info("Export found but it was a forwarded export"))

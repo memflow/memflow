@@ -1,15 +1,17 @@
-use super::ArchMmuDef;
 use crate::architecture::Endianess;
-
-use super::super::{VtopFailureCallback, VtopOutputCallback};
-use super::translate_data::{TranslateData, TranslateDataVec, TranslateVec, TranslationChunk};
-use super::MmuTranslationBase;
 use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 use crate::iter::FlowIters;
 use crate::iter::SplitAtIndex;
 use crate::mem::{MemData, PhysicalMemory, PhysicalReadData};
-use crate::types::{Address, PageType, PhysicalAddress};
+use crate::types::{umem, Address, PageType, PhysicalAddress, UMEM_BITS};
+
+use super::super::{VtopFailureCallback, VtopOutputCallback};
+use super::translate_data::{TranslateData, TranslateDataVec, TranslateVec, TranslationChunk};
+use super::ArchMmuDef;
+use super::MmuTranslationBase;
+
 pub(crate) use fixed_slice_vec::FixedSliceVec as MVec;
+
 use std::convert::TryInto;
 
 #[cfg(feature = "trace_mmu")]
@@ -28,13 +30,13 @@ const MAX_LEVELS: usize = 8;
 
 pub struct ArchMmuSpec {
     pub def: ArchMmuDef,
-    pub pte_addr_masks: [u64; MAX_LEVELS],
+    pub pte_addr_masks: [umem; MAX_LEVELS],
     pub virt_addr_bit_ranges: [(u8, u8); MAX_LEVELS],
-    pub virt_addr_masks: [u64; MAX_LEVELS],
-    pub virt_addr_page_masks: [u64; MAX_LEVELS],
+    pub virt_addr_masks: [umem; MAX_LEVELS],
+    pub virt_addr_page_masks: [umem; MAX_LEVELS],
     pub valid_final_page_steps: [bool; MAX_LEVELS],
     pub pt_leaf_size: [usize; MAX_LEVELS],
-    pub page_size_step: [usize; MAX_LEVELS],
+    pub page_size_step: [umem; MAX_LEVELS],
     pub spare_allocs: usize,
 }
 
@@ -51,8 +53,8 @@ impl ArchMmuSpec {
         let mut virt_addr_masks = [0; MAX_LEVELS];
         let mut virt_addr_page_masks = [0; MAX_LEVELS];
         let mut valid_final_page_steps = [false; MAX_LEVELS];
-        let mut pt_leaf_size = [0; MAX_LEVELS];
-        let mut page_size_step = [0; MAX_LEVELS];
+        let mut pt_leaf_size: [usize; MAX_LEVELS] = [0; MAX_LEVELS];
+        let mut page_size_step: [umem; MAX_LEVELS] = [0; MAX_LEVELS];
         let spare_allocs = def.spare_allocs();
 
         let mut i = 0;
@@ -65,15 +67,15 @@ impl ArchMmuSpec {
                     def.pte_size.to_le().trailing_zeros() as u8
                 };
             let mask = Address::bit_mask_u8(min..max);
-            pte_addr_masks[i] = mask.as_u64();
+            pte_addr_masks[i] = mask.to_umem();
 
             pt_leaf_size[i] = def.pt_leaf_size(i);
             page_size_step[i] = def.page_size_step_unchecked(i);
 
             let (min, max) = def.virt_addr_bit_range(i);
             virt_addr_bit_ranges[i] = (min, max);
-            virt_addr_masks[i] = Address::bit_mask_u8(0..(max - min - 1)).as_u64();
-            virt_addr_page_masks[i] = Address::bit_mask_u8(0..(max - 1)).as_u64();
+            virt_addr_masks[i] = Address::bit_mask_u8(0..(max - min - 1)).to_umem();
+            virt_addr_page_masks[i] = Address::bit_mask_u8(0..(max - 1)).to_umem();
 
             i += 1;
         }
@@ -97,8 +99,8 @@ impl ArchMmuSpec {
         }
     }
 
-    pub fn pte_addr_mask(&self, pte_addr: Address, step: usize) -> u64 {
-        pte_addr.as_u64() & u64::from_le(self.pte_addr_masks[step])
+    pub fn pte_addr_mask(&self, pte_addr: Address, step: usize) -> umem {
+        pte_addr.to_umem() & umem::from_le(self.pte_addr_masks[step])
     }
 
     /// Filter out the input virtual address range to be in bounds
@@ -128,7 +130,7 @@ impl ArchMmuSpec {
 
         // Trim to virt address space limit
         let (left, reject) = tr_data
-            .split_inclusive_at(Address::bit_mask(0..(self.def.addr_size * 8 - 1)).as_usize());
+            .split_inclusive_at(Address::bit_mask(0..(self.def.addr_size * 8 - 1)).to_umem());
         let left = left.unwrap();
 
         if let Some(data) = reject {
@@ -140,9 +142,9 @@ impl ArchMmuSpec {
         }
 
         let virt_bit_range = self.virt_addr_bit_ranges[0].1;
-        let virt_range = 1u64 << (virt_bit_range - 1);
+        let virt_range: umem = 1 << (virt_bit_range - 1);
         vtop_trace!("vbr {:x} | {:x}", virt_bit_range, virt_range);
-        let arch_bit_range = (!0u64) >> (64 - self.def.addr_size * 8);
+        let arch_bit_range: umem = (!0) >> (UMEM_BITS - self.def.addr_size * 8);
 
         let (lower, higher) = left.split_at_address(virt_range.into());
 
@@ -161,8 +163,8 @@ impl ArchMmuSpec {
             if let Some(higher) = higher {
                 // The upper half has to be all negative (all bits set), so compare the masks
                 // to see if it is the case.
-                let lhs = Address::bit_mask(virt_bit_range..(self.def.addr_size * 8 - 1)).as_u64();
-                let rhs = higher.addr.as_u64() & lhs;
+                let lhs = Address::bit_mask(virt_bit_range..(self.def.addr_size * 8 - 1)).to_umem();
+                let rhs = higher.addr.to_umem() & lhs;
 
                 if (lhs ^ rhs) == 0 {
                     vtop_trace!("higher {:x}+{:x}", higher.addr, higher.length());
@@ -205,15 +207,15 @@ impl ArchMmuSpec {
         )
     }
 
-    pub fn virt_addr_to_pte_offset(&self, virt_addr: Address, step: usize) -> u64 {
-        u64::from_le(
-            (virt_addr.as_u64().to_le() >> self.virt_addr_bit_ranges[step].0)
+    pub fn virt_addr_to_pte_offset(&self, virt_addr: Address, step: usize) -> umem {
+        umem::from_le(
+            (virt_addr.to_umem().to_le() >> self.virt_addr_bit_ranges[step].0)
                 & self.virt_addr_masks[step],
-        ) * self.def.pte_size as u64
+        ) * self.def.pte_size as umem
     }
 
-    pub fn virt_addr_to_page_offset(&self, virt_addr: Address, step: usize) -> u64 {
-        virt_addr.as_u64() & u64::from_le(self.virt_addr_page_masks[step])
+    pub fn virt_addr_to_page_offset(&self, virt_addr: Address, step: usize) -> umem {
+        virt_addr.to_umem() & umem::from_le(self.virt_addr_page_masks[step])
     }
 
     /// Get the page size of a specific step without checking if such page could exist
@@ -221,7 +223,7 @@ impl ArchMmuSpec {
     /// # Arguments
     ///
     /// * `step` - the current step in the page walk
-    pub fn page_size_step_unchecked(&self, step: usize) -> usize {
+    pub fn page_size_step_unchecked(&self, step: usize) -> umem {
         self.page_size_step[step]
     }
 
@@ -233,7 +235,7 @@ impl ArchMmuSpec {
     /// # Arguments
     ///
     /// * `step` - the current step in the page walk
-    pub fn page_size_step(&self, step: usize) -> usize {
+    pub fn page_size_step(&self, step: usize) -> umem {
         debug_assert!(self.valid_final_page_steps[step]);
         self.page_size_step_unchecked(step)
     }
@@ -247,7 +249,7 @@ impl ArchMmuSpec {
     /// # Arguments
     ///
     /// * `level` - page mapping level to get the size of (1 meaning the smallest page)
-    pub fn page_size_level(&self, level: usize) -> usize {
+    pub fn page_size_level(&self, level: usize) -> umem {
         self.page_size_step(self.def.virtual_address_splits.len() - level)
     }
 
@@ -416,7 +418,7 @@ impl ArchMmuSpec {
 
         // Fill up working_pair and waiting_pair from the iterator
         dtb.fill_init_chunk(
-            &self,
+            self,
             out_fail,
             &mut addrs,
             (&mut working_addrs2, &mut tmp_addrs),
@@ -533,7 +535,7 @@ impl ArchMmuSpec {
                 PhysicalAddress::with_page(
                     tr_chunk.pt_addr,
                     PageType::PAGE_TABLE,
-                    self.pt_leaf_size(tr_chunk.step),
+                    self.pt_leaf_size(tr_chunk.step) as umem,
                 ),
                 chunk.into(),
             ));
@@ -605,7 +607,7 @@ impl ArchMmuSpec {
             }
         } else {
             dtb.fill_init_chunk(
-                &self,
+                self,
                 out_fail,
                 addrs,
                 (&mut next_working_pair.1, tmp_addrs),
@@ -649,7 +651,7 @@ impl ArchMmuSpec {
                 chunk.pt_addr,
                 chunk
                     .min_addr
-                    .as_page_aligned(self.page_size_step_unchecked(chunk.step + 1)),
+                    .as_mem_aligned(self.page_size_step_unchecked(chunk.step + 1)),
             );
             prev_pt_address[chunk.step] = cur_addr;
 

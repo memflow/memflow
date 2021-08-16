@@ -8,6 +8,8 @@ use rand::prelude::*;
 use rand::{Rng, SeedableRng};
 use rand_xorshift::XorShiftRng as CurRng;
 
+use std::convert::TryInto;
+
 fn vat_test_with_mem(
     bench: &mut Bencher,
     vat: &mut impl VirtualTranslate,
@@ -25,8 +27,7 @@ fn vat_test_with_mem(
         translations
     ];
 
-    let base_addr =
-        rng.gen_range(module.base.as_u64()..(module.base.as_u64() + module.size as u64));
+    let base_addr = rng.gen_range(module.base.to_umem()..(module.base.to_umem() + module.size));
 
     for range in bufs.iter_mut() {
         range.address = (base_addr + rng.gen_range(0..0x2000)).into();
@@ -79,8 +80,8 @@ fn chunk_vat_params(
             |b, &size| {
                 vat_test_with_os(
                     b,
-                    black_box(chunk_size as usize),
-                    black_box((size * chunk_size) as usize),
+                    black_box(chunk_size.try_into().unwrap()),
+                    black_box((size * chunk_size).try_into().unwrap()),
                     &mut os,
                 )
             },

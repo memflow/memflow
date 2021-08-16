@@ -1,5 +1,6 @@
 use crate::cglue::{CSliceMut, CSliceRef};
-use crate::types::Address;
+use crate::types::{clamp_to_usize, imem, umem, Address};
+use core::convert::TryInto;
 use std::iter::*;
 
 pub trait SplitAtIndex {
@@ -14,7 +15,7 @@ pub trait SplitAtIndex {
     /// anything).
     ///
     /// But the core idea is - to allow splittable data, be split, in a generic way.
-    fn split_at(self, idx: usize) -> (Option<Self>, Option<Self>)
+    fn split_at(self, idx: umem) -> (Option<Self>, Option<Self>)
     where
         Self: Sized;
 
@@ -29,18 +30,18 @@ pub trait SplitAtIndex {
     /// Mutating self reference and returned values after the split is undefined behaviour,
     /// because both self, and returned values can point to the same mutable region
     /// (for example: &mut [u8])
-    unsafe fn split_at_mut(&mut self, idx: usize) -> (Option<Self>, Option<Self>)
+    unsafe fn split_at_mut(&mut self, idx: umem) -> (Option<Self>, Option<Self>)
     where
         Self: Sized;
 
     /// Inclusive version of `split_at`
     ///
     /// This is effectively split_at(idx + 1), with a safeguard for idx == usize::MAX.
-    fn split_inclusive_at(self, idx: usize) -> (Option<Self>, Option<Self>)
+    fn split_inclusive_at(self, idx: umem) -> (Option<Self>, Option<Self>)
     where
         Self: Sized,
     {
-        if idx == core::usize::MAX {
+        if idx == umem::MAX {
             (Some(self), None)
         } else {
             self.split_at(idx + 1)
@@ -55,11 +56,11 @@ pub trait SplitAtIndex {
     ///
     /// The same safety rules apply as with `split_at_mut`. Mutating the value after the function
     /// call is undefined, and should not be done until returned values are dropped.
-    unsafe fn split_inclusive_at_mut(&mut self, idx: usize) -> (Option<Self>, Option<Self>)
+    unsafe fn split_inclusive_at_mut(&mut self, idx: umem) -> (Option<Self>, Option<Self>)
     where
         Self: Sized,
     {
-        if idx == core::usize::MAX {
+        if idx == umem::MAX {
             let (_, right) = self.split_at_mut(0);
             (right, None)
         } else {
@@ -70,7 +71,7 @@ pub trait SplitAtIndex {
     /// Reverse version of `split_at`
     ///
     /// This will perform splits with index offsetting from the end of the data
-    fn split_at_rev(self, idx: usize) -> (Option<Self>, Option<Self>)
+    fn split_at_rev(self, idx: umem) -> (Option<Self>, Option<Self>)
     where
         Self: Sized,
     {
@@ -84,32 +85,57 @@ pub trait SplitAtIndex {
     /// Returns the length of the data
     ///
     /// This is the length in terms of how many indexes can be used to split the data.
-    fn length(&self) -> usize;
+    fn length(&self) -> umem;
 
     /// Returns an allocation size hint for the data
     ///
     /// This is purely a hint, but not really an exact value of how much data needs allocating.
     fn size_hint(&self) -> usize {
-        self.length()
+        clamp_to_usize(self.length())
     }
 }
 
+#[cfg(any(feature = "64_bit_mem", feature = "128_bit_mem"))]
 impl SplitAtIndex for usize {
-    fn split_at(self, idx: usize) -> (Option<Self>, Option<Self>) {
+    fn split_at(self, idx: umem) -> (Option<Self>, Option<Self>) {
+        if idx == 0 {
+            (None, Some(self))
+        } else if self as umem <= idx {
+            (Some(self), None)
+        } else {
+            (Some(idx as usize), Some(self - idx as usize))
+        }
+    }
+
+    unsafe fn split_at_mut(&mut self, idx: umem) -> (Option<Self>, Option<Self>) {
+        (*self).split_at(idx)
+    }
+
+    fn length(&self) -> umem {
+        *self as umem
+    }
+
+    fn size_hint(&self) -> usize {
+        1
+    }
+}
+
+impl SplitAtIndex for umem {
+    fn split_at(self, idx: umem) -> (Option<Self>, Option<Self>) {
         if idx == 0 {
             (None, Some(self))
         } else if self <= idx {
             (Some(self), None)
         } else {
-            (Some(idx), Some(self - idx))
+            (Some(idx as umem), Some(self - idx))
         }
     }
 
-    unsafe fn split_at_mut(&mut self, idx: usize) -> (Option<Self>, Option<Self>) {
+    unsafe fn split_at_mut(&mut self, idx: umem) -> (Option<Self>, Option<Self>) {
         (*self).split_at(idx)
     }
 
-    fn length(&self) -> usize {
+    fn length(&self) -> umem {
         *self
     }
 
@@ -119,7 +145,7 @@ impl SplitAtIndex for usize {
 }
 
 impl<T: SplitAtIndex> SplitAtIndex for (Address, T) {
-    fn split_at(self, idx: usize) -> (Option<Self>, Option<Self>) {
+    fn split_at(self, idx: umem) -> (Option<Self>, Option<Self>) {
         let (left, right) = self.1.split_at(idx);
 
         if let Some(left) = left {
@@ -130,7 +156,7 @@ impl<T: SplitAtIndex> SplitAtIndex for (Address, T) {
         }
     }
 
-    unsafe fn split_at_mut(&mut self, idx: usize) -> (Option<Self>, Option<Self>) {
+    unsafe fn split_at_mut(&mut self, idx: umem) -> (Option<Self>, Option<Self>) {
         let (left, right) = self.1.split_at_mut(idx);
 
         if let Some(left) = left {
@@ -141,7 +167,7 @@ impl<T: SplitAtIndex> SplitAtIndex for (Address, T) {
         }
     }
 
-    fn length(&self) -> usize {
+    fn length(&self) -> umem {
         self.1.length()
     }
 
@@ -151,38 +177,38 @@ impl<T: SplitAtIndex> SplitAtIndex for (Address, T) {
 }
 
 impl<T> SplitAtIndex for &[T] {
-    fn split_at(self, idx: usize) -> (Option<Self>, Option<Self>) {
-        let (left, right) = (*self).split_at(core::cmp::min(self.len(), idx));
+    fn split_at(self, idx: umem) -> (Option<Self>, Option<Self>) {
+        let (left, right) = (*self).split_at(core::cmp::min(self.len(), clamp_to_usize(idx)));
         (
             if left.is_empty() { None } else { Some(left) },
             if right.is_empty() { None } else { Some(right) },
         )
     }
 
-    unsafe fn split_at_mut(&mut self, idx: usize) -> (Option<Self>, Option<Self>) {
-        let (left, right) = (*self).split_at(core::cmp::min(self.len(), idx));
+    unsafe fn split_at_mut(&mut self, idx: umem) -> (Option<Self>, Option<Self>) {
+        let (left, right) = (*self).split_at(core::cmp::min(self.len(), clamp_to_usize(idx)));
         (
             if left.is_empty() { None } else { Some(left) },
             if right.is_empty() { None } else { Some(right) },
         )
     }
 
-    fn length(&self) -> usize {
-        self.len()
+    fn length(&self) -> umem {
+        self.len() as umem
     }
 }
 
 impl<T> SplitAtIndex for &mut [T] {
-    fn split_at(self, idx: usize) -> (Option<Self>, Option<Self>) {
-        let (left, right) = (*self).split_at_mut(core::cmp::min(self.len(), idx));
+    fn split_at(self, idx: umem) -> (Option<Self>, Option<Self>) {
+        let (left, right) = (*self).split_at_mut(core::cmp::min(self.len(), clamp_to_usize(idx)));
         (
             if left.is_empty() { None } else { Some(left) },
             if right.is_empty() { None } else { Some(right) },
         )
     }
 
-    unsafe fn split_at_mut(&mut self, idx: usize) -> (Option<Self>, Option<Self>) {
-        let mid = core::cmp::min(self.len(), idx);
+    unsafe fn split_at_mut(&mut self, idx: umem) -> (Option<Self>, Option<Self>) {
+        let mid = core::cmp::min(self.len(), clamp_to_usize(idx));
         let ptr = self.as_mut_ptr();
         (
             if mid != 0 {
@@ -201,15 +227,15 @@ impl<T> SplitAtIndex for &mut [T] {
         )
     }
 
-    fn length(&self) -> usize {
-        self.len()
+    fn length(&self) -> umem {
+        self.len() as umem
     }
 }
 
 impl<'a, T> SplitAtIndex for CSliceRef<'a, T> {
-    fn split_at(self, idx: usize) -> (Option<Self>, Option<Self>) {
+    fn split_at(self, idx: umem) -> (Option<Self>, Option<Self>) {
         let sliced = unsafe { core::slice::from_raw_parts(self.as_mut_ptr(), self.len()) };
-        let (left, right) = (*sliced).split_at(core::cmp::min(self.len(), idx));
+        let (left, right) = (*sliced).split_at(core::cmp::min(self.len(), clamp_to_usize(idx)));
         (
             if left.is_empty() {
                 None
@@ -224,8 +250,8 @@ impl<'a, T> SplitAtIndex for CSliceRef<'a, T> {
         )
     }
 
-    unsafe fn split_at_mut(&mut self, idx: usize) -> (Option<Self>, Option<Self>) {
-        let mid = core::cmp::min(self.len(), idx);
+    unsafe fn split_at_mut(&mut self, idx: umem) -> (Option<Self>, Option<Self>) {
+        let mid = core::cmp::min(self.len(), clamp_to_usize(idx));
         let ptr = self.as_mut_ptr();
         (
             if mid != 0 {
@@ -241,15 +267,15 @@ impl<'a, T> SplitAtIndex for CSliceRef<'a, T> {
         )
     }
 
-    fn length(&self) -> usize {
-        self.len()
+    fn length(&self) -> umem {
+        self.len() as umem
     }
 }
 
 impl<'a, T> SplitAtIndex for CSliceMut<'a, T> {
-    fn split_at(self, idx: usize) -> (Option<Self>, Option<Self>) {
+    fn split_at(self, idx: umem) -> (Option<Self>, Option<Self>) {
         let sliced = unsafe { core::slice::from_raw_parts_mut(self.as_mut_ptr(), self.len()) };
-        let (left, right) = (*sliced).split_at_mut(core::cmp::min(self.len(), idx));
+        let (left, right) = (*sliced).split_at_mut(core::cmp::min(self.len(), clamp_to_usize(idx)));
         (
             if left.is_empty() {
                 None
@@ -264,8 +290,8 @@ impl<'a, T> SplitAtIndex for CSliceMut<'a, T> {
         )
     }
 
-    unsafe fn split_at_mut(&mut self, idx: usize) -> (Option<Self>, Option<Self>) {
-        let mid = core::cmp::min(self.len(), idx);
+    unsafe fn split_at_mut(&mut self, idx: umem) -> (Option<Self>, Option<Self>) {
+        let mid = core::cmp::min(self.len(), clamp_to_usize(idx));
         let ptr = self.as_mut_ptr();
         (
             if mid != 0 {
@@ -281,21 +307,21 @@ impl<'a, T> SplitAtIndex for CSliceMut<'a, T> {
         )
     }
 
-    fn length(&self) -> usize {
-        self.len()
+    fn length(&self) -> umem {
+        self.len() as umem
     }
 }
 
 pub struct PageChunkIterator<T: SplitAtIndex, FS> {
     v: Option<T>,
     cur_address: Address,
-    page_size: usize,
+    page_size: umem,
     check_split_fn: FS,
-    cur_off: usize,
+    cur_off: umem,
 }
 
 impl<T: SplitAtIndex, FS> PageChunkIterator<T, FS> {
-    pub fn new(buf: T, start_address: Address, page_size: usize, check_split_fn: FS) -> Self {
+    pub fn new(buf: T, start_address: Address, page_size: umem, check_split_fn: FS) -> Self {
         Self {
             v: if buf.length() == 0 { None } else { Some(buf) },
             cur_address: start_address,
@@ -319,12 +345,12 @@ impl<T: SplitAtIndex, FS: FnMut(Address, &T, Option<&T>) -> bool> Iterator
             loop {
                 let end_len = Address::from(
                     self.cur_address
-                        .as_u64()
-                        .wrapping_add(self.page_size as u64),
+                        .to_umem()
+                        .wrapping_add(self.page_size as umem),
                 )
-                .as_page_aligned(self.page_size)
-                .as_usize()
-                .wrapping_sub(self.cur_address.as_usize())
+                .as_mem_aligned(self.page_size)
+                .to_umem()
+                .wrapping_sub(self.cur_address.to_umem())
                 .wrapping_sub(1)
                 .wrapping_add(self.cur_off);
 
@@ -336,7 +362,7 @@ impl<T: SplitAtIndex, FS: FnMut(Address, &T, Option<&T>) -> bool> Iterator
                 } else {
                     self.v = tail;
                     let next_address =
-                        Address::from(self.cur_address.as_usize().wrapping_add(end_len + 1));
+                        Address::from(self.cur_address.to_umem().wrapping_add(end_len + 1));
                     let ret = Some((self.cur_address, head));
                     self.cur_address = next_address;
                     self.cur_off = 0;
@@ -351,10 +377,13 @@ impl<T: SplitAtIndex, FS: FnMut(Address, &T, Option<&T>) -> bool> Iterator
     #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
         if let Some(buf) = &self.v {
-            let n = ((self.cur_address + buf.size_hint() - 1).as_page_aligned(self.page_size)
-                - self.cur_address.as_page_aligned(self.page_size))
-                / self.page_size
-                + 1;
+            let n: usize = (((self.cur_address + buf.size_hint() - 1_usize)
+                .as_mem_aligned(self.page_size)
+                - self.cur_address.as_mem_aligned(self.page_size))
+                / self.page_size as imem
+                + 1)
+            .try_into()
+            .unwrap();
             (n, Some(n))
         } else {
             (0, Some(0))

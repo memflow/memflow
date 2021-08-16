@@ -1,6 +1,6 @@
 use super::ArchMmuSpec;
 use crate::architecture::Endianess;
-use crate::types::Address;
+use crate::types::{clamp_to_usize, umem, Address};
 
 /// The `ArchMmuDef` structure defines how a real memory management unit should behave when
 /// translating virtual memory addresses to physical ones.
@@ -66,7 +66,7 @@ impl ArchMmuDef {
     /// the page, instead of an offset that has to be multiplied by `pte_size`. We do that by
     /// subtracting `pte_size` logarithm from the split size.
     #[allow(unused)]
-    pub fn pte_addr_mask(&self, pte_addr: Address, step: usize) -> u64 {
+    pub fn pte_addr_mask(&self, pte_addr: Address, step: usize) -> umem {
         let max = self.address_space_bits - 1;
         let min = self.virtual_address_splits[step]
             + if step == self.virtual_address_splits.len() - 1 {
@@ -75,7 +75,7 @@ impl ArchMmuDef {
                 self.pte_size.to_le().trailing_zeros() as u8
             };
         let mask = Address::bit_mask(min..max);
-        pte_addr.as_u64() & u64::from_le(mask.as_u64())
+        pte_addr.to_umem() & umem::from_le(mask.to_umem())
     }
 
     pub(crate) const fn virt_addr_bit_range(&self, step: usize) -> (u8, u8) {
@@ -123,7 +123,7 @@ impl ArchMmuDef {
     /// * `step` - the current step in the page walk
     pub const fn pt_leaf_size(&self, step: usize) -> usize {
         let (min, max) = self.virt_addr_bit_range(step);
-        (1 << (max - min)) * self.pte_size
+        clamp_to_usize((1 << (max - min)) * self.pte_size as umem)
     }
 
     /// Get the page size of a specific step without checking if such page could exist
@@ -132,7 +132,7 @@ impl ArchMmuDef {
     ///
     /// * `step` - the current step in the page walk
     #[allow(unused)]
-    pub const fn page_size_step_unchecked(&self, step: usize) -> usize {
+    pub const fn page_size_step_unchecked(&self, step: usize) -> umem {
         let max_index_bits = {
             let subsl = &self.virtual_address_splits;
             let mut i = step;
@@ -143,7 +143,7 @@ impl ArchMmuDef {
             }
             accum
         };
-        (1u64 << max_index_bits) as usize
+        1 << max_index_bits
     }
 
     /// Get the page size of a specific page walk step
@@ -155,7 +155,7 @@ impl ArchMmuDef {
     ///
     /// * `step` - the current step in the page walk
     #[allow(unused)]
-    pub fn page_size_step(&self, step: usize) -> usize {
+    pub fn page_size_step(&self, step: usize) -> umem {
         debug_assert!(self.valid_final_page_steps.binary_search(&step).is_ok());
         self.page_size_step_unchecked(step)
     }

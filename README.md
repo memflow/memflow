@@ -7,7 +7,7 @@
 
 ## physical memory introspection framework
 
-memflow is a library that allows live memory introspection of running systems and their snapshots. Due to its modular approach it trivial to support almost any scenario where Direct Memory Access is available.
+memflow is a library that allows live memory introspection of running systems and their snapshots. Due to its modular approach, it is trivial to support almost any scenario where Direct Memory Access is available.
 
 The very core of the library is a [PhysicalMemory](https://docs.rs/memflow/latest/memflow/mem/phys_mem/trait.PhysicalMemory.html) that provides direct memory access in an abstract environment. This object that can be defined both statically, and dynamically with the use of the `plugins` feature. If `plugins` is enabled, it is possible to dynamically load libraries that provide Direct Memory Access.
 
@@ -25,11 +25,11 @@ In the repository, you can find various examples available (which use the memflo
 
 Make sure that your rustc version is at least `1.51.0` or newer.
 
-memflow utilizes a plugin approach and is capable of loading different physical memory backends (so called [`connectors`](#connectors)) at runtime. On top of the physical memory backends memflow is also capable of loading plugins for interfacing with a specific target OS at runtime.
+memflow uses a plugin based approach and is capable of loading different physical memory backends (so-called [`connectors`](#connectors)) at runtime. On top of the physical memory backends memflow is also capable of loading plugins for interfacing with a specific target OS at runtime.
 
-To get started you want to at least install one connector. On Linux based hosts you can simply execute the `install.sh` found in each connector repository to install the connector. When running `./install.sh --system` the connector is installed system-wide. When ommitting the `--system` argument the connector is just installed for the currently user.
+To get started, you want to at least install one connector. On Linux based hosts you can simply execute the `install.sh` found in each connector repository to install the connector. When running `./install.sh --system` the connector is installed system-wide. When omitting the `--system` argument the connector is just installed for the current user.
 
-When using the memflow-daemon it is required to install each connector system-wide (or at least under the root user) so the daemon can access it. Some connectors also require elevated privileges which might also require them to be accessible from the root user.
+When using the memflow-daemon it is required to install each connector system-wide (or at least under the root user) so the daemon can access it. Some connectors also require elevated privileges, which might also require them to be accessible from the root user.
 
 Note that all connectors should be built with the `--all-features` flag to be accessible as a dynamically loaded plugin.
 
@@ -44,7 +44,7 @@ The recommended installation locations for connectors on Windows are:
 [Username]/Documents/memflow/libmemflow_xxx.dll
 ```
 
-Additionally connectors can be placed in any directory of the environment PATH or the working directory of the program as well.
+Additionally, connectors can be placed in any directory of the environment PATH or the working directory of the program as well.
 
 For Windows target support the `win32` plugin has to be built:
 ```bash
@@ -59,7 +59,7 @@ You can either run one of the examples with `cargo run --release --example`. Pas
 
 Some connectors like `qemu_procfs` will require elevated privileges. Refer to the readme of the connector for additional information on their required access rights.
 
-To simplify running examples, tests, and benchmarks through different connectors we added a simple cargo runner script for Linux to this repository.
+To simplify running examples, tests, and benchmarks through different connectors, we added a simple cargo runner script for Linux to this repository.
 Simply set any of the following environment variables when running the `cargo` command to elevate privileges:
 
 - `RUST_SUDO` will start the resulting binary via sudo.
@@ -110,7 +110,7 @@ memflow-win32 is tested on the latest Windows 10 versions all the way down to Wi
 ## Connectors
 
 All examples provided in this repository are using the `plugins` inventory to
-dynamically load a connector at runtime. When using the library programatically it is possible to just statically link a connector into the code.
+dynamically load a connector at runtime. When using the library programmatically it is possible to just statically link a connector into the code.
 
 Some connectors also require different permissions. Please refer to the individual connector repositories for more information.
 
@@ -120,7 +120,7 @@ These are the currently officially existing connectors:
 - [pcileech](https://github.com/memflow/memflow-pcileech)
 - [coredump](https://github.com/memflow/memflow-coredump)
 
-In case you write your own connector please hit us up with a merge request so we can maintain a list of third-party connectors as well.
+In case you write your own connector please hit us up with a pull request so we can maintain a list of third-party connectors as well.
 
 ## Acknowledgements
 - [CasualX](https://github.com/casualx/) for his wonderful pelite crate

@@ -21,23 +21,64 @@ For non-rust libraries, it is possible to use the [FFI](https://github.com/memfl
 
 In the repository, you can find various examples available (which use the memflow-win32 layer)
 
-## Building from source
+## Getting started
 
-To build all projects in the memflow workspace:
+Make sure that your rustc version is at least `1.51.0` or newer.
 
-`cargo build --release --workspace`
+memflow utilizes a plugin approach and is capable of loading different physical memory backends (so called [`connectors`](#connectors)) at runtime. On top of the physical memory backends memflow is also capable of loading plugins for interfacing with a specific target OS at runtime.
 
-To build all examples:
+To get started you want to at least install one connector. On Linux based hosts you can simply execute the `install.sh` found in each connector repository to install the connector. When running `./install.sh --system` the connector is installed system-wide. When ommitting the `--system` argument the connector is just installed for the currently user.
 
-`cargo build --release --workspace --examples`
+When using the memflow-daemon it is required to install each connector system-wide (or at least under the root user) so the daemon can access it. Some connectors also require elevated privileges which might also require them to be accessible from the root user.
 
-Run all tests:
+Note that all connectors should be built with the `--all-features` flag to be accessible as a dynamically loaded plugin.
 
-`cargo test --workspace`
+The recommended installation locations for connectors on Linux are:
+```
+/usr/lib/memflow/libmemflow_xxx.so
+$HOME/.local/lib/memflow/libmemflow_xxx.so
+```
 
-Execute the benchmarks:
+The recommended installation locations for connectors on Windows are:
+```
+[Username]/Documents/memflow/libmemflow_xxx.dll
+```
 
-`cargo bench`
+Additionally connectors can be placed in any directory of the environment PATH or the working directory of the program as well.
+
+For Windows target support the `win32` plugin has to be built:
+```bash
+cargo build --release --all-features --workspace
+```
+
+This will create the OS plugin in `target/release/libmemflow_win32.so` which has to be copied to one of the plugin folders mentioned above.
+
+## Running Examples
+
+You can either run one of the examples with `cargo run --release --example`. Pass nothing to get a list of examples.
+
+Some connectors like `qemu_procfs` will require elevated privileges. Refer to the readme of the connector for additional information on their required access rights.
+
+To simplify running examples, tests, and benchmarks through different connectors we added a simple cargo runner script for Linux to this repository.
+Simply set any of the following environment variables when running the `cargo` command to elevate privileges:
+
+- `RUST_SUDO` will start the resulting binary via sudo.
+- `RUST_SETPTRACE` will enable PTRACE permissions on the resulting binary before executing it.
+
+Alternatively, you can run the benchmarks via `cargo bench` (can pass regex filters). Win32 benchmarks currently work only on Linux.
+
+All examples support the memflow connector `plugins` inventory system.
+You will have to install at least one `connector` to use the examples. Refer to the [getting started](#getting-started) section for more details.
+
+Run memflow\_win32/read\_keys example with a procfs connector:
+
+`RUST_SETPTRACE=1 cargo run --example read_keys -- -vv -c qemu_procfs -a [vmname]`
+
+Run memflow\_win32/read\_bench example with a coredump connector:
+
+`cargo run --example read_bench --release -- -vv -c coredump -a coredump_win10_64bit.raw`
+
+Note: In the examples above the `qemu_procfs` connector requires `'CAP_SYS_PTRACE=ep'` permissions. The runner script in this repository will set the appropriate flags when the `RUST_SETPTRACE` environment variable is passed to it.
 
 ## Documentation
 
@@ -50,59 +91,9 @@ If you decide to build the latest documentation you can do it by issuing:
 
 `cargo doc --workspace --no-deps --open`
 
-## Basic usage
-
-You can either run one of the examples with `cargo run --release --example`. Pass nothing to get a list of examples.
-
-Some connectors like `qemu_procfs` will require elevated privileges. See the Connectors section of this Readme for more information.
-
-To simplify running examples, tests, and benchmarks through different connectors we added a simple cargo runner script for Linux to this repository.
-Simply set any of the following environment variables when running the `cargo` command to elevate privileges:
-
-- `RUST_SUDO` will start the resulting binary via sudo.
-- `RUST_SETPTRACE` will enable PTRACE permissions on the resulting binary before executing it.
-
-Alternatively, you can run the benchmarks via `cargo bench` (can pass regex filters). Win32 benchmarks currently work only on Linux.
-
-## Running Examples
-
-All examples support the memflow connector `plugins` inventory system.
-You will have to install at least one `connector` to use the examples.
-
-To install a connector just use the [memflowup](https://github.com/memflow/memflowup) utility,
-or, head over to the corresponding repository and install them via the `install.sh` script.
-
-You will find a folder called `memflow` in any of the following locations:
-```
-/opt
-/lib
-/usr/lib/
-/usr/local/lib
-/lib32
-/lib64
-/usr/lib32
-/usr/lib64
-/usr/local/lib32
-/usr/local/lib64
-```
-
-On Windows, you can put the connector DLL in a folder named `memflow`
-that is either in your current PATH or put it in `C:\Users\{Username}\.local\lib\memflow`.
-Additionally connectors can be placed in the working directory of the process as well.
-
-Now you can just run the examples by providing the appropriate connector name:
-
-Run memflow\_win32/read\_keys example with a procfs connector:
-
-`RUST_SETPTRACE=1 cargo run --example read_keys -- -vv -c qemu_procfs -a [vmname]`
-
-Run memflow\_win32/read\_bench example with a coredump connector:
-
-`cargo run --example read_bench --release -- -vv -c coredump -a coredump_win10_64bit.raw`
-
-Note: In the examples above the `qemu_procfs` connector requires `'CAP_SYS_PTRACE=ep'` permissions. The runner script in this repository will set the appropriate flags when the `RUST_SETPTRACE` environment variable is passed to it.
-
 ## Compilation support
+
+memflow currently requires at least rustc version `1.51.0` or newer.
 
 | target        | build              | tests              | benches            | compiles on stable |
 |---------------|--------------------|--------------------|--------------------|--------------------|
@@ -130,12 +121,6 @@ These are the currently officially existing connectors:
 - [coredump](https://github.com/memflow/memflow-coredump)
 
 In case you write your own connector please hit us up with a merge request so we can maintain a list of third-party connectors as well.
-
-## Road map / Future Development
-
-- Provide a rust native connector for PCILeech based hardware
-- Provide a UEFI Demo
-- Linux target support
 
 ## Acknowledgements
 - [CasualX](https://github.com/casualx/) for his wonderful pelite crate

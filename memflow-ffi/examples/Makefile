@@ -1,6 +1,6 @@
 CC =gcc
 CFLAGS =-I../ -I../../memflow-ffi/ -L../../target/release
-LIBS=-lm -ldl -lpthread -l:libmemflow_win32_ffi.a
+LIBS=-Wl,--no-as-needed -lm -ldl -lpthread -pthread -l:libmemflow_win32_ffi.a
 
 ODIR=./
 

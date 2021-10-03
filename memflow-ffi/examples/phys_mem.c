@@ -4,7 +4,7 @@
 int main(int argc, char *argv[]) {
 	log_init(4);
 
-	ConnectorInventory *inv = inventory_try_new();
+	ConnectorInventory *inv = inventory_scan();
 	printf("inv: %p\n", inv);
 
 	const char *conn_name = argc > 1? argv[1]: "kvm";

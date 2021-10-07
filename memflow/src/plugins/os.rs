@@ -13,15 +13,7 @@ use std::ffi::c_void;
 pub type OptionArchitectureIdent<'a> = Option<&'a crate::architecture::ArchitectureIdent>;
 
 pub fn create_with_logging<
-    T: 'static
-        + Os
-        + Clone
-        + OsInstanceVtableFiller<
-            'static,
-            CtxBox<'static, T, COptArc<c_void>>,
-            COptArc<c_void>,
-            COptArc<c_void>,
-        >,
+    T: 'static + Os + Clone + OsInstanceVtableFiller<'static, CBox<'static, T>, COptArc<c_void>>,
 >(
     args: &ReprCString,
     conn: ConnectorInstanceArcBox,
@@ -39,15 +31,7 @@ where
 }
 
 pub fn create_without_logging<
-    T: 'static
-        + Os
-        + Clone
-        + OsInstanceVtableFiller<
-            'static,
-            CtxBox<'static, T, COptArc<c_void>>,
-            COptArc<c_void>,
-            COptArc<c_void>,
-        >,
+    T: 'static + Os + Clone + OsInstanceVtableFiller<'static, CBox<'static, T>, COptArc<c_void>>,
 >(
     args: &ReprCString,
     conn: ConnectorInstanceArcBox,

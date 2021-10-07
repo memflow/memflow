@@ -38,7 +38,7 @@ use std::path::{Path, PathBuf};
 use libloading::Library;
 
 /// Exported memflow plugins version
-pub const MEMFLOW_PLUGIN_VERSION: i32 = -2;
+pub const MEMFLOW_PLUGIN_VERSION: i32 = -3;
 
 /// Help and Target callbacks
 pub type HelpCallback<'a> = OpaqueCallback<'a, ReprCString>;

@@ -17,12 +17,7 @@ pub fn create_with_logging<
     T: 'static
         + PhysicalMemory
         + Clone
-        + ConnectorInstanceVtableFiller<
-            'static,
-            CtxBox<'static, T, COptArc<c_void>>,
-            COptArc<c_void>,
-            COptArc<c_void>,
-        >,
+        + ConnectorInstanceVtableFiller<'static, CBox<'static, T>, COptArc<c_void>>,
 >(
     args: &ReprCString,
     lib: COptArc<c_void>,
@@ -39,12 +34,7 @@ pub fn create_without_logging<
     T: 'static
         + PhysicalMemory
         + Clone
-        + ConnectorInstanceVtableFiller<
-            'static,
-            CtxBox<'static, T, COptArc<c_void>>,
-            COptArc<c_void>,
-            COptArc<c_void>,
-        >,
+        + ConnectorInstanceVtableFiller<'static, CBox<'static, T>, COptArc<c_void>>,
 >(
     args: &ReprCString,
     lib: COptArc<c_void>,

@@ -37,10 +37,6 @@ use memflow::os::keyboard::*;
 use memflow::prelude::OsInner;
 use memflow::types::{umem, Address};
 
-// those only required when compiling cglue code
-#[cfg(feature = "plugins")]
-use memflow::cglue;
-
 use log::debug;
 use std::convert::TryInto;
 

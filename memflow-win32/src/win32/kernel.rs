@@ -11,8 +11,6 @@ use super::{
 };
 
 #[cfg(feature = "plugins")]
-use memflow::cglue;
-#[cfg(feature = "plugins")]
 use memflow::mem::{memory_view::*, phys_mem::*};
 #[cfg(feature = "plugins")]
 use memflow::os::{keyboard::*, root::*};

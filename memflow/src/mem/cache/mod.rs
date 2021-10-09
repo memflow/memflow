@@ -6,8 +6,8 @@ pub mod timed_validator;
 
 pub mod count_validator;
 
-mod page_cache;
-mod tlb_cache;
+pub mod page_cache;
+pub mod tlb_cache;
 
 #[doc(hidden)]
 pub use cached_memory_access::*;

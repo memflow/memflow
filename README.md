@@ -105,7 +105,7 @@ memflow currently requires at least rustc version `1.51.0` or newer.
 
 ## Target support
 
-memflow-win32 is tested on the latest Windows 10 versions all the way down to Windows NT 4.0. If you found a version that does not work please submit an issue with the major/minor version as well as the build number.
+memflow-win32 is tested on the latest Windows 11 and Windows 10 versions all the way down to Windows NT 4.0. If you found a version that does not work please submit an issue with the major/minor version as well as the build number.
 
 ## Connectors
 

@@ -21,7 +21,7 @@ fn main() {
         .expect("unable to get target list");
 
     println!("Targets for connector `{}`:", &connector);
-    targets.iter().for_each(|t| println!("{:?}", t));
+    targets.iter().for_each(|t| println!("- {}", t.name));
 }
 
 fn parse_args() -> String {

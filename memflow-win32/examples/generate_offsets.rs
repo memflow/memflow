@@ -71,6 +71,11 @@ pub fn main() {
             Win32OffsetsArchitecture::X86,
             Win32Guid::new("ntkrpamp.pdb", "1B1D6AA205E1C87DC63A314ACAA50B491"),
         ),
+        (
+            Win32Version::new(10, 0, 4026553840),
+            Win32OffsetsArchitecture::X86,
+            Win32Guid::new("ntkrnlmp.pdb", "55678BC384F099B6ED05E9E39046924A1"),
+        ),
     ];
 
     let out_dir = matches.value_of("output").unwrap();

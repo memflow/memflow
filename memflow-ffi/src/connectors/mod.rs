@@ -125,22 +125,30 @@ pub unsafe extern "C" fn inventory_create_os(
     inv: &mut Inventory,
     name: *const c_char,
     args: *const c_char,
-    mem: ConnectorInstanceArcBox<'static>,
+    mem: *mut ConnectorInstanceArcBox<'static>,
     out: &mut MuOsInstanceArcBox<'static>,
 ) -> i32 {
     let rname = CStr::from_ptr(name).to_string_lossy();
     let _args = CStr::from_ptr(args).to_string_lossy();
 
+    let mem_obj = if mem.is_null() {
+        None
+    } else {
+        Some(mem.read())
+    };
+    // Zero out the data so that any automatic destructors on the other side do nothing.
+    std::ptr::write_bytes(mem, 0, 1);
+
     if args.is_null() {
         let args = Args::default();
-        inv.create_os(&rname, Some(mem), &args)
+        inv.create_os(&rname, mem_obj, &args)
             .map_err(inspect_err)
             .into_int_out_result(out)
     } else {
         let rargs = CStr::from_ptr(args).to_string_lossy();
         Args::parse(&rargs)
             .map_err(inspect_err)
-            .and_then(|args| inv.create_os(&rname, Some(mem), &args))
+            .and_then(|args| inv.create_os(&rname, mem_obj, &args))
             .map_err(inspect_err)
             .into_int_out_result(out)
     }

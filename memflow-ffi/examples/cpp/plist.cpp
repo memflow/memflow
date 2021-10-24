@@ -1,51 +1,84 @@
 #include "memflow.hpp"
 #include <stdio.h>
 
+bool plist_callback(void *, ProcessInfo info);
+
 int main(int argc, char *argv[]) {
 	log_init(1);
 
-	CConnectorInventory inventory;
-	printf("inventory initialized: %p\n", inventory.inner);
+	Inventory *inventory = inventory_scan();
+
+	if (!inventory) {
+		printf("unable to create inventory\n");
+		return 1;
+	}
+
+	printf("inventory initialized: %p\n", inventory);
 
 	const char *conn_name = argc > 1? argv[1]: "qemu_procfs";
 	const char *conn_arg = argc > 2? argv[2]: "";
+	const char *os_name = argc > 3? argv[3]: "win32";
+	const char *os_arg = argc > 4? argv[4]: "";
 
-	ConnectorInstance connector;
-	if (inventory.create_connector(conn_name, conn_arg, &connector) < 0) {
+	ConnectorInstanceArcBox connector;
+	if (inventory_create_connector(inventory, conn_name, conn_arg, &connector)) {
 		printf("unable to initialize connector\n");
+		inventory_free(inventory);
 		return 1;
 	}
-	printf("connector initialized: %p\n", connector.instance);
 
-	uint64_t read = connector.phys_read_u64(addr_to_paddr(0x30000));
+	printf("connector initialized: %p\n", connector.container.instance.instance);
 
+	OsInstanceArcBox os;
 
-/*
-	if (conn) {
-		CKernel kernel(conn);
-		printf("Kernel: %p\n", kernel.inner);
-		Win32Version ver = kernel.winver();
-		printf("major: %d\n", ver.nt_major_version);
-		printf("minor: %d\n", ver.nt_minor_version);
-		printf("build: %d\n", ver.nt_build_number);
-
-		std::vector<CWin32ProcessInfo> process_list = kernel.process_info_vec();
-
-		printf("Process List:\n");
-		printf("%-8s | %-16s | %-16s | %-12s | %-5s\n", "Pid", "Name", "Base", "DTB", "Wow64");
-
-		for (CWin32ProcessInfo &p : process_list) {
-			auto info = p.trait();
-			printf("%-8d | %-16s | %-16lx | %-12lx | %-5s\n",
-				info.pid(),
-				info.name_string().c_str(),
-				p.section_base(),
-				p.dtb(),
-				p.wow64()? "Yes" : "No"
-			);
-		}
+	if (inventory_create_os(inventory, os_name, os_arg, &connector, &os)) {
+		printf("unable to initialize OS\n");
+		inventory_free(inventory);
+		return 1;
 	}
-*/
+
+	inventory_free(inventory);
+
+	printf("os initialized: %p\n", os.container.instance.instance);
+
+	auto info = os.info();
+
+	printf("Kernel base: %llx\nKernel size: %llx\nArchitecture: %d\n", info->base, info->size, info->arch.tag);
+
+	printf("Process List:\n");
+
+	printf("%-8s | %-10s | %-10s | %s\n", "Pid", "Sys Arch", "Proc Arch", "Name");
+
+	ProcessInfoCallback callback;
+	callback.func = plist_callback;
+
+	os.process_info_list_callback(callback);
 
 	return 0;
+}
+
+void fmt_arch(char *arch, int n, ArchitectureIdent ident) {
+	switch (ident.tag) {
+		case ArchitectureIdent::Tag::ArchitectureIdent_X86:
+			snprintf(arch, n, "X86_%d", ident.x86._0);
+			break;
+		case ArchitectureIdent::Tag::ArchitectureIdent_AArch64:
+			snprintf(arch, n, "AArch64");
+			break;
+		default:
+			snprintf(arch, n, "Unknown");
+	}
+}
+
+bool plist_callback(void *, ProcessInfo info) {
+
+	char sys_arch[11];
+	char proc_arch[11];
+
+	fmt_arch(sys_arch, sizeof(sys_arch), info.sys_arch);
+	fmt_arch(proc_arch, sizeof(proc_arch), info.proc_arch);
+
+	printf("%-8d | %-10s | %-10s | %s\n", info.pid, sys_arch, proc_arch, info.name);
+
+	return true;
 }

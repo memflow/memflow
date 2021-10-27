@@ -1,7 +1,8 @@
 #include "memflow.hpp"
 #include <stdio.h>
+#include <vector>
 
-bool plist_callback(void *, ProcessInfo info);
+void fmt_arch(char *arch, int n, ArchitectureIdent ident);
 
 int main(int argc, char *argv[]) {
 	log_init(1);
@@ -42,17 +43,28 @@ int main(int argc, char *argv[]) {
 	printf("os initialized: %p\n", os.container.instance.instance);
 
 	auto info = os.info();
+	char arch[11];
+	fmt_arch(arch, sizeof(arch), info->arch);
 
-	printf("Kernel base: %llx\nKernel size: %llx\nArchitecture: %d\n", info->base, info->size, info->arch.tag);
+	printf("Kernel base: %llx\nKernel size: %llx\nArchitecture: %s\n", info->base, info->size, arch);
 
 	printf("Process List:\n");
 
-	printf("%-8s | %-10s | %-10s | %s\n", "Pid", "Sys Arch", "Proc Arch", "Name");
+	printf("%-4s | %-8s | %-10s | %-10s | %s\n", "Seq", "Pid", "Sys Arch", "Proc Arch", "Name");
 
-	ProcessInfoCallback callback;
-	callback.func = plist_callback;
+	int i = 0;
 
-	os.process_info_list_callback(callback);
+	os.process_info_list_callback([i](ProcessInfo info) mutable {
+		char sys_arch[11];
+		char proc_arch[11];
+
+		fmt_arch(sys_arch, sizeof(sys_arch), info.sys_arch);
+		fmt_arch(proc_arch, sizeof(proc_arch), info.proc_arch);
+
+		printf("%-4d | %-8d | %-10s | %-10s | %s\n", i++, info.pid, sys_arch, proc_arch, info.name);
+
+		return true;
+	});
 
 	return 0;
 }
@@ -68,17 +80,4 @@ void fmt_arch(char *arch, int n, ArchitectureIdent ident) {
 		default:
 			snprintf(arch, n, "Unknown");
 	}
-}
-
-bool plist_callback(void *, ProcessInfo info) {
-
-	char sys_arch[11];
-	char proc_arch[11];
-
-	fmt_arch(sys_arch, sizeof(sys_arch), info.sys_arch);
-	fmt_arch(proc_arch, sizeof(proc_arch), info.proc_arch);
-
-	printf("%-8d | %-10s | %-10s | %s\n", info.pid, sys_arch, proc_arch, info.name);
-
-	return true;
 }

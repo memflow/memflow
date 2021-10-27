@@ -140,6 +140,17 @@ using KeyboardStateRetTmp = void;
 template<typename T = void>
 using MaybeUninit = T;
 
+template<typename T>
+struct alignas(alignof(T)) RustMaybeUninit {
+    char pad[sizeof(T)];
+    constexpr T &assume_init() {
+        return *(T *)this;
+    }
+    constexpr const T &assume_init() const {
+        return *(const T *)this;
+    }
+};
+
 template<typename CGlueCtx = void>
 using MemoryViewRetTmp = void;
 
@@ -411,10 +422,80 @@ struct CIterator {
     int32_t (*func)(void*, MaybeUninit<T> *out);
 };
 
+template<typename T, typename Iterator>
+struct CPPIterator {
+    CIterator<T> iter;
+    Iterator cur, end;
+
+    static int32_t next(void *data, MaybeUninit<T> *out) {
+        CPPIterator *i = (CPPIterator *)data;
+
+        if (i->cur == i->end) {
+            return 1;
+        } else {
+            *out = *i->cur;
+            i->cur++;
+        }
+    }
+
+    template<typename Container>
+    CPPIterator(Container &cont)
+        : cur(cont.begin()), end(cont.end())
+    {
+        iter.iter = &this;
+        iter.func = &CPPIterator::next;
+    }
+
+    CPPIterator(CPPIterator &&o) {
+        iter = o.iter;
+        iter.iter = &this;
+        cur = o.cur;
+        end = o.end;
+    }
+
+    CPPIterator(CPPIterator &o) {
+        iter = o.iter;
+        iter.iter = &this;
+        cur = o.cur;
+        end = o.end;
+    }
+
+    inline CIterator &operator() {
+        return iter;
+    }
+};
+
 template<typename T, typename F>
 struct Callback {
     T *context;
     bool (*func)(T*, F);
+
+    template<typename Container>
+    static bool push_back(Container *context, F data) {
+        context->push_back(data);
+        return true;
+    }
+
+    template<typename Function>
+    static bool functional(Function *function, F data) {
+        return (*function)(data);
+    }
+
+    Callback() = default;
+
+    template<typename OT, typename = decltype(std::declval<OT>().push_back(std::declval<F>()))>
+    Callback(OT *cont) :
+        context((T *)cont),
+        func((decltype(func))(&Callback::push_back<OT>)) {}
+
+    template<typename Function, typename = decltype(std::declval<Function>()(std::declval<F>()))>
+    Callback(const Function &function) :
+        context((T *)&function),
+        func((decltype(func))(&Callback::functional<Function>)) {}
+
+    constexpr operator Callback<void, F> &() {
+        return *((Callback<void, F> *)this);
+    }
 };
 
 template<typename T>
@@ -488,7 +569,7 @@ struct CGlueObjContainer {
     typedef C Context;
     T instance;
     C context;
-    R ret_tmp;
+    RustMaybeUninit<R> ret_tmp;
 
     inline auto clone_context() noexcept {
         return context.clone();
@@ -509,7 +590,7 @@ template<typename T, typename R>
 struct CGlueObjContainer<T, void, R> {
     typedef void Context;
     T instance;
-    R ret_tmp;
+    RustMaybeUninit<R> ret_tmp;
 
     inline auto clone_context() noexcept {}
 
@@ -754,7 +835,7 @@ struct ConnectorInstance {
 
     inline auto into_cpu_state(MaybeUninit<IntoCpuState<CBox<void>, Context>> * ok_out) && noexcept {
         auto ___ctx = StoreAll()[this->container.clone_context(), StoreAll()];
-        DeferedForget ___forget(this->container);
+        DeferedForget<decltype(this->container)> ___forget(this->container);
         return (vtbl_connectorcpustateinner)->into_cpu_state((this->container), ok_out);
     }
 
@@ -1885,7 +1966,7 @@ struct OsInstance {
 
     inline auto into_process_by_info(ProcessInfo info, MaybeUninit<IntoProcessInstance<CBox<void>, Context>> * ok_out) && noexcept {
         auto ___ctx = StoreAll()[this->container.clone_context(), StoreAll()];
-        DeferedForget ___forget(this->container);
+        DeferedForget<decltype(this->container)> ___forget(this->container);
         return (vtbl_osinner)->into_process_by_info((this->container), info, ok_out);
     }
 
@@ -1903,19 +1984,19 @@ struct OsInstance {
 
     inline auto into_process_by_address(Address addr, MaybeUninit<IntoProcessInstance<CBox<void>, Context>> * ok_out) && noexcept {
         auto ___ctx = StoreAll()[this->container.clone_context(), StoreAll()];
-        DeferedForget ___forget(this->container);
+        DeferedForget<decltype(this->container)> ___forget(this->container);
         return (vtbl_osinner)->into_process_by_address((this->container), addr, ok_out);
     }
 
     inline auto into_process_by_name(CSliceRef<uint8_t> name, MaybeUninit<IntoProcessInstance<CBox<void>, Context>> * ok_out) && noexcept {
         auto ___ctx = StoreAll()[this->container.clone_context(), StoreAll()];
-        DeferedForget ___forget(this->container);
+        DeferedForget<decltype(this->container)> ___forget(this->container);
         return (vtbl_osinner)->into_process_by_name((this->container), name, ok_out);
     }
 
     inline auto into_process_by_pid(Pid pid, MaybeUninit<IntoProcessInstance<CBox<void>, Context>> * ok_out) && noexcept {
         auto ___ctx = StoreAll()[this->container.clone_context(), StoreAll()];
-        DeferedForget ___forget(this->container);
+        DeferedForget<decltype(this->container)> ___forget(this->container);
         return (vtbl_osinner)->into_process_by_pid((this->container), pid, ok_out);
     }
 
@@ -1973,7 +2054,7 @@ struct OsInstance {
 
     inline auto into_keyboard(MaybeUninit<IntoKeyboard<CBox<void>, Context>> * ok_out) && noexcept {
         auto ___ctx = StoreAll()[this->container.clone_context(), StoreAll()];
-        DeferedForget ___forget(this->container);
+        DeferedForget<decltype(this->container)> ___forget(this->container);
         return (vtbl_oskeyboardinner)->into_keyboard((this->container), ok_out);
     }
 
@@ -2277,7 +2358,7 @@ struct CGlueTraitObj<T, ConnectorCpuStateInnerVtbl<CGlueObjContainer<T, C, R>>, 
 
     inline auto into_cpu_state(MaybeUninit<IntoCpuState<CBox<void>, Context>> * ok_out) && noexcept {
         auto ___ctx = StoreAll()[this->container.clone_context(), StoreAll()];
-        DeferedForget ___forget(this->container);
+        DeferedForget<decltype(this->container)> ___forget(this->container);
         return (this->vtbl)->into_cpu_state((this->container), ok_out);
     }
 
@@ -2491,7 +2572,7 @@ struct CGlueTraitObj<T, OsInnerVtbl<CGlueObjContainer<T, C, R>>, C, R> {
 
     inline auto into_process_by_info(ProcessInfo info, MaybeUninit<IntoProcessInstance<CBox<void>, Context>> * ok_out) && noexcept {
         auto ___ctx = StoreAll()[this->container.clone_context(), StoreAll()];
-        DeferedForget ___forget(this->container);
+        DeferedForget<decltype(this->container)> ___forget(this->container);
         return (this->vtbl)->into_process_by_info((this->container), info, ok_out);
     }
 
@@ -2509,19 +2590,19 @@ struct CGlueTraitObj<T, OsInnerVtbl<CGlueObjContainer<T, C, R>>, C, R> {
 
     inline auto into_process_by_address(Address addr, MaybeUninit<IntoProcessInstance<CBox<void>, Context>> * ok_out) && noexcept {
         auto ___ctx = StoreAll()[this->container.clone_context(), StoreAll()];
-        DeferedForget ___forget(this->container);
+        DeferedForget<decltype(this->container)> ___forget(this->container);
         return (this->vtbl)->into_process_by_address((this->container), addr, ok_out);
     }
 
     inline auto into_process_by_name(CSliceRef<uint8_t> name, MaybeUninit<IntoProcessInstance<CBox<void>, Context>> * ok_out) && noexcept {
         auto ___ctx = StoreAll()[this->container.clone_context(), StoreAll()];
-        DeferedForget ___forget(this->container);
+        DeferedForget<decltype(this->container)> ___forget(this->container);
         return (this->vtbl)->into_process_by_name((this->container), name, ok_out);
     }
 
     inline auto into_process_by_pid(Pid pid, MaybeUninit<IntoProcessInstance<CBox<void>, Context>> * ok_out) && noexcept {
         auto ___ctx = StoreAll()[this->container.clone_context(), StoreAll()];
-        DeferedForget ___forget(this->container);
+        DeferedForget<decltype(this->container)> ___forget(this->container);
         return (this->vtbl)->into_process_by_pid((this->container), pid, ok_out);
     }
 
@@ -2612,7 +2693,7 @@ struct CGlueTraitObj<T, OsKeyboardInnerVtbl<CGlueObjContainer<T, C, R>>, C, R> {
 
     inline auto into_keyboard(MaybeUninit<IntoKeyboard<CBox<void>, Context>> * ok_out) && noexcept {
         auto ___ctx = StoreAll()[this->container.clone_context(), StoreAll()];
-        DeferedForget ___forget(this->container);
+        DeferedForget<decltype(this->container)> ___forget(this->container);
         return (this->vtbl)->into_keyboard((this->container), ok_out);
     }
 

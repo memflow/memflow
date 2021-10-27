@@ -460,7 +460,7 @@ struct CPPIterator {
         end = o.end;
     }
 
-    inline CIterator &operator() {
+    inline operator CIterator<T> &() {
         return iter;
     }
 };

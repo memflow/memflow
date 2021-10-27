@@ -134,10 +134,11 @@ pub unsafe extern "C" fn inventory_create_os(
     let mem_obj = if mem.is_null() {
         None
     } else {
-        Some(mem.read())
+        let mem_obj = mem.read();
+        // Zero out the data so that any automatic destructors on the other side do nothing.
+        std::ptr::write_bytes(mem, 0, 1);
+        Some(mem_obj)
     };
-    // Zero out the data so that any automatic destructors on the other side do nothing.
-    std::ptr::write_bytes(mem, 0, 1);
 
     if args.is_null() {
         let args = Args::default();

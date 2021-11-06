@@ -23,6 +23,7 @@ bitflags = true
 sort_by = "None"
 
 [export]
+include = ["OsInstanceArcBox", "ProcessInstanceArcBox", "IntoProcessInstanceArcBox"]
 
 [export.rename]
 "OptionMut_c_void" = "pvoid"

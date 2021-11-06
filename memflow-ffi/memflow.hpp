@@ -422,10 +422,13 @@ struct CIterator {
     int32_t (*func)(void*, MaybeUninit<T> *out);
 };
 
-template<typename T, typename Iterator>
+template<typename Container>
 struct CPPIterator {
+
+    typedef typename Container::iterator::value_type T;
+
     CIterator<T> iter;
-    Iterator cur, end;
+    typename Container::iterator cur, end;
 
     static int32_t next(void *data, MaybeUninit<T> *out) {
         CPPIterator *i = (CPPIterator *)data;
@@ -435,14 +438,14 @@ struct CPPIterator {
         } else {
             *out = *i->cur;
             i->cur++;
+            return 0;
         }
     }
 
-    template<typename Container>
     CPPIterator(Container &cont)
         : cur(cont.begin()), end(cont.end())
     {
-        iter.iter = &this;
+        iter.iter = &iter - offsetof(CPPIterator<Container>, iter);
         iter.func = &CPPIterator::next;
     }
 
@@ -741,20 +744,22 @@ struct IntoCpuState {
 
     typedef CGlueCtx Context;
 
-    inline auto clone() const noexcept {
+    inline IntoCpuState clone() const noexcept {
         IntoCpuState __ret;
-        __ret.vtbl_clone = this->vtbl_clone;
-        __ret.vtbl_cpustate = this->vtbl_cpustate;
-        __ret.container = (vtbl_clone)->clone(&(this->container));
+            __ret.vtbl_clone = this->vtbl_clone;
+            __ret.vtbl_cpustate = this->vtbl_cpustate;
+        __ret.container = (this->vtbl_clone)->clone(&this->container);
         return __ret;
     }
 
     inline auto pause() noexcept {
-        return (vtbl_cpustate)->pause(&(this->container));
+    (this->vtbl_cpustate)->pause(&this->container);
+
     }
 
     inline auto resume() noexcept {
-        return (vtbl_cpustate)->resume(&(this->container));
+    (this->vtbl_cpustate)->resume(&this->container);
+
     }
 
 };
@@ -804,39 +809,45 @@ struct ConnectorInstance {
 
     typedef CGlueCtx Context;
 
-    inline auto clone() const noexcept {
+    inline ConnectorInstance clone() const noexcept {
         ConnectorInstance __ret;
-        __ret.vtbl_clone = this->vtbl_clone;
-        __ret.vtbl_physicalmemory = this->vtbl_physicalmemory;
-        __ret.vtbl_connectorcpustateinner = this->vtbl_connectorcpustateinner;
-        __ret.container = (vtbl_clone)->clone(&(this->container));
+            __ret.vtbl_clone = this->vtbl_clone;
+            __ret.vtbl_physicalmemory = this->vtbl_physicalmemory;
+            __ret.vtbl_connectorcpustateinner = this->vtbl_connectorcpustateinner;
+        __ret.container = (this->vtbl_clone)->clone(&this->container);
         return __ret;
     }
 
     inline auto phys_read_raw_iter(CIterator<PhysicalReadData> data, PhysicalReadFailCallback * out_fail) noexcept {
-        return (vtbl_physicalmemory)->phys_read_raw_iter(&(this->container), data, out_fail);
+        int32_t __ret = (this->vtbl_physicalmemory)->phys_read_raw_iter(&this->container, data, out_fail);
+        return __ret;
     }
 
     inline auto phys_write_raw_iter(CIterator<PhysicalWriteData> data, PhysicalWriteFailCallback * out_fail) noexcept {
-        return (vtbl_physicalmemory)->phys_write_raw_iter(&(this->container), data, out_fail);
+        int32_t __ret = (this->vtbl_physicalmemory)->phys_write_raw_iter(&this->container, data, out_fail);
+        return __ret;
     }
 
     inline auto metadata() const noexcept {
-        return (vtbl_physicalmemory)->metadata(&(this->container));
+        PhysicalMemoryMetadata __ret = (this->vtbl_physicalmemory)->metadata(&this->container);
+        return __ret;
     }
 
     inline auto set_mem_map(CSliceRef<PhysicalMemoryMapping> mem_map) noexcept {
-        return (vtbl_physicalmemory)->set_mem_map(&(this->container), mem_map);
+    (this->vtbl_physicalmemory)->set_mem_map(&this->container, mem_map);
+
     }
 
     inline auto cpu_state(MaybeUninit<CpuStateBase<CBox<void>, Context>> * ok_out) noexcept {
-        return (vtbl_connectorcpustateinner)->cpu_state(&(this->container), ok_out);
+        int32_t __ret = (this->vtbl_connectorcpustateinner)->cpu_state(&this->container, ok_out);
+        return __ret;
     }
 
     inline auto into_cpu_state(MaybeUninit<IntoCpuState<CBox<void>, Context>> * ok_out) && noexcept {
         auto ___ctx = StoreAll()[this->container.clone_context(), StoreAll()];
-        DeferedForget<decltype(this->container)> ___forget(this->container);
-        return (vtbl_connectorcpustateinner)->into_cpu_state((this->container), ok_out);
+        int32_t __ret = (this->vtbl_connectorcpustateinner)->into_cpu_state(this->container, ok_out);
+        mem_forget(this->container);
+        return __ret;
     }
 
 };
@@ -1373,127 +1384,158 @@ struct ProcessInstance {
     typedef CGlueCtx Context;
 
     inline auto read_raw_iter(CIterator<ReadData> data, ReadFailCallback * out_fail) noexcept {
-        return (vtbl_memoryview)->read_raw_iter(&(this->container), data, out_fail);
+        int32_t __ret = (this->vtbl_memoryview)->read_raw_iter(&this->container, data, out_fail);
+        return __ret;
     }
 
     inline auto write_raw_iter(CIterator<WriteData> data, WriteFailCallback * out_fail) noexcept {
-        return (vtbl_memoryview)->write_raw_iter(&(this->container), data, out_fail);
+        int32_t __ret = (this->vtbl_memoryview)->write_raw_iter(&this->container, data, out_fail);
+        return __ret;
     }
 
     inline auto metadata() const noexcept {
-        return (vtbl_memoryview)->metadata(&(this->container));
+        MemoryViewMetadata __ret = (this->vtbl_memoryview)->metadata(&this->container);
+        return __ret;
     }
 
     inline auto read_raw_list(CSliceMut<ReadData> data) noexcept {
-        return (vtbl_memoryview)->read_raw_list(&(this->container), data);
+        int32_t __ret = (this->vtbl_memoryview)->read_raw_list(&this->container, data);
+        return __ret;
     }
 
     inline auto read_raw_into(Address addr, CSliceMut<uint8_t> out) noexcept {
-        return (vtbl_memoryview)->read_raw_into(&(this->container), addr, out);
+        int32_t __ret = (this->vtbl_memoryview)->read_raw_into(&this->container, addr, out);
+        return __ret;
     }
 
     inline auto write_raw_list(CSliceRef<WriteData> data) noexcept {
-        return (vtbl_memoryview)->write_raw_list(&(this->container), data);
+        int32_t __ret = (this->vtbl_memoryview)->write_raw_list(&this->container, data);
+        return __ret;
     }
 
     inline auto write_raw(Address addr, CSliceRef<uint8_t> data) noexcept {
-        return (vtbl_memoryview)->write_raw(&(this->container), addr, data);
+        int32_t __ret = (this->vtbl_memoryview)->write_raw(&this->container, addr, data);
+        return __ret;
     }
 
     inline auto state() noexcept {
-        return (vtbl_process)->state(&(this->container));
+        ProcessState __ret = (this->vtbl_process)->state(&this->container);
+        return __ret;
     }
 
     inline auto module_address_list_callback(const ArchitectureIdent * target_arch, ModuleAddressCallback callback) noexcept {
-        return (vtbl_process)->module_address_list_callback(&(this->container), target_arch, callback);
+        int32_t __ret = (this->vtbl_process)->module_address_list_callback(&this->container, target_arch, callback);
+        return __ret;
     }
 
     inline auto module_list_callback(const ArchitectureIdent * target_arch, ModuleInfoCallback callback) noexcept {
-        return (vtbl_process)->module_list_callback(&(this->container), target_arch, callback);
+        int32_t __ret = (this->vtbl_process)->module_list_callback(&this->container, target_arch, callback);
+        return __ret;
     }
 
     inline auto module_by_address(Address address, ArchitectureIdent architecture, MaybeUninit<ModuleInfo> * ok_out) noexcept {
-        return (vtbl_process)->module_by_address(&(this->container), address, architecture, ok_out);
+        int32_t __ret = (this->vtbl_process)->module_by_address(&this->container, address, architecture, ok_out);
+        return __ret;
     }
 
     inline auto module_by_name_arch(CSliceRef<uint8_t> name, const ArchitectureIdent * architecture, MaybeUninit<ModuleInfo> * ok_out) noexcept {
-        return (vtbl_process)->module_by_name_arch(&(this->container), name, architecture, ok_out);
+        int32_t __ret = (this->vtbl_process)->module_by_name_arch(&this->container, name, architecture, ok_out);
+        return __ret;
     }
 
     inline auto module_by_name(CSliceRef<uint8_t> name, MaybeUninit<ModuleInfo> * ok_out) noexcept {
-        return (vtbl_process)->module_by_name(&(this->container), name, ok_out);
+        int32_t __ret = (this->vtbl_process)->module_by_name(&this->container, name, ok_out);
+        return __ret;
     }
 
     inline auto primary_module_address(MaybeUninit<Address> * ok_out) noexcept {
-        return (vtbl_process)->primary_module_address(&(this->container), ok_out);
+        int32_t __ret = (this->vtbl_process)->primary_module_address(&this->container, ok_out);
+        return __ret;
     }
 
     inline auto primary_module(MaybeUninit<ModuleInfo> * ok_out) noexcept {
-        return (vtbl_process)->primary_module(&(this->container), ok_out);
+        int32_t __ret = (this->vtbl_process)->primary_module(&this->container, ok_out);
+        return __ret;
     }
 
     inline auto module_import_list_callback(const ModuleInfo * info, ImportCallback callback) noexcept {
-        return (vtbl_process)->module_import_list_callback(&(this->container), info, callback);
+        int32_t __ret = (this->vtbl_process)->module_import_list_callback(&this->container, info, callback);
+        return __ret;
     }
 
     inline auto module_export_list_callback(const ModuleInfo * info, ExportCallback callback) noexcept {
-        return (vtbl_process)->module_export_list_callback(&(this->container), info, callback);
+        int32_t __ret = (this->vtbl_process)->module_export_list_callback(&this->container, info, callback);
+        return __ret;
     }
 
     inline auto module_section_list_callback(const ModuleInfo * info, SectionCallback callback) noexcept {
-        return (vtbl_process)->module_section_list_callback(&(this->container), info, callback);
+        int32_t __ret = (this->vtbl_process)->module_section_list_callback(&this->container, info, callback);
+        return __ret;
     }
 
     inline auto module_import_by_name(const ModuleInfo * info, CSliceRef<uint8_t> name, MaybeUninit<ImportInfo> * ok_out) noexcept {
-        return (vtbl_process)->module_import_by_name(&(this->container), info, name, ok_out);
+        int32_t __ret = (this->vtbl_process)->module_import_by_name(&this->container, info, name, ok_out);
+        return __ret;
     }
 
     inline auto module_export_by_name(const ModuleInfo * info, CSliceRef<uint8_t> name, MaybeUninit<ExportInfo> * ok_out) noexcept {
-        return (vtbl_process)->module_export_by_name(&(this->container), info, name, ok_out);
+        int32_t __ret = (this->vtbl_process)->module_export_by_name(&this->container, info, name, ok_out);
+        return __ret;
     }
 
     inline auto module_section_by_name(const ModuleInfo * info, CSliceRef<uint8_t> name, MaybeUninit<SectionInfo> * ok_out) noexcept {
-        return (vtbl_process)->module_section_by_name(&(this->container), info, name, ok_out);
+        int32_t __ret = (this->vtbl_process)->module_section_by_name(&this->container, info, name, ok_out);
+        return __ret;
     }
 
     inline auto info() const noexcept {
-        return (vtbl_process)->info(&(this->container));
+        const ProcessInfo * __ret = (this->vtbl_process)->info(&this->container);
+        return __ret;
     }
 
     inline auto virt_to_phys_list(CSliceRef<MemoryRange> addrs, VirtualTranslationCallback out, VirtualTranslationFailCallback out_fail) noexcept {
-        return (vtbl_virtualtranslate)->virt_to_phys_list(&(this->container), addrs, out, out_fail);
+    (this->vtbl_virtualtranslate)->virt_to_phys_list(&this->container, addrs, out, out_fail);
+
     }
 
     inline auto virt_to_phys_range(Address start, Address end, VirtualTranslationCallback out) noexcept {
-        return (vtbl_virtualtranslate)->virt_to_phys_range(&(this->container), start, end, out);
+    (this->vtbl_virtualtranslate)->virt_to_phys_range(&this->container, start, end, out);
+
     }
 
     inline auto virt_translation_map_range(Address start, Address end, VirtualTranslationCallback out) noexcept {
-        return (vtbl_virtualtranslate)->virt_translation_map_range(&(this->container), start, end, out);
+    (this->vtbl_virtualtranslate)->virt_translation_map_range(&this->container, start, end, out);
+
     }
 
     inline auto virt_page_map_range(umem gap_size, Address start, Address end, MemoryRangeCallback out) noexcept {
-        return (vtbl_virtualtranslate)->virt_page_map_range(&(this->container), gap_size, start, end, out);
+    (this->vtbl_virtualtranslate)->virt_page_map_range(&this->container, gap_size, start, end, out);
+
     }
 
     inline auto virt_to_phys(Address address, MaybeUninit<PhysicalAddress> * ok_out) noexcept {
-        return (vtbl_virtualtranslate)->virt_to_phys(&(this->container), address, ok_out);
+        int32_t __ret = (this->vtbl_virtualtranslate)->virt_to_phys(&this->container, address, ok_out);
+        return __ret;
     }
 
     inline auto virt_page_info(Address addr, MaybeUninit<Page> * ok_out) noexcept {
-        return (vtbl_virtualtranslate)->virt_page_info(&(this->container), addr, ok_out);
+        int32_t __ret = (this->vtbl_virtualtranslate)->virt_page_info(&this->container, addr, ok_out);
+        return __ret;
     }
 
     inline auto virt_translation_map(VirtualTranslationCallback out) noexcept {
-        return (vtbl_virtualtranslate)->virt_translation_map(&(this->container), out);
+    (this->vtbl_virtualtranslate)->virt_translation_map(&this->container, out);
+
     }
 
     inline auto phys_to_virt(Address phys) noexcept {
-        return (vtbl_virtualtranslate)->phys_to_virt(&(this->container), phys);
+        COption<Address> __ret = (this->vtbl_virtualtranslate)->phys_to_virt(&this->container, phys);
+        return __ret;
     }
 
     inline auto virt_page_map(umem gap_size, MemoryRangeCallback out) noexcept {
-        return (vtbl_virtualtranslate)->virt_page_map(&(this->container), gap_size, out);
+    (this->vtbl_virtualtranslate)->virt_page_map(&this->container, gap_size, out);
+
     }
 
 };
@@ -1569,138 +1611,169 @@ struct IntoProcessInstance {
 
     typedef CGlueCtx Context;
 
-    inline auto clone() const noexcept {
+    inline IntoProcessInstance clone() const noexcept {
         IntoProcessInstance __ret;
-        __ret.vtbl_clone = this->vtbl_clone;
-        __ret.vtbl_memoryview = this->vtbl_memoryview;
-        __ret.vtbl_process = this->vtbl_process;
-        __ret.vtbl_virtualtranslate = this->vtbl_virtualtranslate;
-        __ret.container = (vtbl_clone)->clone(&(this->container));
+            __ret.vtbl_clone = this->vtbl_clone;
+            __ret.vtbl_memoryview = this->vtbl_memoryview;
+            __ret.vtbl_process = this->vtbl_process;
+            __ret.vtbl_virtualtranslate = this->vtbl_virtualtranslate;
+        __ret.container = (this->vtbl_clone)->clone(&this->container);
         return __ret;
     }
 
     inline auto read_raw_iter(CIterator<ReadData> data, ReadFailCallback * out_fail) noexcept {
-        return (vtbl_memoryview)->read_raw_iter(&(this->container), data, out_fail);
+        int32_t __ret = (this->vtbl_memoryview)->read_raw_iter(&this->container, data, out_fail);
+        return __ret;
     }
 
     inline auto write_raw_iter(CIterator<WriteData> data, WriteFailCallback * out_fail) noexcept {
-        return (vtbl_memoryview)->write_raw_iter(&(this->container), data, out_fail);
+        int32_t __ret = (this->vtbl_memoryview)->write_raw_iter(&this->container, data, out_fail);
+        return __ret;
     }
 
     inline auto metadata() const noexcept {
-        return (vtbl_memoryview)->metadata(&(this->container));
+        MemoryViewMetadata __ret = (this->vtbl_memoryview)->metadata(&this->container);
+        return __ret;
     }
 
     inline auto read_raw_list(CSliceMut<ReadData> data) noexcept {
-        return (vtbl_memoryview)->read_raw_list(&(this->container), data);
+        int32_t __ret = (this->vtbl_memoryview)->read_raw_list(&this->container, data);
+        return __ret;
     }
 
     inline auto read_raw_into(Address addr, CSliceMut<uint8_t> out) noexcept {
-        return (vtbl_memoryview)->read_raw_into(&(this->container), addr, out);
+        int32_t __ret = (this->vtbl_memoryview)->read_raw_into(&this->container, addr, out);
+        return __ret;
     }
 
     inline auto write_raw_list(CSliceRef<WriteData> data) noexcept {
-        return (vtbl_memoryview)->write_raw_list(&(this->container), data);
+        int32_t __ret = (this->vtbl_memoryview)->write_raw_list(&this->container, data);
+        return __ret;
     }
 
     inline auto write_raw(Address addr, CSliceRef<uint8_t> data) noexcept {
-        return (vtbl_memoryview)->write_raw(&(this->container), addr, data);
+        int32_t __ret = (this->vtbl_memoryview)->write_raw(&this->container, addr, data);
+        return __ret;
     }
 
     inline auto state() noexcept {
-        return (vtbl_process)->state(&(this->container));
+        ProcessState __ret = (this->vtbl_process)->state(&this->container);
+        return __ret;
     }
 
     inline auto module_address_list_callback(const ArchitectureIdent * target_arch, ModuleAddressCallback callback) noexcept {
-        return (vtbl_process)->module_address_list_callback(&(this->container), target_arch, callback);
+        int32_t __ret = (this->vtbl_process)->module_address_list_callback(&this->container, target_arch, callback);
+        return __ret;
     }
 
     inline auto module_list_callback(const ArchitectureIdent * target_arch, ModuleInfoCallback callback) noexcept {
-        return (vtbl_process)->module_list_callback(&(this->container), target_arch, callback);
+        int32_t __ret = (this->vtbl_process)->module_list_callback(&this->container, target_arch, callback);
+        return __ret;
     }
 
     inline auto module_by_address(Address address, ArchitectureIdent architecture, MaybeUninit<ModuleInfo> * ok_out) noexcept {
-        return (vtbl_process)->module_by_address(&(this->container), address, architecture, ok_out);
+        int32_t __ret = (this->vtbl_process)->module_by_address(&this->container, address, architecture, ok_out);
+        return __ret;
     }
 
     inline auto module_by_name_arch(CSliceRef<uint8_t> name, const ArchitectureIdent * architecture, MaybeUninit<ModuleInfo> * ok_out) noexcept {
-        return (vtbl_process)->module_by_name_arch(&(this->container), name, architecture, ok_out);
+        int32_t __ret = (this->vtbl_process)->module_by_name_arch(&this->container, name, architecture, ok_out);
+        return __ret;
     }
 
     inline auto module_by_name(CSliceRef<uint8_t> name, MaybeUninit<ModuleInfo> * ok_out) noexcept {
-        return (vtbl_process)->module_by_name(&(this->container), name, ok_out);
+        int32_t __ret = (this->vtbl_process)->module_by_name(&this->container, name, ok_out);
+        return __ret;
     }
 
     inline auto primary_module_address(MaybeUninit<Address> * ok_out) noexcept {
-        return (vtbl_process)->primary_module_address(&(this->container), ok_out);
+        int32_t __ret = (this->vtbl_process)->primary_module_address(&this->container, ok_out);
+        return __ret;
     }
 
     inline auto primary_module(MaybeUninit<ModuleInfo> * ok_out) noexcept {
-        return (vtbl_process)->primary_module(&(this->container), ok_out);
+        int32_t __ret = (this->vtbl_process)->primary_module(&this->container, ok_out);
+        return __ret;
     }
 
     inline auto module_import_list_callback(const ModuleInfo * info, ImportCallback callback) noexcept {
-        return (vtbl_process)->module_import_list_callback(&(this->container), info, callback);
+        int32_t __ret = (this->vtbl_process)->module_import_list_callback(&this->container, info, callback);
+        return __ret;
     }
 
     inline auto module_export_list_callback(const ModuleInfo * info, ExportCallback callback) noexcept {
-        return (vtbl_process)->module_export_list_callback(&(this->container), info, callback);
+        int32_t __ret = (this->vtbl_process)->module_export_list_callback(&this->container, info, callback);
+        return __ret;
     }
 
     inline auto module_section_list_callback(const ModuleInfo * info, SectionCallback callback) noexcept {
-        return (vtbl_process)->module_section_list_callback(&(this->container), info, callback);
+        int32_t __ret = (this->vtbl_process)->module_section_list_callback(&this->container, info, callback);
+        return __ret;
     }
 
     inline auto module_import_by_name(const ModuleInfo * info, CSliceRef<uint8_t> name, MaybeUninit<ImportInfo> * ok_out) noexcept {
-        return (vtbl_process)->module_import_by_name(&(this->container), info, name, ok_out);
+        int32_t __ret = (this->vtbl_process)->module_import_by_name(&this->container, info, name, ok_out);
+        return __ret;
     }
 
     inline auto module_export_by_name(const ModuleInfo * info, CSliceRef<uint8_t> name, MaybeUninit<ExportInfo> * ok_out) noexcept {
-        return (vtbl_process)->module_export_by_name(&(this->container), info, name, ok_out);
+        int32_t __ret = (this->vtbl_process)->module_export_by_name(&this->container, info, name, ok_out);
+        return __ret;
     }
 
     inline auto module_section_by_name(const ModuleInfo * info, CSliceRef<uint8_t> name, MaybeUninit<SectionInfo> * ok_out) noexcept {
-        return (vtbl_process)->module_section_by_name(&(this->container), info, name, ok_out);
+        int32_t __ret = (this->vtbl_process)->module_section_by_name(&this->container, info, name, ok_out);
+        return __ret;
     }
 
     inline auto info() const noexcept {
-        return (vtbl_process)->info(&(this->container));
+        const ProcessInfo * __ret = (this->vtbl_process)->info(&this->container);
+        return __ret;
     }
 
     inline auto virt_to_phys_list(CSliceRef<MemoryRange> addrs, VirtualTranslationCallback out, VirtualTranslationFailCallback out_fail) noexcept {
-        return (vtbl_virtualtranslate)->virt_to_phys_list(&(this->container), addrs, out, out_fail);
+    (this->vtbl_virtualtranslate)->virt_to_phys_list(&this->container, addrs, out, out_fail);
+
     }
 
     inline auto virt_to_phys_range(Address start, Address end, VirtualTranslationCallback out) noexcept {
-        return (vtbl_virtualtranslate)->virt_to_phys_range(&(this->container), start, end, out);
+    (this->vtbl_virtualtranslate)->virt_to_phys_range(&this->container, start, end, out);
+
     }
 
     inline auto virt_translation_map_range(Address start, Address end, VirtualTranslationCallback out) noexcept {
-        return (vtbl_virtualtranslate)->virt_translation_map_range(&(this->container), start, end, out);
+    (this->vtbl_virtualtranslate)->virt_translation_map_range(&this->container, start, end, out);
+
     }
 
     inline auto virt_page_map_range(umem gap_size, Address start, Address end, MemoryRangeCallback out) noexcept {
-        return (vtbl_virtualtranslate)->virt_page_map_range(&(this->container), gap_size, start, end, out);
+    (this->vtbl_virtualtranslate)->virt_page_map_range(&this->container, gap_size, start, end, out);
+
     }
 
     inline auto virt_to_phys(Address address, MaybeUninit<PhysicalAddress> * ok_out) noexcept {
-        return (vtbl_virtualtranslate)->virt_to_phys(&(this->container), address, ok_out);
+        int32_t __ret = (this->vtbl_virtualtranslate)->virt_to_phys(&this->container, address, ok_out);
+        return __ret;
     }
 
     inline auto virt_page_info(Address addr, MaybeUninit<Page> * ok_out) noexcept {
-        return (vtbl_virtualtranslate)->virt_page_info(&(this->container), addr, ok_out);
+        int32_t __ret = (this->vtbl_virtualtranslate)->virt_page_info(&this->container, addr, ok_out);
+        return __ret;
     }
 
     inline auto virt_translation_map(VirtualTranslationCallback out) noexcept {
-        return (vtbl_virtualtranslate)->virt_translation_map(&(this->container), out);
+    (this->vtbl_virtualtranslate)->virt_translation_map(&this->container, out);
+
     }
 
     inline auto phys_to_virt(Address phys) noexcept {
-        return (vtbl_virtualtranslate)->phys_to_virt(&(this->container), phys);
+        COption<Address> __ret = (this->vtbl_virtualtranslate)->phys_to_virt(&this->container, phys);
+        return __ret;
     }
 
     inline auto virt_page_map(umem gap_size, MemoryRangeCallback out) noexcept {
-        return (vtbl_virtualtranslate)->virt_page_map(&(this->container), gap_size, out);
+    (this->vtbl_virtualtranslate)->virt_page_map(&this->container, gap_size, out);
+
     }
 
 };
@@ -1860,24 +1933,27 @@ struct IntoKeyboard {
 
     typedef CGlueCtx Context;
 
-    inline auto clone() const noexcept {
+    inline IntoKeyboard clone() const noexcept {
         IntoKeyboard __ret;
-        __ret.vtbl_clone = this->vtbl_clone;
-        __ret.vtbl_keyboard = this->vtbl_keyboard;
-        __ret.container = (vtbl_clone)->clone(&(this->container));
+            __ret.vtbl_clone = this->vtbl_clone;
+            __ret.vtbl_keyboard = this->vtbl_keyboard;
+        __ret.container = (this->vtbl_clone)->clone(&this->container);
         return __ret;
     }
 
     inline auto is_down(int32_t vk) noexcept {
-        return (vtbl_keyboard)->is_down(&(this->container), vk);
+        bool __ret = (this->vtbl_keyboard)->is_down(&this->container, vk);
+        return __ret;
     }
 
     inline auto set_down(int32_t vk, bool down) noexcept {
-        return (vtbl_keyboard)->set_down(&(this->container), vk, down);
+    (this->vtbl_keyboard)->set_down(&this->container, vk, down);
+
     }
 
     inline auto state(MaybeUninit<KeyboardStateBase<CBox<void>, Context>> * ok_out) noexcept {
-        return (vtbl_keyboard)->state(&(this->container), ok_out);
+        int32_t __ret = (this->vtbl_keyboard)->state(&this->container, ok_out);
+        return __ret;
     }
 
 };
@@ -1929,149 +2005,180 @@ struct OsInstance {
 
     typedef CGlueCtx Context;
 
-    inline auto clone() const noexcept {
+    inline OsInstance clone() const noexcept {
         OsInstance __ret;
-        __ret.vtbl_clone = this->vtbl_clone;
-        __ret.vtbl_osinner = this->vtbl_osinner;
-        __ret.vtbl_memoryview = this->vtbl_memoryview;
-        __ret.vtbl_oskeyboardinner = this->vtbl_oskeyboardinner;
-        __ret.vtbl_physicalmemory = this->vtbl_physicalmemory;
-        __ret.container = (vtbl_clone)->clone(&(this->container));
+            __ret.vtbl_clone = this->vtbl_clone;
+            __ret.vtbl_osinner = this->vtbl_osinner;
+            __ret.vtbl_memoryview = this->vtbl_memoryview;
+            __ret.vtbl_oskeyboardinner = this->vtbl_oskeyboardinner;
+            __ret.vtbl_physicalmemory = this->vtbl_physicalmemory;
+        __ret.container = (this->vtbl_clone)->clone(&this->container);
         return __ret;
     }
 
     inline auto process_address_list_callback(AddressCallback callback) noexcept {
-        return (vtbl_osinner)->process_address_list_callback(&(this->container), callback);
+        int32_t __ret = (this->vtbl_osinner)->process_address_list_callback(&this->container, callback);
+        return __ret;
     }
 
     inline auto process_info_list_callback(ProcessInfoCallback callback) noexcept {
-        return (vtbl_osinner)->process_info_list_callback(&(this->container), callback);
+        int32_t __ret = (this->vtbl_osinner)->process_info_list_callback(&this->container, callback);
+        return __ret;
     }
 
     inline auto process_info_by_address(Address address, MaybeUninit<ProcessInfo> * ok_out) noexcept {
-        return (vtbl_osinner)->process_info_by_address(&(this->container), address, ok_out);
+        int32_t __ret = (this->vtbl_osinner)->process_info_by_address(&this->container, address, ok_out);
+        return __ret;
     }
 
     inline auto process_info_by_name(CSliceRef<uint8_t> name, MaybeUninit<ProcessInfo> * ok_out) noexcept {
-        return (vtbl_osinner)->process_info_by_name(&(this->container), name, ok_out);
+        int32_t __ret = (this->vtbl_osinner)->process_info_by_name(&this->container, name, ok_out);
+        return __ret;
     }
 
     inline auto process_info_by_pid(Pid pid, MaybeUninit<ProcessInfo> * ok_out) noexcept {
-        return (vtbl_osinner)->process_info_by_pid(&(this->container), pid, ok_out);
+        int32_t __ret = (this->vtbl_osinner)->process_info_by_pid(&this->container, pid, ok_out);
+        return __ret;
     }
 
     inline auto process_by_info(ProcessInfo info, MaybeUninit<ProcessInstance<CBox<void>, Context>> * ok_out) noexcept {
-        return (vtbl_osinner)->process_by_info(&(this->container), info, ok_out);
+        int32_t __ret = (this->vtbl_osinner)->process_by_info(&this->container, info, ok_out);
+        return __ret;
     }
 
     inline auto into_process_by_info(ProcessInfo info, MaybeUninit<IntoProcessInstance<CBox<void>, Context>> * ok_out) && noexcept {
         auto ___ctx = StoreAll()[this->container.clone_context(), StoreAll()];
-        DeferedForget<decltype(this->container)> ___forget(this->container);
-        return (vtbl_osinner)->into_process_by_info((this->container), info, ok_out);
+        int32_t __ret = (this->vtbl_osinner)->into_process_by_info(this->container, info, ok_out);
+        mem_forget(this->container);
+        return __ret;
     }
 
     inline auto process_by_address(Address addr, MaybeUninit<ProcessInstance<CBox<void>, Context>> * ok_out) noexcept {
-        return (vtbl_osinner)->process_by_address(&(this->container), addr, ok_out);
+        int32_t __ret = (this->vtbl_osinner)->process_by_address(&this->container, addr, ok_out);
+        return __ret;
     }
 
     inline auto process_by_name(CSliceRef<uint8_t> name, MaybeUninit<ProcessInstance<CBox<void>, Context>> * ok_out) noexcept {
-        return (vtbl_osinner)->process_by_name(&(this->container), name, ok_out);
+        int32_t __ret = (this->vtbl_osinner)->process_by_name(&this->container, name, ok_out);
+        return __ret;
     }
 
     inline auto process_by_pid(Pid pid, MaybeUninit<ProcessInstance<CBox<void>, Context>> * ok_out) noexcept {
-        return (vtbl_osinner)->process_by_pid(&(this->container), pid, ok_out);
+        int32_t __ret = (this->vtbl_osinner)->process_by_pid(&this->container, pid, ok_out);
+        return __ret;
     }
 
     inline auto into_process_by_address(Address addr, MaybeUninit<IntoProcessInstance<CBox<void>, Context>> * ok_out) && noexcept {
         auto ___ctx = StoreAll()[this->container.clone_context(), StoreAll()];
-        DeferedForget<decltype(this->container)> ___forget(this->container);
-        return (vtbl_osinner)->into_process_by_address((this->container), addr, ok_out);
+        int32_t __ret = (this->vtbl_osinner)->into_process_by_address(this->container, addr, ok_out);
+        mem_forget(this->container);
+        return __ret;
     }
 
     inline auto into_process_by_name(CSliceRef<uint8_t> name, MaybeUninit<IntoProcessInstance<CBox<void>, Context>> * ok_out) && noexcept {
         auto ___ctx = StoreAll()[this->container.clone_context(), StoreAll()];
-        DeferedForget<decltype(this->container)> ___forget(this->container);
-        return (vtbl_osinner)->into_process_by_name((this->container), name, ok_out);
+        int32_t __ret = (this->vtbl_osinner)->into_process_by_name(this->container, name, ok_out);
+        mem_forget(this->container);
+        return __ret;
     }
 
     inline auto into_process_by_pid(Pid pid, MaybeUninit<IntoProcessInstance<CBox<void>, Context>> * ok_out) && noexcept {
         auto ___ctx = StoreAll()[this->container.clone_context(), StoreAll()];
-        DeferedForget<decltype(this->container)> ___forget(this->container);
-        return (vtbl_osinner)->into_process_by_pid((this->container), pid, ok_out);
+        int32_t __ret = (this->vtbl_osinner)->into_process_by_pid(this->container, pid, ok_out);
+        mem_forget(this->container);
+        return __ret;
     }
 
     inline auto module_address_list_callback(AddressCallback callback) noexcept {
-        return (vtbl_osinner)->module_address_list_callback(&(this->container), callback);
+        int32_t __ret = (this->vtbl_osinner)->module_address_list_callback(&this->container, callback);
+        return __ret;
     }
 
     inline auto module_list_callback(ModuleInfoCallback callback) noexcept {
-        return (vtbl_osinner)->module_list_callback(&(this->container), callback);
+        int32_t __ret = (this->vtbl_osinner)->module_list_callback(&this->container, callback);
+        return __ret;
     }
 
     inline auto module_by_address(Address address, MaybeUninit<ModuleInfo> * ok_out) noexcept {
-        return (vtbl_osinner)->module_by_address(&(this->container), address, ok_out);
+        int32_t __ret = (this->vtbl_osinner)->module_by_address(&this->container, address, ok_out);
+        return __ret;
     }
 
     inline auto module_by_name(CSliceRef<uint8_t> name, MaybeUninit<ModuleInfo> * ok_out) noexcept {
-        return (vtbl_osinner)->module_by_name(&(this->container), name, ok_out);
+        int32_t __ret = (this->vtbl_osinner)->module_by_name(&this->container, name, ok_out);
+        return __ret;
     }
 
     inline auto info() const noexcept {
-        return (vtbl_osinner)->info(&(this->container));
+        const OsInfo * __ret = (this->vtbl_osinner)->info(&this->container);
+        return __ret;
     }
 
     inline auto read_raw_iter(CIterator<ReadData> data, ReadFailCallback * out_fail) noexcept {
-        return (vtbl_memoryview)->read_raw_iter(&(this->container), data, out_fail);
+        int32_t __ret = (this->vtbl_memoryview)->read_raw_iter(&this->container, data, out_fail);
+        return __ret;
     }
 
     inline auto write_raw_iter(CIterator<WriteData> data, WriteFailCallback * out_fail) noexcept {
-        return (vtbl_memoryview)->write_raw_iter(&(this->container), data, out_fail);
+        int32_t __ret = (this->vtbl_memoryview)->write_raw_iter(&this->container, data, out_fail);
+        return __ret;
     }
 
     inline auto memoryview_metadata() const noexcept {
-        return (vtbl_memoryview)->metadata(&(this->container));
+        MemoryViewMetadata __ret = (this->vtbl_memoryview)->metadata(&this->container);
+        return __ret;
     }
 
     inline auto read_raw_list(CSliceMut<ReadData> data) noexcept {
-        return (vtbl_memoryview)->read_raw_list(&(this->container), data);
+        int32_t __ret = (this->vtbl_memoryview)->read_raw_list(&this->container, data);
+        return __ret;
     }
 
     inline auto read_raw_into(Address addr, CSliceMut<uint8_t> out) noexcept {
-        return (vtbl_memoryview)->read_raw_into(&(this->container), addr, out);
+        int32_t __ret = (this->vtbl_memoryview)->read_raw_into(&this->container, addr, out);
+        return __ret;
     }
 
     inline auto write_raw_list(CSliceRef<WriteData> data) noexcept {
-        return (vtbl_memoryview)->write_raw_list(&(this->container), data);
+        int32_t __ret = (this->vtbl_memoryview)->write_raw_list(&this->container, data);
+        return __ret;
     }
 
     inline auto write_raw(Address addr, CSliceRef<uint8_t> data) noexcept {
-        return (vtbl_memoryview)->write_raw(&(this->container), addr, data);
+        int32_t __ret = (this->vtbl_memoryview)->write_raw(&this->container, addr, data);
+        return __ret;
     }
 
     inline auto keyboard(MaybeUninit<KeyboardBase<CBox<void>, Context>> * ok_out) noexcept {
-        return (vtbl_oskeyboardinner)->keyboard(&(this->container), ok_out);
+        int32_t __ret = (this->vtbl_oskeyboardinner)->keyboard(&this->container, ok_out);
+        return __ret;
     }
 
     inline auto into_keyboard(MaybeUninit<IntoKeyboard<CBox<void>, Context>> * ok_out) && noexcept {
         auto ___ctx = StoreAll()[this->container.clone_context(), StoreAll()];
-        DeferedForget<decltype(this->container)> ___forget(this->container);
-        return (vtbl_oskeyboardinner)->into_keyboard((this->container), ok_out);
+        int32_t __ret = (this->vtbl_oskeyboardinner)->into_keyboard(this->container, ok_out);
+        mem_forget(this->container);
+        return __ret;
     }
 
     inline auto phys_read_raw_iter(CIterator<PhysicalReadData> data, PhysicalReadFailCallback * out_fail) noexcept {
-        return (vtbl_physicalmemory)->phys_read_raw_iter(&(this->container), data, out_fail);
+        int32_t __ret = (this->vtbl_physicalmemory)->phys_read_raw_iter(&this->container, data, out_fail);
+        return __ret;
     }
 
     inline auto phys_write_raw_iter(CIterator<PhysicalWriteData> data, PhysicalWriteFailCallback * out_fail) noexcept {
-        return (vtbl_physicalmemory)->phys_write_raw_iter(&(this->container), data, out_fail);
+        int32_t __ret = (this->vtbl_physicalmemory)->phys_write_raw_iter(&this->container, data, out_fail);
+        return __ret;
     }
 
     inline auto physicalmemory_metadata() const noexcept {
-        return (vtbl_physicalmemory)->metadata(&(this->container));
+        PhysicalMemoryMetadata __ret = (this->vtbl_physicalmemory)->metadata(&this->container);
+        return __ret;
     }
 
     inline auto set_mem_map(CSliceRef<PhysicalMemoryMapping> mem_map) noexcept {
-        return (vtbl_physicalmemory)->set_mem_map(&(this->container), mem_map);
+    (this->vtbl_physicalmemory)->set_mem_map(&this->container, mem_map);
+
     }
 
 };
@@ -2085,6 +2192,22 @@ using OsInstanceBaseArcBox = OsInstanceBaseCtxBox<CGlueT, COptArc<CGlueArcTy>>;
 using OsInstanceArcBox = OsInstanceBaseArcBox<void, void>;
 
 using MuOsInstanceArcBox = MaybeUninit<OsInstanceArcBox>;
+
+template<typename CGlueT, typename CGlueCtx>
+using ProcessInstanceBaseCtxBox = ProcessInstance<CBox<CGlueT>, CGlueCtx>;
+
+template<typename CGlueT, typename CGlueArcTy>
+using ProcessInstanceBaseArcBox = ProcessInstanceBaseCtxBox<CGlueT, COptArc<CGlueArcTy>>;
+
+using ProcessInstanceArcBox = ProcessInstanceBaseArcBox<void, void>;
+
+template<typename CGlueT, typename CGlueCtx>
+using IntoProcessInstanceBaseCtxBox = IntoProcessInstance<CBox<CGlueT>, CGlueCtx>;
+
+template<typename CGlueT, typename CGlueArcTy>
+using IntoProcessInstanceBaseArcBox = IntoProcessInstanceBaseCtxBox<CGlueT, COptArc<CGlueArcTy>>;
+
+using IntoProcessInstanceArcBox = IntoProcessInstanceBaseArcBox<void, void>;
 
 extern "C" {
 
@@ -2276,10 +2399,10 @@ struct CGlueTraitObj<T, CloneVtbl<CGlueObjContainer<T, C, R>>, C, R> {
 
     typedef C Context;
 
-    inline auto clone() const noexcept {
+    inline CGlueTraitObj clone() const noexcept {
         CGlueTraitObj __ret;
-        __ret.vtbl = this->vtbl;
-        __ret.container = (this->vtbl)->clone(&(this->container));
+            __ret.vtbl = this->vtbl;
+        __ret.container = (this->vtbl)->clone(&this->container);
         return __ret;
     }
 
@@ -2299,19 +2422,23 @@ struct CGlueTraitObj<T, PhysicalMemoryVtbl<CGlueObjContainer<T, C, R>>, C, R> {
     typedef C Context;
 
     inline auto phys_read_raw_iter(CIterator<PhysicalReadData> data, PhysicalReadFailCallback * out_fail) noexcept {
-        return (this->vtbl)->phys_read_raw_iter(&(this->container), data, out_fail);
+        int32_t __ret = (this->vtbl)->phys_read_raw_iter(&this->container, data, out_fail);
+        return __ret;
     }
 
     inline auto phys_write_raw_iter(CIterator<PhysicalWriteData> data, PhysicalWriteFailCallback * out_fail) noexcept {
-        return (this->vtbl)->phys_write_raw_iter(&(this->container), data, out_fail);
+        int32_t __ret = (this->vtbl)->phys_write_raw_iter(&this->container, data, out_fail);
+        return __ret;
     }
 
     inline auto metadata() const noexcept {
-        return (this->vtbl)->metadata(&(this->container));
+        PhysicalMemoryMetadata __ret = (this->vtbl)->metadata(&this->container);
+        return __ret;
     }
 
     inline auto set_mem_map(CSliceRef<PhysicalMemoryMapping> mem_map) noexcept {
-        return (this->vtbl)->set_mem_map(&(this->container), mem_map);
+    (this->vtbl)->set_mem_map(&this->container, mem_map);
+
     }
 
 };
@@ -2330,11 +2457,13 @@ struct CGlueTraitObj<T, CpuStateVtbl<CGlueObjContainer<T, C, R>>, C, R> {
     typedef C Context;
 
     inline auto pause() noexcept {
-        return (this->vtbl)->pause(&(this->container));
+    (this->vtbl)->pause(&this->container);
+
     }
 
     inline auto resume() noexcept {
-        return (this->vtbl)->resume(&(this->container));
+    (this->vtbl)->resume(&this->container);
+
     }
 
 };
@@ -2353,13 +2482,15 @@ struct CGlueTraitObj<T, ConnectorCpuStateInnerVtbl<CGlueObjContainer<T, C, R>>, 
     typedef C Context;
 
     inline auto cpu_state(MaybeUninit<CpuStateBase<CBox<void>, Context>> * ok_out) noexcept {
-        return (this->vtbl)->cpu_state(&(this->container), ok_out);
+        int32_t __ret = (this->vtbl)->cpu_state(&this->container, ok_out);
+        return __ret;
     }
 
     inline auto into_cpu_state(MaybeUninit<IntoCpuState<CBox<void>, Context>> * ok_out) && noexcept {
         auto ___ctx = StoreAll()[this->container.clone_context(), StoreAll()];
-        DeferedForget<decltype(this->container)> ___forget(this->container);
-        return (this->vtbl)->into_cpu_state((this->container), ok_out);
+        int32_t __ret = (this->vtbl)->into_cpu_state(this->container, ok_out);
+        mem_forget(this->container);
+        return __ret;
     }
 
 };
@@ -2378,31 +2509,38 @@ struct CGlueTraitObj<T, MemoryViewVtbl<CGlueObjContainer<T, C, R>>, C, R> {
     typedef C Context;
 
     inline auto read_raw_iter(CIterator<ReadData> data, ReadFailCallback * out_fail) noexcept {
-        return (this->vtbl)->read_raw_iter(&(this->container), data, out_fail);
+        int32_t __ret = (this->vtbl)->read_raw_iter(&this->container, data, out_fail);
+        return __ret;
     }
 
     inline auto write_raw_iter(CIterator<WriteData> data, WriteFailCallback * out_fail) noexcept {
-        return (this->vtbl)->write_raw_iter(&(this->container), data, out_fail);
+        int32_t __ret = (this->vtbl)->write_raw_iter(&this->container, data, out_fail);
+        return __ret;
     }
 
     inline auto metadata() const noexcept {
-        return (this->vtbl)->metadata(&(this->container));
+        MemoryViewMetadata __ret = (this->vtbl)->metadata(&this->container);
+        return __ret;
     }
 
     inline auto read_raw_list(CSliceMut<ReadData> data) noexcept {
-        return (this->vtbl)->read_raw_list(&(this->container), data);
+        int32_t __ret = (this->vtbl)->read_raw_list(&this->container, data);
+        return __ret;
     }
 
     inline auto read_raw_into(Address addr, CSliceMut<uint8_t> out) noexcept {
-        return (this->vtbl)->read_raw_into(&(this->container), addr, out);
+        int32_t __ret = (this->vtbl)->read_raw_into(&this->container, addr, out);
+        return __ret;
     }
 
     inline auto write_raw_list(CSliceRef<WriteData> data) noexcept {
-        return (this->vtbl)->write_raw_list(&(this->container), data);
+        int32_t __ret = (this->vtbl)->write_raw_list(&this->container, data);
+        return __ret;
     }
 
     inline auto write_raw(Address addr, CSliceRef<uint8_t> data) noexcept {
-        return (this->vtbl)->write_raw(&(this->container), addr, data);
+        int32_t __ret = (this->vtbl)->write_raw(&this->container, addr, data);
+        return __ret;
     }
 
 };
@@ -2421,63 +2559,78 @@ struct CGlueTraitObj<T, ProcessVtbl<CGlueObjContainer<T, C, R>>, C, R> {
     typedef C Context;
 
     inline auto state() noexcept {
-        return (this->vtbl)->state(&(this->container));
+        ProcessState __ret = (this->vtbl)->state(&this->container);
+        return __ret;
     }
 
     inline auto module_address_list_callback(const ArchitectureIdent * target_arch, ModuleAddressCallback callback) noexcept {
-        return (this->vtbl)->module_address_list_callback(&(this->container), target_arch, callback);
+        int32_t __ret = (this->vtbl)->module_address_list_callback(&this->container, target_arch, callback);
+        return __ret;
     }
 
     inline auto module_list_callback(const ArchitectureIdent * target_arch, ModuleInfoCallback callback) noexcept {
-        return (this->vtbl)->module_list_callback(&(this->container), target_arch, callback);
+        int32_t __ret = (this->vtbl)->module_list_callback(&this->container, target_arch, callback);
+        return __ret;
     }
 
     inline auto module_by_address(Address address, ArchitectureIdent architecture, MaybeUninit<ModuleInfo> * ok_out) noexcept {
-        return (this->vtbl)->module_by_address(&(this->container), address, architecture, ok_out);
+        int32_t __ret = (this->vtbl)->module_by_address(&this->container, address, architecture, ok_out);
+        return __ret;
     }
 
     inline auto module_by_name_arch(CSliceRef<uint8_t> name, const ArchitectureIdent * architecture, MaybeUninit<ModuleInfo> * ok_out) noexcept {
-        return (this->vtbl)->module_by_name_arch(&(this->container), name, architecture, ok_out);
+        int32_t __ret = (this->vtbl)->module_by_name_arch(&this->container, name, architecture, ok_out);
+        return __ret;
     }
 
     inline auto module_by_name(CSliceRef<uint8_t> name, MaybeUninit<ModuleInfo> * ok_out) noexcept {
-        return (this->vtbl)->module_by_name(&(this->container), name, ok_out);
+        int32_t __ret = (this->vtbl)->module_by_name(&this->container, name, ok_out);
+        return __ret;
     }
 
     inline auto primary_module_address(MaybeUninit<Address> * ok_out) noexcept {
-        return (this->vtbl)->primary_module_address(&(this->container), ok_out);
+        int32_t __ret = (this->vtbl)->primary_module_address(&this->container, ok_out);
+        return __ret;
     }
 
     inline auto primary_module(MaybeUninit<ModuleInfo> * ok_out) noexcept {
-        return (this->vtbl)->primary_module(&(this->container), ok_out);
+        int32_t __ret = (this->vtbl)->primary_module(&this->container, ok_out);
+        return __ret;
     }
 
     inline auto module_import_list_callback(const ModuleInfo * info, ImportCallback callback) noexcept {
-        return (this->vtbl)->module_import_list_callback(&(this->container), info, callback);
+        int32_t __ret = (this->vtbl)->module_import_list_callback(&this->container, info, callback);
+        return __ret;
     }
 
     inline auto module_export_list_callback(const ModuleInfo * info, ExportCallback callback) noexcept {
-        return (this->vtbl)->module_export_list_callback(&(this->container), info, callback);
+        int32_t __ret = (this->vtbl)->module_export_list_callback(&this->container, info, callback);
+        return __ret;
     }
 
     inline auto module_section_list_callback(const ModuleInfo * info, SectionCallback callback) noexcept {
-        return (this->vtbl)->module_section_list_callback(&(this->container), info, callback);
+        int32_t __ret = (this->vtbl)->module_section_list_callback(&this->container, info, callback);
+        return __ret;
     }
 
     inline auto module_import_by_name(const ModuleInfo * info, CSliceRef<uint8_t> name, MaybeUninit<ImportInfo> * ok_out) noexcept {
-        return (this->vtbl)->module_import_by_name(&(this->container), info, name, ok_out);
+        int32_t __ret = (this->vtbl)->module_import_by_name(&this->container, info, name, ok_out);
+        return __ret;
     }
 
     inline auto module_export_by_name(const ModuleInfo * info, CSliceRef<uint8_t> name, MaybeUninit<ExportInfo> * ok_out) noexcept {
-        return (this->vtbl)->module_export_by_name(&(this->container), info, name, ok_out);
+        int32_t __ret = (this->vtbl)->module_export_by_name(&this->container, info, name, ok_out);
+        return __ret;
     }
 
     inline auto module_section_by_name(const ModuleInfo * info, CSliceRef<uint8_t> name, MaybeUninit<SectionInfo> * ok_out) noexcept {
-        return (this->vtbl)->module_section_by_name(&(this->container), info, name, ok_out);
+        int32_t __ret = (this->vtbl)->module_section_by_name(&this->container, info, name, ok_out);
+        return __ret;
     }
 
     inline auto info() const noexcept {
-        return (this->vtbl)->info(&(this->container));
+        const ProcessInfo * __ret = (this->vtbl)->info(&this->container);
+        return __ret;
     }
 
 };
@@ -2496,39 +2649,48 @@ struct CGlueTraitObj<T, VirtualTranslateVtbl<CGlueObjContainer<T, C, R>>, C, R> 
     typedef C Context;
 
     inline auto virt_to_phys_list(CSliceRef<MemoryRange> addrs, VirtualTranslationCallback out, VirtualTranslationFailCallback out_fail) noexcept {
-        return (this->vtbl)->virt_to_phys_list(&(this->container), addrs, out, out_fail);
+    (this->vtbl)->virt_to_phys_list(&this->container, addrs, out, out_fail);
+
     }
 
     inline auto virt_to_phys_range(Address start, Address end, VirtualTranslationCallback out) noexcept {
-        return (this->vtbl)->virt_to_phys_range(&(this->container), start, end, out);
+    (this->vtbl)->virt_to_phys_range(&this->container, start, end, out);
+
     }
 
     inline auto virt_translation_map_range(Address start, Address end, VirtualTranslationCallback out) noexcept {
-        return (this->vtbl)->virt_translation_map_range(&(this->container), start, end, out);
+    (this->vtbl)->virt_translation_map_range(&this->container, start, end, out);
+
     }
 
     inline auto virt_page_map_range(umem gap_size, Address start, Address end, MemoryRangeCallback out) noexcept {
-        return (this->vtbl)->virt_page_map_range(&(this->container), gap_size, start, end, out);
+    (this->vtbl)->virt_page_map_range(&this->container, gap_size, start, end, out);
+
     }
 
     inline auto virt_to_phys(Address address, MaybeUninit<PhysicalAddress> * ok_out) noexcept {
-        return (this->vtbl)->virt_to_phys(&(this->container), address, ok_out);
+        int32_t __ret = (this->vtbl)->virt_to_phys(&this->container, address, ok_out);
+        return __ret;
     }
 
     inline auto virt_page_info(Address addr, MaybeUninit<Page> * ok_out) noexcept {
-        return (this->vtbl)->virt_page_info(&(this->container), addr, ok_out);
+        int32_t __ret = (this->vtbl)->virt_page_info(&this->container, addr, ok_out);
+        return __ret;
     }
 
     inline auto virt_translation_map(VirtualTranslationCallback out) noexcept {
-        return (this->vtbl)->virt_translation_map(&(this->container), out);
+    (this->vtbl)->virt_translation_map(&this->container, out);
+
     }
 
     inline auto phys_to_virt(Address phys) noexcept {
-        return (this->vtbl)->phys_to_virt(&(this->container), phys);
+        COption<Address> __ret = (this->vtbl)->phys_to_virt(&this->container, phys);
+        return __ret;
     }
 
     inline auto virt_page_map(umem gap_size, MemoryRangeCallback out) noexcept {
-        return (this->vtbl)->virt_page_map(&(this->container), gap_size, out);
+    (this->vtbl)->virt_page_map(&this->container, gap_size, out);
+
     }
 
 };
@@ -2547,83 +2709,101 @@ struct CGlueTraitObj<T, OsInnerVtbl<CGlueObjContainer<T, C, R>>, C, R> {
     typedef C Context;
 
     inline auto process_address_list_callback(AddressCallback callback) noexcept {
-        return (this->vtbl)->process_address_list_callback(&(this->container), callback);
+        int32_t __ret = (this->vtbl)->process_address_list_callback(&this->container, callback);
+        return __ret;
     }
 
     inline auto process_info_list_callback(ProcessInfoCallback callback) noexcept {
-        return (this->vtbl)->process_info_list_callback(&(this->container), callback);
+        int32_t __ret = (this->vtbl)->process_info_list_callback(&this->container, callback);
+        return __ret;
     }
 
     inline auto process_info_by_address(Address address, MaybeUninit<ProcessInfo> * ok_out) noexcept {
-        return (this->vtbl)->process_info_by_address(&(this->container), address, ok_out);
+        int32_t __ret = (this->vtbl)->process_info_by_address(&this->container, address, ok_out);
+        return __ret;
     }
 
     inline auto process_info_by_name(CSliceRef<uint8_t> name, MaybeUninit<ProcessInfo> * ok_out) noexcept {
-        return (this->vtbl)->process_info_by_name(&(this->container), name, ok_out);
+        int32_t __ret = (this->vtbl)->process_info_by_name(&this->container, name, ok_out);
+        return __ret;
     }
 
     inline auto process_info_by_pid(Pid pid, MaybeUninit<ProcessInfo> * ok_out) noexcept {
-        return (this->vtbl)->process_info_by_pid(&(this->container), pid, ok_out);
+        int32_t __ret = (this->vtbl)->process_info_by_pid(&this->container, pid, ok_out);
+        return __ret;
     }
 
     inline auto process_by_info(ProcessInfo info, MaybeUninit<ProcessInstance<CBox<void>, Context>> * ok_out) noexcept {
-        return (this->vtbl)->process_by_info(&(this->container), info, ok_out);
+        int32_t __ret = (this->vtbl)->process_by_info(&this->container, info, ok_out);
+        return __ret;
     }
 
     inline auto into_process_by_info(ProcessInfo info, MaybeUninit<IntoProcessInstance<CBox<void>, Context>> * ok_out) && noexcept {
         auto ___ctx = StoreAll()[this->container.clone_context(), StoreAll()];
-        DeferedForget<decltype(this->container)> ___forget(this->container);
-        return (this->vtbl)->into_process_by_info((this->container), info, ok_out);
+        int32_t __ret = (this->vtbl)->into_process_by_info(this->container, info, ok_out);
+        mem_forget(this->container);
+        return __ret;
     }
 
     inline auto process_by_address(Address addr, MaybeUninit<ProcessInstance<CBox<void>, Context>> * ok_out) noexcept {
-        return (this->vtbl)->process_by_address(&(this->container), addr, ok_out);
+        int32_t __ret = (this->vtbl)->process_by_address(&this->container, addr, ok_out);
+        return __ret;
     }
 
     inline auto process_by_name(CSliceRef<uint8_t> name, MaybeUninit<ProcessInstance<CBox<void>, Context>> * ok_out) noexcept {
-        return (this->vtbl)->process_by_name(&(this->container), name, ok_out);
+        int32_t __ret = (this->vtbl)->process_by_name(&this->container, name, ok_out);
+        return __ret;
     }
 
     inline auto process_by_pid(Pid pid, MaybeUninit<ProcessInstance<CBox<void>, Context>> * ok_out) noexcept {
-        return (this->vtbl)->process_by_pid(&(this->container), pid, ok_out);
+        int32_t __ret = (this->vtbl)->process_by_pid(&this->container, pid, ok_out);
+        return __ret;
     }
 
     inline auto into_process_by_address(Address addr, MaybeUninit<IntoProcessInstance<CBox<void>, Context>> * ok_out) && noexcept {
         auto ___ctx = StoreAll()[this->container.clone_context(), StoreAll()];
-        DeferedForget<decltype(this->container)> ___forget(this->container);
-        return (this->vtbl)->into_process_by_address((this->container), addr, ok_out);
+        int32_t __ret = (this->vtbl)->into_process_by_address(this->container, addr, ok_out);
+        mem_forget(this->container);
+        return __ret;
     }
 
     inline auto into_process_by_name(CSliceRef<uint8_t> name, MaybeUninit<IntoProcessInstance<CBox<void>, Context>> * ok_out) && noexcept {
         auto ___ctx = StoreAll()[this->container.clone_context(), StoreAll()];
-        DeferedForget<decltype(this->container)> ___forget(this->container);
-        return (this->vtbl)->into_process_by_name((this->container), name, ok_out);
+        int32_t __ret = (this->vtbl)->into_process_by_name(this->container, name, ok_out);
+        mem_forget(this->container);
+        return __ret;
     }
 
     inline auto into_process_by_pid(Pid pid, MaybeUninit<IntoProcessInstance<CBox<void>, Context>> * ok_out) && noexcept {
         auto ___ctx = StoreAll()[this->container.clone_context(), StoreAll()];
-        DeferedForget<decltype(this->container)> ___forget(this->container);
-        return (this->vtbl)->into_process_by_pid((this->container), pid, ok_out);
+        int32_t __ret = (this->vtbl)->into_process_by_pid(this->container, pid, ok_out);
+        mem_forget(this->container);
+        return __ret;
     }
 
     inline auto module_address_list_callback(AddressCallback callback) noexcept {
-        return (this->vtbl)->module_address_list_callback(&(this->container), callback);
+        int32_t __ret = (this->vtbl)->module_address_list_callback(&this->container, callback);
+        return __ret;
     }
 
     inline auto module_list_callback(ModuleInfoCallback callback) noexcept {
-        return (this->vtbl)->module_list_callback(&(this->container), callback);
+        int32_t __ret = (this->vtbl)->module_list_callback(&this->container, callback);
+        return __ret;
     }
 
     inline auto module_by_address(Address address, MaybeUninit<ModuleInfo> * ok_out) noexcept {
-        return (this->vtbl)->module_by_address(&(this->container), address, ok_out);
+        int32_t __ret = (this->vtbl)->module_by_address(&this->container, address, ok_out);
+        return __ret;
     }
 
     inline auto module_by_name(CSliceRef<uint8_t> name, MaybeUninit<ModuleInfo> * ok_out) noexcept {
-        return (this->vtbl)->module_by_name(&(this->container), name, ok_out);
+        int32_t __ret = (this->vtbl)->module_by_name(&this->container, name, ok_out);
+        return __ret;
     }
 
     inline auto info() const noexcept {
-        return (this->vtbl)->info(&(this->container));
+        const OsInfo * __ret = (this->vtbl)->info(&this->container);
+        return __ret;
     }
 
 };
@@ -2642,7 +2822,8 @@ struct CGlueTraitObj<T, KeyboardStateVtbl<CGlueObjContainer<T, C, R>>, C, R> {
     typedef C Context;
 
     inline auto is_down(int32_t vk) const noexcept {
-        return (this->vtbl)->is_down(&(this->container), vk);
+        bool __ret = (this->vtbl)->is_down(&this->container, vk);
+        return __ret;
     }
 
 };
@@ -2661,15 +2842,18 @@ struct CGlueTraitObj<T, KeyboardVtbl<CGlueObjContainer<T, C, R>>, C, R> {
     typedef C Context;
 
     inline auto is_down(int32_t vk) noexcept {
-        return (this->vtbl)->is_down(&(this->container), vk);
+        bool __ret = (this->vtbl)->is_down(&this->container, vk);
+        return __ret;
     }
 
     inline auto set_down(int32_t vk, bool down) noexcept {
-        return (this->vtbl)->set_down(&(this->container), vk, down);
+    (this->vtbl)->set_down(&this->container, vk, down);
+
     }
 
     inline auto state(MaybeUninit<KeyboardStateBase<CBox<void>, Context>> * ok_out) noexcept {
-        return (this->vtbl)->state(&(this->container), ok_out);
+        int32_t __ret = (this->vtbl)->state(&this->container, ok_out);
+        return __ret;
     }
 
 };
@@ -2688,13 +2872,15 @@ struct CGlueTraitObj<T, OsKeyboardInnerVtbl<CGlueObjContainer<T, C, R>>, C, R> {
     typedef C Context;
 
     inline auto keyboard(MaybeUninit<KeyboardBase<CBox<void>, Context>> * ok_out) noexcept {
-        return (this->vtbl)->keyboard(&(this->container), ok_out);
+        int32_t __ret = (this->vtbl)->keyboard(&this->container, ok_out);
+        return __ret;
     }
 
     inline auto into_keyboard(MaybeUninit<IntoKeyboard<CBox<void>, Context>> * ok_out) && noexcept {
         auto ___ctx = StoreAll()[this->container.clone_context(), StoreAll()];
-        DeferedForget<decltype(this->container)> ___forget(this->container);
-        return (this->vtbl)->into_keyboard((this->container), ok_out);
+        int32_t __ret = (this->vtbl)->into_keyboard(this->container, ok_out);
+        mem_forget(this->container);
+        return __ret;
     }
 
 };

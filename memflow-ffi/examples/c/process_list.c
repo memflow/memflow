@@ -1,130 +1,122 @@
 #include "memflow.h"
-#include "memflow_support.h"
 
 #include <stdio.h>
 
-bool list_processes(OsInstance *os, Address addr) {
-  ProcessInstance process;
-  if (os->vtbl_osinner->process_by_address(this(os), addr, ctx(os), &process) <
-      0) {
-    return true;
-  }
+bool list_processes(OsInstanceArcBox *os, Address addr) {
 
-  const struct ProcessInfo *info = process.vtbl_process->info(this(&process));
+	ProcessInstanceArcBox process;
+	if (osinstance_process_by_address(os, addr, &process)) {
+		return true;
+	}
 
-  ModuleInfo primary_module;
-  if (process.vtbl_process->primary_module(this(&process), &primary_module) <
-      0) {
-    // no primary module found, continue iteration - this should _never_ happen
-    printf("%d\t%s\t0x%x\tN/A\n", info->pid, info->name, info->address);
-    return true;
-  }
+	const struct ProcessInfo *info = processinstance_info(&process);
 
-  printf("%d\t%s\t0x%x\t0x%x\n", info->pid, info->name, info->address,
-         primary_module.address);
+	ModuleInfo primary_module;
+	if (processinstance_primary_module(&process, &primary_module)) {
+		// no primary module found, continue iteration - this should _never_ happen
+		printf("%d\t%s\t0x%lx\tN/A\n", info->pid, info->name, info->address);
+		return true;
+	}
 
-  // iterate over all module addresses and collect them in an array
-  struct ModuleAddressInfo module_address[256];
-  struct CollectModuleAddressInfoContext modulesctx = {module_address, 256, 0,
-                                                       0};
-  process.vtbl_process->module_address_list_callback(
-      this(&process), NULL,
-      mf_cb_module_address_info(&modulesctx, collect_module_address_info));
-  printf("Read %d of %d modules\n", modulesctx.read, modulesctx.total);
+	printf("%d\t%s\t0x%lx\t0x%lx\n", info->pid, info->name, info->address,
+				 primary_module.address);
 
-  // iterate over all module info structs and collect them in an array
-  struct ModuleInfo module_info[64];
-  struct CollectModuleInfoContext modulesinfoctx = {module_info, 64, 0, 0};
-  process.vtbl_process->module_list_callback(
-      this(&process), NULL,
-      mf_cb_module_info(&modulesinfoctx, collect_module_info));
-  printf("Read %d of %d modules\n", modulesinfoctx.read, modulesinfoctx.total);
+	// iterate over all module addresses and collect them in an array
+	struct ModuleAddressInfo module_addresses[256];
+	COLLECT_CB_INTO_ARR(ModuleAddressInfo, module_address, module_addresses);
+	processinstance_module_address_list_callback(&process, NULL, module_address);
 
-  // iterate over all imports and collect them in an array
-  struct ImportInfo import_info[64];
-  struct CollectImportInfoContext importsctx = {import_info, 64, 0, 0};
-  process.vtbl_process->module_import_list_callback(
-      this(&process), &primary_module,
-      mf_cb_import_info(&importsctx, collect_import_info));
-  printf("Read %d of %d imports\n", importsctx.read, importsctx.total);
+	printf("Read %zu modules\n", module_address_base.size);
 
-  // iterate over all exports and collect them in an array
-  struct ExportInfo export_info[64];
-  struct CollectExportInfoContext exportsctx = {export_info, 64, 0, 0};
-  process.vtbl_process->module_export_list_callback(
-      this(&process), &primary_module,
-      mf_cb_export_info(&exportsctx, collect_export_info));
-  printf("Read %d of %d exports\n", exportsctx.read, exportsctx.total);
+	// iterate over all module info structs and collect them in a buffer
+	COLLECT_CB(ModuleInfo, module_info);
+	processinstance_module_list_callback(&process, NULL, module_info);
+	printf("Read %zu modules\n", module_info_base.size);
+	free(module_info_base.buf);
 
-  // iterate over all sections and collect them in an array
-  struct SectionInfo section_info[64];
-  struct CollectSectionInfoContext sectionsctx = {section_info, 64, 0, 0};
-  process.vtbl_process->module_section_list_callback(
-      this(&process), &primary_module,
-      mf_cb_section_info(&sectionsctx, collect_section_info));
-  printf("Read %d of %d sections\n", sectionsctx.read, sectionsctx.total);
+	// iterate over all imports and collect them in a buffer
+	COLLECT_CB(ImportInfo, import_info);
+	processinstance_module_import_list_callback(&process, &primary_module, import_info);
+	printf("Read %zu imports\n", import_info_base.size);
+	free(import_info_base.buf);
 
-  return true;
+	// iterate over all exports and collect them in a buffer
+	COLLECT_CB(ExportInfo, exports);
+	processinstance_module_export_list_callback(&process, &primary_module, exports);
+	printf("Read %zu exports\n", exports_base.size);
+	free(exports_base.buf);
+
+	// iterate over all sections and collect them in a buffer
+	COLLECT_CB(SectionInfo, sections);
+	processinstance_module_section_list_callback(&process, &primary_module, sections);
+	printf("Read %zu sections\n", sections_base.size);
+	free(sections_base.buf);
+
+	processinstance_arc_box_drop(process);
+
+	return true;
 }
 
 int main(int argc, char *argv[]) {
-  // enable debug level logging
-  log_init(2);
+	// enable debug level logging
+	log_init(2);
 
-  // load all available plugins
-  Inventory *inventory = inventory_scan();
-  printf("inventory initialized: %p\n", inventory);
+	// load all available plugins
+	Inventory *inventory = inventory_scan();
+	printf("Hello, World from C!\n");
 
-  const char *conn_name = argc > 1 ? argv[1] : "qemu_procfs";
-  const char *conn_arg = argc > 2 ? argv[2] : "";
+	printf("inventory initialized: %p\n", inventory);
 
-  // initialize the connector plugin
-  ConnectorInstance connector;
-  if (inventory_create_connector(inventory, conn_name, conn_arg, &connector) <
-      0) {
-    printf("unable to initialize connector\n");
-    inventory_free(inventory);
-    return 1;
-  }
-  printf("connector initialized: %p\n", this(&connector));
+	const char *conn_name = argc > 1 ? argv[1] : "qemu_procfs";
+	const char *conn_arg = argc > 2 ? argv[2] : "";
+	const char *os_name = argc > 3 ? argv[3]: "win32";
+	const char *os_arg = argc > 4? argv[4]: "";
 
-  // initialize the OS plugin
-  OsInstance os;
-  if (inventory_create_os(inventory, "win32", "", connector, &os) < 0) {
-    printf("unable to initialize os plugin\n");
-    mf_connector_free(connector);
-    inventory_free(inventory);
-    return 1;
-  }
-  printf("os plugin initialized: %p\n", this(&os));
+	ConnectorInstanceArcBox connector, *conn = conn_name[0] ? &connector : NULL;
 
-  // iterate over all processes and print them manually
-  printf("Pid\tNAME\tADDRESS\tMAIN_MODULE\n");
-  os.vtbl_osinner->process_address_list_callback(
-      this(&os), mf_cb_address(&os, list_processes));
+	// initialize the connector plugin
+	if (conn) {
+		if (inventory_create_connector(inventory, conn_name, conn_arg, conn)) {
+			printf("unable to initialize connector\n");
+			inventory_free(inventory);
+			return 1;
+		}
 
-  // iterate over all processes and collect them in an array
-  Address process_address[256];
-  struct CollectAddressContext processesctx = {process_address, 256, 0, 0};
-  os.vtbl_osinner->process_address_list_callback(
-      this(&os), mf_cb_address(&processesctx, collect_address));
-  printf("Read %d of %d processes\n", processesctx.read, processesctx.total);
+		printf("connector initialized: %p\n", connector.container.instance.instance);
+	}
 
-  // iterate over all process info structs and collect them in an array
-  struct ProcessInfo process_info[256];
-  struct CollectProcessInfoContext processesinfoctx = {process_info, 256, 0, 0};
-  os.vtbl_osinner->process_info_list_callback(
-      this(&os), mf_cb_process_info(&processesinfoctx, collect_process_info));
-  printf("Read %d of %d process infos\n", processesinfoctx.read,
-         processesinfoctx.total);
+	// initialize the OS plugin
+	OsInstanceArcBox os;
+	if (inventory_create_os(inventory, os_name, os_arg, conn, &os)) {
+		printf("unable to initialize os plugin\n");
+		inventory_free(inventory);
+		return 1;
+	}
 
-  // mf_os_free will also free the connector here
-  // as it was _moved_ into the os by `inventory_create_os`
-  mf_os_free(os);
-  printf("os plugin/connector freed\n");
+	printf("os plugin initialized: %p\n", os.container.instance.instance);
 
-  inventory_free(inventory);
-  printf("inventory freed\n");
+	// iterate over all processes and print them manually
+	printf("Pid\tNAME\tADDRESS\tMAIN_MODULE\n");
+	osinstance_process_address_list_callback(&os, CALLBACK(Address, &os, list_processes));
 
-  return 0;
+	// count all processes
+	COUNT_CB(Address, process_address);
+	osinstance_process_address_list_callback(&os, process_address);
+	printf("Counted %zu processes\n", process_address_count);
+
+	// iterate over all process info structs and collect them in an array
+	struct ProcessInfo process_info[256];
+	COLLECT_CB_INTO_ARR(ProcessInfo, process_info_cb, process_info);
+	osinstance_process_info_list_callback(&os, process_info_cb);
+	printf("Read %zu process infos\n", process_info_cb_base.size);
+
+	// This will also free the connector here
+	// as it was _moved_ into the os by `inventory_create_os`
+	osinstance_arc_box_drop(os);
+	printf("os plugin/connector freed\n");
+
+	inventory_free(inventory);
+	printf("inventory freed\n");
+
+	return 0;
 }

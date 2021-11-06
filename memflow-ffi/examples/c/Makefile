@@ -1,4 +1,4 @@
-CC = gcc
+CC = clang
 CFLAGS = -g -O0 -I../../../memflow-ffi/ -L../../../target/release
 LIBS=-lm -ldl -lpthread -l:libmemflow_ffi.a
 

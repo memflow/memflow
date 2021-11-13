@@ -302,7 +302,7 @@ struct CBox {
     }
 };
 
-template<typename CGlueInst, typename CGlueCtx>
+template<typename CGlueInst = CBox<void>, typename CGlueCtx = COptArc<void>>
 struct ConnectorInstanceContainer {
     typedef CGlueCtx Context;
     CGlueInst instance;
@@ -685,7 +685,7 @@ struct CGlueTraitObj {
 /**
  * Base CGlue trait object for trait MemoryView.
  */
-template<typename CGlueInst, typename CGlueCtx>
+template<typename CGlueInst = CBox<void>, typename CGlueCtx = COptArc<void>>
 using MemoryViewBase = CGlueTraitObj<CGlueInst, MemoryViewVtbl<CGlueObjContainer<CGlueInst, CGlueCtx, MemoryViewRetTmp<CGlueCtx>>>, CGlueCtx, MemoryViewRetTmp<CGlueCtx>>;
 
 /**
@@ -719,10 +719,10 @@ struct CpuStateVtbl {
 /**
  * Base CGlue trait object for trait CpuState.
  */
-template<typename CGlueInst, typename CGlueCtx>
+template<typename CGlueInst = CBox<void>, typename CGlueCtx = COptArc<void>>
 using CpuStateBase = CGlueTraitObj<CGlueInst, CpuStateVtbl<CGlueObjContainer<CGlueInst, CGlueCtx, CpuStateRetTmp<CGlueCtx>>>, CGlueCtx, CpuStateRetTmp<CGlueCtx>>;
 
-template<typename CGlueInst, typename CGlueCtx>
+template<typename CGlueInst = CBox<void>, typename CGlueCtx = COptArc<void>>
 struct IntoCpuStateContainer {
     typedef CGlueCtx Context;
     CGlueInst instance;
@@ -777,7 +777,7 @@ struct IntoCpuStateContainer<CGlueInst, void> {
  * perform any memory transformations either. They are the safest to use, because
  * there is no risk of accidentally consuming the whole object.
  */
-template<typename CGlueInst, typename CGlueCtx>
+template<typename CGlueInst = CBox<void>, typename CGlueCtx = COptArc<void>>
 struct IntoCpuState {
     const CloneVtbl<IntoCpuStateContainer<CGlueInst, CGlueCtx>> *vtbl_clone;
     const CpuStateVtbl<IntoCpuStateContainer<CGlueInst, CGlueCtx>> *vtbl_cpustate;
@@ -841,7 +841,7 @@ struct ConnectorCpuStateInnerVtbl {
  * perform any memory transformations either. They are the safest to use, because
  * there is no risk of accidentally consuming the whole object.
  */
-template<typename CGlueInst, typename CGlueCtx>
+template<typename CGlueInst = CBox<void>, typename CGlueCtx = COptArc<void>>
 struct ConnectorInstance {
     const CloneVtbl<ConnectorInstanceContainer<CGlueInst, CGlueCtx>> *vtbl_clone;
     const PhysicalMemoryVtbl<ConnectorInstanceContainer<CGlueInst, CGlueCtx>> *vtbl_physicalmemory;
@@ -911,17 +911,22 @@ struct ConnectorInstance {
 
 };
 
-template<typename CGlueT, typename CGlueCtx>
+template<typename CGlueT, typename CGlueCtx = COptArc<void>>
 using ConnectorInstanceBaseCtxBox = ConnectorInstance<CBox<CGlueT>, CGlueCtx>;
 
 template<typename CGlueT, typename CGlueArcTy>
 using ConnectorInstanceBaseArcBox = ConnectorInstanceBaseCtxBox<CGlueT, COptArc<CGlueArcTy>>;
+// Typedef for default contaienr and context type
+template<typename CGlueT, typename CGlueArcTy>
+using ConnectorInstanceBase = ConnectorInstanceBaseArcBox<CGlueT,CGlueArcTy>;
 
 using ConnectorInstanceArcBox = ConnectorInstanceBaseArcBox<void, void>;
 
 using MuConnectorInstanceArcBox = MaybeUninit<ConnectorInstanceArcBox>;
+// Typedef for default contaienr and context type
+using MuConnectorInstance = MuConnectorInstanceArcBox;
 
-template<typename CGlueInst, typename CGlueCtx>
+template<typename CGlueInst = CBox<void>, typename CGlueCtx = COptArc<void>>
 struct OsInstanceContainer {
     typedef CGlueCtx Context;
     CGlueInst instance;
@@ -1069,7 +1074,7 @@ struct ProcessInfo {
 
 using ProcessInfoCallback = OpaqueCallback<ProcessInfo>;
 
-template<typename CGlueInst, typename CGlueCtx>
+template<typename CGlueInst = CBox<void>, typename CGlueCtx = COptArc<void>>
 struct ProcessInstanceContainer {
     typedef CGlueCtx Context;
     CGlueInst instance;
@@ -1388,7 +1393,7 @@ struct VirtualTranslateVtbl {
  * perform any memory transformations either. They are the safest to use, because
  * there is no risk of accidentally consuming the whole object.
  */
-template<typename CGlueInst, typename CGlueCtx>
+template<typename CGlueInst = CBox<void>, typename CGlueCtx = COptArc<void>>
 struct ProcessInstance {
     const MemoryViewVtbl<ProcessInstanceContainer<CGlueInst, CGlueCtx>> *vtbl_memoryview;
     const ProcessVtbl<ProcessInstanceContainer<CGlueInst, CGlueCtx>> *vtbl_process;
@@ -1560,7 +1565,7 @@ struct ProcessInstance {
 
 };
 
-template<typename CGlueInst, typename CGlueCtx>
+template<typename CGlueInst = CBox<void>, typename CGlueCtx = COptArc<void>>
 struct IntoProcessInstanceContainer {
     typedef CGlueCtx Context;
     CGlueInst instance;
@@ -1615,7 +1620,7 @@ struct IntoProcessInstanceContainer<CGlueInst, void> {
  * perform any memory transformations either. They are the safest to use, because
  * there is no risk of accidentally consuming the whole object.
  */
-template<typename CGlueInst, typename CGlueCtx>
+template<typename CGlueInst = CBox<void>, typename CGlueCtx = COptArc<void>>
 struct IntoProcessInstance {
     const CloneVtbl<IntoProcessInstanceContainer<CGlueInst, CGlueCtx>> *vtbl_clone;
     const MemoryViewVtbl<IntoProcessInstanceContainer<CGlueInst, CGlueCtx>> *vtbl_memoryview;
@@ -1862,7 +1867,7 @@ struct KeyboardStateVtbl {
 /**
  * Base CGlue trait object for trait KeyboardState.
  */
-template<typename CGlueInst, typename CGlueCtx>
+template<typename CGlueInst = CBox<void>, typename CGlueCtx = COptArc<void>>
 using KeyboardStateBase = CGlueTraitObj<CGlueInst, KeyboardStateVtbl<CGlueObjContainer<CGlueInst, CGlueCtx, KeyboardStateRetTmp<CGlueCtx>>>, CGlueCtx, KeyboardStateRetTmp<CGlueCtx>>;
 
 /**
@@ -1881,10 +1886,10 @@ struct KeyboardVtbl {
 /**
  * Base CGlue trait object for trait Keyboard.
  */
-template<typename CGlueInst, typename CGlueCtx>
+template<typename CGlueInst = CBox<void>, typename CGlueCtx = COptArc<void>>
 using KeyboardBase = CGlueTraitObj<CGlueInst, KeyboardVtbl<CGlueObjContainer<CGlueInst, CGlueCtx, KeyboardRetTmp<CGlueCtx>>>, CGlueCtx, KeyboardRetTmp<CGlueCtx>>;
 
-template<typename CGlueInst, typename CGlueCtx>
+template<typename CGlueInst = CBox<void>, typename CGlueCtx = COptArc<void>>
 struct IntoKeyboardContainer {
     typedef CGlueCtx Context;
     CGlueInst instance;
@@ -1939,7 +1944,7 @@ struct IntoKeyboardContainer<CGlueInst, void> {
  * perform any memory transformations either. They are the safest to use, because
  * there is no risk of accidentally consuming the whole object.
  */
-template<typename CGlueInst, typename CGlueCtx>
+template<typename CGlueInst = CBox<void>, typename CGlueCtx = COptArc<void>>
 struct IntoKeyboard {
     const CloneVtbl<IntoKeyboardContainer<CGlueInst, CGlueCtx>> *vtbl_clone;
     const KeyboardVtbl<IntoKeyboardContainer<CGlueInst, CGlueCtx>> *vtbl_keyboard;
@@ -2008,7 +2013,7 @@ struct OsKeyboardInnerVtbl {
  * perform any memory transformations either. They are the safest to use, because
  * there is no risk of accidentally consuming the whole object.
  */
-template<typename CGlueInst, typename CGlueCtx>
+template<typename CGlueInst = CBox<void>, typename CGlueCtx = COptArc<void>>
 struct OsInstance {
     const CloneVtbl<OsInstanceContainer<CGlueInst, CGlueCtx>> *vtbl_clone;
     const OsInnerVtbl<OsInstanceContainer<CGlueInst, CGlueCtx>> *vtbl_osinner;
@@ -2215,36 +2220,47 @@ struct OsInstance {
 
 };
 
-template<typename CGlueT, typename CGlueCtx>
+template<typename CGlueT, typename CGlueCtx = COptArc<void>>
 using OsInstanceBaseCtxBox = OsInstance<CBox<CGlueT>, CGlueCtx>;
 
 template<typename CGlueT, typename CGlueArcTy>
 using OsInstanceBaseArcBox = OsInstanceBaseCtxBox<CGlueT, COptArc<CGlueArcTy>>;
+// Typedef for default contaienr and context type
+template<typename CGlueT, typename CGlueArcTy>
+using OsInstanceBase = OsInstanceBaseArcBox<CGlueT,CGlueArcTy>;
 
 using OsInstanceArcBox = OsInstanceBaseArcBox<void, void>;
 
 using MuOsInstanceArcBox = MaybeUninit<OsInstanceArcBox>;
+// Typedef for default contaienr and context type
+using MuOsInstance = MuOsInstanceArcBox;
 
-template<typename CGlueT, typename CGlueCtx>
+template<typename CGlueT, typename CGlueCtx = COptArc<void>>
 using ProcessInstanceBaseCtxBox = ProcessInstance<CBox<CGlueT>, CGlueCtx>;
 
 template<typename CGlueT, typename CGlueArcTy>
 using ProcessInstanceBaseArcBox = ProcessInstanceBaseCtxBox<CGlueT, COptArc<CGlueArcTy>>;
+// Typedef for default contaienr and context type
+template<typename CGlueT, typename CGlueArcTy>
+using ProcessInstanceBase = ProcessInstanceBaseArcBox<CGlueT,CGlueArcTy>;
 
 using ProcessInstanceArcBox = ProcessInstanceBaseArcBox<void, void>;
 
-template<typename CGlueT, typename CGlueCtx>
+template<typename CGlueT, typename CGlueCtx = COptArc<void>>
 using IntoProcessInstanceBaseCtxBox = IntoProcessInstance<CBox<CGlueT>, CGlueCtx>;
 
 template<typename CGlueT, typename CGlueArcTy>
 using IntoProcessInstanceBaseArcBox = IntoProcessInstanceBaseCtxBox<CGlueT, COptArc<CGlueArcTy>>;
+// Typedef for default contaienr and context type
+template<typename CGlueT, typename CGlueArcTy>
+using IntoProcessInstanceBase = IntoProcessInstanceBaseArcBox<CGlueT,CGlueArcTy>;
 
 using IntoProcessInstanceArcBox = IntoProcessInstanceBaseArcBox<void, void>;
 
 /**
  * CtxBoxed CGlue trait object for trait MemoryView with context.
  */
-template<typename CGlueT, typename CGlueCtx>
+template<typename CGlueT, typename CGlueCtx = COptArc<void>>
 using MemoryViewBaseCtxBox = MemoryViewBase<CBox<CGlueT>, CGlueCtx>;
 
 /**
@@ -2257,6 +2273,8 @@ using MemoryViewBaseArcBox = MemoryViewBaseCtxBox<CGlueT, COptArc<CGlueC>>;
  * Opaque Boxed CGlue trait object for trait MemoryView with a [`COptArc`](cglue::arc::COptArc) reference counted context.
  */
 using MemoryViewArcBox = MemoryViewBaseArcBox<void, void>;
+// Typedef for default contaienr and context type
+using MemoryView = MemoryViewArcBox;
 
 extern "C" {
 

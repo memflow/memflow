@@ -2,9 +2,9 @@
 
 #include <stdio.h>
 
-bool list_processes(OsInstanceArcBox *os, Address addr) {
+bool list_processes(OsInstance *os, Address addr) {
 
-	ProcessInstanceArcBox process;
+	ProcessInstance process;
 	if (osinstance_process_by_address(os, addr, &process)) {
 		return true;
 	}
@@ -52,7 +52,7 @@ bool list_processes(OsInstanceArcBox *os, Address addr) {
 	printf("Read %zu sections\n", sections_base.size);
 	free(sections_base.buf);
 
-	processinstance_arc_box_drop(process);
+	processinstance_drop(process);
 
 	return true;
 }
@@ -72,7 +72,7 @@ int main(int argc, char *argv[]) {
 	const char *os_name = argc > 3 ? argv[3]: "win32";
 	const char *os_arg = argc > 4? argv[4]: "";
 
-	ConnectorInstanceArcBox connector, *conn = conn_name[0] ? &connector : NULL;
+	ConnectorInstance connector, *conn = conn_name[0] ? &connector : NULL;
 
 	// initialize the connector plugin
 	if (conn) {
@@ -86,7 +86,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	// initialize the OS plugin
-	OsInstanceArcBox os;
+	OsInstance os;
 	if (inventory_create_os(inventory, os_name, os_arg, conn, &os)) {
 		printf("unable to initialize os plugin\n");
 		inventory_free(inventory);
@@ -112,7 +112,7 @@ int main(int argc, char *argv[]) {
 
 	// This will also free the connector here
 	// as it was _moved_ into the os by `inventory_create_os`
-	osinstance_arc_box_drop(os);
+	osinstance_drop(os);
 	printf("os plugin/connector freed\n");
 
 	inventory_free(inventory);

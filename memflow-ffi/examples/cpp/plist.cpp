@@ -21,7 +21,7 @@ int main(int argc, char *argv[]) {
 	const char *os_name = argc > 3? argv[3]: "win32";
 	const char *os_arg = argc > 4? argv[4]: "";
 
-	ConnectorInstanceArcBox connector, *conn = conn_name[0] ? &connector : nullptr;
+	ConnectorInstance<> connector, *conn = conn_name[0] ? &connector : nullptr;
 
 	if (conn) {
 		if (inventory_create_connector(inventory, conn_name, conn_arg, &connector)) {
@@ -33,7 +33,7 @@ int main(int argc, char *argv[]) {
 		printf("connector initialized: %p\n", connector.container.instance.instance);
 	}
 
-	OsInstanceArcBox os;
+	OsInstance<> os;
 
 	if (inventory_create_os(inventory, os_name, os_arg, conn, &os)) {
 		printf("unable to initialize OS\n");

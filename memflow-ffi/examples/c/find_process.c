@@ -4,9 +4,9 @@
 #include <string.h>
 
 struct FindProcessContext {
-	OsInstanceArcBox *os;
+	OsInstance *os;
 	const char *name;
-	ProcessInstanceArcBox *target_process;
+	ProcessInstance *target_process;
 	bool found;
 };
 
@@ -32,7 +32,7 @@ bool find_process(struct FindProcessContext *find_context, Address addr) {
 		return false;
 	}
 
-	processinstance_arc_box_drop(*find_context->target_process);
+	processinstance_drop(*find_context->target_process);
 
 	// continue iteration
 	return true;
@@ -52,7 +52,7 @@ int main(int argc, char *argv[]) {
 	const char *os_arg = argc > 4? argv[4]: "";
 	const char *target_proc = argc > 5? argv[5]: "notepad.exe";
 
-	ConnectorInstanceArcBox connector, *conn = conn_name[0] ? &connector : NULL;
+	ConnectorInstance connector, *conn = conn_name[0] ? &connector : NULL;
 
 	// initialize the connector plugin
 	if (conn) {
@@ -66,7 +66,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	// initialize the OS plugin
-	OsInstanceArcBox os;
+	OsInstance os;
 	if (inventory_create_os(inventory, os_name, os_arg, conn, &os)) {
 		printf("unable to initialize os plugin\n");
 		inventory_free(inventory);
@@ -78,7 +78,7 @@ int main(int argc, char *argv[]) {
 	// find a specific process based on it's name.
 	// this can easily be replaced by process_by_name but
 	// is being used here as a demonstration.
-	ProcessInstanceArcBox target_process;
+	ProcessInstance target_process;
 	struct FindProcessContext find_context = {
 			&os,
 			target_proc,
@@ -94,7 +94,7 @@ int main(int argc, char *argv[]) {
 		printf("%s process found: 0x%lx] %d %s %s\n", target_proc, info->address,
 					 info->pid, info->name, info->path);
 
-		processinstance_arc_box_drop(target_process);
+		processinstance_drop(target_process);
 	} else {
 		printf("Unable to find %s\n", target_proc);
 	}
@@ -107,14 +107,14 @@ int main(int argc, char *argv[]) {
 		printf("%s process found: 0x%lx] %d %s %s\n", target_proc, info->address,
 					 info->pid, info->name, info->path);
 
-		processinstance_arc_box_drop(target_process);
+		processinstance_drop(target_process);
 	} else {
 		printf("Unable to find %s\n", target_proc);
 	}
 
 	// This will also free the connector here
 	// as it was _moved_ into the os by `inventory_create_os`
-	osinstance_arc_box_drop(os);
+	osinstance_drop(os);
 	printf("os plugin/connector freed\n");
 
 	inventory_free(inventory);

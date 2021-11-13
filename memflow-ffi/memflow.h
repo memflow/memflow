@@ -716,6 +716,9 @@ typedef struct CGlueTraitObj_CBox_c_void_____CpuStateVtbl_CGlueObjContainer_CBox
     const struct CpuStateVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____CpuStateRetTmp_COptArc_c_void *vtbl;
     struct CGlueObjContainer_CBox_c_void_____COptArc_c_void_____CpuStateRetTmp_COptArc_c_void container;
 } CGlueTraitObj_CBox_c_void_____CpuStateVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____CpuStateRetTmp_COptArc_c_void______________COptArc_c_void_____CpuStateRetTmp_COptArc_c_void;
+
+// Typedef for default container and context type
+typedef struct CGlueTraitObj_CBox_c_void_____CpuStateVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____CpuStateRetTmp_COptArc_c_void______________COptArc_c_void_____CpuStateRetTmp_COptArc_c_void CpuState;
 /**
  * Base CGlue trait object for trait CpuState.
  */
@@ -764,6 +767,9 @@ typedef struct IntoCpuState_CBox_c_void_____COptArc_c_void {
     const struct CpuStateVtbl_IntoCpuStateContainer_CBox_c_void_____COptArc_c_void *vtbl_cpustate;
     struct IntoCpuStateContainer_CBox_c_void_____COptArc_c_void container;
 } IntoCpuState_CBox_c_void_____COptArc_c_void;
+
+// Typedef for default container and context type
+typedef struct IntoCpuState_CBox_c_void_____COptArc_c_void IntoCpuState;
 /**
  * CGlue vtable for trait ConnectorCpuStateInner.
  *
@@ -798,6 +804,9 @@ typedef struct ConnectorInstance_CBox_c_void_____COptArc_c_void {
     const struct ConnectorCpuStateInnerVtbl_ConnectorInstanceContainer_CBox_c_void_____COptArc_c_void *vtbl_connectorcpustateinner;
     struct ConnectorInstanceContainer_CBox_c_void_____COptArc_c_void container;
 } ConnectorInstance_CBox_c_void_____COptArc_c_void;
+
+// Typedef for default container and context type
+typedef struct ConnectorInstance_CBox_c_void_____COptArc_c_void ConnectorInstance;
 
 typedef struct ConnectorInstance_CBox_c_void_____COptArc_c_void ConnectorInstanceBaseCtxBox_c_void__COptArc_c_void;
 
@@ -1345,6 +1354,9 @@ typedef struct CGlueTraitObj_CBox_c_void_____KeyboardStateVtbl_CGlueObjContainer
     const struct KeyboardStateVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____KeyboardStateRetTmp_COptArc_c_void *vtbl;
     struct CGlueObjContainer_CBox_c_void_____COptArc_c_void_____KeyboardStateRetTmp_COptArc_c_void container;
 } CGlueTraitObj_CBox_c_void_____KeyboardStateVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____KeyboardStateRetTmp_COptArc_c_void______________COptArc_c_void_____KeyboardStateRetTmp_COptArc_c_void;
+
+// Typedef for default container and context type
+typedef struct CGlueTraitObj_CBox_c_void_____KeyboardStateVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____KeyboardStateRetTmp_COptArc_c_void______________COptArc_c_void_____KeyboardStateRetTmp_COptArc_c_void KeyboardState;
 /**
  * Base CGlue trait object for trait KeyboardState.
  */
@@ -1371,6 +1383,9 @@ typedef struct CGlueTraitObj_CBox_c_void_____KeyboardVtbl_CGlueObjContainer_CBox
     const struct KeyboardVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____KeyboardRetTmp_COptArc_c_void *vtbl;
     struct CGlueObjContainer_CBox_c_void_____COptArc_c_void_____KeyboardRetTmp_COptArc_c_void container;
 } CGlueTraitObj_CBox_c_void_____KeyboardVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____KeyboardRetTmp_COptArc_c_void______________COptArc_c_void_____KeyboardRetTmp_COptArc_c_void;
+
+// Typedef for default container and context type
+typedef struct CGlueTraitObj_CBox_c_void_____KeyboardVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____KeyboardRetTmp_COptArc_c_void______________COptArc_c_void_____KeyboardRetTmp_COptArc_c_void Keyboard;
 /**
  * Base CGlue trait object for trait Keyboard.
  */
@@ -1420,6 +1435,9 @@ typedef struct IntoKeyboard_CBox_c_void_____COptArc_c_void {
     const struct KeyboardVtbl_IntoKeyboardContainer_CBox_c_void_____COptArc_c_void *vtbl_keyboard;
     struct IntoKeyboardContainer_CBox_c_void_____COptArc_c_void container;
 } IntoKeyboard_CBox_c_void_____COptArc_c_void;
+
+// Typedef for default container and context type
+typedef struct IntoKeyboard_CBox_c_void_____COptArc_c_void IntoKeyboard;
 /**
  * CGlue vtable for trait OsKeyboardInner.
  *
@@ -1470,6 +1488,9 @@ typedef struct OsInstance_CBox_c_void_____COptArc_c_void {
     const struct PhysicalMemoryVtbl_OsInstanceContainer_CBox_c_void_____COptArc_c_void *vtbl_physicalmemory;
     struct OsInstanceContainer_CBox_c_void_____COptArc_c_void container;
 } OsInstance_CBox_c_void_____COptArc_c_void;
+
+// Typedef for default container and context type
+typedef struct OsInstance_CBox_c_void_____COptArc_c_void OsInstance;
 
 typedef struct OsInstance_CBox_c_void_____COptArc_c_void OsInstanceBaseCtxBox_c_void__COptArc_c_void;
 
@@ -1563,6 +1584,9 @@ typedef struct ProcessInstance_CBox_c_void_____COptArc_c_void {
     const struct VirtualTranslateVtbl_ProcessInstanceContainer_CBox_c_void_____COptArc_c_void *vtbl_virtualtranslate;
     struct ProcessInstanceContainer_CBox_c_void_____COptArc_c_void container;
 } ProcessInstance_CBox_c_void_____COptArc_c_void;
+
+// Typedef for default container and context type
+typedef struct ProcessInstance_CBox_c_void_____COptArc_c_void ProcessInstance;
 
 typedef struct ProcessInstance_CBox_c_void_____COptArc_c_void ProcessInstanceBaseCtxBox_c_void__COptArc_c_void;
 
@@ -1665,6 +1689,9 @@ typedef struct IntoProcessInstance_CBox_c_void_____COptArc_c_void {
     struct IntoProcessInstanceContainer_CBox_c_void_____COptArc_c_void container;
 } IntoProcessInstance_CBox_c_void_____COptArc_c_void;
 
+// Typedef for default container and context type
+typedef struct IntoProcessInstance_CBox_c_void_____COptArc_c_void IntoProcessInstance;
+
 typedef struct IntoProcessInstance_CBox_c_void_____COptArc_c_void IntoProcessInstanceBaseCtxBox_c_void__COptArc_c_void;
 
 typedef IntoProcessInstanceBaseCtxBox_c_void__COptArc_c_void IntoProcessInstanceBaseArcBox_c_void__c_void;
@@ -1717,7 +1744,10 @@ typedef struct MemoryViewVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void__
 typedef struct CGlueTraitObj_CBox_c_void_____MemoryViewVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____MemoryViewRetTmp_COptArc_c_void______________COptArc_c_void_____MemoryViewRetTmp_COptArc_c_void {
     const struct MemoryViewVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____MemoryViewRetTmp_COptArc_c_void *vtbl;
     struct CGlueObjContainer_CBox_c_void_____COptArc_c_void_____MemoryViewRetTmp_COptArc_c_void container;
-} CGlueTraitObj_CBox_c_void_____MemoryViewVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____MemoryViewRetTmp_COptArc_c_void______________COptArc_c_void_____MemoryViewRetTmp_COptArc_c_void;/**
+} CGlueTraitObj_CBox_c_void_____MemoryViewVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____MemoryViewRetTmp_COptArc_c_void______________COptArc_c_void_____MemoryViewRetTmp_COptArc_c_void;
+
+// Typedef for default container and context type
+typedef struct CGlueTraitObj_CBox_c_void_____MemoryViewVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____MemoryViewRetTmp_COptArc_c_void______________COptArc_c_void_____MemoryViewRetTmp_COptArc_c_void MemoryView;/**
  * CGlue vtable for trait PhysicalMemory.
  *
  * This virtual function table contains ABI-safe interface for the given trait.
@@ -1929,7 +1959,7 @@ static inline void resume(void *self)  {
 
 }
 
-static inline void cpustate_arc_box_drop(struct CGlueTraitObj_CBox_c_void_____CpuStateVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____CpuStateRetTmp_COptArc_c_void______________COptArc_c_void_____CpuStateRetTmp_COptArc_c_void self)  {
+static inline void cpustate_drop(struct CGlueTraitObj_CBox_c_void_____CpuStateVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____CpuStateRetTmp_COptArc_c_void______________COptArc_c_void_____CpuStateRetTmp_COptArc_c_void self)  {
     cont_box_drop(&self.container.instance);
     ctx_arc_drop(&self.container.context);
 
@@ -1940,7 +1970,7 @@ static inline bool keyboardstate_is_down(const void *self, int32_t vk)  {
     return __ret;
 }
 
-static inline void keyboardstate_arc_box_drop(struct CGlueTraitObj_CBox_c_void_____KeyboardStateVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____KeyboardStateRetTmp_COptArc_c_void______________COptArc_c_void_____KeyboardStateRetTmp_COptArc_c_void self)  {
+static inline void keyboardstate_drop(struct CGlueTraitObj_CBox_c_void_____KeyboardStateVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____KeyboardStateRetTmp_COptArc_c_void______________COptArc_c_void_____KeyboardStateRetTmp_COptArc_c_void self)  {
     cont_box_drop(&self.container.instance);
     ctx_arc_drop(&self.container.context);
 
@@ -1961,7 +1991,7 @@ static inline int32_t state(void *self, KeyboardStateBase_CBox_c_void_____COptAr
     return __ret;
 }
 
-static inline void keyboard_arc_box_drop(struct CGlueTraitObj_CBox_c_void_____KeyboardVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____KeyboardRetTmp_COptArc_c_void______________COptArc_c_void_____KeyboardRetTmp_COptArc_c_void self)  {
+static inline void keyboard_drop(struct CGlueTraitObj_CBox_c_void_____KeyboardVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____KeyboardRetTmp_COptArc_c_void______________COptArc_c_void_____KeyboardRetTmp_COptArc_c_void self)  {
     cont_box_drop(&self.container.instance);
     ctx_arc_drop(&self.container.context);
 
@@ -2002,7 +2032,7 @@ static inline int32_t write_raw(void *self, Address addr, struct CSliceRef_u8 da
     return __ret;
 }
 
-static inline void memoryview_arc_box_drop(struct CGlueTraitObj_CBox_c_void_____MemoryViewVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____MemoryViewRetTmp_COptArc_c_void______________COptArc_c_void_____MemoryViewRetTmp_COptArc_c_void self)  {
+static inline void memoryview_drop(struct CGlueTraitObj_CBox_c_void_____MemoryViewVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____MemoryViewRetTmp_COptArc_c_void______________COptArc_c_void_____MemoryViewRetTmp_COptArc_c_void self)  {
     cont_box_drop(&self.container.instance);
     ctx_arc_drop(&self.container.context);
 
@@ -2014,7 +2044,7 @@ static inline struct ConnectorInstance_CBox_c_void_____COptArc_c_void connectori
     return __ret;
 }
 
-static inline void connectorinstance_arc_box_drop(struct ConnectorInstance_CBox_c_void_____COptArc_c_void self)  {
+static inline void connectorinstance_drop(struct ConnectorInstance_CBox_c_void_____COptArc_c_void self)  {
     cont_box_drop(&self.container.instance);
     ctx_arc_drop(&self.container.context);
 
@@ -2026,7 +2056,7 @@ static inline struct IntoCpuState_CBox_c_void_____COptArc_c_void intocpustate_cl
     return __ret;
 }
 
-static inline void intocpustate_arc_box_drop(struct IntoCpuState_CBox_c_void_____COptArc_c_void self)  {
+static inline void intocpustate_drop(struct IntoCpuState_CBox_c_void_____COptArc_c_void self)  {
     cont_box_drop(&self.container.instance);
     ctx_arc_drop(&self.container.context);
 
@@ -2047,7 +2077,7 @@ static inline int32_t connectorinstance_cpu_state(void *self, CpuStateBase_CBox_
     return __ret;
 }
 
-static inline int32_t connectorinstance_arc_box_into_cpu_state(struct ConnectorInstance_CBox_c_void_____COptArc_c_void self, struct IntoCpuState_CBox_c_void_____COptArc_c_void * ok_out)  {
+static inline int32_t connectorinstance_into_cpu_state(struct ConnectorInstance_CBox_c_void_____COptArc_c_void self, struct IntoCpuState_CBox_c_void_____COptArc_c_void * ok_out)  {
     COptArc_c_void ___ctx = ctx_arc_clone(&self.container.context);
     int32_t __ret = (self.vtbl_connectorcpustateinner)->into_cpu_state(self.container, ok_out);
     ctx_arc_drop(&___ctx);
@@ -2060,7 +2090,7 @@ static inline struct OsInstance_CBox_c_void_____COptArc_c_void osinstance_clone(
     return __ret;
 }
 
-static inline void osinstance_arc_box_drop(struct OsInstance_CBox_c_void_____COptArc_c_void self)  {
+static inline void osinstance_drop(struct OsInstance_CBox_c_void_____COptArc_c_void self)  {
     cont_box_drop(&self.container.instance);
     ctx_arc_drop(&self.container.context);
 
@@ -2096,7 +2126,7 @@ static inline int32_t osinstance_process_by_info(void *self, struct ProcessInfo 
     return __ret;
 }
 
-static inline int32_t osinstance_arc_box_into_process_by_info(struct OsInstance_CBox_c_void_____COptArc_c_void self, struct ProcessInfo info, struct IntoProcessInstance_CBox_c_void_____COptArc_c_void * ok_out)  {
+static inline int32_t osinstance_into_process_by_info(struct OsInstance_CBox_c_void_____COptArc_c_void self, struct ProcessInfo info, struct IntoProcessInstance_CBox_c_void_____COptArc_c_void * ok_out)  {
     COptArc_c_void ___ctx = ctx_arc_clone(&self.container.context);
     int32_t __ret = (self.vtbl_osinner)->into_process_by_info(self.container, info, ok_out);
     ctx_arc_drop(&___ctx);
@@ -2118,21 +2148,21 @@ static inline int32_t osinstance_process_by_pid(void *self, Pid pid, struct Proc
     return __ret;
 }
 
-static inline int32_t osinstance_arc_box_into_process_by_address(struct OsInstance_CBox_c_void_____COptArc_c_void self, Address addr, struct IntoProcessInstance_CBox_c_void_____COptArc_c_void * ok_out)  {
+static inline int32_t osinstance_into_process_by_address(struct OsInstance_CBox_c_void_____COptArc_c_void self, Address addr, struct IntoProcessInstance_CBox_c_void_____COptArc_c_void * ok_out)  {
     COptArc_c_void ___ctx = ctx_arc_clone(&self.container.context);
     int32_t __ret = (self.vtbl_osinner)->into_process_by_address(self.container, addr, ok_out);
     ctx_arc_drop(&___ctx);
     return __ret;
 }
 
-static inline int32_t osinstance_arc_box_into_process_by_name(struct OsInstance_CBox_c_void_____COptArc_c_void self, struct CSliceRef_u8 name, struct IntoProcessInstance_CBox_c_void_____COptArc_c_void * ok_out)  {
+static inline int32_t osinstance_into_process_by_name(struct OsInstance_CBox_c_void_____COptArc_c_void self, struct CSliceRef_u8 name, struct IntoProcessInstance_CBox_c_void_____COptArc_c_void * ok_out)  {
     COptArc_c_void ___ctx = ctx_arc_clone(&self.container.context);
     int32_t __ret = (self.vtbl_osinner)->into_process_by_name(self.container, name, ok_out);
     ctx_arc_drop(&___ctx);
     return __ret;
 }
 
-static inline int32_t osinstance_arc_box_into_process_by_pid(struct OsInstance_CBox_c_void_____COptArc_c_void self, Pid pid, struct IntoProcessInstance_CBox_c_void_____COptArc_c_void * ok_out)  {
+static inline int32_t osinstance_into_process_by_pid(struct OsInstance_CBox_c_void_____COptArc_c_void self, Pid pid, struct IntoProcessInstance_CBox_c_void_____COptArc_c_void * ok_out)  {
     COptArc_c_void ___ctx = ctx_arc_clone(&self.container.context);
     int32_t __ret = (self.vtbl_osinner)->into_process_by_pid(self.container, pid, ok_out);
     ctx_arc_drop(&___ctx);
@@ -2205,7 +2235,7 @@ static inline struct IntoKeyboard_CBox_c_void_____COptArc_c_void intokeyboard_cl
     return __ret;
 }
 
-static inline void intokeyboard_arc_box_drop(struct IntoKeyboard_CBox_c_void_____COptArc_c_void self)  {
+static inline void intokeyboard_drop(struct IntoKeyboard_CBox_c_void_____COptArc_c_void self)  {
     cont_box_drop(&self.container.instance);
     ctx_arc_drop(&self.container.context);
 
@@ -2231,7 +2261,7 @@ static inline int32_t osinstance_keyboard(void *self, KeyboardBase_CBox_c_void__
     return __ret;
 }
 
-static inline int32_t osinstance_arc_box_into_keyboard(struct OsInstance_CBox_c_void_____COptArc_c_void self, struct IntoKeyboard_CBox_c_void_____COptArc_c_void * ok_out)  {
+static inline int32_t osinstance_into_keyboard(struct OsInstance_CBox_c_void_____COptArc_c_void self, struct IntoKeyboard_CBox_c_void_____COptArc_c_void * ok_out)  {
     COptArc_c_void ___ctx = ctx_arc_clone(&self.container.context);
     int32_t __ret = (self.vtbl_oskeyboardinner)->into_keyboard(self.container, ok_out);
     ctx_arc_drop(&___ctx);
@@ -2253,7 +2283,7 @@ static inline void osinstance_set_mem_map(void *self, struct CSliceRef_PhysicalM
 
 }
 
-static inline MemoryViewBase_CBox_c_void_____COptArc_c_void osinstance_arc_box_into_phys_view(struct OsInstance_CBox_c_void_____COptArc_c_void self)  {
+static inline MemoryViewBase_CBox_c_void_____COptArc_c_void osinstance_into_phys_view(struct OsInstance_CBox_c_void_____COptArc_c_void self)  {
     COptArc_c_void ___ctx = ctx_arc_clone(&self.container.context);
     MemoryViewBase_CBox_c_void_____COptArc_c_void __ret = (self.vtbl_physicalmemory)->into_phys_view(self.container);
     ctx_arc_drop(&___ctx);
@@ -2300,7 +2330,7 @@ static inline int32_t processinstance_write_raw(void *self, Address addr, struct
     return __ret;
 }
 
-static inline void processinstance_arc_box_drop(struct ProcessInstance_CBox_c_void_____COptArc_c_void self)  {
+static inline void processinstance_drop(struct ProcessInstance_CBox_c_void_____COptArc_c_void self)  {
     cont_box_drop(&self.container.instance);
     ctx_arc_drop(&self.container.context);
 
@@ -2432,7 +2462,7 @@ static inline struct IntoProcessInstance_CBox_c_void_____COptArc_c_void intoproc
     return __ret;
 }
 
-static inline void intoprocessinstance_arc_box_drop(struct IntoProcessInstance_CBox_c_void_____COptArc_c_void self)  {
+static inline void intoprocessinstance_drop(struct IntoProcessInstance_CBox_c_void_____COptArc_c_void self)  {
     cont_box_drop(&self.container.instance);
     ctx_arc_drop(&self.container.context);
 
@@ -2613,7 +2643,7 @@ static inline void connectorinstance_set_mem_map(void *self, struct CSliceRef_Ph
 
 }
 
-static inline MemoryViewBase_CBox_c_void_____COptArc_c_void connectorinstance_arc_box_into_phys_view(struct ConnectorInstance_CBox_c_void_____COptArc_c_void self)  {
+static inline MemoryViewBase_CBox_c_void_____COptArc_c_void connectorinstance_into_phys_view(struct ConnectorInstance_CBox_c_void_____COptArc_c_void self)  {
     COptArc_c_void ___ctx = ctx_arc_clone(&self.container.context);
     MemoryViewBase_CBox_c_void_____COptArc_c_void __ret = (self.vtbl_physicalmemory)->into_phys_view(self.container);
     ctx_arc_drop(&___ctx);

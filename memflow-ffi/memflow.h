@@ -76,14 +76,14 @@
 #define BUF_ITER_ARR(ty, name, buf) BUF_ITER(ty, name, buf, sizeof(buf) / sizeof(*buf))
 
 // Forward declarations for vtables and their wrappers
-struct CGlueTraitObj_CBox_c_void_____CpuStateVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void__CpuStateRetTmp_COptArc_c_void___________COptArc_c_void__CpuStateRetTmp_COptArc_c_void;
-struct CGlueObjContainer_CBox_c_void_____COptArc_c_void__CpuStateRetTmp_COptArc_c_void;
-struct CGlueTraitObj_CBox_c_void_____KeyboardStateVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void__KeyboardStateRetTmp_COptArc_c_void___________COptArc_c_void__KeyboardStateRetTmp_COptArc_c_void;
-struct CGlueObjContainer_CBox_c_void_____COptArc_c_void__KeyboardStateRetTmp_COptArc_c_void;
-struct CGlueTraitObj_CBox_c_void_____KeyboardVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void__KeyboardRetTmp_COptArc_c_void___________COptArc_c_void__KeyboardRetTmp_COptArc_c_void;
-struct CGlueObjContainer_CBox_c_void_____COptArc_c_void__KeyboardRetTmp_COptArc_c_void;
-struct ConnectorInstance_CBox_c_void_____COptArc_c_void;
-struct ConnectorInstanceContainer_CBox_c_void_____COptArc_c_void;
+struct CGlueTraitObj_CBox_c_void_____CpuStateVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____CpuStateRetTmp_COptArc_c_void______________COptArc_c_void_____CpuStateRetTmp_COptArc_c_void;
+struct CGlueObjContainer_CBox_c_void_____COptArc_c_void_____CpuStateRetTmp_COptArc_c_void;
+struct CGlueTraitObj_CBox_c_void_____KeyboardStateVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____KeyboardStateRetTmp_COptArc_c_void______________COptArc_c_void_____KeyboardStateRetTmp_COptArc_c_void;
+struct CGlueObjContainer_CBox_c_void_____COptArc_c_void_____KeyboardStateRetTmp_COptArc_c_void;
+struct CGlueTraitObj_CBox_c_void_____KeyboardVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____KeyboardRetTmp_COptArc_c_void______________COptArc_c_void_____KeyboardRetTmp_COptArc_c_void;
+struct CGlueObjContainer_CBox_c_void_____COptArc_c_void_____KeyboardRetTmp_COptArc_c_void;
+struct CGlueTraitObj_CBox_c_void_____MemoryViewVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____MemoryViewRetTmp_COptArc_c_void______________COptArc_c_void_____MemoryViewRetTmp_COptArc_c_void;
+struct CGlueObjContainer_CBox_c_void_____COptArc_c_void_____MemoryViewRetTmp_COptArc_c_void;
 struct ConnectorInstance_CBox_c_void_____COptArc_c_void;
 struct ConnectorInstanceContainer_CBox_c_void_____COptArc_c_void;
 struct IntoCpuState_CBox_c_void_____COptArc_c_void;
@@ -120,6 +120,8 @@ struct IntoProcessInstance_CBox_c_void_____COptArc_c_void;
 struct IntoProcessInstanceContainer_CBox_c_void_____COptArc_c_void;
 struct IntoProcessInstance_CBox_c_void_____COptArc_c_void;
 struct IntoProcessInstanceContainer_CBox_c_void_____COptArc_c_void;
+struct ConnectorInstance_CBox_c_void_____COptArc_c_void;
+struct ConnectorInstanceContainer_CBox_c_void_____COptArc_c_void;
 
 #include <stdarg.h>
 #include <stdbool.h>
@@ -350,10 +352,10 @@ typedef struct MemData_PhysicalAddress__CSliceMut_u8 PhysicalReadData;
  *
  * # Examples
  *
- * Using [`IntoCIterator`](IntoCIterator) helper:
+ * Using [`AsCIterator`](AsCIterator) helper:
  *
  * ```
- * use cglue::iter::{CIterator, IntoCIterator};
+ * use cglue::iter::{CIterator, AsCIterator};
  *
  * extern "C" fn sum_all(iter: CIterator<usize>) -> usize {
  *     iter.sum()
@@ -361,13 +363,13 @@ typedef struct MemData_PhysicalAddress__CSliceMut_u8 PhysicalReadData;
  *
  * let mut iter = (0..10).map(|v| v * v);
  *
- * assert_eq!(sum_all(iter.into_citer()), 285);
+ * assert_eq!(sum_all(iter.as_citer()), 285);
  * ```
  *
  * Converting with `Into` trait:
  *
  * ```
- * use cglue::iter::{CIterator, IntoCIterator};
+ * use cglue::iter::{CIterator, AsCIterator};
  *
  * extern "C" fn sum_all(iter: CIterator<usize>) -> usize {
  *     iter.sum()
@@ -428,10 +430,10 @@ typedef struct MemData_PhysicalAddress__CSliceRef_u8 PhysicalWriteData;
  *
  * # Examples
  *
- * Using [`IntoCIterator`](IntoCIterator) helper:
+ * Using [`AsCIterator`](AsCIterator) helper:
  *
  * ```
- * use cglue::iter::{CIterator, IntoCIterator};
+ * use cglue::iter::{CIterator, AsCIterator};
  *
  * extern "C" fn sum_all(iter: CIterator<usize>) -> usize {
  *     iter.sum()
@@ -439,13 +441,13 @@ typedef struct MemData_PhysicalAddress__CSliceRef_u8 PhysicalWriteData;
  *
  * let mut iter = (0..10).map(|v| v * v);
  *
- * assert_eq!(sum_all(iter.into_citer()), 285);
+ * assert_eq!(sum_all(iter.as_citer()), 285);
  * ```
  *
  * Converting with `Into` trait:
  *
  * ```
- * use cglue::iter::{CIterator, IntoCIterator};
+ * use cglue::iter::{CIterator, AsCIterator};
  *
  * extern "C" fn sum_all(iter: CIterator<usize>) -> usize {
  *     iter.sum()
@@ -495,16 +497,184 @@ typedef struct CSliceRef_PhysicalMemoryMapping {
 } CSliceRef_PhysicalMemoryMapping;
 
 /**
- * CGlue vtable for trait PhysicalMemory.
+ * Generic type representing an address and associated data.
  *
- * This virtual function table contains ABI-safe interface for the given trait.
+ * This base type is always used for initialization, but the commonly used type aliases are:
+ * `ReadData`, `WriteData`, `PhysicalReadData`, and `PhysicalWriteData`.
  */
-typedef struct PhysicalMemoryVtbl_ConnectorInstanceContainer_CBox_c_void_____COptArc_c_void {
-    int32_t (*phys_read_raw_iter)(struct ConnectorInstanceContainer_CBox_c_void_____COptArc_c_void *cont, struct CIterator_PhysicalReadData data, PhysicalReadFailCallback *out_fail);
-    int32_t (*phys_write_raw_iter)(struct ConnectorInstanceContainer_CBox_c_void_____COptArc_c_void *cont, struct CIterator_PhysicalWriteData data, PhysicalWriteFailCallback *out_fail);
-    struct PhysicalMemoryMetadata (*metadata)(const struct ConnectorInstanceContainer_CBox_c_void_____COptArc_c_void *cont);
-    void (*set_mem_map)(struct ConnectorInstanceContainer_CBox_c_void_____COptArc_c_void *cont, struct CSliceRef_PhysicalMemoryMapping mem_map);
-} PhysicalMemoryVtbl_ConnectorInstanceContainer_CBox_c_void_____COptArc_c_void;
+typedef struct MemData_Address__CSliceMut_u8 {
+    Address _0;
+    struct CSliceMut_u8 _1;
+} MemData_Address__CSliceMut_u8;
+
+/**
+ * MemData type for regular memory reads.
+ */
+typedef struct MemData_Address__CSliceMut_u8 ReadData;
+
+/**
+ * FFI compatible iterator.
+ *
+ * Any mutable reference to an iterator can be converted to a `CIterator`.
+ *
+ * `CIterator<T>` implements `Iterator<Item = T>`.
+ *
+ * # Examples
+ *
+ * Using [`AsCIterator`](AsCIterator) helper:
+ *
+ * ```
+ * use cglue::iter::{CIterator, AsCIterator};
+ *
+ * extern "C" fn sum_all(iter: CIterator<usize>) -> usize {
+ *     iter.sum()
+ * }
+ *
+ * let mut iter = (0..10).map(|v| v * v);
+ *
+ * assert_eq!(sum_all(iter.as_citer()), 285);
+ * ```
+ *
+ * Converting with `Into` trait:
+ *
+ * ```
+ * use cglue::iter::{CIterator, AsCIterator};
+ *
+ * extern "C" fn sum_all(iter: CIterator<usize>) -> usize {
+ *     iter.sum()
+ * }
+ *
+ * let mut iter = (0..=10).map(|v| v * v);
+ *
+ * assert_eq!(sum_all((&mut iter).into()), 385);
+ * ```
+ */
+typedef struct CIterator_ReadData {
+    void *iter;
+    int32_t (*func)(void*, ReadData *out);
+} CIterator_ReadData;
+
+typedef struct Callback_c_void__ReadData {
+    void *context;
+    bool (*func)(void*, ReadData);
+} Callback_c_void__ReadData;
+
+typedef struct Callback_c_void__ReadData OpaqueCallback_ReadData;
+
+typedef OpaqueCallback_ReadData ReadFailCallback;
+
+/**
+ * Generic type representing an address and associated data.
+ *
+ * This base type is always used for initialization, but the commonly used type aliases are:
+ * `ReadData`, `WriteData`, `PhysicalReadData`, and `PhysicalWriteData`.
+ */
+typedef struct MemData_Address__CSliceRef_u8 {
+    Address _0;
+    struct CSliceRef_u8 _1;
+} MemData_Address__CSliceRef_u8;
+
+/**
+ * MemData type for regular memory writes.
+ */
+typedef struct MemData_Address__CSliceRef_u8 WriteData;
+
+/**
+ * FFI compatible iterator.
+ *
+ * Any mutable reference to an iterator can be converted to a `CIterator`.
+ *
+ * `CIterator<T>` implements `Iterator<Item = T>`.
+ *
+ * # Examples
+ *
+ * Using [`AsCIterator`](AsCIterator) helper:
+ *
+ * ```
+ * use cglue::iter::{CIterator, AsCIterator};
+ *
+ * extern "C" fn sum_all(iter: CIterator<usize>) -> usize {
+ *     iter.sum()
+ * }
+ *
+ * let mut iter = (0..10).map(|v| v * v);
+ *
+ * assert_eq!(sum_all(iter.as_citer()), 285);
+ * ```
+ *
+ * Converting with `Into` trait:
+ *
+ * ```
+ * use cglue::iter::{CIterator, AsCIterator};
+ *
+ * extern "C" fn sum_all(iter: CIterator<usize>) -> usize {
+ *     iter.sum()
+ * }
+ *
+ * let mut iter = (0..=10).map(|v| v * v);
+ *
+ * assert_eq!(sum_all((&mut iter).into()), 385);
+ * ```
+ */
+typedef struct CIterator_WriteData {
+    void *iter;
+    int32_t (*func)(void*, WriteData *out);
+} CIterator_WriteData;
+
+typedef struct Callback_c_void__WriteData {
+    void *context;
+    bool (*func)(void*, WriteData);
+} Callback_c_void__WriteData;
+
+typedef struct Callback_c_void__WriteData OpaqueCallback_WriteData;
+
+typedef OpaqueCallback_WriteData WriteFailCallback;
+
+typedef struct MemoryViewMetadata {
+    Address max_address;
+    umem real_size;
+    bool readonly;
+    bool little_endian;
+    uint8_t arch_bits;
+} MemoryViewMetadata;
+
+/**
+ * Wrapper around mutable slices.
+ *
+ * This is meant as a safe type to pass across the FFI boundary with similar semantics as regular
+ * slice. However, not all functionality is present, use the slice conversion functions.
+ */
+typedef struct CSliceMut_ReadData {
+    ReadData *data;
+    uintptr_t len;
+} CSliceMut_ReadData;
+
+/**
+ * Wrapper around const slices.
+ *
+ * This is meant as a safe type to pass across the FFI boundary with similar semantics as regular
+ * slice. However, not all functionality is present, use the slice conversion functions.
+ */
+typedef struct CSliceRef_WriteData {
+    const WriteData *data;
+    uintptr_t len;
+} CSliceRef_WriteData;
+/**
+ * Base CGlue trait object for trait MemoryView.
+ */
+typedef struct CGlueTraitObj_CBox_c_void_____MemoryViewVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____MemoryViewRetTmp_COptArc_c_void______________COptArc_c_void_____MemoryViewRetTmp_COptArc_c_void MemoryViewBase_CBox_c_void_____COptArc_c_void;
+/**
+ * CtxBoxed CGlue trait object for trait MemoryView with context.
+ */
+typedef MemoryViewBase_CBox_c_void_____COptArc_c_void MemoryViewBaseCtxBox_c_void__COptArc_c_void;
+/**
+ * Boxed CGlue trait object for trait MemoryView with a [`COptArc`](cglue::arc::COptArc) reference counted context.
+ */
+typedef MemoryViewBaseCtxBox_c_void__COptArc_c_void MemoryViewBaseArcBox_c_void__c_void;
+/**
+ * Opaque Boxed CGlue trait object for trait MemoryView with a [`COptArc`](cglue::arc::COptArc) reference counted context.
+ */
+typedef MemoryViewBaseArcBox_c_void__c_void MemoryViewArcBox;
 
 /**
  * Simple CGlue trait object container.
@@ -521,21 +691,19 @@ typedef struct PhysicalMemoryVtbl_ConnectorInstanceContainer_CBox_c_void_____COp
  * `ret_tmp` is usually `PhantomData` representing nothing, unless the trait has functions that
  * return references to associated types, in which case space is reserved for wrapping structures.
  */
-typedef struct CGlueObjContainer_CBox_c_void_____COptArc_c_void__CpuStateRetTmp_COptArc_c_void {
+typedef struct CGlueObjContainer_CBox_c_void_____COptArc_c_void_____CpuStateRetTmp_COptArc_c_void {
     struct CBox_c_void instance;
     COptArc_c_void context;
-} CGlueObjContainer_CBox_c_void_____COptArc_c_void__CpuStateRetTmp_COptArc_c_void;
-
+} CGlueObjContainer_CBox_c_void_____COptArc_c_void_____CpuStateRetTmp_COptArc_c_void;
 /**
  * CGlue vtable for trait CpuState.
  *
  * This virtual function table contains ABI-safe interface for the given trait.
  */
-typedef struct CpuStateVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void__CpuStateRetTmp_COptArc_c_void {
-    void (*pause)(struct CGlueObjContainer_CBox_c_void_____COptArc_c_void__CpuStateRetTmp_COptArc_c_void *cont);
-    void (*resume)(struct CGlueObjContainer_CBox_c_void_____COptArc_c_void__CpuStateRetTmp_COptArc_c_void *cont);
-} CpuStateVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void__CpuStateRetTmp_COptArc_c_void;
-
+typedef struct CpuStateVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____CpuStateRetTmp_COptArc_c_void {
+    void (*pause)(struct CGlueObjContainer_CBox_c_void_____COptArc_c_void_____CpuStateRetTmp_COptArc_c_void *cont);
+    void (*resume)(struct CGlueObjContainer_CBox_c_void_____COptArc_c_void_____CpuStateRetTmp_COptArc_c_void *cont);
+} CpuStateVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____CpuStateRetTmp_COptArc_c_void;
 /**
  * Simple CGlue trait object.
  *
@@ -544,21 +712,18 @@ typedef struct CpuStateVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void__Cp
  *
  * Container merely is a this pointer with some optional temporary return reference context.
  */
-typedef struct CGlueTraitObj_CBox_c_void_____CpuStateVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void__CpuStateRetTmp_COptArc_c_void___________COptArc_c_void__CpuStateRetTmp_COptArc_c_void {
-    const struct CpuStateVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void__CpuStateRetTmp_COptArc_c_void *vtbl;
-    struct CGlueObjContainer_CBox_c_void_____COptArc_c_void__CpuStateRetTmp_COptArc_c_void container;
-} CGlueTraitObj_CBox_c_void_____CpuStateVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void__CpuStateRetTmp_COptArc_c_void___________COptArc_c_void__CpuStateRetTmp_COptArc_c_void;
-
+typedef struct CGlueTraitObj_CBox_c_void_____CpuStateVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____CpuStateRetTmp_COptArc_c_void______________COptArc_c_void_____CpuStateRetTmp_COptArc_c_void {
+    const struct CpuStateVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____CpuStateRetTmp_COptArc_c_void *vtbl;
+    struct CGlueObjContainer_CBox_c_void_____COptArc_c_void_____CpuStateRetTmp_COptArc_c_void container;
+} CGlueTraitObj_CBox_c_void_____CpuStateVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____CpuStateRetTmp_COptArc_c_void______________COptArc_c_void_____CpuStateRetTmp_COptArc_c_void;
 /**
  * Base CGlue trait object for trait CpuState.
  */
-typedef struct CGlueTraitObj_CBox_c_void_____CpuStateVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void__CpuStateRetTmp_COptArc_c_void___________COptArc_c_void__CpuStateRetTmp_COptArc_c_void CpuStateBase_CBox_c_void_____COptArc_c_void;
-
+typedef struct CGlueTraitObj_CBox_c_void_____CpuStateVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____CpuStateRetTmp_COptArc_c_void______________COptArc_c_void_____CpuStateRetTmp_COptArc_c_void CpuStateBase_CBox_c_void_____COptArc_c_void;
 typedef struct IntoCpuStateContainer_CBox_c_void_____COptArc_c_void {
     struct CBox_c_void instance;
     COptArc_c_void context;
 } IntoCpuStateContainer_CBox_c_void_____COptArc_c_void;
-
 /**
  * CGlue vtable for trait Clone.
  *
@@ -567,7 +732,6 @@ typedef struct IntoCpuStateContainer_CBox_c_void_____COptArc_c_void {
 typedef struct CloneVtbl_IntoCpuStateContainer_CBox_c_void_____COptArc_c_void {
     struct IntoCpuStateContainer_CBox_c_void_____COptArc_c_void (*clone)(const struct IntoCpuStateContainer_CBox_c_void_____COptArc_c_void *cont);
 } CloneVtbl_IntoCpuStateContainer_CBox_c_void_____COptArc_c_void;
-
 /**
  * CGlue vtable for trait CpuState.
  *
@@ -577,7 +741,6 @@ typedef struct CpuStateVtbl_IntoCpuStateContainer_CBox_c_void_____COptArc_c_void
     void (*pause)(struct IntoCpuStateContainer_CBox_c_void_____COptArc_c_void *cont);
     void (*resume)(struct IntoCpuStateContainer_CBox_c_void_____COptArc_c_void *cont);
 } CpuStateVtbl_IntoCpuStateContainer_CBox_c_void_____COptArc_c_void;
-
 /**
  * Trait group potentially implementing `:: cglue :: ext :: core :: clone :: Clone < > + CpuState < >` traits.
  *
@@ -601,7 +764,6 @@ typedef struct IntoCpuState_CBox_c_void_____COptArc_c_void {
     const struct CpuStateVtbl_IntoCpuStateContainer_CBox_c_void_____COptArc_c_void *vtbl_cpustate;
     struct IntoCpuStateContainer_CBox_c_void_____COptArc_c_void container;
 } IntoCpuState_CBox_c_void_____COptArc_c_void;
-
 /**
  * CGlue vtable for trait ConnectorCpuStateInner.
  *
@@ -779,173 +941,6 @@ typedef struct Callback_c_void__ProcessInfo {
 typedef struct Callback_c_void__ProcessInfo OpaqueCallback_ProcessInfo;
 
 typedef OpaqueCallback_ProcessInfo ProcessInfoCallback;
-
-
-/**
- * Generic type representing an address and associated data.
- *
- * This base type is always used for initialization, but the commonly used type aliases are:
- * `ReadData`, `WriteData`, `PhysicalReadData`, and `PhysicalWriteData`.
- */
-typedef struct MemData_Address__CSliceMut_u8 {
-    Address _0;
-    struct CSliceMut_u8 _1;
-} MemData_Address__CSliceMut_u8;
-
-/**
- * MemData type for regular memory reads.
- */
-typedef struct MemData_Address__CSliceMut_u8 ReadData;
-
-/**
- * FFI compatible iterator.
- *
- * Any mutable reference to an iterator can be converted to a `CIterator`.
- *
- * `CIterator<T>` implements `Iterator<Item = T>`.
- *
- * # Examples
- *
- * Using [`IntoCIterator`](IntoCIterator) helper:
- *
- * ```
- * use cglue::iter::{CIterator, IntoCIterator};
- *
- * extern "C" fn sum_all(iter: CIterator<usize>) -> usize {
- *     iter.sum()
- * }
- *
- * let mut iter = (0..10).map(|v| v * v);
- *
- * assert_eq!(sum_all(iter.into_citer()), 285);
- * ```
- *
- * Converting with `Into` trait:
- *
- * ```
- * use cglue::iter::{CIterator, IntoCIterator};
- *
- * extern "C" fn sum_all(iter: CIterator<usize>) -> usize {
- *     iter.sum()
- * }
- *
- * let mut iter = (0..=10).map(|v| v * v);
- *
- * assert_eq!(sum_all((&mut iter).into()), 385);
- * ```
- */
-typedef struct CIterator_ReadData {
-    void *iter;
-    int32_t (*func)(void*, ReadData *out);
-} CIterator_ReadData;
-
-typedef struct Callback_c_void__ReadData {
-    void *context;
-    bool (*func)(void*, ReadData);
-} Callback_c_void__ReadData;
-
-typedef struct Callback_c_void__ReadData OpaqueCallback_ReadData;
-
-typedef OpaqueCallback_ReadData ReadFailCallback;
-
-/**
- * Generic type representing an address and associated data.
- *
- * This base type is always used for initialization, but the commonly used type aliases are:
- * `ReadData`, `WriteData`, `PhysicalReadData`, and `PhysicalWriteData`.
- */
-typedef struct MemData_Address__CSliceRef_u8 {
-    Address _0;
-    struct CSliceRef_u8 _1;
-} MemData_Address__CSliceRef_u8;
-
-/**
- * MemData type for regular memory writes.
- */
-typedef struct MemData_Address__CSliceRef_u8 WriteData;
-
-/**
- * FFI compatible iterator.
- *
- * Any mutable reference to an iterator can be converted to a `CIterator`.
- *
- * `CIterator<T>` implements `Iterator<Item = T>`.
- *
- * # Examples
- *
- * Using [`IntoCIterator`](IntoCIterator) helper:
- *
- * ```
- * use cglue::iter::{CIterator, IntoCIterator};
- *
- * extern "C" fn sum_all(iter: CIterator<usize>) -> usize {
- *     iter.sum()
- * }
- *
- * let mut iter = (0..10).map(|v| v * v);
- *
- * assert_eq!(sum_all(iter.into_citer()), 285);
- * ```
- *
- * Converting with `Into` trait:
- *
- * ```
- * use cglue::iter::{CIterator, IntoCIterator};
- *
- * extern "C" fn sum_all(iter: CIterator<usize>) -> usize {
- *     iter.sum()
- * }
- *
- * let mut iter = (0..=10).map(|v| v * v);
- *
- * assert_eq!(sum_all((&mut iter).into()), 385);
- * ```
- */
-typedef struct CIterator_WriteData {
-    void *iter;
-    int32_t (*func)(void*, WriteData *out);
-} CIterator_WriteData;
-
-typedef struct Callback_c_void__WriteData {
-    void *context;
-    bool (*func)(void*, WriteData);
-} Callback_c_void__WriteData;
-
-typedef struct Callback_c_void__WriteData OpaqueCallback_WriteData;
-
-typedef OpaqueCallback_WriteData WriteFailCallback;
-
-typedef struct MemoryViewMetadata {
-    Address max_address;
-    umem real_size;
-    bool readonly;
-    bool little_endian;
-    uint8_t arch_bits;
-} MemoryViewMetadata;
-
-/**
- * Wrapper around mutable slices.
- *
- * This is meant as a safe type to pass across the FFI boundary with similar semantics as regular
- * slice. However, not all functionality is present, use the slice conversion functions.
- */
-typedef struct CSliceMut_ReadData {
-    ReadData *data;
-    uintptr_t len;
-} CSliceMut_ReadData;
-
-/**
- * Wrapper around const slices.
- *
- * This is meant as a safe type to pass across the FFI boundary with similar semantics as regular
- * slice. However, not all functionality is present, use the slice conversion functions.
- */
-typedef struct CSliceRef_WriteData {
-    const WriteData *data;
-    uintptr_t len;
-} CSliceRef_WriteData;
-
-
 
 /**
  * Exit code of a process
@@ -1127,8 +1122,6 @@ typedef struct Callback_c_void__SectionInfo OpaqueCallback_SectionInfo;
 
 typedef OpaqueCallback_SectionInfo SectionCallback;
 
-
-
 /**
  * Virtual page range information used for callbacks
  */
@@ -1231,21 +1224,6 @@ typedef struct COption_Address {
     };
 } COption_Address;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /**
  * Information block about OS
  *
@@ -1324,11 +1302,10 @@ typedef struct MemoryViewVtbl_OsInstanceContainer_CBox_c_void_____COptArc_c_void
  * `ret_tmp` is usually `PhantomData` representing nothing, unless the trait has functions that
  * return references to associated types, in which case space is reserved for wrapping structures.
  */
-typedef struct CGlueObjContainer_CBox_c_void_____COptArc_c_void__KeyboardRetTmp_COptArc_c_void {
+typedef struct CGlueObjContainer_CBox_c_void_____COptArc_c_void_____KeyboardRetTmp_COptArc_c_void {
     struct CBox_c_void instance;
     COptArc_c_void context;
-} CGlueObjContainer_CBox_c_void_____COptArc_c_void__KeyboardRetTmp_COptArc_c_void;
-
+} CGlueObjContainer_CBox_c_void_____COptArc_c_void_____KeyboardRetTmp_COptArc_c_void;
 /**
  * Simple CGlue trait object container.
  *
@@ -1344,20 +1321,18 @@ typedef struct CGlueObjContainer_CBox_c_void_____COptArc_c_void__KeyboardRetTmp_
  * `ret_tmp` is usually `PhantomData` representing nothing, unless the trait has functions that
  * return references to associated types, in which case space is reserved for wrapping structures.
  */
-typedef struct CGlueObjContainer_CBox_c_void_____COptArc_c_void__KeyboardStateRetTmp_COptArc_c_void {
+typedef struct CGlueObjContainer_CBox_c_void_____COptArc_c_void_____KeyboardStateRetTmp_COptArc_c_void {
     struct CBox_c_void instance;
     COptArc_c_void context;
-} CGlueObjContainer_CBox_c_void_____COptArc_c_void__KeyboardStateRetTmp_COptArc_c_void;
-
+} CGlueObjContainer_CBox_c_void_____COptArc_c_void_____KeyboardStateRetTmp_COptArc_c_void;
 /**
  * CGlue vtable for trait KeyboardState.
  *
  * This virtual function table contains ABI-safe interface for the given trait.
  */
-typedef struct KeyboardStateVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void__KeyboardStateRetTmp_COptArc_c_void {
-    bool (*is_down)(const struct CGlueObjContainer_CBox_c_void_____COptArc_c_void__KeyboardStateRetTmp_COptArc_c_void *cont, int32_t vk);
-} KeyboardStateVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void__KeyboardStateRetTmp_COptArc_c_void;
-
+typedef struct KeyboardStateVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____KeyboardStateRetTmp_COptArc_c_void {
+    bool (*is_down)(const struct CGlueObjContainer_CBox_c_void_____COptArc_c_void_____KeyboardStateRetTmp_COptArc_c_void *cont, int32_t vk);
+} KeyboardStateVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____KeyboardStateRetTmp_COptArc_c_void;
 /**
  * Simple CGlue trait object.
  *
@@ -1366,27 +1341,24 @@ typedef struct KeyboardStateVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_voi
  *
  * Container merely is a this pointer with some optional temporary return reference context.
  */
-typedef struct CGlueTraitObj_CBox_c_void_____KeyboardStateVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void__KeyboardStateRetTmp_COptArc_c_void___________COptArc_c_void__KeyboardStateRetTmp_COptArc_c_void {
-    const struct KeyboardStateVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void__KeyboardStateRetTmp_COptArc_c_void *vtbl;
-    struct CGlueObjContainer_CBox_c_void_____COptArc_c_void__KeyboardStateRetTmp_COptArc_c_void container;
-} CGlueTraitObj_CBox_c_void_____KeyboardStateVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void__KeyboardStateRetTmp_COptArc_c_void___________COptArc_c_void__KeyboardStateRetTmp_COptArc_c_void;
-
+typedef struct CGlueTraitObj_CBox_c_void_____KeyboardStateVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____KeyboardStateRetTmp_COptArc_c_void______________COptArc_c_void_____KeyboardStateRetTmp_COptArc_c_void {
+    const struct KeyboardStateVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____KeyboardStateRetTmp_COptArc_c_void *vtbl;
+    struct CGlueObjContainer_CBox_c_void_____COptArc_c_void_____KeyboardStateRetTmp_COptArc_c_void container;
+} CGlueTraitObj_CBox_c_void_____KeyboardStateVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____KeyboardStateRetTmp_COptArc_c_void______________COptArc_c_void_____KeyboardStateRetTmp_COptArc_c_void;
 /**
  * Base CGlue trait object for trait KeyboardState.
  */
-typedef struct CGlueTraitObj_CBox_c_void_____KeyboardStateVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void__KeyboardStateRetTmp_COptArc_c_void___________COptArc_c_void__KeyboardStateRetTmp_COptArc_c_void KeyboardStateBase_CBox_c_void_____COptArc_c_void;
-
+typedef struct CGlueTraitObj_CBox_c_void_____KeyboardStateVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____KeyboardStateRetTmp_COptArc_c_void______________COptArc_c_void_____KeyboardStateRetTmp_COptArc_c_void KeyboardStateBase_CBox_c_void_____COptArc_c_void;
 /**
  * CGlue vtable for trait Keyboard.
  *
  * This virtual function table contains ABI-safe interface for the given trait.
  */
-typedef struct KeyboardVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void__KeyboardRetTmp_COptArc_c_void {
-    bool (*is_down)(struct CGlueObjContainer_CBox_c_void_____COptArc_c_void__KeyboardRetTmp_COptArc_c_void *cont, int32_t vk);
-    void (*set_down)(struct CGlueObjContainer_CBox_c_void_____COptArc_c_void__KeyboardRetTmp_COptArc_c_void *cont, int32_t vk, bool down);
-    int32_t (*state)(struct CGlueObjContainer_CBox_c_void_____COptArc_c_void__KeyboardRetTmp_COptArc_c_void *cont, KeyboardStateBase_CBox_c_void_____COptArc_c_void *ok_out);
-} KeyboardVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void__KeyboardRetTmp_COptArc_c_void;
-
+typedef struct KeyboardVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____KeyboardRetTmp_COptArc_c_void {
+    bool (*is_down)(struct CGlueObjContainer_CBox_c_void_____COptArc_c_void_____KeyboardRetTmp_COptArc_c_void *cont, int32_t vk);
+    void (*set_down)(struct CGlueObjContainer_CBox_c_void_____COptArc_c_void_____KeyboardRetTmp_COptArc_c_void *cont, int32_t vk, bool down);
+    int32_t (*state)(struct CGlueObjContainer_CBox_c_void_____COptArc_c_void_____KeyboardRetTmp_COptArc_c_void *cont, KeyboardStateBase_CBox_c_void_____COptArc_c_void *ok_out);
+} KeyboardVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____KeyboardRetTmp_COptArc_c_void;
 /**
  * Simple CGlue trait object.
  *
@@ -1395,21 +1367,18 @@ typedef struct KeyboardVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void__Ke
  *
  * Container merely is a this pointer with some optional temporary return reference context.
  */
-typedef struct CGlueTraitObj_CBox_c_void_____KeyboardVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void__KeyboardRetTmp_COptArc_c_void___________COptArc_c_void__KeyboardRetTmp_COptArc_c_void {
-    const struct KeyboardVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void__KeyboardRetTmp_COptArc_c_void *vtbl;
-    struct CGlueObjContainer_CBox_c_void_____COptArc_c_void__KeyboardRetTmp_COptArc_c_void container;
-} CGlueTraitObj_CBox_c_void_____KeyboardVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void__KeyboardRetTmp_COptArc_c_void___________COptArc_c_void__KeyboardRetTmp_COptArc_c_void;
-
+typedef struct CGlueTraitObj_CBox_c_void_____KeyboardVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____KeyboardRetTmp_COptArc_c_void______________COptArc_c_void_____KeyboardRetTmp_COptArc_c_void {
+    const struct KeyboardVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____KeyboardRetTmp_COptArc_c_void *vtbl;
+    struct CGlueObjContainer_CBox_c_void_____COptArc_c_void_____KeyboardRetTmp_COptArc_c_void container;
+} CGlueTraitObj_CBox_c_void_____KeyboardVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____KeyboardRetTmp_COptArc_c_void______________COptArc_c_void_____KeyboardRetTmp_COptArc_c_void;
 /**
  * Base CGlue trait object for trait Keyboard.
  */
-typedef struct CGlueTraitObj_CBox_c_void_____KeyboardVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void__KeyboardRetTmp_COptArc_c_void___________COptArc_c_void__KeyboardRetTmp_COptArc_c_void KeyboardBase_CBox_c_void_____COptArc_c_void;
-
+typedef struct CGlueTraitObj_CBox_c_void_____KeyboardVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____KeyboardRetTmp_COptArc_c_void______________COptArc_c_void_____KeyboardRetTmp_COptArc_c_void KeyboardBase_CBox_c_void_____COptArc_c_void;
 typedef struct IntoKeyboardContainer_CBox_c_void_____COptArc_c_void {
     struct CBox_c_void instance;
     COptArc_c_void context;
 } IntoKeyboardContainer_CBox_c_void_____COptArc_c_void;
-
 /**
  * CGlue vtable for trait Clone.
  *
@@ -1418,7 +1387,6 @@ typedef struct IntoKeyboardContainer_CBox_c_void_____COptArc_c_void {
 typedef struct CloneVtbl_IntoKeyboardContainer_CBox_c_void_____COptArc_c_void {
     struct IntoKeyboardContainer_CBox_c_void_____COptArc_c_void (*clone)(const struct IntoKeyboardContainer_CBox_c_void_____COptArc_c_void *cont);
 } CloneVtbl_IntoKeyboardContainer_CBox_c_void_____COptArc_c_void;
-
 /**
  * CGlue vtable for trait Keyboard.
  *
@@ -1429,7 +1397,6 @@ typedef struct KeyboardVtbl_IntoKeyboardContainer_CBox_c_void_____COptArc_c_void
     void (*set_down)(struct IntoKeyboardContainer_CBox_c_void_____COptArc_c_void *cont, int32_t vk, bool down);
     int32_t (*state)(struct IntoKeyboardContainer_CBox_c_void_____COptArc_c_void *cont, KeyboardStateBase_CBox_c_void_____COptArc_c_void *ok_out);
 } KeyboardVtbl_IntoKeyboardContainer_CBox_c_void_____COptArc_c_void;
-
 /**
  * Trait group potentially implementing `:: cglue :: ext :: core :: clone :: Clone < > + Keyboard < >` traits.
  *
@@ -1453,7 +1420,6 @@ typedef struct IntoKeyboard_CBox_c_void_____COptArc_c_void {
     const struct KeyboardVtbl_IntoKeyboardContainer_CBox_c_void_____COptArc_c_void *vtbl_keyboard;
     struct IntoKeyboardContainer_CBox_c_void_____COptArc_c_void container;
 } IntoKeyboard_CBox_c_void_____COptArc_c_void;
-
 /**
  * CGlue vtable for trait OsKeyboardInner.
  *
@@ -1474,6 +1440,8 @@ typedef struct PhysicalMemoryVtbl_OsInstanceContainer_CBox_c_void_____COptArc_c_
     int32_t (*phys_write_raw_iter)(struct OsInstanceContainer_CBox_c_void_____COptArc_c_void *cont, struct CIterator_PhysicalWriteData data, PhysicalWriteFailCallback *out_fail);
     struct PhysicalMemoryMetadata (*metadata)(const struct OsInstanceContainer_CBox_c_void_____COptArc_c_void *cont);
     void (*set_mem_map)(struct OsInstanceContainer_CBox_c_void_____COptArc_c_void *cont, struct CSliceRef_PhysicalMemoryMapping mem_map);
+    MemoryViewBase_CBox_c_void_____COptArc_c_void (*into_phys_view)(struct OsInstanceContainer_CBox_c_void_____COptArc_c_void cont);
+    MemoryViewBase_CBox_c_void_____COptArc_c_void (*phys_view)(struct OsInstanceContainer_CBox_c_void_____COptArc_c_void *cont);
 } PhysicalMemoryVtbl_OsInstanceContainer_CBox_c_void_____COptArc_c_void;
 
 /**
@@ -1703,6 +1671,66 @@ typedef IntoProcessInstanceBaseCtxBox_c_void__COptArc_c_void IntoProcessInstance
 
 typedef IntoProcessInstanceBaseArcBox_c_void__c_void IntoProcessInstanceArcBox;
 
+/**
+ * Simple CGlue trait object container.
+ *
+ * This is the simplest form of container, represented by an instance, clone context, and
+ * temporary return context.
+ *
+ * `instance` value usually is either a reference, or a mutable reference, or a `CBox`, which
+ * contains static reference to the instance, and a dedicated drop function for freeing resources.
+ *
+ * `context` is either `PhantomData` representing nothing, or typically a `CArc` that can be
+ * cloned at will, reference counting some resource, like a `Library` for automatic unloading.
+ *
+ * `ret_tmp` is usually `PhantomData` representing nothing, unless the trait has functions that
+ * return references to associated types, in which case space is reserved for wrapping structures.
+ */
+typedef struct CGlueObjContainer_CBox_c_void_____COptArc_c_void_____MemoryViewRetTmp_COptArc_c_void {
+    struct CBox_c_void instance;
+    struct COptArc_c_void context;
+} CGlueObjContainer_CBox_c_void_____COptArc_c_void_____MemoryViewRetTmp_COptArc_c_void;
+
+/**
+ * CGlue vtable for trait MemoryView.
+ *
+ * This virtual function table contains ABI-safe interface for the given trait.
+ */
+typedef struct MemoryViewVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____MemoryViewRetTmp_COptArc_c_void {
+    int32_t (*read_raw_iter)(struct CGlueObjContainer_CBox_c_void_____COptArc_c_void_____MemoryViewRetTmp_COptArc_c_void *cont, struct CIterator_ReadData data, ReadFailCallback *out_fail);
+    int32_t (*write_raw_iter)(struct CGlueObjContainer_CBox_c_void_____COptArc_c_void_____MemoryViewRetTmp_COptArc_c_void *cont, struct CIterator_WriteData data, WriteFailCallback *out_fail);
+    struct MemoryViewMetadata (*metadata)(const struct CGlueObjContainer_CBox_c_void_____COptArc_c_void_____MemoryViewRetTmp_COptArc_c_void *cont);
+    int32_t (*read_raw_list)(struct CGlueObjContainer_CBox_c_void_____COptArc_c_void_____MemoryViewRetTmp_COptArc_c_void *cont, struct CSliceMut_ReadData data);
+    int32_t (*read_raw_into)(struct CGlueObjContainer_CBox_c_void_____COptArc_c_void_____MemoryViewRetTmp_COptArc_c_void *cont, Address addr, struct CSliceMut_u8 out);
+    int32_t (*write_raw_list)(struct CGlueObjContainer_CBox_c_void_____COptArc_c_void_____MemoryViewRetTmp_COptArc_c_void *cont, struct CSliceRef_WriteData data);
+    int32_t (*write_raw)(struct CGlueObjContainer_CBox_c_void_____COptArc_c_void_____MemoryViewRetTmp_COptArc_c_void *cont, Address addr, struct CSliceRef_u8 data);
+} MemoryViewVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____MemoryViewRetTmp_COptArc_c_void;
+
+/**
+ * Simple CGlue trait object.
+ *
+ * This is the simplest form of CGlue object, represented by a container and vtable for a single
+ * trait.
+ *
+ * Container merely is a this pointer with some optional temporary return reference context.
+ */
+typedef struct CGlueTraitObj_CBox_c_void_____MemoryViewVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____MemoryViewRetTmp_COptArc_c_void______________COptArc_c_void_____MemoryViewRetTmp_COptArc_c_void {
+    const struct MemoryViewVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____MemoryViewRetTmp_COptArc_c_void *vtbl;
+    struct CGlueObjContainer_CBox_c_void_____COptArc_c_void_____MemoryViewRetTmp_COptArc_c_void container;
+} CGlueTraitObj_CBox_c_void_____MemoryViewVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____MemoryViewRetTmp_COptArc_c_void______________COptArc_c_void_____MemoryViewRetTmp_COptArc_c_void;/**
+ * CGlue vtable for trait PhysicalMemory.
+ *
+ * This virtual function table contains ABI-safe interface for the given trait.
+ */
+typedef struct PhysicalMemoryVtbl_ConnectorInstanceContainer_CBox_c_void_____COptArc_c_void {
+    int32_t (*phys_read_raw_iter)(struct ConnectorInstanceContainer_CBox_c_void_____COptArc_c_void *cont, struct CIterator_PhysicalReadData data, PhysicalReadFailCallback *out_fail);
+    int32_t (*phys_write_raw_iter)(struct ConnectorInstanceContainer_CBox_c_void_____COptArc_c_void *cont, struct CIterator_PhysicalWriteData data, PhysicalWriteFailCallback *out_fail);
+    struct PhysicalMemoryMetadata (*metadata)(const struct ConnectorInstanceContainer_CBox_c_void_____COptArc_c_void *cont);
+    void (*set_mem_map)(struct ConnectorInstanceContainer_CBox_c_void_____COptArc_c_void *cont, struct CSliceRef_PhysicalMemoryMapping mem_map);
+    MemoryViewBase_CBox_c_void_____COptArc_c_void (*into_phys_view)(struct ConnectorInstanceContainer_CBox_c_void_____COptArc_c_void cont);
+    MemoryViewBase_CBox_c_void_____COptArc_c_void (*phys_view)(struct ConnectorInstanceContainer_CBox_c_void_____COptArc_c_void *cont);
+} PhysicalMemoryVtbl_ConnectorInstanceContainer_CBox_c_void_____COptArc_c_void;
+
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
@@ -1892,48 +1920,89 @@ void cont_box_drop(CBox_c_void *self) {
 }
 
 static inline void pause(void *self)  {
-(((struct CGlueTraitObj_CBox_c_void_____CpuStateVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void__CpuStateRetTmp_COptArc_c_void___________COptArc_c_void__CpuStateRetTmp_COptArc_c_void *)self)->vtbl)->pause(&((struct CGlueTraitObj_CBox_c_void_____CpuStateVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void__CpuStateRetTmp_COptArc_c_void___________COptArc_c_void__CpuStateRetTmp_COptArc_c_void *)self)->container);
+(((struct CGlueTraitObj_CBox_c_void_____CpuStateVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____CpuStateRetTmp_COptArc_c_void______________COptArc_c_void_____CpuStateRetTmp_COptArc_c_void *)self)->vtbl)->pause(&((struct CGlueTraitObj_CBox_c_void_____CpuStateVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____CpuStateRetTmp_COptArc_c_void______________COptArc_c_void_____CpuStateRetTmp_COptArc_c_void *)self)->container);
 
 }
 
 static inline void resume(void *self)  {
-(((struct CGlueTraitObj_CBox_c_void_____CpuStateVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void__CpuStateRetTmp_COptArc_c_void___________COptArc_c_void__CpuStateRetTmp_COptArc_c_void *)self)->vtbl)->resume(&((struct CGlueTraitObj_CBox_c_void_____CpuStateVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void__CpuStateRetTmp_COptArc_c_void___________COptArc_c_void__CpuStateRetTmp_COptArc_c_void *)self)->container);
+(((struct CGlueTraitObj_CBox_c_void_____CpuStateVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____CpuStateRetTmp_COptArc_c_void______________COptArc_c_void_____CpuStateRetTmp_COptArc_c_void *)self)->vtbl)->resume(&((struct CGlueTraitObj_CBox_c_void_____CpuStateVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____CpuStateRetTmp_COptArc_c_void______________COptArc_c_void_____CpuStateRetTmp_COptArc_c_void *)self)->container);
 
 }
 
-static inline void cpustate_arc_box_drop(struct CGlueTraitObj_CBox_c_void_____CpuStateVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void__CpuStateRetTmp_COptArc_c_void___________COptArc_c_void__CpuStateRetTmp_COptArc_c_void self)  {
+static inline void cpustate_arc_box_drop(struct CGlueTraitObj_CBox_c_void_____CpuStateVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____CpuStateRetTmp_COptArc_c_void______________COptArc_c_void_____CpuStateRetTmp_COptArc_c_void self)  {
     cont_box_drop(&self.container.instance);
     ctx_arc_drop(&self.container.context);
 
 }
 
 static inline bool keyboardstate_is_down(const void *self, int32_t vk)  {
-    bool __ret = (((const struct CGlueTraitObj_CBox_c_void_____KeyboardStateVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void__KeyboardStateRetTmp_COptArc_c_void___________COptArc_c_void__KeyboardStateRetTmp_COptArc_c_void *)self)->vtbl)->is_down(&((const struct CGlueTraitObj_CBox_c_void_____KeyboardStateVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void__KeyboardStateRetTmp_COptArc_c_void___________COptArc_c_void__KeyboardStateRetTmp_COptArc_c_void *)self)->container, vk);
+    bool __ret = (((const struct CGlueTraitObj_CBox_c_void_____KeyboardStateVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____KeyboardStateRetTmp_COptArc_c_void______________COptArc_c_void_____KeyboardStateRetTmp_COptArc_c_void *)self)->vtbl)->is_down(&((const struct CGlueTraitObj_CBox_c_void_____KeyboardStateVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____KeyboardStateRetTmp_COptArc_c_void______________COptArc_c_void_____KeyboardStateRetTmp_COptArc_c_void *)self)->container, vk);
     return __ret;
 }
 
-static inline void keyboardstate_arc_box_drop(struct CGlueTraitObj_CBox_c_void_____KeyboardStateVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void__KeyboardStateRetTmp_COptArc_c_void___________COptArc_c_void__KeyboardStateRetTmp_COptArc_c_void self)  {
+static inline void keyboardstate_arc_box_drop(struct CGlueTraitObj_CBox_c_void_____KeyboardStateVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____KeyboardStateRetTmp_COptArc_c_void______________COptArc_c_void_____KeyboardStateRetTmp_COptArc_c_void self)  {
     cont_box_drop(&self.container.instance);
     ctx_arc_drop(&self.container.context);
 
 }
 
 static inline bool keyboard_is_down(void *self, int32_t vk)  {
-    bool __ret = (((struct CGlueTraitObj_CBox_c_void_____KeyboardVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void__KeyboardRetTmp_COptArc_c_void___________COptArc_c_void__KeyboardRetTmp_COptArc_c_void *)self)->vtbl)->is_down(&((struct CGlueTraitObj_CBox_c_void_____KeyboardVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void__KeyboardRetTmp_COptArc_c_void___________COptArc_c_void__KeyboardRetTmp_COptArc_c_void *)self)->container, vk);
+    bool __ret = (((struct CGlueTraitObj_CBox_c_void_____KeyboardVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____KeyboardRetTmp_COptArc_c_void______________COptArc_c_void_____KeyboardRetTmp_COptArc_c_void *)self)->vtbl)->is_down(&((struct CGlueTraitObj_CBox_c_void_____KeyboardVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____KeyboardRetTmp_COptArc_c_void______________COptArc_c_void_____KeyboardRetTmp_COptArc_c_void *)self)->container, vk);
     return __ret;
 }
 
 static inline void set_down(void *self, int32_t vk, bool down)  {
-(((struct CGlueTraitObj_CBox_c_void_____KeyboardVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void__KeyboardRetTmp_COptArc_c_void___________COptArc_c_void__KeyboardRetTmp_COptArc_c_void *)self)->vtbl)->set_down(&((struct CGlueTraitObj_CBox_c_void_____KeyboardVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void__KeyboardRetTmp_COptArc_c_void___________COptArc_c_void__KeyboardRetTmp_COptArc_c_void *)self)->container, vk, down);
+(((struct CGlueTraitObj_CBox_c_void_____KeyboardVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____KeyboardRetTmp_COptArc_c_void______________COptArc_c_void_____KeyboardRetTmp_COptArc_c_void *)self)->vtbl)->set_down(&((struct CGlueTraitObj_CBox_c_void_____KeyboardVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____KeyboardRetTmp_COptArc_c_void______________COptArc_c_void_____KeyboardRetTmp_COptArc_c_void *)self)->container, vk, down);
 
 }
 
 static inline int32_t state(void *self, KeyboardStateBase_CBox_c_void_____COptArc_c_void * ok_out)  {
-    int32_t __ret = (((struct CGlueTraitObj_CBox_c_void_____KeyboardVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void__KeyboardRetTmp_COptArc_c_void___________COptArc_c_void__KeyboardRetTmp_COptArc_c_void *)self)->vtbl)->state(&((struct CGlueTraitObj_CBox_c_void_____KeyboardVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void__KeyboardRetTmp_COptArc_c_void___________COptArc_c_void__KeyboardRetTmp_COptArc_c_void *)self)->container, ok_out);
+    int32_t __ret = (((struct CGlueTraitObj_CBox_c_void_____KeyboardVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____KeyboardRetTmp_COptArc_c_void______________COptArc_c_void_____KeyboardRetTmp_COptArc_c_void *)self)->vtbl)->state(&((struct CGlueTraitObj_CBox_c_void_____KeyboardVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____KeyboardRetTmp_COptArc_c_void______________COptArc_c_void_____KeyboardRetTmp_COptArc_c_void *)self)->container, ok_out);
     return __ret;
 }
 
-static inline void keyboard_arc_box_drop(struct CGlueTraitObj_CBox_c_void_____KeyboardVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void__KeyboardRetTmp_COptArc_c_void___________COptArc_c_void__KeyboardRetTmp_COptArc_c_void self)  {
+static inline void keyboard_arc_box_drop(struct CGlueTraitObj_CBox_c_void_____KeyboardVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____KeyboardRetTmp_COptArc_c_void______________COptArc_c_void_____KeyboardRetTmp_COptArc_c_void self)  {
+    cont_box_drop(&self.container.instance);
+    ctx_arc_drop(&self.container.context);
+
+}
+
+static inline int32_t read_raw_iter(void *self, struct CIterator_ReadData data, ReadFailCallback * out_fail)  {
+    int32_t __ret = (((struct CGlueTraitObj_CBox_c_void_____MemoryViewVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____MemoryViewRetTmp_COptArc_c_void______________COptArc_c_void_____MemoryViewRetTmp_COptArc_c_void *)self)->vtbl)->read_raw_iter(&((struct CGlueTraitObj_CBox_c_void_____MemoryViewVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____MemoryViewRetTmp_COptArc_c_void______________COptArc_c_void_____MemoryViewRetTmp_COptArc_c_void *)self)->container, data, out_fail);
+    return __ret;
+}
+
+static inline int32_t write_raw_iter(void *self, struct CIterator_WriteData data, WriteFailCallback * out_fail)  {
+    int32_t __ret = (((struct CGlueTraitObj_CBox_c_void_____MemoryViewVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____MemoryViewRetTmp_COptArc_c_void______________COptArc_c_void_____MemoryViewRetTmp_COptArc_c_void *)self)->vtbl)->write_raw_iter(&((struct CGlueTraitObj_CBox_c_void_____MemoryViewVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____MemoryViewRetTmp_COptArc_c_void______________COptArc_c_void_____MemoryViewRetTmp_COptArc_c_void *)self)->container, data, out_fail);
+    return __ret;
+}
+
+static inline struct MemoryViewMetadata metadata(const void *self)  {
+    struct MemoryViewMetadata __ret = (((const struct CGlueTraitObj_CBox_c_void_____MemoryViewVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____MemoryViewRetTmp_COptArc_c_void______________COptArc_c_void_____MemoryViewRetTmp_COptArc_c_void *)self)->vtbl)->metadata(&((const struct CGlueTraitObj_CBox_c_void_____MemoryViewVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____MemoryViewRetTmp_COptArc_c_void______________COptArc_c_void_____MemoryViewRetTmp_COptArc_c_void *)self)->container);
+    return __ret;
+}
+
+static inline int32_t read_raw_list(void *self, struct CSliceMut_ReadData data)  {
+    int32_t __ret = (((struct CGlueTraitObj_CBox_c_void_____MemoryViewVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____MemoryViewRetTmp_COptArc_c_void______________COptArc_c_void_____MemoryViewRetTmp_COptArc_c_void *)self)->vtbl)->read_raw_list(&((struct CGlueTraitObj_CBox_c_void_____MemoryViewVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____MemoryViewRetTmp_COptArc_c_void______________COptArc_c_void_____MemoryViewRetTmp_COptArc_c_void *)self)->container, data);
+    return __ret;
+}
+
+static inline int32_t read_raw_into(void *self, Address addr, struct CSliceMut_u8 out)  {
+    int32_t __ret = (((struct CGlueTraitObj_CBox_c_void_____MemoryViewVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____MemoryViewRetTmp_COptArc_c_void______________COptArc_c_void_____MemoryViewRetTmp_COptArc_c_void *)self)->vtbl)->read_raw_into(&((struct CGlueTraitObj_CBox_c_void_____MemoryViewVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____MemoryViewRetTmp_COptArc_c_void______________COptArc_c_void_____MemoryViewRetTmp_COptArc_c_void *)self)->container, addr, out);
+    return __ret;
+}
+
+static inline int32_t write_raw_list(void *self, struct CSliceRef_WriteData data)  {
+    int32_t __ret = (((struct CGlueTraitObj_CBox_c_void_____MemoryViewVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____MemoryViewRetTmp_COptArc_c_void______________COptArc_c_void_____MemoryViewRetTmp_COptArc_c_void *)self)->vtbl)->write_raw_list(&((struct CGlueTraitObj_CBox_c_void_____MemoryViewVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____MemoryViewRetTmp_COptArc_c_void______________COptArc_c_void_____MemoryViewRetTmp_COptArc_c_void *)self)->container, data);
+    return __ret;
+}
+
+static inline int32_t write_raw(void *self, Address addr, struct CSliceRef_u8 data)  {
+    int32_t __ret = (((struct CGlueTraitObj_CBox_c_void_____MemoryViewVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____MemoryViewRetTmp_COptArc_c_void______________COptArc_c_void_____MemoryViewRetTmp_COptArc_c_void *)self)->vtbl)->write_raw(&((struct CGlueTraitObj_CBox_c_void_____MemoryViewVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____MemoryViewRetTmp_COptArc_c_void______________COptArc_c_void_____MemoryViewRetTmp_COptArc_c_void *)self)->container, addr, data);
+    return __ret;
+}
+
+static inline void memoryview_arc_box_drop(struct CGlueTraitObj_CBox_c_void_____MemoryViewVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____MemoryViewRetTmp_COptArc_c_void______________COptArc_c_void_____MemoryViewRetTmp_COptArc_c_void self)  {
     cont_box_drop(&self.container.instance);
     ctx_arc_drop(&self.container.context);
 
@@ -1948,26 +2017,6 @@ static inline struct ConnectorInstance_CBox_c_void_____COptArc_c_void connectori
 static inline void connectorinstance_arc_box_drop(struct ConnectorInstance_CBox_c_void_____COptArc_c_void self)  {
     cont_box_drop(&self.container.instance);
     ctx_arc_drop(&self.container.context);
-
-}
-
-static inline int32_t connectorinstance_phys_read_raw_iter(void *self, struct CIterator_PhysicalReadData data, PhysicalReadFailCallback * out_fail)  {
-    int32_t __ret = (((struct ConnectorInstance_CBox_c_void_____COptArc_c_void *)self)->vtbl_physicalmemory)->phys_read_raw_iter(&((struct ConnectorInstance_CBox_c_void_____COptArc_c_void *)self)->container, data, out_fail);
-    return __ret;
-}
-
-static inline int32_t connectorinstance_phys_write_raw_iter(void *self, struct CIterator_PhysicalWriteData data, PhysicalWriteFailCallback * out_fail)  {
-    int32_t __ret = (((struct ConnectorInstance_CBox_c_void_____COptArc_c_void *)self)->vtbl_physicalmemory)->phys_write_raw_iter(&((struct ConnectorInstance_CBox_c_void_____COptArc_c_void *)self)->container, data, out_fail);
-    return __ret;
-}
-
-static inline struct PhysicalMemoryMetadata connectorinstance_metadata(const void *self)  {
-    struct PhysicalMemoryMetadata __ret = (((const struct ConnectorInstance_CBox_c_void_____COptArc_c_void *)self)->vtbl_physicalmemory)->metadata(&((const struct ConnectorInstance_CBox_c_void_____COptArc_c_void *)self)->container);
-    return __ret;
-}
-
-static inline void connectorinstance_set_mem_map(void *self, struct CSliceRef_PhysicalMemoryMapping mem_map)  {
-(((struct ConnectorInstance_CBox_c_void_____COptArc_c_void *)self)->vtbl_physicalmemory)->set_mem_map(&((struct ConnectorInstance_CBox_c_void_____COptArc_c_void *)self)->container, mem_map);
 
 }
 
@@ -2202,6 +2251,18 @@ static inline int32_t osinstance_phys_write_raw_iter(void *self, struct CIterato
 static inline void osinstance_set_mem_map(void *self, struct CSliceRef_PhysicalMemoryMapping mem_map)  {
 (((struct OsInstance_CBox_c_void_____COptArc_c_void *)self)->vtbl_physicalmemory)->set_mem_map(&((struct OsInstance_CBox_c_void_____COptArc_c_void *)self)->container, mem_map);
 
+}
+
+static inline MemoryViewBase_CBox_c_void_____COptArc_c_void osinstance_arc_box_into_phys_view(struct OsInstance_CBox_c_void_____COptArc_c_void self)  {
+    COptArc_c_void ___ctx = ctx_arc_clone(&self.container.context);
+    MemoryViewBase_CBox_c_void_____COptArc_c_void __ret = (self.vtbl_physicalmemory)->into_phys_view(self.container);
+    ctx_arc_drop(&___ctx);
+    return __ret;
+}
+
+static inline MemoryViewBase_CBox_c_void_____COptArc_c_void osinstance_phys_view(void *self)  {
+    MemoryViewBase_CBox_c_void_____COptArc_c_void __ret = (((struct OsInstance_CBox_c_void_____COptArc_c_void *)self)->vtbl_physicalmemory)->phys_view(&((struct OsInstance_CBox_c_void_____COptArc_c_void *)self)->container);
+    return __ret;
 }
 
 static inline int32_t processinstance_read_raw_iter(void *self, struct CIterator_ReadData data, ReadFailCallback * out_fail)  {
@@ -2532,6 +2593,38 @@ static inline void intoprocessinstance_virt_page_map(void *self, umem gap_size, 
 
 }
 
+static inline int32_t connectorinstance_phys_read_raw_iter(void *self, struct CIterator_PhysicalReadData data, PhysicalReadFailCallback * out_fail)  {
+    int32_t __ret = (((struct ConnectorInstance_CBox_c_void_____COptArc_c_void *)self)->vtbl_physicalmemory)->phys_read_raw_iter(&((struct ConnectorInstance_CBox_c_void_____COptArc_c_void *)self)->container, data, out_fail);
+    return __ret;
+}
+
+static inline int32_t connectorinstance_phys_write_raw_iter(void *self, struct CIterator_PhysicalWriteData data, PhysicalWriteFailCallback * out_fail)  {
+    int32_t __ret = (((struct ConnectorInstance_CBox_c_void_____COptArc_c_void *)self)->vtbl_physicalmemory)->phys_write_raw_iter(&((struct ConnectorInstance_CBox_c_void_____COptArc_c_void *)self)->container, data, out_fail);
+    return __ret;
+}
+
+static inline struct PhysicalMemoryMetadata connectorinstance_metadata(const void *self)  {
+    struct PhysicalMemoryMetadata __ret = (((const struct ConnectorInstance_CBox_c_void_____COptArc_c_void *)self)->vtbl_physicalmemory)->metadata(&((const struct ConnectorInstance_CBox_c_void_____COptArc_c_void *)self)->container);
+    return __ret;
+}
+
+static inline void connectorinstance_set_mem_map(void *self, struct CSliceRef_PhysicalMemoryMapping mem_map)  {
+(((struct ConnectorInstance_CBox_c_void_____COptArc_c_void *)self)->vtbl_physicalmemory)->set_mem_map(&((struct ConnectorInstance_CBox_c_void_____COptArc_c_void *)self)->container, mem_map);
+
+}
+
+static inline MemoryViewBase_CBox_c_void_____COptArc_c_void connectorinstance_arc_box_into_phys_view(struct ConnectorInstance_CBox_c_void_____COptArc_c_void self)  {
+    COptArc_c_void ___ctx = ctx_arc_clone(&self.container.context);
+    MemoryViewBase_CBox_c_void_____COptArc_c_void __ret = (self.vtbl_physicalmemory)->into_phys_view(self.container);
+    ctx_arc_drop(&___ctx);
+    return __ret;
+}
+
+static inline MemoryViewBase_CBox_c_void_____COptArc_c_void connectorinstance_phys_view(void *self)  {
+    MemoryViewBase_CBox_c_void_____COptArc_c_void __ret = (((struct ConnectorInstance_CBox_c_void_____COptArc_c_void *)self)->vtbl_physicalmemory)->phys_view(&((struct ConnectorInstance_CBox_c_void_____COptArc_c_void *)self)->container);
+    return __ret;
+}
+
 struct CollectBase {
     /* Pointer to array of data */
     void *buf;
@@ -2611,30 +2704,6 @@ static inline bool cb_count_PhysicalWriteData(size_t *cnt, PhysicalWriteData inf
     return ++(*cnt);
 }
 
-static inline bool cb_collect_static_Address(struct CollectBase *ctx, Address info) {
-    return cb_collect_static_base(ctx, sizeof(Address), &info);
-}
-
-static inline bool cb_collect_dynamic_Address(struct CollectBase *ctx, Address info) {
-    return cb_collect_dynamic_base(ctx, sizeof(Address), &info);
-}
-
-static inline bool cb_count_Address(size_t *cnt, Address info) {
-    return ++(*cnt);
-}
-
-static inline bool cb_collect_static_ProcessInfo(struct CollectBase *ctx, ProcessInfo info) {
-    return cb_collect_static_base(ctx, sizeof(ProcessInfo), &info);
-}
-
-static inline bool cb_collect_dynamic_ProcessInfo(struct CollectBase *ctx, ProcessInfo info) {
-    return cb_collect_dynamic_base(ctx, sizeof(ProcessInfo), &info);
-}
-
-static inline bool cb_count_ProcessInfo(size_t *cnt, ProcessInfo info) {
-    return ++(*cnt);
-}
-
 static inline bool cb_collect_static_ReadData(struct CollectBase *ctx, ReadData info) {
     return cb_collect_static_base(ctx, sizeof(ReadData), &info);
 }
@@ -2656,6 +2725,30 @@ static inline bool cb_collect_dynamic_WriteData(struct CollectBase *ctx, WriteDa
 }
 
 static inline bool cb_count_WriteData(size_t *cnt, WriteData info) {
+    return ++(*cnt);
+}
+
+static inline bool cb_collect_static_Address(struct CollectBase *ctx, Address info) {
+    return cb_collect_static_base(ctx, sizeof(Address), &info);
+}
+
+static inline bool cb_collect_dynamic_Address(struct CollectBase *ctx, Address info) {
+    return cb_collect_dynamic_base(ctx, sizeof(Address), &info);
+}
+
+static inline bool cb_count_Address(size_t *cnt, Address info) {
+    return ++(*cnt);
+}
+
+static inline bool cb_collect_static_ProcessInfo(struct CollectBase *ctx, ProcessInfo info) {
+    return cb_collect_static_base(ctx, sizeof(ProcessInfo), &info);
+}
+
+static inline bool cb_collect_dynamic_ProcessInfo(struct CollectBase *ctx, ProcessInfo info) {
+    return cb_collect_dynamic_base(ctx, sizeof(ProcessInfo), &info);
+}
+
+static inline bool cb_count_ProcessInfo(size_t *cnt, ProcessInfo info) {
     return ++(*cnt);
 }
 

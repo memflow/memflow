@@ -20,23 +20,19 @@ int main(int argc, char *argv[]) {
 			ConnectorInstanceArcBox cloned = connectorinstance_clone(&conn);
 
 			connectorinstance_arc_box_drop(cloned);
-			// mf_connector_phys_read_raw_list(conn, &read_data, 1);
-			/*ConnectorInstance conn_cloned;
-			mf_clone_connector(&conn, &conn_cloned);
 
-			// most simple read
-			PhysicalReadData read_data_0 = {{0x1000, 1, 0}, {buffer, 0x1000}};
-			conn_cloned.vtbl_physicalmemory->phys_read_raw_list(
-					this(&conn), (struct CSliceMut_PhysicalReadData){&read_data_0, 1});
-			// printf("Read: %lx\n", *(uint64_t *)buffer);
+			MemoryViewArcBox phys_view = connectorinstance_phys_view(&conn);
 
 			// regular read_into
-			conn_cloned.vtbl_physicalmemory->phys_read_raw_into(
-					this(&conn), (struct PhysicalAddress){0x1000, 1, 0},
-					(struct CSliceMut_u8){buffer, sizeof(buffer)});
-			// printf("Read: %lx\n", *(uint64_t *)buffer);
+			read_raw_into(&phys_view, 0x1000 + i, MUT_SLICE(u8, buffer, sizeof(buffer)));
 
-			mf_connector_free(conn_cloned);*/
+			// read multiple
+			ReadData read_data = {0x1000 + i, {buffer, sizeof(buffer)}};
+			read_raw_list(&phys_view, MUT_SLICE(ReadData, &read_data, 1));
+
+			printf("Read: %lx\n", *(uint64_t *)buffer);
+
+			memoryview_arc_box_drop(phys_view);
 		}
 
 		connectorinstance_arc_box_drop(conn);

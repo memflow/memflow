@@ -188,8 +188,7 @@ pub trait PhysicalMemory: Send {
         self.phys_write_raw_iter((&mut iter).into(), &mut (&mut |_| true).into())
     }
 
-    // TODO: create FFI helpers for this
-    #[skip_func]
+    #[vtbl_only('static, wrap_with_obj(MemoryView))]
     fn into_phys_view(self) -> PhysicalMemoryView<Self>
     where
         Self: Sized,
@@ -197,7 +196,7 @@ pub trait PhysicalMemory: Send {
         PhysicalMemoryView { mem: self }
     }
 
-    #[skip_func]
+    #[vtbl_only('_, wrap_with_obj(MemoryView))]
     fn phys_view(&mut self) -> PhysicalMemoryView<Fwd<&mut Self>>
     where
         Self: Sized,
@@ -207,6 +206,7 @@ pub trait PhysicalMemory: Send {
 }
 
 #[repr(C)]
+#[derive(Clone)]
 pub struct PhysicalMemoryView<T> {
     mem: T,
 }

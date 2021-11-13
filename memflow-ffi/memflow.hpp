@@ -388,10 +388,10 @@ using PhysicalReadData = MemData<PhysicalAddress, CSliceMut<uint8_t>>;
  *
  * # Examples
  *
- * Using [`IntoCIterator`](IntoCIterator) helper:
+ * Using [`AsCIterator`](AsCIterator) helper:
  *
  * ```
- * use cglue::iter::{CIterator, IntoCIterator};
+ * use cglue::iter::{CIterator, AsCIterator};
  *
  * extern "C" fn sum_all(iter: CIterator<usize>) -> usize {
  *     iter.sum()
@@ -399,13 +399,13 @@ using PhysicalReadData = MemData<PhysicalAddress, CSliceMut<uint8_t>>;
  *
  * let mut iter = (0..10).map(|v| v * v);
  *
- * assert_eq!(sum_all(iter.into_citer()), 285);
+ * assert_eq!(sum_all(iter.as_citer()), 285);
  * ```
  *
  * Converting with `Into` trait:
  *
  * ```
- * use cglue::iter::{CIterator, IntoCIterator};
+ * use cglue::iter::{CIterator, AsCIterator};
  *
  * extern "C" fn sum_all(iter: CIterator<usize>) -> usize {
  *     iter.sum()
@@ -539,20 +539,6 @@ struct PhysicalMemoryMapping {
 };
 
 /**
- * CGlue vtable for trait PhysicalMemory.
- *
- * This virtual function table contains ABI-safe interface for the given trait.
- */
-template<typename CGlueC>
-struct PhysicalMemoryVtbl {
-    typedef typename CGlueC::Context Context;
-    int32_t (*phys_read_raw_iter)(CGlueC *cont, CIterator<PhysicalReadData> data, PhysicalReadFailCallback *out_fail);
-    int32_t (*phys_write_raw_iter)(CGlueC *cont, CIterator<PhysicalWriteData> data, PhysicalWriteFailCallback *out_fail);
-    PhysicalMemoryMetadata (*metadata)(const CGlueC *cont);
-    void (*set_mem_map)(CGlueC *cont, CSliceRef<PhysicalMemoryMapping> mem_map);
-};
-
-/**
  * Simple CGlue trait object container.
  *
  * This is the simplest form of container, represented by an instance, clone context, and
@@ -644,15 +630,42 @@ struct CGlueObjContainer<T, void, void> {
 };
 
 /**
- * CGlue vtable for trait CpuState.
+ * MemData type for regular memory reads.
+ */
+using ReadData = MemData<Address, CSliceMut<uint8_t>>;
+
+using ReadFailCallback = OpaqueCallback<ReadData>;
+
+/**
+ * MemData type for regular memory writes.
+ */
+using WriteData = MemData<Address, CSliceRef<uint8_t>>;
+
+using WriteFailCallback = OpaqueCallback<WriteData>;
+
+struct MemoryViewMetadata {
+    Address max_address;
+    umem real_size;
+    bool readonly;
+    bool little_endian;
+    uint8_t arch_bits;
+};
+
+/**
+ * CGlue vtable for trait MemoryView.
  *
  * This virtual function table contains ABI-safe interface for the given trait.
  */
 template<typename CGlueC>
-struct CpuStateVtbl {
+struct MemoryViewVtbl {
     typedef typename CGlueC::Context Context;
-    void (*pause)(CGlueC *cont);
-    void (*resume)(CGlueC *cont);
+    int32_t (*read_raw_iter)(CGlueC *cont, CIterator<ReadData> data, ReadFailCallback *out_fail);
+    int32_t (*write_raw_iter)(CGlueC *cont, CIterator<WriteData> data, WriteFailCallback *out_fail);
+    MemoryViewMetadata (*metadata)(const CGlueC *cont);
+    int32_t (*read_raw_list)(CGlueC *cont, CSliceMut<ReadData> data);
+    int32_t (*read_raw_into)(CGlueC *cont, Address addr, CSliceMut<uint8_t> out);
+    int32_t (*write_raw_list)(CGlueC *cont, CSliceRef<WriteData> data);
+    int32_t (*write_raw)(CGlueC *cont, Address addr, CSliceRef<uint8_t> data);
 };
 
 /**
@@ -667,6 +680,40 @@ template<typename T, typename V, typename C, typename R>
 struct CGlueTraitObj {
     const V *vtbl;
     CGlueObjContainer<T, C, R> container;
+};
+
+/**
+ * Base CGlue trait object for trait MemoryView.
+ */
+template<typename CGlueInst, typename CGlueCtx>
+using MemoryViewBase = CGlueTraitObj<CGlueInst, MemoryViewVtbl<CGlueObjContainer<CGlueInst, CGlueCtx, MemoryViewRetTmp<CGlueCtx>>>, CGlueCtx, MemoryViewRetTmp<CGlueCtx>>;
+
+/**
+ * CGlue vtable for trait PhysicalMemory.
+ *
+ * This virtual function table contains ABI-safe interface for the given trait.
+ */
+template<typename CGlueC>
+struct PhysicalMemoryVtbl {
+    typedef typename CGlueC::Context Context;
+    int32_t (*phys_read_raw_iter)(CGlueC *cont, CIterator<PhysicalReadData> data, PhysicalReadFailCallback *out_fail);
+    int32_t (*phys_write_raw_iter)(CGlueC *cont, CIterator<PhysicalWriteData> data, PhysicalWriteFailCallback *out_fail);
+    PhysicalMemoryMetadata (*metadata)(const CGlueC *cont);
+    void (*set_mem_map)(CGlueC *cont, CSliceRef<PhysicalMemoryMapping> mem_map);
+    MemoryViewBase<CBox<void>, Context> (*into_phys_view)(CGlueC cont);
+    MemoryViewBase<CBox<void>, Context> (*phys_view)(CGlueC *cont);
+};
+
+/**
+ * CGlue vtable for trait CpuState.
+ *
+ * This virtual function table contains ABI-safe interface for the given trait.
+ */
+template<typename CGlueC>
+struct CpuStateVtbl {
+    typedef typename CGlueC::Context Context;
+    void (*pause)(CGlueC *cont);
+    void (*resume)(CGlueC *cont);
 };
 
 /**
@@ -836,6 +883,18 @@ struct ConnectorInstance {
     inline auto set_mem_map(CSliceRef<PhysicalMemoryMapping> mem_map) noexcept {
     (this->vtbl_physicalmemory)->set_mem_map(&this->container, mem_map);
 
+    }
+
+    inline auto into_phys_view() && noexcept {
+        auto ___ctx = StoreAll()[this->container.clone_context(), StoreAll()];
+        MemoryViewBase<CBox<void>, Context> __ret = (this->vtbl_physicalmemory)->into_phys_view(this->container);
+        mem_forget(this->container);
+        return __ret;
+    }
+
+    inline auto phys_view() noexcept {
+        MemoryViewBase<CBox<void>, Context> __ret = (this->vtbl_physicalmemory)->phys_view(&this->container);
+        return __ret;
     }
 
     inline auto cpu_state(MaybeUninit<CpuStateBase<CBox<void>, Context>> * ok_out) noexcept {
@@ -1045,45 +1104,6 @@ struct ProcessInstanceContainer<CGlueInst, void> {
     inline void forget() noexcept {
         mem_forget(instance);
     }
-};
-
-/**
- * MemData type for regular memory reads.
- */
-using ReadData = MemData<Address, CSliceMut<uint8_t>>;
-
-using ReadFailCallback = OpaqueCallback<ReadData>;
-
-/**
- * MemData type for regular memory writes.
- */
-using WriteData = MemData<Address, CSliceRef<uint8_t>>;
-
-using WriteFailCallback = OpaqueCallback<WriteData>;
-
-struct MemoryViewMetadata {
-    Address max_address;
-    umem real_size;
-    bool readonly;
-    bool little_endian;
-    uint8_t arch_bits;
-};
-
-/**
- * CGlue vtable for trait MemoryView.
- *
- * This virtual function table contains ABI-safe interface for the given trait.
- */
-template<typename CGlueC>
-struct MemoryViewVtbl {
-    typedef typename CGlueC::Context Context;
-    int32_t (*read_raw_iter)(CGlueC *cont, CIterator<ReadData> data, ReadFailCallback *out_fail);
-    int32_t (*write_raw_iter)(CGlueC *cont, CIterator<WriteData> data, WriteFailCallback *out_fail);
-    MemoryViewMetadata (*metadata)(const CGlueC *cont);
-    int32_t (*read_raw_list)(CGlueC *cont, CSliceMut<ReadData> data);
-    int32_t (*read_raw_into)(CGlueC *cont, Address addr, CSliceMut<uint8_t> out);
-    int32_t (*write_raw_list)(CGlueC *cont, CSliceRef<WriteData> data);
-    int32_t (*write_raw)(CGlueC *cont, Address addr, CSliceRef<uint8_t> data);
 };
 
 /**
@@ -2181,6 +2201,18 @@ struct OsInstance {
 
     }
 
+    inline auto into_phys_view() && noexcept {
+        auto ___ctx = StoreAll()[this->container.clone_context(), StoreAll()];
+        MemoryViewBase<CBox<void>, Context> __ret = (this->vtbl_physicalmemory)->into_phys_view(this->container);
+        mem_forget(this->container);
+        return __ret;
+    }
+
+    inline auto phys_view() noexcept {
+        MemoryViewBase<CBox<void>, Context> __ret = (this->vtbl_physicalmemory)->phys_view(&this->container);
+        return __ret;
+    }
+
 };
 
 template<typename CGlueT, typename CGlueCtx>
@@ -2208,6 +2240,23 @@ template<typename CGlueT, typename CGlueArcTy>
 using IntoProcessInstanceBaseArcBox = IntoProcessInstanceBaseCtxBox<CGlueT, COptArc<CGlueArcTy>>;
 
 using IntoProcessInstanceArcBox = IntoProcessInstanceBaseArcBox<void, void>;
+
+/**
+ * CtxBoxed CGlue trait object for trait MemoryView with context.
+ */
+template<typename CGlueT, typename CGlueCtx>
+using MemoryViewBaseCtxBox = MemoryViewBase<CBox<CGlueT>, CGlueCtx>;
+
+/**
+ * Boxed CGlue trait object for trait MemoryView with a [`COptArc`](cglue::arc::COptArc) reference counted context.
+ */
+template<typename CGlueT, typename CGlueC>
+using MemoryViewBaseArcBox = MemoryViewBaseCtxBox<CGlueT, COptArc<CGlueC>>;
+
+/**
+ * Opaque Boxed CGlue trait object for trait MemoryView with a [`COptArc`](cglue::arc::COptArc) reference counted context.
+ */
+using MemoryViewArcBox = MemoryViewBaseArcBox<void, void>;
 
 extern "C" {
 
@@ -2409,6 +2458,56 @@ struct CGlueTraitObj<T, CloneVtbl<CGlueObjContainer<T, C, R>>, C, R> {
 };
 
 template<typename T, typename C, typename R>
+struct CGlueTraitObj<T, MemoryViewVtbl<CGlueObjContainer<T, C, R>>, C, R> {
+    const MemoryViewVtbl<CGlueObjContainer<T, C, R>> *vtbl;
+    CGlueObjContainer<T, C, R> container;
+
+    CGlueTraitObj() : container{} {}
+
+    ~CGlueTraitObj() noexcept {
+        mem_drop(std::move(container));
+    }
+
+    typedef C Context;
+
+    inline auto read_raw_iter(CIterator<ReadData> data, ReadFailCallback * out_fail) noexcept {
+        int32_t __ret = (this->vtbl)->read_raw_iter(&this->container, data, out_fail);
+        return __ret;
+    }
+
+    inline auto write_raw_iter(CIterator<WriteData> data, WriteFailCallback * out_fail) noexcept {
+        int32_t __ret = (this->vtbl)->write_raw_iter(&this->container, data, out_fail);
+        return __ret;
+    }
+
+    inline auto metadata() const noexcept {
+        MemoryViewMetadata __ret = (this->vtbl)->metadata(&this->container);
+        return __ret;
+    }
+
+    inline auto read_raw_list(CSliceMut<ReadData> data) noexcept {
+        int32_t __ret = (this->vtbl)->read_raw_list(&this->container, data);
+        return __ret;
+    }
+
+    inline auto read_raw_into(Address addr, CSliceMut<uint8_t> out) noexcept {
+        int32_t __ret = (this->vtbl)->read_raw_into(&this->container, addr, out);
+        return __ret;
+    }
+
+    inline auto write_raw_list(CSliceRef<WriteData> data) noexcept {
+        int32_t __ret = (this->vtbl)->write_raw_list(&this->container, data);
+        return __ret;
+    }
+
+    inline auto write_raw(Address addr, CSliceRef<uint8_t> data) noexcept {
+        int32_t __ret = (this->vtbl)->write_raw(&this->container, addr, data);
+        return __ret;
+    }
+
+};
+
+template<typename T, typename C, typename R>
 struct CGlueTraitObj<T, PhysicalMemoryVtbl<CGlueObjContainer<T, C, R>>, C, R> {
     const PhysicalMemoryVtbl<CGlueObjContainer<T, C, R>> *vtbl;
     CGlueObjContainer<T, C, R> container;
@@ -2439,6 +2538,18 @@ struct CGlueTraitObj<T, PhysicalMemoryVtbl<CGlueObjContainer<T, C, R>>, C, R> {
     inline auto set_mem_map(CSliceRef<PhysicalMemoryMapping> mem_map) noexcept {
     (this->vtbl)->set_mem_map(&this->container, mem_map);
 
+    }
+
+    inline auto into_phys_view() && noexcept {
+        auto ___ctx = StoreAll()[this->container.clone_context(), StoreAll()];
+        MemoryViewBase<CBox<void>, Context> __ret = (this->vtbl)->into_phys_view(this->container);
+        mem_forget(this->container);
+        return __ret;
+    }
+
+    inline auto phys_view() noexcept {
+        MemoryViewBase<CBox<void>, Context> __ret = (this->vtbl)->phys_view(&this->container);
+        return __ret;
     }
 
 };
@@ -2490,56 +2601,6 @@ struct CGlueTraitObj<T, ConnectorCpuStateInnerVtbl<CGlueObjContainer<T, C, R>>, 
         auto ___ctx = StoreAll()[this->container.clone_context(), StoreAll()];
         int32_t __ret = (this->vtbl)->into_cpu_state(this->container, ok_out);
         mem_forget(this->container);
-        return __ret;
-    }
-
-};
-
-template<typename T, typename C, typename R>
-struct CGlueTraitObj<T, MemoryViewVtbl<CGlueObjContainer<T, C, R>>, C, R> {
-    const MemoryViewVtbl<CGlueObjContainer<T, C, R>> *vtbl;
-    CGlueObjContainer<T, C, R> container;
-
-    CGlueTraitObj() : container{} {}
-
-    ~CGlueTraitObj() noexcept {
-        mem_drop(std::move(container));
-    }
-
-    typedef C Context;
-
-    inline auto read_raw_iter(CIterator<ReadData> data, ReadFailCallback * out_fail) noexcept {
-        int32_t __ret = (this->vtbl)->read_raw_iter(&this->container, data, out_fail);
-        return __ret;
-    }
-
-    inline auto write_raw_iter(CIterator<WriteData> data, WriteFailCallback * out_fail) noexcept {
-        int32_t __ret = (this->vtbl)->write_raw_iter(&this->container, data, out_fail);
-        return __ret;
-    }
-
-    inline auto metadata() const noexcept {
-        MemoryViewMetadata __ret = (this->vtbl)->metadata(&this->container);
-        return __ret;
-    }
-
-    inline auto read_raw_list(CSliceMut<ReadData> data) noexcept {
-        int32_t __ret = (this->vtbl)->read_raw_list(&this->container, data);
-        return __ret;
-    }
-
-    inline auto read_raw_into(Address addr, CSliceMut<uint8_t> out) noexcept {
-        int32_t __ret = (this->vtbl)->read_raw_into(&this->container, addr, out);
-        return __ret;
-    }
-
-    inline auto write_raw_list(CSliceRef<WriteData> data) noexcept {
-        int32_t __ret = (this->vtbl)->write_raw_list(&this->container, data);
-        return __ret;
-    }
-
-    inline auto write_raw(Address addr, CSliceRef<uint8_t> data) noexcept {
-        int32_t __ret = (this->vtbl)->write_raw(&this->container, addr, data);
         return __ret;
     }
 

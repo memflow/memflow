@@ -41,9 +41,6 @@ impl PhysicalMemory for NullMem {
             ideal_batch_size: u32::MAX,
         }
     }
-
-    // This is a no-op
-    fn set_mem_map(&mut self, _mem_map: &[PhysicalMemoryMapping]) {}
 }
 
 use NullMem as Memory;

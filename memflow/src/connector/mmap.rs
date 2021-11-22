@@ -151,9 +151,6 @@ impl<'a, F: AsRef<MemoryMap<&'a mut [u8]>> + Send> PhysicalMemory
             ideal_batch_size: u32::MAX,
         }
     }
-
-    // This is a no-op for u8 slices.
-    fn set_mem_map(&mut self, _mem_map: &[PhysicalMemoryMapping]) {}
 }
 
 impl<'a, F: AsRef<MemoryMap<&'a [u8]>> + Send> PhysicalMemory
@@ -204,9 +201,6 @@ impl<'a, F: AsRef<MemoryMap<&'a [u8]>> + Send> PhysicalMemory
             ideal_batch_size: u32::MAX,
         }
     }
-
-    // This is a no-op for u8 slices.
-    fn set_mem_map(&mut self, _mem_map: &[PhysicalMemoryMapping]) {}
 }
 
 #[cfg(feature = "plugins")]

@@ -101,9 +101,6 @@ pub type MuConnectorInstanceArcBox<'a> = std::mem::MaybeUninit<ConnectorInstance
 ///             ideal_batch_size: u32::MAX
 ///         }
 ///     }
-///
-///     // this is a no-op in this example
-///     fn set_mem_map(&mut self, _mem_map: &[PhysicalMemoryMapping]) {}
 /// }
 /// ```
 ///
@@ -161,6 +158,8 @@ pub trait PhysicalMemory: Send {
     ///
     /// In case a connector cannot acquire memory mappings on it's own this function
     /// allows the OS plugin to set the memory mapping at a later stage of initialization.
+    ///
+    /// The only reason this is needed for some connectors is to avoid catastrophic failures upon reading invalid address.
     ///
     /// By default this is a no-op.
     #[inline]

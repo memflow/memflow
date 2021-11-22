@@ -55,6 +55,7 @@ impl Clone for DummyMemory {
 }
 
 impl PhysicalMemory for DummyMemory {
+    #[inline]
     fn phys_read_raw_iter<'a>(
         &mut self,
         data: CIterator<PhysicalReadData<'a>>,
@@ -63,6 +64,7 @@ impl PhysicalMemory for DummyMemory {
         self.mem.phys_read_raw_iter(data, out_fail)
     }
 
+    #[inline]
     fn phys_write_raw_iter<'a>(
         &mut self,
         data: CIterator<PhysicalWriteData<'a>>,
@@ -71,10 +73,12 @@ impl PhysicalMemory for DummyMemory {
         self.mem.phys_write_raw_iter(data, out_fail)
     }
 
+    #[inline]
     fn metadata(&self) -> PhysicalMemoryMetadata {
         self.mem.metadata()
     }
 
+    #[inline]
     fn set_mem_map(&mut self, mem_map: &[PhysicalMemoryMapping]) {
         self.mem.set_mem_map(mem_map)
     }

@@ -4,8 +4,7 @@ Basic connector which works on mapped memory.
 
 use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 use crate::mem::{
-    MemData, MemoryMap, PhysicalMemory, PhysicalMemoryMapping, PhysicalMemoryMetadata,
-    PhysicalReadData, PhysicalWriteData,
+    MemData, MemoryMap, PhysicalMemory, PhysicalMemoryMetadata, PhysicalReadData, PhysicalWriteData,
 };
 use crate::types::{umem, Address};
 

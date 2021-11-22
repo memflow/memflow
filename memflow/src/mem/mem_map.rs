@@ -140,6 +140,7 @@ impl<M: SplitAtIndex> MemoryMap<M> {
     ) -> impl Iterator<Item = (M, T)> + 'a {
         MemoryMapIterator::new(&self.mappings, iter, out_fail.into())
     }
+
     /// Maps a address range iterator to a hardware address range.
     ///
     /// Output element lengths will both match, so there is no need to do additonal clipping

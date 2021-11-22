@@ -90,10 +90,16 @@ pub trait OsInner<'a>: Send {
     fn process_info_by_address(&mut self, address: Address) -> Result<ProcessInfo>;
 
     /// Find process information by its name
+    ///
+    /// # Remarks:
+    ///
+    /// This function only returns processes whose state is not [`ProcessState::Dead`].
     fn process_info_by_name(&mut self, name: &str) -> Result<ProcessInfo> {
         let mut ret = Err(Error(ErrorOrigin::OsLayer, ErrorKind::ProcessNotFound));
         let callback = &mut |data: ProcessInfo| {
-            if data.name.as_ref() == name {
+            if (data.state == ProcessState::Unknown || data.state == ProcessState::Alive)
+                && data.name.as_ref() == name
+            {
                 ret = Ok(data);
                 false
             } else {
@@ -139,6 +145,7 @@ pub trait OsInner<'a>: Send {
         self.process_info_by_address(addr)
             .and_then(move |i| self.process_by_info(i))
     }
+
     /// Creates a process by its name, borrowing the OS
     ///
     /// It will share the underlying memory resources
@@ -146,10 +153,15 @@ pub trait OsInner<'a>: Send {
     /// If no process with the specified name can be found this function will return an Error.
     ///
     /// This function can be useful for quickly accessing a process.
+    ///
+    /// # Remarks:
+    ///
+    /// This function only returns processes whose state is not [`ProcessState::Dead`].
     fn process_by_name(&'a mut self, name: &str) -> Result<Self::ProcessType> {
         self.process_info_by_name(name)
             .and_then(move |i| self.process_by_info(i))
     }
+
     /// Creates a process by its ID, borrowing the OS
     ///
     /// It will share the underlying memory resources
@@ -176,6 +188,7 @@ pub trait OsInner<'a>: Send {
         self.process_info_by_address(addr)
             .and_then(|i| self.into_process_by_info(i))
     }
+
     /// Creates a process by its name, consuming the OS
     ///
     /// It will consume the OS and not affect memory usage
@@ -183,6 +196,10 @@ pub trait OsInner<'a>: Send {
     /// If no process with the specified name can be found this function will return an Error.
     ///
     /// This function can be useful for quickly accessing a process.
+    ///
+    /// # Remarks:
+    ///
+    /// This function only returns processes whose state is not [`ProcessState::Dead`].
     fn into_process_by_name(mut self, name: &str) -> Result<Self::IntoProcessType>
     where
         Self: Sized,
@@ -190,6 +207,7 @@ pub trait OsInner<'a>: Send {
         self.process_info_by_name(name)
             .and_then(|i| self.into_process_by_info(i))
     }
+
     /// Creates a process by its ID, consuming the OS
     ///
     /// It will consume the OS and not affect memory usage

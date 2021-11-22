@@ -306,6 +306,12 @@ pub struct ProcessInfo {
     pub address: Address,
     /// ID of this process.
     pub pid: Pid,
+    /// The current status of the process at the time when this process info was fetched.
+    ///
+    /// # Remarks
+    ///
+    /// This field is highly volatile and can be re-checked with the [`Process::state()`] function.
+    pub state: ProcessState,
     /// Name of the process.
     pub name: ReprCString,
     /// Path of the process binary

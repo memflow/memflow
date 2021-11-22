@@ -53,6 +53,11 @@ cargo build --release --all-features --workspace
 
 This will create the OS plugin in `target/release/libmemflow_win32.so` which has to be copied to one of the plugin folders mentioned above.
 
+For more information about how to get started with memflow please head over to the YouTube series produced by [h33p](https://github.com/h33p/):
+
+- [memflow basics](https://www.youtube.com/playlist?list=PLrC4R7zDrxB3RSJQk9ahmXNCw8m3pdP6z)
+- [memflow applied](https://www.youtube.com/watch?v=xJXkRMy71dc&list=PLrC4R7zDrxB17iWCy9eEdCaluCR3Bkn8q)
+
 ## Running Examples
 
 You can either run one of the examples with `cargo run --release --example`. Pass nothing to get a list of examples.

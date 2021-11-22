@@ -2,7 +2,7 @@ mod mem_map;
 
 use crate::{
     offsets::{Win32ArchOffsets, Win32Offsets},
-    prelude::VirtualReadUnicodeString,
+    prelude::{VirtualReadUnicodeString, Win32ExitStatus, EXIT_STATUS_STILL_ACTIVE},
 };
 
 use super::{
@@ -169,6 +169,7 @@ impl<T: 'static + PhysicalMemory + Clone, V: 'static + VirtualTranslate2 + Clone
             base_info: ProcessInfo {
                 address: self.kernel_info.os_info.base,
                 pid: 0,
+                state: ProcessState::Alive,
                 name: "ntoskrnl.exe".into(),
                 path: "".into(),
                 command_line: "".into(),
@@ -376,6 +377,19 @@ impl<T: 'static + PhysicalMemory + Clone, V: 'static + VirtualTranslate2 + Clone
         let pid: Pid = self.virt_mem.read(address + self.offsets.eproc_pid())?;
         trace!("pid={}", pid);
 
+        let state = if let Ok(exit_status) = self
+            .virt_mem
+            .read::<Win32ExitStatus>(address + self.offsets.eproc_exit_status())
+        {
+            if exit_status == EXIT_STATUS_STILL_ACTIVE {
+                ProcessState::Alive
+            } else {
+                ProcessState::Dead(exit_status)
+            }
+        } else {
+            ProcessState::Unknown
+        };
+
         let name: ReprCString = self
             .virt_mem
             .read_char_array(address + self.offsets.eproc_name(), IMAGE_FILE_NAME_LENGTH)?
@@ -416,6 +430,7 @@ impl<T: 'static + PhysicalMemory + Clone, V: 'static + VirtualTranslate2 + Clone
         Ok(ProcessInfo {
             address,
             pid,
+            state,
             name,
             path: "".into(),
             command_line: "".into(),

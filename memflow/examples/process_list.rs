@@ -33,8 +33,8 @@ fn main() -> Result<()> {
 
     for p in process_list {
         println!(
-            "{:>5} {:^10} {:^10} {} ({})",
-            p.pid, p.sys_arch, p.proc_arch, p.name, p.command_line
+            "{:>5} {:^10} {:^10} {} ({}) ({:?})",
+            p.pid, p.sys_arch, p.proc_arch, p.name, p.command_line, p.state
         );
     }
 

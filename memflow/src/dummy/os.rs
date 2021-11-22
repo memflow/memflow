@@ -268,6 +268,7 @@ impl DummyOs {
             info: ProcessInfo {
                 address,
                 pid: self.last_pid,
+                state: ProcessState::Alive,
                 name: "Dummy".into(),
                 path: "/some/dummy".into(),
                 command_line: "/some/dummy --dummyarg".into(),

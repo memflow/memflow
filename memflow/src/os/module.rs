@@ -6,6 +6,7 @@ use crate::prelude::v1::*;
 #[repr(C)]
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+#[cfg_attr(feature = "abi_stable", derive(::abi_stable::StableAbi))]
 pub struct ModuleInfo {
     /// Returns the address of the module header.
     ///
@@ -48,6 +49,8 @@ pub type ModuleInfoCallback<'a> = OpaqueCallback<'a, ModuleInfo>;
 /// Pair of address and architecture used for callbacks
 #[repr(C)]
 #[derive(Clone, Debug)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+#[cfg_attr(feature = "abi_stable", derive(::abi_stable::StableAbi))]
 pub struct ModuleAddressInfo {
     pub address: Address,
     pub arch: ArchitectureIdent,
@@ -59,6 +62,7 @@ pub type ModuleAddressCallback<'a> = OpaqueCallback<'a, ModuleAddressInfo>;
 #[repr(C)]
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+#[cfg_attr(feature = "abi_stable", derive(::abi_stable::StableAbi))]
 pub struct ImportInfo {
     /// Name of the import
     pub name: ReprCString,
@@ -72,6 +76,7 @@ pub type ImportCallback<'a> = OpaqueCallback<'a, ImportInfo>;
 #[repr(C)]
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+#[cfg_attr(feature = "abi_stable", derive(::abi_stable::StableAbi))]
 pub struct ExportInfo {
     /// Name of the export
     pub name: ReprCString,
@@ -85,6 +90,7 @@ pub type ExportCallback<'a> = OpaqueCallback<'a, ExportInfo>;
 #[repr(C)]
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+#[cfg_attr(feature = "abi_stable", derive(::abi_stable::StableAbi))]
 pub struct SectionInfo {
     /// Name of the section
     pub name: ReprCString,

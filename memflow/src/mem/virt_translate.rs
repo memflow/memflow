@@ -245,6 +245,8 @@ pub type VirtualTranslationFailCallback<'a> = OpaqueCallback<'a, VirtualTranslat
 /// Virtual page range information with physical mappings used for callbacks
 #[repr(C)]
 #[derive(Clone, Debug, Eq, Copy)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+#[cfg_attr(feature = "abi_stable", derive(::abi_stable::StableAbi))]
 pub struct VirtualTranslation {
     pub in_virtual: Address,
     pub size: umem,
@@ -272,6 +274,8 @@ impl PartialEq for VirtualTranslation {
 /// Virtual page range information used for callbacks
 #[repr(C)]
 #[derive(Clone, Debug, PartialEq, Copy)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+#[cfg_attr(feature = "abi_stable", derive(::abi_stable::StableAbi))]
 pub struct MemoryRange {
     pub address: Address,
     pub size: umem,
@@ -279,6 +283,8 @@ pub struct MemoryRange {
 
 #[repr(C)]
 #[derive(Clone, Copy)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+#[cfg_attr(feature = "abi_stable", derive(::abi_stable::StableAbi))]
 pub struct VirtualTranslationFail {
     pub from: Address,
     pub size: umem,

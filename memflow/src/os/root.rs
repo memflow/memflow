@@ -298,6 +298,7 @@ pub trait OsInner<'a>: Send {
 #[repr(C)]
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+#[cfg_attr(feature = "abi_stable", derive(::abi_stable::StableAbi))]
 pub struct OsInfo {
     /// Base address of the OS kernel
     pub base: Address,

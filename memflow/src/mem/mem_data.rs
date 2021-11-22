@@ -11,6 +11,7 @@ use cglue::slice::*;
 /// `ReadData`, `WriteData`, `PhysicalReadData`, and `PhysicalWriteData`.
 #[repr(C)]
 #[derive(Clone, Copy)]
+#[cfg_attr(feature = "abi_stable", derive(::abi_stable::StableAbi))]
 pub struct MemData<A, T>(pub A, pub T);
 
 impl<A, T> From<MemData<A, T>> for (A, T) {

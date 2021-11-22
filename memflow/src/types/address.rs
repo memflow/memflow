@@ -187,9 +187,10 @@ impl_primitive_address!(u128);
 /// when working in 32-bit environments.
 ///
 /// This type will not handle overflow for 32-bit or 64-bit addresses / lengths.
+#[repr(transparent)]
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
-#[repr(transparent)]
+#[cfg_attr(feature = "abi_stable", derive(::abi_stable::StableAbi))]
 pub struct Address(umem);
 
 impl Address {

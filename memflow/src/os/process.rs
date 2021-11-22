@@ -37,6 +37,7 @@ pub type ExitCode = i32;
 #[repr(C)]
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+#[cfg_attr(feature = "abi_stable", derive(::abi_stable::StableAbi))]
 pub enum ProcessState {
     Unknown,
     Alive,
@@ -297,6 +298,7 @@ pub trait Process: Send {
 #[repr(C)]
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+#[cfg_attr(feature = "abi_stable", derive(::abi_stable::StableAbi))]
 pub struct ProcessInfo {
     /// The base address of this process.
     ///

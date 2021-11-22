@@ -209,6 +209,7 @@ pub trait PhysicalMemory: Send {
 
 #[repr(C)]
 #[derive(Clone)]
+#[cfg_attr(feature = "abi_stable", derive(::abi_stable::StableAbi))]
 pub struct PhysicalMemoryView<T> {
     mem: T,
 }
@@ -270,9 +271,10 @@ impl<T: PhysicalMemory> MemoryView for PhysicalMemoryView<T> {
     }
 }
 
+#[repr(C)]
 #[derive(Debug, Clone, Copy)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
-#[repr(C)]
+#[cfg_attr(feature = "abi_stable", derive(::abi_stable::StableAbi))]
 pub struct PhysicalMemoryMetadata {
     pub max_address: Address,
     pub real_size: umem,

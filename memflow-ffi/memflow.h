@@ -123,6 +123,8 @@ struct IntoProcessInstanceContainer_CBox_c_void_____COptArc_c_void;
 struct ConnectorInstance_CBox_c_void_____COptArc_c_void;
 struct ConnectorInstanceContainer_CBox_c_void_____COptArc_c_void;
 
+typedef struct TypeLayout TypeLayout;
+
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -296,6 +298,11 @@ typedef struct CBox_c_void {
     void (*drop_fn)(void*);
 } CBox_c_void;
 
+/**
+ * FFI-Safe Arc
+ *
+ * This is an FFI-Safe equivalent of Option<Arc<T>>.
+ */
 typedef struct COptArc_c_void {
     const void *instance;
     const void *(*clone_fn)(const void*);
@@ -313,6 +320,7 @@ typedef struct ConnectorInstanceContainer_CBox_c_void_____COptArc_c_void {
  * This virtual function table contains ABI-safe interface for the given trait.
  */
 typedef struct CloneVtbl_ConnectorInstanceContainer_CBox_c_void_____COptArc_c_void {
+    const TypeLayout *layout;
     struct ConnectorInstanceContainer_CBox_c_void_____COptArc_c_void (*clone)(const struct ConnectorInstanceContainer_CBox_c_void_____COptArc_c_void *cont);
 } CloneVtbl_ConnectorInstanceContainer_CBox_c_void_____COptArc_c_void;
 
@@ -701,6 +709,7 @@ typedef struct CGlueObjContainer_CBox_c_void_____COptArc_c_void_____CpuStateRetT
  * This virtual function table contains ABI-safe interface for the given trait.
  */
 typedef struct CpuStateVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____CpuStateRetTmp_COptArc_c_void {
+    const TypeLayout *layout;
     void (*pause)(struct CGlueObjContainer_CBox_c_void_____COptArc_c_void_____CpuStateRetTmp_COptArc_c_void *cont);
     void (*resume)(struct CGlueObjContainer_CBox_c_void_____COptArc_c_void_____CpuStateRetTmp_COptArc_c_void *cont);
 } CpuStateVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____CpuStateRetTmp_COptArc_c_void;
@@ -733,6 +742,7 @@ typedef struct IntoCpuStateContainer_CBox_c_void_____COptArc_c_void {
  * This virtual function table contains ABI-safe interface for the given trait.
  */
 typedef struct CloneVtbl_IntoCpuStateContainer_CBox_c_void_____COptArc_c_void {
+    const TypeLayout *layout;
     struct IntoCpuStateContainer_CBox_c_void_____COptArc_c_void (*clone)(const struct IntoCpuStateContainer_CBox_c_void_____COptArc_c_void *cont);
 } CloneVtbl_IntoCpuStateContainer_CBox_c_void_____COptArc_c_void;
 /**
@@ -741,6 +751,7 @@ typedef struct CloneVtbl_IntoCpuStateContainer_CBox_c_void_____COptArc_c_void {
  * This virtual function table contains ABI-safe interface for the given trait.
  */
 typedef struct CpuStateVtbl_IntoCpuStateContainer_CBox_c_void_____COptArc_c_void {
+    const TypeLayout *layout;
     void (*pause)(struct IntoCpuStateContainer_CBox_c_void_____COptArc_c_void *cont);
     void (*resume)(struct IntoCpuStateContainer_CBox_c_void_____COptArc_c_void *cont);
 } CpuStateVtbl_IntoCpuStateContainer_CBox_c_void_____COptArc_c_void;
@@ -776,6 +787,7 @@ typedef struct IntoCpuState_CBox_c_void_____COptArc_c_void IntoCpuState;
  * This virtual function table contains ABI-safe interface for the given trait.
  */
 typedef struct ConnectorCpuStateInnerVtbl_ConnectorInstanceContainer_CBox_c_void_____COptArc_c_void {
+    const TypeLayout *layout;
     int32_t (*cpu_state)(struct ConnectorInstanceContainer_CBox_c_void_____COptArc_c_void *cont, CpuStateBase_CBox_c_void_____COptArc_c_void *ok_out);
     int32_t (*into_cpu_state)(struct ConnectorInstanceContainer_CBox_c_void_____COptArc_c_void cont, struct IntoCpuState_CBox_c_void_____COptArc_c_void *ok_out);
 } ConnectorCpuStateInnerVtbl_ConnectorInstanceContainer_CBox_c_void_____COptArc_c_void;
@@ -827,6 +839,7 @@ typedef struct OsInstanceContainer_CBox_c_void_____COptArc_c_void {
  * This virtual function table contains ABI-safe interface for the given trait.
  */
 typedef struct CloneVtbl_OsInstanceContainer_CBox_c_void_____COptArc_c_void {
+    const TypeLayout *layout;
     struct OsInstanceContainer_CBox_c_void_____COptArc_c_void (*clone)(const struct OsInstanceContainer_CBox_c_void_____COptArc_c_void *cont);
 } CloneVtbl_OsInstanceContainer_CBox_c_void_____COptArc_c_void;
 
@@ -846,6 +859,33 @@ typedef OpaqueCallback_Address AddressCallback;
  * would love to see that.
  */
 typedef uint32_t Pid;
+
+/**
+ * Exit code of a process
+ */
+typedef int32_t ExitCode;
+
+/**
+ * The state of a process
+ *
+ * # Remarks
+ *
+ * In case the exit code isn't known ProcessState::Unknown is set.
+ */
+typedef enum ProcessState_Tag {
+    ProcessState_Unknown,
+    ProcessState_Alive,
+    ProcessState_Dead,
+} ProcessState_Tag;
+
+typedef struct ProcessState {
+    ProcessState_Tag tag;
+    union {
+        struct {
+            ExitCode dead;
+        };
+    };
+} ProcessState;
 
 /**
  * Wrapper around null-terminated C-style strings.
@@ -914,6 +954,14 @@ typedef struct ProcessInfo {
      */
     Pid pid;
     /**
+     * The current status of the process at the time when this process info was fetched.
+     *
+     * # Remarks
+     *
+     * This field is highly volatile and can be re-checked with the [`Process::state()`] function.
+     */
+    struct ProcessState state;
+    /**
      * Name of the process.
      */
     ReprCString name;
@@ -950,33 +998,6 @@ typedef struct Callback_c_void__ProcessInfo {
 typedef struct Callback_c_void__ProcessInfo OpaqueCallback_ProcessInfo;
 
 typedef OpaqueCallback_ProcessInfo ProcessInfoCallback;
-
-/**
- * Exit code of a process
- */
-typedef int32_t ExitCode;
-
-/**
- * The state of a process
- *
- * # Remarks
- *
- * In case the exit code isn't known ProcessState::Unknown is set.
- */
-typedef enum ProcessState_Tag {
-    ProcessState_Unknown,
-    ProcessState_Alive,
-    ProcessState_Dead,
-} ProcessState_Tag;
-
-typedef struct ProcessState {
-    ProcessState_Tag tag;
-    union {
-        struct {
-            ExitCode dead;
-        };
-    };
-} ProcessState;
 
 /**
  * Pair of address and architecture used for callbacks
@@ -1261,6 +1282,7 @@ typedef struct OsInfo {
  * This virtual function table contains ABI-safe interface for the given trait.
  */
 typedef struct OsInnerVtbl_OsInstanceContainer_CBox_c_void_____COptArc_c_void {
+    const TypeLayout *layout;
     int32_t (*process_address_list_callback)(struct OsInstanceContainer_CBox_c_void_____COptArc_c_void *cont, AddressCallback callback);
     int32_t (*process_info_list_callback)(struct OsInstanceContainer_CBox_c_void_____COptArc_c_void *cont, ProcessInfoCallback callback);
     int32_t (*process_info_by_address)(struct OsInstanceContainer_CBox_c_void_____COptArc_c_void *cont, Address address, struct ProcessInfo *ok_out);
@@ -1287,6 +1309,7 @@ typedef struct OsInnerVtbl_OsInstanceContainer_CBox_c_void_____COptArc_c_void {
  * This virtual function table contains ABI-safe interface for the given trait.
  */
 typedef struct MemoryViewVtbl_OsInstanceContainer_CBox_c_void_____COptArc_c_void {
+    const TypeLayout *layout;
     int32_t (*read_raw_iter)(struct OsInstanceContainer_CBox_c_void_____COptArc_c_void *cont, struct CIterator_ReadData data, ReadFailCallback *out_fail);
     int32_t (*write_raw_iter)(struct OsInstanceContainer_CBox_c_void_____COptArc_c_void *cont, struct CIterator_WriteData data, WriteFailCallback *out_fail);
     struct MemoryViewMetadata (*metadata)(const struct OsInstanceContainer_CBox_c_void_____COptArc_c_void *cont);
@@ -1340,6 +1363,7 @@ typedef struct CGlueObjContainer_CBox_c_void_____COptArc_c_void_____KeyboardStat
  * This virtual function table contains ABI-safe interface for the given trait.
  */
 typedef struct KeyboardStateVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____KeyboardStateRetTmp_COptArc_c_void {
+    const TypeLayout *layout;
     bool (*is_down)(const struct CGlueObjContainer_CBox_c_void_____COptArc_c_void_____KeyboardStateRetTmp_COptArc_c_void *cont, int32_t vk);
 } KeyboardStateVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____KeyboardStateRetTmp_COptArc_c_void;
 /**
@@ -1367,6 +1391,7 @@ typedef struct CGlueTraitObj_CBox_c_void_____KeyboardStateVtbl_CGlueObjContainer
  * This virtual function table contains ABI-safe interface for the given trait.
  */
 typedef struct KeyboardVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____KeyboardRetTmp_COptArc_c_void {
+    const TypeLayout *layout;
     bool (*is_down)(struct CGlueObjContainer_CBox_c_void_____COptArc_c_void_____KeyboardRetTmp_COptArc_c_void *cont, int32_t vk);
     void (*set_down)(struct CGlueObjContainer_CBox_c_void_____COptArc_c_void_____KeyboardRetTmp_COptArc_c_void *cont, int32_t vk, bool down);
     int32_t (*state)(struct CGlueObjContainer_CBox_c_void_____COptArc_c_void_____KeyboardRetTmp_COptArc_c_void *cont, KeyboardStateBase_CBox_c_void_____COptArc_c_void *ok_out);
@@ -1400,6 +1425,7 @@ typedef struct IntoKeyboardContainer_CBox_c_void_____COptArc_c_void {
  * This virtual function table contains ABI-safe interface for the given trait.
  */
 typedef struct CloneVtbl_IntoKeyboardContainer_CBox_c_void_____COptArc_c_void {
+    const TypeLayout *layout;
     struct IntoKeyboardContainer_CBox_c_void_____COptArc_c_void (*clone)(const struct IntoKeyboardContainer_CBox_c_void_____COptArc_c_void *cont);
 } CloneVtbl_IntoKeyboardContainer_CBox_c_void_____COptArc_c_void;
 /**
@@ -1408,6 +1434,7 @@ typedef struct CloneVtbl_IntoKeyboardContainer_CBox_c_void_____COptArc_c_void {
  * This virtual function table contains ABI-safe interface for the given trait.
  */
 typedef struct KeyboardVtbl_IntoKeyboardContainer_CBox_c_void_____COptArc_c_void {
+    const TypeLayout *layout;
     bool (*is_down)(struct IntoKeyboardContainer_CBox_c_void_____COptArc_c_void *cont, int32_t vk);
     void (*set_down)(struct IntoKeyboardContainer_CBox_c_void_____COptArc_c_void *cont, int32_t vk, bool down);
     int32_t (*state)(struct IntoKeyboardContainer_CBox_c_void_____COptArc_c_void *cont, KeyboardStateBase_CBox_c_void_____COptArc_c_void *ok_out);
@@ -1444,6 +1471,7 @@ typedef struct IntoKeyboard_CBox_c_void_____COptArc_c_void IntoKeyboard;
  * This virtual function table contains ABI-safe interface for the given trait.
  */
 typedef struct OsKeyboardInnerVtbl_OsInstanceContainer_CBox_c_void_____COptArc_c_void {
+    const TypeLayout *layout;
     int32_t (*keyboard)(struct OsInstanceContainer_CBox_c_void_____COptArc_c_void *cont, KeyboardBase_CBox_c_void_____COptArc_c_void *ok_out);
     int32_t (*into_keyboard)(struct OsInstanceContainer_CBox_c_void_____COptArc_c_void cont, struct IntoKeyboard_CBox_c_void_____COptArc_c_void *ok_out);
 } OsKeyboardInnerVtbl_OsInstanceContainer_CBox_c_void_____COptArc_c_void;
@@ -1454,10 +1482,11 @@ typedef struct OsKeyboardInnerVtbl_OsInstanceContainer_CBox_c_void_____COptArc_c
  * This virtual function table contains ABI-safe interface for the given trait.
  */
 typedef struct PhysicalMemoryVtbl_OsInstanceContainer_CBox_c_void_____COptArc_c_void {
+    const TypeLayout *layout;
     int32_t (*phys_read_raw_iter)(struct OsInstanceContainer_CBox_c_void_____COptArc_c_void *cont, struct CIterator_PhysicalReadData data, PhysicalReadFailCallback *out_fail);
     int32_t (*phys_write_raw_iter)(struct OsInstanceContainer_CBox_c_void_____COptArc_c_void *cont, struct CIterator_PhysicalWriteData data, PhysicalWriteFailCallback *out_fail);
     struct PhysicalMemoryMetadata (*metadata)(const struct OsInstanceContainer_CBox_c_void_____COptArc_c_void *cont);
-    void (*set_mem_map)(struct OsInstanceContainer_CBox_c_void_____COptArc_c_void *cont, struct CSliceRef_PhysicalMemoryMapping mem_map);
+    void (*set_mem_map)(struct OsInstanceContainer_CBox_c_void_____COptArc_c_void *cont, struct CSliceRef_PhysicalMemoryMapping _mem_map);
     MemoryViewBase_CBox_c_void_____COptArc_c_void (*into_phys_view)(struct OsInstanceContainer_CBox_c_void_____COptArc_c_void cont);
     MemoryViewBase_CBox_c_void_____COptArc_c_void (*phys_view)(struct OsInstanceContainer_CBox_c_void_____COptArc_c_void *cont);
 } PhysicalMemoryVtbl_OsInstanceContainer_CBox_c_void_____COptArc_c_void;
@@ -1511,6 +1540,7 @@ typedef struct ProcessInstanceContainer_CBox_c_void_____COptArc_c_void {
  * This virtual function table contains ABI-safe interface for the given trait.
  */
 typedef struct MemoryViewVtbl_ProcessInstanceContainer_CBox_c_void_____COptArc_c_void {
+    const TypeLayout *layout;
     int32_t (*read_raw_iter)(struct ProcessInstanceContainer_CBox_c_void_____COptArc_c_void *cont, struct CIterator_ReadData data, ReadFailCallback *out_fail);
     int32_t (*write_raw_iter)(struct ProcessInstanceContainer_CBox_c_void_____COptArc_c_void *cont, struct CIterator_WriteData data, WriteFailCallback *out_fail);
     struct MemoryViewMetadata (*metadata)(const struct ProcessInstanceContainer_CBox_c_void_____COptArc_c_void *cont);
@@ -1526,6 +1556,7 @@ typedef struct MemoryViewVtbl_ProcessInstanceContainer_CBox_c_void_____COptArc_c
  * This virtual function table contains ABI-safe interface for the given trait.
  */
 typedef struct ProcessVtbl_ProcessInstanceContainer_CBox_c_void_____COptArc_c_void {
+    const TypeLayout *layout;
     struct ProcessState (*state)(struct ProcessInstanceContainer_CBox_c_void_____COptArc_c_void *cont);
     int32_t (*module_address_list_callback)(struct ProcessInstanceContainer_CBox_c_void_____COptArc_c_void *cont, const struct ArchitectureIdent *target_arch, ModuleAddressCallback callback);
     int32_t (*module_list_callback)(struct ProcessInstanceContainer_CBox_c_void_____COptArc_c_void *cont, const struct ArchitectureIdent *target_arch, ModuleInfoCallback callback);
@@ -1549,6 +1580,7 @@ typedef struct ProcessVtbl_ProcessInstanceContainer_CBox_c_void_____COptArc_c_vo
  * This virtual function table contains ABI-safe interface for the given trait.
  */
 typedef struct VirtualTranslateVtbl_ProcessInstanceContainer_CBox_c_void_____COptArc_c_void {
+    const TypeLayout *layout;
     void (*virt_to_phys_list)(struct ProcessInstanceContainer_CBox_c_void_____COptArc_c_void *cont, struct CSliceRef_MemoryRange addrs, VirtualTranslationCallback out, VirtualTranslationFailCallback out_fail);
     void (*virt_to_phys_range)(struct ProcessInstanceContainer_CBox_c_void_____COptArc_c_void *cont, Address start, Address end, VirtualTranslationCallback out);
     void (*virt_translation_map_range)(struct ProcessInstanceContainer_CBox_c_void_____COptArc_c_void *cont, Address start, Address end, VirtualTranslationCallback out);
@@ -1605,6 +1637,7 @@ typedef struct IntoProcessInstanceContainer_CBox_c_void_____COptArc_c_void {
  * This virtual function table contains ABI-safe interface for the given trait.
  */
 typedef struct CloneVtbl_IntoProcessInstanceContainer_CBox_c_void_____COptArc_c_void {
+    const TypeLayout *layout;
     struct IntoProcessInstanceContainer_CBox_c_void_____COptArc_c_void (*clone)(const struct IntoProcessInstanceContainer_CBox_c_void_____COptArc_c_void *cont);
 } CloneVtbl_IntoProcessInstanceContainer_CBox_c_void_____COptArc_c_void;
 
@@ -1614,6 +1647,7 @@ typedef struct CloneVtbl_IntoProcessInstanceContainer_CBox_c_void_____COptArc_c_
  * This virtual function table contains ABI-safe interface for the given trait.
  */
 typedef struct MemoryViewVtbl_IntoProcessInstanceContainer_CBox_c_void_____COptArc_c_void {
+    const TypeLayout *layout;
     int32_t (*read_raw_iter)(struct IntoProcessInstanceContainer_CBox_c_void_____COptArc_c_void *cont, struct CIterator_ReadData data, ReadFailCallback *out_fail);
     int32_t (*write_raw_iter)(struct IntoProcessInstanceContainer_CBox_c_void_____COptArc_c_void *cont, struct CIterator_WriteData data, WriteFailCallback *out_fail);
     struct MemoryViewMetadata (*metadata)(const struct IntoProcessInstanceContainer_CBox_c_void_____COptArc_c_void *cont);
@@ -1629,6 +1663,7 @@ typedef struct MemoryViewVtbl_IntoProcessInstanceContainer_CBox_c_void_____COptA
  * This virtual function table contains ABI-safe interface for the given trait.
  */
 typedef struct ProcessVtbl_IntoProcessInstanceContainer_CBox_c_void_____COptArc_c_void {
+    const TypeLayout *layout;
     struct ProcessState (*state)(struct IntoProcessInstanceContainer_CBox_c_void_____COptArc_c_void *cont);
     int32_t (*module_address_list_callback)(struct IntoProcessInstanceContainer_CBox_c_void_____COptArc_c_void *cont, const struct ArchitectureIdent *target_arch, ModuleAddressCallback callback);
     int32_t (*module_list_callback)(struct IntoProcessInstanceContainer_CBox_c_void_____COptArc_c_void *cont, const struct ArchitectureIdent *target_arch, ModuleInfoCallback callback);
@@ -1652,6 +1687,7 @@ typedef struct ProcessVtbl_IntoProcessInstanceContainer_CBox_c_void_____COptArc_
  * This virtual function table contains ABI-safe interface for the given trait.
  */
 typedef struct VirtualTranslateVtbl_IntoProcessInstanceContainer_CBox_c_void_____COptArc_c_void {
+    const TypeLayout *layout;
     void (*virt_to_phys_list)(struct IntoProcessInstanceContainer_CBox_c_void_____COptArc_c_void *cont, struct CSliceRef_MemoryRange addrs, VirtualTranslationCallback out, VirtualTranslationFailCallback out_fail);
     void (*virt_to_phys_range)(struct IntoProcessInstanceContainer_CBox_c_void_____COptArc_c_void *cont, Address start, Address end, VirtualTranslationCallback out);
     void (*virt_translation_map_range)(struct IntoProcessInstanceContainer_CBox_c_void_____COptArc_c_void *cont, Address start, Address end, VirtualTranslationCallback out);
@@ -1724,6 +1760,7 @@ typedef struct CGlueObjContainer_CBox_c_void_____COptArc_c_void_____MemoryViewRe
  * This virtual function table contains ABI-safe interface for the given trait.
  */
 typedef struct MemoryViewVtbl_CGlueObjContainer_CBox_c_void_____COptArc_c_void_____MemoryViewRetTmp_COptArc_c_void {
+    const TypeLayout *layout;
     int32_t (*read_raw_iter)(struct CGlueObjContainer_CBox_c_void_____COptArc_c_void_____MemoryViewRetTmp_COptArc_c_void *cont, struct CIterator_ReadData data, ReadFailCallback *out_fail);
     int32_t (*write_raw_iter)(struct CGlueObjContainer_CBox_c_void_____COptArc_c_void_____MemoryViewRetTmp_COptArc_c_void *cont, struct CIterator_WriteData data, WriteFailCallback *out_fail);
     struct MemoryViewMetadata (*metadata)(const struct CGlueObjContainer_CBox_c_void_____COptArc_c_void_____MemoryViewRetTmp_COptArc_c_void *cont);
@@ -1753,10 +1790,11 @@ typedef struct CGlueTraitObj_CBox_c_void_____MemoryViewVtbl_CGlueObjContainer_CB
  * This virtual function table contains ABI-safe interface for the given trait.
  */
 typedef struct PhysicalMemoryVtbl_ConnectorInstanceContainer_CBox_c_void_____COptArc_c_void {
+    const TypeLayout *layout;
     int32_t (*phys_read_raw_iter)(struct ConnectorInstanceContainer_CBox_c_void_____COptArc_c_void *cont, struct CIterator_PhysicalReadData data, PhysicalReadFailCallback *out_fail);
     int32_t (*phys_write_raw_iter)(struct ConnectorInstanceContainer_CBox_c_void_____COptArc_c_void *cont, struct CIterator_PhysicalWriteData data, PhysicalWriteFailCallback *out_fail);
     struct PhysicalMemoryMetadata (*metadata)(const struct ConnectorInstanceContainer_CBox_c_void_____COptArc_c_void *cont);
-    void (*set_mem_map)(struct ConnectorInstanceContainer_CBox_c_void_____COptArc_c_void *cont, struct CSliceRef_PhysicalMemoryMapping mem_map);
+    void (*set_mem_map)(struct ConnectorInstanceContainer_CBox_c_void_____COptArc_c_void *cont, struct CSliceRef_PhysicalMemoryMapping _mem_map);
     MemoryViewBase_CBox_c_void_____COptArc_c_void (*into_phys_view)(struct ConnectorInstanceContainer_CBox_c_void_____COptArc_c_void cont);
     MemoryViewBase_CBox_c_void_____COptArc_c_void (*phys_view)(struct ConnectorInstanceContainer_CBox_c_void_____COptArc_c_void *cont);
 } PhysicalMemoryVtbl_ConnectorInstanceContainer_CBox_c_void_____COptArc_c_void;
@@ -1936,7 +1974,7 @@ uint8_t arch_address_space_bits(const struct ArchitectureObj *arch);
 void arch_free(struct ArchitectureObj *arch);
 
 bool is_x86_arch(const struct ArchitectureObj *arch);
-COptArc_c_void ctx_arc_clone(COptArc_c_void *self) {
+static COptArc_c_void ctx_arc_clone(COptArc_c_void *self) {
     COptArc_c_void ret = *self;
     ret.instance = self->clone_fn(self->instance);
     return ret;
@@ -2278,8 +2316,8 @@ static inline int32_t osinstance_phys_write_raw_iter(void *self, struct CIterato
     return __ret;
 }
 
-static inline void osinstance_set_mem_map(void *self, struct CSliceRef_PhysicalMemoryMapping mem_map)  {
-(((struct OsInstance_CBox_c_void_____COptArc_c_void *)self)->vtbl_physicalmemory)->set_mem_map(&((struct OsInstance_CBox_c_void_____COptArc_c_void *)self)->container, mem_map);
+static inline void osinstance_set_mem_map(void *self, struct CSliceRef_PhysicalMemoryMapping _mem_map)  {
+(((struct OsInstance_CBox_c_void_____COptArc_c_void *)self)->vtbl_physicalmemory)->set_mem_map(&((struct OsInstance_CBox_c_void_____COptArc_c_void *)self)->container, _mem_map);
 
 }
 
@@ -2638,8 +2676,8 @@ static inline struct PhysicalMemoryMetadata connectorinstance_metadata(const voi
     return __ret;
 }
 
-static inline void connectorinstance_set_mem_map(void *self, struct CSliceRef_PhysicalMemoryMapping mem_map)  {
-(((struct ConnectorInstance_CBox_c_void_____COptArc_c_void *)self)->vtbl_physicalmemory)->set_mem_map(&((struct ConnectorInstance_CBox_c_void_____COptArc_c_void *)self)->container, mem_map);
+static inline void connectorinstance_set_mem_map(void *self, struct CSliceRef_PhysicalMemoryMapping _mem_map)  {
+(((struct ConnectorInstance_CBox_c_void_____COptArc_c_void *)self)->vtbl_physicalmemory)->set_mem_map(&((struct ConnectorInstance_CBox_c_void_____COptArc_c_void *)self)->container, _mem_map);
 
 }
 
@@ -2657,7 +2695,7 @@ static inline MemoryViewBase_CBox_c_void_____COptArc_c_void connectorinstance_ph
 
 struct CollectBase {
     /* Pointer to array of data */
-    void *buf;
+    char *buf;
     /* Capacity of the buffer (in elements) */
     size_t capacity;
     /* Current size of the buffer (in elements) */
@@ -2679,7 +2717,7 @@ static bool cb_collect_dynamic_base(struct CollectBase *ctx, size_t elem_size, v
 
     if (!ctx->buf || ctx->size >= ctx->capacity) {
         size_t new_capacity = ctx->buf ? ctx->capacity * 2 : 64;
-        void *buf = realloc(ctx->buf, elem_size * new_capacity);
+        char *buf = (char *)realloc(ctx->buf, elem_size * new_capacity);
         if (buf) {
             ctx->buf = buf;
             ctx->capacity = new_capacity;
@@ -2695,7 +2733,7 @@ static bool cb_collect_dynamic_base(struct CollectBase *ctx, size_t elem_size, v
 
 struct BufferIterator {
     /* Pointer to the data buffer */
-    const void *buf;
+    const char *buf;
     /* Number of elements in the buffer */
     size_t size;
     /* Current element index */

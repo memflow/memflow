@@ -378,9 +378,10 @@ pub trait MemoryView: Send {
     }
 }
 
+#[repr(C)]
 #[derive(Debug, Clone, Copy)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
-#[repr(C)]
+#[cfg_attr(feature = "abi_stable", derive(::abi_stable::StableAbi))]
 pub struct MemoryViewMetadata {
     pub max_address: Address,
     pub real_size: umem,

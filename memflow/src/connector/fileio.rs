@@ -4,8 +4,8 @@ Basic connector which works on file i/o operations (`Seek`, `Read`, `Write`).
 
 use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 use crate::mem::{
-    phys_mem::*, MemData, MemoryMap, PhysicalMemory, PhysicalMemoryMapping, PhysicalMemoryMetadata,
-    PhysicalReadData, PhysicalWriteData,
+    phys_mem::*, MemData, MemoryMap, PhysicalMemory, PhysicalMemoryMetadata, PhysicalReadData,
+    PhysicalWriteData,
 };
 use crate::types::{umem, Address};
 
@@ -181,12 +181,6 @@ impl<T: Seek + Read + Write + Send> PhysicalMemory for FileIoMemory<T> {
             readonly: false,
             ideal_batch_size: u32::MAX,
         }
-    }
-
-    #[inline]
-    fn set_mem_map(&mut self, mem_map: &[PhysicalMemoryMapping]) {
-        let map = MemoryMap::<(Address, umem)>::from_vec(mem_map.to_vec());
-        self.mem_map.merge(map);
     }
 }
 

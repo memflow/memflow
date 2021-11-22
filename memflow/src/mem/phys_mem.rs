@@ -161,7 +161,10 @@ pub trait PhysicalMemory: Send {
     ///
     /// In case a connector cannot acquire memory mappings on it's own this function
     /// allows the OS plugin to set the memory mapping at a later stage of initialization.
-    fn set_mem_map(&mut self, mem_map: &[PhysicalMemoryMapping]);
+    ///
+    /// By default this is a no-op.
+    #[inline]
+    fn set_mem_map(&mut self, _mem_map: &[PhysicalMemoryMapping]) {}
 
     #[skip_func]
     fn phys_read_into<T: Pod + ?Sized>(&mut self, addr: PhysicalAddress, out: &mut T) -> Result<()>

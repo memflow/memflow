@@ -127,8 +127,8 @@ fn parse_args() -> (String, String, String, String, String, String) {
                 .required(true),
         )
         .arg(
-            Arg::with_name("conn-args")
-                .long("conn-args")
+            Arg::with_name("connector-args")
+                .long("connector-args")
                 .short("x")
                 .takes_value(true)
                 .default_value(""),
@@ -179,7 +179,7 @@ fn parse_args() -> (String, String, String, String, String, String) {
 
     (
         matches.value_of("connector").unwrap().into(),
-        matches.value_of("conn-args").unwrap().into(),
+        matches.value_of("connector-args").unwrap().into(),
         matches.value_of("os").unwrap().into(),
         matches.value_of("os-args").unwrap().into(),
         matches.value_of("system-proc").unwrap().into(),

@@ -100,8 +100,8 @@ fn parse_args() -> Result<(String, Args, String, Args, log::Level)> {
                 .required(true),
         )
         .arg(
-            Arg::with_name("conn-args")
-                .long("conn-args")
+            Arg::with_name("connector-args")
+                .long("connector-args")
                 .short("x")
                 .takes_value(true)
                 .default_value(""),
@@ -140,7 +140,7 @@ fn parse_args() -> Result<(String, Args, String, Args, log::Level)> {
                     .log_error("failed to parse connector")
             })?
             .into(),
-        Args::parse(matches.value_of("conn-args").ok_or_else(|| {
+        Args::parse(matches.value_of("connector-args").ok_or_else(|| {
             Error(ErrorOrigin::Other, ErrorKind::Configuration)
                 .log_error("failed to parse connector args")
         })?)?,

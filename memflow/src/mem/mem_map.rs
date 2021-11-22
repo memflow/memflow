@@ -98,14 +98,6 @@ impl<M: SplitAtIndex> MemoryMap<M> {
         self.mappings.is_empty()
     }
 
-    // TODO: truly merge mappings?
-    /// Merges the current mappings with the mappings contained in `other`.
-    pub fn merge(&mut self, other: MemoryMap<M>) {
-        if self.is_empty() {
-            self.mappings = other.mappings;
-        }
-    }
-
     /// Iterator over memory mappings
     pub fn iter(&self) -> impl Iterator<Item = &MemoryMapping<M>> {
         self.mappings.iter()

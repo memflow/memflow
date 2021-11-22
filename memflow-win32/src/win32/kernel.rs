@@ -10,11 +10,14 @@ use super::{
     Win32ModuleListInfo, Win32Process, Win32ProcessInfo, Win32VirtualTranslate,
 };
 
+use memflow::prelude::v1::{Result, *};
+
+#[cfg(feature = "plugins")]
+use memflow::cglue;
 #[cfg(feature = "plugins")]
 use memflow::mem::{memory_view::*, phys_mem::*};
 #[cfg(feature = "plugins")]
 use memflow::os::{keyboard::*, root::*};
-use memflow::prelude::v1::{Result, *};
 
 use log::{info, trace};
 use std::convert::TryInto;

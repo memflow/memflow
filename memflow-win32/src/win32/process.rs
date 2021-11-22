@@ -10,6 +10,8 @@ use memflow::prelude::v1::{Result, *};
 
 // those only required when compiling cglue code
 #[cfg(feature = "plugins")]
+use memflow::cglue;
+#[cfg(feature = "plugins")]
 use memflow::os::process::*;
 
 use goblin::pe::{options::ParseOptions, PE};

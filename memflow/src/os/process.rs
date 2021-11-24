@@ -98,16 +98,9 @@ pub trait Process: Send {
             .module_by_address(address, arch)
         {
             Ok(info) => callback.call(info),
-            Err(Error(_, ErrorKind::PartialData)) => {
-                log::trace!(
-                    "Partial error when reading module {:x}, skipping entry",
-                    address
-                );
-                true
-            }
             Err(e) => {
                 log::trace!("Error when reading module {:x} {:?}", address, e);
-                false
+                true // continue iteration
             }
         };
         unsafe { sptr.as_mut().unwrap() }

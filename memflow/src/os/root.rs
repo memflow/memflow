@@ -240,16 +240,9 @@ pub trait OsInner<'a>: Send {
         let inner_callback =
             &mut |address: Address| match unsafe { &mut *sptr }.module_by_address(address) {
                 Ok(info) => callback.call(info),
-                Err(Error(_, ErrorKind::PartialData)) => {
-                    log::trace!(
-                        "Partial error when reading module {:x}, skipping entry",
-                        address
-                    );
-                    true
-                }
                 Err(e) => {
                     log::trace!("Error when reading module {:x} {:?}", address, e);
-                    false
+                    true // continue iteration
                 }
             };
         unsafe { sptr.as_mut().unwrap() }.module_address_list_callback(inner_callback.into())

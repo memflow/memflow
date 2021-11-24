@@ -121,10 +121,14 @@ impl Win32ModuleListInfo {
 
         trace!("size={:x}", size);
 
-        let path = mem.read_unicode_string(arch_obj, entry + self.offsets.ldr_data_full_name)?;
+        let path = mem
+            .read_unicode_string(arch_obj, entry + self.offsets.ldr_data_full_name)
+            .unwrap_or_else(|_| String::new());
         trace!("path={}", path);
 
-        let name = mem.read_unicode_string(arch_obj, entry + self.offsets.ldr_data_base_name)?;
+        let name = mem
+            .read_unicode_string(arch_obj, entry + self.offsets.ldr_data_base_name)
+            .unwrap_or_else(|_| String::new());
         trace!("name={}", name);
 
         Ok(ModuleInfo {

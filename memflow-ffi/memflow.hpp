@@ -2,6 +2,7 @@
 #define MEMFLOW_H
 
 #include <cstdarg>
+#include <cstring>
 #include <cstdint>
 #include <cstdlib>
 #include <ostream>
@@ -297,6 +298,30 @@ struct CBox {
     T *instance;
     void (*drop_fn)(T*);
 
+    CBox() = default;
+    CBox(T *instance) : instance(instance), drop_fn(nullptr) {}
+    CBox(T *instance, void (*drop_fn)(T *)) : instance(instance), drop_fn(drop_fn) {}
+    template<typename U = T, class = typename std::enable_if<std::is_same<U, T>::value>::type, class = typename std::enable_if<!std::is_same<U, void>::value>::type>
+    CBox(U &&instance) : instance(new U(instance)), drop_fn(&CBox::delete_fn) {}
+
+    static void delete_fn(T *v) {
+        delete v;
+    }
+
+    inline operator CBox<void> () const {
+        CBox<void> ret;
+        ret.instance = (void*)instance;
+        ret.drop_fn = (void(*)(void *))drop_fn;
+        return ret;
+    }
+
+    static inline CBox new_box() {
+        CBox ret;
+        ret.instance = new T;
+        ret.drop_fn = &CBox::delete_fn;
+        return ret;
+    }
+
     inline void drop() && noexcept {
         if (drop_fn && instance)
             drop_fn(instance);
@@ -306,6 +331,14 @@ struct CBox {
     inline void forget() noexcept {
         instance = nullptr;
         drop_fn = nullptr;
+    }
+
+    inline T *operator->() {
+        return instance;
+    }
+
+    inline const T *operator->() const {
+        return instance;
     }
 };
 
@@ -368,6 +401,40 @@ template<typename T>
 struct CSliceMut {
     T *data;
     uintptr_t len;
+
+    CSliceMut () = default;
+
+    template<typename Cont, class = typename std::enable_if<
+        std::is_same<decltype((*(Cont *)nullptr).data()), T *>::value
+        && std::is_same<decltype((*(Cont *)nullptr).size()), size_t>::value
+    >::type>
+    CSliceMut (Cont &data) : data(data.data()), len(data.size()) {}
+
+    template<typename U = T, class = typename std::enable_if<
+        (std::is_same<T, char>::value || std::is_same<T, unsigned char>::value)
+        && std::is_same<T, U>::value
+    >::type>
+    CSliceMut (char *value) : data((T *)value), len(strlen(value)) {}
+
+    template<typename U = T, class = typename std::enable_if<
+        (std::is_same<T, char>::value || std::is_same<T, unsigned char>::value)
+        && std::is_same<T, U>::value
+    >::type>
+    CSliceMut (char *value, uintptr_t len) : data((T *)value), len(len) {}
+
+    template<typename U = T, class = typename std::enable_if<
+        (std::is_same<T, char>::value || std::is_same<T, unsigned char>::value)
+        && std::is_same<T, U>::value
+    >::type>
+    CSliceMut (std::string &value) : data((T *)value.data()), len(value.length()) {}
+
+    template<typename U = T, class = typename std::enable_if<
+        (std::is_same<T, char>::value || std::is_same<T, unsigned char>::value)
+        && std::is_same<T, U>::value
+    >::type>
+    inline operator std::string() const {
+        return std::string((char *)data, len);
+    }
 };
 
 /**
@@ -524,6 +591,40 @@ template<typename T>
 struct CSliceRef {
     const T *data;
     uintptr_t len;
+
+    CSliceRef () = default;
+
+    template<typename Cont, class = typename std::enable_if<
+        std::is_same<decltype((*(const Cont *)nullptr).data()), const T *>::value
+        && std::is_same<decltype((*(const Cont *)nullptr).size()), size_t>::value
+    >::type>
+    CSliceRef (const Cont &data) : data(data.data()), len(data.size()) {}
+
+    template<typename U = T, class = typename std::enable_if<
+        (std::is_same<T, char>::value || std::is_same<T, unsigned char>::value)
+        && std::is_same<T, U>::value
+    >::type>
+    CSliceRef (const char *value) : data((const T *)value), len(strlen(value)) {}
+
+    template<typename U = T, class = typename std::enable_if<
+        (std::is_same<T, char>::value || std::is_same<T, unsigned char>::value)
+        && std::is_same<T, U>::value
+    >::type>
+    CSliceRef (const char *value, uintptr_t len) : data((const T *)value), len(len) {}
+
+    template<typename U = T, class = typename std::enable_if<
+        (std::is_same<T, char>::value || std::is_same<T, unsigned char>::value)
+        && std::is_same<T, U>::value
+    >::type>
+    CSliceRef (const std::string &value) : data((const T *)value.data()), len(value.length()) {}
+
+    template<typename U = T, class = typename std::enable_if<
+        (std::is_same<T, char>::value || std::is_same<T, unsigned char>::value)
+        && std::is_same<T, U>::value
+    >::type>
+    inline operator std::string() const {
+        return std::string((char *)data, len);
+    }
 };
 
 /**

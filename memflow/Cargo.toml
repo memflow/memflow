@@ -39,7 +39,7 @@ rangemap = "0.1.13"
 libloading = { version = "0.7", optional = true }
 dirs = { version = "3.0", optional = true }
 goblin = { version = "0.4", optional = true }
-abi_stable = { version = "0.10", git = "https://github.com/h33p/abi_stable_crates", optional = true }
+abi_stable = { version = "0.10", git = "https://github.com/rodrimati1992/abi_stable_crates", optional = true }
 
 serde = { version = "1.0", optional = true, default-features = false, features = ["derive", "alloc"] }
 toml = { version = "0.5", optional = true }

@@ -5,14 +5,14 @@
 bool list_processes(OsInstance *os, Address addr) {
 
 	ProcessInstance process;
-	if (osinstance_process_by_address(os, addr, &process)) {
+	if (mf_osinstance_process_by_address(os, addr, &process)) {
 		return true;
 	}
 
-	const struct ProcessInfo *info = processinstance_info(&process);
+	const struct ProcessInfo *info = mf_processinstance_info(&process);
 
 	ModuleInfo primary_module;
-	if (processinstance_primary_module(&process, &primary_module)) {
+	if (mf_processinstance_primary_module(&process, &primary_module)) {
 		// no primary module found, continue iteration - this should _never_ happen
 		printf("%d\t%s\t0x%lx\tN/A\n", info->pid, info->name, info->address);
 		return true;
@@ -24,35 +24,35 @@ bool list_processes(OsInstance *os, Address addr) {
 	// iterate over all module addresses and collect them in an array
 	struct ModuleAddressInfo module_addresses[256];
 	COLLECT_CB_INTO_ARR(ModuleAddressInfo, module_address, module_addresses);
-	processinstance_module_address_list_callback(&process, NULL, module_address);
+	mf_processinstance_module_address_list_callback(&process, NULL, module_address);
 
 	printf("Read %zu modules\n", module_address_base.size);
 
 	// iterate over all module info structs and collect them in a buffer
 	COLLECT_CB(ModuleInfo, module_info);
-	processinstance_module_list_callback(&process, NULL, module_info);
+	mf_processinstance_module_list_callback(&process, NULL, module_info);
 	printf("Read %zu modules\n", module_info_base.size);
 	free(module_info_base.buf);
 
 	// iterate over all imports and collect them in a buffer
 	COLLECT_CB(ImportInfo, import_info);
-	processinstance_module_import_list_callback(&process, &primary_module, import_info);
+	mf_processinstance_module_import_list_callback(&process, &primary_module, import_info);
 	printf("Read %zu imports\n", import_info_base.size);
 	free(import_info_base.buf);
 
 	// iterate over all exports and collect them in a buffer
 	COLLECT_CB(ExportInfo, exports);
-	processinstance_module_export_list_callback(&process, &primary_module, exports);
+	mf_processinstance_module_export_list_callback(&process, &primary_module, exports);
 	printf("Read %zu exports\n", exports_base.size);
 	free(exports_base.buf);
 
 	// iterate over all sections and collect them in a buffer
 	COLLECT_CB(SectionInfo, sections);
-	processinstance_module_section_list_callback(&process, &primary_module, sections);
+	mf_processinstance_module_section_list_callback(&process, &primary_module, sections);
 	printf("Read %zu sections\n", sections_base.size);
 	free(sections_base.buf);
 
-	processinstance_drop(process);
+	mf_processinstance_drop(process);
 
 	return true;
 }
@@ -97,22 +97,22 @@ int main(int argc, char *argv[]) {
 
 	// iterate over all processes and print them manually
 	printf("Pid\tNAME\tADDRESS\tMAIN_MODULE\n");
-	osinstance_process_address_list_callback(&os, CALLBACK(Address, &os, list_processes));
+	mf_osinstance_process_address_list_callback(&os, CALLBACK(Address, &os, list_processes));
 
 	// count all processes
 	COUNT_CB(Address, process_address);
-	osinstance_process_address_list_callback(&os, process_address);
+	mf_osinstance_process_address_list_callback(&os, process_address);
 	printf("Counted %zu processes\n", process_address_count);
 
 	// iterate over all process info structs and collect them in an array
 	struct ProcessInfo process_info[256];
 	COLLECT_CB_INTO_ARR(ProcessInfo, process_info_cb, process_info);
-	osinstance_process_info_list_callback(&os, process_info_cb);
+	mf_osinstance_process_info_list_callback(&os, process_info_cb);
 	printf("Read %zu process infos\n", process_info_cb_base.size);
 
 	// This will also free the connector here
 	// as it was _moved_ into the os by `inventory_create_os`
-	osinstance_drop(os);
+	mf_osinstance_drop(os);
 	printf("os plugin/connector freed\n");
 
 	inventory_free(inventory);

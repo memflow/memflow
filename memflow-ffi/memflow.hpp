@@ -2,6 +2,7 @@
 #define MEMFLOW_H
 
 #include <cstdarg>
+#include <cstring>
 #include <cstdint>
 #include <cstdlib>
 #include <ostream>
@@ -29,6 +30,8 @@ enum class Endianess : uint8_t {
 
 struct ArchitectureObj;
 
+
+struct TypeLayout;
 
 /** Destruct the object. */
 template<typename T>
@@ -251,6 +254,11 @@ struct PhysicalAddress {
     uint8_t page_size_log2;
 };
 
+/**
+ * FFI-Safe Arc
+ *
+ * This is an FFI-Safe equivalent of Option<Arc<T>>.
+ */
 template<typename T>
 struct COptArc {
     const T *instance;
@@ -290,6 +298,30 @@ struct CBox {
     T *instance;
     void (*drop_fn)(T*);
 
+    CBox() = default;
+    CBox(T *instance) : instance(instance), drop_fn(nullptr) {}
+    CBox(T *instance, void (*drop_fn)(T *)) : instance(instance), drop_fn(drop_fn) {}
+    template<typename U = T, class = typename std::enable_if<std::is_same<U, T>::value>::type, class = typename std::enable_if<!std::is_same<U, void>::value>::type>
+    CBox(U &&instance) : instance(new U(instance)), drop_fn(&CBox::delete_fn) {}
+
+    static void delete_fn(T *v) {
+        delete v;
+    }
+
+    inline operator CBox<void> () const {
+        CBox<void> ret;
+        ret.instance = (void*)instance;
+        ret.drop_fn = (void(*)(void *))drop_fn;
+        return ret;
+    }
+
+    static inline CBox new_box() {
+        CBox ret;
+        ret.instance = new T;
+        ret.drop_fn = &CBox::delete_fn;
+        return ret;
+    }
+
     inline void drop() && noexcept {
         if (drop_fn && instance)
             drop_fn(instance);
@@ -299,6 +331,14 @@ struct CBox {
     inline void forget() noexcept {
         instance = nullptr;
         drop_fn = nullptr;
+    }
+
+    inline T *operator->() {
+        return instance;
+    }
+
+    inline const T *operator->() const {
+        return instance;
     }
 };
 
@@ -347,6 +387,7 @@ struct ConnectorInstanceContainer<CGlueInst, void> {
 template<typename CGlueC>
 struct CloneVtbl {
     typedef typename CGlueC::Context Context;
+    const TypeLayout *layout;
     CGlueC (*clone)(const CGlueC *cont);
 };
 
@@ -360,6 +401,40 @@ template<typename T>
 struct CSliceMut {
     T *data;
     uintptr_t len;
+
+    CSliceMut () = default;
+
+    template<typename Cont, class = typename std::enable_if<
+        std::is_same<decltype((*(Cont *)nullptr).data()), T *>::value
+        && std::is_same<decltype((*(Cont *)nullptr).size()), size_t>::value
+    >::type>
+    CSliceMut (Cont &data) : data(data.data()), len(data.size()) {}
+
+    template<typename U = T, class = typename std::enable_if<
+        (std::is_same<T, char>::value || std::is_same<T, unsigned char>::value)
+        && std::is_same<T, U>::value
+    >::type>
+    CSliceMut (char *value) : data((T *)value), len(strlen(value)) {}
+
+    template<typename U = T, class = typename std::enable_if<
+        (std::is_same<T, char>::value || std::is_same<T, unsigned char>::value)
+        && std::is_same<T, U>::value
+    >::type>
+    CSliceMut (char *value, uintptr_t len) : data((T *)value), len(len) {}
+
+    template<typename U = T, class = typename std::enable_if<
+        (std::is_same<T, char>::value || std::is_same<T, unsigned char>::value)
+        && std::is_same<T, U>::value
+    >::type>
+    CSliceMut (std::string &value) : data((T *)value.data()), len(value.length()) {}
+
+    template<typename U = T, class = typename std::enable_if<
+        (std::is_same<T, char>::value || std::is_same<T, unsigned char>::value)
+        && std::is_same<T, U>::value
+    >::type>
+    inline operator std::string() const {
+        return std::string((char *)data, len);
+    }
 };
 
 /**
@@ -516,6 +591,40 @@ template<typename T>
 struct CSliceRef {
     const T *data;
     uintptr_t len;
+
+    CSliceRef () = default;
+
+    template<typename Cont, class = typename std::enable_if<
+        std::is_same<decltype((*(const Cont *)nullptr).data()), const T *>::value
+        && std::is_same<decltype((*(const Cont *)nullptr).size()), size_t>::value
+    >::type>
+    CSliceRef (const Cont &data) : data(data.data()), len(data.size()) {}
+
+    template<typename U = T, class = typename std::enable_if<
+        (std::is_same<T, char>::value || std::is_same<T, unsigned char>::value)
+        && std::is_same<T, U>::value
+    >::type>
+    CSliceRef (const char *value) : data((const T *)value), len(strlen(value)) {}
+
+    template<typename U = T, class = typename std::enable_if<
+        (std::is_same<T, char>::value || std::is_same<T, unsigned char>::value)
+        && std::is_same<T, U>::value
+    >::type>
+    CSliceRef (const char *value, uintptr_t len) : data((const T *)value), len(len) {}
+
+    template<typename U = T, class = typename std::enable_if<
+        (std::is_same<T, char>::value || std::is_same<T, unsigned char>::value)
+        && std::is_same<T, U>::value
+    >::type>
+    CSliceRef (const std::string &value) : data((const T *)value.data()), len(value.length()) {}
+
+    template<typename U = T, class = typename std::enable_if<
+        (std::is_same<T, char>::value || std::is_same<T, unsigned char>::value)
+        && std::is_same<T, U>::value
+    >::type>
+    inline operator std::string() const {
+        return std::string((char *)data, len);
+    }
 };
 
 /**
@@ -659,6 +768,7 @@ struct MemoryViewMetadata {
 template<typename CGlueC>
 struct MemoryViewVtbl {
     typedef typename CGlueC::Context Context;
+    const TypeLayout *layout;
     int32_t (*read_raw_iter)(CGlueC *cont, CIterator<ReadData> data, ReadFailCallback *out_fail);
     int32_t (*write_raw_iter)(CGlueC *cont, CIterator<WriteData> data, WriteFailCallback *out_fail);
     MemoryViewMetadata (*metadata)(const CGlueC *cont);
@@ -696,10 +806,11 @@ using MemoryViewBase = CGlueTraitObj<CGlueInst, MemoryViewVtbl<CGlueObjContainer
 template<typename CGlueC>
 struct PhysicalMemoryVtbl {
     typedef typename CGlueC::Context Context;
+    const TypeLayout *layout;
     int32_t (*phys_read_raw_iter)(CGlueC *cont, CIterator<PhysicalReadData> data, PhysicalReadFailCallback *out_fail);
     int32_t (*phys_write_raw_iter)(CGlueC *cont, CIterator<PhysicalWriteData> data, PhysicalWriteFailCallback *out_fail);
     PhysicalMemoryMetadata (*metadata)(const CGlueC *cont);
-    void (*set_mem_map)(CGlueC *cont, CSliceRef<PhysicalMemoryMapping> mem_map);
+    void (*set_mem_map)(CGlueC *cont, CSliceRef<PhysicalMemoryMapping> _mem_map);
     MemoryViewBase<CBox<void>, Context> (*into_phys_view)(CGlueC cont);
     MemoryViewBase<CBox<void>, Context> (*phys_view)(CGlueC *cont);
 };
@@ -712,6 +823,7 @@ struct PhysicalMemoryVtbl {
 template<typename CGlueC>
 struct CpuStateVtbl {
     typedef typename CGlueC::Context Context;
+    const TypeLayout *layout;
     void (*pause)(CGlueC *cont);
     void (*resume)(CGlueC *cont);
 };
@@ -819,6 +931,7 @@ struct IntoCpuState {
 template<typename CGlueC>
 struct ConnectorCpuStateInnerVtbl {
     typedef typename CGlueC::Context Context;
+    const TypeLayout *layout;
     int32_t (*cpu_state)(CGlueC *cont, MaybeUninit<CpuStateBase<CBox<void>, Context>> *ok_out);
     int32_t (*into_cpu_state)(CGlueC cont, MaybeUninit<IntoCpuState<CBox<void>, Context>> *ok_out);
 };
@@ -880,8 +993,8 @@ struct ConnectorInstance {
         return __ret;
     }
 
-    inline auto set_mem_map(CSliceRef<PhysicalMemoryMapping> mem_map) noexcept {
-    (this->vtbl_physicalmemory)->set_mem_map(&this->container, mem_map);
+    inline auto set_mem_map(CSliceRef<PhysicalMemoryMapping> _mem_map) noexcept {
+    (this->vtbl_physicalmemory)->set_mem_map(&this->container, _mem_map);
 
     }
 
@@ -974,6 +1087,35 @@ using AddressCallback = OpaqueCallback<Address>;
 using Pid = uint32_t;
 
 /**
+ * Exit code of a process
+ */
+using ExitCode = int32_t;
+
+/**
+ * The state of a process
+ *
+ * # Remarks
+ *
+ * In case the exit code isn't known ProcessState::Unknown is set.
+ */
+struct ProcessState {
+    enum class Tag {
+        ProcessState_Unknown,
+        ProcessState_Alive,
+        ProcessState_Dead,
+    };
+
+    struct ProcessState_Dead_Body {
+        ExitCode _0;
+    };
+
+    Tag tag;
+    union {
+        ProcessState_Dead_Body dead;
+    };
+};
+
+/**
  * Wrapper around null-terminated C-style strings.
  *
  * Analog to Rust's `String`, [`ReprCString`] owns the underlying data.
@@ -1044,6 +1186,14 @@ struct ProcessInfo {
      */
     Pid pid;
     /**
+     * The current status of the process at the time when this process info was fetched.
+     *
+     * # Remarks
+     *
+     * This field is highly volatile and can be re-checked with the [`Process::state()`] function.
+     */
+    ProcessState state;
+    /**
      * Name of the process.
      */
     ReprCString name;
@@ -1109,35 +1259,6 @@ struct ProcessInstanceContainer<CGlueInst, void> {
     inline void forget() noexcept {
         mem_forget(instance);
     }
-};
-
-/**
- * Exit code of a process
- */
-using ExitCode = int32_t;
-
-/**
- * The state of a process
- *
- * # Remarks
- *
- * In case the exit code isn't known ProcessState::Unknown is set.
- */
-struct ProcessState {
-    enum class Tag {
-        ProcessState_Unknown,
-        ProcessState_Alive,
-        ProcessState_Dead,
-    };
-
-    struct ProcessState_Dead_Body {
-        ExitCode _0;
-    };
-
-    Tag tag;
-    union {
-        ProcessState_Dead_Body dead;
-    };
 };
 
 /**
@@ -1266,6 +1387,7 @@ using SectionCallback = OpaqueCallback<SectionInfo>;
 template<typename CGlueC>
 struct ProcessVtbl {
     typedef typename CGlueC::Context Context;
+    const TypeLayout *layout;
     ProcessState (*state)(CGlueC *cont);
     int32_t (*module_address_list_callback)(CGlueC *cont, const ArchitectureIdent *target_arch, ModuleAddressCallback callback);
     int32_t (*module_list_callback)(CGlueC *cont, const ArchitectureIdent *target_arch, ModuleInfoCallback callback);
@@ -1364,6 +1486,7 @@ struct COption {
 template<typename CGlueC>
 struct VirtualTranslateVtbl {
     typedef typename CGlueC::Context Context;
+    const TypeLayout *layout;
     void (*virt_to_phys_list)(CGlueC *cont, CSliceRef<MemoryRange> addrs, VirtualTranslationCallback out, VirtualTranslationFailCallback out_fail);
     void (*virt_to_phys_range)(CGlueC *cont, Address start, Address end, VirtualTranslationCallback out);
     void (*virt_translation_map_range)(CGlueC *cont, Address start, Address end, VirtualTranslationCallback out);
@@ -1833,6 +1956,7 @@ struct OsInfo {
 template<typename CGlueC>
 struct OsInnerVtbl {
     typedef typename CGlueC::Context Context;
+    const TypeLayout *layout;
     int32_t (*process_address_list_callback)(CGlueC *cont, AddressCallback callback);
     int32_t (*process_info_list_callback)(CGlueC *cont, ProcessInfoCallback callback);
     int32_t (*process_info_by_address)(CGlueC *cont, Address address, MaybeUninit<ProcessInfo> *ok_out);
@@ -1861,6 +1985,7 @@ struct OsInnerVtbl {
 template<typename CGlueC>
 struct KeyboardStateVtbl {
     typedef typename CGlueC::Context Context;
+    const TypeLayout *layout;
     bool (*is_down)(const CGlueC *cont, int32_t vk);
 };
 
@@ -1878,6 +2003,7 @@ using KeyboardStateBase = CGlueTraitObj<CGlueInst, KeyboardStateVtbl<CGlueObjCon
 template<typename CGlueC>
 struct KeyboardVtbl {
     typedef typename CGlueC::Context Context;
+    const TypeLayout *layout;
     bool (*is_down)(CGlueC *cont, int32_t vk);
     void (*set_down)(CGlueC *cont, int32_t vk, bool down);
     int32_t (*state)(CGlueC *cont, MaybeUninit<KeyboardStateBase<CBox<void>, Context>> *ok_out);
@@ -1991,6 +2117,7 @@ struct IntoKeyboard {
 template<typename CGlueC>
 struct OsKeyboardInnerVtbl {
     typedef typename CGlueC::Context Context;
+    const TypeLayout *layout;
     int32_t (*keyboard)(CGlueC *cont, MaybeUninit<KeyboardBase<CBox<void>, Context>> *ok_out);
     int32_t (*into_keyboard)(CGlueC cont, MaybeUninit<IntoKeyboard<CBox<void>, Context>> *ok_out);
 };
@@ -2201,8 +2328,8 @@ struct OsInstance {
         return __ret;
     }
 
-    inline auto set_mem_map(CSliceRef<PhysicalMemoryMapping> mem_map) noexcept {
-    (this->vtbl_physicalmemory)->set_mem_map(&this->container, mem_map);
+    inline auto set_mem_map(CSliceRef<PhysicalMemoryMapping> _mem_map) noexcept {
+    (this->vtbl_physicalmemory)->set_mem_map(&this->container, _mem_map);
 
     }
 
@@ -2553,8 +2680,8 @@ struct CGlueTraitObj<T, PhysicalMemoryVtbl<CGlueObjContainer<T, C, R>>, C, R> {
         return __ret;
     }
 
-    inline auto set_mem_map(CSliceRef<PhysicalMemoryMapping> mem_map) noexcept {
-    (this->vtbl)->set_mem_map(&this->container, mem_map);
+    inline auto set_mem_map(CSliceRef<PhysicalMemoryMapping> _mem_map) noexcept {
+    (this->vtbl)->set_mem_map(&this->container, _mem_map);
 
     }
 

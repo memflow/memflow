@@ -224,9 +224,10 @@ struct MemoryMapFileRange {
 
 // FFI Safe MemoryMapping type for `MemoryMap<(Address, umem)>`.
 // TODO: this could be removed if the RefCell requirement above would be removed.
+#[repr(C)]
 #[derive(Debug, Clone, Copy)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
-#[repr(C)]
+#[cfg_attr(feature = "abi_stable", derive(::abi_stable::StableAbi))]
 pub struct PhysicalMemoryMapping {
     pub base: Address,
     pub size: umem,

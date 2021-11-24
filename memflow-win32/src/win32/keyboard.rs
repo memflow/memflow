@@ -159,7 +159,8 @@ impl<T> Win32Keyboard<T> {
         // TODO: always use sigscan as fallback
         match pe.get_export_by_name("gafAsyncKeyState").map_err(|err| {
             Error(ErrorOrigin::OsLayer, ErrorKind::ExportNotFound)
-                .log_info(format!("unable to find gafAsyncKeyState: {}", err))
+                .log_info("unable to find gafAsyncKeyState")
+                .log_info(err)
         })? {
             Export::Symbol(s) => {
                 debug!("gafAsyncKeyState export found at: {:x}", *s);

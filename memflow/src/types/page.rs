@@ -6,8 +6,9 @@ use super::{umem, Address};
 
 bitflags! {
     /// Describes the type of a page using a bitflag.
-    #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
     #[repr(transparent)]
+    #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+    #[cfg_attr(feature = "abi_stable", derive(::abi_stable::StableAbi))]
     pub struct PageType: u8 {
         /// The page explicitly has no flags.
         const NONE = 0b0000_0000;
@@ -62,8 +63,10 @@ impl Default for PageType {
 /// A `Page` holds information about a memory page.
 ///
 /// More information about paging can be found [here](https://en.wikipedia.org/wiki/Paging).
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
 #[repr(C)]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+#[cfg_attr(feature = "abi_stable", derive(::abi_stable::StableAbi))]
 pub struct Page {
     /// Contains the page type (see above).
     pub page_type: PageType,

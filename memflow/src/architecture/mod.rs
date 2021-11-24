@@ -35,9 +35,10 @@ use cglue::callback::OpaqueCallback;
 /// The memory will be automatically converted to the endianess memflow is currently running on.
 ///
 /// See the [wikipedia article](https://en.wikipedia.org/wiki/Endianness) for more information on the subject.
+#[repr(u8)]
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize))]
-#[repr(u8)]
+#[cfg_attr(feature = "abi_stable", derive(::abi_stable::StableAbi))]
 pub enum Endianess {
     /// Little Endianess
     LittleEndian,
@@ -247,6 +248,7 @@ impl std::cmp::PartialEq<ArchitectureObj> for ArchitectureObj {
 #[repr(C)]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+#[cfg_attr(feature = "abi_stable", derive(::abi_stable::StableAbi))]
 pub enum ArchitectureIdent {
     /// Unknown architecture. Could be third-party implemented. memflow knows how to work on them,
     /// but is unable to instantiate them.

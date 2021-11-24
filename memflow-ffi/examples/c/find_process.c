@@ -16,7 +16,7 @@ bool find_process(struct FindProcessContext *find_context, Address addr) {
 		return false;
 	}
 
-	if (osinstance_process_by_address(
+	if (mf_osinstance_process_by_address(
 				find_context->os,
 				addr,
 				find_context->target_process
@@ -24,7 +24,7 @@ bool find_process(struct FindProcessContext *find_context, Address addr) {
 		return true;
 	}
 
-	const struct ProcessInfo *info = processinstance_info(find_context->target_process);
+	const struct ProcessInfo *info = mf_processinstance_info(find_context->target_process);
 
 	if (!strcmp(info->name, find_context->name)) {
 		// abort iteration
@@ -32,7 +32,7 @@ bool find_process(struct FindProcessContext *find_context, Address addr) {
 		return false;
 	}
 
-	processinstance_drop(*find_context->target_process);
+	mf_processinstance_drop(*find_context->target_process);
 
 	// continue iteration
 	return true;
@@ -86,35 +86,35 @@ int main(int argc, char *argv[]) {
 			false,
 	};
 
-	osinstance_process_address_list_callback(&os, CALLBACK(Address, &find_context, find_process));
+	mf_osinstance_process_address_list_callback(&os, CALLBACK(Address, &find_context, find_process));
 
 	if (find_context.found) {
-		const struct ProcessInfo *info = processinstance_info(&target_process);
+		const struct ProcessInfo *info = mf_processinstance_info(&target_process);
 
 		printf("%s process found: 0x%lx] %d %s %s\n", target_proc, info->address,
 					 info->pid, info->name, info->path);
 
-		processinstance_drop(target_process);
+		mf_processinstance_drop(target_process);
 	} else {
 		printf("Unable to find %s\n", target_proc);
 	}
 
 	// find a specific process based on its name
 	// via process_by_name
-	if (!osinstance_process_by_name(&os, STR(target_proc), &target_process)) {
-		const struct ProcessInfo *info = processinstance_info(&target_process);
+	if (!mf_osinstance_process_by_name(&os, STR(target_proc), &target_process)) {
+		const struct ProcessInfo *info = mf_processinstance_info(&target_process);
 
 		printf("%s process found: 0x%lx] %d %s %s\n", target_proc, info->address,
 					 info->pid, info->name, info->path);
 
-		processinstance_drop(target_process);
+		mf_processinstance_drop(target_process);
 	} else {
 		printf("Unable to find %s\n", target_proc);
 	}
 
 	// This will also free the connector here
 	// as it was _moved_ into the os by `inventory_create_os`
-	osinstance_drop(os);
+	mf_osinstance_drop(os);
 	printf("os plugin/connector freed\n");
 
 	inventory_free(inventory);

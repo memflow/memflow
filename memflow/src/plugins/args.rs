@@ -57,7 +57,13 @@ impl fmt::Display for Args {
             self.map
                 .iter()
                 .filter(|(key, _)| key.as_str() != "default")
-                .map(|(key, value)| format!("{}={}", key, value))
+                .map(|(key, value)| {
+                    if value.contains(',') || value.contains('=') {
+                        format!("{}=\"{}\"", key, value)
+                    } else {
+                        format!("{}={}", key, value)
+                    }
+                })
                 .collect::<Vec<_>>(),
         );
 
@@ -93,9 +99,23 @@ impl Args {
     pub fn parse(args: &str) -> Result<Self> {
         let mut map = HashMap::new();
 
-        // if args != "" {
-        let split = args.split(',');
-        for (i, kv) in split.clone().enumerate() {
+        let quotes = args.split('"');
+        let mut split = vec![];
+        for (i, kv) in quotes.clone().enumerate() {
+            if i % 2 == 0 {
+                let s = kv.split(",");
+                split.extend(s.map(|s| s.to_owned()));
+            } else {
+                if split.is_empty() {
+                    split.push(kv.to_owned());
+                } else {
+                    let prev = split.pop().unwrap();
+                    map.insert(prev[..prev.len() - 1].to_string(), kv.to_string());
+                }
+            }
+        }
+
+        for (i, kv) in split.iter().enumerate() {
             let kvsplit = kv.split('=').collect::<Vec<_>>();
             if kvsplit.len() == 2 {
                 map.insert(kvsplit[0].to_string(), kvsplit[1].to_string());
@@ -103,7 +123,6 @@ impl Args {
                 map.insert("default".to_string(), kv.to_string());
             }
         }
-        // }
 
         Ok(Self { map })
     }
@@ -489,6 +508,7 @@ mod tests {
         assert_eq!(args2.get("opt3").unwrap(), "test3");
     }
 
+    // TODO: test non default first to string
     #[test]
     pub fn to_string_with_default() {
         let argstr = "test0,opt1=test1,opt2=test2,opt3=test3";
@@ -498,6 +518,26 @@ mod tests {
         assert_eq!(args2.get("opt1").unwrap(), "test1");
         assert_eq!(args2.get("opt2").unwrap(), "test2");
         assert_eq!(args2.get("opt3").unwrap(), "test3");
+    }
+
+    #[test]
+    pub fn double_quotes() {
+        let argstr = "opt1=test1,test0,opt2=\"test2,test3\"";
+        let args = Args::parse(argstr).unwrap();
+        let args2 = Args::parse(&args.to_string()).unwrap();
+        assert_eq!(args2.get_default(), None);
+        assert_eq!(args2.get("opt1").unwrap(), "test1");
+        assert_eq!(args2.get("opt2").unwrap(), "test2,test3");
+    }
+
+    #[test]
+    pub fn double_quotes_eq() {
+        let argstr = "opt1=test1,test0,opt2=\"test2,test3=test4\"";
+        let args = Args::parse(argstr).unwrap();
+        let args2 = Args::parse(&args.to_string()).unwrap();
+        assert_eq!(args2.get_default(), None);
+        assert_eq!(args2.get("opt1").unwrap(), "test1");
+        assert_eq!(args2.get("opt2").unwrap(), "test2,test3=test4");
     }
 
     #[test]

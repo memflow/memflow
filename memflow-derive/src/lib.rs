@@ -85,7 +85,7 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
             #[doc(hidden)]
             extern "C" fn mf_create(
                 args: &cglue::repr_cstring::ReprCString,
-                _: Option<#crate_path::os::root::OsInstanceArcBox>,
+                _: cglue::option::COption<#crate_path::os::root::OsInstanceArcBox>,
                 lib: #crate_path::cglue::COptArc<::core::ffi::c_void>,
                 log_level: i32,
                 out: &mut #crate_path::mem::phys_mem::MuConnectorInstanceArcBox<'static>
@@ -98,7 +98,7 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
             #[doc(hidden)]
             extern "C" fn mf_create(
                 args: &cglue::repr_cstring::ReprCString,
-                _: Option<#crate_path::os::root::OsInstanceArcBox>,
+                _: cglue::option::COption<#crate_path::os::root::OsInstanceArcBox>,
                 lib: #crate_path::cglue::COptArc<::core::ffi::c_void>,
                 _: i32,
                 out: &mut #crate_path::mem::phys_mem::MuConnectorInstanceArcBox<'static>
@@ -149,9 +149,11 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
         #[no_mangle]
         pub static #connector_descriptor: #crate_path::plugins::ConnectorDescriptor = #crate_path::plugins::ConnectorDescriptor {
             plugin_version: #crate_path::plugins::MEMFLOW_PLUGIN_VERSION,
-            name: #connector_name,
-            version: #version_gen,
-            description: #description_gen,
+            input_layout: <<#crate_path::plugins::LoadableConnector as #crate_path::plugins::Loadable>::CInputArg as #crate_path::abi_stable::StableAbi>::LAYOUT,
+            output_layout: <<#crate_path::plugins::LoadableConnector as #crate_path::plugins::Loadable>::Instance as #crate_path::abi_stable::StableAbi>::LAYOUT,
+            name: #crate_path::cglue::CSliceRef::from_str(#connector_name),
+            version: #crate_path::cglue::CSliceRef::from_str(#version_gen),
+            description: #crate_path::cglue::CSliceRef::from_str(#description_gen),
             help_callback: #help_gen,
             target_list_callback: #target_list_gen,
             create: mf_create,
@@ -338,9 +340,11 @@ pub fn os_layer_bare(args: TokenStream, input: TokenStream) -> TokenStream {
         #[no_mangle]
         pub static #os_descriptor: #crate_path::plugins::os::OsDescriptor = #crate_path::plugins::os::OsDescriptor {
             plugin_version: #crate_path::plugins::MEMFLOW_PLUGIN_VERSION,
-            name: #os_name,
-            version: #version_gen,
-            description: #description_gen,
+            input_layout: <<#crate_path::plugins::os::LoadableOs as #crate_path::plugins::Loadable>::CInputArg as #crate_path::abi_stable::StableAbi>::LAYOUT,
+            output_layout: <<#crate_path::plugins::os::LoadableOs as #crate_path::plugins::Loadable>::Instance as #crate_path::abi_stable::StableAbi>::LAYOUT,
+            name: #crate_path::cglue::CSliceRef::from_str(#os_name),
+            version: #crate_path::cglue::CSliceRef::from_str(#version_gen),
+            description: #crate_path::cglue::CSliceRef::from_str(#description_gen),
             help_callback: #help_gen,
             target_list_callback: None, // non existent on Os Plugins
             create: mf_create,

@@ -35,10 +35,11 @@ use std::fs::read_dir;
 use std::mem::MaybeUninit;
 use std::path::{Path, PathBuf};
 
+use abi_stable::{type_layout::TypeLayout, StableAbi};
 use libloading::Library;
 
 /// Exported memflow plugins version
-pub const MEMFLOW_PLUGIN_VERSION: i32 = -5;
+pub const MEMFLOW_PLUGIN_VERSION: i32 = -6;
 
 /// Help and Target callbacks
 pub type HelpCallback<'a> = OpaqueCallback<'a, ReprCString>;
@@ -62,18 +63,24 @@ pub struct PluginDescriptor<T: Loadable> {
     /// If the versions mismatch the inventory will refuse to load.
     pub plugin_version: i32,
 
+    /// Layout of the input type.
+    pub input_layout: &'static TypeLayout,
+
+    /// Layout of the loaded type.
+    pub output_layout: &'static TypeLayout,
+
     /// The name of the plugin.
     /// This name will be used when loading a plugin from the inventory.
     ///
     /// During plugin discovery, the export suffix has to match this name being capitalized
-    pub name: &'static str,
+    pub name: CSliceRef<'static, u8>,
 
     /// The version of the connector.
     /// If multiple connectors are installed the latest is picked.
-    pub version: &'static str,
+    pub version: CSliceRef<'static, u8>,
 
     /// The description of the connector.
-    pub description: &'static str,
+    pub description: CSliceRef<'static, u8>,
 
     /// Retrieves a help string from the plugin (lists all available commands)
     pub help_callback: Option<extern "C" fn(callback: HelpCallback) -> ()>,
@@ -82,20 +89,22 @@ pub struct PluginDescriptor<T: Loadable> {
     pub target_list_callback: Option<extern "C" fn(callback: TargetCallback) -> i32>,
 
     /// Create instance of the plugin
-    pub create: extern "C" fn(
-        &ReprCString,
-        T::CInputArg,
-        lib: COptArc<c_void>,
-        i32,
-        &mut MaybeUninit<T::Instance>,
-    ) -> i32,
+    pub create: CreateFn<T>,
 }
+
+pub type CreateFn<T> = extern "C" fn(
+    &ReprCString,
+    <T as Loadable>::CInputArg,
+    lib: COptArc<c_void>,
+    i32,
+    &mut MaybeUninit<<T as Loadable>::Instance>,
+) -> i32;
 
 /// Defines a common interface for loadable plugins
 pub trait Loadable: Sized {
-    type Instance;
+    type Instance: StableAbi;
     type InputArg;
-    type CInputArg;
+    type CInputArg: StableAbi;
 
     /// Checks if plugin with the same `ident` already exists in input list
     fn exists(&self, instances: &[LibInstance<Self>]) -> bool {
@@ -129,19 +138,24 @@ pub trait Loadable: Sized {
         // check version
         if descriptor.plugin_version != MEMFLOW_PLUGIN_VERSION {
             warn!(
-                "{} {} has a different version. version {} required, found {}.",
-                Self::plugin_type(),
-                descriptor.name,
-                MEMFLOW_PLUGIN_VERSION,
-                descriptor.plugin_version
+                "{} has a different version. version {} required, found {}.",
+                export, MEMFLOW_PLUGIN_VERSION, descriptor.plugin_version
             );
             Err(Error(ErrorOrigin::Inventory, ErrorKind::VersionMismatch))
-        } else {
+        } else if VerifyLayout::check::<Self::CInputArg>(Some(descriptor.input_layout))
+            .and(VerifyLayout::check::<Self::Instance>(Some(
+                descriptor.output_layout,
+            )))
+            .is_valid_strict()
+        {
             Ok(LibInstance {
                 path: path.as_ref().to_path_buf(),
                 library: library.clone(),
                 loader: Self::new(descriptor),
             })
+        } else {
+            warn!("{} has invalid ABI.", export);
+            Err(Error(ErrorOrigin::Inventory, ErrorKind::InvalidAbi))
         }
     }
 

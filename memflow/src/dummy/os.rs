@@ -545,9 +545,11 @@ impl PhysicalMemory for DummyOs {
 #[no_mangle]
 pub static MEMFLOW_OS_DUMMY: OsDescriptor = OsDescriptor {
     plugin_version: MEMFLOW_PLUGIN_VERSION,
-    name: "dummy",
-    version: env!("CARGO_PKG_VERSION"),
-    description: "Dummy testing OS",
+    input_layout: <<LoadableOs as Loadable>::CInputArg as ::abi_stable::StableAbi>::LAYOUT,
+    output_layout: <<LoadableOs as Loadable>::Instance as ::abi_stable::StableAbi>::LAYOUT,
+    name: CSliceRef::from_str("dummy"),
+    version: CSliceRef::from_str(env!("CARGO_PKG_VERSION")),
+    description: CSliceRef::from_str("Dummy testing OS"),
     help_callback: None, // TODO: add dummy help string
     target_list_callback: None,
     create: mf_create,

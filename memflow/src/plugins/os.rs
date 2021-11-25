@@ -63,7 +63,7 @@ impl Loadable for LoadableOs {
     }
 
     fn ident(&self) -> &str {
-        self.descriptor.name
+        self.descriptor.name.into_str()
     }
 
     fn plugin_type() -> &'static str {

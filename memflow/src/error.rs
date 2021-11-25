@@ -116,6 +116,7 @@ impl From<ErrorKind> for Error {
 }
 
 #[repr(u16)]
+#[non_exhaustive]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 pub enum ErrorOrigin {
     Pointer,
@@ -173,6 +174,7 @@ impl ErrorOrigin {
 }
 
 #[repr(u16)]
+#[non_exhaustive]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 pub enum ErrorKind {
     Uninitialized,
@@ -218,6 +220,7 @@ pub enum ErrorKind {
     VersionMismatch,
     AlreadyExists,
     PluginNotFound,
+    InvalidAbi,
     UnsupportedOptionalFeature,
 
     ProcessNotFound,
@@ -277,6 +280,7 @@ impl ErrorKind {
             ErrorKind::VersionMismatch => "version mismatch",
             ErrorKind::AlreadyExists => "already exists",
             ErrorKind::PluginNotFound => "plugin not found",
+            ErrorKind::InvalidAbi => "invalid plugin ABI",
             ErrorKind::UnsupportedOptionalFeature => "unsupported optional feature",
 
             ErrorKind::ProcessNotFound => "process not found",

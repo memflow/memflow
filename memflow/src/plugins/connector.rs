@@ -55,10 +55,10 @@ pub struct LoadableConnector {
 impl Loadable for LoadableConnector {
     type Instance = ConnectorInstanceArcBox<'static>;
     type InputArg = Option<OsInstanceArcBox<'static>>;
-    type CInputArg = Option<OsInstanceArcBox<'static>>;
+    type CInputArg = COption<OsInstanceArcBox<'static>>;
 
     fn ident(&self) -> &str {
-        self.descriptor.name
+        self.descriptor.name.into_str()
     }
 
     fn export_prefix() -> &'static str {
@@ -125,7 +125,7 @@ impl Loadable for LoadableConnector {
         let mut out = MuConnectorInstanceArcBox::uninit();
         let res = (self.descriptor.create)(
             &cstr,
-            input,
+            input.into(),
             library.into_opaque(),
             log::max_level() as i32,
             &mut out,

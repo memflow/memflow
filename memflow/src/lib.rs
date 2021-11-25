@@ -61,6 +61,12 @@ pub mod cglue {
 }
 
 #[doc(hidden)]
+#[cfg(feature = "abi_stable")]
+pub mod abi_stable {
+    pub use ::abi_stable::*;
+}
+
+#[doc(hidden)]
 pub mod dataview {
     pub use ::dataview::*;
     pub use ::memflow_derive::Pod;

@@ -299,7 +299,7 @@ typedef struct CBox_c_void {
 /**
  * FFI-Safe Arc
  *
- * This is an FFI-Safe equivalent of Option<Arc<T>>, or Arc<T>.
+ * This is an FFI-Safe equivalent of Arc<T> and Option<Arc<T>>.
  */
 typedef struct CArc_c_void {
     const void *instance;
@@ -404,6 +404,22 @@ typedef OpaqueCallback_PhysicalReadData PhysicalReadFailCallback;
  *
  * This is meant as a safe type to pass across the FFI boundary with similar semantics as regular
  * slice. However, not all functionality is present, use the slice conversion functions.
+ *
+ * # Examples
+ *
+ * Simple conversion:
+ *
+ * ```
+ * use cglue::slice::CSliceRef;
+ *
+ * let arr = [0, 5, 3, 2];
+ *
+ * let cslice = CSliceRef::from(&arr[..]);
+ *
+ * let slice = cslice.as_slice();
+ *
+ * assert_eq!(&arr, slice);
+ * ```
  */
 typedef struct CSliceRef_u8 {
     const uint8_t *data;
@@ -495,6 +511,22 @@ typedef struct PhysicalMemoryMapping {
  *
  * This is meant as a safe type to pass across the FFI boundary with similar semantics as regular
  * slice. However, not all functionality is present, use the slice conversion functions.
+ *
+ * # Examples
+ *
+ * Simple conversion:
+ *
+ * ```
+ * use cglue::slice::CSliceRef;
+ *
+ * let arr = [0, 5, 3, 2];
+ *
+ * let cslice = CSliceRef::from(&arr[..]);
+ *
+ * let slice = cslice.as_slice();
+ *
+ * assert_eq!(&arr, slice);
+ * ```
  */
 typedef struct CSliceRef_PhysicalMemoryMapping {
     const struct PhysicalMemoryMapping *data;
@@ -659,6 +691,22 @@ typedef struct CSliceMut_ReadData {
  *
  * This is meant as a safe type to pass across the FFI boundary with similar semantics as regular
  * slice. However, not all functionality is present, use the slice conversion functions.
+ *
+ * # Examples
+ *
+ * Simple conversion:
+ *
+ * ```
+ * use cglue::slice::CSliceRef;
+ *
+ * let arr = [0, 5, 3, 2];
+ *
+ * let cslice = CSliceRef::from(&arr[..]);
+ *
+ * let slice = cslice.as_slice();
+ *
+ * assert_eq!(&arr, slice);
+ * ```
  */
 typedef struct CSliceRef_WriteData {
     const WriteData *data;
@@ -1157,6 +1205,22 @@ typedef struct MemoryRange {
  *
  * This is meant as a safe type to pass across the FFI boundary with similar semantics as regular
  * slice. However, not all functionality is present, use the slice conversion functions.
+ *
+ * # Examples
+ *
+ * Simple conversion:
+ *
+ * ```
+ * use cglue::slice::CSliceRef;
+ *
+ * let arr = [0, 5, 3, 2];
+ *
+ * let cslice = CSliceRef::from(&arr[..]);
+ *
+ * let slice = cslice.as_slice();
+ *
+ * assert_eq!(&arr, slice);
+ * ```
  */
 typedef struct CSliceRef_MemoryRange {
     const struct MemoryRange *data;

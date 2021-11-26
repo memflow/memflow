@@ -234,7 +234,7 @@ impl<T> SplitAtIndex for &mut [T] {
 
 impl<'a, T> SplitAtIndex for CSliceRef<'a, T> {
     fn split_at(self, idx: umem) -> (Option<Self>, Option<Self>) {
-        let sliced = unsafe { core::slice::from_raw_parts(self.as_mut_ptr(), self.len()) };
+        let sliced = unsafe { core::slice::from_raw_parts(self.as_ptr(), self.len()) };
         let (left, right) = (*sliced).split_at(core::cmp::min(self.len(), clamp_to_usize(idx)));
         (
             if left.is_empty() {
@@ -252,7 +252,7 @@ impl<'a, T> SplitAtIndex for CSliceRef<'a, T> {
 
     unsafe fn split_at_mut(&mut self, idx: umem) -> (Option<Self>, Option<Self>) {
         let mid = core::cmp::min(self.len(), clamp_to_usize(idx));
-        let ptr = self.as_mut_ptr();
+        let ptr = self.as_ptr();
         (
             if mid != 0 {
                 Some(core::slice::from_raw_parts(ptr, mid).into())

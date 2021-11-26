@@ -12,7 +12,7 @@ use std::time::Duration;
 pub fn build_kernel(
     args: &Args,
     mem: Option<ConnectorInstanceArcBox<'static>>,
-    lib: COptArc<c_void>,
+    lib: CArc<c_void>,
     log_level: log::Level,
 ) -> Result<OsInstanceArcBox<'static>> {
     let mem = mem.ok_or_else(|| {
@@ -35,7 +35,7 @@ fn build_final<
 >(
     kernel_builder: Win32KernelBuilder<A, B, C>,
     _: &Args,
-    lib: COptArc<c_void>,
+    lib: CArc<c_void>,
 ) -> Result<OsInstanceArcBox<'static>> {
     log::info!(
         "Building kernel of type {}",
@@ -52,7 +52,7 @@ fn build_arch<
 >(
     builder: Win32KernelBuilder<A, B, C>,
     args: &Args,
-    lib: COptArc<c_void>,
+    lib: CArc<c_void>,
 ) -> Result<OsInstanceArcBox<'static>> {
     match args.get("arch").map(|a| a.to_lowercase()).as_deref() {
         Some("x64") => build_final(builder.arch(ArchitectureIdent::X86(64, false)), args, lib),
@@ -74,7 +74,7 @@ fn build_symstore<
 >(
     builder: Win32KernelBuilder<A, B, C>,
     args: &Args,
-    lib: COptArc<c_void>,
+    lib: CArc<c_void>,
 ) -> Result<OsInstanceArcBox<'static>> {
     match args.get("symstore") {
         Some("uncached") => build_arch(
@@ -94,7 +94,7 @@ fn build_kernel_hint<
 >(
     builder: Win32KernelBuilder<A, B, C>,
     args: &Args,
-    lib: COptArc<c_void>,
+    lib: CArc<c_void>,
 ) -> Result<OsInstanceArcBox<'static>> {
     match args
         .get("kernel_hint")
@@ -112,7 +112,7 @@ fn build_page_cache<
 >(
     builder: Win32KernelBuilder<A, B, C>,
     args: &Args,
-    lib: COptArc<c_void>,
+    lib: CArc<c_void>,
 ) -> Result<OsInstanceArcBox<'static>> {
     match args::parse_vatcache(args)? {
         Some((0, _)) => build_kernel_hint(
@@ -148,7 +148,7 @@ fn build_vat<
 >(
     builder: Win32KernelBuilder<A, B, C>,
     args: &Args,
-    lib: COptArc<c_void>,
+    lib: CArc<c_void>,
 ) -> Result<OsInstanceArcBox<'static>> {
     match args::parse_vatcache(args)? {
         Some((0, _)) => build_page_cache(
@@ -185,7 +185,7 @@ fn build_dtb<
 >(
     builder: Win32KernelBuilder<A, B, C>,
     args: &Args,
-    lib: COptArc<c_void>,
+    lib: CArc<c_void>,
 ) -> Result<OsInstanceArcBox<'static>> {
     match args
         .get("dtb")

@@ -31,8 +31,6 @@ enum class Endianess : uint8_t {
 struct ArchitectureObj;
 
 
-struct TypeLayout;
-
 /** Destruct the object. */
 template<typename T>
 inline typename std::enable_if<!std::is_pointer<T>::value>::type mem_drop(T &&self) noexcept {
@@ -257,16 +255,16 @@ struct PhysicalAddress {
 /**
  * FFI-Safe Arc
  *
- * This is an FFI-Safe equivalent of Option<Arc<T>>.
+ * This is an FFI-Safe equivalent of Option<Arc<T>>, or Arc<T>.
  */
 template<typename T>
-struct COptArc {
+struct CArc {
     const T *instance;
     const T *(*clone_fn)(const T*);
     void (*drop_fn)(const T*);
 
-    inline COptArc clone() const noexcept {
-        COptArc ret;
+    inline CArc clone() const noexcept {
+        CArc ret;
         ret.instance = clone_fn(instance);
         ret.clone_fn = clone_fn;
         ret.drop_fn = drop_fn;
@@ -342,7 +340,7 @@ struct CBox {
     }
 };
 
-template<typename CGlueInst = CBox<void>, typename CGlueCtx = COptArc<void>>
+template<typename CGlueInst = CBox<void>, typename CGlueCtx = CArc<void>>
 struct ConnectorInstanceContainer {
     typedef CGlueCtx Context;
     CGlueInst instance;
@@ -387,8 +385,15 @@ struct ConnectorInstanceContainer<CGlueInst, void> {
 template<typename CGlueC>
 struct CloneVtbl {
     typedef typename CGlueC::Context Context;
-    const TypeLayout *layout;
     CGlueC (*clone)(const CGlueC *cont);
+};
+
+template<typename Impl>
+struct CloneVtblImpl : CloneVtbl<typename Impl::Parent> {
+constexpr CloneVtblImpl() :
+    CloneVtbl<typename Impl::Parent> {
+        &Impl::clone
+    } {}
 };
 
 /**
@@ -495,6 +500,55 @@ template<typename T>
 struct CIterator {
     void *iter;
     int32_t (*func)(void*, MaybeUninit<T> *out);
+
+    class iterator : std::iterator<std::input_iterator_tag, T> {
+        CIterator<T> *iter;
+        RustMaybeUninit<T> data;
+        bool initialized = false;
+        bool end = false;
+
+      public:
+        explicit iterator() : end(true) {}
+
+        explicit iterator(CIterator<T> *iter) : iter(iter) {
+            end = iter->func(iter->iter, &data.assume_init());
+        }
+
+        iterator &operator++() {
+            if (!iter || end) {
+                return *this;
+            }
+
+            end = iter->func(iter->iter, &data.assume_init());
+
+            return *this;
+        }
+
+        constexpr bool operator==(const iterator &other) const {
+            return (end && other.end)
+                || (!end && !other.end && data.assume_init() == other.data.assume_init());
+        }
+
+        constexpr bool operator!=(const iterator &other) const {
+            return !(*this == other);
+        }
+
+        constexpr T &operator*() {
+            return data.assume_init();
+        }
+
+        constexpr const T &operator*() const {
+            return data.assume_init();
+        }
+    };
+
+    constexpr iterator begin() {
+        return iterator(this);
+    }
+
+    constexpr iterator end() {
+        return iterator();
+    }
 };
 
 template<typename Container>
@@ -768,7 +822,6 @@ struct MemoryViewMetadata {
 template<typename CGlueC>
 struct MemoryViewVtbl {
     typedef typename CGlueC::Context Context;
-    const TypeLayout *layout;
     int32_t (*read_raw_iter)(CGlueC *cont, CIterator<ReadData> data, ReadFailCallback *out_fail);
     int32_t (*write_raw_iter)(CGlueC *cont, CIterator<WriteData> data, WriteFailCallback *out_fail);
     MemoryViewMetadata (*metadata)(const CGlueC *cont);
@@ -776,6 +829,20 @@ struct MemoryViewVtbl {
     int32_t (*read_raw_into)(CGlueC *cont, Address addr, CSliceMut<uint8_t> out);
     int32_t (*write_raw_list)(CGlueC *cont, CSliceRef<WriteData> data);
     int32_t (*write_raw)(CGlueC *cont, Address addr, CSliceRef<uint8_t> data);
+};
+
+template<typename Impl>
+struct MemoryViewVtblImpl : MemoryViewVtbl<typename Impl::Parent> {
+constexpr MemoryViewVtblImpl() :
+    MemoryViewVtbl<typename Impl::Parent> {
+        &Impl::read_raw_iter,
+        &Impl::write_raw_iter,
+        &Impl::metadata,
+        &Impl::read_raw_list,
+        &Impl::read_raw_into,
+        &Impl::write_raw_list,
+        &Impl::write_raw
+    } {}
 };
 
 /**
@@ -795,7 +862,7 @@ struct CGlueTraitObj {
 /**
  * Base CGlue trait object for trait MemoryView.
  */
-template<typename CGlueInst = CBox<void>, typename CGlueCtx = COptArc<void>>
+template<typename CGlueInst = CBox<void>, typename CGlueCtx = CArc<void>>
 using MemoryViewBase = CGlueTraitObj<CGlueInst, MemoryViewVtbl<CGlueObjContainer<CGlueInst, CGlueCtx, MemoryViewRetTmp<CGlueCtx>>>, CGlueCtx, MemoryViewRetTmp<CGlueCtx>>;
 
 /**
@@ -806,13 +873,25 @@ using MemoryViewBase = CGlueTraitObj<CGlueInst, MemoryViewVtbl<CGlueObjContainer
 template<typename CGlueC>
 struct PhysicalMemoryVtbl {
     typedef typename CGlueC::Context Context;
-    const TypeLayout *layout;
     int32_t (*phys_read_raw_iter)(CGlueC *cont, CIterator<PhysicalReadData> data, PhysicalReadFailCallback *out_fail);
     int32_t (*phys_write_raw_iter)(CGlueC *cont, CIterator<PhysicalWriteData> data, PhysicalWriteFailCallback *out_fail);
     PhysicalMemoryMetadata (*metadata)(const CGlueC *cont);
     void (*set_mem_map)(CGlueC *cont, CSliceRef<PhysicalMemoryMapping> _mem_map);
     MemoryViewBase<CBox<void>, Context> (*into_phys_view)(CGlueC cont);
     MemoryViewBase<CBox<void>, Context> (*phys_view)(CGlueC *cont);
+};
+
+template<typename Impl>
+struct PhysicalMemoryVtblImpl : PhysicalMemoryVtbl<typename Impl::Parent> {
+constexpr PhysicalMemoryVtblImpl() :
+    PhysicalMemoryVtbl<typename Impl::Parent> {
+        &Impl::phys_read_raw_iter,
+        &Impl::phys_write_raw_iter,
+        &Impl::metadata,
+        &Impl::set_mem_map,
+        &Impl::into_phys_view,
+        &Impl::phys_view
+    } {}
 };
 
 /**
@@ -823,18 +902,26 @@ struct PhysicalMemoryVtbl {
 template<typename CGlueC>
 struct CpuStateVtbl {
     typedef typename CGlueC::Context Context;
-    const TypeLayout *layout;
     void (*pause)(CGlueC *cont);
     void (*resume)(CGlueC *cont);
+};
+
+template<typename Impl>
+struct CpuStateVtblImpl : CpuStateVtbl<typename Impl::Parent> {
+constexpr CpuStateVtblImpl() :
+    CpuStateVtbl<typename Impl::Parent> {
+        &Impl::pause,
+        &Impl::resume
+    } {}
 };
 
 /**
  * Base CGlue trait object for trait CpuState.
  */
-template<typename CGlueInst = CBox<void>, typename CGlueCtx = COptArc<void>>
+template<typename CGlueInst = CBox<void>, typename CGlueCtx = CArc<void>>
 using CpuStateBase = CGlueTraitObj<CGlueInst, CpuStateVtbl<CGlueObjContainer<CGlueInst, CGlueCtx, CpuStateRetTmp<CGlueCtx>>>, CGlueCtx, CpuStateRetTmp<CGlueCtx>>;
 
-template<typename CGlueInst = CBox<void>, typename CGlueCtx = COptArc<void>>
+template<typename CGlueInst = CBox<void>, typename CGlueCtx = CArc<void>>
 struct IntoCpuStateContainer {
     typedef CGlueCtx Context;
     CGlueInst instance;
@@ -889,13 +976,13 @@ struct IntoCpuStateContainer<CGlueInst, void> {
  * perform any memory transformations either. They are the safest to use, because
  * there is no risk of accidentally consuming the whole object.
  */
-template<typename CGlueInst = CBox<void>, typename CGlueCtx = COptArc<void>>
+template<typename CGlueInst = CBox<void>, typename CGlueCtx = CArc<void>>
 struct IntoCpuState {
     const CloneVtbl<IntoCpuStateContainer<CGlueInst, CGlueCtx>> *vtbl_clone;
     const CpuStateVtbl<IntoCpuStateContainer<CGlueInst, CGlueCtx>> *vtbl_cpustate;
     IntoCpuStateContainer<CGlueInst, CGlueCtx> container;
 
-    IntoCpuState() : container{} {}
+    IntoCpuState() : container{} , vtbl_clone{}, vtbl_cpustate{} {}
 
     ~IntoCpuState() noexcept {
         mem_drop(std::move(container));
@@ -931,9 +1018,17 @@ struct IntoCpuState {
 template<typename CGlueC>
 struct ConnectorCpuStateInnerVtbl {
     typedef typename CGlueC::Context Context;
-    const TypeLayout *layout;
     int32_t (*cpu_state)(CGlueC *cont, MaybeUninit<CpuStateBase<CBox<void>, Context>> *ok_out);
     int32_t (*into_cpu_state)(CGlueC cont, MaybeUninit<IntoCpuState<CBox<void>, Context>> *ok_out);
+};
+
+template<typename Impl>
+struct ConnectorCpuStateInnerVtblImpl : ConnectorCpuStateInnerVtbl<typename Impl::Parent> {
+constexpr ConnectorCpuStateInnerVtblImpl() :
+    ConnectorCpuStateInnerVtbl<typename Impl::Parent> {
+        &Impl::cpu_state,
+        &Impl::into_cpu_state
+    } {}
 };
 
 /**
@@ -954,14 +1049,14 @@ struct ConnectorCpuStateInnerVtbl {
  * perform any memory transformations either. They are the safest to use, because
  * there is no risk of accidentally consuming the whole object.
  */
-template<typename CGlueInst = CBox<void>, typename CGlueCtx = COptArc<void>>
+template<typename CGlueInst = CBox<void>, typename CGlueCtx = CArc<void>>
 struct ConnectorInstance {
     const CloneVtbl<ConnectorInstanceContainer<CGlueInst, CGlueCtx>> *vtbl_clone;
     const PhysicalMemoryVtbl<ConnectorInstanceContainer<CGlueInst, CGlueCtx>> *vtbl_physicalmemory;
     const ConnectorCpuStateInnerVtbl<ConnectorInstanceContainer<CGlueInst, CGlueCtx>> *vtbl_connectorcpustateinner;
     ConnectorInstanceContainer<CGlueInst, CGlueCtx> container;
 
-    ConnectorInstance() : container{} {}
+    ConnectorInstance() : container{} , vtbl_clone{}, vtbl_physicalmemory{}, vtbl_connectorcpustateinner{} {}
 
     ~ConnectorInstance() noexcept {
         mem_drop(std::move(container));
@@ -1024,11 +1119,11 @@ struct ConnectorInstance {
 
 };
 
-template<typename CGlueT, typename CGlueCtx = COptArc<void>>
+template<typename CGlueT, typename CGlueCtx = CArc<void>>
 using ConnectorInstanceBaseCtxBox = ConnectorInstance<CBox<CGlueT>, CGlueCtx>;
 
 template<typename CGlueT, typename CGlueArcTy>
-using ConnectorInstanceBaseArcBox = ConnectorInstanceBaseCtxBox<CGlueT, COptArc<CGlueArcTy>>;
+using ConnectorInstanceBaseArcBox = ConnectorInstanceBaseCtxBox<CGlueT, CArc<CGlueArcTy>>;
 // Typedef for default contaienr and context type
 template<typename CGlueT, typename CGlueArcTy>
 using ConnectorInstanceBase = ConnectorInstanceBaseArcBox<CGlueT,CGlueArcTy>;
@@ -1039,7 +1134,7 @@ using MuConnectorInstanceArcBox = MaybeUninit<ConnectorInstanceArcBox>;
 // Typedef for default contaienr and context type
 using MuConnectorInstance = MuConnectorInstanceArcBox;
 
-template<typename CGlueInst = CBox<void>, typename CGlueCtx = COptArc<void>>
+template<typename CGlueInst = CBox<void>, typename CGlueCtx = CArc<void>>
 struct OsInstanceContainer {
     typedef CGlueCtx Context;
     CGlueInst instance;
@@ -1224,7 +1319,7 @@ struct ProcessInfo {
 
 using ProcessInfoCallback = OpaqueCallback<ProcessInfo>;
 
-template<typename CGlueInst = CBox<void>, typename CGlueCtx = COptArc<void>>
+template<typename CGlueInst = CBox<void>, typename CGlueCtx = CArc<void>>
 struct ProcessInstanceContainer {
     typedef CGlueCtx Context;
     CGlueInst instance;
@@ -1387,7 +1482,6 @@ using SectionCallback = OpaqueCallback<SectionInfo>;
 template<typename CGlueC>
 struct ProcessVtbl {
     typedef typename CGlueC::Context Context;
-    const TypeLayout *layout;
     ProcessState (*state)(CGlueC *cont);
     int32_t (*module_address_list_callback)(CGlueC *cont, const ArchitectureIdent *target_arch, ModuleAddressCallback callback);
     int32_t (*module_list_callback)(CGlueC *cont, const ArchitectureIdent *target_arch, ModuleInfoCallback callback);
@@ -1403,6 +1497,28 @@ struct ProcessVtbl {
     int32_t (*module_export_by_name)(CGlueC *cont, const ModuleInfo *info, CSliceRef<uint8_t> name, MaybeUninit<ExportInfo> *ok_out);
     int32_t (*module_section_by_name)(CGlueC *cont, const ModuleInfo *info, CSliceRef<uint8_t> name, MaybeUninit<SectionInfo> *ok_out);
     const ProcessInfo *(*info)(const CGlueC *cont);
+};
+
+template<typename Impl>
+struct ProcessVtblImpl : ProcessVtbl<typename Impl::Parent> {
+constexpr ProcessVtblImpl() :
+    ProcessVtbl<typename Impl::Parent> {
+        &Impl::state,
+        &Impl::module_address_list_callback,
+        &Impl::module_list_callback,
+        &Impl::module_by_address,
+        &Impl::module_by_name_arch,
+        &Impl::module_by_name,
+        &Impl::primary_module_address,
+        &Impl::primary_module,
+        &Impl::module_import_list_callback,
+        &Impl::module_export_list_callback,
+        &Impl::module_section_list_callback,
+        &Impl::module_import_by_name,
+        &Impl::module_export_by_name,
+        &Impl::module_section_by_name,
+        &Impl::info
+    } {}
 };
 
 /**
@@ -1486,7 +1602,6 @@ struct COption {
 template<typename CGlueC>
 struct VirtualTranslateVtbl {
     typedef typename CGlueC::Context Context;
-    const TypeLayout *layout;
     void (*virt_to_phys_list)(CGlueC *cont, CSliceRef<MemoryRange> addrs, VirtualTranslationCallback out, VirtualTranslationFailCallback out_fail);
     void (*virt_to_phys_range)(CGlueC *cont, Address start, Address end, VirtualTranslationCallback out);
     void (*virt_translation_map_range)(CGlueC *cont, Address start, Address end, VirtualTranslationCallback out);
@@ -1496,6 +1611,22 @@ struct VirtualTranslateVtbl {
     void (*virt_translation_map)(CGlueC *cont, VirtualTranslationCallback out);
     COption<Address> (*phys_to_virt)(CGlueC *cont, Address phys);
     void (*virt_page_map)(CGlueC *cont, umem gap_size, MemoryRangeCallback out);
+};
+
+template<typename Impl>
+struct VirtualTranslateVtblImpl : VirtualTranslateVtbl<typename Impl::Parent> {
+constexpr VirtualTranslateVtblImpl() :
+    VirtualTranslateVtbl<typename Impl::Parent> {
+        &Impl::virt_to_phys_list,
+        &Impl::virt_to_phys_range,
+        &Impl::virt_translation_map_range,
+        &Impl::virt_page_map_range,
+        &Impl::virt_to_phys,
+        &Impl::virt_page_info,
+        &Impl::virt_translation_map,
+        &Impl::phys_to_virt,
+        &Impl::virt_page_map
+    } {}
 };
 
 /**
@@ -1516,14 +1647,14 @@ struct VirtualTranslateVtbl {
  * perform any memory transformations either. They are the safest to use, because
  * there is no risk of accidentally consuming the whole object.
  */
-template<typename CGlueInst = CBox<void>, typename CGlueCtx = COptArc<void>>
+template<typename CGlueInst = CBox<void>, typename CGlueCtx = CArc<void>>
 struct ProcessInstance {
     const MemoryViewVtbl<ProcessInstanceContainer<CGlueInst, CGlueCtx>> *vtbl_memoryview;
     const ProcessVtbl<ProcessInstanceContainer<CGlueInst, CGlueCtx>> *vtbl_process;
     const VirtualTranslateVtbl<ProcessInstanceContainer<CGlueInst, CGlueCtx>> *vtbl_virtualtranslate;
     ProcessInstanceContainer<CGlueInst, CGlueCtx> container;
 
-    ProcessInstance() : container{} {}
+    ProcessInstance() : container{} , vtbl_memoryview{}, vtbl_process{}, vtbl_virtualtranslate{} {}
 
     ~ProcessInstance() noexcept {
         mem_drop(std::move(container));
@@ -1688,7 +1819,7 @@ struct ProcessInstance {
 
 };
 
-template<typename CGlueInst = CBox<void>, typename CGlueCtx = COptArc<void>>
+template<typename CGlueInst = CBox<void>, typename CGlueCtx = CArc<void>>
 struct IntoProcessInstanceContainer {
     typedef CGlueCtx Context;
     CGlueInst instance;
@@ -1743,7 +1874,7 @@ struct IntoProcessInstanceContainer<CGlueInst, void> {
  * perform any memory transformations either. They are the safest to use, because
  * there is no risk of accidentally consuming the whole object.
  */
-template<typename CGlueInst = CBox<void>, typename CGlueCtx = COptArc<void>>
+template<typename CGlueInst = CBox<void>, typename CGlueCtx = CArc<void>>
 struct IntoProcessInstance {
     const CloneVtbl<IntoProcessInstanceContainer<CGlueInst, CGlueCtx>> *vtbl_clone;
     const MemoryViewVtbl<IntoProcessInstanceContainer<CGlueInst, CGlueCtx>> *vtbl_memoryview;
@@ -1751,7 +1882,7 @@ struct IntoProcessInstance {
     const VirtualTranslateVtbl<IntoProcessInstanceContainer<CGlueInst, CGlueCtx>> *vtbl_virtualtranslate;
     IntoProcessInstanceContainer<CGlueInst, CGlueCtx> container;
 
-    IntoProcessInstance() : container{} {}
+    IntoProcessInstance() : container{} , vtbl_clone{}, vtbl_memoryview{}, vtbl_process{}, vtbl_virtualtranslate{} {}
 
     ~IntoProcessInstance() noexcept {
         mem_drop(std::move(container));
@@ -1956,7 +2087,6 @@ struct OsInfo {
 template<typename CGlueC>
 struct OsInnerVtbl {
     typedef typename CGlueC::Context Context;
-    const TypeLayout *layout;
     int32_t (*process_address_list_callback)(CGlueC *cont, AddressCallback callback);
     int32_t (*process_info_list_callback)(CGlueC *cont, ProcessInfoCallback callback);
     int32_t (*process_info_by_address)(CGlueC *cont, Address address, MaybeUninit<ProcessInfo> *ok_out);
@@ -1977,6 +2107,31 @@ struct OsInnerVtbl {
     const OsInfo *(*info)(const CGlueC *cont);
 };
 
+template<typename Impl>
+struct OsInnerVtblImpl : OsInnerVtbl<typename Impl::Parent> {
+constexpr OsInnerVtblImpl() :
+    OsInnerVtbl<typename Impl::Parent> {
+        &Impl::process_address_list_callback,
+        &Impl::process_info_list_callback,
+        &Impl::process_info_by_address,
+        &Impl::process_info_by_name,
+        &Impl::process_info_by_pid,
+        &Impl::process_by_info,
+        &Impl::into_process_by_info,
+        &Impl::process_by_address,
+        &Impl::process_by_name,
+        &Impl::process_by_pid,
+        &Impl::into_process_by_address,
+        &Impl::into_process_by_name,
+        &Impl::into_process_by_pid,
+        &Impl::module_address_list_callback,
+        &Impl::module_list_callback,
+        &Impl::module_by_address,
+        &Impl::module_by_name,
+        &Impl::info
+    } {}
+};
+
 /**
  * CGlue vtable for trait KeyboardState.
  *
@@ -1985,14 +2140,21 @@ struct OsInnerVtbl {
 template<typename CGlueC>
 struct KeyboardStateVtbl {
     typedef typename CGlueC::Context Context;
-    const TypeLayout *layout;
     bool (*is_down)(const CGlueC *cont, int32_t vk);
+};
+
+template<typename Impl>
+struct KeyboardStateVtblImpl : KeyboardStateVtbl<typename Impl::Parent> {
+constexpr KeyboardStateVtblImpl() :
+    KeyboardStateVtbl<typename Impl::Parent> {
+        &Impl::is_down
+    } {}
 };
 
 /**
  * Base CGlue trait object for trait KeyboardState.
  */
-template<typename CGlueInst = CBox<void>, typename CGlueCtx = COptArc<void>>
+template<typename CGlueInst = CBox<void>, typename CGlueCtx = CArc<void>>
 using KeyboardStateBase = CGlueTraitObj<CGlueInst, KeyboardStateVtbl<CGlueObjContainer<CGlueInst, CGlueCtx, KeyboardStateRetTmp<CGlueCtx>>>, CGlueCtx, KeyboardStateRetTmp<CGlueCtx>>;
 
 /**
@@ -2003,19 +2165,28 @@ using KeyboardStateBase = CGlueTraitObj<CGlueInst, KeyboardStateVtbl<CGlueObjCon
 template<typename CGlueC>
 struct KeyboardVtbl {
     typedef typename CGlueC::Context Context;
-    const TypeLayout *layout;
     bool (*is_down)(CGlueC *cont, int32_t vk);
     void (*set_down)(CGlueC *cont, int32_t vk, bool down);
     int32_t (*state)(CGlueC *cont, MaybeUninit<KeyboardStateBase<CBox<void>, Context>> *ok_out);
 };
 
+template<typename Impl>
+struct KeyboardVtblImpl : KeyboardVtbl<typename Impl::Parent> {
+constexpr KeyboardVtblImpl() :
+    KeyboardVtbl<typename Impl::Parent> {
+        &Impl::is_down,
+        &Impl::set_down,
+        &Impl::state
+    } {}
+};
+
 /**
  * Base CGlue trait object for trait Keyboard.
  */
-template<typename CGlueInst = CBox<void>, typename CGlueCtx = COptArc<void>>
+template<typename CGlueInst = CBox<void>, typename CGlueCtx = CArc<void>>
 using KeyboardBase = CGlueTraitObj<CGlueInst, KeyboardVtbl<CGlueObjContainer<CGlueInst, CGlueCtx, KeyboardRetTmp<CGlueCtx>>>, CGlueCtx, KeyboardRetTmp<CGlueCtx>>;
 
-template<typename CGlueInst = CBox<void>, typename CGlueCtx = COptArc<void>>
+template<typename CGlueInst = CBox<void>, typename CGlueCtx = CArc<void>>
 struct IntoKeyboardContainer {
     typedef CGlueCtx Context;
     CGlueInst instance;
@@ -2070,13 +2241,13 @@ struct IntoKeyboardContainer<CGlueInst, void> {
  * perform any memory transformations either. They are the safest to use, because
  * there is no risk of accidentally consuming the whole object.
  */
-template<typename CGlueInst = CBox<void>, typename CGlueCtx = COptArc<void>>
+template<typename CGlueInst = CBox<void>, typename CGlueCtx = CArc<void>>
 struct IntoKeyboard {
     const CloneVtbl<IntoKeyboardContainer<CGlueInst, CGlueCtx>> *vtbl_clone;
     const KeyboardVtbl<IntoKeyboardContainer<CGlueInst, CGlueCtx>> *vtbl_keyboard;
     IntoKeyboardContainer<CGlueInst, CGlueCtx> container;
 
-    IntoKeyboard() : container{} {}
+    IntoKeyboard() : container{} , vtbl_clone{}, vtbl_keyboard{} {}
 
     ~IntoKeyboard() noexcept {
         mem_drop(std::move(container));
@@ -2117,9 +2288,17 @@ struct IntoKeyboard {
 template<typename CGlueC>
 struct OsKeyboardInnerVtbl {
     typedef typename CGlueC::Context Context;
-    const TypeLayout *layout;
     int32_t (*keyboard)(CGlueC *cont, MaybeUninit<KeyboardBase<CBox<void>, Context>> *ok_out);
     int32_t (*into_keyboard)(CGlueC cont, MaybeUninit<IntoKeyboard<CBox<void>, Context>> *ok_out);
+};
+
+template<typename Impl>
+struct OsKeyboardInnerVtblImpl : OsKeyboardInnerVtbl<typename Impl::Parent> {
+constexpr OsKeyboardInnerVtblImpl() :
+    OsKeyboardInnerVtbl<typename Impl::Parent> {
+        &Impl::keyboard,
+        &Impl::into_keyboard
+    } {}
 };
 
 /**
@@ -2140,7 +2319,7 @@ struct OsKeyboardInnerVtbl {
  * perform any memory transformations either. They are the safest to use, because
  * there is no risk of accidentally consuming the whole object.
  */
-template<typename CGlueInst = CBox<void>, typename CGlueCtx = COptArc<void>>
+template<typename CGlueInst = CBox<void>, typename CGlueCtx = CArc<void>>
 struct OsInstance {
     const CloneVtbl<OsInstanceContainer<CGlueInst, CGlueCtx>> *vtbl_clone;
     const OsInnerVtbl<OsInstanceContainer<CGlueInst, CGlueCtx>> *vtbl_osinner;
@@ -2149,7 +2328,7 @@ struct OsInstance {
     const PhysicalMemoryVtbl<OsInstanceContainer<CGlueInst, CGlueCtx>> *vtbl_physicalmemory;
     OsInstanceContainer<CGlueInst, CGlueCtx> container;
 
-    OsInstance() : container{} {}
+    OsInstance() : container{} , vtbl_clone{}, vtbl_osinner{}, vtbl_memoryview{}, vtbl_oskeyboardinner{}, vtbl_physicalmemory{} {}
 
     ~OsInstance() noexcept {
         mem_drop(std::move(container));
@@ -2347,11 +2526,11 @@ struct OsInstance {
 
 };
 
-template<typename CGlueT, typename CGlueCtx = COptArc<void>>
+template<typename CGlueT, typename CGlueCtx = CArc<void>>
 using OsInstanceBaseCtxBox = OsInstance<CBox<CGlueT>, CGlueCtx>;
 
 template<typename CGlueT, typename CGlueArcTy>
-using OsInstanceBaseArcBox = OsInstanceBaseCtxBox<CGlueT, COptArc<CGlueArcTy>>;
+using OsInstanceBaseArcBox = OsInstanceBaseCtxBox<CGlueT, CArc<CGlueArcTy>>;
 // Typedef for default contaienr and context type
 template<typename CGlueT, typename CGlueArcTy>
 using OsInstanceBase = OsInstanceBaseArcBox<CGlueT,CGlueArcTy>;
@@ -2362,22 +2541,22 @@ using MuOsInstanceArcBox = MaybeUninit<OsInstanceArcBox>;
 // Typedef for default contaienr and context type
 using MuOsInstance = MuOsInstanceArcBox;
 
-template<typename CGlueT, typename CGlueCtx = COptArc<void>>
+template<typename CGlueT, typename CGlueCtx = CArc<void>>
 using ProcessInstanceBaseCtxBox = ProcessInstance<CBox<CGlueT>, CGlueCtx>;
 
 template<typename CGlueT, typename CGlueArcTy>
-using ProcessInstanceBaseArcBox = ProcessInstanceBaseCtxBox<CGlueT, COptArc<CGlueArcTy>>;
+using ProcessInstanceBaseArcBox = ProcessInstanceBaseCtxBox<CGlueT, CArc<CGlueArcTy>>;
 // Typedef for default contaienr and context type
 template<typename CGlueT, typename CGlueArcTy>
 using ProcessInstanceBase = ProcessInstanceBaseArcBox<CGlueT,CGlueArcTy>;
 
 using ProcessInstanceArcBox = ProcessInstanceBaseArcBox<void, void>;
 
-template<typename CGlueT, typename CGlueCtx = COptArc<void>>
+template<typename CGlueT, typename CGlueCtx = CArc<void>>
 using IntoProcessInstanceBaseCtxBox = IntoProcessInstance<CBox<CGlueT>, CGlueCtx>;
 
 template<typename CGlueT, typename CGlueArcTy>
-using IntoProcessInstanceBaseArcBox = IntoProcessInstanceBaseCtxBox<CGlueT, COptArc<CGlueArcTy>>;
+using IntoProcessInstanceBaseArcBox = IntoProcessInstanceBaseCtxBox<CGlueT, CArc<CGlueArcTy>>;
 // Typedef for default contaienr and context type
 template<typename CGlueT, typename CGlueArcTy>
 using IntoProcessInstanceBase = IntoProcessInstanceBaseArcBox<CGlueT,CGlueArcTy>;
@@ -2387,17 +2566,17 @@ using IntoProcessInstanceArcBox = IntoProcessInstanceBaseArcBox<void, void>;
 /**
  * CtxBoxed CGlue trait object for trait MemoryView with context.
  */
-template<typename CGlueT, typename CGlueCtx = COptArc<void>>
+template<typename CGlueT, typename CGlueCtx = CArc<void>>
 using MemoryViewBaseCtxBox = MemoryViewBase<CBox<CGlueT>, CGlueCtx>;
 
 /**
- * Boxed CGlue trait object for trait MemoryView with a [`COptArc`](cglue::arc::COptArc) reference counted context.
+ * Boxed CGlue trait object for trait MemoryView with a [`CArc`](cglue::arc::CArc) reference counted context.
  */
 template<typename CGlueT, typename CGlueC>
-using MemoryViewBaseArcBox = MemoryViewBaseCtxBox<CGlueT, COptArc<CGlueC>>;
+using MemoryViewBaseArcBox = MemoryViewBaseCtxBox<CGlueT, CArc<CGlueC>>;
 
 /**
- * Opaque Boxed CGlue trait object for trait MemoryView with a [`COptArc`](cglue::arc::COptArc) reference counted context.
+ * Opaque Boxed CGlue trait object for trait MemoryView with a [`CArc`](cglue::arc::CArc) reference counted context.
  */
 using MemoryViewArcBox = MemoryViewBaseArcBox<void, void>;
 // Typedef for default contaienr and context type

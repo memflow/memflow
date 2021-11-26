@@ -13,17 +13,17 @@ use std::ffi::c_void;
 pub type OptionArchitectureIdent<'a> = Option<&'a crate::architecture::ArchitectureIdent>;
 
 pub fn create_with_logging<
-    T: 'static + Os + Clone + OsInstanceVtableFiller<'static, CBox<'static, T>, COptArc<c_void>>,
+    T: 'static + Os + Clone + OsInstanceVtableFiller<'static, CBox<'static, T>, CArc<c_void>>,
 >(
     args: &ReprCString,
     conn: ConnectorInstanceArcBox,
-    lib: COptArc<c_void>,
+    lib: CArc<c_void>,
     log_level: i32,
     out: &mut MuOsInstanceArcBox<'static>,
     create_fn: impl Fn(&Args, ConnectorInstanceArcBox, log::Level) -> Result<T>,
 ) -> i32
 where
-    (T, COptArc<c_void>): Into<OsInstanceBaseArcBox<'static, T, c_void>>,
+    (T, CArc<c_void>): Into<OsInstanceBaseArcBox<'static, T, c_void>>,
 {
     super::util::create_with_logging(args, lib, log_level, out, move |a, lib, l| {
         Ok(group_obj!((create_fn(&a, conn, l)?, lib) as OsInstance))
@@ -31,16 +31,16 @@ where
 }
 
 pub fn create_without_logging<
-    T: 'static + Os + Clone + OsInstanceVtableFiller<'static, CBox<'static, T>, COptArc<c_void>>,
+    T: 'static + Os + Clone + OsInstanceVtableFiller<'static, CBox<'static, T>, CArc<c_void>>,
 >(
     args: &ReprCString,
     conn: ConnectorInstanceArcBox,
-    lib: COptArc<c_void>,
+    lib: CArc<c_void>,
     out: &mut MuOsInstanceArcBox<'static>,
     create_fn: impl Fn(&Args, ConnectorInstanceArcBox) -> Result<T>,
 ) -> i32
 where
-    (T, COptArc<c_void>): Into<OsInstanceBaseArcBox<'static, T, c_void>>,
+    (T, CArc<c_void>): Into<OsInstanceBaseArcBox<'static, T, c_void>>,
 {
     super::util::create_without_logging(args, lib, out, |a, lib| {
         Ok(group_obj!((create_fn(&a, conn)?, lib) as OsInstance))
@@ -63,7 +63,7 @@ impl Loadable for LoadableOs {
     }
 
     fn ident(&self) -> &str {
-        self.descriptor.name.into_str()
+        unsafe { self.descriptor.name.into_str() }
     }
 
     fn plugin_type() -> &'static str {
@@ -107,7 +107,7 @@ impl Loadable for LoadableOs {
     /// The OS is initialized with the arguments provided to this function.
     fn instantiate(
         &self,
-        library: COptArc<Library>,
+        library: CArc<Library>,
         input: Self::InputArg,
         args: &Args,
     ) -> Result<Self::Instance> {

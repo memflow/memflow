@@ -559,7 +559,7 @@ pub static MEMFLOW_OS_DUMMY: OsDescriptor = OsDescriptor {
 extern "C" fn mf_create(
     args: &ReprCString,
     mem: COption<ConnectorInstanceArcBox>,
-    lib: COptArc<c_void>,
+    lib: CArc<c_void>,
     log_level: i32,
     out: &mut MuOsInstanceArcBox<'static>,
 ) -> i32 {
@@ -569,7 +569,7 @@ extern "C" fn mf_create(
 pub fn build_dummy(
     args: &Args,
     _mem: Option<ConnectorInstanceArcBox>,
-    lib: COptArc<c_void>,
+    lib: CArc<c_void>,
     _log_level: Level,
 ) -> Result<OsInstanceArcBox<'static>> {
     let size = super::mem::parse_size(args)?;

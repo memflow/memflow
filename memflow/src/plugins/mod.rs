@@ -95,7 +95,7 @@ pub struct PluginDescriptor<T: Loadable> {
 pub type CreateFn<T> = extern "C" fn(
     &ReprCString,
     <T as Loadable>::CInputArg,
-    lib: COptArc<c_void>,
+    lib: CArc<c_void>,
     i32,
     &mut MaybeUninit<<T as Loadable>::Instance>,
 ) -> i32;
@@ -130,6 +130,8 @@ pub trait Loadable: Sized {
         let descriptor = unsafe {
             library
                 .as_ref()
+                // TODO: support loading without arc
+                .ok_or(Error(ErrorOrigin::Inventory, ErrorKind::Uninitialized))?
                 .get::<*mut PluginDescriptor<Self>>(format!("{}\0", export).as_bytes())
                 .map_err(|_| Error(ErrorOrigin::Inventory, ErrorKind::MemflowExportsNotFound))?
                 .read()
@@ -247,7 +249,7 @@ pub trait Loadable: Sized {
     /// for validity of the library.
     fn instantiate(
         &self,
-        library: COptArc<Library>,
+        library: CArc<Library>,
         input: Self::InputArg,
         args: &Args,
     ) -> Result<Self::Instance>;
@@ -685,8 +687,7 @@ impl Inventory {
             lib.path.to_string_lossy(),
         );
 
-        lib.loader
-            .instantiate(Some(lib.library.clone()).into(), input, args)
+        lib.loader.instantiate(lib.library.clone(), input, args)
     }
 }
 

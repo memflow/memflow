@@ -17,10 +17,10 @@ pub fn create_with_logging<
     T: 'static
         + PhysicalMemory
         + Clone
-        + ConnectorInstanceVtableFiller<'static, CBox<'static, T>, COptArc<c_void>>,
+        + ConnectorInstanceVtableFiller<'static, CBox<'static, T>, CArc<c_void>>,
 >(
     args: &ReprCString,
-    lib: COptArc<c_void>,
+    lib: CArc<c_void>,
     log_level: i32,
     out: &mut MuConnectorInstanceArcBox<'static>,
     create_fn: impl Fn(&Args, log::Level) -> Result<T>,
@@ -34,10 +34,10 @@ pub fn create_without_logging<
     T: 'static
         + PhysicalMemory
         + Clone
-        + ConnectorInstanceVtableFiller<'static, CBox<'static, T>, COptArc<c_void>>,
+        + ConnectorInstanceVtableFiller<'static, CBox<'static, T>, CArc<c_void>>,
 >(
     args: &ReprCString,
-    lib: COptArc<c_void>,
+    lib: CArc<c_void>,
     out: &mut MuConnectorInstanceArcBox<'static>,
     create_fn: impl Fn(&Args) -> Result<T>,
 ) -> i32 {
@@ -58,7 +58,7 @@ impl Loadable for LoadableConnector {
     type CInputArg = COption<OsInstanceArcBox<'static>>;
 
     fn ident(&self) -> &str {
-        self.descriptor.name.into_str()
+        unsafe { self.descriptor.name.into_str() }
     }
 
     fn export_prefix() -> &'static str {
@@ -117,7 +117,7 @@ impl Loadable for LoadableConnector {
     /// The connector is initialized with the arguments provided to this function.
     fn instantiate(
         &self,
-        library: COptArc<Library>,
+        library: CArc<Library>,
         input: Self::InputArg,
         args: &Args,
     ) -> Result<Self::Instance> {

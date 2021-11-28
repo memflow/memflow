@@ -141,7 +141,7 @@ using KeyboardStateRetTmp = void;
 template<typename T = void>
 struct alignas(alignof(T)) RustMaybeUninit {
     char pad[sizeof(T)];
-    constexpr T &assume_init() {
+    inline T &assume_init() {
         return *(T *)this;
     }
     constexpr const T &assume_init() const {
@@ -530,7 +530,7 @@ struct CIterator {
             return !(*this == other);
         }
 
-        constexpr T &operator*() {
+        inline T &operator*() {
             return data.assume_init();
         }
 
@@ -2604,6 +2604,8 @@ extern const ArchitectureObj *X86_32_PAE;
 extern const ArchitectureObj *X86_64;
 
 void log_init(int32_t level_num);
+
+void debug_error(int32_t error);
 
 /**
  * Helper to convert `Address` to a `PhysicalAddress`

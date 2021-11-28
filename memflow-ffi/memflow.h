@@ -1850,6 +1850,8 @@ extern const struct ArchitectureObj *X86_64;
 
 void log_init(int32_t level_num);
 
+void debug_error(int32_t error);
+
 /**
  * Helper to convert `Address` to a `PhysicalAddress`
  *

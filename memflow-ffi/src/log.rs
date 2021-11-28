@@ -1,4 +1,7 @@
-use log::Level;
+use log::{debug, Level};
+use memflow::cglue::IntError;
+use memflow::error::Error;
+use std::num::NonZeroI32;
 
 #[no_mangle]
 pub extern "C" fn log_init(level_num: i32) {
@@ -14,4 +17,11 @@ pub extern "C" fn log_init(level_num: i32) {
         .with_level(level.to_level_filter())
         .init()
         .unwrap();
+}
+
+#[no_mangle]
+pub extern "C" fn debug_error(error: i32) {
+    if let Some(error) = NonZeroI32::new(error) {
+        debug!("{}", <Error as IntError>::from_int_err(error));
+    }
 }

@@ -39,6 +39,9 @@ bool find_process(struct FindProcessContext *find_context, Address addr) {
 }
 
 int main(int argc, char *argv[]) {
+
+	int ret = 0;
+
 	// enable debug level logging
 	log_init(2);
 
@@ -101,7 +104,7 @@ int main(int argc, char *argv[]) {
 
 	// find a specific process based on its name
 	// via process_by_name
-	if (!mf_osinstance_process_by_name(&os, STR(target_proc), &target_process)) {
+	if (!(ret = mf_osinstance_process_by_name(&os, STR(target_proc), &target_process))) {
 		const struct ProcessInfo *info = mf_processinstance_info(&target_process);
 
 		printf("%s process found: 0x%lx] %d %s %s\n", target_proc, info->address,
@@ -110,6 +113,7 @@ int main(int argc, char *argv[]) {
 		mf_processinstance_drop(target_process);
 	} else {
 		printf("Unable to find %s\n", target_proc);
+		debug_error(ret);
 	}
 
 	// This will also free the connector here

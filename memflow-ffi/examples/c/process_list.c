@@ -4,17 +4,21 @@
 
 bool list_processes(OsInstance *os, Address addr) {
 
+	int ret;
+
 	ProcessInstance process;
-	if (mf_osinstance_process_by_address(os, addr, &process)) {
+	if ((ret = mf_osinstance_process_by_address(os, addr, &process))) {
+		debug_error(ret);
 		return true;
 	}
 
 	const struct ProcessInfo *info = mf_processinstance_info(&process);
 
 	ModuleInfo primary_module;
-	if (mf_processinstance_primary_module(&process, &primary_module)) {
+	if ((ret = mf_processinstance_primary_module(&process, &primary_module))) {
 		// no primary module found, continue iteration - this should _never_ happen
 		printf("%d\t%s\t0x%lx\tN/A\n", info->pid, info->name, info->address);
+		debug_error(ret);
 		return true;
 	}
 

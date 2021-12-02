@@ -1,6 +1,128 @@
 #ifndef MEMFLOW_H
 #define MEMFLOW_H
 
+// Construct a typed slice for rust functions
+#define REF_SLICE(ty, buf, len) ((struct CSliceRef_##ty){(buf), (len)})
+
+// Constructs a typed mutable slice for rust functions
+#define MUT_SLICE(ty, buf, len) ((struct CSliceMut_##ty){(buf), (len)})
+
+// Constructs a slice from a string for rust functions
+// Note that strlen() is optimized out for string literals here
+#define STR(string) \
+    REF_SLICE(u8, (const unsigned char *)string, strlen(string))
+
+// Constructs a callback
+#define CALLBACK(ty, ctx, func) \
+    (struct Callback_c_void__##ty){(ctx), (bool (*)(void *, ty))(func)}
+
+// Constructs a dynamic collect callback
+//
+// This callback will collect all elements into a buffer accessible within `(*name_data)`.
+// It is the same buffer as `name_base.buf`, but cast into the correct type. The buffer must
+// be freed with `free(3)`.
+//
+// Number of elements is accessible within `name_base.size`, alongside its capacity.
+//
+// After creation, this callback should not exit its scope.
+#define COLLECT_CB(ty, name) \
+    struct CollectBase name##_base = {}; \
+    ty **name##_data = (ty **)&name##_base.buf; \
+    Callback_c_void__##ty name = CALLBACK(ty, &name##_base, cb_collect_dynamic_##ty)
+
+// Constructs a static collect callback
+//
+// This callback will collect all elements into the provided buffer up to given length.
+//
+// Any additional elements that do not fit will be skipped.
+//
+// Number of elements is accessible within `name_base.size`.
+//
+// After creation, this callback should not exit its scope.
+#define COLLECT_CB_INTO(ty, name, data, len) \
+    struct CollectBase name##_base = (struct CollectBase){ (void *)data, (size_t)len, 0 }; \
+    ty **name##_data = (ty **)&name##_base.buf; \
+    Callback_c_void__##ty name = CALLBACK(ty, &name##_base, cb_collect_static_##ty)
+
+// Constructs a static collect callback (for arrays)
+//
+// This is the same as `COLLECT_CB_INTO`, but performs an automatic array size calculation.
+//
+// Number of elements is accessible within `name_base.size`.
+//
+// After creation, this callback should not exit its scope.
+#define COLLECT_CB_INTO_ARR(ty, name, data) \
+    COLLECT_CB_INTO(ty, name, data, sizeof(data) / sizeof(*data))
+
+// Constructs a count callback
+//
+// This callback will simply count the number of elements encountered, and this value is
+// accessible through `name_count` variable.
+//
+// After creation, this callback should not exit its scope.
+#define COUNT_CB(ty, name) \
+    size_t name##_count = 0; \
+    Callback_c_void__##ty name = CALLBACK(ty, &name##_count, cb_count_##ty)
+
+#define BUF_ITER_SPEC(ty, ty2, name, buf, len) \
+    struct BufferIterator name##_base = (struct BufferIterator){(const void *)(const ty2 *)buf, len, 0, sizeof(ty2)}; \
+    CIterator_##ty name = (CIterator_##ty){ &name##_base, (int32_t (*)(void *, ty2 *))buf_iter_next }
+
+#define BUF_ITER_ARR_SPEC(ty, ty2, name, buf) BUF_ITER_SPEC(ty, ty2, name, buf, sizeof(buf) / sizeof(*buf))
+
+#define BUF_ITER(ty, name, buf, len) \
+    BUF_ITER_SPEC(ty, ty, name, buf, len)
+
+#define BUF_ITER_ARR(ty, name, buf) BUF_ITER(ty, name, buf, sizeof(buf) / sizeof(*buf))
+
+// Forward declarations for vtables and their wrappers
+struct CGlueTraitObj_CBox_c_void_____CpuStateVtbl_CGlueObjContainer_CBox_c_void_____CArc_c_void_____CpuStateRetTmp_CArc_c_void______________CArc_c_void_____CpuStateRetTmp_CArc_c_void;
+struct CGlueObjContainer_CBox_c_void_____CArc_c_void_____CpuStateRetTmp_CArc_c_void;
+struct CGlueTraitObj_CBox_c_void_____KeyboardStateVtbl_CGlueObjContainer_CBox_c_void_____CArc_c_void_____KeyboardStateRetTmp_CArc_c_void______________CArc_c_void_____KeyboardStateRetTmp_CArc_c_void;
+struct CGlueObjContainer_CBox_c_void_____CArc_c_void_____KeyboardStateRetTmp_CArc_c_void;
+struct CGlueTraitObj_CBox_c_void_____KeyboardVtbl_CGlueObjContainer_CBox_c_void_____CArc_c_void_____KeyboardRetTmp_CArc_c_void______________CArc_c_void_____KeyboardRetTmp_CArc_c_void;
+struct CGlueObjContainer_CBox_c_void_____CArc_c_void_____KeyboardRetTmp_CArc_c_void;
+struct CGlueTraitObj_CBox_c_void_____MemoryViewVtbl_CGlueObjContainer_CBox_c_void_____CArc_c_void_____MemoryViewRetTmp_CArc_c_void______________CArc_c_void_____MemoryViewRetTmp_CArc_c_void;
+struct CGlueObjContainer_CBox_c_void_____CArc_c_void_____MemoryViewRetTmp_CArc_c_void;
+struct ConnectorInstance_CBox_c_void_____CArc_c_void;
+struct ConnectorInstanceContainer_CBox_c_void_____CArc_c_void;
+struct IntoCpuState_CBox_c_void_____CArc_c_void;
+struct IntoCpuStateContainer_CBox_c_void_____CArc_c_void;
+struct IntoCpuState_CBox_c_void_____CArc_c_void;
+struct IntoCpuStateContainer_CBox_c_void_____CArc_c_void;
+struct ConnectorInstance_CBox_c_void_____CArc_c_void;
+struct ConnectorInstanceContainer_CBox_c_void_____CArc_c_void;
+struct OsInstance_CBox_c_void_____CArc_c_void;
+struct OsInstanceContainer_CBox_c_void_____CArc_c_void;
+struct OsInstance_CBox_c_void_____CArc_c_void;
+struct OsInstanceContainer_CBox_c_void_____CArc_c_void;
+struct OsInstance_CBox_c_void_____CArc_c_void;
+struct OsInstanceContainer_CBox_c_void_____CArc_c_void;
+struct IntoKeyboard_CBox_c_void_____CArc_c_void;
+struct IntoKeyboardContainer_CBox_c_void_____CArc_c_void;
+struct IntoKeyboard_CBox_c_void_____CArc_c_void;
+struct IntoKeyboardContainer_CBox_c_void_____CArc_c_void;
+struct OsInstance_CBox_c_void_____CArc_c_void;
+struct OsInstanceContainer_CBox_c_void_____CArc_c_void;
+struct OsInstance_CBox_c_void_____CArc_c_void;
+struct OsInstanceContainer_CBox_c_void_____CArc_c_void;
+struct ProcessInstance_CBox_c_void_____CArc_c_void;
+struct ProcessInstanceContainer_CBox_c_void_____CArc_c_void;
+struct ProcessInstance_CBox_c_void_____CArc_c_void;
+struct ProcessInstanceContainer_CBox_c_void_____CArc_c_void;
+struct ProcessInstance_CBox_c_void_____CArc_c_void;
+struct ProcessInstanceContainer_CBox_c_void_____CArc_c_void;
+struct IntoProcessInstance_CBox_c_void_____CArc_c_void;
+struct IntoProcessInstanceContainer_CBox_c_void_____CArc_c_void;
+struct IntoProcessInstance_CBox_c_void_____CArc_c_void;
+struct IntoProcessInstanceContainer_CBox_c_void_____CArc_c_void;
+struct IntoProcessInstance_CBox_c_void_____CArc_c_void;
+struct IntoProcessInstanceContainer_CBox_c_void_____CArc_c_void;
+struct IntoProcessInstance_CBox_c_void_____CArc_c_void;
+struct IntoProcessInstanceContainer_CBox_c_void_____CArc_c_void;
+struct ConnectorInstance_CBox_c_void_____CArc_c_void;
+struct ConnectorInstanceContainer_CBox_c_void_____CArc_c_void;
+
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -34,62 +156,6 @@ typedef uint8_t Endianess;
 #endif // __cplusplus
 
 typedef struct ArchitectureObj ArchitectureObj;
-
-/**
- * Type definition for temporary return value wrapping storage.
- *
- * The trait does not use return wrapping, thus is a typedef to `PhantomData`.
- *
- * Note that `cbindgen` will generate wrong structures for this type. It is important
- * to go inside the generated headers and fix it - all RetTmp structures without a
- * body should be completely deleted, both as types, and as fields in the
- * groups/objects. If C++11 templates are generated, it is important to define a
- * custom type for CGlueTraitObj that does not have `ret_tmp` defined, and change all
- * type aliases of this trait to use that particular structure.
- */
-typedef struct CloneRetTmp_CArc_c_void CloneRetTmp_CArc_c_void;
-
-/**
- * Type definition for temporary return value wrapping storage.
- *
- * The trait does not use return wrapping, thus is a typedef to `PhantomData`.
- *
- * Note that `cbindgen` will generate wrong structures for this type. It is important
- * to go inside the generated headers and fix it - all RetTmp structures without a
- * body should be completely deleted, both as types, and as fields in the
- * groups/objects. If C++11 templates are generated, it is important to define a
- * custom type for CGlueTraitObj that does not have `ret_tmp` defined, and change all
- * type aliases of this trait to use that particular structure.
- */
-typedef struct CloneRetTmp_Context CloneRetTmp_Context;
-
-/**
- * Type definition for temporary return value wrapping storage.
- *
- * The trait does not use return wrapping, thus is a typedef to `PhantomData`.
- *
- * Note that `cbindgen` will generate wrong structures for this type. It is important
- * to go inside the generated headers and fix it - all RetTmp structures without a
- * body should be completely deleted, both as types, and as fields in the
- * groups/objects. If C++11 templates are generated, it is important to define a
- * custom type for CGlueTraitObj that does not have `ret_tmp` defined, and change all
- * type aliases of this trait to use that particular structure.
- */
-typedef struct ConnectorCpuStateInnerRetTmp_CArc_c_void ConnectorCpuStateInnerRetTmp_CArc_c_void;
-
-/**
- * Type definition for temporary return value wrapping storage.
- *
- * The trait does not use return wrapping, thus is a typedef to `PhantomData`.
- *
- * Note that `cbindgen` will generate wrong structures for this type. It is important
- * to go inside the generated headers and fix it - all RetTmp structures without a
- * body should be completely deleted, both as types, and as fields in the
- * groups/objects. If C++11 templates are generated, it is important to define a
- * custom type for CGlueTraitObj that does not have `ret_tmp` defined, and change all
- * type aliases of this trait to use that particular structure.
- */
-typedef struct CpuStateRetTmp_Context CpuStateRetTmp_Context;
 
 /**
  * The core of the plugin system
@@ -135,160 +201,6 @@ typedef struct CpuStateRetTmp_Context CpuStateRetTmp_Context;
  * ```
  */
 typedef struct Inventory Inventory;
-
-/**
- * Type definition for temporary return value wrapping storage.
- *
- * The trait does not use return wrapping, thus is a typedef to `PhantomData`.
- *
- * Note that `cbindgen` will generate wrong structures for this type. It is important
- * to go inside the generated headers and fix it - all RetTmp structures without a
- * body should be completely deleted, both as types, and as fields in the
- * groups/objects. If C++11 templates are generated, it is important to define a
- * custom type for CGlueTraitObj that does not have `ret_tmp` defined, and change all
- * type aliases of this trait to use that particular structure.
- */
-typedef struct KeyboardRetTmp_Context KeyboardRetTmp_Context;
-
-/**
- * Type definition for temporary return value wrapping storage.
- *
- * The trait does not use return wrapping, thus is a typedef to `PhantomData`.
- *
- * Note that `cbindgen` will generate wrong structures for this type. It is important
- * to go inside the generated headers and fix it - all RetTmp structures without a
- * body should be completely deleted, both as types, and as fields in the
- * groups/objects. If C++11 templates are generated, it is important to define a
- * custom type for CGlueTraitObj that does not have `ret_tmp` defined, and change all
- * type aliases of this trait to use that particular structure.
- */
-typedef struct KeyboardStateRetTmp_Context KeyboardStateRetTmp_Context;
-
-/**
- * Type definition for temporary return value wrapping storage.
- *
- * The trait does not use return wrapping, thus is a typedef to `PhantomData`.
- *
- * Note that `cbindgen` will generate wrong structures for this type. It is important
- * to go inside the generated headers and fix it - all RetTmp structures without a
- * body should be completely deleted, both as types, and as fields in the
- * groups/objects. If C++11 templates are generated, it is important to define a
- * custom type for CGlueTraitObj that does not have `ret_tmp` defined, and change all
- * type aliases of this trait to use that particular structure.
- */
-typedef struct MemoryViewRetTmp_CArc_c_void MemoryViewRetTmp_CArc_c_void;
-
-/**
- * Type definition for temporary return value wrapping storage.
- *
- * The trait does not use return wrapping, thus is a typedef to `PhantomData`.
- *
- * Note that `cbindgen` will generate wrong structures for this type. It is important
- * to go inside the generated headers and fix it - all RetTmp structures without a
- * body should be completely deleted, both as types, and as fields in the
- * groups/objects. If C++11 templates are generated, it is important to define a
- * custom type for CGlueTraitObj that does not have `ret_tmp` defined, and change all
- * type aliases of this trait to use that particular structure.
- */
-typedef struct MemoryViewRetTmp_Context MemoryViewRetTmp_Context;
-
-/**
- * Type definition for temporary return value wrapping storage.
- *
- * The trait does not use return wrapping, thus is a typedef to `PhantomData`.
- *
- * Note that `cbindgen` will generate wrong structures for this type. It is important
- * to go inside the generated headers and fix it - all RetTmp structures without a
- * body should be completely deleted, both as types, and as fields in the
- * groups/objects. If C++11 templates are generated, it is important to define a
- * custom type for CGlueTraitObj that does not have `ret_tmp` defined, and change all
- * type aliases of this trait to use that particular structure.
- */
-typedef struct OsInnerRetTmp_CArc_c_void OsInnerRetTmp_CArc_c_void;
-
-/**
- * Type definition for temporary return value wrapping storage.
- *
- * The trait does not use return wrapping, thus is a typedef to `PhantomData`.
- *
- * Note that `cbindgen` will generate wrong structures for this type. It is important
- * to go inside the generated headers and fix it - all RetTmp structures without a
- * body should be completely deleted, both as types, and as fields in the
- * groups/objects. If C++11 templates are generated, it is important to define a
- * custom type for CGlueTraitObj that does not have `ret_tmp` defined, and change all
- * type aliases of this trait to use that particular structure.
- */
-typedef struct OsKeyboardInnerRetTmp_CArc_c_void OsKeyboardInnerRetTmp_CArc_c_void;
-
-/**
- * Type definition for temporary return value wrapping storage.
- *
- * The trait does not use return wrapping, thus is a typedef to `PhantomData`.
- *
- * Note that `cbindgen` will generate wrong structures for this type. It is important
- * to go inside the generated headers and fix it - all RetTmp structures without a
- * body should be completely deleted, both as types, and as fields in the
- * groups/objects. If C++11 templates are generated, it is important to define a
- * custom type for CGlueTraitObj that does not have `ret_tmp` defined, and change all
- * type aliases of this trait to use that particular structure.
- */
-typedef struct PhysicalMemoryRetTmp_CArc_c_void PhysicalMemoryRetTmp_CArc_c_void;
-
-/**
- * Type definition for temporary return value wrapping storage.
- *
- * The trait does not use return wrapping, thus is a typedef to `PhantomData`.
- *
- * Note that `cbindgen` will generate wrong structures for this type. It is important
- * to go inside the generated headers and fix it - all RetTmp structures without a
- * body should be completely deleted, both as types, and as fields in the
- * groups/objects. If C++11 templates are generated, it is important to define a
- * custom type for CGlueTraitObj that does not have `ret_tmp` defined, and change all
- * type aliases of this trait to use that particular structure.
- */
-typedef struct ProcessRetTmp_CArc_c_void ProcessRetTmp_CArc_c_void;
-
-/**
- * Type definition for temporary return value wrapping storage.
- *
- * The trait does not use return wrapping, thus is a typedef to `PhantomData`.
- *
- * Note that `cbindgen` will generate wrong structures for this type. It is important
- * to go inside the generated headers and fix it - all RetTmp structures without a
- * body should be completely deleted, both as types, and as fields in the
- * groups/objects. If C++11 templates are generated, it is important to define a
- * custom type for CGlueTraitObj that does not have `ret_tmp` defined, and change all
- * type aliases of this trait to use that particular structure.
- */
-typedef struct ProcessRetTmp_Context ProcessRetTmp_Context;
-
-/**
- * Type definition for temporary return value wrapping storage.
- *
- * The trait does not use return wrapping, thus is a typedef to `PhantomData`.
- *
- * Note that `cbindgen` will generate wrong structures for this type. It is important
- * to go inside the generated headers and fix it - all RetTmp structures without a
- * body should be completely deleted, both as types, and as fields in the
- * groups/objects. If C++11 templates are generated, it is important to define a
- * custom type for CGlueTraitObj that does not have `ret_tmp` defined, and change all
- * type aliases of this trait to use that particular structure.
- */
-typedef struct VirtualTranslateRetTmp_CArc_c_void VirtualTranslateRetTmp_CArc_c_void;
-
-/**
- * Type definition for temporary return value wrapping storage.
- *
- * The trait does not use return wrapping, thus is a typedef to `PhantomData`.
- *
- * Note that `cbindgen` will generate wrong structures for this type. It is important
- * to go inside the generated headers and fix it - all RetTmp structures without a
- * body should be completely deleted, both as types, and as fields in the
- * groups/objects. If C++11 templates are generated, it is important to define a
- * custom type for CGlueTraitObj that does not have `ret_tmp` defined, and change all
- * type aliases of this trait to use that particular structure.
- */
-typedef struct VirtualTranslateRetTmp_Context VirtualTranslateRetTmp_Context;
 
 /**
  * The largest target memory type
@@ -398,9 +310,6 @@ typedef struct CArc_c_void {
 typedef struct ConnectorInstanceContainer_CBox_c_void_____CArc_c_void {
     struct CBox_c_void instance;
     struct CArc_c_void context;
-    struct CloneRetTmp_CArc_c_void ret_tmp_clone;
-    struct PhysicalMemoryRetTmp_CArc_c_void ret_tmp_physicalmemory;
-    struct ConnectorCpuStateInnerRetTmp_CArc_c_void ret_tmp_connectorcpustateinner;
 } ConnectorInstanceContainer_CBox_c_void_____CArc_c_void;
 
 /**
@@ -625,27 +534,6 @@ typedef struct CSliceRef_PhysicalMemoryMapping {
 } CSliceRef_PhysicalMemoryMapping;
 
 /**
- * Simple CGlue trait object container.
- *
- * This is the simplest form of container, represented by an instance, clone context, and
- * temporary return context.
- *
- * `instance` value usually is either a reference, or a mutable reference, or a `CBox`, which
- * contains static reference to the instance, and a dedicated drop function for freeing resources.
- *
- * `context` is either `PhantomData` representing nothing, or typically a `CArc` that can be
- * cloned at will, reference counting some resource, like a `Library` for automatic unloading.
- *
- * `ret_tmp` is usually `PhantomData` representing nothing, unless the trait has functions that
- * return references to associated types, in which case space is reserved for wrapping structures.
- */
-typedef struct CGlueObjContainer_CBox_c_void_____Context__MemoryViewRetTmp_Context {
-    struct CBox_c_void instance;
-    Context context;
-    struct MemoryViewRetTmp_Context ret_tmp;
-} CGlueObjContainer_CBox_c_void_____Context__MemoryViewRetTmp_Context;
-
-/**
  * Generic type representing an address and associated data.
  *
  * This base type is always used for initialization, but the commonly used type aliases are:
@@ -824,53 +712,22 @@ typedef struct CSliceRef_WriteData {
     const WriteData *data;
     uintptr_t len;
 } CSliceRef_WriteData;
-
-/**
- * CGlue vtable for trait MemoryView.
- *
- * This virtual function table contains ABI-safe interface for the given trait.
- */
-typedef struct MemoryViewVtbl_CGlueObjContainer_CBox_c_void_____Context__MemoryViewRetTmp_Context {
-    int32_t (*read_raw_iter)(struct CGlueObjContainer_CBox_c_void_____Context__MemoryViewRetTmp_Context *cont, struct CIterator_ReadData data, ReadFailCallback *out_fail);
-    int32_t (*write_raw_iter)(struct CGlueObjContainer_CBox_c_void_____Context__MemoryViewRetTmp_Context *cont, struct CIterator_WriteData data, WriteFailCallback *out_fail);
-    struct MemoryViewMetadata (*metadata)(const struct CGlueObjContainer_CBox_c_void_____Context__MemoryViewRetTmp_Context *cont);
-    int32_t (*read_raw_list)(struct CGlueObjContainer_CBox_c_void_____Context__MemoryViewRetTmp_Context *cont, struct CSliceMut_ReadData data);
-    int32_t (*read_raw_into)(struct CGlueObjContainer_CBox_c_void_____Context__MemoryViewRetTmp_Context *cont, Address addr, struct CSliceMut_u8 out);
-    int32_t (*write_raw_list)(struct CGlueObjContainer_CBox_c_void_____Context__MemoryViewRetTmp_Context *cont, struct CSliceRef_WriteData data);
-    int32_t (*write_raw)(struct CGlueObjContainer_CBox_c_void_____Context__MemoryViewRetTmp_Context *cont, Address addr, struct CSliceRef_u8 data);
-} MemoryViewVtbl_CGlueObjContainer_CBox_c_void_____Context__MemoryViewRetTmp_Context;
-
-/**
- * Simple CGlue trait object.
- *
- * This is the simplest form of CGlue object, represented by a container and vtable for a single
- * trait.
- *
- * Container merely is a this pointer with some optional temporary return reference context.
- */
-typedef struct CGlueTraitObj_CBox_c_void_____MemoryViewVtbl_CGlueObjContainer_CBox_c_void_____Context__MemoryViewRetTmp_Context___________Context__MemoryViewRetTmp_Context {
-    const struct MemoryViewVtbl_CGlueObjContainer_CBox_c_void_____Context__MemoryViewRetTmp_Context *vtbl;
-    struct CGlueObjContainer_CBox_c_void_____Context__MemoryViewRetTmp_Context container;
-} CGlueTraitObj_CBox_c_void_____MemoryViewVtbl_CGlueObjContainer_CBox_c_void_____Context__MemoryViewRetTmp_Context___________Context__MemoryViewRetTmp_Context;
-
 /**
  * Base CGlue trait object for trait MemoryView.
  */
-typedef struct CGlueTraitObj_CBox_c_void_____MemoryViewVtbl_CGlueObjContainer_CBox_c_void_____Context__MemoryViewRetTmp_Context___________Context__MemoryViewRetTmp_Context MemoryViewBase_CBox_c_void_____Context;
-
+typedef struct CGlueTraitObj_CBox_c_void_____MemoryViewVtbl_CGlueObjContainer_CBox_c_void_____CArc_c_void_____MemoryViewRetTmp_CArc_c_void______________CArc_c_void_____MemoryViewRetTmp_CArc_c_void MemoryViewBase_CBox_c_void_____CArc_c_void;
 /**
- * CGlue vtable for trait PhysicalMemory.
- *
- * This virtual function table contains ABI-safe interface for the given trait.
+ * CtxBoxed CGlue trait object for trait MemoryView with context.
  */
-typedef struct PhysicalMemoryVtbl_ConnectorInstanceContainer_CBox_c_void_____CArc_c_void {
-    int32_t (*phys_read_raw_iter)(struct ConnectorInstanceContainer_CBox_c_void_____CArc_c_void *cont, struct CIterator_PhysicalReadData data, PhysicalReadFailCallback *out_fail);
-    int32_t (*phys_write_raw_iter)(struct ConnectorInstanceContainer_CBox_c_void_____CArc_c_void *cont, struct CIterator_PhysicalWriteData data, PhysicalWriteFailCallback *out_fail);
-    struct PhysicalMemoryMetadata (*metadata)(const struct ConnectorInstanceContainer_CBox_c_void_____CArc_c_void *cont);
-    void (*set_mem_map)(struct ConnectorInstanceContainer_CBox_c_void_____CArc_c_void *cont, struct CSliceRef_PhysicalMemoryMapping _mem_map);
-    MemoryViewBase_CBox_c_void_____Context (*into_phys_view)(struct ConnectorInstanceContainer_CBox_c_void_____CArc_c_void cont);
-    MemoryViewBase_CBox_c_void_____Context (*phys_view)(struct ConnectorInstanceContainer_CBox_c_void_____CArc_c_void *cont);
-} PhysicalMemoryVtbl_ConnectorInstanceContainer_CBox_c_void_____CArc_c_void;
+typedef MemoryViewBase_CBox_c_void_____CArc_c_void MemoryViewBaseCtxBox_c_void__CArc_c_void;
+/**
+ * Boxed CGlue trait object for trait MemoryView with a [`CArc`](cglue::arc::CArc) reference counted context.
+ */
+typedef MemoryViewBaseCtxBox_c_void__CArc_c_void MemoryViewBaseArcBox_c_void__c_void;
+/**
+ * Opaque Boxed CGlue trait object for trait MemoryView with a [`CArc`](cglue::arc::CArc) reference counted context.
+ */
+typedef MemoryViewBaseArcBox_c_void__c_void MemoryViewArcBox;
 
 /**
  * Simple CGlue trait object container.
@@ -887,22 +744,19 @@ typedef struct PhysicalMemoryVtbl_ConnectorInstanceContainer_CBox_c_void_____CAr
  * `ret_tmp` is usually `PhantomData` representing nothing, unless the trait has functions that
  * return references to associated types, in which case space is reserved for wrapping structures.
  */
-typedef struct CGlueObjContainer_CBox_c_void_____Context__CpuStateRetTmp_Context {
+typedef struct CGlueObjContainer_CBox_c_void_____CArc_c_void_____CpuStateRetTmp_CArc_c_void {
     struct CBox_c_void instance;
-    Context context;
-    struct CpuStateRetTmp_Context ret_tmp;
-} CGlueObjContainer_CBox_c_void_____Context__CpuStateRetTmp_Context;
-
+    CArc_c_void context;
+} CGlueObjContainer_CBox_c_void_____CArc_c_void_____CpuStateRetTmp_CArc_c_void;
 /**
  * CGlue vtable for trait CpuState.
  *
  * This virtual function table contains ABI-safe interface for the given trait.
  */
-typedef struct CpuStateVtbl_CGlueObjContainer_CBox_c_void_____Context__CpuStateRetTmp_Context {
-    void (*pause)(struct CGlueObjContainer_CBox_c_void_____Context__CpuStateRetTmp_Context *cont);
-    void (*resume)(struct CGlueObjContainer_CBox_c_void_____Context__CpuStateRetTmp_Context *cont);
-} CpuStateVtbl_CGlueObjContainer_CBox_c_void_____Context__CpuStateRetTmp_Context;
-
+typedef struct CpuStateVtbl_CGlueObjContainer_CBox_c_void_____CArc_c_void_____CpuStateRetTmp_CArc_c_void {
+    void (*pause)(struct CGlueObjContainer_CBox_c_void_____CArc_c_void_____CpuStateRetTmp_CArc_c_void *cont);
+    void (*resume)(struct CGlueObjContainer_CBox_c_void_____CArc_c_void_____CpuStateRetTmp_CArc_c_void *cont);
+} CpuStateVtbl_CGlueObjContainer_CBox_c_void_____CArc_c_void_____CpuStateRetTmp_CArc_c_void;
 /**
  * Simple CGlue trait object.
  *
@@ -911,42 +765,38 @@ typedef struct CpuStateVtbl_CGlueObjContainer_CBox_c_void_____Context__CpuStateR
  *
  * Container merely is a this pointer with some optional temporary return reference context.
  */
-typedef struct CGlueTraitObj_CBox_c_void_____CpuStateVtbl_CGlueObjContainer_CBox_c_void_____Context__CpuStateRetTmp_Context___________Context__CpuStateRetTmp_Context {
-    const struct CpuStateVtbl_CGlueObjContainer_CBox_c_void_____Context__CpuStateRetTmp_Context *vtbl;
-    struct CGlueObjContainer_CBox_c_void_____Context__CpuStateRetTmp_Context container;
-} CGlueTraitObj_CBox_c_void_____CpuStateVtbl_CGlueObjContainer_CBox_c_void_____Context__CpuStateRetTmp_Context___________Context__CpuStateRetTmp_Context;
+typedef struct CGlueTraitObj_CBox_c_void_____CpuStateVtbl_CGlueObjContainer_CBox_c_void_____CArc_c_void_____CpuStateRetTmp_CArc_c_void______________CArc_c_void_____CpuStateRetTmp_CArc_c_void {
+    const struct CpuStateVtbl_CGlueObjContainer_CBox_c_void_____CArc_c_void_____CpuStateRetTmp_CArc_c_void *vtbl;
+    struct CGlueObjContainer_CBox_c_void_____CArc_c_void_____CpuStateRetTmp_CArc_c_void container;
+} CGlueTraitObj_CBox_c_void_____CpuStateVtbl_CGlueObjContainer_CBox_c_void_____CArc_c_void_____CpuStateRetTmp_CArc_c_void______________CArc_c_void_____CpuStateRetTmp_CArc_c_void;
 
+// Typedef for default container and context type
+typedef struct CGlueTraitObj_CBox_c_void_____CpuStateVtbl_CGlueObjContainer_CBox_c_void_____CArc_c_void_____CpuStateRetTmp_CArc_c_void______________CArc_c_void_____CpuStateRetTmp_CArc_c_void CpuState;
 /**
  * Base CGlue trait object for trait CpuState.
  */
-typedef struct CGlueTraitObj_CBox_c_void_____CpuStateVtbl_CGlueObjContainer_CBox_c_void_____Context__CpuStateRetTmp_Context___________Context__CpuStateRetTmp_Context CpuStateBase_CBox_c_void_____Context;
-
-typedef struct IntoCpuStateContainer_CBox_c_void_____Context {
+typedef struct CGlueTraitObj_CBox_c_void_____CpuStateVtbl_CGlueObjContainer_CBox_c_void_____CArc_c_void_____CpuStateRetTmp_CArc_c_void______________CArc_c_void_____CpuStateRetTmp_CArc_c_void CpuStateBase_CBox_c_void_____CArc_c_void;
+typedef struct IntoCpuStateContainer_CBox_c_void_____CArc_c_void {
     struct CBox_c_void instance;
-    Context context;
-    struct CloneRetTmp_Context ret_tmp_clone;
-    struct CpuStateRetTmp_Context ret_tmp_cpustate;
-} IntoCpuStateContainer_CBox_c_void_____Context;
-
+    CArc_c_void context;
+} IntoCpuStateContainer_CBox_c_void_____CArc_c_void;
 /**
  * CGlue vtable for trait Clone.
  *
  * This virtual function table contains ABI-safe interface for the given trait.
  */
-typedef struct CloneVtbl_IntoCpuStateContainer_CBox_c_void_____Context {
-    struct IntoCpuStateContainer_CBox_c_void_____Context (*clone)(const struct IntoCpuStateContainer_CBox_c_void_____Context *cont);
-} CloneVtbl_IntoCpuStateContainer_CBox_c_void_____Context;
-
+typedef struct CloneVtbl_IntoCpuStateContainer_CBox_c_void_____CArc_c_void {
+    struct IntoCpuStateContainer_CBox_c_void_____CArc_c_void (*clone)(const struct IntoCpuStateContainer_CBox_c_void_____CArc_c_void *cont);
+} CloneVtbl_IntoCpuStateContainer_CBox_c_void_____CArc_c_void;
 /**
  * CGlue vtable for trait CpuState.
  *
  * This virtual function table contains ABI-safe interface for the given trait.
  */
-typedef struct CpuStateVtbl_IntoCpuStateContainer_CBox_c_void_____Context {
-    void (*pause)(struct IntoCpuStateContainer_CBox_c_void_____Context *cont);
-    void (*resume)(struct IntoCpuStateContainer_CBox_c_void_____Context *cont);
-} CpuStateVtbl_IntoCpuStateContainer_CBox_c_void_____Context;
-
+typedef struct CpuStateVtbl_IntoCpuStateContainer_CBox_c_void_____CArc_c_void {
+    void (*pause)(struct IntoCpuStateContainer_CBox_c_void_____CArc_c_void *cont);
+    void (*resume)(struct IntoCpuStateContainer_CBox_c_void_____CArc_c_void *cont);
+} CpuStateVtbl_IntoCpuStateContainer_CBox_c_void_____CArc_c_void;
 /**
  * Trait group potentially implementing `:: cglue :: ext :: core :: clone :: Clone < > + CpuState < >` traits.
  *
@@ -965,20 +815,22 @@ typedef struct CpuStateVtbl_IntoCpuStateContainer_CBox_c_void_____Context {
  * perform any memory transformations either. They are the safest to use, because
  * there is no risk of accidentally consuming the whole object.
  */
-typedef struct IntoCpuState_CBox_c_void_____Context {
-    const struct CloneVtbl_IntoCpuStateContainer_CBox_c_void_____Context *vtbl_clone;
-    const struct CpuStateVtbl_IntoCpuStateContainer_CBox_c_void_____Context *vtbl_cpustate;
-    struct IntoCpuStateContainer_CBox_c_void_____Context container;
-} IntoCpuState_CBox_c_void_____Context;
+typedef struct IntoCpuState_CBox_c_void_____CArc_c_void {
+    const struct CloneVtbl_IntoCpuStateContainer_CBox_c_void_____CArc_c_void *vtbl_clone;
+    const struct CpuStateVtbl_IntoCpuStateContainer_CBox_c_void_____CArc_c_void *vtbl_cpustate;
+    struct IntoCpuStateContainer_CBox_c_void_____CArc_c_void container;
+} IntoCpuState_CBox_c_void_____CArc_c_void;
 
+// Typedef for default container and context type
+typedef struct IntoCpuState_CBox_c_void_____CArc_c_void IntoCpuState;
 /**
  * CGlue vtable for trait ConnectorCpuStateInner.
  *
  * This virtual function table contains ABI-safe interface for the given trait.
  */
 typedef struct ConnectorCpuStateInnerVtbl_ConnectorInstanceContainer_CBox_c_void_____CArc_c_void {
-    int32_t (*cpu_state)(struct ConnectorInstanceContainer_CBox_c_void_____CArc_c_void *cont, CpuStateBase_CBox_c_void_____Context *ok_out);
-    int32_t (*into_cpu_state)(struct ConnectorInstanceContainer_CBox_c_void_____CArc_c_void cont, struct IntoCpuState_CBox_c_void_____Context *ok_out);
+    int32_t (*cpu_state)(struct ConnectorInstanceContainer_CBox_c_void_____CArc_c_void *cont, CpuStateBase_CBox_c_void_____CArc_c_void *ok_out);
+    int32_t (*into_cpu_state)(struct ConnectorInstanceContainer_CBox_c_void_____CArc_c_void cont, struct IntoCpuState_CBox_c_void_____CArc_c_void *ok_out);
 } ConnectorCpuStateInnerVtbl_ConnectorInstanceContainer_CBox_c_void_____CArc_c_void;
 
 /**
@@ -1006,6 +858,9 @@ typedef struct ConnectorInstance_CBox_c_void_____CArc_c_void {
     struct ConnectorInstanceContainer_CBox_c_void_____CArc_c_void container;
 } ConnectorInstance_CBox_c_void_____CArc_c_void;
 
+// Typedef for default container and context type
+typedef struct ConnectorInstance_CBox_c_void_____CArc_c_void ConnectorInstance;
+
 typedef struct ConnectorInstance_CBox_c_void_____CArc_c_void ConnectorInstanceBaseCtxBox_c_void__CArc_c_void;
 
 typedef ConnectorInstanceBaseCtxBox_c_void__CArc_c_void ConnectorInstanceBaseArcBox_c_void__c_void;
@@ -1017,11 +872,6 @@ typedef ConnectorInstanceArcBox MuConnectorInstanceArcBox;
 typedef struct OsInstanceContainer_CBox_c_void_____CArc_c_void {
     struct CBox_c_void instance;
     struct CArc_c_void context;
-    struct CloneRetTmp_CArc_c_void ret_tmp_clone;
-    struct OsInnerRetTmp_CArc_c_void ret_tmp_osinner;
-    struct MemoryViewRetTmp_CArc_c_void ret_tmp_memoryview;
-    struct OsKeyboardInnerRetTmp_CArc_c_void ret_tmp_oskeyboardinner;
-    struct PhysicalMemoryRetTmp_CArc_c_void ret_tmp_physicalmemory;
 } OsInstanceContainer_CBox_c_void_____CArc_c_void;
 
 /**
@@ -1189,29 +1039,6 @@ typedef struct Callback_c_void__ProcessInfo OpaqueCallback_ProcessInfo;
 
 typedef OpaqueCallback_ProcessInfo ProcessInfoCallback;
 
-typedef struct ProcessInstanceContainer_CBox_c_void_____Context {
-    struct CBox_c_void instance;
-    Context context;
-    struct MemoryViewRetTmp_Context ret_tmp_memoryview;
-    struct ProcessRetTmp_Context ret_tmp_process;
-    struct VirtualTranslateRetTmp_Context ret_tmp_virtualtranslate;
-} ProcessInstanceContainer_CBox_c_void_____Context;
-
-/**
- * CGlue vtable for trait MemoryView.
- *
- * This virtual function table contains ABI-safe interface for the given trait.
- */
-typedef struct MemoryViewVtbl_ProcessInstanceContainer_CBox_c_void_____Context {
-    int32_t (*read_raw_iter)(struct ProcessInstanceContainer_CBox_c_void_____Context *cont, struct CIterator_ReadData data, ReadFailCallback *out_fail);
-    int32_t (*write_raw_iter)(struct ProcessInstanceContainer_CBox_c_void_____Context *cont, struct CIterator_WriteData data, WriteFailCallback *out_fail);
-    struct MemoryViewMetadata (*metadata)(const struct ProcessInstanceContainer_CBox_c_void_____Context *cont);
-    int32_t (*read_raw_list)(struct ProcessInstanceContainer_CBox_c_void_____Context *cont, struct CSliceMut_ReadData data);
-    int32_t (*read_raw_into)(struct ProcessInstanceContainer_CBox_c_void_____Context *cont, Address addr, struct CSliceMut_u8 out);
-    int32_t (*write_raw_list)(struct ProcessInstanceContainer_CBox_c_void_____Context *cont, struct CSliceRef_WriteData data);
-    int32_t (*write_raw)(struct ProcessInstanceContainer_CBox_c_void_____Context *cont, Address addr, struct CSliceRef_u8 data);
-} MemoryViewVtbl_ProcessInstanceContainer_CBox_c_void_____Context;
-
 /**
  * Pair of address and architecture used for callbacks
  */
@@ -1366,29 +1193,6 @@ typedef struct Callback_c_void__SectionInfo OpaqueCallback_SectionInfo;
 typedef OpaqueCallback_SectionInfo SectionCallback;
 
 /**
- * CGlue vtable for trait Process.
- *
- * This virtual function table contains ABI-safe interface for the given trait.
- */
-typedef struct ProcessVtbl_ProcessInstanceContainer_CBox_c_void_____Context {
-    struct ProcessState (*state)(struct ProcessInstanceContainer_CBox_c_void_____Context *cont);
-    int32_t (*module_address_list_callback)(struct ProcessInstanceContainer_CBox_c_void_____Context *cont, const struct ArchitectureIdent *target_arch, ModuleAddressCallback callback);
-    int32_t (*module_list_callback)(struct ProcessInstanceContainer_CBox_c_void_____Context *cont, const struct ArchitectureIdent *target_arch, ModuleInfoCallback callback);
-    int32_t (*module_by_address)(struct ProcessInstanceContainer_CBox_c_void_____Context *cont, Address address, struct ArchitectureIdent architecture, struct ModuleInfo *ok_out);
-    int32_t (*module_by_name_arch)(struct ProcessInstanceContainer_CBox_c_void_____Context *cont, struct CSliceRef_u8 name, const struct ArchitectureIdent *architecture, struct ModuleInfo *ok_out);
-    int32_t (*module_by_name)(struct ProcessInstanceContainer_CBox_c_void_____Context *cont, struct CSliceRef_u8 name, struct ModuleInfo *ok_out);
-    int32_t (*primary_module_address)(struct ProcessInstanceContainer_CBox_c_void_____Context *cont, Address *ok_out);
-    int32_t (*primary_module)(struct ProcessInstanceContainer_CBox_c_void_____Context *cont, struct ModuleInfo *ok_out);
-    int32_t (*module_import_list_callback)(struct ProcessInstanceContainer_CBox_c_void_____Context *cont, const struct ModuleInfo *info, ImportCallback callback);
-    int32_t (*module_export_list_callback)(struct ProcessInstanceContainer_CBox_c_void_____Context *cont, const struct ModuleInfo *info, ExportCallback callback);
-    int32_t (*module_section_list_callback)(struct ProcessInstanceContainer_CBox_c_void_____Context *cont, const struct ModuleInfo *info, SectionCallback callback);
-    int32_t (*module_import_by_name)(struct ProcessInstanceContainer_CBox_c_void_____Context *cont, const struct ModuleInfo *info, struct CSliceRef_u8 name, struct ImportInfo *ok_out);
-    int32_t (*module_export_by_name)(struct ProcessInstanceContainer_CBox_c_void_____Context *cont, const struct ModuleInfo *info, struct CSliceRef_u8 name, struct ExportInfo *ok_out);
-    int32_t (*module_section_by_name)(struct ProcessInstanceContainer_CBox_c_void_____Context *cont, const struct ModuleInfo *info, struct CSliceRef_u8 name, struct SectionInfo *ok_out);
-    const struct ProcessInfo *(*info)(const struct ProcessInstanceContainer_CBox_c_void_____Context *cont);
-} ProcessVtbl_ProcessInstanceContainer_CBox_c_void_____Context;
-
-/**
  * Virtual page range information used for callbacks
  */
 typedef struct MemoryRange {
@@ -1507,147 +1311,6 @@ typedef struct COption_Address {
 } COption_Address;
 
 /**
- * CGlue vtable for trait VirtualTranslate.
- *
- * This virtual function table contains ABI-safe interface for the given trait.
- */
-typedef struct VirtualTranslateVtbl_ProcessInstanceContainer_CBox_c_void_____Context {
-    void (*virt_to_phys_list)(struct ProcessInstanceContainer_CBox_c_void_____Context *cont, struct CSliceRef_MemoryRange addrs, VirtualTranslationCallback out, VirtualTranslationFailCallback out_fail);
-    void (*virt_to_phys_range)(struct ProcessInstanceContainer_CBox_c_void_____Context *cont, Address start, Address end, VirtualTranslationCallback out);
-    void (*virt_translation_map_range)(struct ProcessInstanceContainer_CBox_c_void_____Context *cont, Address start, Address end, VirtualTranslationCallback out);
-    void (*virt_page_map_range)(struct ProcessInstanceContainer_CBox_c_void_____Context *cont, umem gap_size, Address start, Address end, MemoryRangeCallback out);
-    int32_t (*virt_to_phys)(struct ProcessInstanceContainer_CBox_c_void_____Context *cont, Address address, struct PhysicalAddress *ok_out);
-    int32_t (*virt_page_info)(struct ProcessInstanceContainer_CBox_c_void_____Context *cont, Address addr, struct Page *ok_out);
-    void (*virt_translation_map)(struct ProcessInstanceContainer_CBox_c_void_____Context *cont, VirtualTranslationCallback out);
-    struct COption_Address (*phys_to_virt)(struct ProcessInstanceContainer_CBox_c_void_____Context *cont, Address phys);
-    void (*virt_page_map)(struct ProcessInstanceContainer_CBox_c_void_____Context *cont, umem gap_size, MemoryRangeCallback out);
-} VirtualTranslateVtbl_ProcessInstanceContainer_CBox_c_void_____Context;
-
-/**
- * Trait group potentially implementing `MemoryView < > + Process < > + VirtualTranslate < >` traits.
- *
- * Optional traits are not implemented here, however. There are numerous conversion
- * functions available for safely retrieving a concrete collection of traits.
- *
- * `check_impl_` functions allow to check if the object implements the wanted traits.
- *
- * `into_impl_` functions consume the object and produce a new final structure that
- * keeps only the required information.
- *
- * `cast_impl_` functions merely check and transform the object into a type that can
- *be transformed back into `ProcessInstance` without losing data.
- *
- * `as_ref_`, and `as_mut_` functions obtain references to safe objects, but do not
- * perform any memory transformations either. They are the safest to use, because
- * there is no risk of accidentally consuming the whole object.
- */
-typedef struct ProcessInstance_CBox_c_void_____Context {
-    const struct MemoryViewVtbl_ProcessInstanceContainer_CBox_c_void_____Context *vtbl_memoryview;
-    const struct ProcessVtbl_ProcessInstanceContainer_CBox_c_void_____Context *vtbl_process;
-    const struct VirtualTranslateVtbl_ProcessInstanceContainer_CBox_c_void_____Context *vtbl_virtualtranslate;
-    struct ProcessInstanceContainer_CBox_c_void_____Context container;
-} ProcessInstance_CBox_c_void_____Context;
-
-typedef struct IntoProcessInstanceContainer_CBox_c_void_____Context {
-    struct CBox_c_void instance;
-    Context context;
-    struct CloneRetTmp_Context ret_tmp_clone;
-    struct MemoryViewRetTmp_Context ret_tmp_memoryview;
-    struct ProcessRetTmp_Context ret_tmp_process;
-    struct VirtualTranslateRetTmp_Context ret_tmp_virtualtranslate;
-} IntoProcessInstanceContainer_CBox_c_void_____Context;
-
-/**
- * CGlue vtable for trait Clone.
- *
- * This virtual function table contains ABI-safe interface for the given trait.
- */
-typedef struct CloneVtbl_IntoProcessInstanceContainer_CBox_c_void_____Context {
-    struct IntoProcessInstanceContainer_CBox_c_void_____Context (*clone)(const struct IntoProcessInstanceContainer_CBox_c_void_____Context *cont);
-} CloneVtbl_IntoProcessInstanceContainer_CBox_c_void_____Context;
-
-/**
- * CGlue vtable for trait MemoryView.
- *
- * This virtual function table contains ABI-safe interface for the given trait.
- */
-typedef struct MemoryViewVtbl_IntoProcessInstanceContainer_CBox_c_void_____Context {
-    int32_t (*read_raw_iter)(struct IntoProcessInstanceContainer_CBox_c_void_____Context *cont, struct CIterator_ReadData data, ReadFailCallback *out_fail);
-    int32_t (*write_raw_iter)(struct IntoProcessInstanceContainer_CBox_c_void_____Context *cont, struct CIterator_WriteData data, WriteFailCallback *out_fail);
-    struct MemoryViewMetadata (*metadata)(const struct IntoProcessInstanceContainer_CBox_c_void_____Context *cont);
-    int32_t (*read_raw_list)(struct IntoProcessInstanceContainer_CBox_c_void_____Context *cont, struct CSliceMut_ReadData data);
-    int32_t (*read_raw_into)(struct IntoProcessInstanceContainer_CBox_c_void_____Context *cont, Address addr, struct CSliceMut_u8 out);
-    int32_t (*write_raw_list)(struct IntoProcessInstanceContainer_CBox_c_void_____Context *cont, struct CSliceRef_WriteData data);
-    int32_t (*write_raw)(struct IntoProcessInstanceContainer_CBox_c_void_____Context *cont, Address addr, struct CSliceRef_u8 data);
-} MemoryViewVtbl_IntoProcessInstanceContainer_CBox_c_void_____Context;
-
-/**
- * CGlue vtable for trait Process.
- *
- * This virtual function table contains ABI-safe interface for the given trait.
- */
-typedef struct ProcessVtbl_IntoProcessInstanceContainer_CBox_c_void_____Context {
-    struct ProcessState (*state)(struct IntoProcessInstanceContainer_CBox_c_void_____Context *cont);
-    int32_t (*module_address_list_callback)(struct IntoProcessInstanceContainer_CBox_c_void_____Context *cont, const struct ArchitectureIdent *target_arch, ModuleAddressCallback callback);
-    int32_t (*module_list_callback)(struct IntoProcessInstanceContainer_CBox_c_void_____Context *cont, const struct ArchitectureIdent *target_arch, ModuleInfoCallback callback);
-    int32_t (*module_by_address)(struct IntoProcessInstanceContainer_CBox_c_void_____Context *cont, Address address, struct ArchitectureIdent architecture, struct ModuleInfo *ok_out);
-    int32_t (*module_by_name_arch)(struct IntoProcessInstanceContainer_CBox_c_void_____Context *cont, struct CSliceRef_u8 name, const struct ArchitectureIdent *architecture, struct ModuleInfo *ok_out);
-    int32_t (*module_by_name)(struct IntoProcessInstanceContainer_CBox_c_void_____Context *cont, struct CSliceRef_u8 name, struct ModuleInfo *ok_out);
-    int32_t (*primary_module_address)(struct IntoProcessInstanceContainer_CBox_c_void_____Context *cont, Address *ok_out);
-    int32_t (*primary_module)(struct IntoProcessInstanceContainer_CBox_c_void_____Context *cont, struct ModuleInfo *ok_out);
-    int32_t (*module_import_list_callback)(struct IntoProcessInstanceContainer_CBox_c_void_____Context *cont, const struct ModuleInfo *info, ImportCallback callback);
-    int32_t (*module_export_list_callback)(struct IntoProcessInstanceContainer_CBox_c_void_____Context *cont, const struct ModuleInfo *info, ExportCallback callback);
-    int32_t (*module_section_list_callback)(struct IntoProcessInstanceContainer_CBox_c_void_____Context *cont, const struct ModuleInfo *info, SectionCallback callback);
-    int32_t (*module_import_by_name)(struct IntoProcessInstanceContainer_CBox_c_void_____Context *cont, const struct ModuleInfo *info, struct CSliceRef_u8 name, struct ImportInfo *ok_out);
-    int32_t (*module_export_by_name)(struct IntoProcessInstanceContainer_CBox_c_void_____Context *cont, const struct ModuleInfo *info, struct CSliceRef_u8 name, struct ExportInfo *ok_out);
-    int32_t (*module_section_by_name)(struct IntoProcessInstanceContainer_CBox_c_void_____Context *cont, const struct ModuleInfo *info, struct CSliceRef_u8 name, struct SectionInfo *ok_out);
-    const struct ProcessInfo *(*info)(const struct IntoProcessInstanceContainer_CBox_c_void_____Context *cont);
-} ProcessVtbl_IntoProcessInstanceContainer_CBox_c_void_____Context;
-
-/**
- * CGlue vtable for trait VirtualTranslate.
- *
- * This virtual function table contains ABI-safe interface for the given trait.
- */
-typedef struct VirtualTranslateVtbl_IntoProcessInstanceContainer_CBox_c_void_____Context {
-    void (*virt_to_phys_list)(struct IntoProcessInstanceContainer_CBox_c_void_____Context *cont, struct CSliceRef_MemoryRange addrs, VirtualTranslationCallback out, VirtualTranslationFailCallback out_fail);
-    void (*virt_to_phys_range)(struct IntoProcessInstanceContainer_CBox_c_void_____Context *cont, Address start, Address end, VirtualTranslationCallback out);
-    void (*virt_translation_map_range)(struct IntoProcessInstanceContainer_CBox_c_void_____Context *cont, Address start, Address end, VirtualTranslationCallback out);
-    void (*virt_page_map_range)(struct IntoProcessInstanceContainer_CBox_c_void_____Context *cont, umem gap_size, Address start, Address end, MemoryRangeCallback out);
-    int32_t (*virt_to_phys)(struct IntoProcessInstanceContainer_CBox_c_void_____Context *cont, Address address, struct PhysicalAddress *ok_out);
-    int32_t (*virt_page_info)(struct IntoProcessInstanceContainer_CBox_c_void_____Context *cont, Address addr, struct Page *ok_out);
-    void (*virt_translation_map)(struct IntoProcessInstanceContainer_CBox_c_void_____Context *cont, VirtualTranslationCallback out);
-    struct COption_Address (*phys_to_virt)(struct IntoProcessInstanceContainer_CBox_c_void_____Context *cont, Address phys);
-    void (*virt_page_map)(struct IntoProcessInstanceContainer_CBox_c_void_____Context *cont, umem gap_size, MemoryRangeCallback out);
-} VirtualTranslateVtbl_IntoProcessInstanceContainer_CBox_c_void_____Context;
-
-/**
- * Trait group potentially implementing `:: cglue :: ext :: core :: clone :: Clone < > + MemoryView < > + Process < > + VirtualTranslate < >` traits.
- *
- * Optional traits are not implemented here, however. There are numerous conversion
- * functions available for safely retrieving a concrete collection of traits.
- *
- * `check_impl_` functions allow to check if the object implements the wanted traits.
- *
- * `into_impl_` functions consume the object and produce a new final structure that
- * keeps only the required information.
- *
- * `cast_impl_` functions merely check and transform the object into a type that can
- *be transformed back into `IntoProcessInstance` without losing data.
- *
- * `as_ref_`, and `as_mut_` functions obtain references to safe objects, but do not
- * perform any memory transformations either. They are the safest to use, because
- * there is no risk of accidentally consuming the whole object.
- */
-typedef struct IntoProcessInstance_CBox_c_void_____Context {
-    const struct CloneVtbl_IntoProcessInstanceContainer_CBox_c_void_____Context *vtbl_clone;
-    const struct MemoryViewVtbl_IntoProcessInstanceContainer_CBox_c_void_____Context *vtbl_memoryview;
-    const struct ProcessVtbl_IntoProcessInstanceContainer_CBox_c_void_____Context *vtbl_process;
-    const struct VirtualTranslateVtbl_IntoProcessInstanceContainer_CBox_c_void_____Context *vtbl_virtualtranslate;
-    struct IntoProcessInstanceContainer_CBox_c_void_____Context container;
-} IntoProcessInstance_CBox_c_void_____Context;
-
-/**
  * Information block about OS
  *
  * This provides some basic information about the OS in question. `base`, and `size` may be
@@ -1680,14 +1343,14 @@ typedef struct OsInnerVtbl_OsInstanceContainer_CBox_c_void_____CArc_c_void {
     int32_t (*process_info_by_address)(struct OsInstanceContainer_CBox_c_void_____CArc_c_void *cont, Address address, struct ProcessInfo *ok_out);
     int32_t (*process_info_by_name)(struct OsInstanceContainer_CBox_c_void_____CArc_c_void *cont, struct CSliceRef_u8 name, struct ProcessInfo *ok_out);
     int32_t (*process_info_by_pid)(struct OsInstanceContainer_CBox_c_void_____CArc_c_void *cont, Pid pid, struct ProcessInfo *ok_out);
-    int32_t (*process_by_info)(struct OsInstanceContainer_CBox_c_void_____CArc_c_void *cont, struct ProcessInfo info, struct ProcessInstance_CBox_c_void_____Context *ok_out);
-    int32_t (*into_process_by_info)(struct OsInstanceContainer_CBox_c_void_____CArc_c_void cont, struct ProcessInfo info, struct IntoProcessInstance_CBox_c_void_____Context *ok_out);
-    int32_t (*process_by_address)(struct OsInstanceContainer_CBox_c_void_____CArc_c_void *cont, Address addr, struct ProcessInstance_CBox_c_void_____Context *ok_out);
-    int32_t (*process_by_name)(struct OsInstanceContainer_CBox_c_void_____CArc_c_void *cont, struct CSliceRef_u8 name, struct ProcessInstance_CBox_c_void_____Context *ok_out);
-    int32_t (*process_by_pid)(struct OsInstanceContainer_CBox_c_void_____CArc_c_void *cont, Pid pid, struct ProcessInstance_CBox_c_void_____Context *ok_out);
-    int32_t (*into_process_by_address)(struct OsInstanceContainer_CBox_c_void_____CArc_c_void cont, Address addr, struct IntoProcessInstance_CBox_c_void_____Context *ok_out);
-    int32_t (*into_process_by_name)(struct OsInstanceContainer_CBox_c_void_____CArc_c_void cont, struct CSliceRef_u8 name, struct IntoProcessInstance_CBox_c_void_____Context *ok_out);
-    int32_t (*into_process_by_pid)(struct OsInstanceContainer_CBox_c_void_____CArc_c_void cont, Pid pid, struct IntoProcessInstance_CBox_c_void_____Context *ok_out);
+    int32_t (*process_by_info)(struct OsInstanceContainer_CBox_c_void_____CArc_c_void *cont, struct ProcessInfo info, struct ProcessInstance_CBox_c_void_____CArc_c_void *ok_out);
+    int32_t (*into_process_by_info)(struct OsInstanceContainer_CBox_c_void_____CArc_c_void cont, struct ProcessInfo info, struct IntoProcessInstance_CBox_c_void_____CArc_c_void *ok_out);
+    int32_t (*process_by_address)(struct OsInstanceContainer_CBox_c_void_____CArc_c_void *cont, Address addr, struct ProcessInstance_CBox_c_void_____CArc_c_void *ok_out);
+    int32_t (*process_by_name)(struct OsInstanceContainer_CBox_c_void_____CArc_c_void *cont, struct CSliceRef_u8 name, struct ProcessInstance_CBox_c_void_____CArc_c_void *ok_out);
+    int32_t (*process_by_pid)(struct OsInstanceContainer_CBox_c_void_____CArc_c_void *cont, Pid pid, struct ProcessInstance_CBox_c_void_____CArc_c_void *ok_out);
+    int32_t (*into_process_by_address)(struct OsInstanceContainer_CBox_c_void_____CArc_c_void cont, Address addr, struct IntoProcessInstance_CBox_c_void_____CArc_c_void *ok_out);
+    int32_t (*into_process_by_name)(struct OsInstanceContainer_CBox_c_void_____CArc_c_void cont, struct CSliceRef_u8 name, struct IntoProcessInstance_CBox_c_void_____CArc_c_void *ok_out);
+    int32_t (*into_process_by_pid)(struct OsInstanceContainer_CBox_c_void_____CArc_c_void cont, Pid pid, struct IntoProcessInstance_CBox_c_void_____CArc_c_void *ok_out);
     int32_t (*module_address_list_callback)(struct OsInstanceContainer_CBox_c_void_____CArc_c_void *cont, AddressCallback callback);
     int32_t (*module_list_callback)(struct OsInstanceContainer_CBox_c_void_____CArc_c_void *cont, ModuleInfoCallback callback);
     int32_t (*module_by_address)(struct OsInstanceContainer_CBox_c_void_____CArc_c_void *cont, Address address, struct ModuleInfo *ok_out);
@@ -1725,12 +1388,10 @@ typedef struct MemoryViewVtbl_OsInstanceContainer_CBox_c_void_____CArc_c_void {
  * `ret_tmp` is usually `PhantomData` representing nothing, unless the trait has functions that
  * return references to associated types, in which case space is reserved for wrapping structures.
  */
-typedef struct CGlueObjContainer_CBox_c_void_____Context__KeyboardRetTmp_Context {
+typedef struct CGlueObjContainer_CBox_c_void_____CArc_c_void_____KeyboardRetTmp_CArc_c_void {
     struct CBox_c_void instance;
-    Context context;
-    struct KeyboardRetTmp_Context ret_tmp;
-} CGlueObjContainer_CBox_c_void_____Context__KeyboardRetTmp_Context;
-
+    CArc_c_void context;
+} CGlueObjContainer_CBox_c_void_____CArc_c_void_____KeyboardRetTmp_CArc_c_void;
 /**
  * Simple CGlue trait object container.
  *
@@ -1746,21 +1407,18 @@ typedef struct CGlueObjContainer_CBox_c_void_____Context__KeyboardRetTmp_Context
  * `ret_tmp` is usually `PhantomData` representing nothing, unless the trait has functions that
  * return references to associated types, in which case space is reserved for wrapping structures.
  */
-typedef struct CGlueObjContainer_CBox_c_void_____Context__KeyboardStateRetTmp_Context {
+typedef struct CGlueObjContainer_CBox_c_void_____CArc_c_void_____KeyboardStateRetTmp_CArc_c_void {
     struct CBox_c_void instance;
-    Context context;
-    struct KeyboardStateRetTmp_Context ret_tmp;
-} CGlueObjContainer_CBox_c_void_____Context__KeyboardStateRetTmp_Context;
-
+    CArc_c_void context;
+} CGlueObjContainer_CBox_c_void_____CArc_c_void_____KeyboardStateRetTmp_CArc_c_void;
 /**
  * CGlue vtable for trait KeyboardState.
  *
  * This virtual function table contains ABI-safe interface for the given trait.
  */
-typedef struct KeyboardStateVtbl_CGlueObjContainer_CBox_c_void_____Context__KeyboardStateRetTmp_Context {
-    bool (*is_down)(const struct CGlueObjContainer_CBox_c_void_____Context__KeyboardStateRetTmp_Context *cont, int32_t vk);
-} KeyboardStateVtbl_CGlueObjContainer_CBox_c_void_____Context__KeyboardStateRetTmp_Context;
-
+typedef struct KeyboardStateVtbl_CGlueObjContainer_CBox_c_void_____CArc_c_void_____KeyboardStateRetTmp_CArc_c_void {
+    bool (*is_down)(const struct CGlueObjContainer_CBox_c_void_____CArc_c_void_____KeyboardStateRetTmp_CArc_c_void *cont, int32_t vk);
+} KeyboardStateVtbl_CGlueObjContainer_CBox_c_void_____CArc_c_void_____KeyboardStateRetTmp_CArc_c_void;
 /**
  * Simple CGlue trait object.
  *
@@ -1769,27 +1427,27 @@ typedef struct KeyboardStateVtbl_CGlueObjContainer_CBox_c_void_____Context__Keyb
  *
  * Container merely is a this pointer with some optional temporary return reference context.
  */
-typedef struct CGlueTraitObj_CBox_c_void_____KeyboardStateVtbl_CGlueObjContainer_CBox_c_void_____Context__KeyboardStateRetTmp_Context___________Context__KeyboardStateRetTmp_Context {
-    const struct KeyboardStateVtbl_CGlueObjContainer_CBox_c_void_____Context__KeyboardStateRetTmp_Context *vtbl;
-    struct CGlueObjContainer_CBox_c_void_____Context__KeyboardStateRetTmp_Context container;
-} CGlueTraitObj_CBox_c_void_____KeyboardStateVtbl_CGlueObjContainer_CBox_c_void_____Context__KeyboardStateRetTmp_Context___________Context__KeyboardStateRetTmp_Context;
+typedef struct CGlueTraitObj_CBox_c_void_____KeyboardStateVtbl_CGlueObjContainer_CBox_c_void_____CArc_c_void_____KeyboardStateRetTmp_CArc_c_void______________CArc_c_void_____KeyboardStateRetTmp_CArc_c_void {
+    const struct KeyboardStateVtbl_CGlueObjContainer_CBox_c_void_____CArc_c_void_____KeyboardStateRetTmp_CArc_c_void *vtbl;
+    struct CGlueObjContainer_CBox_c_void_____CArc_c_void_____KeyboardStateRetTmp_CArc_c_void container;
+} CGlueTraitObj_CBox_c_void_____KeyboardStateVtbl_CGlueObjContainer_CBox_c_void_____CArc_c_void_____KeyboardStateRetTmp_CArc_c_void______________CArc_c_void_____KeyboardStateRetTmp_CArc_c_void;
 
+// Typedef for default container and context type
+typedef struct CGlueTraitObj_CBox_c_void_____KeyboardStateVtbl_CGlueObjContainer_CBox_c_void_____CArc_c_void_____KeyboardStateRetTmp_CArc_c_void______________CArc_c_void_____KeyboardStateRetTmp_CArc_c_void KeyboardState;
 /**
  * Base CGlue trait object for trait KeyboardState.
  */
-typedef struct CGlueTraitObj_CBox_c_void_____KeyboardStateVtbl_CGlueObjContainer_CBox_c_void_____Context__KeyboardStateRetTmp_Context___________Context__KeyboardStateRetTmp_Context KeyboardStateBase_CBox_c_void_____Context;
-
+typedef struct CGlueTraitObj_CBox_c_void_____KeyboardStateVtbl_CGlueObjContainer_CBox_c_void_____CArc_c_void_____KeyboardStateRetTmp_CArc_c_void______________CArc_c_void_____KeyboardStateRetTmp_CArc_c_void KeyboardStateBase_CBox_c_void_____CArc_c_void;
 /**
  * CGlue vtable for trait Keyboard.
  *
  * This virtual function table contains ABI-safe interface for the given trait.
  */
-typedef struct KeyboardVtbl_CGlueObjContainer_CBox_c_void_____Context__KeyboardRetTmp_Context {
-    bool (*is_down)(struct CGlueObjContainer_CBox_c_void_____Context__KeyboardRetTmp_Context *cont, int32_t vk);
-    void (*set_down)(struct CGlueObjContainer_CBox_c_void_____Context__KeyboardRetTmp_Context *cont, int32_t vk, bool down);
-    int32_t (*state)(struct CGlueObjContainer_CBox_c_void_____Context__KeyboardRetTmp_Context *cont, KeyboardStateBase_CBox_c_void_____Context *ok_out);
-} KeyboardVtbl_CGlueObjContainer_CBox_c_void_____Context__KeyboardRetTmp_Context;
-
+typedef struct KeyboardVtbl_CGlueObjContainer_CBox_c_void_____CArc_c_void_____KeyboardRetTmp_CArc_c_void {
+    bool (*is_down)(struct CGlueObjContainer_CBox_c_void_____CArc_c_void_____KeyboardRetTmp_CArc_c_void *cont, int32_t vk);
+    void (*set_down)(struct CGlueObjContainer_CBox_c_void_____CArc_c_void_____KeyboardRetTmp_CArc_c_void *cont, int32_t vk, bool down);
+    int32_t (*state)(struct CGlueObjContainer_CBox_c_void_____CArc_c_void_____KeyboardRetTmp_CArc_c_void *cont, KeyboardStateBase_CBox_c_void_____CArc_c_void *ok_out);
+} KeyboardVtbl_CGlueObjContainer_CBox_c_void_____CArc_c_void_____KeyboardRetTmp_CArc_c_void;
 /**
  * Simple CGlue trait object.
  *
@@ -1798,43 +1456,39 @@ typedef struct KeyboardVtbl_CGlueObjContainer_CBox_c_void_____Context__KeyboardR
  *
  * Container merely is a this pointer with some optional temporary return reference context.
  */
-typedef struct CGlueTraitObj_CBox_c_void_____KeyboardVtbl_CGlueObjContainer_CBox_c_void_____Context__KeyboardRetTmp_Context___________Context__KeyboardRetTmp_Context {
-    const struct KeyboardVtbl_CGlueObjContainer_CBox_c_void_____Context__KeyboardRetTmp_Context *vtbl;
-    struct CGlueObjContainer_CBox_c_void_____Context__KeyboardRetTmp_Context container;
-} CGlueTraitObj_CBox_c_void_____KeyboardVtbl_CGlueObjContainer_CBox_c_void_____Context__KeyboardRetTmp_Context___________Context__KeyboardRetTmp_Context;
+typedef struct CGlueTraitObj_CBox_c_void_____KeyboardVtbl_CGlueObjContainer_CBox_c_void_____CArc_c_void_____KeyboardRetTmp_CArc_c_void______________CArc_c_void_____KeyboardRetTmp_CArc_c_void {
+    const struct KeyboardVtbl_CGlueObjContainer_CBox_c_void_____CArc_c_void_____KeyboardRetTmp_CArc_c_void *vtbl;
+    struct CGlueObjContainer_CBox_c_void_____CArc_c_void_____KeyboardRetTmp_CArc_c_void container;
+} CGlueTraitObj_CBox_c_void_____KeyboardVtbl_CGlueObjContainer_CBox_c_void_____CArc_c_void_____KeyboardRetTmp_CArc_c_void______________CArc_c_void_____KeyboardRetTmp_CArc_c_void;
 
+// Typedef for default container and context type
+typedef struct CGlueTraitObj_CBox_c_void_____KeyboardVtbl_CGlueObjContainer_CBox_c_void_____CArc_c_void_____KeyboardRetTmp_CArc_c_void______________CArc_c_void_____KeyboardRetTmp_CArc_c_void Keyboard;
 /**
  * Base CGlue trait object for trait Keyboard.
  */
-typedef struct CGlueTraitObj_CBox_c_void_____KeyboardVtbl_CGlueObjContainer_CBox_c_void_____Context__KeyboardRetTmp_Context___________Context__KeyboardRetTmp_Context KeyboardBase_CBox_c_void_____Context;
-
-typedef struct IntoKeyboardContainer_CBox_c_void_____Context {
+typedef struct CGlueTraitObj_CBox_c_void_____KeyboardVtbl_CGlueObjContainer_CBox_c_void_____CArc_c_void_____KeyboardRetTmp_CArc_c_void______________CArc_c_void_____KeyboardRetTmp_CArc_c_void KeyboardBase_CBox_c_void_____CArc_c_void;
+typedef struct IntoKeyboardContainer_CBox_c_void_____CArc_c_void {
     struct CBox_c_void instance;
-    Context context;
-    struct CloneRetTmp_Context ret_tmp_clone;
-    struct KeyboardRetTmp_Context ret_tmp_keyboard;
-} IntoKeyboardContainer_CBox_c_void_____Context;
-
+    CArc_c_void context;
+} IntoKeyboardContainer_CBox_c_void_____CArc_c_void;
 /**
  * CGlue vtable for trait Clone.
  *
  * This virtual function table contains ABI-safe interface for the given trait.
  */
-typedef struct CloneVtbl_IntoKeyboardContainer_CBox_c_void_____Context {
-    struct IntoKeyboardContainer_CBox_c_void_____Context (*clone)(const struct IntoKeyboardContainer_CBox_c_void_____Context *cont);
-} CloneVtbl_IntoKeyboardContainer_CBox_c_void_____Context;
-
+typedef struct CloneVtbl_IntoKeyboardContainer_CBox_c_void_____CArc_c_void {
+    struct IntoKeyboardContainer_CBox_c_void_____CArc_c_void (*clone)(const struct IntoKeyboardContainer_CBox_c_void_____CArc_c_void *cont);
+} CloneVtbl_IntoKeyboardContainer_CBox_c_void_____CArc_c_void;
 /**
  * CGlue vtable for trait Keyboard.
  *
  * This virtual function table contains ABI-safe interface for the given trait.
  */
-typedef struct KeyboardVtbl_IntoKeyboardContainer_CBox_c_void_____Context {
-    bool (*is_down)(struct IntoKeyboardContainer_CBox_c_void_____Context *cont, int32_t vk);
-    void (*set_down)(struct IntoKeyboardContainer_CBox_c_void_____Context *cont, int32_t vk, bool down);
-    int32_t (*state)(struct IntoKeyboardContainer_CBox_c_void_____Context *cont, KeyboardStateBase_CBox_c_void_____Context *ok_out);
-} KeyboardVtbl_IntoKeyboardContainer_CBox_c_void_____Context;
-
+typedef struct KeyboardVtbl_IntoKeyboardContainer_CBox_c_void_____CArc_c_void {
+    bool (*is_down)(struct IntoKeyboardContainer_CBox_c_void_____CArc_c_void *cont, int32_t vk);
+    void (*set_down)(struct IntoKeyboardContainer_CBox_c_void_____CArc_c_void *cont, int32_t vk, bool down);
+    int32_t (*state)(struct IntoKeyboardContainer_CBox_c_void_____CArc_c_void *cont, KeyboardStateBase_CBox_c_void_____CArc_c_void *ok_out);
+} KeyboardVtbl_IntoKeyboardContainer_CBox_c_void_____CArc_c_void;
 /**
  * Trait group potentially implementing `:: cglue :: ext :: core :: clone :: Clone < > + Keyboard < >` traits.
  *
@@ -1853,20 +1507,22 @@ typedef struct KeyboardVtbl_IntoKeyboardContainer_CBox_c_void_____Context {
  * perform any memory transformations either. They are the safest to use, because
  * there is no risk of accidentally consuming the whole object.
  */
-typedef struct IntoKeyboard_CBox_c_void_____Context {
-    const struct CloneVtbl_IntoKeyboardContainer_CBox_c_void_____Context *vtbl_clone;
-    const struct KeyboardVtbl_IntoKeyboardContainer_CBox_c_void_____Context *vtbl_keyboard;
-    struct IntoKeyboardContainer_CBox_c_void_____Context container;
-} IntoKeyboard_CBox_c_void_____Context;
+typedef struct IntoKeyboard_CBox_c_void_____CArc_c_void {
+    const struct CloneVtbl_IntoKeyboardContainer_CBox_c_void_____CArc_c_void *vtbl_clone;
+    const struct KeyboardVtbl_IntoKeyboardContainer_CBox_c_void_____CArc_c_void *vtbl_keyboard;
+    struct IntoKeyboardContainer_CBox_c_void_____CArc_c_void container;
+} IntoKeyboard_CBox_c_void_____CArc_c_void;
 
+// Typedef for default container and context type
+typedef struct IntoKeyboard_CBox_c_void_____CArc_c_void IntoKeyboard;
 /**
  * CGlue vtable for trait OsKeyboardInner.
  *
  * This virtual function table contains ABI-safe interface for the given trait.
  */
 typedef struct OsKeyboardInnerVtbl_OsInstanceContainer_CBox_c_void_____CArc_c_void {
-    int32_t (*keyboard)(struct OsInstanceContainer_CBox_c_void_____CArc_c_void *cont, KeyboardBase_CBox_c_void_____Context *ok_out);
-    int32_t (*into_keyboard)(struct OsInstanceContainer_CBox_c_void_____CArc_c_void cont, struct IntoKeyboard_CBox_c_void_____Context *ok_out);
+    int32_t (*keyboard)(struct OsInstanceContainer_CBox_c_void_____CArc_c_void *cont, KeyboardBase_CBox_c_void_____CArc_c_void *ok_out);
+    int32_t (*into_keyboard)(struct OsInstanceContainer_CBox_c_void_____CArc_c_void cont, struct IntoKeyboard_CBox_c_void_____CArc_c_void *ok_out);
 } OsKeyboardInnerVtbl_OsInstanceContainer_CBox_c_void_____CArc_c_void;
 
 /**
@@ -1879,8 +1535,8 @@ typedef struct PhysicalMemoryVtbl_OsInstanceContainer_CBox_c_void_____CArc_c_voi
     int32_t (*phys_write_raw_iter)(struct OsInstanceContainer_CBox_c_void_____CArc_c_void *cont, struct CIterator_PhysicalWriteData data, PhysicalWriteFailCallback *out_fail);
     struct PhysicalMemoryMetadata (*metadata)(const struct OsInstanceContainer_CBox_c_void_____CArc_c_void *cont);
     void (*set_mem_map)(struct OsInstanceContainer_CBox_c_void_____CArc_c_void *cont, struct CSliceRef_PhysicalMemoryMapping _mem_map);
-    MemoryViewBase_CBox_c_void_____Context (*into_phys_view)(struct OsInstanceContainer_CBox_c_void_____CArc_c_void cont);
-    MemoryViewBase_CBox_c_void_____Context (*phys_view)(struct OsInstanceContainer_CBox_c_void_____CArc_c_void *cont);
+    MemoryViewBase_CBox_c_void_____CArc_c_void (*into_phys_view)(struct OsInstanceContainer_CBox_c_void_____CArc_c_void cont);
+    MemoryViewBase_CBox_c_void_____CArc_c_void (*phys_view)(struct OsInstanceContainer_CBox_c_void_____CArc_c_void *cont);
 } PhysicalMemoryVtbl_OsInstanceContainer_CBox_c_void_____CArc_c_void;
 
 /**
@@ -1910,6 +1566,9 @@ typedef struct OsInstance_CBox_c_void_____CArc_c_void {
     struct OsInstanceContainer_CBox_c_void_____CArc_c_void container;
 } OsInstance_CBox_c_void_____CArc_c_void;
 
+// Typedef for default container and context type
+typedef struct OsInstance_CBox_c_void_____CArc_c_void OsInstance;
+
 typedef struct OsInstance_CBox_c_void_____CArc_c_void OsInstanceBaseCtxBox_c_void__CArc_c_void;
 
 typedef OsInstanceBaseCtxBox_c_void__CArc_c_void OsInstanceBaseArcBox_c_void__c_void;
@@ -1921,9 +1580,6 @@ typedef OsInstanceArcBox MuOsInstanceArcBox;
 typedef struct ProcessInstanceContainer_CBox_c_void_____CArc_c_void {
     struct CBox_c_void instance;
     struct CArc_c_void context;
-    struct MemoryViewRetTmp_CArc_c_void ret_tmp_memoryview;
-    struct ProcessRetTmp_CArc_c_void ret_tmp_process;
-    struct VirtualTranslateRetTmp_CArc_c_void ret_tmp_virtualtranslate;
 } ProcessInstanceContainer_CBox_c_void_____CArc_c_void;
 
 /**
@@ -2006,6 +1662,9 @@ typedef struct ProcessInstance_CBox_c_void_____CArc_c_void {
     struct ProcessInstanceContainer_CBox_c_void_____CArc_c_void container;
 } ProcessInstance_CBox_c_void_____CArc_c_void;
 
+// Typedef for default container and context type
+typedef struct ProcessInstance_CBox_c_void_____CArc_c_void ProcessInstance;
+
 typedef struct ProcessInstance_CBox_c_void_____CArc_c_void ProcessInstanceBaseCtxBox_c_void__CArc_c_void;
 
 typedef ProcessInstanceBaseCtxBox_c_void__CArc_c_void ProcessInstanceBaseArcBox_c_void__c_void;
@@ -2015,10 +1674,6 @@ typedef ProcessInstanceBaseArcBox_c_void__c_void ProcessInstanceArcBox;
 typedef struct IntoProcessInstanceContainer_CBox_c_void_____CArc_c_void {
     struct CBox_c_void instance;
     struct CArc_c_void context;
-    struct CloneRetTmp_CArc_c_void ret_tmp_clone;
-    struct MemoryViewRetTmp_CArc_c_void ret_tmp_memoryview;
-    struct ProcessRetTmp_CArc_c_void ret_tmp_process;
-    struct VirtualTranslateRetTmp_CArc_c_void ret_tmp_virtualtranslate;
 } IntoProcessInstanceContainer_CBox_c_void_____CArc_c_void;
 
 /**
@@ -2111,6 +1766,9 @@ typedef struct IntoProcessInstance_CBox_c_void_____CArc_c_void {
     struct IntoProcessInstanceContainer_CBox_c_void_____CArc_c_void container;
 } IntoProcessInstance_CBox_c_void_____CArc_c_void;
 
+// Typedef for default container and context type
+typedef struct IntoProcessInstance_CBox_c_void_____CArc_c_void IntoProcessInstance;
+
 typedef struct IntoProcessInstance_CBox_c_void_____CArc_c_void IntoProcessInstanceBaseCtxBox_c_void__CArc_c_void;
 
 typedef IntoProcessInstanceBaseCtxBox_c_void__CArc_c_void IntoProcessInstanceBaseArcBox_c_void__c_void;
@@ -2135,7 +1793,6 @@ typedef IntoProcessInstanceBaseArcBox_c_void__c_void IntoProcessInstanceArcBox;
 typedef struct CGlueObjContainer_CBox_c_void_____CArc_c_void_____MemoryViewRetTmp_CArc_c_void {
     struct CBox_c_void instance;
     struct CArc_c_void context;
-    struct MemoryViewRetTmp_CArc_c_void ret_tmp;
 } CGlueObjContainer_CBox_c_void_____CArc_c_void_____MemoryViewRetTmp_CArc_c_void;
 
 /**
@@ -2166,25 +1823,20 @@ typedef struct CGlueTraitObj_CBox_c_void_____MemoryViewVtbl_CGlueObjContainer_CB
     struct CGlueObjContainer_CBox_c_void_____CArc_c_void_____MemoryViewRetTmp_CArc_c_void container;
 } CGlueTraitObj_CBox_c_void_____MemoryViewVtbl_CGlueObjContainer_CBox_c_void_____CArc_c_void_____MemoryViewRetTmp_CArc_c_void______________CArc_c_void_____MemoryViewRetTmp_CArc_c_void;
 
-/**
- * Base CGlue trait object for trait MemoryView.
+// Typedef for default container and context type
+typedef struct CGlueTraitObj_CBox_c_void_____MemoryViewVtbl_CGlueObjContainer_CBox_c_void_____CArc_c_void_____MemoryViewRetTmp_CArc_c_void______________CArc_c_void_____MemoryViewRetTmp_CArc_c_void MemoryView;/**
+ * CGlue vtable for trait PhysicalMemory.
+ *
+ * This virtual function table contains ABI-safe interface for the given trait.
  */
-typedef struct CGlueTraitObj_CBox_c_void_____MemoryViewVtbl_CGlueObjContainer_CBox_c_void_____CArc_c_void_____MemoryViewRetTmp_CArc_c_void______________CArc_c_void_____MemoryViewRetTmp_CArc_c_void MemoryViewBase_CBox_c_void_____CArc_c_void;
-
-/**
- * CtxBoxed CGlue trait object for trait MemoryView with context.
- */
-typedef MemoryViewBase_CBox_c_void_____CArc_c_void MemoryViewBaseCtxBox_c_void__CArc_c_void;
-
-/**
- * Boxed CGlue trait object for trait MemoryView with a [`CArc`](cglue::arc::CArc) reference counted context.
- */
-typedef MemoryViewBaseCtxBox_c_void__CArc_c_void MemoryViewBaseArcBox_c_void__c_void;
-
-/**
- * Opaque Boxed CGlue trait object for trait MemoryView with a [`CArc`](cglue::arc::CArc) reference counted context.
- */
-typedef MemoryViewBaseArcBox_c_void__c_void MemoryViewArcBox;
+typedef struct PhysicalMemoryVtbl_ConnectorInstanceContainer_CBox_c_void_____CArc_c_void {
+    int32_t (*phys_read_raw_iter)(struct ConnectorInstanceContainer_CBox_c_void_____CArc_c_void *cont, struct CIterator_PhysicalReadData data, PhysicalReadFailCallback *out_fail);
+    int32_t (*phys_write_raw_iter)(struct ConnectorInstanceContainer_CBox_c_void_____CArc_c_void *cont, struct CIterator_PhysicalWriteData data, PhysicalWriteFailCallback *out_fail);
+    struct PhysicalMemoryMetadata (*metadata)(const struct ConnectorInstanceContainer_CBox_c_void_____CArc_c_void *cont);
+    void (*set_mem_map)(struct ConnectorInstanceContainer_CBox_c_void_____CArc_c_void *cont, struct CSliceRef_PhysicalMemoryMapping _mem_map);
+    MemoryViewBase_CBox_c_void_____CArc_c_void (*into_phys_view)(struct ConnectorInstanceContainer_CBox_c_void_____CArc_c_void cont);
+    MemoryViewBase_CBox_c_void_____CArc_c_void (*phys_view)(struct ConnectorInstanceContainer_CBox_c_void_____CArc_c_void *cont);
+} PhysicalMemoryVtbl_ConnectorInstanceContainer_CBox_c_void_____CArc_c_void;
 
 #ifdef __cplusplus
 extern "C" {
@@ -2363,6 +2015,949 @@ uint8_t arch_address_space_bits(const struct ArchitectureObj *arch);
 void arch_free(struct ArchitectureObj *arch);
 
 bool is_x86_arch(const struct ArchitectureObj *arch);
+static CArc_c_void ctx_arc_clone(CArc_c_void *self) {
+    CArc_c_void ret = *self;
+    ret.instance = self->clone_fn(self->instance);
+    return ret;
+}
+
+void ctx_arc_drop(CArc_c_void *self) {
+    if (self->drop_fn && self->instance) self->drop_fn(self->instance);
+}
+void cont_box_drop(CBox_c_void *self) {
+    if (self->drop_fn && self->instance) self->drop_fn(self->instance);
+}
+
+static inline void mf_pause(void *self)  {
+(((struct CGlueTraitObj_CBox_c_void_____CpuStateVtbl_CGlueObjContainer_CBox_c_void_____CArc_c_void_____CpuStateRetTmp_CArc_c_void______________CArc_c_void_____CpuStateRetTmp_CArc_c_void *)self)->vtbl)->pause(&((struct CGlueTraitObj_CBox_c_void_____CpuStateVtbl_CGlueObjContainer_CBox_c_void_____CArc_c_void_____CpuStateRetTmp_CArc_c_void______________CArc_c_void_____CpuStateRetTmp_CArc_c_void *)self)->container);
+
+}
+
+static inline void mf_resume(void *self)  {
+(((struct CGlueTraitObj_CBox_c_void_____CpuStateVtbl_CGlueObjContainer_CBox_c_void_____CArc_c_void_____CpuStateRetTmp_CArc_c_void______________CArc_c_void_____CpuStateRetTmp_CArc_c_void *)self)->vtbl)->resume(&((struct CGlueTraitObj_CBox_c_void_____CpuStateVtbl_CGlueObjContainer_CBox_c_void_____CArc_c_void_____CpuStateRetTmp_CArc_c_void______________CArc_c_void_____CpuStateRetTmp_CArc_c_void *)self)->container);
+
+}
+
+static inline void mf_cpustate_drop(struct CGlueTraitObj_CBox_c_void_____CpuStateVtbl_CGlueObjContainer_CBox_c_void_____CArc_c_void_____CpuStateRetTmp_CArc_c_void______________CArc_c_void_____CpuStateRetTmp_CArc_c_void self)  {
+    cont_box_drop(&self.container.instance);
+    ctx_arc_drop(&self.container.context);
+
+}
+
+static inline bool mf_keyboardstate_is_down(const void *self, int32_t vk)  {
+    bool __ret = (((const struct CGlueTraitObj_CBox_c_void_____KeyboardStateVtbl_CGlueObjContainer_CBox_c_void_____CArc_c_void_____KeyboardStateRetTmp_CArc_c_void______________CArc_c_void_____KeyboardStateRetTmp_CArc_c_void *)self)->vtbl)->is_down(&((const struct CGlueTraitObj_CBox_c_void_____KeyboardStateVtbl_CGlueObjContainer_CBox_c_void_____CArc_c_void_____KeyboardStateRetTmp_CArc_c_void______________CArc_c_void_____KeyboardStateRetTmp_CArc_c_void *)self)->container, vk);
+    return __ret;
+}
+
+static inline void mf_keyboardstate_drop(struct CGlueTraitObj_CBox_c_void_____KeyboardStateVtbl_CGlueObjContainer_CBox_c_void_____CArc_c_void_____KeyboardStateRetTmp_CArc_c_void______________CArc_c_void_____KeyboardStateRetTmp_CArc_c_void self)  {
+    cont_box_drop(&self.container.instance);
+    ctx_arc_drop(&self.container.context);
+
+}
+
+static inline bool mf_keyboard_is_down(void *self, int32_t vk)  {
+    bool __ret = (((struct CGlueTraitObj_CBox_c_void_____KeyboardVtbl_CGlueObjContainer_CBox_c_void_____CArc_c_void_____KeyboardRetTmp_CArc_c_void______________CArc_c_void_____KeyboardRetTmp_CArc_c_void *)self)->vtbl)->is_down(&((struct CGlueTraitObj_CBox_c_void_____KeyboardVtbl_CGlueObjContainer_CBox_c_void_____CArc_c_void_____KeyboardRetTmp_CArc_c_void______________CArc_c_void_____KeyboardRetTmp_CArc_c_void *)self)->container, vk);
+    return __ret;
+}
+
+static inline void mf_set_down(void *self, int32_t vk, bool down)  {
+(((struct CGlueTraitObj_CBox_c_void_____KeyboardVtbl_CGlueObjContainer_CBox_c_void_____CArc_c_void_____KeyboardRetTmp_CArc_c_void______________CArc_c_void_____KeyboardRetTmp_CArc_c_void *)self)->vtbl)->set_down(&((struct CGlueTraitObj_CBox_c_void_____KeyboardVtbl_CGlueObjContainer_CBox_c_void_____CArc_c_void_____KeyboardRetTmp_CArc_c_void______________CArc_c_void_____KeyboardRetTmp_CArc_c_void *)self)->container, vk, down);
+
+}
+
+static inline int32_t mf_state(void *self, KeyboardStateBase_CBox_c_void_____CArc_c_void * ok_out)  {
+    int32_t __ret = (((struct CGlueTraitObj_CBox_c_void_____KeyboardVtbl_CGlueObjContainer_CBox_c_void_____CArc_c_void_____KeyboardRetTmp_CArc_c_void______________CArc_c_void_____KeyboardRetTmp_CArc_c_void *)self)->vtbl)->state(&((struct CGlueTraitObj_CBox_c_void_____KeyboardVtbl_CGlueObjContainer_CBox_c_void_____CArc_c_void_____KeyboardRetTmp_CArc_c_void______________CArc_c_void_____KeyboardRetTmp_CArc_c_void *)self)->container, ok_out);
+    return __ret;
+}
+
+static inline void mf_keyboard_drop(struct CGlueTraitObj_CBox_c_void_____KeyboardVtbl_CGlueObjContainer_CBox_c_void_____CArc_c_void_____KeyboardRetTmp_CArc_c_void______________CArc_c_void_____KeyboardRetTmp_CArc_c_void self)  {
+    cont_box_drop(&self.container.instance);
+    ctx_arc_drop(&self.container.context);
+
+}
+
+static inline int32_t mf_read_raw_iter(void *self, struct CIterator_ReadData data, ReadFailCallback * out_fail)  {
+    int32_t __ret = (((struct CGlueTraitObj_CBox_c_void_____MemoryViewVtbl_CGlueObjContainer_CBox_c_void_____CArc_c_void_____MemoryViewRetTmp_CArc_c_void______________CArc_c_void_____MemoryViewRetTmp_CArc_c_void *)self)->vtbl)->read_raw_iter(&((struct CGlueTraitObj_CBox_c_void_____MemoryViewVtbl_CGlueObjContainer_CBox_c_void_____CArc_c_void_____MemoryViewRetTmp_CArc_c_void______________CArc_c_void_____MemoryViewRetTmp_CArc_c_void *)self)->container, data, out_fail);
+    return __ret;
+}
+
+static inline int32_t mf_write_raw_iter(void *self, struct CIterator_WriteData data, WriteFailCallback * out_fail)  {
+    int32_t __ret = (((struct CGlueTraitObj_CBox_c_void_____MemoryViewVtbl_CGlueObjContainer_CBox_c_void_____CArc_c_void_____MemoryViewRetTmp_CArc_c_void______________CArc_c_void_____MemoryViewRetTmp_CArc_c_void *)self)->vtbl)->write_raw_iter(&((struct CGlueTraitObj_CBox_c_void_____MemoryViewVtbl_CGlueObjContainer_CBox_c_void_____CArc_c_void_____MemoryViewRetTmp_CArc_c_void______________CArc_c_void_____MemoryViewRetTmp_CArc_c_void *)self)->container, data, out_fail);
+    return __ret;
+}
+
+static inline struct MemoryViewMetadata mf_metadata(const void *self)  {
+    struct MemoryViewMetadata __ret = (((const struct CGlueTraitObj_CBox_c_void_____MemoryViewVtbl_CGlueObjContainer_CBox_c_void_____CArc_c_void_____MemoryViewRetTmp_CArc_c_void______________CArc_c_void_____MemoryViewRetTmp_CArc_c_void *)self)->vtbl)->metadata(&((const struct CGlueTraitObj_CBox_c_void_____MemoryViewVtbl_CGlueObjContainer_CBox_c_void_____CArc_c_void_____MemoryViewRetTmp_CArc_c_void______________CArc_c_void_____MemoryViewRetTmp_CArc_c_void *)self)->container);
+    return __ret;
+}
+
+static inline int32_t mf_read_raw_list(void *self, struct CSliceMut_ReadData data)  {
+    int32_t __ret = (((struct CGlueTraitObj_CBox_c_void_____MemoryViewVtbl_CGlueObjContainer_CBox_c_void_____CArc_c_void_____MemoryViewRetTmp_CArc_c_void______________CArc_c_void_____MemoryViewRetTmp_CArc_c_void *)self)->vtbl)->read_raw_list(&((struct CGlueTraitObj_CBox_c_void_____MemoryViewVtbl_CGlueObjContainer_CBox_c_void_____CArc_c_void_____MemoryViewRetTmp_CArc_c_void______________CArc_c_void_____MemoryViewRetTmp_CArc_c_void *)self)->container, data);
+    return __ret;
+}
+
+static inline int32_t mf_read_raw_into(void *self, Address addr, struct CSliceMut_u8 out)  {
+    int32_t __ret = (((struct CGlueTraitObj_CBox_c_void_____MemoryViewVtbl_CGlueObjContainer_CBox_c_void_____CArc_c_void_____MemoryViewRetTmp_CArc_c_void______________CArc_c_void_____MemoryViewRetTmp_CArc_c_void *)self)->vtbl)->read_raw_into(&((struct CGlueTraitObj_CBox_c_void_____MemoryViewVtbl_CGlueObjContainer_CBox_c_void_____CArc_c_void_____MemoryViewRetTmp_CArc_c_void______________CArc_c_void_____MemoryViewRetTmp_CArc_c_void *)self)->container, addr, out);
+    return __ret;
+}
+
+static inline int32_t mf_write_raw_list(void *self, struct CSliceRef_WriteData data)  {
+    int32_t __ret = (((struct CGlueTraitObj_CBox_c_void_____MemoryViewVtbl_CGlueObjContainer_CBox_c_void_____CArc_c_void_____MemoryViewRetTmp_CArc_c_void______________CArc_c_void_____MemoryViewRetTmp_CArc_c_void *)self)->vtbl)->write_raw_list(&((struct CGlueTraitObj_CBox_c_void_____MemoryViewVtbl_CGlueObjContainer_CBox_c_void_____CArc_c_void_____MemoryViewRetTmp_CArc_c_void______________CArc_c_void_____MemoryViewRetTmp_CArc_c_void *)self)->container, data);
+    return __ret;
+}
+
+static inline int32_t mf_write_raw(void *self, Address addr, struct CSliceRef_u8 data)  {
+    int32_t __ret = (((struct CGlueTraitObj_CBox_c_void_____MemoryViewVtbl_CGlueObjContainer_CBox_c_void_____CArc_c_void_____MemoryViewRetTmp_CArc_c_void______________CArc_c_void_____MemoryViewRetTmp_CArc_c_void *)self)->vtbl)->write_raw(&((struct CGlueTraitObj_CBox_c_void_____MemoryViewVtbl_CGlueObjContainer_CBox_c_void_____CArc_c_void_____MemoryViewRetTmp_CArc_c_void______________CArc_c_void_____MemoryViewRetTmp_CArc_c_void *)self)->container, addr, data);
+    return __ret;
+}
+
+static inline void mf_memoryview_drop(struct CGlueTraitObj_CBox_c_void_____MemoryViewVtbl_CGlueObjContainer_CBox_c_void_____CArc_c_void_____MemoryViewRetTmp_CArc_c_void______________CArc_c_void_____MemoryViewRetTmp_CArc_c_void self)  {
+    cont_box_drop(&self.container.instance);
+    ctx_arc_drop(&self.container.context);
+
+}
+
+static inline struct ConnectorInstance_CBox_c_void_____CArc_c_void mf_connectorinstance_clone(const void *self)  {
+    struct ConnectorInstance_CBox_c_void_____CArc_c_void __ret;
+    __ret.container = (((const struct ConnectorInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_clone)->clone(&((const struct ConnectorInstance_CBox_c_void_____CArc_c_void *)self)->container);
+    return __ret;
+}
+
+static inline void mf_connectorinstance_drop(struct ConnectorInstance_CBox_c_void_____CArc_c_void self)  {
+    cont_box_drop(&self.container.instance);
+    ctx_arc_drop(&self.container.context);
+
+}
+
+static inline struct IntoCpuState_CBox_c_void_____CArc_c_void mf_intocpustate_clone(const void *self)  {
+    struct IntoCpuState_CBox_c_void_____CArc_c_void __ret;
+    __ret.container = (((const struct IntoCpuState_CBox_c_void_____CArc_c_void *)self)->vtbl_clone)->clone(&((const struct IntoCpuState_CBox_c_void_____CArc_c_void *)self)->container);
+    return __ret;
+}
+
+static inline void mf_intocpustate_drop(struct IntoCpuState_CBox_c_void_____CArc_c_void self)  {
+    cont_box_drop(&self.container.instance);
+    ctx_arc_drop(&self.container.context);
+
+}
+
+static inline void mf_intocpustate_pause(void *self)  {
+(((struct IntoCpuState_CBox_c_void_____CArc_c_void *)self)->vtbl_cpustate)->pause(&((struct IntoCpuState_CBox_c_void_____CArc_c_void *)self)->container);
+
+}
+
+static inline void mf_intocpustate_resume(void *self)  {
+(((struct IntoCpuState_CBox_c_void_____CArc_c_void *)self)->vtbl_cpustate)->resume(&((struct IntoCpuState_CBox_c_void_____CArc_c_void *)self)->container);
+
+}
+
+static inline int32_t mf_connectorinstance_cpu_state(void *self, CpuStateBase_CBox_c_void_____CArc_c_void * ok_out)  {
+    int32_t __ret = (((struct ConnectorInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_connectorcpustateinner)->cpu_state(&((struct ConnectorInstance_CBox_c_void_____CArc_c_void *)self)->container, ok_out);
+    return __ret;
+}
+
+static inline int32_t mf_connectorinstance_into_cpu_state(struct ConnectorInstance_CBox_c_void_____CArc_c_void self, struct IntoCpuState_CBox_c_void_____CArc_c_void * ok_out)  {
+    CArc_c_void ___ctx = ctx_arc_clone(&self.container.context);
+    int32_t __ret = (self.vtbl_connectorcpustateinner)->into_cpu_state(self.container, ok_out);
+    ctx_arc_drop(&___ctx);
+    return __ret;
+}
+
+static inline struct OsInstance_CBox_c_void_____CArc_c_void mf_osinstance_clone(const void *self)  {
+    struct OsInstance_CBox_c_void_____CArc_c_void __ret;
+    __ret.container = (((const struct OsInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_clone)->clone(&((const struct OsInstance_CBox_c_void_____CArc_c_void *)self)->container);
+    return __ret;
+}
+
+static inline void mf_osinstance_drop(struct OsInstance_CBox_c_void_____CArc_c_void self)  {
+    cont_box_drop(&self.container.instance);
+    ctx_arc_drop(&self.container.context);
+
+}
+
+static inline int32_t mf_osinstance_process_address_list_callback(void *self, AddressCallback callback)  {
+    int32_t __ret = (((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_osinner)->process_address_list_callback(&((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->container, callback);
+    return __ret;
+}
+
+static inline int32_t mf_osinstance_process_info_list_callback(void *self, ProcessInfoCallback callback)  {
+    int32_t __ret = (((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_osinner)->process_info_list_callback(&((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->container, callback);
+    return __ret;
+}
+
+static inline int32_t mf_osinstance_process_info_by_address(void *self, Address address, struct ProcessInfo * ok_out)  {
+    int32_t __ret = (((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_osinner)->process_info_by_address(&((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->container, address, ok_out);
+    return __ret;
+}
+
+static inline int32_t mf_osinstance_process_info_by_name(void *self, struct CSliceRef_u8 name, struct ProcessInfo * ok_out)  {
+    int32_t __ret = (((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_osinner)->process_info_by_name(&((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->container, name, ok_out);
+    return __ret;
+}
+
+static inline int32_t mf_osinstance_process_info_by_pid(void *self, Pid pid, struct ProcessInfo * ok_out)  {
+    int32_t __ret = (((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_osinner)->process_info_by_pid(&((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->container, pid, ok_out);
+    return __ret;
+}
+
+static inline int32_t mf_osinstance_process_by_info(void *self, struct ProcessInfo info, struct ProcessInstance_CBox_c_void_____CArc_c_void * ok_out)  {
+    int32_t __ret = (((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_osinner)->process_by_info(&((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->container, info, ok_out);
+    return __ret;
+}
+
+static inline int32_t mf_osinstance_into_process_by_info(struct OsInstance_CBox_c_void_____CArc_c_void self, struct ProcessInfo info, struct IntoProcessInstance_CBox_c_void_____CArc_c_void * ok_out)  {
+    CArc_c_void ___ctx = ctx_arc_clone(&self.container.context);
+    int32_t __ret = (self.vtbl_osinner)->into_process_by_info(self.container, info, ok_out);
+    ctx_arc_drop(&___ctx);
+    return __ret;
+}
+
+static inline int32_t mf_osinstance_process_by_address(void *self, Address addr, struct ProcessInstance_CBox_c_void_____CArc_c_void * ok_out)  {
+    int32_t __ret = (((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_osinner)->process_by_address(&((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->container, addr, ok_out);
+    return __ret;
+}
+
+static inline int32_t mf_osinstance_process_by_name(void *self, struct CSliceRef_u8 name, struct ProcessInstance_CBox_c_void_____CArc_c_void * ok_out)  {
+    int32_t __ret = (((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_osinner)->process_by_name(&((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->container, name, ok_out);
+    return __ret;
+}
+
+static inline int32_t mf_osinstance_process_by_pid(void *self, Pid pid, struct ProcessInstance_CBox_c_void_____CArc_c_void * ok_out)  {
+    int32_t __ret = (((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_osinner)->process_by_pid(&((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->container, pid, ok_out);
+    return __ret;
+}
+
+static inline int32_t mf_osinstance_into_process_by_address(struct OsInstance_CBox_c_void_____CArc_c_void self, Address addr, struct IntoProcessInstance_CBox_c_void_____CArc_c_void * ok_out)  {
+    CArc_c_void ___ctx = ctx_arc_clone(&self.container.context);
+    int32_t __ret = (self.vtbl_osinner)->into_process_by_address(self.container, addr, ok_out);
+    ctx_arc_drop(&___ctx);
+    return __ret;
+}
+
+static inline int32_t mf_osinstance_into_process_by_name(struct OsInstance_CBox_c_void_____CArc_c_void self, struct CSliceRef_u8 name, struct IntoProcessInstance_CBox_c_void_____CArc_c_void * ok_out)  {
+    CArc_c_void ___ctx = ctx_arc_clone(&self.container.context);
+    int32_t __ret = (self.vtbl_osinner)->into_process_by_name(self.container, name, ok_out);
+    ctx_arc_drop(&___ctx);
+    return __ret;
+}
+
+static inline int32_t mf_osinstance_into_process_by_pid(struct OsInstance_CBox_c_void_____CArc_c_void self, Pid pid, struct IntoProcessInstance_CBox_c_void_____CArc_c_void * ok_out)  {
+    CArc_c_void ___ctx = ctx_arc_clone(&self.container.context);
+    int32_t __ret = (self.vtbl_osinner)->into_process_by_pid(self.container, pid, ok_out);
+    ctx_arc_drop(&___ctx);
+    return __ret;
+}
+
+static inline int32_t mf_osinstance_module_address_list_callback(void *self, AddressCallback callback)  {
+    int32_t __ret = (((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_osinner)->module_address_list_callback(&((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->container, callback);
+    return __ret;
+}
+
+static inline int32_t mf_osinstance_module_list_callback(void *self, ModuleInfoCallback callback)  {
+    int32_t __ret = (((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_osinner)->module_list_callback(&((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->container, callback);
+    return __ret;
+}
+
+static inline int32_t mf_osinstance_module_by_address(void *self, Address address, struct ModuleInfo * ok_out)  {
+    int32_t __ret = (((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_osinner)->module_by_address(&((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->container, address, ok_out);
+    return __ret;
+}
+
+static inline int32_t mf_osinstance_module_by_name(void *self, struct CSliceRef_u8 name, struct ModuleInfo * ok_out)  {
+    int32_t __ret = (((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_osinner)->module_by_name(&((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->container, name, ok_out);
+    return __ret;
+}
+
+static inline const struct OsInfo * mf_osinstance_info(const void *self)  {
+    const struct OsInfo * __ret = (((const struct OsInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_osinner)->info(&((const struct OsInstance_CBox_c_void_____CArc_c_void *)self)->container);
+    return __ret;
+}
+
+static inline int32_t mf_osinstance_read_raw_iter(void *self, struct CIterator_ReadData data, ReadFailCallback * out_fail)  {
+    int32_t __ret = (((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_memoryview)->read_raw_iter(&((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->container, data, out_fail);
+    return __ret;
+}
+
+static inline int32_t mf_osinstance_write_raw_iter(void *self, struct CIterator_WriteData data, WriteFailCallback * out_fail)  {
+    int32_t __ret = (((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_memoryview)->write_raw_iter(&((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->container, data, out_fail);
+    return __ret;
+}
+
+static inline struct MemoryViewMetadata mf_osinstance_metadata(const void *self)  {
+    struct MemoryViewMetadata __ret = (((const struct OsInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_memoryview)->metadata(&((const struct OsInstance_CBox_c_void_____CArc_c_void *)self)->container);
+    return __ret;
+}
+
+static inline int32_t mf_osinstance_read_raw_list(void *self, struct CSliceMut_ReadData data)  {
+    int32_t __ret = (((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_memoryview)->read_raw_list(&((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->container, data);
+    return __ret;
+}
+
+static inline int32_t mf_osinstance_read_raw_into(void *self, Address addr, struct CSliceMut_u8 out)  {
+    int32_t __ret = (((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_memoryview)->read_raw_into(&((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->container, addr, out);
+    return __ret;
+}
+
+static inline int32_t mf_osinstance_write_raw_list(void *self, struct CSliceRef_WriteData data)  {
+    int32_t __ret = (((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_memoryview)->write_raw_list(&((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->container, data);
+    return __ret;
+}
+
+static inline int32_t mf_osinstance_write_raw(void *self, Address addr, struct CSliceRef_u8 data)  {
+    int32_t __ret = (((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_memoryview)->write_raw(&((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->container, addr, data);
+    return __ret;
+}
+
+static inline struct IntoKeyboard_CBox_c_void_____CArc_c_void mf_intokeyboard_clone(const void *self)  {
+    struct IntoKeyboard_CBox_c_void_____CArc_c_void __ret;
+    __ret.container = (((const struct IntoKeyboard_CBox_c_void_____CArc_c_void *)self)->vtbl_clone)->clone(&((const struct IntoKeyboard_CBox_c_void_____CArc_c_void *)self)->container);
+    return __ret;
+}
+
+static inline void mf_intokeyboard_drop(struct IntoKeyboard_CBox_c_void_____CArc_c_void self)  {
+    cont_box_drop(&self.container.instance);
+    ctx_arc_drop(&self.container.context);
+
+}
+
+static inline bool mf_intokeyboard_is_down(void *self, int32_t vk)  {
+    bool __ret = (((struct IntoKeyboard_CBox_c_void_____CArc_c_void *)self)->vtbl_keyboard)->is_down(&((struct IntoKeyboard_CBox_c_void_____CArc_c_void *)self)->container, vk);
+    return __ret;
+}
+
+static inline void mf_intokeyboard_set_down(void *self, int32_t vk, bool down)  {
+(((struct IntoKeyboard_CBox_c_void_____CArc_c_void *)self)->vtbl_keyboard)->set_down(&((struct IntoKeyboard_CBox_c_void_____CArc_c_void *)self)->container, vk, down);
+
+}
+
+static inline int32_t mf_intokeyboard_state(void *self, KeyboardStateBase_CBox_c_void_____CArc_c_void * ok_out)  {
+    int32_t __ret = (((struct IntoKeyboard_CBox_c_void_____CArc_c_void *)self)->vtbl_keyboard)->state(&((struct IntoKeyboard_CBox_c_void_____CArc_c_void *)self)->container, ok_out);
+    return __ret;
+}
+
+static inline int32_t mf_osinstance_keyboard(void *self, KeyboardBase_CBox_c_void_____CArc_c_void * ok_out)  {
+    int32_t __ret = (((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_oskeyboardinner)->keyboard(&((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->container, ok_out);
+    return __ret;
+}
+
+static inline int32_t mf_osinstance_into_keyboard(struct OsInstance_CBox_c_void_____CArc_c_void self, struct IntoKeyboard_CBox_c_void_____CArc_c_void * ok_out)  {
+    CArc_c_void ___ctx = ctx_arc_clone(&self.container.context);
+    int32_t __ret = (self.vtbl_oskeyboardinner)->into_keyboard(self.container, ok_out);
+    ctx_arc_drop(&___ctx);
+    return __ret;
+}
+
+static inline int32_t mf_osinstance_phys_read_raw_iter(void *self, struct CIterator_PhysicalReadData data, PhysicalReadFailCallback * out_fail)  {
+    int32_t __ret = (((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_physicalmemory)->phys_read_raw_iter(&((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->container, data, out_fail);
+    return __ret;
+}
+
+static inline int32_t mf_osinstance_phys_write_raw_iter(void *self, struct CIterator_PhysicalWriteData data, PhysicalWriteFailCallback * out_fail)  {
+    int32_t __ret = (((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_physicalmemory)->phys_write_raw_iter(&((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->container, data, out_fail);
+    return __ret;
+}
+
+static inline void mf_osinstance_set_mem_map(void *self, struct CSliceRef_PhysicalMemoryMapping _mem_map)  {
+(((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_physicalmemory)->set_mem_map(&((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->container, _mem_map);
+
+}
+
+static inline MemoryViewBase_CBox_c_void_____CArc_c_void mf_osinstance_into_phys_view(struct OsInstance_CBox_c_void_____CArc_c_void self)  {
+    CArc_c_void ___ctx = ctx_arc_clone(&self.container.context);
+    MemoryViewBase_CBox_c_void_____CArc_c_void __ret = (self.vtbl_physicalmemory)->into_phys_view(self.container);
+    ctx_arc_drop(&___ctx);
+    return __ret;
+}
+
+static inline MemoryViewBase_CBox_c_void_____CArc_c_void mf_osinstance_phys_view(void *self)  {
+    MemoryViewBase_CBox_c_void_____CArc_c_void __ret = (((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_physicalmemory)->phys_view(&((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->container);
+    return __ret;
+}
+
+static inline int32_t mf_processinstance_read_raw_iter(void *self, struct CIterator_ReadData data, ReadFailCallback * out_fail)  {
+    int32_t __ret = (((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_memoryview)->read_raw_iter(&((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, data, out_fail);
+    return __ret;
+}
+
+static inline int32_t mf_processinstance_write_raw_iter(void *self, struct CIterator_WriteData data, WriteFailCallback * out_fail)  {
+    int32_t __ret = (((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_memoryview)->write_raw_iter(&((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, data, out_fail);
+    return __ret;
+}
+
+static inline struct MemoryViewMetadata mf_processinstance_metadata(const void *self)  {
+    struct MemoryViewMetadata __ret = (((const struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_memoryview)->metadata(&((const struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->container);
+    return __ret;
+}
+
+static inline int32_t mf_processinstance_read_raw_list(void *self, struct CSliceMut_ReadData data)  {
+    int32_t __ret = (((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_memoryview)->read_raw_list(&((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, data);
+    return __ret;
+}
+
+static inline int32_t mf_processinstance_read_raw_into(void *self, Address addr, struct CSliceMut_u8 out)  {
+    int32_t __ret = (((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_memoryview)->read_raw_into(&((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, addr, out);
+    return __ret;
+}
+
+static inline int32_t mf_processinstance_write_raw_list(void *self, struct CSliceRef_WriteData data)  {
+    int32_t __ret = (((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_memoryview)->write_raw_list(&((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, data);
+    return __ret;
+}
+
+static inline int32_t mf_processinstance_write_raw(void *self, Address addr, struct CSliceRef_u8 data)  {
+    int32_t __ret = (((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_memoryview)->write_raw(&((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, addr, data);
+    return __ret;
+}
+
+static inline void mf_processinstance_drop(struct ProcessInstance_CBox_c_void_____CArc_c_void self)  {
+    cont_box_drop(&self.container.instance);
+    ctx_arc_drop(&self.container.context);
+
+}
+
+static inline struct ProcessState mf_processinstance_state(void *self)  {
+    struct ProcessState __ret = (((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_process)->state(&((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->container);
+    return __ret;
+}
+
+static inline int32_t mf_processinstance_module_address_list_callback(void *self, const struct ArchitectureIdent * target_arch, ModuleAddressCallback callback)  {
+    int32_t __ret = (((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_process)->module_address_list_callback(&((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, target_arch, callback);
+    return __ret;
+}
+
+static inline int32_t mf_processinstance_module_list_callback(void *self, const struct ArchitectureIdent * target_arch, ModuleInfoCallback callback)  {
+    int32_t __ret = (((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_process)->module_list_callback(&((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, target_arch, callback);
+    return __ret;
+}
+
+static inline int32_t mf_processinstance_module_by_address(void *self, Address address, struct ArchitectureIdent architecture, struct ModuleInfo * ok_out)  {
+    int32_t __ret = (((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_process)->module_by_address(&((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, address, architecture, ok_out);
+    return __ret;
+}
+
+static inline int32_t mf_processinstance_module_by_name_arch(void *self, struct CSliceRef_u8 name, const struct ArchitectureIdent * architecture, struct ModuleInfo * ok_out)  {
+    int32_t __ret = (((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_process)->module_by_name_arch(&((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, name, architecture, ok_out);
+    return __ret;
+}
+
+static inline int32_t mf_processinstance_module_by_name(void *self, struct CSliceRef_u8 name, struct ModuleInfo * ok_out)  {
+    int32_t __ret = (((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_process)->module_by_name(&((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, name, ok_out);
+    return __ret;
+}
+
+static inline int32_t mf_processinstance_primary_module_address(void *self, Address * ok_out)  {
+    int32_t __ret = (((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_process)->primary_module_address(&((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, ok_out);
+    return __ret;
+}
+
+static inline int32_t mf_processinstance_primary_module(void *self, struct ModuleInfo * ok_out)  {
+    int32_t __ret = (((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_process)->primary_module(&((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, ok_out);
+    return __ret;
+}
+
+static inline int32_t mf_processinstance_module_import_list_callback(void *self, const struct ModuleInfo * info, ImportCallback callback)  {
+    int32_t __ret = (((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_process)->module_import_list_callback(&((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, info, callback);
+    return __ret;
+}
+
+static inline int32_t mf_processinstance_module_export_list_callback(void *self, const struct ModuleInfo * info, ExportCallback callback)  {
+    int32_t __ret = (((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_process)->module_export_list_callback(&((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, info, callback);
+    return __ret;
+}
+
+static inline int32_t mf_processinstance_module_section_list_callback(void *self, const struct ModuleInfo * info, SectionCallback callback)  {
+    int32_t __ret = (((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_process)->module_section_list_callback(&((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, info, callback);
+    return __ret;
+}
+
+static inline int32_t mf_processinstance_module_import_by_name(void *self, const struct ModuleInfo * info, struct CSliceRef_u8 name, struct ImportInfo * ok_out)  {
+    int32_t __ret = (((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_process)->module_import_by_name(&((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, info, name, ok_out);
+    return __ret;
+}
+
+static inline int32_t mf_processinstance_module_export_by_name(void *self, const struct ModuleInfo * info, struct CSliceRef_u8 name, struct ExportInfo * ok_out)  {
+    int32_t __ret = (((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_process)->module_export_by_name(&((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, info, name, ok_out);
+    return __ret;
+}
+
+static inline int32_t mf_processinstance_module_section_by_name(void *self, const struct ModuleInfo * info, struct CSliceRef_u8 name, struct SectionInfo * ok_out)  {
+    int32_t __ret = (((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_process)->module_section_by_name(&((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, info, name, ok_out);
+    return __ret;
+}
+
+static inline const struct ProcessInfo * mf_processinstance_info(const void *self)  {
+    const struct ProcessInfo * __ret = (((const struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_process)->info(&((const struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->container);
+    return __ret;
+}
+
+static inline void mf_processinstance_virt_to_phys_list(void *self, struct CSliceRef_MemoryRange addrs, VirtualTranslationCallback out, VirtualTranslationFailCallback out_fail)  {
+(((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_virtualtranslate)->virt_to_phys_list(&((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, addrs, out, out_fail);
+
+}
+
+static inline void mf_processinstance_virt_to_phys_range(void *self, Address start, Address end, VirtualTranslationCallback out)  {
+(((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_virtualtranslate)->virt_to_phys_range(&((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, start, end, out);
+
+}
+
+static inline void mf_processinstance_virt_translation_map_range(void *self, Address start, Address end, VirtualTranslationCallback out)  {
+(((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_virtualtranslate)->virt_translation_map_range(&((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, start, end, out);
+
+}
+
+static inline void mf_processinstance_virt_page_map_range(void *self, umem gap_size, Address start, Address end, MemoryRangeCallback out)  {
+(((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_virtualtranslate)->virt_page_map_range(&((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, gap_size, start, end, out);
+
+}
+
+static inline int32_t mf_processinstance_virt_to_phys(void *self, Address address, struct PhysicalAddress * ok_out)  {
+    int32_t __ret = (((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_virtualtranslate)->virt_to_phys(&((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, address, ok_out);
+    return __ret;
+}
+
+static inline int32_t mf_processinstance_virt_page_info(void *self, Address addr, struct Page * ok_out)  {
+    int32_t __ret = (((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_virtualtranslate)->virt_page_info(&((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, addr, ok_out);
+    return __ret;
+}
+
+static inline void mf_processinstance_virt_translation_map(void *self, VirtualTranslationCallback out)  {
+(((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_virtualtranslate)->virt_translation_map(&((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, out);
+
+}
+
+static inline struct COption_Address mf_processinstance_phys_to_virt(void *self, Address phys)  {
+    struct COption_Address __ret = (((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_virtualtranslate)->phys_to_virt(&((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, phys);
+    return __ret;
+}
+
+static inline void mf_processinstance_virt_page_map(void *self, umem gap_size, MemoryRangeCallback out)  {
+(((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_virtualtranslate)->virt_page_map(&((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, gap_size, out);
+
+}
+
+static inline struct IntoProcessInstance_CBox_c_void_____CArc_c_void mf_intoprocessinstance_clone(const void *self)  {
+    struct IntoProcessInstance_CBox_c_void_____CArc_c_void __ret;
+    __ret.container = (((const struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_clone)->clone(&((const struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->container);
+    return __ret;
+}
+
+static inline void mf_intoprocessinstance_drop(struct IntoProcessInstance_CBox_c_void_____CArc_c_void self)  {
+    cont_box_drop(&self.container.instance);
+    ctx_arc_drop(&self.container.context);
+
+}
+
+static inline int32_t mf_intoprocessinstance_read_raw_iter(void *self, struct CIterator_ReadData data, ReadFailCallback * out_fail)  {
+    int32_t __ret = (((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_memoryview)->read_raw_iter(&((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, data, out_fail);
+    return __ret;
+}
+
+static inline int32_t mf_intoprocessinstance_write_raw_iter(void *self, struct CIterator_WriteData data, WriteFailCallback * out_fail)  {
+    int32_t __ret = (((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_memoryview)->write_raw_iter(&((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, data, out_fail);
+    return __ret;
+}
+
+static inline struct MemoryViewMetadata mf_intoprocessinstance_metadata(const void *self)  {
+    struct MemoryViewMetadata __ret = (((const struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_memoryview)->metadata(&((const struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->container);
+    return __ret;
+}
+
+static inline int32_t mf_intoprocessinstance_read_raw_list(void *self, struct CSliceMut_ReadData data)  {
+    int32_t __ret = (((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_memoryview)->read_raw_list(&((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, data);
+    return __ret;
+}
+
+static inline int32_t mf_intoprocessinstance_read_raw_into(void *self, Address addr, struct CSliceMut_u8 out)  {
+    int32_t __ret = (((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_memoryview)->read_raw_into(&((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, addr, out);
+    return __ret;
+}
+
+static inline int32_t mf_intoprocessinstance_write_raw_list(void *self, struct CSliceRef_WriteData data)  {
+    int32_t __ret = (((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_memoryview)->write_raw_list(&((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, data);
+    return __ret;
+}
+
+static inline int32_t mf_intoprocessinstance_write_raw(void *self, Address addr, struct CSliceRef_u8 data)  {
+    int32_t __ret = (((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_memoryview)->write_raw(&((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, addr, data);
+    return __ret;
+}
+
+static inline struct ProcessState mf_intoprocessinstance_state(void *self)  {
+    struct ProcessState __ret = (((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_process)->state(&((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->container);
+    return __ret;
+}
+
+static inline int32_t mf_intoprocessinstance_module_address_list_callback(void *self, const struct ArchitectureIdent * target_arch, ModuleAddressCallback callback)  {
+    int32_t __ret = (((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_process)->module_address_list_callback(&((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, target_arch, callback);
+    return __ret;
+}
+
+static inline int32_t mf_intoprocessinstance_module_list_callback(void *self, const struct ArchitectureIdent * target_arch, ModuleInfoCallback callback)  {
+    int32_t __ret = (((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_process)->module_list_callback(&((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, target_arch, callback);
+    return __ret;
+}
+
+static inline int32_t mf_intoprocessinstance_module_by_address(void *self, Address address, struct ArchitectureIdent architecture, struct ModuleInfo * ok_out)  {
+    int32_t __ret = (((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_process)->module_by_address(&((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, address, architecture, ok_out);
+    return __ret;
+}
+
+static inline int32_t mf_intoprocessinstance_module_by_name_arch(void *self, struct CSliceRef_u8 name, const struct ArchitectureIdent * architecture, struct ModuleInfo * ok_out)  {
+    int32_t __ret = (((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_process)->module_by_name_arch(&((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, name, architecture, ok_out);
+    return __ret;
+}
+
+static inline int32_t mf_intoprocessinstance_module_by_name(void *self, struct CSliceRef_u8 name, struct ModuleInfo * ok_out)  {
+    int32_t __ret = (((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_process)->module_by_name(&((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, name, ok_out);
+    return __ret;
+}
+
+static inline int32_t mf_intoprocessinstance_primary_module_address(void *self, Address * ok_out)  {
+    int32_t __ret = (((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_process)->primary_module_address(&((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, ok_out);
+    return __ret;
+}
+
+static inline int32_t mf_intoprocessinstance_primary_module(void *self, struct ModuleInfo * ok_out)  {
+    int32_t __ret = (((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_process)->primary_module(&((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, ok_out);
+    return __ret;
+}
+
+static inline int32_t mf_intoprocessinstance_module_import_list_callback(void *self, const struct ModuleInfo * info, ImportCallback callback)  {
+    int32_t __ret = (((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_process)->module_import_list_callback(&((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, info, callback);
+    return __ret;
+}
+
+static inline int32_t mf_intoprocessinstance_module_export_list_callback(void *self, const struct ModuleInfo * info, ExportCallback callback)  {
+    int32_t __ret = (((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_process)->module_export_list_callback(&((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, info, callback);
+    return __ret;
+}
+
+static inline int32_t mf_intoprocessinstance_module_section_list_callback(void *self, const struct ModuleInfo * info, SectionCallback callback)  {
+    int32_t __ret = (((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_process)->module_section_list_callback(&((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, info, callback);
+    return __ret;
+}
+
+static inline int32_t mf_intoprocessinstance_module_import_by_name(void *self, const struct ModuleInfo * info, struct CSliceRef_u8 name, struct ImportInfo * ok_out)  {
+    int32_t __ret = (((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_process)->module_import_by_name(&((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, info, name, ok_out);
+    return __ret;
+}
+
+static inline int32_t mf_intoprocessinstance_module_export_by_name(void *self, const struct ModuleInfo * info, struct CSliceRef_u8 name, struct ExportInfo * ok_out)  {
+    int32_t __ret = (((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_process)->module_export_by_name(&((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, info, name, ok_out);
+    return __ret;
+}
+
+static inline int32_t mf_intoprocessinstance_module_section_by_name(void *self, const struct ModuleInfo * info, struct CSliceRef_u8 name, struct SectionInfo * ok_out)  {
+    int32_t __ret = (((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_process)->module_section_by_name(&((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, info, name, ok_out);
+    return __ret;
+}
+
+static inline const struct ProcessInfo * mf_intoprocessinstance_info(const void *self)  {
+    const struct ProcessInfo * __ret = (((const struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_process)->info(&((const struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->container);
+    return __ret;
+}
+
+static inline void mf_intoprocessinstance_virt_to_phys_list(void *self, struct CSliceRef_MemoryRange addrs, VirtualTranslationCallback out, VirtualTranslationFailCallback out_fail)  {
+(((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_virtualtranslate)->virt_to_phys_list(&((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, addrs, out, out_fail);
+
+}
+
+static inline void mf_intoprocessinstance_virt_to_phys_range(void *self, Address start, Address end, VirtualTranslationCallback out)  {
+(((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_virtualtranslate)->virt_to_phys_range(&((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, start, end, out);
+
+}
+
+static inline void mf_intoprocessinstance_virt_translation_map_range(void *self, Address start, Address end, VirtualTranslationCallback out)  {
+(((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_virtualtranslate)->virt_translation_map_range(&((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, start, end, out);
+
+}
+
+static inline void mf_intoprocessinstance_virt_page_map_range(void *self, umem gap_size, Address start, Address end, MemoryRangeCallback out)  {
+(((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_virtualtranslate)->virt_page_map_range(&((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, gap_size, start, end, out);
+
+}
+
+static inline int32_t mf_intoprocessinstance_virt_to_phys(void *self, Address address, struct PhysicalAddress * ok_out)  {
+    int32_t __ret = (((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_virtualtranslate)->virt_to_phys(&((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, address, ok_out);
+    return __ret;
+}
+
+static inline int32_t mf_intoprocessinstance_virt_page_info(void *self, Address addr, struct Page * ok_out)  {
+    int32_t __ret = (((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_virtualtranslate)->virt_page_info(&((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, addr, ok_out);
+    return __ret;
+}
+
+static inline void mf_intoprocessinstance_virt_translation_map(void *self, VirtualTranslationCallback out)  {
+(((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_virtualtranslate)->virt_translation_map(&((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, out);
+
+}
+
+static inline struct COption_Address mf_intoprocessinstance_phys_to_virt(void *self, Address phys)  {
+    struct COption_Address __ret = (((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_virtualtranslate)->phys_to_virt(&((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, phys);
+    return __ret;
+}
+
+static inline void mf_intoprocessinstance_virt_page_map(void *self, umem gap_size, MemoryRangeCallback out)  {
+(((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_virtualtranslate)->virt_page_map(&((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, gap_size, out);
+
+}
+
+static inline int32_t mf_connectorinstance_phys_read_raw_iter(void *self, struct CIterator_PhysicalReadData data, PhysicalReadFailCallback * out_fail)  {
+    int32_t __ret = (((struct ConnectorInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_physicalmemory)->phys_read_raw_iter(&((struct ConnectorInstance_CBox_c_void_____CArc_c_void *)self)->container, data, out_fail);
+    return __ret;
+}
+
+static inline int32_t mf_connectorinstance_phys_write_raw_iter(void *self, struct CIterator_PhysicalWriteData data, PhysicalWriteFailCallback * out_fail)  {
+    int32_t __ret = (((struct ConnectorInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_physicalmemory)->phys_write_raw_iter(&((struct ConnectorInstance_CBox_c_void_____CArc_c_void *)self)->container, data, out_fail);
+    return __ret;
+}
+
+static inline struct PhysicalMemoryMetadata mf_connectorinstance_metadata(const void *self)  {
+    struct PhysicalMemoryMetadata __ret = (((const struct ConnectorInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_physicalmemory)->metadata(&((const struct ConnectorInstance_CBox_c_void_____CArc_c_void *)self)->container);
+    return __ret;
+}
+
+static inline void mf_connectorinstance_set_mem_map(void *self, struct CSliceRef_PhysicalMemoryMapping _mem_map)  {
+(((struct ConnectorInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_physicalmemory)->set_mem_map(&((struct ConnectorInstance_CBox_c_void_____CArc_c_void *)self)->container, _mem_map);
+
+}
+
+static inline MemoryViewBase_CBox_c_void_____CArc_c_void mf_connectorinstance_into_phys_view(struct ConnectorInstance_CBox_c_void_____CArc_c_void self)  {
+    CArc_c_void ___ctx = ctx_arc_clone(&self.container.context);
+    MemoryViewBase_CBox_c_void_____CArc_c_void __ret = (self.vtbl_physicalmemory)->into_phys_view(self.container);
+    ctx_arc_drop(&___ctx);
+    return __ret;
+}
+
+static inline MemoryViewBase_CBox_c_void_____CArc_c_void mf_connectorinstance_phys_view(void *self)  {
+    MemoryViewBase_CBox_c_void_____CArc_c_void __ret = (((struct ConnectorInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_physicalmemory)->phys_view(&((struct ConnectorInstance_CBox_c_void_____CArc_c_void *)self)->container);
+    return __ret;
+}
+
+struct CollectBase {
+    /* Pointer to array of data */
+    char *buf;
+    /* Capacity of the buffer (in elements) */
+    size_t capacity;
+    /* Current size of the buffer (in elements) */
+    size_t size;
+};
+
+// For memcpy
+#include <string.h>
+
+static bool cb_collect_static_base(struct CollectBase *ctx, size_t elem_size, void *info) {
+
+    if (ctx->size < ctx->capacity) {
+        memcpy(ctx->buf + elem_size * ctx->size++, info, elem_size);
+    }
+
+    return ctx->size < ctx->capacity;
+}
+
+static bool cb_collect_dynamic_base(struct CollectBase *ctx, size_t elem_size, void *info) {
+
+    if (!ctx->buf || ctx->size >= ctx->capacity) {
+        size_t new_capacity = ctx->buf ? ctx->capacity * 2 : 64;
+        char *buf = (char *)realloc(ctx->buf, elem_size * new_capacity);
+        if (buf) {
+            ctx->buf = buf;
+            ctx->capacity = new_capacity;
+        }
+    }
+
+    if (!ctx->buf || ctx->size >= ctx->capacity) return false;
+
+    memcpy(ctx->buf + elem_size * ctx->size++, info, elem_size);
+
+    return true;
+}
+
+struct BufferIterator {
+    /* Pointer to the data buffer */
+    const char *buf;
+    /* Number of elements in the buffer */
+    size_t size;
+    /* Current element index */
+    size_t i;
+    /* Size of the data element */
+    size_t sz_elem;
+};
+
+static bool buf_iter_next(struct BufferIterator *iter, void *out) {
+    if (iter->i >= iter->size) return 1;
+    memcpy(out, iter->buf + iter->i++ * iter->sz_elem, iter->sz_elem);
+    return 0;
+}
+
+static inline bool cb_collect_static_PhysicalReadData(struct CollectBase *ctx, PhysicalReadData info) {
+    return cb_collect_static_base(ctx, sizeof(PhysicalReadData), &info);
+}
+
+static inline bool cb_collect_dynamic_PhysicalReadData(struct CollectBase *ctx, PhysicalReadData info) {
+    return cb_collect_dynamic_base(ctx, sizeof(PhysicalReadData), &info);
+}
+
+static inline bool cb_count_PhysicalReadData(size_t *cnt, PhysicalReadData info) {
+    return ++(*cnt);
+}
+
+static inline bool cb_collect_static_PhysicalWriteData(struct CollectBase *ctx, PhysicalWriteData info) {
+    return cb_collect_static_base(ctx, sizeof(PhysicalWriteData), &info);
+}
+
+static inline bool cb_collect_dynamic_PhysicalWriteData(struct CollectBase *ctx, PhysicalWriteData info) {
+    return cb_collect_dynamic_base(ctx, sizeof(PhysicalWriteData), &info);
+}
+
+static inline bool cb_count_PhysicalWriteData(size_t *cnt, PhysicalWriteData info) {
+    return ++(*cnt);
+}
+
+static inline bool cb_collect_static_ReadData(struct CollectBase *ctx, ReadData info) {
+    return cb_collect_static_base(ctx, sizeof(ReadData), &info);
+}
+
+static inline bool cb_collect_dynamic_ReadData(struct CollectBase *ctx, ReadData info) {
+    return cb_collect_dynamic_base(ctx, sizeof(ReadData), &info);
+}
+
+static inline bool cb_count_ReadData(size_t *cnt, ReadData info) {
+    return ++(*cnt);
+}
+
+static inline bool cb_collect_static_WriteData(struct CollectBase *ctx, WriteData info) {
+    return cb_collect_static_base(ctx, sizeof(WriteData), &info);
+}
+
+static inline bool cb_collect_dynamic_WriteData(struct CollectBase *ctx, WriteData info) {
+    return cb_collect_dynamic_base(ctx, sizeof(WriteData), &info);
+}
+
+static inline bool cb_count_WriteData(size_t *cnt, WriteData info) {
+    return ++(*cnt);
+}
+
+static inline bool cb_collect_static_Address(struct CollectBase *ctx, Address info) {
+    return cb_collect_static_base(ctx, sizeof(Address), &info);
+}
+
+static inline bool cb_collect_dynamic_Address(struct CollectBase *ctx, Address info) {
+    return cb_collect_dynamic_base(ctx, sizeof(Address), &info);
+}
+
+static inline bool cb_count_Address(size_t *cnt, Address info) {
+    return ++(*cnt);
+}
+
+static inline bool cb_collect_static_ProcessInfo(struct CollectBase *ctx, ProcessInfo info) {
+    return cb_collect_static_base(ctx, sizeof(ProcessInfo), &info);
+}
+
+static inline bool cb_collect_dynamic_ProcessInfo(struct CollectBase *ctx, ProcessInfo info) {
+    return cb_collect_dynamic_base(ctx, sizeof(ProcessInfo), &info);
+}
+
+static inline bool cb_count_ProcessInfo(size_t *cnt, ProcessInfo info) {
+    return ++(*cnt);
+}
+
+static inline bool cb_collect_static_ModuleAddressInfo(struct CollectBase *ctx, ModuleAddressInfo info) {
+    return cb_collect_static_base(ctx, sizeof(ModuleAddressInfo), &info);
+}
+
+static inline bool cb_collect_dynamic_ModuleAddressInfo(struct CollectBase *ctx, ModuleAddressInfo info) {
+    return cb_collect_dynamic_base(ctx, sizeof(ModuleAddressInfo), &info);
+}
+
+static inline bool cb_count_ModuleAddressInfo(size_t *cnt, ModuleAddressInfo info) {
+    return ++(*cnt);
+}
+
+static inline bool cb_collect_static_ModuleInfo(struct CollectBase *ctx, ModuleInfo info) {
+    return cb_collect_static_base(ctx, sizeof(ModuleInfo), &info);
+}
+
+static inline bool cb_collect_dynamic_ModuleInfo(struct CollectBase *ctx, ModuleInfo info) {
+    return cb_collect_dynamic_base(ctx, sizeof(ModuleInfo), &info);
+}
+
+static inline bool cb_count_ModuleInfo(size_t *cnt, ModuleInfo info) {
+    return ++(*cnt);
+}
+
+static inline bool cb_collect_static_ImportInfo(struct CollectBase *ctx, ImportInfo info) {
+    return cb_collect_static_base(ctx, sizeof(ImportInfo), &info);
+}
+
+static inline bool cb_collect_dynamic_ImportInfo(struct CollectBase *ctx, ImportInfo info) {
+    return cb_collect_dynamic_base(ctx, sizeof(ImportInfo), &info);
+}
+
+static inline bool cb_count_ImportInfo(size_t *cnt, ImportInfo info) {
+    return ++(*cnt);
+}
+
+static inline bool cb_collect_static_ExportInfo(struct CollectBase *ctx, ExportInfo info) {
+    return cb_collect_static_base(ctx, sizeof(ExportInfo), &info);
+}
+
+static inline bool cb_collect_dynamic_ExportInfo(struct CollectBase *ctx, ExportInfo info) {
+    return cb_collect_dynamic_base(ctx, sizeof(ExportInfo), &info);
+}
+
+static inline bool cb_count_ExportInfo(size_t *cnt, ExportInfo info) {
+    return ++(*cnt);
+}
+
+static inline bool cb_collect_static_SectionInfo(struct CollectBase *ctx, SectionInfo info) {
+    return cb_collect_static_base(ctx, sizeof(SectionInfo), &info);
+}
+
+static inline bool cb_collect_dynamic_SectionInfo(struct CollectBase *ctx, SectionInfo info) {
+    return cb_collect_dynamic_base(ctx, sizeof(SectionInfo), &info);
+}
+
+static inline bool cb_count_SectionInfo(size_t *cnt, SectionInfo info) {
+    return ++(*cnt);
+}
+
+static inline bool cb_collect_static_VirtualTranslation(struct CollectBase *ctx, VirtualTranslation info) {
+    return cb_collect_static_base(ctx, sizeof(VirtualTranslation), &info);
+}
+
+static inline bool cb_collect_dynamic_VirtualTranslation(struct CollectBase *ctx, VirtualTranslation info) {
+    return cb_collect_dynamic_base(ctx, sizeof(VirtualTranslation), &info);
+}
+
+static inline bool cb_count_VirtualTranslation(size_t *cnt, VirtualTranslation info) {
+    return ++(*cnt);
+}
+
+static inline bool cb_collect_static_VirtualTranslationFail(struct CollectBase *ctx, VirtualTranslationFail info) {
+    return cb_collect_static_base(ctx, sizeof(VirtualTranslationFail), &info);
+}
+
+static inline bool cb_collect_dynamic_VirtualTranslationFail(struct CollectBase *ctx, VirtualTranslationFail info) {
+    return cb_collect_dynamic_base(ctx, sizeof(VirtualTranslationFail), &info);
+}
+
+static inline bool cb_count_VirtualTranslationFail(size_t *cnt, VirtualTranslationFail info) {
+    return ++(*cnt);
+}
+
+static inline bool cb_collect_static_MemoryRange(struct CollectBase *ctx, MemoryRange info) {
+    return cb_collect_static_base(ctx, sizeof(MemoryRange), &info);
+}
+
+static inline bool cb_collect_dynamic_MemoryRange(struct CollectBase *ctx, MemoryRange info) {
+    return cb_collect_dynamic_base(ctx, sizeof(MemoryRange), &info);
+}
+
+static inline bool cb_count_MemoryRange(size_t *cnt, MemoryRange info) {
+    return ++(*cnt);
+}
+
 
 #ifdef __cplusplus
 } // extern "C"

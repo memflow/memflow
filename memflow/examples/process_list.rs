@@ -7,8 +7,8 @@ fn main() -> Result<()> {
     let (conn_name, conn_args, os_name, os_args) = parse_args()?;
 
     // create connector + os
-    let inventory = Inventory::scan();
     let mut os = {
+        let inventory = Inventory::scan();
         let builder = inventory.builder();
 
         if let Some(conn_name) = conn_name {

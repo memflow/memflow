@@ -1,7 +1,7 @@
 use crate::cglue::{result::into_int_out_result, *};
 use crate::error::{Error, ErrorKind, ErrorOrigin};
 
-use super::Args;
+use super::{Args, PluginLogger};
 
 use std::ffi::c_void;
 
@@ -103,47 +103,9 @@ pub fn find_export_by_prefix(
         .collect::<Vec<_>>())
 }
 
-/// Wrapper for instantiating object with log level
-///
-/// This function will parse args into `Args`, log_level into `log::Level`,
-/// and call the create_fn
-///
-/// This function is used by the proc macros
-pub fn create_with_logging<T>(
-    args: &ReprCString,
-    lib: CArc<c_void>,
-    log_level: i32,
-    out: &mut MaybeUninit<T>,
-    create_fn: impl FnOnce(Args, CArc<c_void>, log::Level) -> Result<T, Error>,
-) -> i32 {
-    let level = match log_level {
-        1 => ::log::Level::Error,
-        2 => ::log::Level::Warn,
-        3 => ::log::Level::Info,
-        4 => ::log::Level::Debug,
-        5 => ::log::Level::Trace,
-        _ => ::log::Level::Trace,
-    };
-
-    into_int_out_result(
-        Args::parse(&args)
-            .map_err(|e| {
-                ::log::error!("error parsing args: {}", e);
-                e
-            })
-            .and_then(|args| {
-                create_fn(args, lib, level).map_err(|e| {
-                    ::log::error!("{}", e);
-                    e
-                })
-            }),
-        out,
-    )
-}
-
 /// Wrapper for instantiating object with all needed parameters
 ///
-/// This function will parse args into `Args`, log_level into `log::Level`,
+/// This function will parse args into `Args`, initializes the [`PluginLogger`],
 /// and call the create_fn with `input` forwarded.
 ///
 /// This function is used by the proc macros
@@ -151,18 +113,11 @@ pub fn create_bare<T, I>(
     args: &ReprCString,
     input: I,
     lib: CArc<c_void>,
-    log_level: i32,
+    logger: PluginLogger,
     out: &mut MaybeUninit<T>,
-    create_fn: impl FnOnce(&Args, I, CArc<c_void>, log::Level) -> Result<T, Error>,
+    create_fn: impl FnOnce(&Args, I, CArc<c_void>) -> Result<T, Error>,
 ) -> i32 {
-    let level = match log_level {
-        1 => ::log::Level::Error,
-        2 => ::log::Level::Warn,
-        3 => ::log::Level::Info,
-        4 => ::log::Level::Debug,
-        5 => ::log::Level::Trace,
-        _ => ::log::Level::Trace,
-    };
+    logger.init().ok();
 
     into_int_out_result(
         Args::parse(&args)
@@ -171,7 +126,7 @@ pub fn create_bare<T, I>(
                 e
             })
             .and_then(|args| {
-                create_fn(&args, input, lib, level).map_err(|e| {
+                create_fn(&args, input, lib).map_err(|e| {
                     ::log::error!("{}", e);
                     e
                 })
@@ -180,17 +135,20 @@ pub fn create_bare<T, I>(
     )
 }
 
-/// Wrapper for instantiating object without logging
+/// Wrapper for instantiating object.
 ///
 /// This function will parse args into `Args`, and call the create_fn
 ///
 /// This function is used by the proc macros
-pub fn create_without_logging<T>(
+pub fn create<T>(
     args: &ReprCString,
     lib: CArc<c_void>,
+    logger: PluginLogger,
     out: &mut MaybeUninit<T>,
     create_fn: impl FnOnce(super::Args, CArc<c_void>) -> Result<T, Error>,
 ) -> i32 {
+    logger.init().ok();
+
     into_int_out_result(
         Args::parse(&args).and_then(|args| create_fn(args, lib)),
         out,

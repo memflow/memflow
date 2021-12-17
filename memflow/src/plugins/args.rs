@@ -508,7 +508,6 @@ mod tests {
         assert_eq!(args2.get("opt3").unwrap(), "test3");
     }
 
-    // TODO: test non default first to string
     #[test]
     pub fn to_string_with_default() {
         let argstr = "test0,opt1=test1,opt2=test2,opt3=test3";

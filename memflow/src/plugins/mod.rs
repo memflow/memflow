@@ -23,6 +23,9 @@ pub mod os;
 pub use os::{LoadableOs, OsDescriptor};
 pub type OsInputArg = <LoadableOs as Loadable>::InputArg;
 
+pub mod logger;
+pub use logger::*; // TODO: restrict
+
 pub(crate) mod util;
 pub use util::create_bare;
 
@@ -39,7 +42,7 @@ use abi_stable::{type_layout::TypeLayout, StableAbi};
 use libloading::Library;
 
 /// Exported memflow plugins version
-pub const MEMFLOW_PLUGIN_VERSION: i32 = -6;
+pub const MEMFLOW_PLUGIN_VERSION: i32 = -7;
 
 /// Help and Target callbacks
 pub type HelpCallback<'a> = OpaqueCallback<'a, ReprCString>;
@@ -96,7 +99,7 @@ pub type CreateFn<T> = extern "C" fn(
     &ReprCString,
     <T as Loadable>::CInputArg,
     lib: CArc<c_void>,
-    i32,
+    logger: PluginLogger,
     &mut MaybeUninit<<T as Loadable>::Instance>,
 ) -> i32;
 

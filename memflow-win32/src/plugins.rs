@@ -13,16 +13,10 @@ pub fn build_kernel(
     args: &Args,
     mem: Option<ConnectorInstanceArcBox<'static>>,
     lib: CArc<c_void>,
-    log_level: log::Level,
 ) -> Result<OsInstanceArcBox<'static>> {
     let mem = mem.ok_or_else(|| {
         Error(ErrorOrigin::OsLayer, ErrorKind::Configuration).log_error("Must provide memory!")
     })?;
-
-    simple_logger::SimpleLogger::new()
-        .with_level(log_level.to_level_filter())
-        .init()
-        .ok();
 
     let builder = Win32Kernel::builder(mem);
     build_dtb(builder, args, lib)

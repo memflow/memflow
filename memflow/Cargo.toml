@@ -19,7 +19,7 @@ codecov = { repository = "github", branch = "master", service = "github" }
 [dependencies]
 memflow-derive = { version = "0.1", path = "../memflow-derive" }
 dataview = { version = "0.1", default-features = false }
-log = "0.4"
+log = { version = "0.4", default-features = false }
 bitflags = "1.2"
 coarsetime = { version = "0.1", optional = true }
 smallvec = { version = "1.4", default-features = false }
@@ -32,7 +32,8 @@ itertools = { version = "0.10", default-features = false }
 memmap = { version = "0.7", optional = true }
 hashbrown = "0.11"
 fixed-slice-vec = "0.8.0"
-cglue = { version = "0.2.0", git = "https://github.com/h33p/cglue", branch = "main", default-features = false }
+#cglue = { version = "0.2.0", git = "https://github.com/h33p/cglue", branch = "main", default-features = false }
+cglue = { path = "../../cglue/cglue", default-features = false }
 rangemap = "0.1.13"
 
 # plugins
@@ -59,7 +60,7 @@ dummy_mem = ["rand", "rand_xorshift"]
 std = ["coarsetime", "no-std-compat/std", "cglue/std"]
 serde_derive = ["serde", "cglue/serde"]
 memmapfiles = ["toml", "serde_derive"]
-plugins = ["libloading", "dirs", "goblin", "abi_stable", "cglue/layout_checks"]
+plugins = ["libloading", "dirs", "goblin", "abi_stable", "cglue/layout_checks", "log/std"]
 filemap = ["memmap"]
 64_bit_mem = []
 # use 128 bit addressing.

@@ -13,7 +13,6 @@ use crate::plugins::*;
 use crate::types::{clamp_to_usize, imem, mem, size, umem, Address};
 
 use crate::cglue::*;
-use log::Level;
 use rand::seq::SliceRandom;
 use rand::{thread_rng, Rng, SeedableRng};
 use rand_xorshift::XorShiftRng;
@@ -560,17 +559,16 @@ extern "C" fn mf_create(
     args: &ReprCString,
     mem: COption<ConnectorInstanceArcBox>,
     lib: CArc<c_void>,
-    log_level: i32,
+    logger: PluginLogger,
     out: &mut MuOsInstanceArcBox<'static>,
 ) -> i32 {
-    create_bare(args, mem.into(), lib, log_level, out, build_dummy)
+    create_bare(args, mem.into(), lib, logger, out, build_dummy)
 }
 
 pub fn build_dummy(
     args: &Args,
     _mem: Option<ConnectorInstanceArcBox>,
     lib: CArc<c_void>,
-    _log_level: Level,
 ) -> Result<OsInstanceArcBox<'static>> {
     let size = super::mem::parse_size(args)?;
     let mem = DummyMemory::new(size);

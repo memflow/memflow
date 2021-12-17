@@ -23,7 +23,8 @@ pub struct Record {
     //key_values: KeyValues<'a>,
 }
 
-/// A logger which just forwards all calls over the ffi from the callee to the caller.
+/// A logger which just forwards all logging calls over the FFI
+/// from the callee to the caller (i.e. from the plugin to the main process).
 #[repr(C)]
 pub struct PluginLogger {
     max_level: i32,
@@ -33,7 +34,12 @@ pub struct PluginLogger {
 }
 
 impl PluginLogger {
-    /// Creates a new PluginLogger. This function has to be called on the caller side.
+    /// Creates a new PluginLogger.
+    ///
+    /// # Remarks:
+    ///
+    /// This function has to be called on the caller side
+    /// (i.e. from memflow itself in the main process).
     pub fn new() -> Self {
         Self {
             max_level: log::max_level() as i32,
@@ -43,11 +49,14 @@ impl PluginLogger {
         }
     }
 
-    /// Actually initializes the logger and sets up the log crate.
+    /// Initializes the logger and sets up the logger in the log crate.
+    ///
+    /// # Remarks:
+    ///
     /// This function has to be invoked on the callee side.
+    /// (i.e. in the plugin)
     pub fn init(self) -> Result<(), SetLoggerError> {
         log::set_max_level(i32_to_level(self.max_level).to_level_filter());
-        // TODO: move to https://docs.rs/log/latest/log/fn.set_logger.html
         log::set_boxed_logger(Box::new(self))?;
         Ok(())
     }
@@ -87,6 +96,7 @@ impl log::Log for PluginLogger {
     }
 }
 
+/// FFI function which is being invoked from the caller to the callee.
 extern "C" fn mf_log_enabled(metadata: &Metadata) -> i32 {
     match log::logger().enabled(
         &log::Metadata::builder()
@@ -99,6 +109,7 @@ extern "C" fn mf_log_enabled(metadata: &Metadata) -> i32 {
     }
 }
 
+/// FFI function which is being invoked from the caller to the callee.
 extern "C" fn mf_log_log(record: &Record) {
     log::logger().log(
         &log::Record::builder()
@@ -125,6 +136,7 @@ extern "C" fn mf_log_log(record: &Record) {
     )
 }
 
+/// FFI function which is being invoked from the caller to the callee.
 extern "C" fn mf_log_flush() {
     log::logger().flush()
 }

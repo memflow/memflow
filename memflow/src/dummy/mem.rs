@@ -10,18 +10,16 @@ use crate::mem::{
 use crate::plugins::*;
 use crate::types::{size, umem, Address};
 
-use std::sync::Arc;
-
 cglue_impl_group!(DummyMemory, ConnectorInstance, {});
 
 pub struct DummyMemory {
-    pub(crate) buf: Arc<Box<[u8]>>,
+    pub(crate) buf: Box<[u8]>,
     pub(crate) mem: MappedPhysicalMemory<&'static mut [u8], MemoryMap<&'static mut [u8]>>,
 }
 
 impl DummyMemory {
     pub fn new(size: usize) -> Self {
-        let buf = Arc::new(vec![0_u8; size].into_boxed_slice());
+        let buf = vec![0_u8; size].into_boxed_slice();
 
         let mut map = MemoryMap::new();
         map.push_range(

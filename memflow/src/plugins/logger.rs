@@ -86,7 +86,7 @@ impl log::Log for PluginLogger {
             message: format!("{}", record.args()).into(),
             module_path: record.module_path().map(|s| s.into()).into(),
             file: record.file().map(|s| s.into()).into(),
-            line: record.line().map(|s| s.into()).into(),
+            line: record.line().into(),
         };
         (self.log)(&r)
     }

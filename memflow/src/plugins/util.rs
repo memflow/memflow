@@ -120,7 +120,7 @@ pub fn create_bare<T, I>(
     logger.init().ok();
 
     into_int_out_result(
-        Args::parse(&args)
+        Args::parse(args)
             .map_err(|e| {
                 ::log::error!("error parsing args: {}", e);
                 e
@@ -149,8 +149,5 @@ pub fn create<T>(
 ) -> i32 {
     logger.init().ok();
 
-    into_int_out_result(
-        Args::parse(&args).and_then(|args| create_fn(args, lib)),
-        out,
-    )
+    into_int_out_result(Args::parse(args).and_then(|args| create_fn(args, lib)), out)
 }

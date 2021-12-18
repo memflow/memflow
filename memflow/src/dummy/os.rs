@@ -241,7 +241,7 @@ impl DummyOs {
     }
 
     pub fn vtop(&mut self, dtb_base: Address, virt_addr: Address) -> Option<Address> {
-        let mut pml4 = unsafe {
+        let pml4 = unsafe {
             &mut *(self
                 .mem
                 .buf
@@ -251,7 +251,7 @@ impl DummyOs {
         };
 
         let pt_mapper =
-            unsafe { OffsetPageTable::new(&mut pml4, VirtAddr::from_ptr(self.mem.buf.as_ptr())) };
+            unsafe { OffsetPageTable::new(pml4, VirtAddr::from_ptr(self.mem.buf.as_ptr())) };
 
         pt_mapper
             .translate_addr(VirtAddr::new(virt_addr.to_umem() as u64))
@@ -325,7 +325,7 @@ impl DummyOs {
 
         let dtb = self.alloc_pt_page();
 
-        let mut pml4 = unsafe {
+        let pml4 = unsafe {
             &mut *(self
                 .mem
                 .buf
@@ -336,7 +336,7 @@ impl DummyOs {
         *pml4 = PageTable::new();
 
         let mut pt_mapper =
-            unsafe { OffsetPageTable::new(&mut pml4, VirtAddr::from_ptr(self.mem.buf.as_ptr())) };
+            unsafe { OffsetPageTable::new(pml4, VirtAddr::from_ptr(self.mem.buf.as_ptr())) };
 
         while cur_len < map_size {
             let page_info = self.next_page_for_address(cur_len.into());

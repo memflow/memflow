@@ -366,7 +366,7 @@ impl Inventory {
         let path_iter = path_iter.chain(
             path_var
                 .as_ref()
-                .map(|p| std::env::split_paths(p))
+                .map(std::env::split_paths)
                 .into_iter()
                 .flatten(),
         );
@@ -605,7 +605,7 @@ impl Inventory {
     /// use memflow::mem::phys_mem::*;
     ///
     /// #[connector(name = "dummy_conn")]
-    /// pub fn create_connector(_args: &Args, _log_level: log::Level) -> Result<DummyMemory> {
+    /// pub fn create_connector(_args: &Args) -> Result<DummyMemory> {
     ///     Ok(DummyMemory::new(size::mb(16)))
     /// }
     /// ```

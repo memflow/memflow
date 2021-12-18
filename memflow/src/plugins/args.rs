@@ -103,15 +103,13 @@ impl Args {
         let mut split = vec![];
         for (i, kv) in quotes.clone().enumerate() {
             if i % 2 == 0 {
-                let s = kv.split(",");
+                let s = kv.split(',');
                 split.extend(s.map(|s| s.to_owned()));
+            } else if split.is_empty() {
+                split.push(kv.to_owned());
             } else {
-                if split.is_empty() {
-                    split.push(kv.to_owned());
-                } else {
-                    let prev = split.pop().unwrap();
-                    map.insert(prev[..prev.len() - 1].to_string(), kv.to_string());
-                }
+                let prev = split.pop().unwrap();
+                map.insert(prev[..prev.len() - 1].to_string(), kv.to_string());
             }
         }
 

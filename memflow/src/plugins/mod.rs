@@ -235,8 +235,7 @@ pub trait Loadable: Sized {
                 Error(ErrorOrigin::Inventory, ErrorKind::UnableToLoadLibrary)
             })
             .map(LibContext::from)
-            .map(CArc::from)?
-            .into();
+            .map(CArc::from)?;
 
         Ok(exports
             .into_iter()
@@ -731,7 +730,14 @@ impl Inventory {
         lib.loader.instantiate(lib.library.clone(), input, args)
     }
 
-    pub fn update_max_log_level(&self) {
+    /// Sets the maximum logging level in all plugins and updates the
+    /// internal [`PluginLogger`] in each plugin instance.
+    pub fn set_max_log_level(&self, level: LevelFilter) {
+        log::set_max_level(level);
+        self.update_max_log_level()
+    }
+
+    fn update_max_log_level(&self) {
         let level = log::max_level();
 
         self.connectors
@@ -741,11 +747,6 @@ impl Inventory {
             .filter_map(|l| *l)
             .filter_map(LibContext::try_get_logger)
             .for_each(|l| l.on_level_change(level));
-    }
-
-    pub fn set_max_log_level(&self, level: LevelFilter) {
-        log::set_max_level(level);
-        self.update_max_log_level()
     }
 }
 

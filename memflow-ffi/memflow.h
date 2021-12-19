@@ -1948,12 +1948,12 @@ void log_init(LevelFilter level_filter);
 /**
  * Logs an error with custom log level.
  */
-void log_error(Level level, int32_t error);
+void log(Level level, int32_t error);
 
 /**
  * Logs an error with debug log level.
  */
-void debug_error(int32_t error);
+void log_debug_error(int32_t error);
 
 /**
  * Sets new maximum log level.
@@ -1962,7 +1962,7 @@ void debug_error(int32_t error);
  * if it is not supplied, plugins will not have their log levels updated, potentially leading to
  * lower performance, or less logging than expected.
  */
-void set_max_level(LevelFilter level_filter, const struct Inventory *inventory);
+void log_set_max_level(LevelFilter level_filter, const struct Inventory *inventory);
 
 /**
  * Helper to convert `Address` to a `PhysicalAddress`

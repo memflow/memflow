@@ -142,20 +142,25 @@ fn read_bench(mut kernel: OsInstanceArcBox) -> Result<()> {
 fn main() -> Result<()> {
     let (conn_name, conn_args, os_name, os_args, log_level) = parse_args()?;
 
-    simple_logger::SimpleLogger::new()
-        .with_level(log_level.to_level_filter())
-        .init()
-        .unwrap();
+    simple_logger::SimpleLogger::new().init().unwrap();
+
+    log::set_max_level(log_level.to_level_filter());
 
     // create connector + os
     let inventory = Inventory::scan();
-    let os = inventory
-        .builder()
-        .connector(&conn_name)
-        .args(conn_args)
-        .os(&os_name)
-        .args(os_args)
-        .build()?;
+    let os = if conn_name.is_empty() {
+        inventory.builder().os(&os_name).args(os_args).build()?
+    } else {
+        inventory
+            .builder()
+            .connector(&conn_name)
+            .args(conn_args)
+            .os(&os_name)
+            .args(os_args)
+            .build()?
+    };
+
+    inventory.set_max_log_level(log::LevelFilter::Trace);
 
     read_bench(os)
 }

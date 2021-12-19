@@ -80,32 +80,17 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
     let func = parse_macro_input!(input as ItemFn);
     let func_name = &func.sig.ident;
 
-    let create_fn_gen = if func.sig.inputs.len() > 1 {
-        quote! {
+    let create_fn_gen = quote! {
             #[doc(hidden)]
             extern "C" fn mf_create(
                 args: &cglue::repr_cstring::ReprCString,
                 _: cglue::option::COption<#crate_path::os::root::OsInstanceArcBox>,
                 lib: #crate_path::cglue::CArc<::core::ffi::c_void>,
-                log_level: i32,
+                logger: Option<&'static #crate_path::plugins::PluginLogger>,
                 out: &mut #crate_path::mem::phys_mem::MuConnectorInstanceArcBox<'static>
             ) -> i32 {
-                #crate_path::plugins::connector::create_with_logging(args, lib, log_level, out, #func_name)
+                #crate_path::plugins::connector::create(args, lib, logger, out, #func_name)
             }
-        }
-    } else {
-        quote! {
-            #[doc(hidden)]
-            extern "C" fn mf_create(
-                args: &cglue::repr_cstring::ReprCString,
-                _: cglue::option::COption<#crate_path::os::root::OsInstanceArcBox>,
-                lib: #crate_path::cglue::CArc<::core::ffi::c_void>,
-                _: i32,
-                out: &mut #crate_path::mem::phys_mem::MuConnectorInstanceArcBox<'static>
-            ) -> i32 {
-                #crate_path::plugins::connector::create_without_logging(args, lib, out, #func_name)
-            }
-        }
     };
 
     let help_fn_gen = args.help_fn.map(|v| v.parse().unwrap()).map_or_else(
@@ -206,32 +191,17 @@ pub fn os_layer(args: TokenStream, input: TokenStream) -> TokenStream {
     let func = parse_macro_input!(input as ItemFn);
     let func_name = &func.sig.ident;
 
-    let create_fn_gen = if func.sig.inputs.len() > 2 {
-        quote! {
+    let create_fn_gen = quote! {
             #[doc(hidden)]
             extern "C" fn mf_create(
                 args: &cglue::repr_cstring::ReprCString,
                 mem: #crate_path::cglue::COption<#crate_path::mem::phys_mem::ConnectorInstanceArcBox<'static>>,
                 lib: #crate_path::cglue::CArc<::core::ffi::c_void>,
-                log_level: i32,
+                logger: Option<&'static #crate_path::plugins::PluginLogger>,
                 out: &mut #crate_path::os::root::MuOsInstanceArcBox<'static>
             ) -> i32 {
-                #crate_path::plugins::os::create_with_logging(args, mem.into(), lib, log_level, out, #func_name)
+                #crate_path::plugins::os::create(args, mem.into(), lib, logger, out, #func_name)
             }
-        }
-    } else {
-        quote! {
-            #[doc(hidden)]
-            extern "C" fn mf_create(
-                args: &cglue::repr_cstring::ReprCString,
-                mem: #crate_path::cglue::COption<#crate_path::mem::phys_mem::ConnectorInstanceArcBox<'static>>,
-                lib: #crate_path::cglue::CArc<::core::ffi::c_void>,
-                _: i32,
-                out: &mut #crate_path::os::root::MuOsInstanceArcBox<'static>
-            ) -> i32 {
-                #crate_path::plugins::os::create_without_logging(args, mem.into(), lib, out, #func_name)
-            }
-        }
     };
 
     let help_fn_gen = args.help_fn.map(|v| v.parse().unwrap()).map_or_else(
@@ -313,10 +283,10 @@ pub fn os_layer_bare(args: TokenStream, input: TokenStream) -> TokenStream {
             args: &cglue::repr_cstring::ReprCString,
             mem: #crate_path::cglue::COption<#crate_path::mem::phys_mem::ConnectorInstanceArcBox<'static>>,
             lib: #crate_path::cglue::CArc<::core::ffi::c_void>,
-            log_level: i32,
+            logger: Option<&'static #crate_path::plugins::PluginLogger>,
             out: &mut #crate_path::os::root::MuOsInstanceArcBox<'static>
         ) -> i32 {
-            #crate_path::plugins::create_bare(args, mem.into(), lib, log_level, out, #func_name)
+            #crate_path::plugins::create_bare(args, mem.into(), lib, logger, out, #func_name)
         }
     };
 

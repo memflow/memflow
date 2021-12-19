@@ -109,12 +109,12 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: nightly-2021-04-08
+          toolchain: nightly-2021-12-19
           override: true
-      - run: rustup toolchain install nightly-2021-04-08
-      - run: rustup +nightly-2021-04-08 component add rust-src
+      - run: rustup toolchain install nightly-2021-12-19
+      - run: rustup +nightly-2021-12-19 component add rust-src
       - name: Build no_std crate
-        run: cd nostd-test; cargo +nightly-2021-04-08 build --all-features --verbose
+        run: cd nostd-test; cargo +nightly-2021-12-19 build --all-features --verbose
 
   build-coverage:
     runs-on: ubuntu-latest

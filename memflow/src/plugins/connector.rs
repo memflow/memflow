@@ -6,14 +6,14 @@ use crate::error::*;
 use crate::mem::PhysicalMemory;
 
 use super::{
-    Args, ConnectorInstance, ConnectorInstanceArcBox, ConnectorInstanceVtableFiller, Loadable,
-    MuConnectorInstanceArcBox, OsInstanceArcBox, PluginDescriptor, TargetInfo,
+    Args, ConnectorInstance, ConnectorInstanceArcBox, ConnectorInstanceVtableFiller, LibContext,
+    Loadable, MuConnectorInstanceArcBox, OsInstanceArcBox, PluginDescriptor, PluginLogger,
+    TargetInfo,
 };
 
-use libloading::Library;
 use std::ffi::c_void;
 
-pub fn create_with_logging<
+pub fn create<
     T: 'static
         + PhysicalMemory
         + Clone
@@ -21,27 +21,11 @@ pub fn create_with_logging<
 >(
     args: &ReprCString,
     lib: CArc<c_void>,
-    log_level: i32,
-    out: &mut MuConnectorInstanceArcBox<'static>,
-    create_fn: impl Fn(&Args, log::Level) -> Result<T>,
-) -> i32 {
-    super::util::create_with_logging(args, lib, log_level, out, |a, lib, l| {
-        Ok(group_obj!((create_fn(&a, l)?, lib) as ConnectorInstance))
-    })
-}
-
-pub fn create_without_logging<
-    T: 'static
-        + PhysicalMemory
-        + Clone
-        + ConnectorInstanceVtableFiller<'static, CBox<'static, T>, CArc<c_void>>,
->(
-    args: &ReprCString,
-    lib: CArc<c_void>,
+    logger: Option<&'static PluginLogger>,
     out: &mut MuConnectorInstanceArcBox<'static>,
     create_fn: impl Fn(&Args) -> Result<T>,
 ) -> i32 {
-    super::util::create_without_logging(args, lib, out, |a, lib| {
+    super::util::create(args, lib, logger, out, |a, lib| {
         Ok(group_obj!((create_fn(&a)?, lib) as ConnectorInstance))
     })
 }
@@ -117,19 +101,15 @@ impl Loadable for LoadableConnector {
     /// The connector is initialized with the arguments provided to this function.
     fn instantiate(
         &self,
-        library: CArc<Library>,
+        library: CArc<LibContext>,
         input: Self::InputArg,
         args: &Args,
     ) -> Result<Self::Instance> {
         let cstr = ReprCString::from(args.to_string());
         let mut out = MuConnectorInstanceArcBox::uninit();
-        let res = (self.descriptor.create)(
-            &cstr,
-            input.into(),
-            library.into_opaque(),
-            log::max_level() as i32,
-            &mut out,
-        );
+        let logger = library.as_ref().map(|lib| unsafe { lib.get_logger() });
+        let res =
+            (self.descriptor.create)(&cstr, input.into(), library.into_opaque(), logger, &mut out);
         unsafe { from_int_result(res, out) }
     }
 }

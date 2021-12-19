@@ -103,15 +103,13 @@ impl Args {
         let mut split = vec![];
         for (i, kv) in quotes.clone().enumerate() {
             if i % 2 == 0 {
-                let s = kv.split(",");
+                let s = kv.split(',');
                 split.extend(s.map(|s| s.to_owned()));
+            } else if split.is_empty() {
+                split.push(kv.to_owned());
             } else {
-                if split.is_empty() {
-                    split.push(kv.to_owned());
-                } else {
-                    let prev = split.pop().unwrap();
-                    map.insert(prev[..prev.len() - 1].to_string(), kv.to_string());
-                }
+                let prev = split.pop().unwrap();
+                map.insert(prev[..prev.len() - 1].to_string(), kv.to_string());
             }
         }
 
@@ -508,7 +506,6 @@ mod tests {
         assert_eq!(args2.get("opt3").unwrap(), "test3");
     }
 
-    // TODO: test non default first to string
     #[test]
     pub fn to_string_with_default() {
         let argstr = "test0,opt1=test1,opt2=test2,opt3=test3";

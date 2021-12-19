@@ -3,46 +3,29 @@ use crate::error::*;
 use crate::os::Os;
 
 use super::{
-    Args, ConnectorInstanceArcBox, Loadable, MuOsInstanceArcBox, OsInstance, OsInstanceArcBox,
-    OsInstanceBaseArcBox, OsInstanceVtableFiller, PluginDescriptor, TargetInfo,
+    Args, ConnectorInstanceArcBox, LibContext, Loadable, MuOsInstanceArcBox, OsInstance,
+    OsInstanceArcBox, OsInstanceBaseArcBox, OsInstanceVtableFiller, PluginDescriptor, PluginLogger,
+    TargetInfo,
 };
 
-use libloading::Library;
 use std::ffi::c_void;
 
 pub type OptionArchitectureIdent<'a> = Option<&'a crate::architecture::ArchitectureIdent>;
 
-pub fn create_with_logging<
+pub fn create<
     T: 'static + Os + Clone + OsInstanceVtableFiller<'static, CBox<'static, T>, CArc<c_void>>,
 >(
     args: &ReprCString,
     conn: ConnectorInstanceArcBox,
     lib: CArc<c_void>,
-    log_level: i32,
-    out: &mut MuOsInstanceArcBox<'static>,
-    create_fn: impl Fn(&Args, ConnectorInstanceArcBox, log::Level) -> Result<T>,
-) -> i32
-where
-    (T, CArc<c_void>): Into<OsInstanceBaseArcBox<'static, T, c_void>>,
-{
-    super::util::create_with_logging(args, lib, log_level, out, move |a, lib, l| {
-        Ok(group_obj!((create_fn(&a, conn, l)?, lib) as OsInstance))
-    })
-}
-
-pub fn create_without_logging<
-    T: 'static + Os + Clone + OsInstanceVtableFiller<'static, CBox<'static, T>, CArc<c_void>>,
->(
-    args: &ReprCString,
-    conn: ConnectorInstanceArcBox,
-    lib: CArc<c_void>,
+    logger: Option<&'static PluginLogger>,
     out: &mut MuOsInstanceArcBox<'static>,
     create_fn: impl Fn(&Args, ConnectorInstanceArcBox) -> Result<T>,
 ) -> i32
 where
     (T, CArc<c_void>): Into<OsInstanceBaseArcBox<'static, T, c_void>>,
 {
-    super::util::create_without_logging(args, lib, out, |a, lib| {
+    super::util::create(args, lib, logger, out, |a, lib| {
         Ok(group_obj!((create_fn(&a, conn)?, lib) as OsInstance))
     })
 }
@@ -107,19 +90,15 @@ impl Loadable for LoadableOs {
     /// The OS is initialized with the arguments provided to this function.
     fn instantiate(
         &self,
-        library: CArc<Library>,
+        library: CArc<LibContext>,
         input: Self::InputArg,
         args: &Args,
     ) -> Result<Self::Instance> {
         let cstr = ReprCString::from(args.to_string());
         let mut out = MuOsInstanceArcBox::uninit();
-        let res = (self.descriptor.create)(
-            &cstr,
-            input.into(),
-            library.into_opaque(),
-            log::max_level() as i32,
-            &mut out,
-        );
+        let logger = library.as_ref().map(|lib| unsafe { lib.get_logger() });
+        let res =
+            (self.descriptor.create)(&cstr, input.into(), library.into_opaque(), logger, &mut out);
         unsafe { from_int_result(res, out) }
     }
 }

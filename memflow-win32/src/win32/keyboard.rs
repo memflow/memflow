@@ -52,7 +52,6 @@ cglue_impl_group!(Win32Keyboard<T>, IntoKeyboard);
 #[derive(Clone, Debug)]
 pub struct Win32Keyboard<T> {
     pub virt_mem: T,
-    user_process_info: Win32ProcessInfo,
     key_state_addr: Address,
 }
 
@@ -72,7 +71,6 @@ impl<'a, T: 'static + PhysicalMemory + Clone, V: 'static + VirtualTranslate2 + C
 
         Ok(Self {
             virt_mem,
-            user_process_info,
             key_state_addr,
         })
     }
@@ -108,7 +106,6 @@ impl<'a, T: 'static + PhysicalMemory + Clone, V: 'static + VirtualTranslate2 + C
 
         Ok(Self {
             virt_mem,
-            user_process_info,
             key_state_addr,
         })
     }

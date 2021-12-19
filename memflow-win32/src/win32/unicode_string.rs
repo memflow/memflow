@@ -78,8 +78,6 @@ impl<'a, T: MemoryView> VirtualReadUnicodeString for T {
                 Endianess::BigEndian => u16::from_be_bytes(b),
             })
             .collect::<Vec<u16>>();
-        Ok(U16CString::from_vec_with_nul(content16)
-            .map_err(|_| Error(ErrorOrigin::OsLayer, ErrorKind::Encoding))?
-            .to_string_lossy())
+        Ok(U16CString::from_vec_truncate(content16).to_string_lossy())
     }
 }

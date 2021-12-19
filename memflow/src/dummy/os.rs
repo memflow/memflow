@@ -13,7 +13,6 @@ use crate::plugins::*;
 use crate::types::{clamp_to_usize, imem, mem, size, umem, Address};
 
 use crate::cglue::*;
-use log::Level;
 use rand::seq::SliceRandom;
 use rand::{thread_rng, Rng, SeedableRng};
 use rand_xorshift::XorShiftRng;
@@ -242,7 +241,7 @@ impl DummyOs {
     }
 
     pub fn vtop(&mut self, dtb_base: Address, virt_addr: Address) -> Option<Address> {
-        let mut pml4 = unsafe {
+        let pml4 = unsafe {
             &mut *(self
                 .mem
                 .buf
@@ -252,7 +251,7 @@ impl DummyOs {
         };
 
         let pt_mapper =
-            unsafe { OffsetPageTable::new(&mut pml4, VirtAddr::from_ptr(self.mem.buf.as_ptr())) };
+            unsafe { OffsetPageTable::new(pml4, VirtAddr::from_ptr(self.mem.buf.as_ptr())) };
 
         pt_mapper
             .translate_addr(VirtAddr::new(virt_addr.to_umem() as u64))
@@ -326,7 +325,7 @@ impl DummyOs {
 
         let dtb = self.alloc_pt_page();
 
-        let mut pml4 = unsafe {
+        let pml4 = unsafe {
             &mut *(self
                 .mem
                 .buf
@@ -337,7 +336,7 @@ impl DummyOs {
         *pml4 = PageTable::new();
 
         let mut pt_mapper =
-            unsafe { OffsetPageTable::new(&mut pml4, VirtAddr::from_ptr(self.mem.buf.as_ptr())) };
+            unsafe { OffsetPageTable::new(pml4, VirtAddr::from_ptr(self.mem.buf.as_ptr())) };
 
         while cur_len < map_size {
             let page_info = self.next_page_for_address(cur_len.into());
@@ -560,17 +559,16 @@ extern "C" fn mf_create(
     args: &ReprCString,
     mem: COption<ConnectorInstanceArcBox>,
     lib: CArc<c_void>,
-    log_level: i32,
+    logger: Option<&'static PluginLogger>,
     out: &mut MuOsInstanceArcBox<'static>,
 ) -> i32 {
-    create_bare(args, mem.into(), lib, log_level, out, build_dummy)
+    create_bare(args, mem.into(), lib, logger, out, build_dummy)
 }
 
 pub fn build_dummy(
     args: &Args,
     _mem: Option<ConnectorInstanceArcBox>,
     lib: CArc<c_void>,
-    _log_level: Level,
 ) -> Result<OsInstanceArcBox<'static>> {
     let size = super::mem::parse_size(args)?;
     let mem = DummyMemory::new(size);

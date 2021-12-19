@@ -14,7 +14,7 @@ parse_deps = true
 include = ["memflow"]
 
 [parse.expand]
-crates = ["cglue", "memflow", "memflow-ffi"]
+crates = ["cglue", "memflow", "memflow-ffi", "log"]
 
 [macro_expansion]
 bitflags = true

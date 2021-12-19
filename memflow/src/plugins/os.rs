@@ -3,11 +3,11 @@ use crate::error::*;
 use crate::os::Os;
 
 use super::{
-    Args, ConnectorInstanceArcBox, Loadable, MuOsInstanceArcBox, OsInstance, OsInstanceArcBox,
-    OsInstanceBaseArcBox, OsInstanceVtableFiller, PluginDescriptor, PluginLogger, TargetInfo,
+    Args, ConnectorInstanceArcBox, LibContext, Loadable, MuOsInstanceArcBox, OsInstance,
+    OsInstanceArcBox, OsInstanceBaseArcBox, OsInstanceVtableFiller, PluginDescriptor, PluginLogger,
+    TargetInfo,
 };
 
-use libloading::Library;
 use std::ffi::c_void;
 
 pub type OptionArchitectureIdent<'a> = Option<&'a crate::architecture::ArchitectureIdent>;
@@ -18,7 +18,7 @@ pub fn create<
     args: &ReprCString,
     conn: ConnectorInstanceArcBox,
     lib: CArc<c_void>,
-    logger: PluginLogger,
+    logger: Option<&'static PluginLogger>,
     out: &mut MuOsInstanceArcBox<'static>,
     create_fn: impl Fn(&Args, ConnectorInstanceArcBox) -> Result<T>,
 ) -> i32
@@ -90,19 +90,15 @@ impl Loadable for LoadableOs {
     /// The OS is initialized with the arguments provided to this function.
     fn instantiate(
         &self,
-        library: CArc<Library>,
+        library: CArc<LibContext>,
         input: Self::InputArg,
         args: &Args,
     ) -> Result<Self::Instance> {
         let cstr = ReprCString::from(args.to_string());
         let mut out = MuOsInstanceArcBox::uninit();
-        let res = (self.descriptor.create)(
-            &cstr,
-            input.into(),
-            library.into_opaque(),
-            PluginLogger::new(),
-            &mut out,
-        );
+        let logger = library.as_ref().map(|lib| unsafe { lib.get_logger() });
+        let res =
+            (self.descriptor.create)(&cstr, input.into(), library.into_opaque(), logger, &mut out);
         unsafe { from_int_result(res, out) }
     }
 }

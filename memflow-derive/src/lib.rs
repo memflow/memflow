@@ -86,7 +86,7 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
                 args: &cglue::repr_cstring::ReprCString,
                 _: cglue::option::COption<#crate_path::os::root::OsInstanceArcBox>,
                 lib: #crate_path::cglue::CArc<::core::ffi::c_void>,
-                logger: #crate_path::plugins::PluginLogger,
+                logger: Option<&'static #crate_path::plugins::PluginLogger>,
                 out: &mut #crate_path::mem::phys_mem::MuConnectorInstanceArcBox<'static>
             ) -> i32 {
                 #crate_path::plugins::connector::create(args, lib, logger, out, #func_name)
@@ -197,7 +197,7 @@ pub fn os_layer(args: TokenStream, input: TokenStream) -> TokenStream {
                 args: &cglue::repr_cstring::ReprCString,
                 mem: #crate_path::cglue::COption<#crate_path::mem::phys_mem::ConnectorInstanceArcBox<'static>>,
                 lib: #crate_path::cglue::CArc<::core::ffi::c_void>,
-                logger: #crate_path::plugins::PluginLogger,
+                logger: Option<&'static #crate_path::plugins::PluginLogger>,
                 out: &mut #crate_path::os::root::MuOsInstanceArcBox<'static>
             ) -> i32 {
                 #crate_path::plugins::os::create(args, mem.into(), lib, logger, out, #func_name)
@@ -283,7 +283,7 @@ pub fn os_layer_bare(args: TokenStream, input: TokenStream) -> TokenStream {
             args: &cglue::repr_cstring::ReprCString,
             mem: #crate_path::cglue::COption<#crate_path::mem::phys_mem::ConnectorInstanceArcBox<'static>>,
             lib: #crate_path::cglue::CArc<::core::ffi::c_void>,
-            logger: #crate_path::plugins::PluginLogger,
+            logger: Option<&'static #crate_path::plugins::PluginLogger>,
             out: &mut #crate_path::os::root::MuOsInstanceArcBox<'static>
         ) -> i32 {
             #crate_path::plugins::create_bare(args, mem.into(), lib, logger, out, #func_name)

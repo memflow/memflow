@@ -155,6 +155,98 @@ enum Endianess
 typedef uint8_t Endianess;
 #endif // __cplusplus
 
+/**
+ * An enum representing the available verbosity levels of the logger.
+ *
+ * Typical usage includes: checking if a certain `Level` is enabled with
+ * [`log_enabled!`](macro.log_enabled.html), specifying the `Level` of
+ * [`log!`](macro.log.html), and comparing a `Level` directly to a
+ * [`LevelFilter`](enum.LevelFilter.html).
+ */
+enum Level
+#ifdef __cplusplus
+  : uintptr_t
+#endif // __cplusplus
+ {
+    /**
+     * The "error" level.
+     *
+     * Designates very serious errors.
+     */
+    Level_Error = 1,
+    /**
+     * The "warn" level.
+     *
+     * Designates hazardous situations.
+     */
+    Level_Warn,
+    /**
+     * The "info" level.
+     *
+     * Designates useful information.
+     */
+    Level_Info,
+    /**
+     * The "debug" level.
+     *
+     * Designates lower priority information.
+     */
+    Level_Debug,
+    /**
+     * The "trace" level.
+     *
+     * Designates very low priority, often extremely verbose, information.
+     */
+    Level_Trace,
+};
+#ifndef __cplusplus
+typedef uintptr_t Level;
+#endif // __cplusplus
+
+/**
+ * An enum representing the available verbosity level filters of the logger.
+ *
+ * A `LevelFilter` may be compared directly to a [`Level`]. Use this type
+ * to get and set the maximum log level with [`max_level()`] and [`set_max_level`].
+ *
+ * [`Level`]: enum.Level.html
+ * [`max_level()`]: fn.max_level.html
+ * [`set_max_level`]: fn.set_max_level.html
+ */
+enum LevelFilter
+#ifdef __cplusplus
+  : uintptr_t
+#endif // __cplusplus
+ {
+    /**
+     * A level lower than all log levels.
+     */
+    LevelFilter_Off,
+    /**
+     * Corresponds to the `Error` log level.
+     */
+    LevelFilter_Error,
+    /**
+     * Corresponds to the `Warn` log level.
+     */
+    LevelFilter_Warn,
+    /**
+     * Corresponds to the `Info` log level.
+     */
+    LevelFilter_Info,
+    /**
+     * Corresponds to the `Debug` log level.
+     */
+    LevelFilter_Debug,
+    /**
+     * Corresponds to the `Trace` log level.
+     */
+    LevelFilter_Trace,
+};
+#ifndef __cplusplus
+typedef uintptr_t LevelFilter;
+#endif // __cplusplus
+
 typedef struct ArchitectureObj ArchitectureObj;
 
 /**
@@ -1848,9 +1940,29 @@ extern const struct ArchitectureObj *X86_32_PAE;
 
 extern const struct ArchitectureObj *X86_64;
 
-void log_init(int32_t level_num);
+/**
+ * Initialize logging with selected logging level.
+ */
+void log_init(LevelFilter level_filter);
 
+/**
+ * Logs an error with custom log level.
+ */
+void log_error(Level level, int32_t error);
+
+/**
+ * Logs an error with debug log level.
+ */
 void debug_error(int32_t error);
+
+/**
+ * Sets new maximum log level.
+ *
+ * If `inventory` is supplied, the log level is also updated within all plugin instances. However,
+ * if it is not supplied, plugins will not have their log levels updated, potentially leading to
+ * lower performance, or less logging than expected.
+ */
+void set_max_level(LevelFilter level_filter, const struct Inventory *inventory);
 
 /**
  * Helper to convert `Address` to a `PhysicalAddress`

@@ -40,12 +40,47 @@ use std::path::{Path, PathBuf};
 
 use abi_stable::{type_layout::TypeLayout, StableAbi};
 use libloading::Library;
+use once_cell::sync::OnceCell;
 
 /// Exported memflow plugins version
 pub const MEMFLOW_PLUGIN_VERSION: i32 = -7;
 
 /// Help and Target callbacks
 pub type HelpCallback<'a> = OpaqueCallback<'a, ReprCString>;
+
+/// Context for a single library.
+pub struct LibContext {
+    lib: Library,
+    logger: OnceCell<Box<PluginLogger>>,
+}
+
+impl From<Library> for LibContext {
+    fn from(lib: Library) -> Self {
+        Self {
+            lib,
+            logger: Default::default(),
+        }
+    }
+}
+
+impl LibContext {
+    /// Get a static logger for this library context.
+    ///
+    /// # Safety
+    ///
+    /// The returned logger is not actually static. Caller must ensure the reference won't dangle
+    /// after the library is unloaded. This is typically ensured by only passing this reference to
+    /// the underlying library code.
+    pub unsafe fn get_logger(&self) -> &'static PluginLogger {
+        (&**self.logger.get_or_init(|| Box::new(PluginLogger::new())) as *const PluginLogger)
+            .as_ref()
+            .unwrap()
+    }
+
+    pub fn try_get_logger(&self) -> Option<&PluginLogger> {
+        self.logger.get().map(|l| &**l)
+    }
+}
 
 /// Target information structure
 #[repr(C)]
@@ -99,7 +134,7 @@ pub type CreateFn<T> = extern "C" fn(
     &ReprCString,
     <T as Loadable>::CInputArg,
     lib: CArc<c_void>,
-    logger: PluginLogger,
+    logger: Option<&'static PluginLogger>,
     &mut MaybeUninit<<T as Loadable>::Instance>,
 ) -> i32;
 
@@ -126,7 +161,7 @@ pub trait Loadable: Sized {
 
     fn load(
         path: impl AsRef<Path>,
-        library: &CArc<Library>,
+        library: &CArc<LibContext>,
         export: &str,
     ) -> Result<LibInstance<Self>> {
         // find os descriptor
@@ -135,6 +170,7 @@ pub trait Loadable: Sized {
                 .as_ref()
                 // TODO: support loading without arc
                 .ok_or(Error(ErrorOrigin::Inventory, ErrorKind::Uninitialized))?
+                .lib
                 .get::<*mut PluginDescriptor<Self>>(format!("{}\0", export).as_bytes())
                 .map_err(|_| Error(ErrorOrigin::Inventory, ErrorKind::MemflowExportsNotFound))?
                 .read()
@@ -198,7 +234,9 @@ pub trait Loadable: Sized {
                 );
                 Error(ErrorOrigin::Inventory, ErrorKind::UnableToLoadLibrary)
             })
-            .map(CArc::from)?;
+            .map(LibContext::from)
+            .map(CArc::from)?
+            .into();
 
         Ok(exports
             .into_iter()
@@ -252,7 +290,7 @@ pub trait Loadable: Sized {
     /// for validity of the library.
     fn instantiate(
         &self,
-        library: CArc<Library>,
+        library: CArc<LibContext>,
         input: Self::InputArg,
         args: &Args,
     ) -> Result<Self::Instance>;
@@ -692,6 +730,23 @@ impl Inventory {
 
         lib.loader.instantiate(lib.library.clone(), input, args)
     }
+
+    pub fn update_max_log_level(&self) {
+        let level = log::max_level();
+
+        self.connectors
+            .iter()
+            .map(|c| c.library.as_ref())
+            .chain(self.os_layers.iter().map(|o| o.library.as_ref()))
+            .filter_map(|l| *l)
+            .filter_map(LibContext::try_get_logger)
+            .for_each(|l| l.on_level_change(level));
+    }
+
+    pub fn set_max_log_level(&self, level: LevelFilter) {
+        log::set_max_level(level);
+        self.update_max_log_level()
+    }
 }
 
 enum BuildStep<'a> {
@@ -866,6 +921,6 @@ impl<'a> OsBuilder<'a> {
 #[derive(Clone)]
 pub struct LibInstance<T> {
     path: PathBuf,
-    library: CArc<Library>,
+    library: CArc<LibContext>,
     loader: T,
 }

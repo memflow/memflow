@@ -6,11 +6,11 @@ use crate::error::*;
 use crate::mem::PhysicalMemory;
 
 use super::{
-    Args, ConnectorInstance, ConnectorInstanceArcBox, ConnectorInstanceVtableFiller, Loadable,
-    MuConnectorInstanceArcBox, OsInstanceArcBox, PluginDescriptor, PluginLogger, TargetInfo,
+    Args, ConnectorInstance, ConnectorInstanceArcBox, ConnectorInstanceVtableFiller, LibContext,
+    Loadable, MuConnectorInstanceArcBox, OsInstanceArcBox, PluginDescriptor, PluginLogger,
+    TargetInfo,
 };
 
-use libloading::Library;
 use std::ffi::c_void;
 
 pub fn create<
@@ -21,7 +21,7 @@ pub fn create<
 >(
     args: &ReprCString,
     lib: CArc<c_void>,
-    logger: PluginLogger,
+    logger: Option<&'static PluginLogger>,
     out: &mut MuConnectorInstanceArcBox<'static>,
     create_fn: impl Fn(&Args) -> Result<T>,
 ) -> i32 {
@@ -101,19 +101,15 @@ impl Loadable for LoadableConnector {
     /// The connector is initialized with the arguments provided to this function.
     fn instantiate(
         &self,
-        library: CArc<Library>,
+        library: CArc<LibContext>,
         input: Self::InputArg,
         args: &Args,
     ) -> Result<Self::Instance> {
         let cstr = ReprCString::from(args.to_string());
         let mut out = MuConnectorInstanceArcBox::uninit();
-        let res = (self.descriptor.create)(
-            &cstr,
-            input.into(),
-            library.into_opaque(),
-            PluginLogger::new(),
-            &mut out,
-        );
+        let logger = library.as_ref().map(|lib| unsafe { lib.get_logger() });
+        let res =
+            (self.descriptor.create)(&cstr, input.into(), library.into_opaque(), logger, &mut out);
         unsafe { from_int_result(res, out) }
     }
 }

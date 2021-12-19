@@ -113,11 +113,13 @@ pub fn create_bare<T, I>(
     args: &ReprCString,
     input: I,
     lib: CArc<c_void>,
-    logger: PluginLogger,
+    logger: Option<&'static PluginLogger>,
     out: &mut MaybeUninit<T>,
     create_fn: impl FnOnce(&Args, I, CArc<c_void>) -> Result<T, Error>,
 ) -> i32 {
-    logger.init().ok();
+    if let Some(logger) = logger {
+        logger.init().ok();
+    }
 
     into_int_out_result(
         Args::parse(args)
@@ -143,11 +145,13 @@ pub fn create_bare<T, I>(
 pub fn create<T>(
     args: &ReprCString,
     lib: CArc<c_void>,
-    logger: PluginLogger,
+    logger: Option<&'static PluginLogger>,
     out: &mut MaybeUninit<T>,
     create_fn: impl FnOnce(super::Args, CArc<c_void>) -> Result<T, Error>,
 ) -> i32 {
-    logger.init().ok();
+    if let Some(logger) = logger {
+        logger.init().ok();
+    }
 
     into_int_out_result(Args::parse(args).and_then(|args| create_fn(args, lib)), out)
 }

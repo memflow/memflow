@@ -559,7 +559,7 @@ extern "C" fn mf_create(
     args: &ReprCString,
     mem: COption<ConnectorInstanceArcBox>,
     lib: CArc<c_void>,
-    logger: PluginLogger,
+    logger: Option<&'static PluginLogger>,
     out: &mut MuOsInstanceArcBox<'static>,
 ) -> i32 {
     create_bare(args, mem.into(), lib, logger, out, build_dummy)

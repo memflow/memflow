@@ -23,7 +23,7 @@ log = { version = "0.4", default-features = false }
 bitflags = "1.2"
 coarsetime = { version = "0.1", optional = true }
 smallvec = { version = "1.4", default-features = false }
-x86_64 = { version = "0.14.2", default-features = false }
+x86_64 = { version = "0.14.7", default-features = false }
 rand = { version = "0.8", optional = true }
 rand_xorshift = { version = "0.3", optional = true }
 bumpalo = { version = "3.6", features = ["collections"] }
@@ -38,7 +38,7 @@ rangemap = "0.1.13"
 
 # plugins
 libloading = { version = "0.7", optional = true }
-dirs = { version = "3.0", optional = true }
+dirs = { version = "4.0", optional = true }
 goblin = { version = "0.4", optional = true }
 abi_stable = { version = "0.10", git = "https://github.com/rodrimati1992/abi_stable_crates", optional = true }
 once_cell = { version = "1", optional = true }

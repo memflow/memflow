@@ -15,8 +15,8 @@ use log::*;
 use uefi::{Handle, Status};
 
 #[entry]
-fn efi_main(_handle: Handle, st: SystemTable<Boot>) -> Status {
-    uefi_services::init(&st).expect_success("Failed to initialize utilities");
+fn efi_main(_handle: Handle, mut st: SystemTable<Boot>) -> Status {
+    uefi_services::init(&mut st).expect_success("Failed to initialize utilities");
 
     info!("memflow EFI test");
 

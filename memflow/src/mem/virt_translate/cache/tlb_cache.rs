@@ -1,9 +1,9 @@
 use std::prelude::v1::*;
 
-use super::CacheValidator;
-use crate::architecture::{ArchitectureObj, VirtualTranslate3};
+use super::VirtualTranslate3;
+use crate::architecture::ArchitectureObj;
 use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
-use crate::types::{umem, Address, PhysicalAddress};
+use crate::types::{cache::CacheValidator, umem, Address, PhysicalAddress};
 
 #[derive(Clone, Copy)]
 pub struct TlbEntry {

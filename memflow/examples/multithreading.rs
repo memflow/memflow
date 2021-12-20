@@ -4,7 +4,6 @@ use clap::*;
 use log::{info, Level};
 
 use memflow::error::{Error, ErrorKind, ErrorOrigin, Result};
-use memflow::mem::phys_mem::ConnectorInstanceArcBox;
 use memflow::os::*;
 use memflow::plugins::*;
 

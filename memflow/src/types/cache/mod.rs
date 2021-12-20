@@ -1,18 +1,7 @@
-pub mod cached_memory_access;
-pub mod cached_vat;
-
 #[cfg(feature = "std")]
 pub mod timed_validator;
 
 pub mod count_validator;
-
-pub mod page_cache;
-pub mod tlb_cache;
-
-#[doc(hidden)]
-pub use cached_memory_access::*;
-#[doc(hidden)]
-pub use cached_vat::*;
 
 #[cfg(feature = "std")]
 #[doc(hidden)]
@@ -25,8 +14,6 @@ pub use count_validator::*;
 pub type DefaultCacheValidator = TimedCacheValidator;
 #[cfg(not(feature = "std"))]
 pub type DefaultCacheValidator = CountCacheValidator;
-
-use crate::types::PageType;
 
 /// Validators are used when working with caches and determine for how long
 /// a specific cache entry stays valid.

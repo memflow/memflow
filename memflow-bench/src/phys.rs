@@ -1,6 +1,6 @@
 use criterion::*;
 
-use memflow::mem::{CachedMemoryAccess, PhysicalMemory};
+use memflow::mem::{CachedPhysicalMemory, PhysicalMemory};
 
 use memflow::architecture;
 use memflow::cglue::*;
@@ -98,7 +98,7 @@ fn read_test_with_ctx(
     let end = start + size::mb(1);
 
     if cache_size > 0 {
-        let mut cached_mem = CachedMemoryAccess::builder(mem)
+        let mut cached_mem = CachedPhysicalMemory::builder(mem)
             .arch(architecture::x86::x64::ARCH)
             .cache_size(size::mb(cache_size as usize))
             .page_type_mask(PageType::PAGE_TABLE | PageType::READ_ONLY | PageType::WRITEABLE)

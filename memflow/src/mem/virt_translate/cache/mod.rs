@@ -1,14 +1,16 @@
 use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 
-use super::tlb_cache::TlbCache;
-use crate::architecture::{
-    ArchitectureObj, VirtualTranslate3, VtopFailureCallback, VtopOutputCallback,
-};
+mod tlb_cache;
+
+use crate::architecture::ArchitectureObj;
 use crate::iter::{PageChunks, SplitAtIndex};
-use crate::mem::cache::{CacheValidator, DefaultCacheValidator};
 use crate::mem::virt_translate::VirtualTranslate2;
 use crate::mem::{MemData, PhysicalMemory};
+use crate::types::cache::{CacheValidator, DefaultCacheValidator};
 use crate::types::{umem, Address};
+use tlb_cache::TlbCache;
+
+use super::{VirtualTranslate3, VtopFailureCallback, VtopOutputCallback};
 
 use cglue::callback::FromExtend;
 
@@ -25,7 +27,7 @@ use bumpalo::{collections::Vec as BumpVec, Bump};
 ///
 ///
 /// ```
-/// use memflow::mem::cache::CachedVirtualTranslate;
+/// use memflow::mem::CachedVirtualTranslate;
 /// # use memflow::architecture::x86::x64;
 /// # use memflow::dummy::{DummyMemory, DummyOs};
 /// # use memflow::mem::{DirectTranslate, VirtualDma, MemoryView, VirtualTranslate2};
@@ -47,7 +49,7 @@ use bumpalo::{collections::Vec as BumpVec, Bump};
 ///
 /// ```
 /// use std::time::{Duration, Instant};
-/// # use memflow::mem::cache::CachedVirtualTranslate;
+/// # use memflow::mem::CachedVirtualTranslate;
 /// # use memflow::architecture::x86::x64;
 /// # use memflow::dummy::{DummyMemory, DummyOs};
 /// # use memflow::mem::{DirectTranslate, VirtualDma, MemoryView, VirtualTranslate2};
@@ -293,13 +295,13 @@ impl<V: VirtualTranslate2, Q: CacheValidator> CachedVirtualTranslateBuilder<V, Q
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use crate::architecture::x86;
     use crate::dummy::{DummyMemory, DummyOs};
     use crate::error::PartialResultExt;
-    use crate::mem::cache::cached_vat::CachedVirtualTranslate;
-    use crate::mem::cache::timed_validator::TimedCacheValidator;
     use crate::mem::{DirectTranslate, PhysicalMemory};
     use crate::mem::{MemoryView, VirtualDma};
+    use crate::types::cache::timed_validator::TimedCacheValidator;
     use crate::types::{size, Address};
 
     use coarsetime::Duration;

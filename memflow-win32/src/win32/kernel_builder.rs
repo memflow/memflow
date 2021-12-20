@@ -10,10 +10,10 @@ use memflow::architecture::ArchitectureIdent;
 use memflow::cglue::forward::ForwardMut;
 use memflow::error::Result;
 use memflow::mem::{
-    CachedMemoryAccess, CachedVirtualTranslate, DefaultCacheValidator, DirectTranslate,
+    phys_mem::CachedPhysicalMemory, virt_translate::CachedVirtualTranslate, DirectTranslate,
     PhysicalMemory, VirtualTranslate2,
 };
-use memflow::types::Address;
+use memflow::types::{Address, DefaultCacheValidator};
 
 /// Builder for a Windows Kernel structure.
 ///
@@ -56,13 +56,13 @@ use memflow::types::Address;
 ///
 /// Customizing the caches:
 /// ```
-/// use memflow::mem::{PhysicalMemory, CachedMemoryAccess, CachedVirtualTranslate};
+/// use memflow::mem::{PhysicalMemory, CachedPhysicalMemory, CachedVirtualTranslate};
 /// use memflow_win32::win32::Win32Kernel;
 ///
 /// fn test<T: 'static + PhysicalMemory + Clone>(connector: T) {
 ///     let _kernel = Win32Kernel::builder(connector)
 ///     .build_page_cache(|connector, arch| {
-///         CachedMemoryAccess::builder(connector)
+///         CachedPhysicalMemory::builder(connector)
 ///             .arch(arch)
 ///             .build()
 ///             .unwrap()
@@ -95,7 +95,7 @@ use memflow::types::Address;
 ///     let vat = DirectTranslate::new();
 ///
 ///     // Create a Page Cache layer with default values
-///     let mut connector_cached = CachedMemoryAccess::builder(connector)
+///     let mut connector_cached = CachedPhysicalMemory::builder(connector)
 ///         .arch(kernel_info.os_info.arch)
 ///         .build()
 ///         .unwrap();
@@ -287,7 +287,7 @@ where
         self,
     ) -> Win32KernelBuilder<
         T,
-        CachedMemoryAccess<'a, T, DefaultCacheValidator>,
+        CachedPhysicalMemory<'a, T, DefaultCacheValidator>,
         CachedVirtualTranslate<DirectTranslate, DefaultCacheValidator>,
     > {
         Win32KernelBuilder {
@@ -301,7 +301,7 @@ where
             symbol_store: self.symbol_store,
 
             build_page_cache: Box::new(|connector, arch| {
-                CachedMemoryAccess::builder(connector)
+                CachedPhysicalMemory::builder(connector)
                     .arch(arch)
                     .build()
                     .unwrap()
@@ -323,13 +323,13 @@ where
     /// # Examples
     ///
     /// ```
-    /// use memflow::mem::{PhysicalMemory, CachedMemoryAccess};
+    /// use memflow::mem::{PhysicalMemory, CachedPhysicalMemory};
     /// use memflow_win32::win32::Win32Kernel;
     ///
     /// fn test<T: 'static + PhysicalMemory + Clone>(connector: T) {
     ///     let _kernel = Win32Kernel::builder(connector)
     ///         .build_page_cache(|connector, arch| {
-    ///             CachedMemoryAccess::builder(connector)
+    ///             CachedPhysicalMemory::builder(connector)
     ///                 .arch(arch)
     ///                 .build()
     ///                 .unwrap()

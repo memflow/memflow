@@ -16,11 +16,15 @@ pub use args::{ArgDescriptor, Args, ArgsValidator};
 pub type OptionVoid = Option<&'static mut std::ffi::c_void>;
 
 pub mod connector;
-pub use connector::{ConnectorDescriptor, LoadableConnector};
+pub use connector::{cglue_connectorinstance::*, ConnectorDescriptor, LoadableConnector};
 pub type ConnectorInputArg = <LoadableConnector as Loadable>::InputArg;
 
 pub mod os;
-pub use os::{LoadableOs, OsDescriptor};
+pub use os::{
+    cglue_intoprocessinstance::*, cglue_osinstance::*, cglue_processinstance::*,
+    IntoProcessInstanceArcBox, LoadableOs, MuOsInstanceArcBox, OsDescriptor, OsInstanceArcBox,
+    ProcessInstanceArcBox,
+};
 pub type OsInputArg = <LoadableOs as Loadable>::InputArg;
 
 pub mod logger;
@@ -30,8 +34,6 @@ pub(crate) mod util;
 pub use util::create_bare;
 
 use crate::error::{Result, *};
-use crate::mem::phys_mem::*;
-use crate::os::root::*;
 
 use log::*;
 use std::fs::read_dir;
@@ -306,8 +308,8 @@ pub trait Loadable: Sized {
 ///
 /// ```no_run
 /// use memflow::plugins::Inventory;
+/// # use memflow::plugins::OsInstanceArcBox;
 /// # use memflow::error::Result;
-/// # use memflow::os::OsInstanceArcBox;
 /// # fn test() -> Result<OsInstanceArcBox<'static>> {
 /// let inventory = Inventory::scan();
 /// inventory

@@ -10,18 +10,13 @@ use std::prelude::v1::*;
 
 use crate::mem::memory_view::*;
 
-// those only required when compiling cglue code
-#[cfg(feature = "plugins")]
-use crate::connector::cpu_state::*;
+pub mod cache;
+
+pub use cache::*;
 
 // TODO:
 // - check endianess here and return an error
 // - better would be to convert endianess with word alignment from addr
-
-#[cfg(feature = "plugins")]
-cglue_trait_group!(ConnectorInstance<'a>, { PhysicalMemory, Clone }, { ConnectorCpuStateInner<'a> });
-#[cfg(feature = "plugins")]
-pub type MuConnectorInstanceArcBox<'a> = std::mem::MaybeUninit<ConnectorInstanceArcBox<'a>>;
 
 /// The [`PhysicalMemory`] trait is implemented by memory backends
 /// and provides a generic way to read and write from/to physical memory.

@@ -7,7 +7,7 @@ use log::Level;
 use memflow::cglue::*;
 use memflow::error::{Error, ErrorKind, ErrorOrigin, Result};
 use memflow::mem::*;
-use memflow::os::{ModuleInfo, OsInner, OsInstanceArcBox, Process};
+use memflow::os::{ModuleInfo, OsInner, Process};
 use memflow::plugins::*;
 use memflow::types::*;
 

@@ -9,6 +9,24 @@ pub mod direct_translate;
 use crate::iter::SplitAtIndex;
 pub use direct_translate::DirectTranslate;
 
+use crate::architecture::ArchitectureObj;
+
+#[macro_use]
+pub mod mmu;
+
+pub mod cache;
+
+pub use cache::*;
+
+//use crate::error::{Error, Result};
+//use crate::iter::SplitAtIndex;
+//use crate::mem::{MemData, PhysicalMemory};
+//use crate::types::{size, umem};
+//
+//use crate::types::{Address, PhysicalAddress};
+//
+//use cglue::callback::OpaqueCallback;
+
 #[cfg(test)]
 mod tests;
 
@@ -16,8 +34,6 @@ use crate::error::{Result, *};
 
 use crate::mem::{MemData, PhysicalMemory};
 use crate::types::{umem, Address, Page, PhysicalAddress};
-
-use crate::architecture::{VirtualTranslate3, VtopFailureCallback, VtopOutputCallback};
 
 #[cglue_trait]
 #[int_result]
@@ -379,7 +395,7 @@ where
     /// # use memflow::types::{PhysicalAddress, Address, umem};
     /// # use memflow::dummy::{DummyMemory, DummyOs};
     /// # use memflow::types::size;
-    /// # use memflow::architecture::VirtualTranslate3;
+    /// # use memflow::mem::VirtualTranslate3;
     /// use memflow::mem::{VirtualTranslate2, DirectTranslate};
     /// use memflow::architecture::x86::x64;
     ///
@@ -467,3 +483,97 @@ where
         (**self).virt_to_phys_iter(phys_mem, translator, addrs, out, out_fail)
     }
 }
+
+/// Translates virtual memory to physical using internal translation base (usually a process' dtb)
+///
+/// This trait abstracts virtual address translation for a single virtual memory scope.
+/// On x86 architectures, it is a single `Address` - a CR3 register. But other architectures may
+/// use multiple translation bases, or use a completely different translation mechanism (MIPS).
+pub trait VirtualTranslate3: Clone + Copy + Send {
+    /// Translate a single virtual address
+    ///
+    /// # Examples
+    /// ```
+    /// # use memflow::error::Result;
+    /// # use memflow::types::{PhysicalAddress, Address};
+    /// # use memflow::dummy::{DummyMemory, DummyOs};
+    /// use memflow::mem::VirtualTranslate3;
+    /// use memflow::architecture::x86::x64;
+    /// use memflow::types::{size, umem};
+    ///
+    /// # const VIRT_MEM_SIZE: usize = size::mb(8);
+    /// # const CHUNK_SIZE: usize = 2;
+    /// #
+    /// # let mem = DummyMemory::new(size::mb(16));
+    /// # let mut os = DummyOs::new(mem);
+    /// # let (dtb, virtual_base) = os.alloc_dtb(VIRT_MEM_SIZE, &[]);
+    /// # let mut mem = os.into_inner();
+    /// # let translator = x64::new_translator(dtb);
+    /// let arch = x64::ARCH;
+    ///
+    /// // Translate a mapped address
+    /// let res = translator.virt_to_phys(
+    ///     &mut mem,
+    ///     virtual_base,
+    /// );
+    ///
+    /// assert!(res.is_ok());
+    ///
+    /// // Translate unmapped address
+    /// let res = translator.virt_to_phys(
+    ///     &mut mem,
+    ///     virtual_base - 1,
+    /// );
+    ///
+    /// assert!(res.is_err());
+    ///
+    /// ```
+    fn virt_to_phys<T: PhysicalMemory>(
+        &self,
+        mem: &mut T,
+        addr: Address,
+    ) -> Result<PhysicalAddress> {
+        let mut buf: [std::mem::MaybeUninit<u8>; 512] =
+            unsafe { std::mem::MaybeUninit::uninit().assume_init() };
+        let mut output = None;
+        let success = &mut |elem: MemData<PhysicalAddress, _>| {
+            if output.is_none() {
+                output = Some(elem.0);
+            }
+            false
+        };
+        let mut output_err = None;
+        let fail = &mut |elem: (Error, _)| {
+            output_err = Some(elem.0);
+            true
+        };
+        self.virt_to_phys_iter(
+            mem,
+            Some(MemData::<_, umem>(addr, 1)).into_iter(),
+            &mut success.into(),
+            &mut fail.into(),
+            &mut buf,
+        );
+        output.map(Ok).unwrap_or_else(|| Err(output_err.unwrap()))
+    }
+
+    fn virt_to_phys_iter<
+        T: PhysicalMemory + ?Sized,
+        B: SplitAtIndex,
+        VI: Iterator<Item = MemData<Address, B>>,
+    >(
+        &self,
+        mem: &mut T,
+        addrs: VI,
+        out: &mut VtopOutputCallback<B>,
+        out_fail: &mut VtopFailureCallback<B>,
+        tmp_buf: &mut [std::mem::MaybeUninit<u8>],
+    );
+
+    fn translation_table_id(&self, address: Address) -> umem;
+
+    fn arch(&self) -> ArchitectureObj;
+}
+
+pub type VtopOutputCallback<'a, B> = OpaqueCallback<'a, MemData<PhysicalAddress, B>>;
+pub type VtopFailureCallback<'a, B> = OpaqueCallback<'a, (Error, MemData<Address, B>)>;

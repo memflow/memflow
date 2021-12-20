@@ -2,9 +2,10 @@ pub mod x32;
 pub mod x32_pae;
 pub mod x64;
 
-use super::{
-    mmu::ArchMmuSpec, Architecture, ArchitectureIdent, ArchitectureObj, Endianess,
-    VirtualTranslate3, VtopFailureCallback, VtopOutputCallback,
+use super::{Architecture, ArchitectureIdent, ArchitectureObj, Endianess};
+
+use crate::mem::virt_translate::{
+    mmu::ArchMmuSpec, VirtualTranslate3, VtopFailureCallback, VtopOutputCallback,
 };
 
 use crate::error::{Error, ErrorKind, ErrorOrigin, Result};

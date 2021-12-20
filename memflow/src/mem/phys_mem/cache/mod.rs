@@ -1,37 +1,34 @@
-/*!
-This cache is a wrapper for connector objects that implement the [`PhysicalMemory`] trait.
-It enables a configurable caching layer when accessing physical pages.
+//! This cache is a wrapper for connector objects that implement the [`PhysicalMemory`] trait.
+//! It enables a configurable caching layer when accessing physical pages.
+//!
+//! Each page that is being read by the the connector will be placed into a `PageCache` object.
+//! If the cache is still valid then for consecutive reads this connector will just return the values from the cache
+//! and not issue out a new read. In case the cache is not valid anymore it will do a new read.
+//!
+//! The cache time is determined by the customizable cache validator.
+//! The cache validator has to implement the [`CacheValidator`](../trait.CacheValidator.html) trait.
+//!
+//! To make it easier and quicker to construct and work with caches this module also contains a cache builder.
+//!
+//! More examples can be found in the documentations for each of the structs in this module.
+//!
+//! # Examples
+//!
+//! Building a simple cache with default settings:
+//! ```
+//! use memflow::architecture::x86::x64;
+//! use memflow::mem::{PhysicalMemory, CachedPhysicalMemory};
+//!
+//! fn build<T: PhysicalMemory>(mem: T) {
+//!     let cache = CachedPhysicalMemory::builder(mem)
+//!         .arch(x64::ARCH)
+//!         .build()
+//!         .unwrap();
+//! }
+//! ```
 
-Each page that is being read by the the connector will be placed into a `PageCache` object.
-If the cache is still valid then for consecutive reads this connector will just return the values from the cache
-and not issue out a new read. In case the cache is not valid anymore it will do a new read.
+mod page_cache;
 
-The cache time is determined by the customizable cache validator.
-The cache validator has to implement the [`CacheValidator`](../trait.CacheValidator.html) trait.
-
-To make it easier and quicker to construct and work with caches this module also contains a cache builder.
-
-More examples can be found in the documentations for each of the structs in this module.
-
-# Examples
-
-Building a simple cache with default settings:
-```
-use memflow::architecture::x86::x64;
-use memflow::mem::{PhysicalMemory, CachedMemoryAccess};
-
-fn build<T: PhysicalMemory>(mem: T) {
-    let cache = CachedMemoryAccess::builder(mem)
-        .arch(x64::ARCH)
-        .build()
-        .unwrap();
-}
-```
-*/
-
-use super::{
-    page_cache::PageCache, page_cache::PageValidity, CacheValidator, DefaultCacheValidator,
-};
 use crate::architecture::ArchitectureObj;
 use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 use crate::iter::PageChunks;
@@ -40,6 +37,9 @@ use crate::mem::{
     MemData, PhysicalMemory, PhysicalMemoryMapping, PhysicalMemoryMetadata, PhysicalReadData,
     PhysicalWriteData,
 };
+use page_cache::{PageCache, PageValidity};
+
+use crate::types::cache::{CacheValidator, DefaultCacheValidator};
 
 use crate::types::{size, PageType};
 use cglue::iter::CIterator;
@@ -50,13 +50,13 @@ use bumpalo::Bump;
 ///
 /// Since this cache implements [`PhysicalMemory`] it can be used as a replacement
 /// in all structs and functions that require a [`PhysicalMemory`] object.
-pub struct CachedMemoryAccess<'a, T, Q> {
+pub struct CachedPhysicalMemory<'a, T, Q> {
     mem: T,
     cache: PageCache<'a, Q>,
     arena: Bump,
 }
 
-impl<'a, T, Q> Clone for CachedMemoryAccess<'a, T, Q>
+impl<'a, T, Q> Clone for CachedPhysicalMemory<'a, T, Q>
 where
     T: Clone,
     Q: CacheValidator + Clone,
@@ -70,12 +70,12 @@ where
     }
 }
 
-impl<'a, T: PhysicalMemory, Q: CacheValidator> CachedMemoryAccess<'a, T, Q> {
+impl<'a, T: PhysicalMemory, Q: CacheValidator> CachedPhysicalMemory<'a, T, Q> {
     /// Constructs a new cache based on the given `PageCache`.
     ///
     /// This function is used when manually constructing a cache inside of the memflow crate itself.
     ///
-    /// For general usage it is advised to just use the [builder](struct.CachedMemoryAccessBuilder.html)
+    /// For general usage it is advised to just use the [builder](struct.CachedPhysicalMemoryBuilder.html)
     /// to construct the cache.
     pub fn new(mem: T, cache: PageCache<'a, Q>) -> Self {
         Self {
@@ -95,10 +95,10 @@ impl<'a, T: PhysicalMemory, Q: CacheValidator> CachedMemoryAccess<'a, T, Q> {
     /// ```
     /// # const MAGIC_VALUE: u64 = 0x23bd_318f_f3a3_5821;
     /// use memflow::architecture::x86::x64;
-    /// use memflow::mem::{PhysicalMemory, CachedMemoryAccess, MemoryView};
+    /// use memflow::mem::{PhysicalMemory, CachedPhysicalMemory, MemoryView};
     ///
     /// fn build<T: PhysicalMemory>(mem: T) -> T {
-    ///     let mut cache = CachedMemoryAccess::builder(mem)
+    ///     let mut cache = CachedPhysicalMemory::builder(mem)
     ///         .arch(x64::ARCH)
     ///         .build()
     ///         .unwrap();
@@ -121,15 +121,15 @@ impl<'a, T: PhysicalMemory, Q: CacheValidator> CachedMemoryAccess<'a, T, Q> {
     }
 }
 
-impl<'a, T: PhysicalMemory> CachedMemoryAccess<'a, T, DefaultCacheValidator> {
+impl<'a, T: PhysicalMemory> CachedPhysicalMemory<'a, T, DefaultCacheValidator> {
     /// Returns a new builder for this cache with default settings.
-    pub fn builder(mem: T) -> CachedMemoryAccessBuilder<T, DefaultCacheValidator> {
-        CachedMemoryAccessBuilder::new(mem)
+    pub fn builder(mem: T) -> CachedPhysicalMemoryBuilder<T, DefaultCacheValidator> {
+        CachedPhysicalMemoryBuilder::new(mem)
     }
 }
 
 // forward PhysicalMemory trait fncs
-impl<'a, T: PhysicalMemory, Q: CacheValidator> PhysicalMemory for CachedMemoryAccess<'a, T, Q> {
+impl<'a, T: PhysicalMemory, Q: CacheValidator> PhysicalMemory for CachedPhysicalMemory<'a, T, Q> {
     fn phys_read_raw_iter<'b>(
         &mut self,
         data: CIterator<PhysicalReadData<'b>>,
@@ -181,8 +181,8 @@ impl<'a, T: PhysicalMemory, Q: CacheValidator> PhysicalMemory for CachedMemoryAc
     }
 }
 
-/// The builder interface for constructing a `CachedMemoryAccess` object.
-pub struct CachedMemoryAccessBuilder<T, Q> {
+/// The builder interface for constructing a `CachedPhysicalMemory` object.
+pub struct CachedPhysicalMemoryBuilder<T, Q> {
     mem: T,
     validator: Q,
     page_size: Option<usize>,
@@ -190,28 +190,28 @@ pub struct CachedMemoryAccessBuilder<T, Q> {
     page_type_mask: PageType,
 }
 
-impl<T: PhysicalMemory> CachedMemoryAccessBuilder<T, DefaultCacheValidator> {
-    /// Creates a new `CachedMemoryAccess` builder.
-    /// The memory object is mandatory as the CachedMemoryAccess struct wraps around it.
+impl<T: PhysicalMemory> CachedPhysicalMemoryBuilder<T, DefaultCacheValidator> {
+    /// Creates a new `CachedPhysicalMemory` builder.
+    /// The memory object is mandatory as the CachedPhysicalMemory struct wraps around it.
     ///
     /// This type of cache also is required to know the exact page size of the target system.
     /// This can either be set directly via the `page_size()` method or via the `arch()` method.
-    /// If no page size has been set this builder will fail to build the CachedMemoryAccess.
+    /// If no page size has been set this builder will fail to build the CachedPhysicalMemory.
     ///
     /// Without further adjustments this function creates a cache that is 2 megabytes in size and caches
     /// pages that contain pagetable entries as well as read-only pages.
     ///
-    /// It is also possible to either let the `CachedMemoryAccess` object own or just borrow the underlying memory object.
+    /// It is also possible to either let the `CachedPhysicalMemory` object own or just borrow the underlying memory object.
     ///
     /// # Examples
     /// Moves ownership of a mem object and retrieves it back:
     /// ```
     /// # const MAGIC_VALUE: u64 = 0x23bd_318f_f3a3_5821;
     /// use memflow::architecture::x86::x64;
-    /// use memflow::mem::{PhysicalMemory, CachedMemoryAccess, MemoryView};
+    /// use memflow::mem::{PhysicalMemory, CachedPhysicalMemory, MemoryView};
     ///
     /// fn build<T: PhysicalMemory>(mem: T) {
-    ///     let mut cache = CachedMemoryAccess::builder(mem)
+    ///     let mut cache = CachedPhysicalMemory::builder(mem)
     ///         .arch(x64::ARCH)
     ///         .build()
     ///         .unwrap();
@@ -234,12 +234,12 @@ impl<T: PhysicalMemory> CachedMemoryAccessBuilder<T, DefaultCacheValidator> {
     /// ```
     /// # const MAGIC_VALUE: u64 = 0x23bd_318f_f3a3_5821;
     /// use memflow::architecture::x86::x64;
-    /// use memflow::mem::{PhysicalMemory, CachedMemoryAccess, MemoryView};
+    /// use memflow::mem::{PhysicalMemory, CachedPhysicalMemory, MemoryView};
     /// use memflow::cglue::{Fwd, ForwardMut};
     ///
     /// fn build<T: PhysicalMemory>(mem: Fwd<&mut T>)
     ///     -> impl PhysicalMemory + '_ {
-    ///     CachedMemoryAccess::builder(mem)
+    ///     CachedPhysicalMemory::builder(mem)
     ///         .arch(x64::ARCH)
     ///         .build()
     ///         .unwrap()
@@ -273,10 +273,10 @@ impl<T: PhysicalMemory> CachedMemoryAccessBuilder<T, DefaultCacheValidator> {
     }
 }
 
-impl<T: PhysicalMemory, Q: CacheValidator> CachedMemoryAccessBuilder<T, Q> {
-    /// Builds the `CachedMemoryAccess` object or returns an error if the page size is not set.
-    pub fn build<'a>(self) -> Result<CachedMemoryAccess<'a, T, Q>> {
-        Ok(CachedMemoryAccess::new(
+impl<T: PhysicalMemory, Q: CacheValidator> CachedPhysicalMemoryBuilder<T, Q> {
+    /// Builds the `CachedPhysicalMemory` object or returns an error if the page size is not set.
+    pub fn build<'a>(self) -> Result<CachedPhysicalMemory<'a, T, Q>> {
+        Ok(CachedPhysicalMemory::new(
             self.mem,
             PageCache::with_page_size(
                 self.page_size.ok_or_else(|| {
@@ -303,10 +303,11 @@ impl<T: PhysicalMemory, Q: CacheValidator> CachedMemoryAccessBuilder<T, Q> {
     /// use std::time::Duration;
     ///
     /// use memflow::architecture::x86::x64;
-    /// use memflow::mem::{PhysicalMemory, CachedMemoryAccess, DefaultCacheValidator};
+    /// use memflow::mem::{PhysicalMemory, CachedPhysicalMemory};
+    /// use memflow::types::DefaultCacheValidator;
     ///
     /// fn build<T: PhysicalMemory>(mem: T) {
-    ///     let cache = CachedMemoryAccess::builder(mem)
+    ///     let cache = CachedPhysicalMemory::builder(mem)
     ///         .arch(x64::ARCH)
     ///         .validator(DefaultCacheValidator::new(Duration::from_millis(2000).into()))
     ///         .build()
@@ -317,8 +318,11 @@ impl<T: PhysicalMemory, Q: CacheValidator> CachedMemoryAccessBuilder<T, Q> {
     /// # let mut mem = DummyMemory::new(size::mb(4));
     /// # build(mem);
     /// ```
-    pub fn validator<QN: CacheValidator>(self, validator: QN) -> CachedMemoryAccessBuilder<T, QN> {
-        CachedMemoryAccessBuilder {
+    pub fn validator<QN: CacheValidator>(
+        self,
+        validator: QN,
+    ) -> CachedPhysicalMemoryBuilder<T, QN> {
+        CachedPhysicalMemoryBuilder {
             mem: self.mem,
             validator,
             page_size: self.page_size,
@@ -339,10 +343,10 @@ impl<T: PhysicalMemory, Q: CacheValidator> CachedMemoryAccessBuilder<T, Q> {
     ///
     /// ```
     /// use memflow::types::size;
-    /// use memflow::mem::{PhysicalMemory, CachedMemoryAccess};
+    /// use memflow::mem::{PhysicalMemory, CachedPhysicalMemory};
     ///
     /// fn build<T: PhysicalMemory>(mem: T) {
-    ///     let cache = CachedMemoryAccess::builder(mem)
+    ///     let cache = CachedPhysicalMemory::builder(mem)
     ///         .page_size(size::kb(4))
     ///         .build()
     ///         .unwrap();
@@ -368,10 +372,10 @@ impl<T: PhysicalMemory, Q: CacheValidator> CachedMemoryAccessBuilder<T, Q> {
     ///
     /// ```
     /// use memflow::architecture::x86::x64;
-    /// use memflow::mem::{PhysicalMemory, CachedMemoryAccess};
+    /// use memflow::mem::{PhysicalMemory, CachedPhysicalMemory};
     ///
     /// fn build<T: PhysicalMemory>(mem: T) {
-    ///     let cache = CachedMemoryAccess::builder(mem)
+    ///     let cache = CachedPhysicalMemory::builder(mem)
     ///         .arch(x64::ARCH)
     ///         .build()
     ///         .unwrap();
@@ -400,10 +404,10 @@ impl<T: PhysicalMemory, Q: CacheValidator> CachedMemoryAccessBuilder<T, Q> {
     /// ```
     /// use memflow::types::size;
     /// use memflow::architecture::x86::x64;
-    /// use memflow::mem::{PhysicalMemory, CachedMemoryAccess};
+    /// use memflow::mem::{PhysicalMemory, CachedPhysicalMemory};
     ///
     /// fn build<T: PhysicalMemory>(mem: T) {
-    ///     let cache = CachedMemoryAccess::builder(mem)
+    ///     let cache = CachedPhysicalMemory::builder(mem)
     ///         .arch(x64::ARCH)
     ///         .cache_size(size::mb(2))
     ///         .build()
@@ -433,10 +437,10 @@ impl<T: PhysicalMemory, Q: CacheValidator> CachedMemoryAccessBuilder<T, Q> {
     /// ```
     /// use memflow::types::PageType;
     /// use memflow::architecture::x86::x32;
-    /// use memflow::mem::{PhysicalMemory, CachedMemoryAccess};
+    /// use memflow::mem::{PhysicalMemory, CachedPhysicalMemory};
     ///
     /// fn build<T: PhysicalMemory>(mem: T) {
-    ///     let cache = CachedMemoryAccess::builder(mem)
+    ///     let cache = CachedPhysicalMemory::builder(mem)
     ///         .arch(x32::ARCH)
     ///         .page_type_mask(PageType::PAGE_TABLE | PageType::READ_ONLY)
     ///         .build()

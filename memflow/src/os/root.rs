@@ -5,21 +5,8 @@ use super::{AddressCallback, ProcessInfo, ProcessInfoCallback};
 
 use crate::prelude::v1::{Result, *};
 
-// those only required when compiling cglue code
-#[cfg(feature = "plugins")]
-use super::keyboard::*;
-#[cfg(feature = "plugins")]
-use crate::mem::memory_view::*;
-#[cfg(feature = "plugins")]
-use crate::mem::phys_mem::*;
-
 use crate::cglue::*;
 use std::prelude::v1::*;
-
-#[cfg(feature = "plugins")]
-cglue_trait_group!(OsInstance<'a>, { OsInner<'a>, Clone }, { PhysicalMemory, MemoryView, OsKeyboardInner<'a> });
-#[cfg(feature = "plugins")]
-pub type MuOsInstanceArcBox<'a> = std::mem::MaybeUninit<OsInstanceArcBox<'a>>;
 
 /// OS supertrait for all possible lifetimes
 ///
@@ -38,9 +25,9 @@ impl<T: for<'a> OsInner<'a>> Os for T {}
 #[cfg_attr(feature = "plugins", cglue_trait)]
 #[int_result]
 pub trait OsInner<'a>: Send {
-    #[wrap_with_group(crate::os::process::ProcessInstance)]
+    #[wrap_with_group(crate::plugins::os::ProcessInstance)]
     type ProcessType: crate::os::process::Process + MemoryView + 'a;
-    #[wrap_with_group(crate::os::process::IntoProcessInstance)]
+    #[wrap_with_group(crate::plugins::os::IntoProcessInstance)]
     type IntoProcessType: crate::os::process::Process + MemoryView + Clone + 'static;
 
     /// Walks a process list and calls a callback for each process structure address

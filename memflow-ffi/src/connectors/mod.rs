@@ -2,8 +2,10 @@ use std::ffi::CStr;
 use std::os::raw::c_char;
 use std::path::PathBuf;
 
-use memflow::mem::phys_mem::{ConnectorInstanceArcBox, MuConnectorInstanceArcBox};
-use memflow::os::root::{MuOsInstanceArcBox, OsInstanceArcBox};
+use memflow::plugins::{
+    connector::{ConnectorInstanceArcBox, MuConnectorInstanceArcBox},
+    os::{MuOsInstanceArcBox, OsInstanceArcBox},
+};
 use memflow::plugins::{Args, Inventory};
 
 use crate::util::*;

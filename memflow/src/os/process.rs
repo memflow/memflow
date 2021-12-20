@@ -8,18 +8,6 @@ use crate::cglue::*;
 use crate::prelude::v1::{Result, *};
 use std::prelude::v1::*;
 
-// those only required when compiling cglue code
-#[cfg(feature = "plugins")]
-use crate::mem::memory_view::*;
-#[cfg(feature = "plugins")]
-use crate::mem::virt_translate::*;
-
-// ProcessInstance group for Process and MemoryView
-#[cfg(feature = "plugins")]
-cglue_trait_group!(ProcessInstance, { Process, MemoryView }, { VirtualTranslate });
-#[cfg(feature = "plugins")]
-cglue_trait_group!(IntoProcessInstance, { Process, MemoryView, Clone }, { VirtualTranslate });
-
 /// Type meant for process IDs
 ///
 /// If there is a case where Pid can be over 32-bit limit, or negative, please open an issue, we

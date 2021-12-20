@@ -186,6 +186,6 @@ impl<T: Seek + Read + Write + Send> PhysicalMemory for FileIoMemory<T> {
 
 cglue_impl_group!(
     FileIoMemory<T: Read + Seek + Write + Send>,
-    ConnectorInstance,
+    crate::plugins::ConnectorInstance,
     {}
 );

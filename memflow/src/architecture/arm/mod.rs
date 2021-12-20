@@ -1,12 +1,13 @@
 pub mod aarch64;
 
-use super::{
+use super::{Architecture, ArchitectureIdent, ArchitectureObj, Endianess};
+
+use crate::mem::virt_translate::{
     mmu::{
         translate_data::{TranslateDataVec, TranslationChunk},
         ArchMmuSpec, MmuTranslationBase,
     },
-    Architecture, ArchitectureIdent, ArchitectureObj, Endianess, VirtualTranslate3,
-    VtopFailureCallback, VtopOutputCallback,
+    VirtualTranslate3, VtopFailureCallback, VtopOutputCallback,
 };
 
 use crate::error::{Error, ErrorKind, ErrorOrigin, Result};

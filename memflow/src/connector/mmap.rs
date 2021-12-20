@@ -205,12 +205,12 @@ impl<'a, F: AsRef<MemoryMap<&'a [u8]>> + Send> PhysicalMemory
 #[cfg(feature = "plugins")]
 cglue_impl_group!(
     MappedPhysicalMemory<T = &'cglue_a mut [u8], F: AsRef<MemoryMap<&'cglue_a mut [u8]>>>,
-    ConnectorInstance,
+    crate::plugins::ConnectorInstance,
     {}
 );
 #[cfg(feature = "plugins")]
 cglue_impl_group!(
     MappedPhysicalMemory<T = &'cglue_a [u8], F: AsRef<MemoryMap<&'cglue_a [u8]>>>,
-    ConnectorInstance,
+    crate::plugins::ConnectorInstance,
     {}
 );

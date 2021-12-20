@@ -3,9 +3,7 @@ use crate::error::Result;
 use crate::iter::PageChunks;
 use crate::mem::mem_data::*;
 use crate::mem::phys_mem::{PhysicalMemory, PhysicalReadFailCallback};
-use crate::types::{umem, Address, PhysicalAddress};
-
-use super::{CacheValidator, PageType};
+use crate::types::{cache::CacheValidator, umem, Address, PageType, PhysicalAddress};
 
 use std::alloc::{alloc, alloc_zeroed, dealloc, Layout};
 use std::prelude::v1::*;
@@ -357,8 +355,8 @@ mod tests {
     use crate::architecture::x86;
     use crate::cglue::ForwardMut;
     use crate::dummy::{DummyMemory, DummyOs};
-    use crate::mem::{CachedMemoryAccess, MemoryView, TimedCacheValidator, VirtualDma};
-    use crate::types::{size, Address, PhysicalAddress};
+    use crate::mem::{CachedPhysicalMemory, MemoryView, VirtualDma};
+    use crate::types::{cache::TimedCacheValidator, size, Address, PhysicalAddress};
 
     use coarsetime::Duration;
     use rand::{thread_rng, Rng};
@@ -402,7 +400,7 @@ mod tests {
         dummy_os.as_mut().phys_write(write_addr, &cmp_buf).unwrap();
         let arch = x86::x64::ARCH;
 
-        let mut mem = CachedMemoryAccess::builder(dummy_os.into_inner())
+        let mut mem = CachedPhysicalMemory::builder(dummy_os.into_inner())
             .validator(TimedCacheValidator::new(Duration::from_secs(100)))
             .page_type_mask(PageType::UNKNOWN)
             .arch(arch)
@@ -469,7 +467,7 @@ mod tests {
                 PageType::PAGE_TABLE | PageType::READ_ONLY,
                 TimedCacheValidator::new(Duration::from_secs(100)),
             );
-            let mut mem_cache = CachedMemoryAccess::new(dummy_os.forward_mut(), cache);
+            let mut mem_cache = CachedPhysicalMemory::new(dummy_os.forward_mut(), cache);
             let mut buf_cache = vec![0_u8; buf_nocache.len()];
             {
                 let mut virt_mem = VirtualDma::new(mem_cache.forward_mut(), arch, translator);
@@ -511,7 +509,7 @@ mod tests {
             TimedCacheValidator::new(Duration::from_secs(100)),
         );
 
-        let mut mem_cache = CachedMemoryAccess::new(dummy_os.forward_mut(), cache);
+        let mut mem_cache = CachedPhysicalMemory::new(dummy_os.forward_mut(), cache);
 
         //Modifying the memory from other channels should leave the cached page unchanged
         let mut cached_buf = vec![0_u8; 64];
@@ -567,7 +565,7 @@ mod tests {
             TimedCacheValidator::new(Duration::from_secs(100)),
         );
 
-        let mut mem_cache = CachedMemoryAccess::new(dummy_os.forward_mut(), cache);
+        let mut mem_cache = CachedPhysicalMemory::new(dummy_os.forward_mut(), cache);
 
         //Modifying the memory from other channels should leave the cached page unchanged
         let mut cached_buf = vec![0_u8; 64];
@@ -634,7 +632,7 @@ mod tests {
             TimedCacheValidator::new(Duration::from_secs(100)),
         );
 
-        let mut mem_cache = CachedMemoryAccess::new(dummy_os.forward_mut(), cache);
+        let mut mem_cache = CachedPhysicalMemory::new(dummy_os.forward_mut(), cache);
 
         let mut buf_1 = vec![0_u8; buf_size];
         mem_cache
@@ -693,7 +691,7 @@ mod tests {
             TimedCacheValidator::new(Duration::from_secs(100)),
         );
 
-        let mut mem_cache = CachedMemoryAccess::new(dummy_os.forward_mut(), cache);
+        let mut mem_cache = CachedPhysicalMemory::new(dummy_os.forward_mut(), cache);
 
         let mut buf_1 = vec![0_u8; 64];
         mem_cache
@@ -730,7 +728,7 @@ mod tests {
             TimedCacheValidator::new(Duration::from_secs(100)),
         );
 
-        let mut mem_cache = CachedMemoryAccess::new(dummy_os.forward_mut(), cache);
+        let mut mem_cache = CachedPhysicalMemory::new(dummy_os.forward_mut(), cache);
 
         let mut buf_1 = vec![0_u8; 64];
         mem_cache
@@ -774,7 +772,7 @@ mod tests {
             TimedCacheValidator::new(Duration::from_secs(100)),
         );
 
-        let mem_cache = CachedMemoryAccess::new(dummy_os.forward_mut(), cache);
+        let mem_cache = CachedPhysicalMemory::new(dummy_os.forward_mut(), cache);
         let mut virt_mem = VirtualDma::new(mem_cache, arch, translator);
 
         let mut buf_1 = vec![0_u8; 64];

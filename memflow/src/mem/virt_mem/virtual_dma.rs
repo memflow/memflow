@@ -1,13 +1,14 @@
 use std::prelude::v1::*;
 
-use crate::architecture::{ArchitectureObj, Endianess, VirtualTranslate3};
+use crate::architecture::{ArchitectureObj, Endianess};
 use crate::error::{Error, Result, *};
 use crate::mem::memory_view::*;
 use crate::mem::{
     mem_data::*,
     virt_translate::{
-        DirectTranslate, MemoryRange, VirtualTranslate, VirtualTranslate2, VirtualTranslation,
-        VirtualTranslationCallback, VirtualTranslationFail, VirtualTranslationFailCallback,
+        DirectTranslate, MemoryRange, VirtualTranslate, VirtualTranslate2, VirtualTranslate3,
+        VirtualTranslation, VirtualTranslationCallback, VirtualTranslationFail,
+        VirtualTranslationFailCallback,
     },
     MemoryView, PhysicalMemory, PhysicalMemoryMetadata,
 };

@@ -4,6 +4,7 @@ use memflow::mem::{MemData, MemoryView};
 
 use memflow::error::Result;
 use memflow::os::*;
+use memflow::plugins::*;
 
 use rand::prelude::*;
 use rand::{Rng, SeedableRng};

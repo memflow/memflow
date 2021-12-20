@@ -1,10 +1,10 @@
 use memflow::{
-    architecture::{
-        arm, x86, ArchitectureIdent, ArchitectureObj, VirtualTranslate3, VtopFailureCallback,
-        VtopOutputCallback,
-    },
+    architecture::{arm, x86, ArchitectureIdent, ArchitectureObj},
     iter::SplitAtIndex,
-    mem::{MemData, MemoryView, PhysicalMemory, VirtualDma, VirtualTranslate2},
+    mem::{
+        MemData, MemoryView, PhysicalMemory, VirtualDma, VirtualTranslate2, VirtualTranslate3,
+        VtopFailureCallback, VtopOutputCallback,
+    },
     types::{umem, Address},
 };
 

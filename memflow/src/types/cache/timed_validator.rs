@@ -1,14 +1,13 @@
-/*!
-Validators are used when working with caches and determine for how long
-a specific cache entry stays valid.
+//! Validators are used when working with caches and determine for how long
+//! a specific cache entry stays valid.
+//!
+//! This validator limits the cache time based on an actual time instant.
+//! Internally it uses the [coarsetime](https://docs.rs/coarsetime/0.1.14/coarsetime/) crate as a less
+//! computation intensive alternative for [std::time](https://doc.rust-lang.org/std/time/index.html).
+//! Therefor the Duration has to be converted (e.g. via the .into() trait) when constructing this validator.
+//!
+//! The default implementation will set the cache time to 1 second.
 
-This validator limits the cache time based on an actual time instant.
-Internally it uses the [coarsetime](https://docs.rs/coarsetime/0.1.14/coarsetime/) crate as a less
-computation intensive alternative for [std::time](https://doc.rust-lang.org/std/time/index.html).
-Therefor the Duration has to be converted (e.g. via the .into() trait) when constructing this validator.
-
-The default implementation will set the cache time to 1 second.
-*/
 use std::prelude::v1::*;
 
 use super::CacheValidator;
@@ -41,7 +40,7 @@ impl TimedCacheValidator {
     /// # Examples:
     /// ```
     /// use std::time::Duration;
-    /// use memflow::mem::TimedCacheValidator;
+    /// use memflow::types::cache::TimedCacheValidator;
     ///
     /// let _ = TimedCacheValidator::new(Duration::from_millis(5000).into());
     /// ```

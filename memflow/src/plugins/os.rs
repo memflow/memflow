@@ -1,16 +1,25 @@
 use crate::cglue::{result::from_int_result, *};
 use crate::error::*;
-use crate::os::Os;
+use crate::mem::memory_view::*;
+use crate::mem::phys_mem::*;
+use crate::mem::virt_translate::*;
+use crate::os::keyboard::*;
+use crate::os::process::*;
+use crate::os::root::*;
 
 use super::{
-    Args, ConnectorInstanceArcBox, LibContext, Loadable, MuOsInstanceArcBox, OsInstance,
-    OsInstanceArcBox, OsInstanceBaseArcBox, OsInstanceVtableFiller, PluginDescriptor, PluginLogger,
-    TargetInfo,
+    Args, ConnectorInstanceArcBox, LibContext, Loadable, PluginDescriptor, PluginLogger, TargetInfo,
 };
 
 use std::ffi::c_void;
 
 pub type OptionArchitectureIdent<'a> = Option<&'a crate::architecture::ArchitectureIdent>;
+
+cglue_trait_group!(OsInstance<'a>, { OsInner<'a>, Clone }, { PhysicalMemory, MemoryView, OsKeyboardInner<'a> });
+pub type MuOsInstanceArcBox<'a> = std::mem::MaybeUninit<OsInstanceArcBox<'a>>;
+
+cglue_trait_group!(ProcessInstance, { Process, MemoryView }, { VirtualTranslate });
+cglue_trait_group!(IntoProcessInstance, { Process, MemoryView, Clone }, { VirtualTranslate });
 
 pub fn create<
     T: 'static + Os + Clone + OsInstanceVtableFiller<'static, CBox<'static, T>, CArc<c_void>>,

@@ -1,11 +1,12 @@
 use crate::architecture::x86::x64;
-use crate::architecture::VirtualTranslate3;
 use crate::error::*;
+use crate::mem::virt_translate::VirtualTranslate3;
 
 use crate::architecture::ArchitectureIdent;
 use crate::mem::{mem_data::*, memory_view::*};
 use crate::os::process::*;
 use crate::os::*;
+use crate::plugins::*;
 use crate::types::{umem, Address};
 
 use crate::cglue::*;

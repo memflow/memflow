@@ -1,5 +1,4 @@
-use super::VirtualTranslate2;
-use crate::architecture::{VirtualTranslate3, VtopFailureCallback, VtopOutputCallback};
+use super::{VirtualTranslate2, VirtualTranslate3, VtopFailureCallback, VtopOutputCallback};
 use crate::iter::SplitAtIndex;
 use crate::mem::{MemData, PhysicalMemory};
 use crate::types::{size, Address};

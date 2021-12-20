@@ -4,6 +4,7 @@ use crate::win32::{Win32Kernel, Win32KernelBuilder};
 use memflow::cglue;
 use memflow::plugins::args;
 use memflow::prelude::v1::*;
+use memflow::types::cache::TimedCacheValidator;
 
 use std::ffi::c_void;
 use std::time::Duration;
@@ -111,13 +112,13 @@ fn build_page_cache<
     match args::parse_vatcache(args)? {
         Some((0, _)) => build_kernel_hint(
             builder
-                .build_page_cache(|v, a| CachedMemoryAccess::builder(v).arch(a).build().unwrap()),
+                .build_page_cache(|v, a| CachedPhysicalMemory::builder(v).arch(a).build().unwrap()),
             args,
             lib,
         ),
         Some((size, time)) => build_kernel_hint(
             builder.build_page_cache(move |v, a| {
-                let builder = CachedMemoryAccess::builder(v).arch(a).cache_size(size);
+                let builder = CachedPhysicalMemory::builder(v).arch(a).cache_size(size);
 
                 if time > 0 {
                     builder

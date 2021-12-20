@@ -9,9 +9,15 @@ pub mod arch_overlay;
 pub mod batcher;
 pub mod remap_view;
 
+#[cfg(feature = "std")]
+pub mod cursor;
+
 pub use arch_overlay::ArchOverlayView;
 pub use batcher::MemoryViewBatcher;
 pub use remap_view::RemapView;
+
+#[cfg(feature = "std")]
+pub use cursor::MemoryCursor;
 
 /// The `MemoryView` trait implements generic access to memory, no matter if it is a process
 /// virtual memory, or machine's physical memory.

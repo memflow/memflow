@@ -3,15 +3,17 @@ use crate::cglue::{
     *,
 };
 use crate::error::*;
-use crate::mem::PhysicalMemory;
+use crate::mem::phys_mem::*;
 
 use super::{
-    Args, ConnectorInstance, ConnectorInstanceArcBox, ConnectorInstanceVtableFiller, LibContext,
-    Loadable, MuConnectorInstanceArcBox, OsInstanceArcBox, PluginDescriptor, PluginLogger,
-    TargetInfo,
+    Args, LibContext, Loadable, OsInstanceArcBox, PluginDescriptor, PluginLogger, TargetInfo,
 };
 
+use crate::connector::cpu_state::*;
 use std::ffi::c_void;
+
+cglue_trait_group!(ConnectorInstance<'a>, { PhysicalMemory, Clone }, { ConnectorCpuStateInner<'a> });
+pub type MuConnectorInstanceArcBox<'a> = std::mem::MaybeUninit<ConnectorInstanceArcBox<'a>>;
 
 pub fn create<
     T: 'static

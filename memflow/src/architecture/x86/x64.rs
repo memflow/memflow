@@ -1,7 +1,9 @@
 use super::{
-    super::{ArchMmuDef, ArchitectureObj, Endianess},
+    super::{ArchitectureObj, Endianess},
     X86Architecture, X86VirtualTranslate,
 };
+
+use crate::mem::virt_translate::mmu::ArchMmuDef;
 
 use crate::types::Address;
 
@@ -30,7 +32,7 @@ pub fn new_translator(dtb: Address) -> X86VirtualTranslate {
 
 #[cfg(test)]
 mod tests {
-    use crate::architecture::mmu::ArchMmuSpec;
+    use crate::mem::virt_translate::mmu::ArchMmuSpec;
     use crate::types::{mem, size, umem, Address, PageType};
 
     fn get_mmu_spec() -> &'static ArchMmuSpec {

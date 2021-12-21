@@ -28,7 +28,10 @@ pub use virt_translate::{
 };
 
 pub use memory_view::{
-    MemoryCursor, MemoryView, MemoryViewMetadata, ReadFailCallback, WriteFailCallback,
+    MemoryView, MemoryViewMetadata, ReadFailCallback, WriteFailCallback,
 };
+
+#[cfg(feature = "std")]
+pub use memory_view::MemoryCursor;
 
 pub use mem_data::*;

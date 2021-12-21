@@ -7,6 +7,7 @@ use super::*;
 ///
 /// This is useful for nested VM introspection, or analyzing emulators and custom memory
 /// structures.
+#[derive(Clone)]
 pub struct RemapView<T: MemoryView> {
     mem: T,
     mem_map: MemoryMap<(Address, umem)>,
@@ -58,6 +59,10 @@ impl<T: MemoryView> MemoryView for RemapView<T> {
     }
 
     fn metadata(&self) -> MemoryViewMetadata {
-        self.mem.metadata()
+        MemoryViewMetadata {
+            max_address: self.mem_map.max_address(),
+            real_size: self.mem_map.real_size(),
+            ..self.mem.metadata()
+        }
     }
 }

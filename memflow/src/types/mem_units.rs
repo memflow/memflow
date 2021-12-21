@@ -1,6 +1,6 @@
 ///! This module contains helper functions for creating various byte sizes.
 ///! All function are const and will be [optimized](https://rust.godbolt.org/z/T6LiwJ) by rustc.
-use super::umem;
+use super::{imem, umem};
 
 #[macro_export]
 macro_rules! impl_unit_helper {
@@ -44,6 +44,8 @@ macro_rules! impl_unit_helper {
 
 impl_unit_helper!(size, usize);
 impl_unit_helper!(mem, umem);
+impl_unit_helper!(ssize, isize);
+impl_unit_helper!(smem, imem);
 
 #[cfg(test)]
 mod tests {

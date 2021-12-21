@@ -33,7 +33,7 @@ mod tests;
 use crate::error::{Result, *};
 
 use crate::mem::{MemData, PhysicalMemory};
-use crate::types::{umem, Address, Page, PhysicalAddress};
+use crate::types::{imem, umem, Address, Page, PhysicalAddress};
 
 #[cglue_trait]
 #[int_result]
@@ -101,7 +101,7 @@ pub trait VirtualTranslate: Send {
 
     fn virt_page_map_range(
         &mut self,
-        gap_size: umem,
+        gap_size: imem,
         start: Address,
         end: Address,
         out: MemoryRangeCallback,
@@ -125,7 +125,7 @@ pub trait VirtualTranslate: Send {
         set.gaps(&(start..end))
             .filter(|r| {
                 assert!(r.end >= r.start);
-                (r.end - r.start) as umem <= gap_size
+                gap_size >= 0 && (r.end - r.start) as umem <= gap_size as umem
             })
             .collect::<Vec<_>>()
             .into_iter()
@@ -172,7 +172,7 @@ pub trait VirtualTranslate: Send {
     #[skip_func]
     fn virt_page_map_range_vec(
         &mut self,
-        gap_size: umem,
+        gap_size: imem,
         start: Address,
         end: Address,
     ) -> Vec<MemoryRange> {
@@ -242,12 +242,12 @@ pub trait VirtualTranslate: Send {
         virt
     }
 
-    fn virt_page_map(&mut self, gap_size: umem, out: MemoryRangeCallback) {
+    fn virt_page_map(&mut self, gap_size: imem, out: MemoryRangeCallback) {
         self.virt_page_map_range(gap_size, Address::null(), Address::invalid(), out)
     }
 
     #[skip_func]
-    fn virt_page_map_vec(&mut self, gap_size: umem) -> Vec<MemoryRange> {
+    fn virt_page_map_vec(&mut self, gap_size: imem) -> Vec<MemoryRange> {
         let mut out = vec![];
         self.virt_page_map(gap_size, (&mut out).into());
         out

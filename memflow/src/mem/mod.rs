@@ -27,9 +27,7 @@ pub use virt_translate::{
     VirtualTranslate3, VtopFailureCallback, VtopOutputCallback,
 };
 
-pub use memory_view::{
-    MemoryView, MemoryViewMetadata, ReadFailCallback, WriteFailCallback,
-};
+pub use memory_view::{MemoryView, MemoryViewMetadata, ReadFailCallback, WriteFailCallback};
 
 #[cfg(feature = "std")]
 pub use memory_view::MemoryCursor;

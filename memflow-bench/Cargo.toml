@@ -21,11 +21,8 @@ rand_xorshift = "0.3"
 # This branch provides throughput plots
 criterion = { git = "https://github.com/h33p/criterion.rs.git", branch = "tput" }
 
-memflow-win32 = { path = "../memflow-win32" }
-
 [dev-dependencies]
 memflow = { path = "../memflow", features = ["dummy_mem", "plugins"] }
-memflow-win32 = { path = "../memflow-win32" }
 simple_logger = "1"
 
 [features]

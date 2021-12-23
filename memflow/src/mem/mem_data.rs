@@ -2,6 +2,7 @@
 
 use crate::iter::SplitAtIndex;
 use crate::types::{umem, Address, PhysicalAddress};
+use cglue::callback::OpaqueCallback;
 
 use cglue::slice::*;
 
@@ -10,7 +11,7 @@ use cglue::slice::*;
 /// This base type is always used for initialization, but the commonly used type aliases are:
 /// `ReadData`, `WriteData`, `PhysicalReadData`, and `PhysicalWriteData`.
 #[repr(C)]
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "abi_stable", derive(::abi_stable::StableAbi))]
 pub struct MemData<A, T>(pub A, pub T);
 
@@ -87,3 +88,7 @@ pub type PhysicalWriteData<'a> = MemData<PhysicalAddress, CSliceRef<'a, u8>>;
 
 pub trait PhysicalWriteIterator<'a>: Iterator<Item = PhysicalWriteData<'a>> + 'a {}
 impl<'a, T: Iterator<Item = PhysicalWriteData<'a>> + 'a> PhysicalWriteIterator<'a> for T {}
+
+pub type ReadFailCallback<'a, 'b> = OpaqueCallback<'a, ReadData<'b>>;
+
+pub type WriteFailCallback<'a, 'b> = OpaqueCallback<'a, WriteData<'b>>;

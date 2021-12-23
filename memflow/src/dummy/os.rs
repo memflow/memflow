@@ -515,7 +515,7 @@ impl PhysicalMemory for DummyOs {
     fn phys_read_raw_iter<'a>(
         &mut self,
         data: CIterator<PhysicalReadData<'a>>,
-        out_fail: &mut PhysicalReadFailCallback<'_, 'a>,
+        out_fail: &mut ReadFailCallback<'_, 'a>,
     ) -> Result<()> {
         self.mem.phys_read_raw_iter(data, out_fail)
     }
@@ -524,7 +524,7 @@ impl PhysicalMemory for DummyOs {
     fn phys_write_raw_iter<'a>(
         &mut self,
         data: CIterator<PhysicalWriteData<'a>>,
-        out_fail: &mut PhysicalWriteFailCallback<'_, 'a>,
+        out_fail: &mut WriteFailCallback<'_, 'a>,
     ) -> Result<()> {
         self.mem.phys_write_raw_iter(data, out_fail)
     }

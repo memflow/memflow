@@ -40,13 +40,13 @@ pub use cache::*;
 ///     MemData,
 ///     phys_mem::{
 ///         PhysicalMemory,
-///         PhysicalReadFailCallback,
-///         PhysicalWriteFailCallback,
 ///         PhysicalMemoryMetadata,
 ///     },
 ///     mem_data::{
 ///         PhysicalReadData,
 ///         PhysicalWriteData,
+///         ReadFailCallback,
+///         WriteFailCallback,
 ///     }
 /// };
 ///
@@ -63,7 +63,7 @@ pub use cache::*;
 ///     fn phys_read_raw_iter<'a>(
 ///         &mut self,
 ///         data: CIterator<PhysicalReadData<'a>>,
-///         _: &mut PhysicalReadFailCallback<'_, 'a>
+///         _: &mut ReadFailCallback<'_, 'a>
 ///     ) -> Result<()> {
 ///         data
 ///             .for_each(|MemData(addr, mut out)| {
@@ -77,7 +77,7 @@ pub use cache::*;
 ///     fn phys_write_raw_iter<'a>(
 ///         &mut self,
 ///         data: CIterator<PhysicalWriteData<'a>>,
-///         _: &mut PhysicalWriteFailCallback<'_, 'a>
+///         _: &mut WriteFailCallback<'_, 'a>
 ///     ) -> Result<()> {
 ///         data
 ///             .for_each(|MemData(addr, data)| {
@@ -121,12 +121,12 @@ pub trait PhysicalMemory: Send {
     fn phys_read_raw_iter<'a>(
         &mut self,
         data: CIterator<PhysicalReadData<'a>>,
-        out_fail: &mut PhysicalReadFailCallback<'_, 'a>,
+        out_fail: &mut ReadFailCallback<'_, 'a>,
     ) -> Result<()>;
     fn phys_write_raw_iter<'a>(
         &mut self,
         data: CIterator<PhysicalWriteData<'a>>,
-        out_fail: &mut PhysicalWriteFailCallback<'_, 'a>,
+        out_fail: &mut WriteFailCallback<'_, 'a>,
     ) -> Result<()>;
 
     /// Retrieve metadata about the physical memory
@@ -168,7 +168,7 @@ pub trait PhysicalMemory: Send {
         let mut iter = Some(MemData(addr, out.as_bytes_mut().into())).into_iter();
         self.phys_read_raw_iter(
             (&mut iter).into(),
-            &mut (&mut |MemData(_, mut d): PhysicalReadData| {
+            &mut (&mut |MemData(_, mut d): ReadData| {
                 d.iter_mut().for_each(|b| *b = 0);
                 true
             })
@@ -216,14 +216,7 @@ impl<T: PhysicalMemory> MemoryView for PhysicalMemoryView<T> {
         out_fail: &mut ReadFailCallback<'_, 'a>,
     ) -> Result<()> {
         let mut iter = data.map(|MemData(addr, data)| MemData(addr.into(), data));
-
-        let mut callback = |MemData(addr, data): PhysicalReadData<'a>| {
-            out_fail.call(MemData(addr.address(), (&data).into()))
-        };
-        let callback = &mut callback;
-
-        self.mem
-            .phys_read_raw_iter((&mut iter).into(), &mut callback.into())
+        self.mem.phys_read_raw_iter((&mut iter).into(), out_fail)
     }
 
     fn write_raw_iter<'a>(
@@ -232,14 +225,7 @@ impl<T: PhysicalMemory> MemoryView for PhysicalMemoryView<T> {
         out_fail: &mut WriteFailCallback<'_, 'a>,
     ) -> Result<()> {
         let mut iter = data.map(|MemData(addr, data)| MemData(addr.into(), data));
-
-        let mut callback = |MemData(addr, data): PhysicalWriteData<'a>| {
-            out_fail.call(MemData(addr.address(), data))
-        };
-        let callback = &mut callback;
-
-        self.mem
-            .phys_write_raw_iter((&mut iter).into(), &mut callback.into())
+        self.mem.phys_write_raw_iter((&mut iter).into(), out_fail)
     }
 
     fn metadata(&self) -> MemoryViewMetadata {
@@ -276,7 +262,3 @@ pub struct PhysicalMemoryMetadata {
     pub readonly: bool,
     pub ideal_batch_size: u32,
 }
-
-pub type PhysicalReadFailCallback<'a, 'b> = OpaqueCallback<'a, PhysicalReadData<'b>>;
-
-pub type PhysicalWriteFailCallback<'a, 'b> = OpaqueCallback<'a, PhysicalWriteData<'b>>;

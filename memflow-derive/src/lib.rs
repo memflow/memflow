@@ -157,6 +157,124 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
 }
 
 #[proc_macro_attribute]
+pub fn connector_bare(args: TokenStream, input: TokenStream) -> TokenStream {
+    let crate_path = crate_path();
+
+    let attr_args = parse_macro_input!(args as AttributeArgs);
+    let args = match ConnectorFactoryArgs::from_list(&attr_args) {
+        Ok(v) => v,
+        Err(e) => return TokenStream::from(e.write_errors()),
+    };
+
+    let connector_name = args.name;
+
+    let version_gen = args
+        .version
+        .map_or_else(|| quote! { env!("CARGO_PKG_VERSION") }, |v| quote! { #v });
+
+    let description_gen = args.description.map_or_else(
+        || quote! { env!("CARGO_PKG_DESCRIPTION") },
+        |d| quote! { #d },
+    );
+
+    let help_gen = if args.help_fn.is_some() {
+        quote! { Some(mf_help_callback) }
+    } else {
+        quote! { None }
+    };
+
+    let target_list_gen = if args.target_list_fn.is_some() {
+        quote! { Some(mf_target_list_callback) }
+    } else {
+        quote! { None }
+    };
+
+    let connector_descriptor: proc_macro2::TokenStream =
+        ["MEMFLOW_CONNECTOR_", &(&connector_name).to_uppercase()]
+            .concat()
+            .parse()
+            .unwrap();
+
+    let func = parse_macro_input!(input as ItemFn);
+    let func_name = &func.sig.ident;
+
+    let create_fn_gen = quote! {
+            #[doc(hidden)]
+            extern "C" fn mf_create(
+                args: &cglue::repr_cstring::ReprCString,
+                os: cglue::option::COption<#crate_path::plugins::os::OsInstanceArcBox<'static>>,
+                lib: #crate_path::cglue::CArc<::core::ffi::c_void>,
+                logger: Option<&'static #crate_path::plugins::PluginLogger>,
+                out: &mut #crate_path::plugins::connector::MuConnectorInstanceArcBox<'static>
+            ) -> i32 {
+                #crate_path::plugins::create_bare(args, os.into(), lib, logger, out, #func_name)
+            }
+    };
+
+    let help_fn_gen = args.help_fn.map(|v| v.parse().unwrap()).map_or_else(
+        proc_macro2::TokenStream::new,
+        |func_name: proc_macro2::TokenStream| {
+            quote! {
+                #[doc(hidden)]
+                extern "C" fn mf_help_callback(
+                    mut callback: #crate_path::plugins::HelpCallback,
+                ) {
+                    let helpstr = #func_name();
+                    let _ = callback.call(helpstr.into());
+                }
+            }
+        },
+    );
+
+    let target_list_fn_gen = args.target_list_fn.map(|v| v.parse().unwrap()).map_or_else(
+        proc_macro2::TokenStream::new,
+        |func_name: proc_macro2::TokenStream| {
+            quote! {
+                #[doc(hidden)]
+                extern "C" fn mf_target_list_callback(
+                    mut callback: #crate_path::plugins::TargetCallback,
+                ) -> i32 {
+                    #func_name()
+                        .map(|mut targets| {
+                            targets
+                                .into_iter()
+                                .take_while(|t| callback.call(t.clone()))
+                                .for_each(|_| ());
+                        })
+                        .into_int_result()
+                }
+            }
+        },
+    );
+
+    let gen = quote! {
+        #[doc(hidden)]
+        #[no_mangle]
+        pub static #connector_descriptor: #crate_path::plugins::ConnectorDescriptor = #crate_path::plugins::ConnectorDescriptor {
+            plugin_version: #crate_path::plugins::MEMFLOW_PLUGIN_VERSION,
+            input_layout: <<#crate_path::plugins::LoadableConnector as #crate_path::plugins::Loadable>::CInputArg as #crate_path::abi_stable::StableAbi>::LAYOUT,
+            output_layout: <<#crate_path::plugins::LoadableConnector as #crate_path::plugins::Loadable>::Instance as #crate_path::abi_stable::StableAbi>::LAYOUT,
+            name: #crate_path::cglue::CSliceRef::from_str(#connector_name),
+            version: #crate_path::cglue::CSliceRef::from_str(#version_gen),
+            description: #crate_path::cglue::CSliceRef::from_str(#description_gen),
+            help_callback: #help_gen,
+            target_list_callback: #target_list_gen,
+            create: mf_create,
+        };
+
+        #create_fn_gen
+
+        #help_fn_gen
+
+        #target_list_fn_gen
+
+        #func
+    };
+
+    gen.into()
+}
+
+#[proc_macro_attribute]
 pub fn os_layer(args: TokenStream, input: TokenStream) -> TokenStream {
     let crate_path = crate_path();
 

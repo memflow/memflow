@@ -33,9 +33,8 @@ use crate::architecture::ArchitectureObj;
 use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 use crate::iter::PageChunks;
 use crate::mem::{
-    phys_mem::{PhysicalReadFailCallback, PhysicalWriteFailCallback},
     MemData, PhysicalMemory, PhysicalMemoryMapping, PhysicalMemoryMetadata, PhysicalReadData,
-    PhysicalWriteData,
+    PhysicalWriteData, ReadFailCallback, WriteFailCallback,
 };
 use page_cache::{PageCache, PageValidity};
 
@@ -133,7 +132,7 @@ impl<'a, T: PhysicalMemory, Q: CacheValidator> PhysicalMemory for CachedPhysical
     fn phys_read_raw_iter<'b>(
         &mut self,
         data: CIterator<PhysicalReadData<'b>>,
-        out_fail: &mut PhysicalReadFailCallback<'_, 'b>,
+        out_fail: &mut ReadFailCallback<'_, 'b>,
     ) -> Result<()> {
         self.cache.validator.update_validity();
         self.arena.reset();
@@ -144,7 +143,7 @@ impl<'a, T: PhysicalMemory, Q: CacheValidator> PhysicalMemory for CachedPhysical
     fn phys_write_raw_iter<'b>(
         &mut self,
         data: CIterator<PhysicalWriteData<'b>>,
-        out_fail: &mut PhysicalWriteFailCallback<'_, 'b>,
+        out_fail: &mut WriteFailCallback<'_, 'b>,
     ) -> Result<()> {
         self.cache.validator.update_validity();
 

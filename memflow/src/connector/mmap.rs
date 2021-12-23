@@ -4,12 +4,12 @@ Basic connector which works on mapped memory.
 
 use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 use crate::mem::{
-    MemData, MemoryMap, PhysicalMemory, PhysicalMemoryMetadata, PhysicalReadData, PhysicalWriteData,
+    MemData, MemoryMap, PhysicalMemory, PhysicalMemoryMetadata, PhysicalReadData,
+    PhysicalWriteData, ReadFailCallback, WriteFailCallback,
 };
 use crate::types::{umem, Address};
 
 use crate::cglue::*;
-use crate::mem::phys_mem::*;
 
 use std::convert::TryInto;
 
@@ -96,17 +96,9 @@ impl<'a, F: AsRef<MemoryMap<&'a mut [u8]>> + Send> PhysicalMemory
     fn phys_read_raw_iter<'b>(
         &mut self,
         data: CIterator<PhysicalReadData<'b>>,
-        out_fail: &mut PhysicalReadFailCallback<'_, 'b>,
+        out_fail: &mut ReadFailCallback<'_, 'b>,
     ) -> Result<()> {
-        let mut void = |(addr, buf): (Address, &'b mut [u8])| {
-            // TODO: manage not to lose physical page information here???
-            out_fail.call(MemData(addr.into(), buf.into()))
-        };
-        for (mapped_buf, buf) in self
-            .info
-            .as_ref()
-            .map_iter(data.map(|MemData(addr, buf)| (addr, buf.into())), &mut void)
-        {
+        for MemData(mapped_buf, mut buf) in self.info.as_ref().map_iter(data, out_fail) {
             buf.copy_from_slice(mapped_buf.as_ref());
         }
         Ok(())
@@ -115,14 +107,9 @@ impl<'a, F: AsRef<MemoryMap<&'a mut [u8]>> + Send> PhysicalMemory
     fn phys_write_raw_iter<'b>(
         &mut self,
         data: CIterator<PhysicalWriteData<'b>>,
-        out_fail: &mut PhysicalWriteFailCallback<'_, 'b>,
+        out_fail: &mut WriteFailCallback<'_, 'b>,
     ) -> Result<()> {
-        let mut void = &mut |(addr, buf): (Address, _)| {
-            // TODO: manage not to lose physical page information here???
-            out_fail.call(MemData(addr.into(), buf))
-        };
-
-        for (mapped_buf, buf) in self.info.as_ref().map_iter(data.map(<_>::from), &mut void) {
+        for MemData(mapped_buf, buf) in self.info.as_ref().map_iter(data, out_fail) {
             mapped_buf.as_mut().copy_from_slice(buf.into());
         }
 
@@ -158,13 +145,9 @@ impl<'a, F: AsRef<MemoryMap<&'a [u8]>> + Send> PhysicalMemory
     fn phys_read_raw_iter<'b>(
         &mut self,
         data: CIterator<PhysicalReadData<'b>>,
-        out_fail: &mut PhysicalReadFailCallback<'_, 'b>,
+        out_fail: &mut ReadFailCallback<'_, 'b>,
     ) -> Result<()> {
-        let mut void = |(addr, buf): (Address, _)| {
-            // TODO: manage not to lose physical page information here???
-            out_fail.call(MemData(addr.into(), buf))
-        };
-        for (mapped_buf, mut buf) in self.info.as_ref().map_iter(data.map(<_>::into), &mut void) {
+        for MemData(mapped_buf, mut buf) in self.info.as_ref().map_iter(data, out_fail) {
             buf.copy_from_slice(mapped_buf.as_ref());
         }
         Ok(())
@@ -173,7 +156,7 @@ impl<'a, F: AsRef<MemoryMap<&'a [u8]>> + Send> PhysicalMemory
     fn phys_write_raw_iter<'b>(
         &mut self,
         _data: CIterator<PhysicalWriteData<'b>>,
-        _out_fail: &mut PhysicalWriteFailCallback<'_, 'b>,
+        _out_fail: &mut WriteFailCallback<'_, 'b>,
     ) -> Result<()> {
         Err(Error(ErrorOrigin::Connector, ErrorKind::ReadOnly)
             .log_error("target mapping is not writeable"))

@@ -160,8 +160,6 @@ fn main() -> Result<()> {
             .build()?
     };
 
-    inventory.set_max_log_level(log::LevelFilter::Trace);
-
     read_bench(os)
 }
 

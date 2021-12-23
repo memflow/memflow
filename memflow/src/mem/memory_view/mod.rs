@@ -395,7 +395,3 @@ pub struct MemoryViewMetadata {
     pub little_endian: bool,
     pub arch_bits: u8,
 }
-
-pub type ReadFailCallback<'a, 'b> = OpaqueCallback<'a, ReadData<'b>>;
-
-pub type WriteFailCallback<'a, 'b> = OpaqueCallback<'a, WriteData<'b>>;

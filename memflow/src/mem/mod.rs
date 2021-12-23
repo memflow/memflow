@@ -15,10 +15,7 @@ pub mod virt_mem;
 pub mod virt_translate;
 
 pub use mem_map::{MemoryMap, PhysicalMemoryMapping};
-pub use phys_mem::{
-    CachedPhysicalMemory, PhysicalMemory, PhysicalMemoryMetadata, PhysicalReadFailCallback,
-    PhysicalWriteFailCallback,
-};
+pub use phys_mem::{CachedPhysicalMemory, PhysicalMemory, PhysicalMemoryMetadata};
 pub use virt_mem::VirtualDma;
 //#[doc(hidden)]
 //pub use virt_mem_batcher::VirtualMemoryBatcher;
@@ -27,7 +24,7 @@ pub use virt_translate::{
     VirtualTranslate3, VtopFailureCallback, VtopOutputCallback,
 };
 
-pub use memory_view::{MemoryView, MemoryViewMetadata, ReadFailCallback, WriteFailCallback};
+pub use memory_view::{MemoryView, MemoryViewMetadata};
 
 #[cfg(feature = "std")]
 pub use memory_view::MemoryCursor;

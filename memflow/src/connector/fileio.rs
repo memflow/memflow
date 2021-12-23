@@ -4,8 +4,8 @@ Basic connector which works on file i/o operations (`Seek`, `Read`, `Write`).
 
 use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 use crate::mem::{
-    phys_mem::*, MemData, MemoryMap, PhysicalMemory, PhysicalMemoryMetadata, PhysicalReadData,
-    PhysicalWriteData,
+    MemData, MemoryMap, PhysicalMemory, PhysicalMemoryMetadata, PhysicalReadData,
+    PhysicalWriteData, ReadFailCallback, WriteFailCallback,
 };
 use crate::types::{umem, Address};
 
@@ -133,13 +133,9 @@ impl<T: Seek + Read + Write + Send> PhysicalMemory for FileIoMemory<T> {
     fn phys_read_raw_iter<'a>(
         &mut self,
         data: CIterator<PhysicalReadData<'a>>,
-        out_fail: &mut PhysicalReadFailCallback<'_, 'a>,
+        out_fail: &mut ReadFailCallback<'_, 'a>,
     ) -> Result<()> {
-        let mut void = |(addr, buf): (Address, _)| {
-            // TODO: manage not to lose physical page information here???
-            out_fail.call(MemData(addr.into(), buf))
-        };
-        for ((file_off, _), buf) in self.mem_map.map_iter(data.map(<_>::into), &mut void) {
+        for MemData((file_off, _), buf) in self.mem_map.map_iter(data, out_fail) {
             self.reader
                 .seek(SeekFrom::Start(file_off.to_umem() as u64))
                 .map_err(|err| {
@@ -155,13 +151,9 @@ impl<T: Seek + Read + Write + Send> PhysicalMemory for FileIoMemory<T> {
     fn phys_write_raw_iter<'a>(
         &mut self,
         data: CIterator<PhysicalWriteData<'a>>,
-        out_fail: &mut PhysicalWriteFailCallback<'_, 'a>,
+        out_fail: &mut WriteFailCallback<'_, 'a>,
     ) -> Result<()> {
-        let void = &mut |(addr, buf): (Address, _)| {
-            // TODO: manage not to lose physical page information here???
-            out_fail.call(MemData(addr.into(), buf))
-        };
-        for ((file_off, _), buf) in self.mem_map.map_iter(data.map(<_>::from), void) {
+        for MemData((file_off, _), buf) in self.mem_map.map_iter(data, out_fail) {
             self.reader
                 .seek(SeekFrom::Start(file_off.to_umem() as u64))
                 .map_err(|err| {

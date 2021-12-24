@@ -41,7 +41,7 @@ where
 }
 
 #[repr(C)]
-#[derive(Default, Clone)]
+#[derive(Default, Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 pub struct OsArgs {
     pub target: Option<ReprCString>,

@@ -9,20 +9,12 @@ use colored::*;
 static mut HAD_ERROR: bool = false;
 
 fn main() -> Result<()> {
-    let (conn_name, conn_args_str, os_name, os_args_str, sysproc, kernel_mods) = parse_args();
+    let matches = parse_args();
+    let (chain, sysproc, kernel_mods) = extract_args(&matches)?;
 
-    let conn_args = str::parse(&conn_args_str)?;
-    let os_args = str::parse(&os_args_str)?;
-
-    // create inventory + connector
+    // create inventory + os
     let inventory = Inventory::scan();
-    let mut os = inventory
-        .builder()
-        .connector(&conn_name)
-        .args(conn_args)
-        .os(&os_name)
-        .args(os_args)
-        .build()?;
+    let mut os = inventory.builder().os_chain(chain).build()?;
 
     {
         println!("Kernel info:");
@@ -114,8 +106,8 @@ fn kernel_modules(kernel: &mut impl Os) -> Result<Vec<ModuleInfo>> {
     modules
 }
 
-fn parse_args() -> (String, String, String, String, String, String) {
-    let matches = App::new("multithreading example")
+fn parse_args() -> ArgMatches<'static> {
+    App::new("integration example")
         .version(crate_version!())
         .author(crate_authors!())
         .arg(Arg::with_name("verbose").short("v").multiple(true))
@@ -124,28 +116,16 @@ fn parse_args() -> (String, String, String, String, String, String) {
                 .long("connector")
                 .short("c")
                 .takes_value(true)
-                .required(true),
-        )
-        .arg(
-            Arg::with_name("connector-args")
-                .long("connector-args")
-                .short("x")
-                .takes_value(true)
-                .default_value(""),
+                .required(false)
+                .multiple(true),
         )
         .arg(
             Arg::with_name("os")
                 .long("os")
                 .short("o")
                 .takes_value(true)
-                .required(true),
-        )
-        .arg(
-            Arg::with_name("os-args")
-                .long("os-args")
-                .short("y")
-                .takes_value(true)
-                .default_value(""),
+                .required(true)
+                .multiple(true),
         )
         .arg(
             Arg::with_name("system-proc")
@@ -161,8 +141,10 @@ fn parse_args() -> (String, String, String, String, String, String) {
                 .takes_value(true)
                 .default_value("ntoskrnl.exe,hal.dll"),
         )
-        .get_matches();
+        .get_matches()
+}
 
+fn extract_args<'a>(matches: &'a ArgMatches) -> Result<(OsChain<'a>, &'a str, &'a str)> {
     // set log level
     let level = match matches.occurrences_of("verbose") {
         0 => Level::Error,
@@ -172,17 +154,21 @@ fn parse_args() -> (String, String, String, String, String, String) {
         4 => Level::Trace,
         _ => Level::Trace,
     };
-    simple_logger::SimpleLogger::new()
-        .with_level(level.to_level_filter())
-        .init()
-        .unwrap();
 
-    (
-        matches.value_of("connector").unwrap().into(),
-        matches.value_of("connector-args").unwrap().into(),
-        matches.value_of("os").unwrap().into(),
-        matches.value_of("os-args").unwrap().into(),
-        matches.value_of("system-proc").unwrap().into(),
-        matches.value_of("kernel-mods").unwrap().into(),
-    )
+    simple_logger::SimpleLogger::new().init().unwrap();
+    log::set_max_level(level.to_level_filter());
+
+    if let Some(((conn_idx, conn), (os_idx, os))) = matches
+        .indices_of("connector")
+        .zip(matches.values_of("connector"))
+        .zip(matches.indices_of("os").zip(matches.values_of("os")))
+    {
+        Ok((
+            OsChain::new(conn_idx.zip(conn), os_idx.zip(os))?,
+            matches.value_of("system-proc").unwrap(),
+            matches.value_of("kernel-mods").unwrap(),
+        ))
+    } else {
+        Err(ErrorKind::ArgValidation.into())
+    }
 }

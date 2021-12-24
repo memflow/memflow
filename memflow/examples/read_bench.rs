@@ -5,7 +5,7 @@ use clap::*;
 use log::Level;
 
 use memflow::cglue::*;
-use memflow::error::{Error, ErrorKind, ErrorOrigin, Result};
+use memflow::error::{ErrorKind, Result};
 use memflow::mem::*;
 use memflow::os::{ModuleInfo, OsInner, Process};
 use memflow::plugins::*;
@@ -140,7 +140,8 @@ fn read_bench(mut kernel: OsInstanceArcBox) -> Result<()> {
 }
 
 fn main() -> Result<()> {
-    let (conn_name, conn_args, os_name, os_args, log_level) = parse_args()?;
+    let matches = parse_args();
+    let (chain, log_level) = extract_args(&matches)?;
 
     simple_logger::SimpleLogger::new().init().unwrap();
 
@@ -148,23 +149,14 @@ fn main() -> Result<()> {
 
     // create connector + os
     let inventory = Inventory::scan();
-    let os = if conn_name.is_empty() {
-        inventory.builder().os(&os_name).args(os_args).build()?
-    } else {
-        inventory
-            .builder()
-            .connector(&conn_name)
-            .args(conn_args)
-            .os(&os_name)
-            .args(os_args)
-            .build()?
-    };
+
+    let os = inventory.builder().os_chain(chain).build()?;
 
     read_bench(os)
 }
 
-fn parse_args() -> Result<(String, ConnectorArgs, String, OsArgs, log::Level)> {
-    let matches = App::new("read_bench example")
+fn parse_args() -> ArgMatches<'static> {
+    App::new("read_bench example")
         .version(crate_version!())
         .author(crate_authors!())
         .arg(Arg::with_name("verbose").short("v").multiple(true))
@@ -173,31 +165,21 @@ fn parse_args() -> Result<(String, ConnectorArgs, String, OsArgs, log::Level)> {
                 .long("connector")
                 .short("c")
                 .takes_value(true)
-                .required(false),
-        )
-        .arg(
-            Arg::with_name("connector-args")
-                .long("connector-args")
-                .short("x")
-                .takes_value(true)
-                .default_value(""),
+                .required(false)
+                .multiple(true),
         )
         .arg(
             Arg::with_name("os")
                 .long("os")
                 .short("o")
                 .takes_value(true)
-                .required(true),
+                .required(true)
+                .multiple(true),
         )
-        .arg(
-            Arg::with_name("os-args")
-                .long("os-args")
-                .short("y")
-                .takes_value(true)
-                .default_value(""),
-        )
-        .get_matches();
+        .get_matches()
+}
 
+fn extract_args<'a>(matches: &'a ArgMatches) -> Result<(OsChain<'a>, log::Level)> {
     // set log level
     let level = match matches.occurrences_of("verbose") {
         0 => Level::Error,
@@ -208,21 +190,13 @@ fn parse_args() -> Result<(String, ConnectorArgs, String, OsArgs, log::Level)> {
         _ => Level::Trace,
     };
 
-    Ok((
-        matches.value_of("connector").unwrap_or("").into(),
-        str::parse(matches.value_of("connector-args").ok_or_else(|| {
-            Error(ErrorOrigin::Other, ErrorKind::Configuration)
-                .log_error("failed to parse connector args")
-        })?)?,
-        matches
-            .value_of("os")
-            .ok_or_else(|| {
-                Error(ErrorOrigin::Other, ErrorKind::Configuration).log_error("failed to parse os")
-            })?
-            .into(),
-        str::parse(matches.value_of("os-args").ok_or_else(|| {
-            Error(ErrorOrigin::Other, ErrorKind::Configuration).log_error("failed to parse os args")
-        })?)?,
-        level,
-    ))
+    if let Some(((conn_idx, conn), (os_idx, os))) = matches
+        .indices_of("connector")
+        .zip(matches.values_of("connector"))
+        .zip(matches.indices_of("os").zip(matches.values_of("os")))
+    {
+        Ok((OsChain::new(conn_idx.zip(conn), os_idx.zip(os))?, level))
+    } else {
+        Err(ErrorKind::ArgValidation.into())
+    }
 }

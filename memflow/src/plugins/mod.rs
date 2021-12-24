@@ -756,7 +756,7 @@ impl Inventory {
     }
 }
 
-enum BuildStep<'a> {
+pub enum BuildStep<'a> {
     Connector {
         name: &'a str,
         args: Option<ConnectorArgs>,
@@ -765,6 +765,119 @@ enum BuildStep<'a> {
         name: &'a str,
         args: Option<OsArgs>,
     },
+}
+
+impl<'a> BuildStep<'a> {
+    /// Parse input string and construct steps for building a connector.
+    ///
+    /// Name and arguments are separated by `:`, for example:
+    ///
+    /// `kvm:5`, or `qemu:win10:memmap=map`.
+    pub fn new_connector(input: &'a str) -> Result<Self> {
+        let (name, args) = input.split_once(":").unwrap_or((input, ""));
+
+        Ok(Self::Connector {
+            name,
+            args: if args.is_empty() {
+                None
+            } else {
+                Some(str::parse(args)?)
+            },
+        })
+    }
+
+    /// Parse input string and construct steps for building an OS.
+    ///
+    /// Name and arguments are separated by `:`, for example:
+    ///
+    /// `win32`, or `win32::dtb=0xdeadbeef`.
+    pub fn new_os(input: &'a str) -> Result<Self> {
+        let (name, args) = input.split_once(":").unwrap_or((input, ""));
+
+        Ok(Self::Os {
+            name,
+            args: if args.is_empty() {
+                None
+            } else {
+                Some(str::parse(args)?)
+            },
+        })
+    }
+
+    /// Validate whether the next build step is compatible with the current one.
+    pub fn validate_next(&self, next: &Self) -> bool {
+        !matches!(
+            (self, next),
+            (BuildStep::Connector { .. }, BuildStep::Connector { .. })
+                | (BuildStep::Os { .. }, BuildStep::Os { .. })
+        )
+    }
+}
+
+fn builder_from_args<'a>(
+    connectors: impl Iterator<Item = (usize, &'a str)>,
+    os_layers: impl Iterator<Item = (usize, &'a str)>,
+) -> Result<Vec<BuildStep<'a>>> {
+    let mut layers = connectors
+        .map(|(i, a)| BuildStep::new_connector(a).map(|a| (i, a)))
+        .chain(os_layers.map(|(i, a)| BuildStep::new_os(a).map(|a| (i, a))))
+        .collect::<Result<Vec<_>>>()?;
+
+    layers.sort_by(|(a, _), (b, _)| a.cmp(b));
+
+    if layers.windows(2).any(|w| !w[0].1.validate_next(&w[1].1)) {
+        return Err(Error(ErrorOrigin::Other, ErrorKind::ArgValidation));
+    }
+
+    Ok(layers.into_iter().map(|(_, s)| s).collect())
+}
+
+/// Precompiled connector chain.
+///
+/// Use this with [`Inventory::builder`](Inventory::builder).
+pub struct ConnectorChain<'a>(Vec<BuildStep<'a>>);
+
+impl<'a> ConnectorChain<'a> {
+    /// Build a new connector chain.
+    ///
+    /// Arguments are iterators of command line arguments with their position and value. The
+    /// position will be used to sort them and validate whether they are in correct order.
+    pub fn new(
+        connectors: impl Iterator<Item = (usize, &'a str)>,
+        os_layers: impl Iterator<Item = (usize, &'a str)>,
+    ) -> Result<Self> {
+        let steps = builder_from_args(connectors, os_layers)?;
+
+        if !matches!(steps.last(), Some(BuildStep::Connector { .. })) {
+            return Err(Error(ErrorOrigin::Other, ErrorKind::ArgValidation));
+        }
+
+        Ok(Self(steps))
+    }
+}
+
+/// Precompiled os chain.
+///
+/// Use this with [`Inventory::builder`](Inventory::builder).
+pub struct OsChain<'a>(Vec<BuildStep<'a>>);
+
+impl<'a> OsChain<'a> {
+    /// Build a new OS chain.
+    ///
+    /// Arguments are iterators of command line arguments with their position and value. The
+    /// position will be used to sort them and validate whether they are in correct order.
+    pub fn new(
+        connectors: impl Iterator<Item = (usize, &'a str)>,
+        os_layers: impl Iterator<Item = (usize, &'a str)>,
+    ) -> Result<Self> {
+        let steps = builder_from_args(connectors, os_layers)?;
+
+        if !matches!(steps.last(), Some(BuildStep::Os { .. })) {
+            return Err(Error(ErrorOrigin::Other, ErrorKind::ArgValidation));
+        }
+
+        Ok(Self(steps))
+    }
 }
 
 /// BuilderEmpty is the starting builder that allows to either call `connector`, or `os`.
@@ -794,6 +907,30 @@ impl<'a> BuilderEmpty<'a> {
         ConnectorBuilder {
             inventory: self.inventory,
             steps: vec![BuildStep::Os { name, args: None }],
+        }
+    }
+
+    /// Chains multiple pre-validated steps, resulting in an Os ready-to-build.
+    ///
+    /// # Arguments
+    ///
+    /// * `chain` - steps to initialize the builder with.
+    pub fn os_chain(self, chain: OsChain<'a>) -> ConnectorBuilder<'a> {
+        ConnectorBuilder {
+            inventory: self.inventory,
+            steps: chain.0,
+        }
+    }
+
+    /// Chains multiple pre-validated steps, resulting in a connector ready-to-build.
+    ///
+    /// # Arguments
+    ///
+    /// * `chain` - steps to initialize the builder with.
+    pub fn connector_chain(self, chain: ConnectorChain<'a>) -> OsBuilder<'a> {
+        OsBuilder {
+            inventory: self.inventory,
+            steps: chain.0,
         }
     }
 }

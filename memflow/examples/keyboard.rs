@@ -1,20 +1,15 @@
-use clap::{crate_authors, crate_version, App, Arg};
+use clap::{crate_authors, crate_version, App, Arg, ArgMatches};
 use log::Level;
 /// A simple keyboard example using memflow
 use memflow::prelude::v1::*;
 
 fn main() -> Result<()> {
-    let (conn_name, conn_args, os_name, os_args) = parse_args()?;
+    let matches = parse_args();
+    let chain = extract_args(&matches)?;
 
-    // create connector + os
+    // create inventory + os
     let inventory = Inventory::scan();
-    let os = inventory
-        .builder()
-        .connector(&conn_name)
-        .args(conn_args)
-        .os(&os_name)
-        .args(os_args)
-        .build()?;
+    let os = inventory.builder().os_chain(chain).build()?;
 
     if !os.check_impl_oskeyboardinner() {
         return Err(
@@ -31,8 +26,8 @@ fn main() -> Result<()> {
     }
 }
 
-fn parse_args() -> Result<(String, ConnectorArgs, String, OsArgs)> {
-    let matches = App::new("mfps")
+fn parse_args() -> ArgMatches<'static> {
+    App::new("keyboard example")
         .version(crate_version!())
         .author(crate_authors!())
         .arg(Arg::with_name("verbose").short("v").multiple(true))
@@ -41,31 +36,21 @@ fn parse_args() -> Result<(String, ConnectorArgs, String, OsArgs)> {
                 .long("connector")
                 .short("c")
                 .takes_value(true)
-                .required(true),
-        )
-        .arg(
-            Arg::with_name("connector-args")
-                .long("connector-args")
-                .short("x")
-                .takes_value(true)
-                .default_value(""),
+                .required(false)
+                .multiple(true),
         )
         .arg(
             Arg::with_name("os")
                 .long("os")
                 .short("o")
                 .takes_value(true)
-                .required(true),
+                .required(true)
+                .multiple(true),
         )
-        .arg(
-            Arg::with_name("os-args")
-                .long("os-args")
-                .short("y")
-                .takes_value(true)
-                .default_value(""),
-        )
-        .get_matches();
+        .get_matches()
+}
 
+fn extract_args<'a>(matches: &'a ArgMatches) -> Result<OsChain<'a>> {
     // set log level
     let level = match matches.occurrences_of("verbose") {
         0 => Level::Error,
@@ -76,32 +61,16 @@ fn parse_args() -> Result<(String, ConnectorArgs, String, OsArgs)> {
         _ => Level::Trace,
     };
 
-    // initialize loggong
-    simple_logger::SimpleLogger::new()
-        .with_level(level.to_level_filter())
-        .init()
-        .unwrap();
+    simple_logger::SimpleLogger::new().init().unwrap();
+    log::set_max_level(level.to_level_filter());
 
-    Ok((
-        matches
-            .value_of("connector")
-            .ok_or_else(|| {
-                Error(ErrorOrigin::Other, ErrorKind::Configuration)
-                    .log_error("failed to parse connector")
-            })?
-            .into(),
-        str::parse(matches.value_of("connector-args").ok_or_else(|| {
-            Error(ErrorOrigin::Other, ErrorKind::Configuration)
-                .log_error("failed to parse connector args")
-        })?)?,
-        matches
-            .value_of("os")
-            .ok_or_else(|| {
-                Error(ErrorOrigin::Other, ErrorKind::Configuration).log_error("failed to parse os")
-            })?
-            .into(),
-        str::parse(matches.value_of("os-args").ok_or_else(|| {
-            Error(ErrorOrigin::Other, ErrorKind::Configuration).log_error("failed to parse os args")
-        })?)?,
-    ))
+    if let Some(((conn_idx, conn), (os_idx, os))) = matches
+        .indices_of("connector")
+        .zip(matches.values_of("connector"))
+        .zip(matches.indices_of("os").zip(matches.values_of("os")))
+    {
+        Ok(OsChain::new(conn_idx.zip(conn), os_idx.zip(os))?)
+    } else {
+        Err(ErrorKind::ArgValidation.into())
+    }
 }

@@ -36,7 +36,7 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn parse_args() -> Result<(Option<String>, Args, String, Args, String)> {
+fn parse_args() -> Result<(Option<String>, ConnectorArgs, String, OsArgs, String)> {
     let matches = App::new("mfop")
         .version(crate_version!())
         .author(crate_authors!())
@@ -96,7 +96,7 @@ fn parse_args() -> Result<(Option<String>, Args, String, Args, String)> {
 
     Ok((
         matches.value_of("connector").map(ToString::to_string),
-        Args::parse(matches.value_of("connector-args").ok_or_else(|| {
+        str::parse(matches.value_of("connector-args").ok_or_else(|| {
             Error(ErrorOrigin::Other, ErrorKind::Configuration)
                 .log_error("failed to parse connector args")
         })?)?,
@@ -106,7 +106,7 @@ fn parse_args() -> Result<(Option<String>, Args, String, Args, String)> {
                 Error(ErrorOrigin::Other, ErrorKind::Configuration).log_error("failed to parse os")
             })?
             .into(),
-        Args::parse(matches.value_of("os-args").ok_or_else(|| {
+        str::parse(matches.value_of("os-args").ok_or_else(|| {
             Error(ErrorOrigin::Other, ErrorKind::Configuration).log_error("failed to parse os args")
         })?)?,
         matches

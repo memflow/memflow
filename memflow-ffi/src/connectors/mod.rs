@@ -2,11 +2,11 @@ use std::ffi::CStr;
 use std::os::raw::c_char;
 use std::path::PathBuf;
 
+use memflow::plugins::Inventory;
 use memflow::plugins::{
     connector::{ConnectorInstanceArcBox, MuConnectorInstanceArcBox},
     os::{MuOsInstanceArcBox, OsInstanceArcBox},
 };
-use memflow::plugins::{Args, Inventory};
 
 use crate::util::*;
 use memflow::cglue::result::IntResult;
@@ -85,14 +85,14 @@ pub unsafe extern "C" fn inventory_create_connector(
     let rname = CStr::from_ptr(name).to_string_lossy();
 
     if args.is_null() {
-        inv.create_connector(&rname, None, &Args::default())
+        inv.create_connector(&rname, None, None)
             .map_err(inspect_err)
             .into_int_out_result(out)
     } else {
         let rargs = CStr::from_ptr(args).to_string_lossy();
-        Args::parse(&rargs)
+        str::parse(&rargs)
             .map_err(inspect_err)
-            .and_then(|args| inv.create_connector(&rname, None, &args))
+            .and_then(|args| inv.create_connector(&rname, None, Some(&args)))
             .map_err(inspect_err)
             .into_int_out_result(out)
     }
@@ -143,15 +143,14 @@ pub unsafe extern "C" fn inventory_create_os(
     };
 
     if args.is_null() {
-        let args = Args::default();
-        inv.create_os(&rname, mem_obj, &args)
+        inv.create_os(&rname, mem_obj, None)
             .map_err(inspect_err)
             .into_int_out_result(out)
     } else {
         let rargs = CStr::from_ptr(args).to_string_lossy();
-        Args::parse(&rargs)
+        str::parse(&rargs)
             .map_err(inspect_err)
-            .and_then(|args| inv.create_os(&rname, mem_obj, &args))
+            .and_then(|args| inv.create_os(&rname, mem_obj, Some(&args)))
             .map_err(inspect_err)
             .into_int_out_result(out)
     }

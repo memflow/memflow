@@ -116,7 +116,7 @@ pub fn parse_size(args: &Args) -> Result<usize> {
 }
 
 #[connector(name = "dummy")]
-pub fn create_connector(args: &Args) -> Result<DummyMemory> {
-    let size = parse_size(args)?;
+pub fn create_connector(args: &ConnectorArgs) -> Result<DummyMemory> {
+    let size = parse_size(&args.extra_args)?;
     Ok(DummyMemory::new(size))
 }

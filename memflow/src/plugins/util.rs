@@ -105,34 +105,30 @@ pub fn find_export_by_prefix(
 
 /// Wrapper for instantiating object with all needed parameters
 ///
-/// This function will parse args into `Args`, initializes the [`PluginLogger`],
+/// This function will initialize the [`PluginLogger`],
 /// and call the create_fn with `input` forwarded.
 ///
 /// This function is used by the proc macros
-pub fn create_bare<T, I>(
-    args: &ReprCString,
+pub fn create_bare<A: Default, T, I>(
+    args: Option<&A>,
     input: I,
     lib: CArc<c_void>,
     logger: Option<&'static PluginLogger>,
     out: &mut MaybeUninit<T>,
-    create_fn: impl FnOnce(&Args, I, CArc<c_void>) -> Result<T, Error>,
+    create_fn: impl FnOnce(&A, I, CArc<c_void>) -> Result<T, Error>,
 ) -> i32 {
     if let Some(logger) = logger {
         logger.init().ok();
     }
 
+    let default: A = Default::default();
+    let args = args.unwrap_or(&default);
+
     into_int_out_result(
-        Args::parse(args)
-            .map_err(|e| {
-                ::log::error!("error parsing args: {}", e);
-                e
-            })
-            .and_then(|args| {
-                create_fn(&args, input, lib).map_err(|e| {
-                    ::log::error!("{}", e);
-                    e
-                })
-            }),
+        create_fn(&args, input, lib).map_err(|e| {
+            ::log::error!("{}", e);
+            e
+        }),
         out,
     )
 }
@@ -142,16 +138,19 @@ pub fn create_bare<T, I>(
 /// This function will parse args into `Args`, and call the create_fn
 ///
 /// This function is used by the proc macros
-pub fn create<T>(
-    args: &ReprCString,
+pub fn create<A: Default, T>(
+    args: Option<&A>,
     lib: CArc<c_void>,
     logger: Option<&'static PluginLogger>,
     out: &mut MaybeUninit<T>,
-    create_fn: impl FnOnce(super::Args, CArc<c_void>) -> Result<T, Error>,
+    create_fn: impl FnOnce(&A, CArc<c_void>) -> Result<T, Error>,
 ) -> i32 {
     if let Some(logger) = logger {
         logger.init().ok();
     }
 
-    into_int_out_result(Args::parse(args).and_then(|args| create_fn(args, lib)), out)
+    let default: A = Default::default();
+    let args = args.unwrap_or(&default);
+
+    into_int_out_result(create_fn(args, lib), out)
 }

@@ -11,8 +11,8 @@ static mut HAD_ERROR: bool = false;
 fn main() -> Result<()> {
     let (conn_name, conn_args_str, os_name, os_args_str, sysproc, kernel_mods) = parse_args();
 
-    let conn_args = Args::parse(&conn_args_str)?;
-    let os_args = Args::parse(&os_args_str)?;
+    let conn_args = str::parse(&conn_args_str)?;
+    let os_args = str::parse(&os_args_str)?;
 
     // create inventory + connector
     let inventory = Inventory::scan();

@@ -21,14 +21,14 @@ pub fn build_os(
         args = args.insert("vatcache", "none");
     }
 
-    if cache_size > 0 {
-        args = args.insert(
-            "pagecache",
-            &format!("page:{}kb", (cache_size + 1023) / 1024),
-        );
+    let page_cache_params = if cache_size > 0 {
+        Some(PageCacheParams::new(cache_size, 0, 0))
     } else {
-        args = args.insert("pagecache", "none")
-    }
+        None
+    };
+
+    let conn_args = ConnectorArgs::new(None, Default::default(), page_cache_params);
+    let args = OsArgs::new(None, args);
 
     let ret = if conn_name.is_empty() {
         inventory.builder().os(os_name).args(args).build()
@@ -36,6 +36,7 @@ pub fn build_os(
         inventory
             .builder()
             .connector(conn_name)
+            .args(conn_args)
             .os(os_name)
             .args(args)
             .build()

@@ -556,7 +556,7 @@ pub static MEMFLOW_OS_DUMMY: OsDescriptor = OsDescriptor {
 
 #[doc(hidden)]
 extern "C" fn mf_create(
-    args: &ReprCString,
+    args: Option<&OsArgs>,
     mem: COption<ConnectorInstanceArcBox>,
     lib: CArc<c_void>,
     logger: Option<&'static PluginLogger>,
@@ -566,11 +566,11 @@ extern "C" fn mf_create(
 }
 
 pub fn build_dummy(
-    args: &Args,
+    args: &OsArgs,
     _mem: Option<ConnectorInstanceArcBox>,
     lib: CArc<c_void>,
 ) -> Result<OsInstanceArcBox<'static>> {
-    let size = super::mem::parse_size(args)?;
+    let size = super::mem::parse_size(&args.extra_args)?;
     let mem = DummyMemory::new(size);
     let mut os = DummyOs::new(mem);
     os.alloc_process_with_module(

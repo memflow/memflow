@@ -8,6 +8,8 @@ use std::prelude::v1::*;
 use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 use crate::types::size;
 
+use cglue::{repr_cstring::ReprCString, vec::CVec};
+
 use core::convert::TryFrom;
 use hashbrown::HashMap;
 
@@ -32,9 +34,30 @@ use hashbrown::HashMap;
 ///     .insert("arg1", "test1")
 ///     .insert("arg2", "test2");
 /// ```
+#[repr(C)]
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 pub struct Args {
-    map: HashMap<String, String>,
+    // Just how many args do you have usually?
+    // Hashmap performance improvements may not be worth the complexity
+    // C/C++ users would have in constructing arguments structure.
+    args: CVec<ArgEntry>,
+}
+
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+pub struct ArgEntry {
+    key: ReprCString,
+    value: ReprCString,
+}
+
+impl<T: Into<ReprCString>> From<(T, T)> for ArgEntry {
+    fn from((key, value): (T, T)) -> Self {
+        Self {
+            key: key.into(),
+            value: value.into(),
+        }
+    }
 }
 
 impl fmt::Display for Args {
@@ -45,19 +68,13 @@ impl fmt::Display for Args {
     /// # Remarks
     ///
     /// The sorting order of the underlying `HashMap` is random.
-    /// This function only guarantees that the 'default' value (if it is set) will be the first element.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut result = Vec::new();
 
-        if let Some(default) = self.get_default() {
-            result.push(default.to_string());
-        }
-
         result.extend(
-            self.map
+            self.args
                 .iter()
-                .filter(|(key, _)| key.as_str() != "default")
-                .map(|(key, value)| {
+                .map(|ArgEntry { key, value }| {
                     if value.contains(',') || value.contains('=') {
                         format!("{}=\"{}\"", key, value)
                     } else {
@@ -75,13 +92,8 @@ impl Args {
     /// Creates an empty `Args` struct.
     pub fn new() -> Self {
         Self {
-            map: HashMap::new(),
+            args: Default::default(),
         }
-    }
-
-    /// Creates a `Args` struct with a default (unnamed) value.
-    pub fn with_default(value: &str) -> Self {
-        Self::new().insert("default", value)
     }
 
     /// Tries to create a `Args` structure from an argument string.
@@ -90,10 +102,6 @@ impl Args {
     ///
     /// An argument string can just contain keys and values:
     /// `opt1=val1,opt2=val2,opt3=val3`
-    ///
-    /// The argument string can also contain a default value as the first entry
-    /// which will be placed as a default argument:
-    /// `default_value,opt1=val1,opt2=val2`
     ///
     /// This function can be used to initialize a connector from user input.
     pub fn parse(args: &str) -> Result<Self> {
@@ -117,12 +125,12 @@ impl Args {
             let kvsplit = kv.split('=').collect::<Vec<_>>();
             if kvsplit.len() == 2 {
                 map.insert(kvsplit[0].to_string(), kvsplit[1].to_string());
-            } else if i == 0 && !kv.is_empty() {
-                map.insert("default".to_string(), kv.to_string());
             }
         }
 
-        Ok(Self { map })
+        Ok(Self {
+            args: map.into_iter().map(<_>::into).collect::<Vec<_>>().into(),
+        })
     }
 
     /// Consumes self, inserts the given key-value pair and returns the self again.
@@ -140,22 +148,22 @@ impl Args {
     ///     .insert("arg2", "test2");
     /// ```
     pub fn insert(mut self, key: &str, value: &str) -> Self {
-        self.map.insert(key.to_string(), value.to_string());
+        if let Some(a) = self.args.iter_mut().filter(|a| &*a.key == key).next() {
+            a.value = value.into();
+        } else {
+            self.args.push((key, value).into());
+        }
         self
     }
 
     /// Tries to retrieve an entry from the options map.
     /// If the entry was not found this function returns a `None` value.
     pub fn get(&self, key: &str) -> Option<&str> {
-        self.map.get(key).map(|s| s.as_str())
-    }
-
-    /// Tries to retrieve the default entry from the options map.
-    /// If the entry was not found this function returns a `None` value.
-    ///
-    /// This function is a convenience wrapper for `args.get("default")`.
-    pub fn get_default(&self) -> Option<&str> {
-        self.get("default")
+        self.args
+            .iter()
+            .filter(|a| &*a.key == key)
+            .map(|a| &*a.value)
+            .next()
     }
 }
 
@@ -196,7 +204,6 @@ impl From<Args> for String {
 /// use memflow::plugins::{ArgsValidator, ArgDescriptor};
 ///
 /// let validator = ArgsValidator::new()
-///     .arg(ArgDescriptor::new("default"))
 ///     .arg(ArgDescriptor::new("arg1"));
 /// ```
 #[derive(Debug)]
@@ -224,10 +231,10 @@ impl ArgsValidator {
 
     pub fn validate(&self, args: &Args) -> Result<()> {
         // check if all given args exist
-        for arg in args.map.iter() {
-            if !self.args.iter().any(|a| a.name == *arg.0) {
+        for arg in args.args.iter() {
+            if !self.args.iter().any(|a| a.name == &*arg.key) {
                 return Err(Error(ErrorOrigin::ArgsValidator, ErrorKind::ArgNotExists)
-                    .log_error(format!("argument {} does not exist", arg.0)));
+                    .log_error(format!("argument {} does not exist", &*arg.key)));
             }
         }
 
@@ -279,8 +286,8 @@ pub type ArgValidator = Box<dyn Fn(&str) -> ::std::result::Result<(), &'static s
 /// ```
 /// use memflow::plugins::ArgDescriptor;
 ///
-/// let desc = ArgDescriptor::new("default")
-///     .description("default argument description")
+/// let desc = ArgDescriptor::new("cache_size")
+///     .description("cache_size argument description")
 ///     .required(true);
 /// ```
 pub struct ArgDescriptor {
@@ -326,7 +333,7 @@ impl ArgDescriptor {
     /// ```
     /// use memflow::plugins::ArgDescriptor;
     ///
-    /// let desc = ArgDescriptor::new("default").validator(Box::new(|arg| {
+    /// let desc = ArgDescriptor::new("cache_size").validator(Box::new(|arg| {
     ///     match arg == "valid_option" {
     ///         true => Ok(()),
     ///         false => Err("argument must be 'valid_option'"),
@@ -367,60 +374,71 @@ impl fmt::Debug for ArgDescriptor {
     }
 }
 
-pub fn parse_pagecache(args: &Args) -> Result<Option<(usize, u64)>> {
-    match args.get("pagecache").unwrap_or("default") {
-        "default" => Ok(Some((0, 0))),
-        "none" => Ok(None),
-        size => Ok(Some(parse_pagecache_args(size)?)),
-    }
-}
+/// Split a string into a list of separate parts based on ':' delimiter
+///
+/// This is a more advanced version of splitting that allows to do some basic escaping with
+/// quotation marks.
+///
+/// # Examples
+///
+/// ```
+/// use memflow::plugins::args::split_str_args;
+///
+/// let v: Vec<_> = split_str_args("a:b:c").collect();
+/// assert_eq!(v, ["a", "b", "c"]);
+///
+/// let v: Vec<_> = split_str_args("a::c").collect();
+/// assert_eq!(v, ["a", "", "c"]);
+///
+/// let v: Vec<_> = split_str_args("a:\"hello\":c").collect();
+/// assert_eq!(v, ["a", "hello", "c"]);
+///
+/// let v: Vec<_> = split_str_args("a:\"hel:lo\":c").collect();
+/// assert_eq!(v, ["a", "hel:lo", "c"]);
+///
+/// let v: Vec<_> = split_str_args("a:\"hel:lo:c").collect();
+/// assert_eq!(v, ["a", "\"hel:lo:c"]);
+/// ```
+pub fn split_str_args(inp: &str) -> impl Iterator<Item = &str> {
+    let mut prev_char = '\0';
+    let mut quotation_char = None;
 
-fn parse_pagecache_args(vargs: &str) -> Result<(usize, u64)> {
-    let mut sp = vargs.splitn(2, ';');
-    let (size, time) = (
-        sp.next().ok_or_else(|| {
-            Error(ErrorOrigin::OsLayer, ErrorKind::Configuration)
-                .log_error("Failed to parse Page Cache size")
-        })?,
-        sp.next().unwrap_or("0"),
-    );
+    const VALID_QUOTES: &str = "\"'`";
 
-    let (size, size_mul) = {
-        let mul_arr = &[
-            (size::kb(1), ["kb", "k"]),
-            (size::mb(1), ["mb", "m"]),
-            (size::gb(1), ["gb", "g"]),
-        ];
+    inp.split(move |c| {
+        let ret = if c == ':' {
+            let ret = quotation_char.is_none() || Some(prev_char) == quotation_char;
+            if ret {
+                quotation_char = None;
+            }
+            ret
+        } else {
+            if prev_char == ':' && quotation_char.is_none() && VALID_QUOTES.contains(c) {
+                quotation_char = Some(c);
+            }
+            false
+        };
 
-        mul_arr
-            .iter()
-            .flat_map(|(m, e)| e.iter().map(move |e| (*m, e)))
-            .find_map(|(m, e)| {
-                if size.to_lowercase().ends_with(e) {
-                    Some((size.trim_end_matches(e), m))
-                } else {
-                    None
-                }
-            })
-            .ok_or_else(|| {
-                Error(ErrorOrigin::OsLayer, ErrorKind::Configuration)
-                    .log_error("Invalid Page Cache size unit (or none)!")
-            })?
-    };
+        prev_char = c;
 
-    let size = usize::from_str_radix(size, 16).map_err(|_| {
-        Error(ErrorOrigin::OsLayer, ErrorKind::Configuration)
-            .log_error("Failed to parse Page Cache size")
-    })?;
-
-    let size = size * size_mul;
-
-    let time = time.parse::<u64>().map_err(|_| {
-        Error(ErrorOrigin::OsLayer, ErrorKind::Configuration)
-            .log_error("Failed to parse Page Cache validity time")
-    })?;
-
-    Ok((size, time))
+        ret
+    })
+    .map(|s| {
+        if let Some(c) = s.chars().next().and_then(|a| {
+            if Some(a) == s.chars().last() && VALID_QUOTES.contains(a) {
+                Some(a)
+            } else {
+                None
+            }
+        }) {
+            s.split_once(c)
+                .and_then(|(_, a)| a.rsplit_once(c))
+                .map(|(a, _)| a)
+                .unwrap_or("")
+        } else {
+            s
+        }
+    })
 }
 
 pub fn parse_vatcache(args: &Args) -> Result<Option<(usize, u64)>> {
@@ -465,9 +483,8 @@ mod tests {
 
     #[test]
     pub fn from_str_default() {
-        let argstr = "test0,opt1=test1,opt2=test2,opt3=test3";
+        let argstr = "opt1=test1,opt2=test2,opt3=test3";
         let args = Args::parse(argstr).unwrap();
-        assert_eq!(args.get_default().unwrap(), "test0");
         assert_eq!(args.get("opt1").unwrap(), "test1");
         assert_eq!(args.get("opt2").unwrap(), "test2");
         assert_eq!(args.get("opt3").unwrap(), "test3");
@@ -477,7 +494,6 @@ mod tests {
     pub fn from_str_default2() {
         let argstr = "opt1=test1,test0";
         let args = Args::parse(argstr).unwrap();
-        assert_eq!(args.get_default(), None);
         assert_eq!(args.get("opt1").unwrap(), "test1");
     }
 
@@ -492,7 +508,6 @@ mod tests {
     pub fn parse_empty() {
         let argstr = "opt1=test1,test0";
         let args = Args::parse(argstr).unwrap();
-        assert_eq!(args.get_default(), None);
     }
 
     #[test]
@@ -500,7 +515,6 @@ mod tests {
         let argstr = "opt1=test1,opt2=test2,opt3=test3";
         let args = Args::parse(argstr).unwrap();
         let args2 = Args::parse(&args.to_string()).unwrap();
-        assert_eq!(args2.get_default(), None);
         assert_eq!(args2.get("opt1").unwrap(), "test1");
         assert_eq!(args2.get("opt2").unwrap(), "test2");
         assert_eq!(args2.get("opt3").unwrap(), "test3");
@@ -508,10 +522,9 @@ mod tests {
 
     #[test]
     pub fn to_string_with_default() {
-        let argstr = "test0,opt1=test1,opt2=test2,opt3=test3";
+        let argstr = "opt1=test1,opt2=test2,opt3=test3";
         let args = Args::parse(argstr).unwrap();
         let args2 = Args::parse(&args.to_string()).unwrap();
-        assert_eq!(args2.get_default().unwrap(), "test0");
         assert_eq!(args2.get("opt1").unwrap(), "test1");
         assert_eq!(args2.get("opt2").unwrap(), "test2");
         assert_eq!(args2.get("opt3").unwrap(), "test3");
@@ -522,7 +535,6 @@ mod tests {
         let argstr = "opt1=test1,test0,opt2=\"test2,test3\"";
         let args = Args::parse(argstr).unwrap();
         let args2 = Args::parse(&args.to_string()).unwrap();
-        assert_eq!(args2.get_default(), None);
         assert_eq!(args2.get("opt1").unwrap(), "test1");
         assert_eq!(args2.get("opt2").unwrap(), "test2,test3");
     }
@@ -532,7 +544,6 @@ mod tests {
         let argstr = "opt1=test1,test0,opt2=\"test2,test3=test4\"";
         let args = Args::parse(argstr).unwrap();
         let args2 = Args::parse(&args.to_string()).unwrap();
-        assert_eq!(args2.get_default(), None);
         assert_eq!(args2.get("opt1").unwrap(), "test1");
         assert_eq!(args2.get("opt2").unwrap(), "test2,test3=test4");
     }
@@ -551,24 +562,18 @@ mod tests {
 
     #[test]
     pub fn validator_success_optional() {
-        let validator = ArgsValidator::new()
-            .arg(ArgDescriptor::new("default").required(true))
-            .arg(ArgDescriptor::new("opt1").required(false));
+        let validator = ArgsValidator::new().arg(ArgDescriptor::new("opt1").required(false));
 
-        let argstr = "test0";
-        let args = Args::parse(argstr).unwrap();
+        let args = Args::parse("").unwrap();
 
         assert_eq!(validator.validate(&args), Ok(()));
     }
 
     #[test]
     pub fn validator_error_required() {
-        let validator = ArgsValidator::new()
-            .arg(ArgDescriptor::new("default").required(true))
-            .arg(ArgDescriptor::new("opt1").required(true));
+        let validator = ArgsValidator::new().arg(ArgDescriptor::new("opt1").required(true));
 
-        let argstr = "test0";
-        let args = Args::parse(argstr).unwrap();
+        let args = Args::parse("").unwrap();
 
         assert_eq!(
             validator.validate(&args),
@@ -581,11 +586,9 @@ mod tests {
 
     #[test]
     pub fn validator_error_notexist() {
-        let validator = ArgsValidator::new()
-            .arg(ArgDescriptor::new("default"))
-            .arg(ArgDescriptor::new("opt1"));
+        let validator = ArgsValidator::new().arg(ArgDescriptor::new("opt1"));
 
-        let argstr = "test0,opt2=arg2";
+        let argstr = "opt2=arg2";
         let args = Args::parse(argstr).unwrap();
 
         assert_eq!(
@@ -604,7 +607,7 @@ mod tests {
                 }
             })));
 
-        let argstr = "valid_option";
+        let argstr = "default=valid_option";
         let args = Args::parse(argstr).unwrap();
 
         assert_eq!(validator.validate(&args), Ok(()));
@@ -620,7 +623,7 @@ mod tests {
                 }
             })));
 
-        let argstr = "invalid_option";
+        let argstr = "default=invalid_option";
         let args = Args::parse(argstr).unwrap();
 
         assert_eq!(

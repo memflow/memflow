@@ -455,3 +455,10 @@ impl<T: PhysicalMemory, Q: CacheValidator> CachedPhysicalMemoryBuilder<T, Q> {
         self
     }
 }
+
+#[cfg(feature = "plugins")]
+cglue::cglue_impl_group!(
+    CachedPhysicalMemory<'cglue_a, T: PhysicalMemory, Q: CacheValidator>,
+    crate::plugins::ConnectorInstance,
+    {}
+);

@@ -163,7 +163,7 @@ fn main() -> Result<()> {
     read_bench(os)
 }
 
-fn parse_args() -> Result<(String, Args, String, Args, log::Level)> {
+fn parse_args() -> Result<(String, ConnectorArgs, String, OsArgs, log::Level)> {
     let matches = App::new("read_bench example")
         .version(crate_version!())
         .author(crate_authors!())
@@ -210,7 +210,7 @@ fn parse_args() -> Result<(String, Args, String, Args, log::Level)> {
 
     Ok((
         matches.value_of("connector").unwrap_or("").into(),
-        Args::parse(matches.value_of("connector-args").ok_or_else(|| {
+        str::parse(matches.value_of("connector-args").ok_or_else(|| {
             Error(ErrorOrigin::Other, ErrorKind::Configuration)
                 .log_error("failed to parse connector args")
         })?)?,
@@ -220,7 +220,7 @@ fn parse_args() -> Result<(String, Args, String, Args, log::Level)> {
                 Error(ErrorOrigin::Other, ErrorKind::Configuration).log_error("failed to parse os")
             })?
             .into(),
-        Args::parse(matches.value_of("os-args").ok_or_else(|| {
+        str::parse(matches.value_of("os-args").ok_or_else(|| {
             Error(ErrorOrigin::Other, ErrorKind::Configuration).log_error("failed to parse os args")
         })?)?,
         level,

@@ -13,12 +13,14 @@ pub fn parallel_init(
     connector: ConnectorInstanceArcBox<'static>,
     inventory: &Inventory,
     os_name: &str,
-    os_args: &Args,
+    os_args: &OsArgs,
 ) {
     rayon::scope(|s| {
         (0..8).map(|_| connector.clone()).into_iter().for_each(|c| {
             s.spawn(move |_| {
-                inventory.create_os(os_name, Some(c), os_args).unwrap();
+                inventory
+                    .create_os(os_name, Some(c), Some(os_args))
+                    .unwrap();
             })
         })
     });
@@ -66,7 +68,7 @@ pub fn main() {
     // create inventory + connector
     let inventory = Inventory::scan();
     let connector = inventory
-        .create_connector(&conn_name, None, &conn_args)
+        .create_connector(&conn_name, None, Some(&conn_args))
         .unwrap();
 
     // parallel test functions
@@ -76,7 +78,7 @@ pub fn main() {
     parallel_init(connector.clone(), &inventory, &os_name, &os_args);
 
     let kernel = inventory
-        .create_os(&os_name, Some(connector), &os_args)
+        .create_os(&os_name, Some(connector), Some(&os_args))
         .unwrap();
 
     // showcasing parallel process iteration
@@ -86,7 +88,7 @@ pub fn main() {
     parallel_processes(kernel);
 }
 
-fn parse_args() -> Result<(String, Args, String, Args, log::Level)> {
+fn parse_args() -> Result<(String, ConnectorArgs, String, OsArgs, log::Level)> {
     let matches = App::new("multithreading example")
         .version(crate_version!())
         .author(crate_authors!())
@@ -139,7 +141,7 @@ fn parse_args() -> Result<(String, Args, String, Args, log::Level)> {
                     .log_error("failed to parse connector")
             })?
             .into(),
-        Args::parse(matches.value_of("connector-args").ok_or_else(|| {
+        str::parse(matches.value_of("connector-args").ok_or_else(|| {
             Error(ErrorOrigin::Other, ErrorKind::Configuration)
                 .log_error("failed to parse connector args")
         })?)?,
@@ -149,7 +151,7 @@ fn parse_args() -> Result<(String, Args, String, Args, log::Level)> {
                 Error(ErrorOrigin::Other, ErrorKind::Configuration).log_error("failed to parse os")
             })?
             .into(),
-        Args::parse(matches.value_of("os-args").ok_or_else(|| {
+        str::parse(matches.value_of("os-args").ok_or_else(|| {
             Error(ErrorOrigin::Other, ErrorKind::Configuration).log_error("failed to parse os args")
         })?)?,
         level,

@@ -83,7 +83,7 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
     let create_fn_gen = quote! {
             #[doc(hidden)]
             extern "C" fn mf_create(
-                args: &cglue::repr_cstring::ReprCString,
+                args: Option<&#crate_path::plugins::connector::ConnectorArgs>,
                 _: cglue::option::COption<#crate_path::plugins::os::OsInstanceArcBox>,
                 lib: #crate_path::cglue::CArc<::core::ffi::c_void>,
                 logger: Option<&'static #crate_path::plugins::PluginLogger>,
@@ -201,7 +201,7 @@ pub fn connector_bare(args: TokenStream, input: TokenStream) -> TokenStream {
     let create_fn_gen = quote! {
             #[doc(hidden)]
             extern "C" fn mf_create(
-                args: &cglue::repr_cstring::ReprCString,
+                args: Option<&#crate_path::plugins::connector::ConnectorArgs>,
                 os: cglue::option::COption<#crate_path::plugins::os::OsInstanceArcBox<'static>>,
                 lib: #crate_path::cglue::CArc<::core::ffi::c_void>,
                 logger: Option<&'static #crate_path::plugins::PluginLogger>,
@@ -312,7 +312,7 @@ pub fn os_layer(args: TokenStream, input: TokenStream) -> TokenStream {
     let create_fn_gen = quote! {
             #[doc(hidden)]
             extern "C" fn mf_create(
-                args: &cglue::repr_cstring::ReprCString,
+                args: Option<&#crate_path::plugins::os::OsArgs>,
                 mem: #crate_path::cglue::COption<#crate_path::plugins::connector::ConnectorInstanceArcBox<'static>>,
                 lib: #crate_path::cglue::CArc<::core::ffi::c_void>,
                 logger: Option<&'static #crate_path::plugins::PluginLogger>,
@@ -398,7 +398,7 @@ pub fn os_layer_bare(args: TokenStream, input: TokenStream) -> TokenStream {
     let create_fn_gen = quote! {
         #[doc(hidden)]
         extern "C" fn mf_create(
-            args: &cglue::repr_cstring::ReprCString,
+            args: Option<&#crate_path::plugins::os::OsArgs>,
             mem: #crate_path::cglue::COption<#crate_path::plugins::connector::ConnectorInstanceArcBox<'static>>,
             lib: #crate_path::cglue::CArc<::core::ffi::c_void>,
             logger: Option<&'static #crate_path::plugins::PluginLogger>,

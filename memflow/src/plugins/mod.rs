@@ -16,14 +16,17 @@ pub use args::{ArgDescriptor, Args, ArgsValidator};
 pub type OptionVoid = Option<&'static mut std::ffi::c_void>;
 
 pub mod connector;
-pub use connector::{cglue_connectorinstance::*, ConnectorDescriptor, LoadableConnector};
+pub use connector::{
+    cglue_connectorinstance::*, ConnectorArgs, ConnectorDescriptor, LoadableConnector,
+    PageCacheParams,
+};
 pub type ConnectorInputArg = <LoadableConnector as Loadable>::InputArg;
 
 pub mod os;
 pub use os::{
     cglue_intoprocessinstance::*, cglue_osinstance::*, cglue_processinstance::*,
-    IntoProcessInstanceArcBox, LoadableOs, MuOsInstanceArcBox, OsDescriptor, OsInstanceArcBox,
-    ProcessInstanceArcBox,
+    IntoProcessInstanceArcBox, LoadableOs, MuOsInstanceArcBox, OsArgs, OsDescriptor,
+    OsInstanceArcBox, ProcessInstanceArcBox,
 };
 pub type OsInputArg = <LoadableOs as Loadable>::InputArg;
 
@@ -45,7 +48,7 @@ use libloading::Library;
 use once_cell::sync::OnceCell;
 
 /// Exported memflow plugins version
-pub const MEMFLOW_PLUGIN_VERSION: i32 = -7;
+pub const MEMFLOW_PLUGIN_VERSION: i32 = -8;
 
 /// Help and Target callbacks
 pub type HelpCallback<'a> = OpaqueCallback<'a, ReprCString>;
@@ -133,7 +136,7 @@ pub struct PluginDescriptor<T: Loadable> {
 }
 
 pub type CreateFn<T> = extern "C" fn(
-    &ReprCString,
+    Option<&<T as Loadable>::ArgsType>,
     <T as Loadable>::CInputArg,
     lib: CArc<c_void>,
     logger: Option<&'static PluginLogger>,
@@ -145,6 +148,7 @@ pub trait Loadable: Sized {
     type Instance: StableAbi;
     type InputArg;
     type CInputArg: StableAbi;
+    type ArgsType;
 
     /// Checks if plugin with the same `ident` already exists in input list
     fn exists(&self, instances: &[LibInstance<Self>]) -> bool {
@@ -293,7 +297,7 @@ pub trait Loadable: Sized {
         &self,
         library: CArc<LibContext>,
         input: Self::InputArg,
-        args: &Args,
+        args: Option<&Self::ArgsType>,
     ) -> Result<Self::Instance>;
 }
 
@@ -580,7 +584,7 @@ impl Inventory {
     /// let os = inventory
     ///   .builder()
     ///   .connector("qemu_procfs")
-    ///   .args(Args::parse("vm-win10").unwrap())
+    ///   .args(str::parse("vm-win10").unwrap())
     ///   .build();
     /// ```
     ///
@@ -592,7 +596,7 @@ impl Inventory {
     /// let os = inventory
     ///   .builder()
     ///   .connector("qemu_procfs")
-    ///   .args(Args::parse("vm-win10").unwrap())
+    ///   .args(str::parse("vm-win10").unwrap())
     ///   .os("win10")
     ///   .build();
     /// ```
@@ -630,7 +634,7 @@ impl Inventory {
     ///
     /// let inventory = Inventory::scan_path("./").unwrap();
     /// let connector = inventory
-    ///     .create_connector("coredump", None, &Args::new())
+    ///     .create_connector("coredump", None, None)
     ///     .unwrap();
     /// ```
     ///
@@ -639,12 +643,12 @@ impl Inventory {
     /// use memflow::error::Result;
     /// use memflow::types::size;
     /// use memflow::dummy::DummyMemory;
-    /// use memflow::plugins::Args;
+    /// use memflow::plugins::ConnectorArgs;
     /// use memflow::derive::connector;
     /// use memflow::mem::phys_mem::*;
     ///
     /// #[connector(name = "dummy_conn")]
-    /// pub fn create_connector(_args: &Args) -> Result<DummyMemory> {
+    /// pub fn create_connector(_args: &ConnectorArgs) -> Result<DummyMemory> {
     ///     Ok(DummyMemory::new(size::mb(16)))
     /// }
     /// ```
@@ -652,7 +656,7 @@ impl Inventory {
         &self,
         name: &str,
         input: ConnectorInputArg,
-        args: &Args,
+        args: Option<&ConnectorArgs>,
     ) -> Result<ConnectorInstanceArcBox<'static>> {
         Self::create_internal(&self.connectors, name, input, args)
     }
@@ -671,7 +675,7 @@ impl Inventory {
     ///
     /// Creating a OS instance with custom arguments
     /// ```
-    /// use memflow::plugins::{Inventory, Args};
+    /// use memflow::plugins::{Inventory, ConnectorArgs};
     ///
     /// # let mut inventory = Inventory::scan();
     /// # let paths = std::fs::read_dir("../target/").unwrap();
@@ -686,16 +690,16 @@ impl Inventory {
     /// # }
     /// # inventory.add_dir_filtered("../target/release/deps".into(), "ffi").ok();
     /// # inventory.add_dir_filtered("../target/debug/deps".into(), "ffi").ok();
-    /// let args = Args::parse("4m").unwrap();
-    /// let connector = inventory.create_os("dummy", None, &args)
+    /// let args = str::parse(":4m").unwrap();
+    /// let os = inventory.create_os("dummy", None, Some(&args))
     ///     .unwrap();
-    /// std::mem::drop(connector);
+    /// std::mem::drop(os);
     /// ```
     pub fn create_os(
         &self,
         name: &str,
         input: OsInputArg,
-        args: &Args,
+        args: Option<&OsArgs>,
     ) -> Result<OsInstanceArcBox<'static>> {
         Self::create_internal(&self.os_layers, name, input, args)
     }
@@ -704,7 +708,7 @@ impl Inventory {
         libs: &[LibInstance<T>],
         name: &str,
         input: T::InputArg,
-        args: &Args,
+        args: Option<&T::ArgsType>,
     ) -> Result<T::Instance> {
         let lib = libs
             .iter()
@@ -753,8 +757,14 @@ impl Inventory {
 }
 
 enum BuildStep<'a> {
-    Connector { name: &'a str, args: Option<Args> },
-    Os { name: &'a str, args: Option<Args> },
+    Connector {
+        name: &'a str,
+        args: Option<ConnectorArgs>,
+    },
+    Os {
+        name: &'a str,
+        args: Option<OsArgs>,
+    },
 }
 
 /// BuilderEmpty is the starting builder that allows to either call `connector`, or `os`.
@@ -814,7 +824,7 @@ impl<'a> ConnectorBuilder<'a> {
     /// # Arguments
     ///
     /// * `os_args` - the arguments to be passed to the previously added OS
-    pub fn args(mut self, os_args: Args) -> ConnectorBuilder<'a> {
+    pub fn args(mut self, os_args: OsArgs) -> ConnectorBuilder<'a> {
         if let Some(BuildStep::Os { name: _, args }) = self.steps.iter_mut().last() {
             *args = Some(os_args);
         }
@@ -831,19 +841,11 @@ impl<'a> ConnectorBuilder<'a> {
         for step in self.steps.iter() {
             match step {
                 BuildStep::Connector { name, args } => {
-                    connector = Some(self.inventory.create_connector(
-                        name,
-                        os,
-                        args.as_ref().unwrap_or(&Args::default()),
-                    )?);
+                    connector = Some(self.inventory.create_connector(name, os, args.as_ref())?);
                     os = None;
                 }
                 BuildStep::Os { name, args } => {
-                    os = Some(self.inventory.create_os(
-                        name,
-                        connector,
-                        args.as_ref().unwrap_or(&Args::default()),
-                    )?);
+                    os = Some(self.inventory.create_os(name, connector, args.as_ref())?);
                     connector = None;
                 }
             };
@@ -878,7 +880,7 @@ impl<'a> OsBuilder<'a> {
     /// # Arguments
     ///
     /// * `conn_args` - the arguments to be passed to the previously added Connector
-    pub fn args(mut self, conn_args: Args) -> OsBuilder<'a> {
+    pub fn args(mut self, conn_args: ConnectorArgs) -> OsBuilder<'a> {
         if let Some(BuildStep::Connector { name: _, args }) = self.steps.iter_mut().last() {
             *args = Some(conn_args);
         }
@@ -895,19 +897,11 @@ impl<'a> OsBuilder<'a> {
         for step in self.steps.iter() {
             match step {
                 BuildStep::Connector { name, args } => {
-                    connector = Some(self.inventory.create_connector(
-                        name,
-                        os,
-                        args.as_ref().unwrap_or(&Args::default()),
-                    )?);
+                    connector = Some(self.inventory.create_connector(name, os, args.as_ref())?);
                     os = None;
                 }
                 BuildStep::Os { name, args } => {
-                    os = Some(self.inventory.create_os(
-                        name,
-                        connector,
-                        args.as_ref().unwrap_or(&Args::default()),
-                    )?);
+                    os = Some(self.inventory.create_os(name, connector, args.as_ref())?);
                     connector = None;
                 }
             };

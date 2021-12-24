@@ -8,7 +8,8 @@ use crate::os::process::*;
 use crate::os::root::*;
 
 use super::{
-    Args, ConnectorInstanceArcBox, LibContext, Loadable, PluginDescriptor, PluginLogger, TargetInfo,
+    args::split_str_args, Args, ConnectorInstanceArcBox, LibContext, Loadable, PluginDescriptor,
+    PluginLogger, TargetInfo,
 };
 
 use std::ffi::c_void;
@@ -24,12 +25,12 @@ cglue_trait_group!(IntoProcessInstance, { Process, MemoryView, Clone }, { Virtua
 pub fn create<
     T: 'static + Os + Clone + OsInstanceVtableFiller<'static, CBox<'static, T>, CArc<c_void>>,
 >(
-    args: &ReprCString,
+    args: Option<&OsArgs>,
     conn: ConnectorInstanceArcBox,
     lib: CArc<c_void>,
     logger: Option<&'static PluginLogger>,
     out: &mut MuOsInstanceArcBox<'static>,
-    create_fn: impl Fn(&Args, ConnectorInstanceArcBox) -> Result<T>,
+    create_fn: impl Fn(&OsArgs, ConnectorInstanceArcBox) -> Result<T>,
 ) -> i32
 where
     (T, CArc<c_void>): Into<OsInstanceBaseArcBox<'static, T, c_void>>,
@@ -37,6 +38,40 @@ where
     super::util::create(args, lib, logger, out, |a, lib| {
         Ok(group_obj!((create_fn(&a, conn)?, lib) as OsInstance))
     })
+}
+
+#[repr(C)]
+#[derive(Default, Clone)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+pub struct OsArgs {
+    pub target: Option<ReprCString>,
+    pub extra_args: Args,
+}
+
+impl std::str::FromStr for OsArgs {
+    type Err = crate::error::Error;
+
+    fn from_str(s: &str) -> Result<Self> {
+        let mut iter = split_str_args(s);
+
+        let target = iter
+            .next()
+            .and_then(|s| if s.is_empty() { None } else { Some(s.into()) });
+
+        Ok(Self {
+            target,
+            extra_args: Args::parse(iter.next().unwrap_or(""))?,
+        })
+    }
+}
+
+impl OsArgs {
+    pub fn new(target: Option<&str>, extra_args: Args) -> Self {
+        Self {
+            target: target.map(<_>::into),
+            extra_args,
+        }
+    }
 }
 
 pub type OsDescriptor = PluginDescriptor<LoadableOs>;
@@ -49,6 +84,7 @@ impl Loadable for LoadableOs {
     type Instance = OsInstanceArcBox<'static>;
     type InputArg = Option<ConnectorInstanceArcBox<'static>>;
     type CInputArg = COption<ConnectorInstanceArcBox<'static>>;
+    type ArgsType = OsArgs;
 
     fn export_prefix() -> &'static str {
         "MEMFLOW_OS_"
@@ -101,13 +137,12 @@ impl Loadable for LoadableOs {
         &self,
         library: CArc<LibContext>,
         input: Self::InputArg,
-        args: &Args,
+        args: Option<&OsArgs>,
     ) -> Result<Self::Instance> {
-        let cstr = ReprCString::from(args.to_string());
         let mut out = MuOsInstanceArcBox::uninit();
         let logger = library.as_ref().map(|lib| unsafe { lib.get_logger() });
         let res =
-            (self.descriptor.create)(&cstr, input.into(), library.into_opaque(), logger, &mut out);
+            (self.descriptor.create)(args, input.into(), library.into_opaque(), logger, &mut out);
         unsafe { from_int_result(res, out) }
     }
 }

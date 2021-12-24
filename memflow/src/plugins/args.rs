@@ -67,12 +67,18 @@ impl fmt::Display for Args {
     /// # Remarks
     ///
     /// The sorting order of the underlying `HashMap` is random.
+    /// This function only guarantees that the 'default' value (if it is set) will be the first element.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut result = Vec::new();
+
+        if let Some(default) = self.get_default() {
+            result.push(default.to_string());
+        }
 
         result.extend(
             self.args
                 .iter()
+                .filter(|e| &*e.key != "default")
                 .map(|ArgEntry { key, value }| {
                     if value.contains(',') || value.contains('=') {
                         format!("{}=\"{}\"", key, value)
@@ -95,12 +101,21 @@ impl Args {
         }
     }
 
+    /// Creates a `Args` struct with a default (unnamed) value.
+    pub fn with_default(value: &str) -> Self {
+        Self::new().insert("default", value)
+    }
+
     /// Tries to create a `Args` structure from an argument string.
     ///
     /// The argument string is a string of comma seperated key-value pairs.
     ///
     /// An argument string can just contain keys and values:
     /// `opt1=val1,opt2=val2,opt3=val3`
+    ///
+    /// The argument string can also contain a default value as the first entry
+    /// which will be placed as a default argument:
+    /// `default_value,opt1=val1,opt2=val2`
     ///
     /// This function can be used to initialize a connector from user input.
     pub fn parse(args: &str) -> Result<Self> {
@@ -120,10 +135,12 @@ impl Args {
             }
         }
 
-        for kv in split.iter() {
+        for (i, kv) in split.iter().enumerate() {
             let kvsplit = kv.split('=').collect::<Vec<_>>();
             if kvsplit.len() == 2 {
                 map.insert(kvsplit[0].to_string(), kvsplit[1].to_string());
+            } else if i == 0 && !kv.is_empty() {
+                map.insert("default".to_string(), kv.to_string());
             }
         }
 
@@ -147,7 +164,7 @@ impl Args {
     ///     .insert("arg2", "test2");
     /// ```
     pub fn insert(mut self, key: &str, value: &str) -> Self {
-        if let Some(a) = self.args.iter_mut().filter(|a| &*a.key == key).next() {
+        if let Some(a) = self.args.iter_mut().find(|a| &*a.key == key) {
             a.value = value.into();
         } else {
             self.args.push((key, value).into());
@@ -163,6 +180,14 @@ impl Args {
             .filter(|a| &*a.key == key)
             .map(|a| &*a.value)
             .next()
+    }
+
+    /// Tries to retrieve the default entry from the options map.
+    /// If the entry was not found this function returns a `None` value.
+    ///
+    /// This function is a convenience wrapper for `args.get("default")`.
+    pub fn get_default(&self) -> Option<&str> {
+        self.get("default")
     }
 }
 
@@ -203,6 +228,7 @@ impl From<Args> for String {
 /// use memflow::plugins::{ArgsValidator, ArgDescriptor};
 ///
 /// let validator = ArgsValidator::new()
+///     .arg(ArgDescriptor::new("default"))
 ///     .arg(ArgDescriptor::new("arg1"));
 /// ```
 #[derive(Debug)]
@@ -231,7 +257,7 @@ impl ArgsValidator {
     pub fn validate(&self, args: &Args) -> Result<()> {
         // check if all given args exist
         for arg in args.args.iter() {
-            if !self.args.iter().any(|a| a.name == &*arg.key) {
+            if !self.args.iter().any(|a| a.name == *arg.key) {
                 return Err(Error(ErrorOrigin::ArgsValidator, ErrorKind::ArgNotExists)
                     .log_error(format!("argument {} does not exist", &*arg.key)));
             }
@@ -424,7 +450,7 @@ pub fn split_str_args(inp: &str) -> impl Iterator<Item = &str> {
     })
     .map(|s| {
         if let Some(c) = s.chars().next().and_then(|a| {
-            if Some(a) == s.chars().last() && VALID_QUOTES.contains(a) {
+            if s.ends_with(a) && VALID_QUOTES.contains(a) {
                 Some(a)
             } else {
                 None
@@ -482,8 +508,9 @@ mod tests {
 
     #[test]
     pub fn from_str_default() {
-        let argstr = "opt1=test1,opt2=test2,opt3=test3";
+        let argstr = "test0,opt1=test1,opt2=test2,opt3=test3";
         let args = Args::parse(argstr).unwrap();
+        assert_eq!(args.get_default().unwrap(), "test0");
         assert_eq!(args.get("opt1").unwrap(), "test1");
         assert_eq!(args.get("opt2").unwrap(), "test2");
         assert_eq!(args.get("opt3").unwrap(), "test3");
@@ -493,6 +520,7 @@ mod tests {
     pub fn from_str_default2() {
         let argstr = "opt1=test1,test0";
         let args = Args::parse(argstr).unwrap();
+        assert_eq!(args.get_default(), None);
         assert_eq!(args.get("opt1").unwrap(), "test1");
     }
 
@@ -506,7 +534,7 @@ mod tests {
     #[test]
     pub fn parse_empty() {
         let argstr = "opt1=test1,test0";
-        let args = Args::parse(argstr).unwrap();
+        let _ = Args::parse(argstr).unwrap();
     }
 
     #[test]
@@ -514,6 +542,7 @@ mod tests {
         let argstr = "opt1=test1,opt2=test2,opt3=test3";
         let args = Args::parse(argstr).unwrap();
         let args2 = Args::parse(&args.to_string()).unwrap();
+        assert_eq!(args2.get_default(), None);
         assert_eq!(args2.get("opt1").unwrap(), "test1");
         assert_eq!(args2.get("opt2").unwrap(), "test2");
         assert_eq!(args2.get("opt3").unwrap(), "test3");
@@ -521,9 +550,10 @@ mod tests {
 
     #[test]
     pub fn to_string_with_default() {
-        let argstr = "opt1=test1,opt2=test2,opt3=test3";
+        let argstr = "test0,opt1=test1,opt2=test2,opt3=test3";
         let args = Args::parse(argstr).unwrap();
         let args2 = Args::parse(&args.to_string()).unwrap();
+        assert_eq!(args2.get_default().unwrap(), "test0");
         assert_eq!(args2.get("opt1").unwrap(), "test1");
         assert_eq!(args2.get("opt2").unwrap(), "test2");
         assert_eq!(args2.get("opt3").unwrap(), "test3");
@@ -622,7 +652,7 @@ mod tests {
                 }
             })));
 
-        let argstr = "default=invalid_option";
+        let argstr = "invalid_option";
         let args = Args::parse(argstr).unwrap();
 
         assert_eq!(

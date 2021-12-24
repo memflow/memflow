@@ -36,7 +36,7 @@ where
     (T, CArc<c_void>): Into<OsInstanceBaseArcBox<'static, T, c_void>>,
 {
     super::util::create(args, lib, logger, out, |a, lib| {
-        Ok(group_obj!((create_fn(&a, conn)?, lib) as OsInstance))
+        Ok(group_obj!((create_fn(a, conn)?, lib) as OsInstance))
     })
 }
 

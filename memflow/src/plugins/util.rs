@@ -1,7 +1,7 @@
 use crate::cglue::{result::into_int_out_result, *};
 use crate::error::{Error, ErrorKind, ErrorOrigin};
 
-use super::{Args, PluginLogger};
+use super::PluginLogger;
 
 use std::ffi::c_void;
 

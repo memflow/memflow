@@ -6,7 +6,6 @@ use std::fmt;
 use std::prelude::v1::*;
 
 use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
-use crate::types::size;
 
 use cglue::{repr_cstring::ReprCString, vec::CVec};
 
@@ -121,7 +120,7 @@ impl Args {
             }
         }
 
-        for (i, kv) in split.iter().enumerate() {
+        for kv in split.iter() {
             let kvsplit = kv.split('=').collect::<Vec<_>>();
             if kvsplit.len() == 2 {
                 map.insert(kvsplit[0].to_string(), kvsplit[1].to_string());

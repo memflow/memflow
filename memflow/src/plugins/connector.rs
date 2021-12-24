@@ -195,7 +195,7 @@ impl std::str::FromStr for ConnectorArgs {
             page_cache: if let Some(s) = iter.next() {
                 Some(PageCacheParams::from_str(s)?)
             } else {
-                None
+                Some(Default::default())
             }
             .into(),
         })

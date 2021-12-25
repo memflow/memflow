@@ -70,16 +70,22 @@ fn extract_args<'a>(matches: &'a ArgMatches) -> Result<(OsChain<'a>, &'a str)> {
     simple_logger::SimpleLogger::new().init().unwrap();
     log::set_max_level(level.to_level_filter());
 
-    if let Some(((conn_idx, conn), (os_idx, os))) = matches
+    let conn_iter = matches
         .indices_of("connector")
         .zip(matches.values_of("connector"))
-        .zip(matches.indices_of("os").zip(matches.values_of("os")))
-    {
-        Ok((
-            OsChain::new(conn_idx.zip(conn), os_idx.zip(os))?,
-            matches.value_of("process").unwrap(),
-        ))
-    } else {
-        Err(ErrorKind::ArgValidation.into())
-    }
+        .map(|(a, b)| a.zip(b))
+        .into_iter()
+        .flatten();
+
+    let os_iter = matches
+        .indices_of("os")
+        .zip(matches.values_of("os"))
+        .map(|(a, b)| a.zip(b))
+        .into_iter()
+        .flatten();
+
+    Ok((
+        OsChain::new(conn_iter, os_iter)?,
+        matches.value_of("process").unwrap(),
+    ))
 }

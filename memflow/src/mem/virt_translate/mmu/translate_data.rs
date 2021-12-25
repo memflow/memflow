@@ -1,7 +1,7 @@
 use crate::iter::SplitAtIndex;
 use crate::types::{umem, Address};
 
-use super::{ArchMmuSpec, MmuTranslationBase};
+use super::{ArchMmuDef, ArchMmuSpec, MmuTranslationBase};
 
 use std::cmp::Ordering;
 
@@ -102,6 +102,19 @@ impl<T: SplitAtIndex> SplitAtIndex for TranslateData<T> {
     }
 }
 
+bitflags! {
+    #[repr(transparent)]
+    #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+    #[cfg_attr(feature = "abi_stable", derive(::abi_stable::StableAbi))]
+    pub struct FlagsType: u8 {
+        const NONE = 0b00;
+        // Maps MMUDef's writeable_bit
+        const WRITEABLE = 0b01;
+        // Maps MMUDef's nx_bit
+        const NX = 0b10;
+    }
+}
+
 /// Abstracts away a list of TranslateData in a splittable manner
 #[derive(Debug)]
 pub struct TranslationChunk<T> {
@@ -110,21 +123,62 @@ pub struct TranslationChunk<T> {
     pub min_addr: Address,
     max_addr: Address,
     pub step: usize,
+    pub prev_flags: FlagsType,
+}
+
+impl FlagsType {
+    pub fn nx(mut self, flag: bool) -> Self {
+        self &= !(FlagsType::NX);
+        if flag {
+            self | FlagsType::NX
+        } else {
+            self
+        }
+    }
+
+    pub fn writeable(mut self, flag: bool) -> Self {
+        self &= !(FlagsType::WRITEABLE);
+        if flag {
+            self | FlagsType::WRITEABLE
+        } else {
+            self
+        }
+    }
+}
+
+impl TranslationChunk<Address> {
+    pub fn update_flags(&mut self, mmu_def: &ArchMmuDef) {
+        self.prev_flags = FlagsType::NONE
+            .writeable((mmu_def.writeable_bit)(
+                self.pt_addr,
+                self.prev_flags.contains(FlagsType::WRITEABLE),
+            ))
+            .nx((mmu_def.nx_bit)(
+                self.pt_addr,
+                self.prev_flags.contains(FlagsType::NX),
+            ));
+    }
 }
 
 impl<T> TranslationChunk<T> {
-    pub fn new(pt_addr: T) -> Self {
+    pub fn new(pt_addr: T, prev_flags: FlagsType) -> Self {
         let (min, max) = (!0u64, 0u64);
-        Self::with_minmax(pt_addr, min.into(), max.into())
+        Self::with_minmax(pt_addr, prev_flags, min.into(), max.into())
     }
 
-    pub fn with_minmax(pt_addr: T, min_addr: Address, max_addr: Address) -> Self {
+    pub fn with_minmax(
+        pt_addr: T,
+        prev_flags: FlagsType,
+        min_addr: Address,
+        max_addr: Address,
+    ) -> Self {
         Self {
             pt_addr,
             addr_count: 0,
             step: 0,
             min_addr,
             max_addr,
+            prev_flags,
         }
     }
 }
@@ -225,7 +279,7 @@ impl<T: MmuTranslationBase> TranslationChunk<T> {
             let (pt_addr, _) = self.pt_addr.get_pt_by_index(index as usize);
             let pt_addr = spec.vtop_step(pt_addr, addr, self.step);
 
-            let mut new_chunk = TranslationChunk::new(pt_addr);
+            let mut new_chunk = TranslationChunk::new(pt_addr, self.prev_flags);
 
             // Go through each address and check it individually
             for _ in 0..self.addr_count {

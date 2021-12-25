@@ -17,8 +17,8 @@ pub(super) static ARCH_SPEC: X86Architecture = X86Architecture {
         addr_size: 4,
         pte_size: 8,
         present_bit: |a| a.bit_at(0),
-        writeable_bit: |a| a.bit_at(1),
-        nx_bit: |a| a.bit_at(63),
+        writeable_bit: |a, pb| pb || a.bit_at(1),
+        nx_bit: |a, pb| pb || a.bit_at(63),
         large_page_bit: |a| a.bit_at(7),
     }
     .into_spec(),

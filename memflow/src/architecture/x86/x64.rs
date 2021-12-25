@@ -17,8 +17,8 @@ pub(super) static ARCH_SPEC: X86Architecture = X86Architecture {
         addr_size: 8,
         pte_size: 8,
         present_bit: |a| a.bit_at(0),
-        writeable_bit: |a| a.bit_at(1),
-        nx_bit: |a| a.bit_at(63),
+        writeable_bit: |a, pb| pb || a.bit_at(1),
+        nx_bit: |a, pb| pb || a.bit_at(63),
         large_page_bit: |a| a.bit_at(7),
     }
     .into_spec(),
@@ -32,7 +32,7 @@ pub fn new_translator(dtb: Address) -> X86VirtualTranslate {
 
 #[cfg(test)]
 mod tests {
-    use crate::mem::virt_translate::mmu::ArchMmuSpec;
+    use crate::mem::virt_translate::mmu::{ArchMmuSpec, FlagsType};
     use crate::types::{mem, size, umem, Address, PageType};
 
     fn get_mmu_spec() -> &'static ArchMmuSpec {
@@ -149,30 +149,37 @@ mod tests {
             })
             .into();
         let pte_address = Address::from(mem::gb(57));
+        let prev_flags = FlagsType::NONE;
 
         assert_eq!(
-            mmu.get_phys_page(pte_address, virt_address, 4).page_type(),
+            mmu.get_phys_page(pte_address, virt_address, 4, prev_flags)
+                .page_type(),
             PageType::READ_ONLY
         );
         assert_eq!(
-            mmu.get_phys_page(pte_address, virt_address, 4).page_size(),
+            mmu.get_phys_page(pte_address, virt_address, 4, prev_flags)
+                .page_size(),
             mem::kb(4)
         );
         assert_eq!(
-            mmu.get_phys_page(pte_address, virt_address, 2).page_base(),
+            mmu.get_phys_page(pte_address, virt_address, 2, prev_flags)
+                .page_base(),
             pte_address
         );
 
         assert_eq!(
-            mmu.get_phys_page(pte_address, virt_address, 4).address(),
+            mmu.get_phys_page(pte_address, virt_address, 4, prev_flags)
+                .address(),
             pte_address + page_offset
         );
         assert_eq!(
-            mmu.get_phys_page(pte_address, virt_address, 3).address(),
+            mmu.get_phys_page(pte_address, virt_address, 3, prev_flags)
+                .address(),
             pte_address + mem::kb(4 * indices[3]) + page_offset
         );
         assert_eq!(
-            mmu.get_phys_page(pte_address, virt_address, 2).address(),
+            mmu.get_phys_page(pte_address, virt_address, 2, prev_flags)
+                .address(),
             pte_address + mem::mb(2 * indices[2]) + mem::kb(4 * indices[3]) + page_offset
         );
     }

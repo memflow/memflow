@@ -17,8 +17,8 @@ pub(super) static ARCH_SPEC: ArmArchitecture = ArmArchitecture {
         addr_size: 8,
         pte_size: 8,
         present_bit: |a| a.bit_at(0),
-        writeable_bit: |a| a.bit_at(10),
-        nx_bit: |a| a.bit_at(54),
+        writeable_bit: |a, _| a.bit_at(10),
+        nx_bit: |a, _| a.bit_at(54),
         large_page_bit: |a| !a.bit_at(1),
     }
     .into_spec(),

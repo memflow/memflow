@@ -9,6 +9,7 @@ use crate::types::{umem, Address};
 pub(crate) use def::ArchMmuDef;
 pub(crate) use fixed_slice_vec::FixedSliceVec as MVec;
 pub(crate) use spec::ArchMmuSpec;
+pub(crate) use translate_data::FlagsType;
 use translate_data::{TranslateDataVec, TranslateVec, TranslationChunk};
 
 pub trait MmuTranslationBase: Clone + Copy + core::fmt::Debug {
@@ -45,7 +46,7 @@ pub trait MmuTranslationBase: Clone + Copy + core::fmt::Debug {
         VI: Iterator<Item = MemData<Address, B>>,
         B: SplitAtIndex,
     {
-        let mut init_chunk = TranslationChunk::new(*self);
+        let mut init_chunk = TranslationChunk::new(*self, FlagsType::NONE);
 
         let working_addr_count = work_vecs.1.capacity();
 

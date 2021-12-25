@@ -2,9 +2,10 @@ use crate::architecture::x86::x64;
 use crate::cglue::ForwardMut;
 use crate::dummy::{DummyMemory, DummyOs};
 use crate::mem::{
-    DirectTranslate, MemData, MemoryView, VirtualDma, VirtualTranslate, VirtualTranslate2,
+    DirectTranslate, MemData, MemoryView, PhysicalMemory, VirtualDma, VirtualTranslate,
+    VirtualTranslate2, VirtualTranslate3,
 };
-use crate::types::{mem, size};
+use crate::types::{mem, size, PageType};
 
 #[test]
 fn test_vtop() {
@@ -51,6 +52,29 @@ fn test_vtop() {
 
         assert_eq!(vtop, dummy_vtop);
     }
+}
+
+#[test]
+fn test_x86_flag_inheritance() {
+    let dummy_mem = DummyMemory::new(size::mb(16));
+    let mut dummy_os = DummyOs::new(dummy_mem);
+    let (dtb, virt_base) = dummy_os.alloc_dtb(size::mb(2), &[]);
+    let translator = x64::new_translator(dtb);
+
+    let paddr = translator.virt_to_phys(&mut dummy_os, virt_base).unwrap();
+    assert!(!paddr.page_type.contains(PageType::NOEXEC));
+
+    {
+        let mut phys_view = dummy_os.phys_view();
+        let dtb_idx = (virt_base.to_umem() as u64 >> 39) & 0x1ffu64;
+        let pte = phys_view.read_addr64(dtb + dtb_idx * 8).unwrap().to_umem();
+        // Set nx bit
+        let pte = pte | !(!0u64 >> 1);
+        phys_view.write(dtb + dtb_idx * 8, &pte).unwrap();
+    }
+
+    let paddr = translator.virt_to_phys(&mut dummy_os, virt_base).unwrap();
+    assert!(paddr.page_type.contains(PageType::NOEXEC));
 }
 
 #[test]

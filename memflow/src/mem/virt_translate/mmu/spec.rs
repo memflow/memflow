@@ -6,7 +6,9 @@ use crate::mem::{MemData, PhysicalMemory, PhysicalReadData};
 use crate::types::{umem, Address, PageType, PhysicalAddress, UMEM_BITS};
 
 use super::super::{VtopFailureCallback, VtopOutputCallback};
-use super::translate_data::{TranslateData, TranslateDataVec, TranslateVec, TranslationChunk};
+use super::translate_data::{
+    FlagsType, TranslateData, TranslateDataVec, TranslateVec, TranslationChunk,
+};
 use super::ArchMmuDef;
 use super::MmuTranslationBase;
 
@@ -269,6 +271,7 @@ impl ArchMmuSpec {
         pte_addr: Address,
         virt_addr: Address,
         step: usize,
+        prev_flags: FlagsType,
     ) -> PhysicalAddress {
         let phys_addr = Address::from(
             self.pte_addr_mask(pte_addr, step) | self.virt_addr_to_page_offset(virt_addr, step),
@@ -277,8 +280,14 @@ impl ArchMmuSpec {
         PhysicalAddress::with_page(
             phys_addr,
             PageType::default()
-                .write((self.def.writeable_bit)(pte_addr))
-                .noexec((self.def.nx_bit)(pte_addr)),
+                .write((self.def.writeable_bit)(
+                    pte_addr,
+                    prev_flags.contains(FlagsType::WRITEABLE),
+                ))
+                .noexec((self.def.nx_bit)(
+                    pte_addr,
+                    prev_flags.contains(FlagsType::NX),
+                )),
             self.page_size_step(step),
         )
     }
@@ -553,6 +562,10 @@ impl ArchMmuSpec {
         for (ref mut chunk, MemData(_, buf)) in chunks.iter_mut().zip(pt_read.iter()) {
             let pt_addr = buf_to_addr(&*buf);
             chunk.pt_addr = pt_addr;
+            // We assume the flags may either always inherit or never inherit.
+            // Thus, if there is a more insane architecture, that has it mixed,
+            // then open an issue report!
+            chunk.update_flags(&self.def);
         }
 
         Ok(())
@@ -589,7 +602,7 @@ impl ArchMmuSpec {
                 } else {
                     // Move addresses between the stacks, and only until we fill up the
                     // address stack.
-                    let mut new_chunk = TranslationChunk::new(chunk.pt_addr);
+                    let mut new_chunk = TranslationChunk::new(chunk.pt_addr, chunk.prev_flags);
                     new_chunk.step = chunk.step;
                     for _ in
                         (0..chunk.addr_count).zip(working_addrs.len()..working_addrs.capacity())
@@ -672,10 +685,11 @@ impl ArchMmuSpec {
                 // Success!
                 let pt_addr = chunk.pt_addr;
                 let step = chunk.step;
+                let prev_flags = chunk.prev_flags;
                 while let Some(entry) = chunk.pop_data(working_addrs) {
                     // TODO: handle condition..
                     let _ = out.call(MemData(
-                        self.get_phys_page(pt_addr, entry.addr, step),
+                        self.get_phys_page(pt_addr, entry.addr, step, prev_flags),
                         entry.buf,
                     ));
                 }

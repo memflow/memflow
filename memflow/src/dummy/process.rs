@@ -120,26 +120,26 @@ impl<T: MemoryView> Process for DummyProcess<T> {
 
     fn module_import_list_callback(
         &mut self,
-        _info: &ModuleInfo,
-        _callback: ImportCallback,
+        info: &ModuleInfo,
+        callback: ImportCallback,
     ) -> Result<()> {
-        Err(Error(ErrorOrigin::OsLayer, ErrorKind::NotImplemented))
+        crate::os::util::module_import_list_callback(self, info, callback)
     }
 
     fn module_export_list_callback(
         &mut self,
-        _info: &ModuleInfo,
-        _callback: ExportCallback,
+        info: &ModuleInfo,
+        callback: ExportCallback,
     ) -> Result<()> {
-        Err(Error(ErrorOrigin::OsLayer, ErrorKind::NotImplemented))
+        crate::os::util::module_export_list_callback(self, info, callback)
     }
 
     fn module_section_list_callback(
         &mut self,
-        _info: &ModuleInfo,
-        _callback: SectionCallback,
+        info: &ModuleInfo,
+        callback: SectionCallback,
     ) -> Result<()> {
-        Err(Error(ErrorOrigin::OsLayer, ErrorKind::NotImplemented))
+        crate::os::util::module_section_list_callback(self, info, callback)
     }
 
     /// Retrieves the process info

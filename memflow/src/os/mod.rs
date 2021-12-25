@@ -19,6 +19,7 @@ pub mod keyboard;
 pub mod module;
 pub mod process;
 pub mod root;
+pub mod util;
 
 pub use keyboard::{Keyboard, KeyboardState, OsKeyboard, OsKeyboardInner};
 

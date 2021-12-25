@@ -4,7 +4,6 @@ use std::time::{Duration, Instant};
 use clap::*;
 use log::Level;
 
-use memflow::cglue::*;
 use memflow::error::{ErrorKind, Result};
 use memflow::mem::*;
 use memflow::os::{ModuleInfo, OsInner, Process};
@@ -112,16 +111,12 @@ fn read_bench(mut kernel: OsInstanceArcBox) -> Result<()> {
                 prc.info().name,
             );
 
-            let mem_map = {
-                let prc = as_mut!(prc impl VirtualTranslate)
-                    .ok_or(ErrorKind::UnsupportedOptionalFeature)?;
-                prc.virt_page_map_vec(smem::gb(1))
-            };
+            let mem_map = prc.mapped_mem_vec(smem::gb(1));
 
-            println!("Memory map (with up to 1GB gaps):");
+            println!("Mapped memory map (with up to 1GB gaps):");
 
-            for map in mem_map {
-                println!("{:x}-{:x}", map.address, map.address + map.size);
+            for MemData(address, size) in mem_map {
+                println!("{:x}-{:x}", address, address + size);
             }
 
             rwtest(

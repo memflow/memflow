@@ -7,7 +7,7 @@ use crate::mem::{mem_data::*, memory_view::*};
 use crate::os::process::*;
 use crate::os::*;
 use crate::plugins::*;
-use crate::types::{umem, Address};
+use crate::types::{imem, umem, util::GapRemover, Address};
 
 use crate::cglue::*;
 use rand::{thread_rng, Rng};
@@ -145,6 +145,17 @@ impl<T: MemoryView> Process for DummyProcess<T> {
     /// Retrieves the process info
     fn info(&self) -> &ProcessInfo {
         &self.proc.info
+    }
+
+    fn mapped_mem_range(
+        &mut self,
+        gap_size: imem,
+        start: Address,
+        end: Address,
+        out: MemoryRangeCallback,
+    ) {
+        GapRemover::new(out, gap_size, start, end)
+            .extend(self.proc.modules.iter().map(|m| MemData(m.base, m.size)))
     }
 }
 

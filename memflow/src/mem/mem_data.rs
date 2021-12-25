@@ -12,6 +12,7 @@ use cglue::slice::*;
 /// `ReadData`, `WriteData`, `PhysicalReadData`, and `PhysicalWriteData`.
 #[repr(C)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 #[cfg_attr(feature = "abi_stable", derive(::abi_stable::StableAbi))]
 pub struct MemData<A, T>(pub A, pub T);
 
@@ -74,6 +75,8 @@ impl<'a, T: Iterator<Item = ReadData<'a>> + 'a> ReadIterator<'a> for T {}
 /// MemData type for regular memory writes.
 pub type WriteData<'a> = MemData<Address, CSliceRef<'a, u8>>;
 
+pub type MemoryRange = MemData<Address, umem>;
+
 pub trait WriteIterator<'a>: Iterator<Item = WriteData<'a>> + 'a {}
 impl<'a, T: Iterator<Item = WriteData<'a>> + 'a> WriteIterator<'a> for T {}
 
@@ -92,3 +95,5 @@ impl<'a, T: Iterator<Item = PhysicalWriteData<'a>> + 'a> PhysicalWriteIterator<'
 pub type ReadFailCallback<'a, 'b> = OpaqueCallback<'a, ReadData<'b>>;
 
 pub type WriteFailCallback<'a, 'b> = OpaqueCallback<'a, WriteData<'b>>;
+
+pub type MemoryRangeCallback<'a> = OpaqueCallback<'a, MemoryRange>;

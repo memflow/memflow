@@ -1,5 +1,7 @@
 use std::prelude::v1::*;
 
+use super::{MemoryRange, MemoryRangeCallback};
+
 use std::cmp::*;
 
 use cglue::prelude::v1::*;
@@ -10,6 +12,7 @@ use crate::iter::SplitAtIndex;
 pub use direct_translate::DirectTranslate;
 
 use crate::architecture::ArchitectureObj;
+use crate::types::util::GapRemover;
 
 #[macro_use]
 pub mod mmu;
@@ -53,10 +56,7 @@ pub trait VirtualTranslate: Send {
     ) {
         assert!(end >= start);
         self.virt_to_phys_list(
-            &[MemoryRange {
-                address: start,
-                size: (end - start) as umem,
-            }],
+            &[MemData(start, (end - start) as umem)],
             out,
             (&mut |_| true).into(),
         )
@@ -106,7 +106,7 @@ pub trait VirtualTranslate: Send {
         end: Address,
         out: MemoryRangeCallback,
     ) {
-        let mut set: rangemap::RangeSet<Address> = Default::default();
+        let mut gap_remover = GapRemover::new(out, gap_size, start, end);
 
         self.virt_to_phys_range(
             start,
@@ -116,39 +116,18 @@ pub trait VirtualTranslate: Send {
                        size,
                        out_physical: _,
                    }| {
-                set.insert(in_virtual..(in_virtual + size));
+                gap_remover.push_range(MemData(in_virtual, size));
                 true
             })
                 .into(),
         );
-
-        set.gaps(&(start..end))
-            .filter(|r| {
-                assert!(r.end >= r.start);
-                gap_size >= 0 && (r.end - r.start) as umem <= gap_size as umem
-            })
-            .collect::<Vec<_>>()
-            .into_iter()
-            .for_each(|r| set.insert(r));
-
-        set.iter()
-            .map(|r| {
-                let address = r.start;
-                assert!(r.end >= address);
-                let size = r.end - address;
-                MemoryRange {
-                    address,
-                    size: size as umem,
-                }
-            })
-            .feed_into(out);
     }
 
     fn virt_to_phys(&mut self, address: Address) -> Result<PhysicalAddress> {
         let mut out = Err(Error(ErrorOrigin::VirtualTranslate, ErrorKind::OutOfBounds));
 
         self.virt_to_phys_list(
-            &[MemoryRange { address, size: 1 }],
+            &[MemData(address, 1)],
             (&mut |VirtualTranslation {
                        in_virtual: _,
                        size: _,
@@ -255,7 +234,6 @@ pub trait VirtualTranslate: Send {
 }
 
 pub type VirtualTranslationCallback<'a> = OpaqueCallback<'a, VirtualTranslation>;
-pub type MemoryRangeCallback<'a> = OpaqueCallback<'a, MemoryRange>;
 pub type VirtualTranslationFailCallback<'a> = OpaqueCallback<'a, VirtualTranslationFail>;
 
 /// Virtual page range information with physical mappings used for callbacks
@@ -285,16 +263,6 @@ impl PartialEq for VirtualTranslation {
     fn eq(&self, other: &Self) -> bool {
         self.in_virtual == other.in_virtual
     }
-}
-
-/// Virtual page range information used for callbacks
-#[repr(C)]
-#[derive(Clone, Debug, PartialEq, Copy)]
-#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
-#[cfg_attr(feature = "abi_stable", derive(::abi_stable::StableAbi))]
-pub struct MemoryRange {
-    pub address: Address,
-    pub size: umem,
 }
 
 #[repr(C)]

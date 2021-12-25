@@ -1,7 +1,9 @@
 use crate::architecture::x86::x64;
 use crate::cglue::ForwardMut;
 use crate::dummy::{DummyMemory, DummyOs};
-use crate::mem::{DirectTranslate, MemoryView, VirtualDma, VirtualTranslate, VirtualTranslate2};
+use crate::mem::{
+    DirectTranslate, MemData, MemoryView, VirtualDma, VirtualTranslate, VirtualTranslate2,
+};
 use crate::types::{mem, size};
 
 #[test]
@@ -62,18 +64,13 @@ fn test_virt_page_map() {
 
     let page_map = virt_mem.virt_page_map_vec(0);
 
-    for map in page_map.iter() {
-        println!(
-            "{:x}-{:x} ({:x})",
-            map.address,
-            map.address + map.size,
-            map.size
-        );
+    for MemData(address, size) in page_map.iter() {
+        println!("{:x}-{:x} ({:x})", address, *address + *size, size);
     }
 
     assert!(page_map.len() == 1);
-    assert_eq!(page_map[0].address, virt_base);
-    assert_eq!(page_map[0].size, mem::mb(2));
+    assert_eq!(page_map[0].0, virt_base);
+    assert_eq!(page_map[0].1, mem::mb(2));
 }
 
 #[test]

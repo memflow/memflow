@@ -6,7 +6,7 @@ use crate::mem::memory_view::*;
 use crate::mem::{
     mem_data::*,
     virt_translate::{
-        DirectTranslate, MemoryRange, VirtualTranslate, VirtualTranslate2, VirtualTranslate3,
+        DirectTranslate, VirtualTranslate, VirtualTranslate2, VirtualTranslate3,
         VirtualTranslation, VirtualTranslationCallback, VirtualTranslationFail,
         VirtualTranslationFailCallback,
     },
@@ -267,7 +267,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate2, D: VirtualTranslate3> VirtualTrans
             &self.translator,
             addrs
                 .iter()
-                .map(|v| MemData(v.address, (v.address, v.size))),
+                .map(|&MemData(address, size)| MemData(address, (address, size))),
             &mut (&mut |MemData(a, b): MemData<PhysicalAddress, (Address, umem)>| {
                 out.call(VirtualTranslation {
                     in_virtual: b.0,

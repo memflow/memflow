@@ -270,6 +270,37 @@ pub trait Process: Send {
 
     /// Retrieves the process info
     fn info(&self) -> &ProcessInfo;
+
+    fn mapped_mem_range(
+        &mut self,
+        gap_size: imem,
+        start: Address,
+        end: Address,
+        out: MemoryRangeCallback,
+    );
+
+    #[skip_func]
+    fn mapped_mem_range_vec(
+        &mut self,
+        gap_size: imem,
+        start: Address,
+        end: Address,
+    ) -> Vec<MemoryRange> {
+        let mut out = vec![];
+        self.mapped_mem_range(gap_size, start, end, (&mut out).into());
+        out
+    }
+
+    fn mapped_mem(&mut self, gap_size: imem, out: MemoryRangeCallback) {
+        self.mapped_mem_range(gap_size, Address::null(), Address::invalid(), out)
+    }
+
+    #[skip_func]
+    fn mapped_mem_vec(&mut self, gap_size: imem) -> Vec<MemoryRange> {
+        let mut out = vec![];
+        self.mapped_mem(gap_size, (&mut out).into());
+        out
+    }
 }
 
 /// Process information structure

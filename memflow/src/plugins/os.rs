@@ -8,11 +8,11 @@ use crate::os::process::*;
 use crate::os::root::*;
 
 use super::{
-    args::split_str_args, Args, ConnectorInstanceArcBox, LibContext, Loadable, PluginDescriptor,
-    PluginLogger, TargetInfo,
+    args::split_str_args, Args, ConnectorInstanceArcBox, LibArc, LibContext, Loadable,
+    PluginDescriptor, PluginLogger, TargetInfo,
 };
 
-use std::ffi::c_void;
+use cglue::trait_group::c_void;
 
 pub type OptionArchitectureIdent<'a> = Option<&'a crate::architecture::ArchitectureIdent>;
 
@@ -22,18 +22,16 @@ pub type MuOsInstanceArcBox<'a> = std::mem::MaybeUninit<OsInstanceArcBox<'a>>;
 cglue_trait_group!(ProcessInstance, { Process, MemoryView }, { VirtualTranslate });
 cglue_trait_group!(IntoProcessInstance, { Process, MemoryView, Clone }, { VirtualTranslate });
 
-pub fn create<
-    T: 'static + Os + Clone + OsInstanceVtableFiller<'static, CBox<'static, T>, CArc<c_void>>,
->(
+pub fn create<T: 'static + Os + Clone + OsInstanceVtableFiller<'static, CBox<'static, T>, LibArc>>(
     args: Option<&OsArgs>,
     conn: ConnectorInstanceArcBox,
-    lib: CArc<c_void>,
+    lib: LibArc,
     logger: Option<&'static PluginLogger>,
     out: &mut MuOsInstanceArcBox<'static>,
     create_fn: impl Fn(&OsArgs, ConnectorInstanceArcBox) -> Result<T>,
 ) -> i32
 where
-    (T, CArc<c_void>): Into<OsInstanceBaseArcBox<'static, T, c_void>>,
+    (T, LibArc): Into<OsInstanceBaseArcBox<'static, T, c_void>>,
 {
     super::util::create(args, lib, logger, out, |a, lib| {
         Ok(group_obj!((create_fn(a, conn)?, lib) as OsInstance))

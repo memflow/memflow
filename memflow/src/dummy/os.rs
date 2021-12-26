@@ -18,7 +18,6 @@ use rand::{thread_rng, Rng, SeedableRng};
 use rand_xorshift::XorShiftRng;
 use std::collections::VecDeque;
 use std::convert::TryInto;
-use std::ffi::c_void;
 
 use crate::architecture::x86::{x64, X86VirtualTranslate};
 
@@ -558,7 +557,7 @@ pub static MEMFLOW_OS_DUMMY: OsDescriptor = OsDescriptor {
 extern "C" fn mf_create(
     args: Option<&OsArgs>,
     mem: COption<ConnectorInstanceArcBox>,
-    lib: CArc<c_void>,
+    lib: LibArc,
     logger: Option<&'static PluginLogger>,
     out: &mut MuOsInstanceArcBox<'static>,
 ) -> i32 {
@@ -568,7 +567,7 @@ extern "C" fn mf_create(
 pub fn build_dummy(
     args: &OsArgs,
     _mem: Option<ConnectorInstanceArcBox>,
-    lib: CArc<c_void>,
+    lib: LibArc,
 ) -> Result<OsInstanceArcBox<'static>> {
     let size = super::mem::parse_size(&args.extra_args)?;
     let mem = DummyMemory::new(size);

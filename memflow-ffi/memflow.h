@@ -261,8 +261,8 @@ typedef struct ArchitectureObj ArchitectureObj;
  *
  * ```no_run
  * use memflow::plugins::Inventory;
+ * # use memflow::plugins::OsInstanceArcBox;
  * # use memflow::error::Result;
- * # use memflow::os::OsInstanceArcBox;
  * # fn test() -> Result<OsInstanceArcBox<'static>> {
  * let inventory = Inventory::scan();
  * inventory
@@ -482,14 +482,30 @@ typedef struct CIterator_PhysicalReadData {
     int32_t (*func)(void*, PhysicalReadData *out);
 } CIterator_PhysicalReadData;
 
-typedef struct Callback_c_void__PhysicalReadData {
+/**
+ * Generic type representing an address and associated data.
+ *
+ * This base type is always used for initialization, but the commonly used type aliases are:
+ * `ReadData`, `WriteData`, `PhysicalReadData`, and `PhysicalWriteData`.
+ */
+typedef struct MemData_Address__CSliceMut_u8 {
+    Address _0;
+    struct CSliceMut_u8 _1;
+} MemData_Address__CSliceMut_u8;
+
+/**
+ * MemData type for regular memory reads.
+ */
+typedef struct MemData_Address__CSliceMut_u8 ReadData;
+
+typedef struct Callback_c_void__ReadData {
     void *context;
-    bool (*func)(void*, PhysicalReadData);
-} Callback_c_void__PhysicalReadData;
+    bool (*func)(void*, ReadData);
+} Callback_c_void__ReadData;
 
-typedef struct Callback_c_void__PhysicalReadData OpaqueCallback_PhysicalReadData;
+typedef struct Callback_c_void__ReadData OpaqueCallback_ReadData;
 
-typedef OpaqueCallback_PhysicalReadData PhysicalReadFailCallback;
+typedef OpaqueCallback_ReadData ReadFailCallback;
 
 /**
  * Wrapper around const slices.
@@ -576,14 +592,30 @@ typedef struct CIterator_PhysicalWriteData {
     int32_t (*func)(void*, PhysicalWriteData *out);
 } CIterator_PhysicalWriteData;
 
-typedef struct Callback_c_void__PhysicalWriteData {
+/**
+ * Generic type representing an address and associated data.
+ *
+ * This base type is always used for initialization, but the commonly used type aliases are:
+ * `ReadData`, `WriteData`, `PhysicalReadData`, and `PhysicalWriteData`.
+ */
+typedef struct MemData_Address__CSliceRef_u8 {
+    Address _0;
+    struct CSliceRef_u8 _1;
+} MemData_Address__CSliceRef_u8;
+
+/**
+ * MemData type for regular memory writes.
+ */
+typedef struct MemData_Address__CSliceRef_u8 WriteData;
+
+typedef struct Callback_c_void__WriteData {
     void *context;
-    bool (*func)(void*, PhysicalWriteData);
-} Callback_c_void__PhysicalWriteData;
+    bool (*func)(void*, WriteData);
+} Callback_c_void__WriteData;
 
-typedef struct Callback_c_void__PhysicalWriteData OpaqueCallback_PhysicalWriteData;
+typedef struct Callback_c_void__WriteData OpaqueCallback_WriteData;
 
-typedef OpaqueCallback_PhysicalWriteData PhysicalWriteFailCallback;
+typedef OpaqueCallback_WriteData WriteFailCallback;
 
 typedef struct PhysicalMemoryMetadata {
     Address max_address;
@@ -624,22 +656,6 @@ typedef struct CSliceRef_PhysicalMemoryMapping {
     const struct PhysicalMemoryMapping *data;
     uintptr_t len;
 } CSliceRef_PhysicalMemoryMapping;
-
-/**
- * Generic type representing an address and associated data.
- *
- * This base type is always used for initialization, but the commonly used type aliases are:
- * `ReadData`, `WriteData`, `PhysicalReadData`, and `PhysicalWriteData`.
- */
-typedef struct MemData_Address__CSliceMut_u8 {
-    Address _0;
-    struct CSliceMut_u8 _1;
-} MemData_Address__CSliceMut_u8;
-
-/**
- * MemData type for regular memory reads.
- */
-typedef struct MemData_Address__CSliceMut_u8 ReadData;
 
 /**
  * FFI compatible iterator.
@@ -683,31 +699,6 @@ typedef struct CIterator_ReadData {
     int32_t (*func)(void*, ReadData *out);
 } CIterator_ReadData;
 
-typedef struct Callback_c_void__ReadData {
-    void *context;
-    bool (*func)(void*, ReadData);
-} Callback_c_void__ReadData;
-
-typedef struct Callback_c_void__ReadData OpaqueCallback_ReadData;
-
-typedef OpaqueCallback_ReadData ReadFailCallback;
-
-/**
- * Generic type representing an address and associated data.
- *
- * This base type is always used for initialization, but the commonly used type aliases are:
- * `ReadData`, `WriteData`, `PhysicalReadData`, and `PhysicalWriteData`.
- */
-typedef struct MemData_Address__CSliceRef_u8 {
-    Address _0;
-    struct CSliceRef_u8 _1;
-} MemData_Address__CSliceRef_u8;
-
-/**
- * MemData type for regular memory writes.
- */
-typedef struct MemData_Address__CSliceRef_u8 WriteData;
-
 /**
  * FFI compatible iterator.
  *
@@ -749,15 +740,6 @@ typedef struct CIterator_WriteData {
     void *iter;
     int32_t (*func)(void*, WriteData *out);
 } CIterator_WriteData;
-
-typedef struct Callback_c_void__WriteData {
-    void *context;
-    bool (*func)(void*, WriteData);
-} Callback_c_void__WriteData;
-
-typedef struct Callback_c_void__WriteData OpaqueCallback_WriteData;
-
-typedef OpaqueCallback_WriteData WriteFailCallback;
 
 typedef struct MemoryViewMetadata {
     Address max_address;
@@ -1284,13 +1266,29 @@ typedef struct Callback_c_void__SectionInfo OpaqueCallback_SectionInfo;
 
 typedef OpaqueCallback_SectionInfo SectionCallback;
 
+typedef int64_t imem;
+
 /**
- * Virtual page range information used for callbacks
+ * Generic type representing an address and associated data.
+ *
+ * This base type is always used for initialization, but the commonly used type aliases are:
+ * `ReadData`, `WriteData`, `PhysicalReadData`, and `PhysicalWriteData`.
  */
-typedef struct MemoryRange {
-    Address address;
-    umem size;
-} MemoryRange;
+typedef struct MemData_Address__umem {
+    Address _0;
+    umem _1;
+} MemData_Address__umem;
+
+typedef struct MemData_Address__umem MemoryRange;
+
+typedef struct Callback_c_void__MemoryRange {
+    void *context;
+    bool (*func)(void*, MemoryRange);
+} Callback_c_void__MemoryRange;
+
+typedef struct Callback_c_void__MemoryRange OpaqueCallback_MemoryRange;
+
+typedef OpaqueCallback_MemoryRange MemoryRangeCallback;
 
 /**
  * Wrapper around const slices.
@@ -1315,7 +1313,7 @@ typedef struct MemoryRange {
  * ```
  */
 typedef struct CSliceRef_MemoryRange {
-    const struct MemoryRange *data;
+    const MemoryRange *data;
     uintptr_t len;
 } CSliceRef_MemoryRange;
 
@@ -1350,15 +1348,6 @@ typedef struct Callback_c_void__VirtualTranslationFail {
 typedef struct Callback_c_void__VirtualTranslationFail OpaqueCallback_VirtualTranslationFail;
 
 typedef OpaqueCallback_VirtualTranslationFail VirtualTranslationFailCallback;
-
-typedef struct Callback_c_void__MemoryRange {
-    void *context;
-    bool (*func)(void*, struct MemoryRange);
-} Callback_c_void__MemoryRange;
-
-typedef struct Callback_c_void__MemoryRange OpaqueCallback_MemoryRange;
-
-typedef OpaqueCallback_MemoryRange MemoryRangeCallback;
 
 /**
  * A `Page` holds information about a memory page.
@@ -1623,8 +1612,8 @@ typedef struct OsKeyboardInnerVtbl_OsInstanceContainer_CBox_c_void_____CArc_c_vo
  * This virtual function table contains ABI-safe interface for the given trait.
  */
 typedef struct PhysicalMemoryVtbl_OsInstanceContainer_CBox_c_void_____CArc_c_void {
-    int32_t (*phys_read_raw_iter)(struct OsInstanceContainer_CBox_c_void_____CArc_c_void *cont, struct CIterator_PhysicalReadData data, PhysicalReadFailCallback *out_fail);
-    int32_t (*phys_write_raw_iter)(struct OsInstanceContainer_CBox_c_void_____CArc_c_void *cont, struct CIterator_PhysicalWriteData data, PhysicalWriteFailCallback *out_fail);
+    int32_t (*phys_read_raw_iter)(struct OsInstanceContainer_CBox_c_void_____CArc_c_void *cont, struct CIterator_PhysicalReadData data, ReadFailCallback *out_fail);
+    int32_t (*phys_write_raw_iter)(struct OsInstanceContainer_CBox_c_void_____CArc_c_void *cont, struct CIterator_PhysicalWriteData data, WriteFailCallback *out_fail);
     struct PhysicalMemoryMetadata (*metadata)(const struct OsInstanceContainer_CBox_c_void_____CArc_c_void *cont);
     void (*set_mem_map)(struct OsInstanceContainer_CBox_c_void_____CArc_c_void *cont, struct CSliceRef_PhysicalMemoryMapping _mem_map);
     MemoryViewBase_CBox_c_void_____CArc_c_void (*into_phys_view)(struct OsInstanceContainer_CBox_c_void_____CArc_c_void cont);
@@ -1710,6 +1699,8 @@ typedef struct ProcessVtbl_ProcessInstanceContainer_CBox_c_void_____CArc_c_void 
     int32_t (*module_export_by_name)(struct ProcessInstanceContainer_CBox_c_void_____CArc_c_void *cont, const struct ModuleInfo *info, struct CSliceRef_u8 name, struct ExportInfo *ok_out);
     int32_t (*module_section_by_name)(struct ProcessInstanceContainer_CBox_c_void_____CArc_c_void *cont, const struct ModuleInfo *info, struct CSliceRef_u8 name, struct SectionInfo *ok_out);
     const struct ProcessInfo *(*info)(const struct ProcessInstanceContainer_CBox_c_void_____CArc_c_void *cont);
+    void (*mapped_mem_range)(struct ProcessInstanceContainer_CBox_c_void_____CArc_c_void *cont, imem gap_size, Address start, Address end, MemoryRangeCallback out);
+    void (*mapped_mem)(struct ProcessInstanceContainer_CBox_c_void_____CArc_c_void *cont, imem gap_size, MemoryRangeCallback out);
 } ProcessVtbl_ProcessInstanceContainer_CBox_c_void_____CArc_c_void;
 
 /**
@@ -1721,12 +1712,12 @@ typedef struct VirtualTranslateVtbl_ProcessInstanceContainer_CBox_c_void_____CAr
     void (*virt_to_phys_list)(struct ProcessInstanceContainer_CBox_c_void_____CArc_c_void *cont, struct CSliceRef_MemoryRange addrs, VirtualTranslationCallback out, VirtualTranslationFailCallback out_fail);
     void (*virt_to_phys_range)(struct ProcessInstanceContainer_CBox_c_void_____CArc_c_void *cont, Address start, Address end, VirtualTranslationCallback out);
     void (*virt_translation_map_range)(struct ProcessInstanceContainer_CBox_c_void_____CArc_c_void *cont, Address start, Address end, VirtualTranslationCallback out);
-    void (*virt_page_map_range)(struct ProcessInstanceContainer_CBox_c_void_____CArc_c_void *cont, umem gap_size, Address start, Address end, MemoryRangeCallback out);
+    void (*virt_page_map_range)(struct ProcessInstanceContainer_CBox_c_void_____CArc_c_void *cont, imem gap_size, Address start, Address end, MemoryRangeCallback out);
     int32_t (*virt_to_phys)(struct ProcessInstanceContainer_CBox_c_void_____CArc_c_void *cont, Address address, struct PhysicalAddress *ok_out);
     int32_t (*virt_page_info)(struct ProcessInstanceContainer_CBox_c_void_____CArc_c_void *cont, Address addr, struct Page *ok_out);
     void (*virt_translation_map)(struct ProcessInstanceContainer_CBox_c_void_____CArc_c_void *cont, VirtualTranslationCallback out);
     struct COption_Address (*phys_to_virt)(struct ProcessInstanceContainer_CBox_c_void_____CArc_c_void *cont, Address phys);
-    void (*virt_page_map)(struct ProcessInstanceContainer_CBox_c_void_____CArc_c_void *cont, umem gap_size, MemoryRangeCallback out);
+    void (*virt_page_map)(struct ProcessInstanceContainer_CBox_c_void_____CArc_c_void *cont, imem gap_size, MemoryRangeCallback out);
 } VirtualTranslateVtbl_ProcessInstanceContainer_CBox_c_void_____CArc_c_void;
 
 /**
@@ -1813,6 +1804,8 @@ typedef struct ProcessVtbl_IntoProcessInstanceContainer_CBox_c_void_____CArc_c_v
     int32_t (*module_export_by_name)(struct IntoProcessInstanceContainer_CBox_c_void_____CArc_c_void *cont, const struct ModuleInfo *info, struct CSliceRef_u8 name, struct ExportInfo *ok_out);
     int32_t (*module_section_by_name)(struct IntoProcessInstanceContainer_CBox_c_void_____CArc_c_void *cont, const struct ModuleInfo *info, struct CSliceRef_u8 name, struct SectionInfo *ok_out);
     const struct ProcessInfo *(*info)(const struct IntoProcessInstanceContainer_CBox_c_void_____CArc_c_void *cont);
+    void (*mapped_mem_range)(struct IntoProcessInstanceContainer_CBox_c_void_____CArc_c_void *cont, imem gap_size, Address start, Address end, MemoryRangeCallback out);
+    void (*mapped_mem)(struct IntoProcessInstanceContainer_CBox_c_void_____CArc_c_void *cont, imem gap_size, MemoryRangeCallback out);
 } ProcessVtbl_IntoProcessInstanceContainer_CBox_c_void_____CArc_c_void;
 
 /**
@@ -1824,12 +1817,12 @@ typedef struct VirtualTranslateVtbl_IntoProcessInstanceContainer_CBox_c_void____
     void (*virt_to_phys_list)(struct IntoProcessInstanceContainer_CBox_c_void_____CArc_c_void *cont, struct CSliceRef_MemoryRange addrs, VirtualTranslationCallback out, VirtualTranslationFailCallback out_fail);
     void (*virt_to_phys_range)(struct IntoProcessInstanceContainer_CBox_c_void_____CArc_c_void *cont, Address start, Address end, VirtualTranslationCallback out);
     void (*virt_translation_map_range)(struct IntoProcessInstanceContainer_CBox_c_void_____CArc_c_void *cont, Address start, Address end, VirtualTranslationCallback out);
-    void (*virt_page_map_range)(struct IntoProcessInstanceContainer_CBox_c_void_____CArc_c_void *cont, umem gap_size, Address start, Address end, MemoryRangeCallback out);
+    void (*virt_page_map_range)(struct IntoProcessInstanceContainer_CBox_c_void_____CArc_c_void *cont, imem gap_size, Address start, Address end, MemoryRangeCallback out);
     int32_t (*virt_to_phys)(struct IntoProcessInstanceContainer_CBox_c_void_____CArc_c_void *cont, Address address, struct PhysicalAddress *ok_out);
     int32_t (*virt_page_info)(struct IntoProcessInstanceContainer_CBox_c_void_____CArc_c_void *cont, Address addr, struct Page *ok_out);
     void (*virt_translation_map)(struct IntoProcessInstanceContainer_CBox_c_void_____CArc_c_void *cont, VirtualTranslationCallback out);
     struct COption_Address (*phys_to_virt)(struct IntoProcessInstanceContainer_CBox_c_void_____CArc_c_void *cont, Address phys);
-    void (*virt_page_map)(struct IntoProcessInstanceContainer_CBox_c_void_____CArc_c_void *cont, umem gap_size, MemoryRangeCallback out);
+    void (*virt_page_map)(struct IntoProcessInstanceContainer_CBox_c_void_____CArc_c_void *cont, imem gap_size, MemoryRangeCallback out);
 } VirtualTranslateVtbl_IntoProcessInstanceContainer_CBox_c_void_____CArc_c_void;
 
 /**
@@ -1922,8 +1915,8 @@ typedef struct CGlueTraitObj_CBox_c_void_____MemoryViewVtbl_CGlueObjContainer_CB
  * This virtual function table contains ABI-safe interface for the given trait.
  */
 typedef struct PhysicalMemoryVtbl_ConnectorInstanceContainer_CBox_c_void_____CArc_c_void {
-    int32_t (*phys_read_raw_iter)(struct ConnectorInstanceContainer_CBox_c_void_____CArc_c_void *cont, struct CIterator_PhysicalReadData data, PhysicalReadFailCallback *out_fail);
-    int32_t (*phys_write_raw_iter)(struct ConnectorInstanceContainer_CBox_c_void_____CArc_c_void *cont, struct CIterator_PhysicalWriteData data, PhysicalWriteFailCallback *out_fail);
+    int32_t (*phys_read_raw_iter)(struct ConnectorInstanceContainer_CBox_c_void_____CArc_c_void *cont, struct CIterator_PhysicalReadData data, ReadFailCallback *out_fail);
+    int32_t (*phys_write_raw_iter)(struct ConnectorInstanceContainer_CBox_c_void_____CArc_c_void *cont, struct CIterator_PhysicalWriteData data, WriteFailCallback *out_fail);
     struct PhysicalMemoryMetadata (*metadata)(const struct ConnectorInstanceContainer_CBox_c_void_____CArc_c_void *cont);
     void (*set_mem_map)(struct ConnectorInstanceContainer_CBox_c_void_____CArc_c_void *cont, struct CSliceRef_PhysicalMemoryMapping _mem_map);
     MemoryViewBase_CBox_c_void_____CArc_c_void (*into_phys_view)(struct ConnectorInstanceContainer_CBox_c_void_____CArc_c_void cont);
@@ -2459,12 +2452,12 @@ static inline int32_t mf_osinstance_into_keyboard(struct OsInstance_CBox_c_void_
     return __ret;
 }
 
-static inline int32_t mf_osinstance_phys_read_raw_iter(void *self, struct CIterator_PhysicalReadData data, PhysicalReadFailCallback * out_fail)  {
+static inline int32_t mf_osinstance_phys_read_raw_iter(void *self, struct CIterator_PhysicalReadData data, ReadFailCallback * out_fail)  {
     int32_t __ret = (((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_physicalmemory)->phys_read_raw_iter(&((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->container, data, out_fail);
     return __ret;
 }
 
-static inline int32_t mf_osinstance_phys_write_raw_iter(void *self, struct CIterator_PhysicalWriteData data, PhysicalWriteFailCallback * out_fail)  {
+static inline int32_t mf_osinstance_phys_write_raw_iter(void *self, struct CIterator_PhysicalWriteData data, WriteFailCallback * out_fail)  {
     int32_t __ret = (((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_physicalmemory)->phys_write_raw_iter(&((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->container, data, out_fail);
     return __ret;
 }
@@ -2602,6 +2595,16 @@ static inline const struct ProcessInfo * mf_processinstance_info(const void *sel
     return __ret;
 }
 
+static inline void mf_processinstance_mapped_mem_range(void *self, imem gap_size, Address start, Address end, MemoryRangeCallback out)  {
+(((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_process)->mapped_mem_range(&((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, gap_size, start, end, out);
+
+}
+
+static inline void mf_processinstance_mapped_mem(void *self, imem gap_size, MemoryRangeCallback out)  {
+(((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_process)->mapped_mem(&((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, gap_size, out);
+
+}
+
 static inline void mf_processinstance_virt_to_phys_list(void *self, struct CSliceRef_MemoryRange addrs, VirtualTranslationCallback out, VirtualTranslationFailCallback out_fail)  {
 (((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_virtualtranslate)->virt_to_phys_list(&((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, addrs, out, out_fail);
 
@@ -2617,7 +2620,7 @@ static inline void mf_processinstance_virt_translation_map_range(void *self, Add
 
 }
 
-static inline void mf_processinstance_virt_page_map_range(void *self, umem gap_size, Address start, Address end, MemoryRangeCallback out)  {
+static inline void mf_processinstance_virt_page_map_range(void *self, imem gap_size, Address start, Address end, MemoryRangeCallback out)  {
 (((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_virtualtranslate)->virt_page_map_range(&((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, gap_size, start, end, out);
 
 }
@@ -2642,7 +2645,7 @@ static inline struct COption_Address mf_processinstance_phys_to_virt(void *self,
     return __ret;
 }
 
-static inline void mf_processinstance_virt_page_map(void *self, umem gap_size, MemoryRangeCallback out)  {
+static inline void mf_processinstance_virt_page_map(void *self, imem gap_size, MemoryRangeCallback out)  {
 (((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_virtualtranslate)->virt_page_map(&((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, gap_size, out);
 
 }
@@ -2769,6 +2772,16 @@ static inline const struct ProcessInfo * mf_intoprocessinstance_info(const void 
     return __ret;
 }
 
+static inline void mf_intoprocessinstance_mapped_mem_range(void *self, imem gap_size, Address start, Address end, MemoryRangeCallback out)  {
+(((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_process)->mapped_mem_range(&((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, gap_size, start, end, out);
+
+}
+
+static inline void mf_intoprocessinstance_mapped_mem(void *self, imem gap_size, MemoryRangeCallback out)  {
+(((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_process)->mapped_mem(&((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, gap_size, out);
+
+}
+
 static inline void mf_intoprocessinstance_virt_to_phys_list(void *self, struct CSliceRef_MemoryRange addrs, VirtualTranslationCallback out, VirtualTranslationFailCallback out_fail)  {
 (((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_virtualtranslate)->virt_to_phys_list(&((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, addrs, out, out_fail);
 
@@ -2784,7 +2797,7 @@ static inline void mf_intoprocessinstance_virt_translation_map_range(void *self,
 
 }
 
-static inline void mf_intoprocessinstance_virt_page_map_range(void *self, umem gap_size, Address start, Address end, MemoryRangeCallback out)  {
+static inline void mf_intoprocessinstance_virt_page_map_range(void *self, imem gap_size, Address start, Address end, MemoryRangeCallback out)  {
 (((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_virtualtranslate)->virt_page_map_range(&((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, gap_size, start, end, out);
 
 }
@@ -2809,17 +2822,17 @@ static inline struct COption_Address mf_intoprocessinstance_phys_to_virt(void *s
     return __ret;
 }
 
-static inline void mf_intoprocessinstance_virt_page_map(void *self, umem gap_size, MemoryRangeCallback out)  {
+static inline void mf_intoprocessinstance_virt_page_map(void *self, imem gap_size, MemoryRangeCallback out)  {
 (((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_virtualtranslate)->virt_page_map(&((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, gap_size, out);
 
 }
 
-static inline int32_t mf_connectorinstance_phys_read_raw_iter(void *self, struct CIterator_PhysicalReadData data, PhysicalReadFailCallback * out_fail)  {
+static inline int32_t mf_connectorinstance_phys_read_raw_iter(void *self, struct CIterator_PhysicalReadData data, ReadFailCallback * out_fail)  {
     int32_t __ret = (((struct ConnectorInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_physicalmemory)->phys_read_raw_iter(&((struct ConnectorInstance_CBox_c_void_____CArc_c_void *)self)->container, data, out_fail);
     return __ret;
 }
 
-static inline int32_t mf_connectorinstance_phys_write_raw_iter(void *self, struct CIterator_PhysicalWriteData data, PhysicalWriteFailCallback * out_fail)  {
+static inline int32_t mf_connectorinstance_phys_write_raw_iter(void *self, struct CIterator_PhysicalWriteData data, WriteFailCallback * out_fail)  {
     int32_t __ret = (((struct ConnectorInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_physicalmemory)->phys_write_raw_iter(&((struct ConnectorInstance_CBox_c_void_____CArc_c_void *)self)->container, data, out_fail);
     return __ret;
 }
@@ -2900,30 +2913,6 @@ static bool buf_iter_next(struct BufferIterator *iter, void *out) {
     if (iter->i >= iter->size) return 1;
     memcpy(out, iter->buf + iter->i++ * iter->sz_elem, iter->sz_elem);
     return 0;
-}
-
-static inline bool cb_collect_static_PhysicalReadData(struct CollectBase *ctx, PhysicalReadData info) {
-    return cb_collect_static_base(ctx, sizeof(PhysicalReadData), &info);
-}
-
-static inline bool cb_collect_dynamic_PhysicalReadData(struct CollectBase *ctx, PhysicalReadData info) {
-    return cb_collect_dynamic_base(ctx, sizeof(PhysicalReadData), &info);
-}
-
-static inline bool cb_count_PhysicalReadData(size_t *cnt, PhysicalReadData info) {
-    return ++(*cnt);
-}
-
-static inline bool cb_collect_static_PhysicalWriteData(struct CollectBase *ctx, PhysicalWriteData info) {
-    return cb_collect_static_base(ctx, sizeof(PhysicalWriteData), &info);
-}
-
-static inline bool cb_collect_dynamic_PhysicalWriteData(struct CollectBase *ctx, PhysicalWriteData info) {
-    return cb_collect_dynamic_base(ctx, sizeof(PhysicalWriteData), &info);
-}
-
-static inline bool cb_count_PhysicalWriteData(size_t *cnt, PhysicalWriteData info) {
-    return ++(*cnt);
 }
 
 static inline bool cb_collect_static_ReadData(struct CollectBase *ctx, ReadData info) {
@@ -3034,6 +3023,18 @@ static inline bool cb_count_SectionInfo(size_t *cnt, SectionInfo info) {
     return ++(*cnt);
 }
 
+static inline bool cb_collect_static_MemoryRange(struct CollectBase *ctx, MemoryRange info) {
+    return cb_collect_static_base(ctx, sizeof(MemoryRange), &info);
+}
+
+static inline bool cb_collect_dynamic_MemoryRange(struct CollectBase *ctx, MemoryRange info) {
+    return cb_collect_dynamic_base(ctx, sizeof(MemoryRange), &info);
+}
+
+static inline bool cb_count_MemoryRange(size_t *cnt, MemoryRange info) {
+    return ++(*cnt);
+}
+
 static inline bool cb_collect_static_VirtualTranslation(struct CollectBase *ctx, VirtualTranslation info) {
     return cb_collect_static_base(ctx, sizeof(VirtualTranslation), &info);
 }
@@ -3055,18 +3056,6 @@ static inline bool cb_collect_dynamic_VirtualTranslationFail(struct CollectBase 
 }
 
 static inline bool cb_count_VirtualTranslationFail(size_t *cnt, VirtualTranslationFail info) {
-    return ++(*cnt);
-}
-
-static inline bool cb_collect_static_MemoryRange(struct CollectBase *ctx, MemoryRange info) {
-    return cb_collect_static_base(ctx, sizeof(MemoryRange), &info);
-}
-
-static inline bool cb_collect_dynamic_MemoryRange(struct CollectBase *ctx, MemoryRange info) {
-    return cb_collect_dynamic_base(ctx, sizeof(MemoryRange), &info);
-}
-
-static inline bool cb_count_MemoryRange(size_t *cnt, MemoryRange info) {
     return ++(*cnt);
 }
 

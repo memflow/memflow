@@ -1,9 +1,7 @@
-use crate::cglue::{result::into_int_out_result, *};
+use crate::cglue::result::into_int_out_result;
 use crate::error::{Error, ErrorKind, ErrorOrigin};
 
-use super::PluginLogger;
-
-use std::ffi::c_void;
+use super::{LibArc, PluginLogger};
 
 use std::mem::MaybeUninit;
 use std::path::Path;
@@ -112,10 +110,10 @@ pub fn find_export_by_prefix(
 pub fn create_bare<A: Default, T, I>(
     args: Option<&A>,
     input: I,
-    lib: CArc<c_void>,
+    lib: LibArc,
     logger: Option<&'static PluginLogger>,
     out: &mut MaybeUninit<T>,
-    create_fn: impl FnOnce(&A, I, CArc<c_void>) -> Result<T, Error>,
+    create_fn: impl FnOnce(&A, I, LibArc) -> Result<T, Error>,
 ) -> i32 {
     if let Some(logger) = logger {
         logger.init().ok();
@@ -140,10 +138,10 @@ pub fn create_bare<A: Default, T, I>(
 /// This function is used by the proc macros
 pub fn create<A: Default, T>(
     args: Option<&A>,
-    lib: CArc<c_void>,
+    lib: LibArc,
     logger: Option<&'static PluginLogger>,
     out: &mut MaybeUninit<T>,
-    create_fn: impl FnOnce(&A, CArc<c_void>) -> Result<T, Error>,
+    create_fn: impl FnOnce(&A, LibArc) -> Result<T, Error>,
 ) -> i32 {
     if let Some(logger) = logger {
         logger.init().ok();

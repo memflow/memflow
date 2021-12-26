@@ -2,9 +2,6 @@
 [profile.bench]
 debug = true
 
-[patch.crates-io]
-abi_stable = { version = "0.10", git = "https://github.com/rodrimati1992/abi_stable_crates" }
-
 [workspace]
 members = [
     "memflow",

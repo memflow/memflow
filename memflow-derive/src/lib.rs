@@ -85,7 +85,7 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
             extern "C" fn mf_create(
                 args: Option<&#crate_path::plugins::connector::ConnectorArgs>,
                 _: cglue::option::COption<#crate_path::plugins::os::OsInstanceArcBox>,
-                lib: #crate_path::cglue::CArc<::core::ffi::c_void>,
+                lib: #crate_path::plugins::LibArc,
                 logger: Option<&'static #crate_path::plugins::PluginLogger>,
                 out: &mut #crate_path::plugins::connector::MuConnectorInstanceArcBox<'static>
             ) -> i32 {
@@ -203,7 +203,7 @@ pub fn connector_bare(args: TokenStream, input: TokenStream) -> TokenStream {
             extern "C" fn mf_create(
                 args: Option<&#crate_path::plugins::connector::ConnectorArgs>,
                 os: cglue::option::COption<#crate_path::plugins::os::OsInstanceArcBox<'static>>,
-                lib: #crate_path::cglue::CArc<::core::ffi::c_void>,
+                lib: #crate_path::plugins::LibArc,
                 logger: Option<&'static #crate_path::plugins::PluginLogger>,
                 out: &mut #crate_path::plugins::connector::MuConnectorInstanceArcBox<'static>
             ) -> i32 {
@@ -314,7 +314,7 @@ pub fn os_layer(args: TokenStream, input: TokenStream) -> TokenStream {
             extern "C" fn mf_create(
                 args: Option<&#crate_path::plugins::os::OsArgs>,
                 mem: #crate_path::cglue::COption<#crate_path::plugins::connector::ConnectorInstanceArcBox<'static>>,
-                lib: #crate_path::cglue::CArc<::core::ffi::c_void>,
+                lib: #crate_path::plugins::LibArc,
                 logger: Option<&'static #crate_path::plugins::PluginLogger>,
                 out: &mut #crate_path::plugins::os::MuOsInstanceArcBox<'static>
             ) -> i32 {
@@ -400,7 +400,7 @@ pub fn os_layer_bare(args: TokenStream, input: TokenStream) -> TokenStream {
         extern "C" fn mf_create(
             args: Option<&#crate_path::plugins::os::OsArgs>,
             mem: #crate_path::cglue::COption<#crate_path::plugins::connector::ConnectorInstanceArcBox<'static>>,
-            lib: #crate_path::cglue::CArc<::core::ffi::c_void>,
+            lib: #crate_path::plugins::LibArc,
             logger: Option<&'static #crate_path::plugins::PluginLogger>,
             out: &mut #crate_path::plugins::os::MuOsInstanceArcBox<'static>
         ) -> i32 {

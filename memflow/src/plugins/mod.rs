@@ -5,7 +5,7 @@ All functionality in this module is gated behind `plugins` feature.
 */
 
 use crate::cglue::*;
-use std::ffi::c_void;
+use cglue::trait_group::c_void;
 use std::prelude::v1::*;
 
 pub mod args;
@@ -13,7 +13,9 @@ pub mod args;
 pub use args::{ArgDescriptor, Args, ArgsValidator};
 
 // cbindgen fails to properly parse this as return type
-pub type OptionVoid = Option<&'static mut std::ffi::c_void>;
+pub type OptionVoid = Option<&'static mut c_void>;
+
+pub type LibArc = CArc<c_void>;
 
 pub mod connector;
 pub use connector::{
@@ -138,7 +140,7 @@ pub struct PluginDescriptor<T: Loadable> {
 pub type CreateFn<T> = extern "C" fn(
     Option<&<T as Loadable>::ArgsType>,
     <T as Loadable>::CInputArg,
-    lib: CArc<c_void>,
+    lib: LibArc,
     logger: Option<&'static PluginLogger>,
     &mut MaybeUninit<<T as Loadable>::Instance>,
 ) -> i32;

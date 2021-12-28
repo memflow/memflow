@@ -32,7 +32,7 @@ itertools = { version = "0.10", default-features = false }
 memmap = { version = "0.7", optional = true }
 hashbrown = "0.11"
 fixed-slice-vec = "0.8.0"
-cglue = { version = ">=0.2.4", git = "https://github.com/h33p/cglue", branch = "main", default-features = false }
+cglue = { version = ">=0.2.5", git = "https://github.com/h33p/cglue", branch = "main", default-features = false }
 #cglue = { path = "../../cglue/cglue", default-features = false }
 rangemap = "0.1.13"
 

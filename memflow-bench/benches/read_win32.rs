@@ -5,7 +5,7 @@ use criterion::*;
 
 use memflow::prelude::v1::*;
 
-fn create_connector(args: &Args) -> Result<impl PhysicalMemory + Clone> {
+fn create_connector(args: Option<&ConnectorArgs>) -> Result<impl PhysicalMemory + Clone> {
     // this workaround is to prevent loaded libraries
     // from spitting out to much log information and skewing benchmarks
     let filter = log::max_level();
@@ -24,8 +24,8 @@ fn initialize_virt_ctx(cache_size: usize, use_tlb: bool) -> Result<OsInstanceArc
 fn win32_read_group(c: &mut Criterion) {
     virt::seq_read(c, "win32", &initialize_virt_ctx, true);
     virt::chunk_read(c, "win32", &initialize_virt_ctx, true);
-    phys::seq_read(c, "win32", &|| create_connector(&Args::new()));
-    phys::chunk_read(c, "win32", &|| create_connector(&Args::new()));
+    phys::seq_read(c, "win32", &|| create_connector(None));
+    phys::chunk_read(c, "win32", &|| create_connector(None));
     vat::chunk_vat(c, "win32", &initialize_virt_ctx, true);
 }
 

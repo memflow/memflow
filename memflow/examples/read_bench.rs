@@ -111,7 +111,7 @@ fn read_bench(mut kernel: OsInstanceArcBox) -> Result<()> {
                 prc.info().name,
             );
 
-            let mem_map = prc.mapped_mem_vec(smem::gb(1));
+            let mem_map = prc.mapped_mem_vec(smem::gb(0));
 
             println!("Mapped memory map (with up to 1GB gaps):");
 

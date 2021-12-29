@@ -1,6 +1,7 @@
 use crate::mem::mem_data::{MemData, MemoryRange, MemoryRangeCallback};
 use crate::types::{imem, umem, Address};
 use cglue::prelude::v1::*;
+use std::prelude::v1::*;
 
 pub struct GapRemover<'a> {
     set: rangemap::RangeSet<Address>,

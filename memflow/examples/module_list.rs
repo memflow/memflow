@@ -28,7 +28,7 @@ fn main() -> Result<()> {
 
     for m in module_list {
         println!(
-            "0x{:x>8} 0x{:x>8} {:^10} {} ({})",
+            "0x{:0>8x} 0x{:0>8x} {:^10} {} ({})",
             m.base, m.size, m.arch, m.name, m.path
         );
     }

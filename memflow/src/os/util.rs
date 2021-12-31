@@ -7,6 +7,98 @@ use crate::types::umem;
 use cglue::prelude::v1::ReprCString;
 
 #[cfg(feature = "goblin")]
+use goblin::{
+    container::Ctx,
+    elf::{dynamic, Dynamic, Elf, ProgramHeader, RelocSection, Symtab},
+    mach::Mach,
+    pe::{options::ParseOptions, PE},
+    strtab::Strtab,
+    Object,
+};
+
+#[cfg(feature = "goblin")]
+fn parse_elf<'a>(bytes: &'a [u8]) -> goblin::error::Result<Elf<'a>> {
+    let header = Elf::parse_header(bytes)?;
+
+    let ctx = Ctx {
+        container: header.container()?,
+        le: header.endianness()?,
+    };
+
+    let program_headers =
+        ProgramHeader::parse(bytes, header.e_phoff as usize, header.e_phnum as usize, ctx)?;
+
+    let dynamic = Dynamic::parse(bytes, &program_headers, ctx)?;
+
+    let mut dynsyms = Symtab::default();
+    let mut dynstrtab = Strtab::default();
+    let mut dynrelas = RelocSection::default();
+    let mut dynrels = RelocSection::default();
+    let mut pltrelocs = RelocSection::default();
+
+    if let Some(ref dynamic) = dynamic {
+        let dyn_info = &dynamic.info;
+
+        dynstrtab = Strtab::parse(bytes, dyn_info.strtab, dyn_info.strsz, 0x0)?;
+
+        /*if dyn_info.soname != 0 {
+            // FIXME: warn! here
+            soname = dynstrtab.get_at(dyn_info.soname);
+        }
+        if dyn_info.needed_count > 0 {
+            libraries = dynamic.get_libraries(&dynstrtab);
+        }*/
+        // parse the dynamic relocations
+        if let Ok(relas) = RelocSection::parse(bytes, dyn_info.rela, dyn_info.relasz, true, ctx) {
+            dynrelas = relas;
+            dynrels = RelocSection::parse(bytes, dyn_info.rel, dyn_info.relsz, false, ctx)?;
+            let is_rela = dyn_info.pltrel as u64 == dynamic::DT_RELA;
+            pltrelocs =
+                RelocSection::parse(bytes, dyn_info.jmprel, dyn_info.pltrelsz, is_rela, ctx)?;
+
+            // TODO: support these from goblin
+            let mut num_syms = /*if let Some(gnu_hash) = dyn_info.gnu_hash {
+                gnu_hash_len(bytes, gnu_hash as usize, ctx)?
+            } else if let Some(hash) = dyn_info.hash {
+                hash_len(bytes, hash as usize, header.e_machine, ctx)?
+            } else*/ {
+                0
+            };
+            let max_reloc_sym = dynrelas
+                .iter()
+                .chain(dynrels.iter())
+                .chain(pltrelocs.iter())
+                .fold(0, |num, reloc| core::cmp::max(num, reloc.r_sym));
+            if max_reloc_sym != 0 {
+                num_syms = core::cmp::max(num_syms, max_reloc_sym + 1);
+            }
+
+            dynsyms = Symtab::parse(bytes, dyn_info.symtab, num_syms, ctx)?;
+        }
+    }
+
+    let mut elf = Elf::lazy_parse(header)?;
+
+    elf.program_headers = program_headers;
+    elf.dynamic = dynamic;
+    elf.dynsyms = dynsyms;
+    elf.dynstrtab = dynstrtab;
+    elf.dynrelas = dynrelas;
+    elf.dynrels = dynrels;
+    elf.pltrelocs = pltrelocs;
+
+    Ok(elf)
+}
+
+fn custom_parse<'a>(buf: &'a [u8]) -> Result<Object<'a>> {
+    PE::parse_with_opts(buf, &ParseOptions { resolve_rva: false })
+        .map(|pe| Object::PE(pe))
+        .or_else(|_| parse_elf(buf).map(|elf| Object::Elf(elf)))
+        .or_else(|_| Mach::parse(buf).map(|mach| Object::Mach(mach)))
+        .map_err(|_| Error(ErrorOrigin::OsLayer, ErrorKind::InvalidExeFile))
+}
+
+#[cfg(feature = "goblin")]
 pub fn module_import_list_callback(
     mem: &mut impl MemoryView,
     info: &ModuleInfo,
@@ -16,8 +108,6 @@ pub fn module_import_list_callback(
 
     mem.read_raw_into(info.base, &mut module_image)
         .data_part()?;
-
-    use goblin::Object;
 
     fn import_call(iter: impl Iterator<Item = (umem, ReprCString)>, mut callback: ImportCallback) {
         iter.take_while(|(offset, name)| {
@@ -29,7 +119,7 @@ pub fn module_import_list_callback(
         .for_each(|_| {});
     }
 
-    match Object::parse(&module_image).map_err(|_| ErrorKind::InvalidExeFile)? {
+    match custom_parse(&module_image)? {
         Object::Elf(elf) => {
             let iter = elf
                 .dynsyms
@@ -70,8 +160,6 @@ pub fn module_export_list_callback(
     mem.read_raw_into(info.base, &mut module_image)
         .data_part()?;
 
-    use goblin::Object;
-
     fn export_call(iter: impl Iterator<Item = (umem, ReprCString)>, mut callback: ExportCallback) {
         iter.take_while(|(offset, name)| {
             callback.call(ExportInfo {
@@ -82,7 +170,7 @@ pub fn module_export_list_callback(
         .for_each(|_| {});
     }
 
-    match Object::parse(&module_image).map_err(|_| ErrorKind::InvalidExeFile)? {
+    match custom_parse(&module_image)? {
         Object::Elf(elf) => {
             let iter = elf
                 .dynsyms
@@ -123,8 +211,6 @@ pub fn module_section_list_callback(
     mem.read_raw_into(info.base, &mut module_image)
         .data_part()?;
 
-    use goblin::Object;
-
     fn section_call(
         iter: impl Iterator<Item = (umem, umem, ReprCString)>,
         mut callback: SectionCallback,
@@ -139,7 +225,7 @@ pub fn module_section_list_callback(
         .for_each(|_| {});
     }
 
-    match Object::parse(&module_image).map_err(|_| ErrorKind::InvalidExeFile)? {
+    match custom_parse(&module_image)? {
         Object::Elf(elf) => {
             let iter = elf.section_headers.iter().filter_map(|s| {
                 elf.shdr_strtab

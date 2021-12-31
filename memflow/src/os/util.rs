@@ -90,6 +90,7 @@ fn parse_elf<'a>(bytes: &'a [u8]) -> goblin::error::Result<Elf<'a>> {
     Ok(elf)
 }
 
+#[cfg(feature = "goblin")]
 fn custom_parse<'a>(buf: &'a [u8]) -> Result<Object<'a>> {
     PE::parse_with_opts(buf, &ParseOptions { resolve_rva: false })
         .map(|pe| Object::PE(pe))

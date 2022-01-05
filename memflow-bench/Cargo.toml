@@ -23,7 +23,7 @@ criterion = { git = "https://github.com/h33p/criterion.rs.git", branch = "tput" 
 
 [dev-dependencies]
 memflow = { path = "../memflow", features = ["dummy_mem", "plugins"] }
-simple_logger = "1"
+simple_logger = "1.16"
 
 [features]
 default = []

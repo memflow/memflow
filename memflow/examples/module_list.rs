@@ -12,7 +12,7 @@ fn main() -> Result<()> {
     let os = inventory.builder().os_chain(chain).build()?;
 
     let mut process = os
-        .into_process_by_name(&proc_name)
+        .into_process_by_name(proc_name)
         .expect("unable to find process");
     println!("found process: {:?}", process.info());
 

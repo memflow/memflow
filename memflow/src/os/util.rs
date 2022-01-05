@@ -17,7 +17,7 @@ use goblin::{
 };
 
 #[cfg(feature = "goblin")]
-fn parse_elf<'a>(bytes: &'a [u8]) -> goblin::error::Result<Elf<'a>> {
+fn parse_elf(bytes: &[u8]) -> goblin::error::Result<Elf<'_>> {
     let header = Elf::parse_header(bytes)?;
 
     let ctx = Ctx {
@@ -91,11 +91,11 @@ fn parse_elf<'a>(bytes: &'a [u8]) -> goblin::error::Result<Elf<'a>> {
 }
 
 #[cfg(feature = "goblin")]
-fn custom_parse<'a>(buf: &'a [u8]) -> Result<Object<'a>> {
+fn custom_parse(buf: &[u8]) -> Result<Object<'_>> {
     PE::parse_with_opts(buf, &ParseOptions { resolve_rva: false })
-        .map(|pe| Object::PE(pe))
-        .or_else(|_| parse_elf(buf).map(|elf| Object::Elf(elf)))
-        .or_else(|_| Mach::parse(buf).map(|mach| Object::Mach(mach)))
+        .map(Object::PE)
+        .or_else(|_| parse_elf(buf).map(Object::Elf))
+        .or_else(|_| Mach::parse(buf).map(Object::Mach))
         .map_err(|_| Error(ErrorOrigin::OsLayer, ErrorKind::InvalidExeFile))
 }
 

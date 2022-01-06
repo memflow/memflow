@@ -191,7 +191,7 @@ impl std::str::FromStr for ConnectorArgs {
 
         Ok(Self {
             target,
-            extra_args: Args::parse(iter.next().unwrap_or(""))?,
+            extra_args: iter.next().unwrap_or("").parse()?,
             page_cache: if let Some(s) = iter.next() {
                 Some(PageCacheParams::from_str(s)?)
             } else {

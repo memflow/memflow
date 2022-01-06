@@ -58,7 +58,7 @@ impl std::str::FromStr for OsArgs {
 
         Ok(Self {
             target,
-            extra_args: Args::parse(iter.next().unwrap_or(""))?,
+            extra_args: iter.next().unwrap_or("").parse()?,
         })
     }
 }

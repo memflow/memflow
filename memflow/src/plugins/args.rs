@@ -22,7 +22,7 @@ use hashbrown::HashMap;
 /// use std::convert::TryFrom;
 ///
 /// let argstr = "opt1=test1,opt2=test2,opt3=test3";
-/// let args = Args::parse(argstr).unwrap();
+/// let args: Args = argstr.parse().unwrap();
 /// ```
 ///
 /// Construct as builder:
@@ -93,18 +93,8 @@ impl fmt::Display for Args {
     }
 }
 
-impl Args {
-    /// Creates an empty `Args` struct.
-    pub fn new() -> Self {
-        Self {
-            args: Default::default(),
-        }
-    }
-
-    /// Creates a `Args` struct with a default (unnamed) value.
-    pub fn with_default(value: &str) -> Self {
-        Self::new().insert("default", value)
-    }
+impl std::str::FromStr for Args {
+    type Err = crate::error::Error;
 
     /// Tries to create a `Args` structure from an argument string.
     ///
@@ -118,10 +108,10 @@ impl Args {
     /// `default_value,opt1=val1,opt2=val2`
     ///
     /// This function can be used to initialize a connector from user input.
-    pub fn parse(args: &str) -> Result<Self> {
+    fn from_str(s: &str) -> Result<Self> {
         let mut map = HashMap::new();
 
-        let quotes = args.split('"');
+        let quotes = s.split('"');
         let mut split = vec![];
         for (i, kv) in quotes.clone().enumerate() {
             if i % 2 == 0 {
@@ -147,6 +137,27 @@ impl Args {
         Ok(Self {
             args: map.into_iter().map(<_>::into).collect::<Vec<_>>().into(),
         })
+    }
+}
+
+impl Default for Args {
+    /// Creates an empty `Args` struct.
+    fn default() -> Self {
+        Self {
+            args: Default::default(),
+        }
+    }
+}
+
+impl Args {
+    /// Creates an empty `Args` struct.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Creates a `Args` struct with a default (unnamed) value.
+    pub fn with_default(value: &str) -> Self {
+        Self::new().insert("default", value)
     }
 
     /// Consumes self, inserts the given key-value pair and returns the self again.
@@ -191,17 +202,11 @@ impl Args {
     }
 }
 
-impl Default for Args {
-    fn default() -> Self {
-        Args::new()
-    }
-}
-
 impl TryFrom<&str> for Args {
     type Error = Error;
 
     fn try_from(args: &str) -> Result<Self> {
-        Args::parse(args)
+        args.parse()
     }
 }
 
@@ -209,7 +214,7 @@ impl TryFrom<String> for Args {
     type Error = Error;
 
     fn try_from(args: String) -> Result<Self> {
-        Args::parse(&args)
+        args.parse()
     }
 }
 
@@ -500,7 +505,7 @@ mod tests {
     #[test]
     pub fn from_str() {
         let argstr = "opt1=test1,opt2=test2,opt3=test3";
-        let args = Args::parse(argstr).unwrap();
+        let args: Args = argstr.parse().unwrap();
         assert_eq!(args.get("opt1").unwrap(), "test1");
         assert_eq!(args.get("opt2").unwrap(), "test2");
         assert_eq!(args.get("opt3").unwrap(), "test3");
@@ -509,7 +514,7 @@ mod tests {
     #[test]
     pub fn from_str_default() {
         let argstr = "test0,opt1=test1,opt2=test2,opt3=test3";
-        let args = Args::parse(argstr).unwrap();
+        let args: Args = argstr.parse().unwrap();
         assert_eq!(args.get_default().unwrap(), "test0");
         assert_eq!(args.get("opt1").unwrap(), "test1");
         assert_eq!(args.get("opt2").unwrap(), "test2");
@@ -519,7 +524,7 @@ mod tests {
     #[test]
     pub fn from_str_default2() {
         let argstr = "opt1=test1,test0";
-        let args = Args::parse(argstr).unwrap();
+        let args: Args = argstr.parse().unwrap();
         assert_eq!(args.get_default(), None);
         assert_eq!(args.get("opt1").unwrap(), "test1");
     }
@@ -534,14 +539,14 @@ mod tests {
     #[test]
     pub fn parse_empty() {
         let argstr = "opt1=test1,test0";
-        let _ = Args::parse(argstr).unwrap();
+        let _: Args = argstr.parse().unwrap();
     }
 
     #[test]
     pub fn to_string() {
         let argstr = "opt1=test1,opt2=test2,opt3=test3";
-        let args = Args::parse(argstr).unwrap();
-        let args2 = Args::parse(&args.to_string()).unwrap();
+        let args: Args = argstr.parse().unwrap();
+        let args2: Args = args.to_string().parse().unwrap();
         assert_eq!(args2.get_default(), None);
         assert_eq!(args2.get("opt1").unwrap(), "test1");
         assert_eq!(args2.get("opt2").unwrap(), "test2");
@@ -551,8 +556,8 @@ mod tests {
     #[test]
     pub fn to_string_with_default() {
         let argstr = "test0,opt1=test1,opt2=test2,opt3=test3";
-        let args = Args::parse(argstr).unwrap();
-        let args2 = Args::parse(&args.to_string()).unwrap();
+        let args: Args = argstr.parse().unwrap();
+        let args2: Args = args.to_string().parse().unwrap();
         assert_eq!(args2.get_default().unwrap(), "test0");
         assert_eq!(args2.get("opt1").unwrap(), "test1");
         assert_eq!(args2.get("opt2").unwrap(), "test2");
@@ -562,8 +567,8 @@ mod tests {
     #[test]
     pub fn double_quotes() {
         let argstr = "opt1=test1,test0,opt2=\"test2,test3\"";
-        let args = Args::parse(argstr).unwrap();
-        let args2 = Args::parse(&args.to_string()).unwrap();
+        let args: Args = argstr.parse().unwrap();
+        let args2: Args = args.to_string().parse().unwrap();
         assert_eq!(args2.get("opt1").unwrap(), "test1");
         assert_eq!(args2.get("opt2").unwrap(), "test2,test3");
     }
@@ -571,8 +576,8 @@ mod tests {
     #[test]
     pub fn double_quotes_eq() {
         let argstr = "opt1=test1,test0,opt2=\"test2,test3=test4\"";
-        let args = Args::parse(argstr).unwrap();
-        let args2 = Args::parse(&args.to_string()).unwrap();
+        let args: Args = argstr.parse().unwrap();
+        let args2: Args = args.to_string().parse().unwrap();
         assert_eq!(args2.get("opt1").unwrap(), "test1");
         assert_eq!(args2.get("opt2").unwrap(), "test2,test3=test4");
     }
@@ -584,7 +589,7 @@ mod tests {
             .arg(ArgDescriptor::new("opt1"));
 
         let argstr = "test0,opt1=test1";
-        let args = Args::parse(argstr).unwrap();
+        let args: Args = argstr.parse().unwrap();
 
         assert_eq!(validator.validate(&args), Ok(()));
     }
@@ -593,7 +598,7 @@ mod tests {
     pub fn validator_success_optional() {
         let validator = ArgsValidator::new().arg(ArgDescriptor::new("opt1").required(false));
 
-        let args = Args::parse("").unwrap();
+        let args: Args = "".parse().unwrap();
 
         assert_eq!(validator.validate(&args), Ok(()));
     }
@@ -602,7 +607,7 @@ mod tests {
     pub fn validator_error_required() {
         let validator = ArgsValidator::new().arg(ArgDescriptor::new("opt1").required(true));
 
-        let args = Args::parse("").unwrap();
+        let args: Args = "".parse().unwrap();
 
         assert_eq!(
             validator.validate(&args),
@@ -618,7 +623,7 @@ mod tests {
         let validator = ArgsValidator::new().arg(ArgDescriptor::new("opt1"));
 
         let argstr = "opt2=arg2";
-        let args = Args::parse(argstr).unwrap();
+        let args: Args = argstr.parse().unwrap();
 
         assert_eq!(
             validator.validate(&args),
@@ -637,7 +642,7 @@ mod tests {
             })));
 
         let argstr = "default=valid_option";
-        let args = Args::parse(argstr).unwrap();
+        let args: Args = argstr.parse().unwrap();
 
         assert_eq!(validator.validate(&args), Ok(()));
     }
@@ -653,7 +658,7 @@ mod tests {
             })));
 
         let argstr = "invalid_option";
-        let args = Args::parse(argstr).unwrap();
+        let args: Args = argstr.parse().unwrap();
 
         assert_eq!(
             validator.validate(&args),

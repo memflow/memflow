@@ -28,6 +28,12 @@ struct OsFactoryArgs {
     help_fn: Option<String>,
 }
 
+fn validate_plugin_name(name: &str) {
+    if !name.chars().all(char::is_alphanumeric) {
+        panic!("plugin name must only contain alphanumeric characters");
+    }
+}
+
 // We should add conditional compilation for the crate-type here
 // so our rust libraries who use a connector wont export those functions
 // again by themselves (e.g. the ffi).
@@ -49,6 +55,7 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
     };
 
     let connector_name = args.name;
+    validate_plugin_name(&connector_name);
 
     let version_gen = args
         .version
@@ -167,6 +174,7 @@ pub fn connector_bare(args: TokenStream, input: TokenStream) -> TokenStream {
     };
 
     let connector_name = args.name;
+    validate_plugin_name(&connector_name);
 
     let version_gen = args
         .version
@@ -285,6 +293,7 @@ pub fn os_layer(args: TokenStream, input: TokenStream) -> TokenStream {
     };
 
     let os_name = args.name;
+    validate_plugin_name(&os_name);
 
     let version_gen = args
         .version
@@ -371,6 +380,7 @@ pub fn os_layer_bare(args: TokenStream, input: TokenStream) -> TokenStream {
     };
 
     let os_name = args.name;
+    validate_plugin_name(&os_name);
 
     let version_gen = args
         .version

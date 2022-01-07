@@ -220,6 +220,7 @@ pub enum ErrorKind {
     VersionMismatch,
     AlreadyExists,
     PluginNotFound,
+    TargetNotFound,
     InvalidAbi,
     UnsupportedOptionalFeature,
 
@@ -280,6 +281,7 @@ impl ErrorKind {
             ErrorKind::VersionMismatch => "version mismatch",
             ErrorKind::AlreadyExists => "already exists",
             ErrorKind::PluginNotFound => "plugin not found",
+            ErrorKind::TargetNotFound => "specified (connector) target could not be found",
             ErrorKind::InvalidAbi => "invalid plugin ABI",
             ErrorKind::UnsupportedOptionalFeature => "unsupported optional feature",
 
@@ -300,7 +302,7 @@ impl ErrorKind {
 pub enum PartialError<T> {
     /// Hard Error
     ///
-    /// Catch-all for all hard errors
+    /// Catch-all for all hard  
     Error(Error),
     /// Partial Virtual Read Error
     ///

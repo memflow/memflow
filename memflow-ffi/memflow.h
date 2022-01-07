@@ -267,7 +267,7 @@ typedef struct ArchitectureObj ArchitectureObj;
  * let inventory = Inventory::scan();
  * inventory
  *   .builder()
- *   .connector("qemu_procfs")
+ *   .connector("qemu")
  *   .os("win32")
  *   .build()
  * # }
@@ -282,9 +282,9 @@ typedef struct ArchitectureObj ArchitectureObj;
  * let inventory = Inventory::scan();
  * let os = inventory
  *   .builder()
- *   .connector("qemu_procfs")
+ *   .connector("qemu")
  *   .os("linux")
- *   .connector("qemu_procfs")
+ *   .connector("qemu")
  *   .os("win32")
  *   .build();
  * # Ok(())
@@ -1939,14 +1939,39 @@ extern const struct ArchitectureObj *X86_64;
 void log_init(LevelFilter level_filter);
 
 /**
- * Logs an error with custom log level.
+ * Logs a error message via log::error!
  */
-void log(Level level, int32_t error);
+void log_error(const char *s);
+
+/**
+ * Logs a warning message via log::warn!
+ */
+void log_warn(const char *s);
+
+/**
+ * Logs a info message via log::info!
+ */
+void log_info(const char *s);
+
+/**
+ * Logs a debug message via log::debug!
+ */
+void log_debug(const char *s);
+
+/**
+ * Logs a trace message via log::trace!
+ */
+void log_trace(const char *s);
+
+/**
+ * Logs an error code with custom log level.
+ */
+void log_errorcode(Level level, int32_t error);
 
 /**
  * Logs an error with debug log level.
  */
-void log_debug_error(int32_t error);
+void log_debug_errorcode(int32_t error);
 
 /**
  * Sets new maximum log level.

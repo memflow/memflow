@@ -8,7 +8,7 @@ bool list_processes(OsInstance *os, Address addr) {
 
 	ProcessInstance process;
 	if ((ret = mf_osinstance_process_by_address(os, addr, &process))) {
-		debug_error(ret);
+		log_debug_errorcode(ret);
 		return true;
 	}
 
@@ -18,7 +18,7 @@ bool list_processes(OsInstance *os, Address addr) {
 	if ((ret = mf_processinstance_primary_module(&process, &primary_module))) {
 		// no primary module found, continue iteration - this should _never_ happen
 		printf("%d\t%s\t0x%lx\tN/A\n", info->pid, info->name, info->address);
-		debug_error(ret);
+		log_debug_errorcode(ret);
 		return true;
 	}
 
@@ -71,7 +71,7 @@ int main(int argc, char *argv[]) {
 
 	printf("inventory initialized: %p\n", inventory);
 
-	const char *conn_name = argc > 1 ? argv[1] : "qemu_procfs";
+	const char *conn_name = argc > 1 ? argv[1] : "qemu";
 	const char *conn_arg = argc > 2 ? argv[2] : "";
 	const char *os_name = argc > 3 ? argv[3]: "win32";
 	const char *os_arg = argc > 4? argv[4]: "";

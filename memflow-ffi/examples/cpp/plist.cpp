@@ -5,18 +5,18 @@
 void fmt_arch(char *arch, int n, ArchitectureIdent ident);
 
 int main(int argc, char *argv[]) {
-	log_init(1);
+	log_init(LevelFilter::LevelFilter_Info);
 
 	Inventory *inventory = inventory_scan();
 
 	if (!inventory) {
-		printf("unable to create inventory\n");
+		log_error("unable to create inventory");
 		return 1;
 	}
 
 	printf("inventory initialized: %p\n", inventory);
 
-	const char *conn_name = argc > 1? argv[1]: "qemu_procfs";
+	const char *conn_name = argc > 1? argv[1]: "qemu";
 	const char *conn_arg = argc > 2? argv[2]: "";
 	const char *os_name = argc > 3? argv[3]: "win32";
 	const char *os_arg = argc > 4? argv[4]: "";

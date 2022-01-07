@@ -62,7 +62,7 @@ For more information about how to get started with memflow please head over to t
 
 You can either run one of the examples with `cargo run --release --example`. Pass nothing to get a list of examples.
 
-Some connectors like `qemu_procfs` will require elevated privileges. Refer to the readme of the connector for additional information on their required access rights.
+Some connectors like `qemu` will require elevated privileges. Refer to the readme of the connector for additional information on their required access rights.
 
 To simplify running examples, tests, and benchmarks through different connectors, we added a simple cargo runner script for Linux to this repository.
 Simply set any of the following environment variables when running the `cargo` command to elevate privileges:
@@ -77,13 +77,13 @@ You will have to install at least one `connector` to use the examples. Refer to 
 
 Run memflow\_win32/read\_keys example with a procfs connector:
 
-`RUST_SETPTRACE=1 cargo run --example read_keys -- -vv -c qemu_procfs -a [vmname]`
+`RUST_SETPTRACE=1 cargo run --example read_keys -- -vv -c qemu -a [vmname]`
 
 Run memflow\_win32/read\_bench example with a coredump connector:
 
 `cargo run --example read_bench --release -- -vv -c coredump -a coredump_win10_64bit.raw`
 
-Note: In the examples above the `qemu_procfs` connector requires `'CAP_SYS_PTRACE=ep'` permissions. The runner script in this repository will set the appropriate flags when the `RUST_SETPTRACE` environment variable is passed to it.
+Note: In the examples above the `qemu` connector requires `'CAP_SYS_PTRACE=ep'` permissions. The runner script in this repository will set the appropriate flags when the `RUST_SETPTRACE` environment variable is passed to it.
 
 ## Documentation
 
@@ -120,7 +120,7 @@ dynamically load a connector at runtime. When using the library programmatically
 Some connectors also require different permissions. Please refer to the individual connector repositories for more information.
 
 These are the currently officially existing connectors:
-- [qemu_procfs](https://github.com/memflow/memflow-qemu-procfs)
+- [qemu](https://github.com/memflow/memflow-qemu-procfs)
 - [kvm](https://github.com/memflow/memflow-kvm)
 - [pcileech](https://github.com/memflow/memflow-pcileech)
 - [coredump](https://github.com/memflow/memflow-coredump)

@@ -42,14 +42,14 @@ int main(int argc, char *argv[]) {
 
 	int ret = 0;
 
-	// enable debug level logging
-	log_init(2);
+	// enable info level logging
+	log_init(3);
 
 	// load all available plugins
 	Inventory *inventory = inventory_scan();
 	printf("inventory initialized: %p\n", inventory);
 
-	const char *conn_name = argc > 1 ? argv[1] : "qemu_procfs";
+	const char *conn_name = argc > 1 ? argv[1] : "qemu";
 	const char *conn_arg = argc > 2 ? argv[2] : "";
 	const char *os_name = argc > 3 ? argv[3]: "win32";
 	const char *os_arg = argc > 4? argv[4]: "";
@@ -60,7 +60,7 @@ int main(int argc, char *argv[]) {
 	// initialize the connector plugin
 	if (conn) {
 		if (inventory_create_connector(inventory, conn_name, conn_arg, conn)) {
-			printf("unable to initialize connector\n");
+			log_error("unable to initialize connector");
 			inventory_free(inventory);
 			return 1;
 		}
@@ -71,7 +71,7 @@ int main(int argc, char *argv[]) {
 	// initialize the OS plugin
 	OsInstance os;
 	if (inventory_create_os(inventory, os_name, os_arg, conn, &os)) {
-		printf("unable to initialize os plugin\n");
+		log_error("unable to initialize os plugin");
 		inventory_free(inventory);
 		return 1;
 	}
@@ -113,16 +113,16 @@ int main(int argc, char *argv[]) {
 		mf_processinstance_drop(target_process);
 	} else {
 		printf("Unable to find %s\n", target_proc);
-		debug_error(ret);
+		log_debug_errorcode(ret);
 	}
 
 	// This will also free the connector here
 	// as it was _moved_ into the os by `inventory_create_os`
 	mf_osinstance_drop(os);
-	printf("os plugin/connector freed\n");
+	log_info("os plugin/connector freed");
 
 	inventory_free(inventory);
-	printf("inventory freed\n");
+	log_info("inventory freed");
 
 	return 0;
 }

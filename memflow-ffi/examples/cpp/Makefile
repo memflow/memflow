@@ -1,5 +1,5 @@
 CC = g++
-CFLAGS = -g -O0 -pedantic -std=c++11 -I../../../memflow-ffi/ -L../../../target/release
+CFLAGS = -g -O0 -pedantic -std=c++14 -I../../../memflow-ffi/ -L../../../target/release
 LIBS=-lm -ldl -lpthread -l:libmemflow_ffi.a
 
 ODIR=./

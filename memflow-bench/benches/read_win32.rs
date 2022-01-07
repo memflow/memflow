@@ -11,14 +11,14 @@ fn create_connector(args: Option<&ConnectorArgs>) -> Result<impl PhysicalMemory 
     let filter = log::max_level();
     log::set_max_level(log::Level::Error.to_level_filter());
 
-    let result = Inventory::scan().create_connector("qemu_procfs", None, args)?;
+    let result = Inventory::scan().create_connector("qemu", None, args)?;
 
     log::set_max_level(filter);
     Ok(result)
 }
 
 fn initialize_virt_ctx(cache_size: usize, use_tlb: bool) -> Result<OsInstanceArcBox<'static>> {
-    util::build_os("qemu_procfs", cache_size, "win32", use_tlb)
+    util::build_os("qemu", cache_size, "win32", use_tlb)
 }
 
 fn win32_read_group(c: &mut Criterion) {

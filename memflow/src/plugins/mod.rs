@@ -320,7 +320,7 @@ pub trait Loadable: Sized {
 /// let inventory = Inventory::scan();
 /// inventory
 ///   .builder()
-///   .connector("qemu_procfs")
+///   .connector("qemu")
 ///   .os("win32")
 ///   .build()
 /// # }
@@ -335,9 +335,9 @@ pub trait Loadable: Sized {
 /// let inventory = Inventory::scan();
 /// let os = inventory
 ///   .builder()
-///   .connector("qemu_procfs")
+///   .connector("qemu")
 ///   .os("linux")
-///   .connector("qemu_procfs")
+///   .connector("qemu")
 ///   .os("win32")
 ///   .build();
 /// # Ok(())
@@ -574,7 +574,7 @@ impl Inventory {
     /// let inventory = Inventory::scan();
     /// let os = inventory
     ///   .builder()
-    ///   .connector("qemu_procfs")
+    ///   .connector("qemu")
     ///   .build();
     /// ```
     ///
@@ -585,7 +585,7 @@ impl Inventory {
     /// let inventory = Inventory::scan();
     /// let os = inventory
     ///   .builder()
-    ///   .connector("qemu_procfs")
+    ///   .connector("qemu")
     ///   .args(str::parse("vm-win10").unwrap())
     ///   .build();
     /// ```
@@ -597,7 +597,7 @@ impl Inventory {
     /// let inventory = Inventory::scan();
     /// let os = inventory
     ///   .builder()
-    ///   .connector("qemu_procfs")
+    ///   .connector("qemu")
     ///   .args(str::parse("vm-win10").unwrap())
     ///   .os("win10")
     ///   .build();

@@ -60,10 +60,13 @@ pub fn parallel_processes(kernel: OsInstanceArcBox<'static>) {
 pub fn main() {
     let (conn_name, conn_args, os_name, os_args, log_level) = parse_args().unwrap();
 
-    simple_logger::SimpleLogger::new()
-        .with_level(log_level.to_level_filter())
-        .init()
-        .unwrap();
+    simplelog::TermLogger::init(
+        log_level.to_level_filter(),
+        simplelog::Config::default(),
+        simplelog::TerminalMode::Stdout,
+        simplelog::ColorChoice::Auto,
+    )
+    .unwrap();
 
     // create inventory + connector
     let inventory = Inventory::scan();
@@ -92,32 +95,32 @@ fn parse_args() -> Result<(String, ConnectorArgs, String, OsArgs, log::Level)> {
     let matches = App::new("multithreading example")
         .version(crate_version!())
         .author(crate_authors!())
-        .arg(Arg::with_name("verbose").short("v").multiple(true))
+        .arg(Arg::new("verbose").short('v').multiple_occurrences(true))
         .arg(
-            Arg::with_name("connector")
+            Arg::new("connector")
                 .long("connector")
-                .short("c")
+                .short('c')
                 .takes_value(true)
                 .required(true),
         )
         .arg(
-            Arg::with_name("connector-args")
+            Arg::new("connector-args")
                 .long("connector-args")
-                .short("x")
+                .short('x')
                 .takes_value(true)
                 .default_value(""),
         )
         .arg(
-            Arg::with_name("os")
+            Arg::new("os")
                 .long("os")
-                .short("o")
+                .short('o')
                 .takes_value(true)
                 .required(true),
         )
         .arg(
-            Arg::with_name("os-args")
+            Arg::new("os-args")
                 .long("os-args")
-                .short("y")
+                .short('y')
                 .takes_value(true)
                 .default_value(""),
         )

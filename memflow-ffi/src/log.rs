@@ -7,8 +7,13 @@ use std::num::NonZeroI32;
 /// Initialize logging with selected logging level.
 #[no_mangle]
 pub extern "C" fn log_init(level_filter: LevelFilter) {
-    simple_logger::SimpleLogger::new().init().unwrap();
-    log::set_max_level(level_filter);
+    simplelog::TermLogger::init(
+        level_filter,
+        simplelog::Config::default(),
+        simplelog::TerminalMode::Stdout,
+        simplelog::ColorChoice::Auto,
+    )
+    .unwrap();
 }
 
 /// Logs an error with custom log level.

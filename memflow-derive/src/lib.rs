@@ -29,7 +29,10 @@ struct OsFactoryArgs {
 }
 
 fn validate_plugin_name(name: &str) {
-    if !name.chars().all(char::is_alphanumeric) {
+    if !name
+        .chars()
+        .all(|c| char::is_alphanumeric(c) || c == '-' || c == '_')
+    {
         panic!("plugin name must only contain alphanumeric characters");
     }
 }

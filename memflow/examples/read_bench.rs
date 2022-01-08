@@ -178,7 +178,7 @@ fn parse_args() -> ArgMatches {
         .get_matches()
 }
 
-fn extract_args<'a>(matches: &'a ArgMatches) -> Result<(OsChain<'a>, log::Level)> {
+fn extract_args(matches: &ArgMatches) -> Result<(OsChain<'_>, log::Level)> {
     // set log level
     let level = match matches.occurrences_of("verbose") {
         0 => Level::Error,

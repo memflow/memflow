@@ -22,10 +22,14 @@ pub extern "C" fn log_init(level_filter: LevelFilter) {
 // TODO: add variadic functions when this is being stabilized, see https://github.com/rust-lang/rust/issues/44930
 
 /// Logs a error message via log::error!
+///
+/// # Safety
+///
+/// The provided string must be a valid null-terminated char array.
 #[no_mangle]
-pub extern "C" fn log_error(s: *const c_char) {
+pub unsafe extern "C" fn log_error(s: *const c_char) {
     if !s.is_null() {
-        let c_str = unsafe { CStr::from_ptr(s) };
+        let c_str = CStr::from_ptr(s);
         if let Ok(r_str) = c_str.to_str() {
             log::error!("{}", r_str);
         }
@@ -33,10 +37,14 @@ pub extern "C" fn log_error(s: *const c_char) {
 }
 
 /// Logs a warning message via log::warn!
+///
+/// # Safety
+///
+/// The provided string must be a valid null-terminated char array.
 #[no_mangle]
-pub extern "C" fn log_warn(s: *const c_char) {
+pub unsafe extern "C" fn log_warn(s: *const c_char) {
     if !s.is_null() {
-        let c_str = unsafe { CStr::from_ptr(s) };
+        let c_str = CStr::from_ptr(s);
         if let Ok(r_str) = c_str.to_str() {
             log::warn!("{}", r_str);
         }
@@ -44,10 +52,14 @@ pub extern "C" fn log_warn(s: *const c_char) {
 }
 
 /// Logs a info message via log::info!
+///
+/// # Safety
+///
+/// The provided string must be a valid null-terminated char array.
 #[no_mangle]
-pub extern "C" fn log_info(s: *const c_char) {
+pub unsafe extern "C" fn log_info(s: *const c_char) {
     if !s.is_null() {
-        let c_str = unsafe { CStr::from_ptr(s) };
+        let c_str = CStr::from_ptr(s);
         if let Ok(r_str) = c_str.to_str() {
             log::info!("{}", r_str);
         }
@@ -55,10 +67,14 @@ pub extern "C" fn log_info(s: *const c_char) {
 }
 
 /// Logs a debug message via log::debug!
+///
+/// # Safety
+///
+/// The provided string must be a valid null-terminated char array.
 #[no_mangle]
-pub extern "C" fn log_debug(s: *const c_char) {
+pub unsafe extern "C" fn log_debug(s: *const c_char) {
     if !s.is_null() {
-        let c_str = unsafe { CStr::from_ptr(s) };
+        let c_str = CStr::from_ptr(s);
         if let Ok(r_str) = c_str.to_str() {
             log::debug!("{}", r_str);
         }
@@ -66,10 +82,14 @@ pub extern "C" fn log_debug(s: *const c_char) {
 }
 
 /// Logs a trace message via log::trace!
+///
+/// # Safety
+///
+/// The provided string must be a valid null-terminated char array.
 #[no_mangle]
-pub extern "C" fn log_trace(s: *const c_char) {
+pub unsafe extern "C" fn log_trace(s: *const c_char) {
     if !s.is_null() {
-        let c_str = unsafe { CStr::from_ptr(s) };
+        let c_str = CStr::from_ptr(s);
         if let Ok(r_str) = c_str.to_str() {
             log::trace!("{}", r_str);
         }

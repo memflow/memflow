@@ -5,6 +5,7 @@ use crate::mem::MemoryView;
 use crate::os::*;
 use crate::types::umem;
 use cglue::prelude::v1::ReprCString;
+use dataview::Pod;
 
 #[cfg(feature = "goblin")]
 use goblin::{
@@ -15,6 +16,10 @@ use goblin::{
     strtab::Strtab,
     Object,
 };
+
+fn aligned_alloc(bytes: usize) -> Vec<u64> {
+    vec![0; (bytes + 8 - 1) / 8]
+}
 
 #[cfg(feature = "goblin")]
 fn parse_elf(bytes: &[u8]) -> goblin::error::Result<Elf<'_>> {
@@ -94,23 +99,34 @@ fn parse_elf(bytes: &[u8]) -> goblin::error::Result<Elf<'_>> {
 fn custom_parse(buf: &[u8]) -> Result<Object<'_>> {
     PE::parse_with_opts(buf, &ParseOptions { resolve_rva: false })
         .map(Object::PE)
+        .map_err(|e| {
+            log::debug!("PE: {}", e);
+            e
+        })
         .or_else(|_| parse_elf(buf).map(Object::Elf))
+        .map_err(|e| {
+            log::debug!("Elf: {}", e);
+            e
+        })
         .or_else(|_| Mach::parse(buf).map(Object::Mach))
+        .map_err(|e| {
+            log::debug!("Mach: {}", e);
+            e
+        })
         .map_err(|_| Error(ErrorOrigin::OsLayer, ErrorKind::InvalidExeFile))
 }
 
-#[cfg(feature = "goblin")]
 pub fn module_import_list_callback(
     mem: &mut impl MemoryView,
     info: &ModuleInfo,
-    callback: ImportCallback,
+    mut callback: ImportCallback,
 ) -> Result<()> {
-    let mut module_image = vec![0u8; info.size as usize];
+    let mut module_image = aligned_alloc(info.size as usize);
+    let module_image = module_image.as_bytes_mut();
 
-    mem.read_raw_into(info.base, &mut module_image)
-        .data_part()?;
+    mem.read_raw_into(info.base, module_image).data_part()?;
 
-    fn import_call(iter: impl Iterator<Item = (umem, ReprCString)>, mut callback: ImportCallback) {
+    fn import_call(iter: impl Iterator<Item = (umem, ReprCString)>, callback: &mut ImportCallback) {
         iter.take_while(|(offset, name)| {
             callback.call(ImportInfo {
                 name: name.clone(),
@@ -120,7 +136,51 @@ pub fn module_import_list_callback(
         .for_each(|_| {});
     }
 
-    match custom_parse(&module_image)? {
+    let ret = Err(Error::from(ErrorKind::NotImplemented));
+
+    #[cfg(feature = "pelite")]
+    let ret = ret.or_else(|_| {
+        if let Ok(pe) = pelite::PeFile::from_bytes(module_image) {
+            use pelite::pe32::imports::Import as Import32;
+            use pelite::pe64::imports::Import as Import64;
+            use pelite::Wrap::*;
+
+            if let Some(imports) = pe
+                .iat()
+                .map(|imports| Some(imports))
+                .or_else(|e| {
+                    if let pelite::Error::Null = e {
+                        Ok(None)
+                    } else {
+                        Err(e)
+                    }
+                })
+                .map_err(|_| ErrorKind::InvalidExeFile)?
+            {
+                let iter = imports
+                    .iter()
+                    .filter_map(|w| match w {
+                        T32((addr, Ok(Import32::ByName { name, .. }))) => {
+                            Some((*addr as umem, name))
+                        }
+                        T64((addr, Ok(Import64::ByName { name, .. }))) => {
+                            Some((*addr as umem, name))
+                        }
+                        _ => None,
+                    })
+                    .filter_map(|(a, n)| n.to_str().ok().map(|n| (a, n.into())));
+
+                import_call(iter, &mut callback);
+            }
+
+            Ok(())
+        } else {
+            Err(Error::from(ErrorKind::InvalidExeFile))
+        }
+    });
+
+    #[cfg(feature = "goblin")]
+    let ret = ret.or_else(|_| match custom_parse(module_image)? {
         Object::Elf(elf) => {
             let iter = elf
                 .dynsyms
@@ -132,7 +192,7 @@ pub fn module_import_list_callback(
                         .map(|n| (s.st_value as umem, ReprCString::from(n)))
                 });
 
-            import_call(iter, callback);
+            import_call(iter, &mut callback);
 
             Ok(())
         }
@@ -142,26 +202,27 @@ pub fn module_import_list_callback(
                 .iter()
                 .map(|e| (e.offset as umem, e.name.as_ref().into()));
 
-            import_call(iter, callback);
+            import_call(iter, &mut callback);
 
             Ok(())
         }
         _ => Err(ErrorKind::InvalidExeFile.into()),
-    }
+    });
+
+    ret
 }
 
-#[cfg(feature = "goblin")]
 pub fn module_export_list_callback(
     mem: &mut impl MemoryView,
     info: &ModuleInfo,
-    callback: ExportCallback,
+    mut callback: ExportCallback,
 ) -> Result<()> {
-    let mut module_image = vec![0u8; info.size as usize];
+    let mut module_image = aligned_alloc(info.size as usize);
+    let module_image = module_image.as_bytes_mut();
 
-    mem.read_raw_into(info.base, &mut module_image)
-        .data_part()?;
+    mem.read_raw_into(info.base, module_image).data_part()?;
 
-    fn export_call(iter: impl Iterator<Item = (umem, ReprCString)>, mut callback: ExportCallback) {
+    fn export_call(iter: impl Iterator<Item = (umem, ReprCString)>, callback: &mut ExportCallback) {
         iter.take_while(|(offset, name)| {
             callback.call(ExportInfo {
                 name: name.clone(),
@@ -171,7 +232,51 @@ pub fn module_export_list_callback(
         .for_each(|_| {});
     }
 
-    match custom_parse(&module_image)? {
+    let ret = Err(Error::from(ErrorKind::NotImplemented));
+
+    #[cfg(feature = "pelite")]
+    let ret = ret.or_else(|_| {
+        if let Ok(pe) = pelite::PeFile::from_bytes(module_image) {
+            use pelite::pe64::exports::Export;
+
+            if let Some(exports) = pe
+                .exports()
+                .map(|exports| Some(exports))
+                .or_else(|e| {
+                    if let pelite::Error::Null = e {
+                        Ok(None)
+                    } else {
+                        Err(e)
+                    }
+                })
+                .map_err(|e| log::debug!("pelite: {}", e))
+                .map_err(|_| ErrorKind::InvalidExeFile)?
+            {
+                let exports = exports
+                    .by()
+                    .map_err(|e| log::debug!("pelite: {}", e))
+                    .map_err(|_| ErrorKind::InvalidExeFile)?;
+
+                let iter = exports
+                    .iter_names()
+                    .filter_map(|(n, e)| n.ok().zip(e.ok()))
+                    .filter_map(|(n, e)| match e {
+                        Export::Symbol(off) => Some((*off as umem, n)),
+                        _ => None,
+                    })
+                    .filter_map(|(o, n)| n.to_str().ok().map(|n| (o, n.into())));
+
+                export_call(iter, &mut callback);
+            }
+
+            return Ok(());
+        } else {
+            Err(Error::from(ErrorKind::InvalidExeFile))
+        }
+    });
+
+    #[cfg(feature = "goblin")]
+    let ret = ret.or_else(|_| match custom_parse(module_image)? {
         Object::Elf(elf) => {
             let iter = elf
                 .dynsyms
@@ -183,7 +288,7 @@ pub fn module_export_list_callback(
                         .map(|n| (s.st_value as umem, ReprCString::from(n)))
                 });
 
-            export_call(iter, callback);
+            export_call(iter, &mut callback);
 
             Ok(())
         }
@@ -193,28 +298,29 @@ pub fn module_export_list_callback(
                 .iter()
                 .filter_map(|e| e.name.map(|name| (e.offset as umem, name.into())));
 
-            export_call(iter, callback);
+            export_call(iter, &mut callback);
 
             Ok(())
         }
         _ => Err(ErrorKind::InvalidExeFile.into()),
-    }
+    });
+
+    ret
 }
 
-#[cfg(feature = "goblin")]
 pub fn module_section_list_callback(
     mem: &mut impl MemoryView,
     info: &ModuleInfo,
-    callback: SectionCallback,
+    mut callback: SectionCallback,
 ) -> Result<()> {
-    let mut module_image = vec![0u8; info.size as usize];
+    let mut module_image = aligned_alloc(info.size as usize);
+    let module_image = module_image.as_bytes_mut();
 
-    mem.read_raw_into(info.base, &mut module_image)
-        .data_part()?;
+    mem.read_raw_into(info.base, module_image).data_part()?;
 
     fn section_call(
         iter: impl Iterator<Item = (umem, umem, ReprCString)>,
-        mut callback: SectionCallback,
+        callback: &mut SectionCallback,
     ) {
         iter.take_while(|(base, size, name)| {
             callback.call(SectionInfo {
@@ -226,7 +332,31 @@ pub fn module_section_list_callback(
         .for_each(|_| {});
     }
 
-    match custom_parse(&module_image)? {
+    let ret = Err(Error::from(ErrorKind::NotImplemented));
+
+    #[cfg(feature = "pelite")]
+    let ret = ret.or_else(|_| {
+        if let Ok(pe) = pelite::PeFile::from_bytes(module_image) {
+            let iter = pe.section_headers().iter().filter_map(|sh| {
+                sh.name().ok().map(|name| {
+                    (
+                        sh.virtual_range().start as umem,
+                        sh.virtual_range().end as umem,
+                        name.into(),
+                    )
+                })
+            });
+
+            section_call(iter, &mut callback);
+
+            Ok(())
+        } else {
+            Err(Error::from(ErrorKind::InvalidExeFile))
+        }
+    });
+
+    #[cfg(feature = "goblin")]
+    let ret = ret.or_else(|_| match custom_parse(module_image)? {
         Object::Elf(elf) => {
             let iter = elf.section_headers.iter().filter_map(|s| {
                 elf.shdr_strtab
@@ -234,7 +364,7 @@ pub fn module_section_list_callback(
                     .map(|n| (s.sh_addr as umem, s.sh_size as umem, ReprCString::from(n)))
             });
 
-            section_call(iter, callback);
+            section_call(iter, &mut callback);
 
             Ok(())
         }
@@ -249,10 +379,12 @@ pub fn module_section_list_callback(
                 })
             });
 
-            section_call(iter, callback);
+            section_call(iter, &mut callback);
 
             Ok(())
         }
         _ => Err(ErrorKind::InvalidExeFile.into()),
-    }
+    });
+
+    ret
 }

@@ -1940,26 +1940,46 @@ void log_init(LevelFilter level_filter);
 
 /**
  * Logs a error message via log::error!
+ *
+ * # Safety
+ *
+ * The provided string must be a valid null-terminated char array.
  */
 void log_error(const char *s);
 
 /**
  * Logs a warning message via log::warn!
+ *
+ * # Safety
+ *
+ * The provided string must be a valid null-terminated char array.
  */
 void log_warn(const char *s);
 
 /**
  * Logs a info message via log::info!
+ *
+ * # Safety
+ *
+ * The provided string must be a valid null-terminated char array.
  */
 void log_info(const char *s);
 
 /**
  * Logs a debug message via log::debug!
+ *
+ * # Safety
+ *
+ * The provided string must be a valid null-terminated char array.
  */
 void log_debug(const char *s);
 
 /**
  * Logs a trace message via log::trace!
+ *
+ * # Safety
+ *
+ * The provided string must be a valid null-terminated char array.
  */
 void log_trace(const char *s);
 

@@ -21,6 +21,12 @@ fn main() -> Result<()> {
         .expect("unable to find module in process");
     println!("{:?}", module_info);
 
+    let export_count = process
+        .module_export_list(&module_info)
+        .expect("unable to get exports")
+        .len();
+    println!("Exports: {}", export_count);
+
     Ok(())
 }
 
@@ -56,7 +62,7 @@ fn parse_args() -> ArgMatches {
         .get_matches()
 }
 
-fn extract_args(matches: &ArgMatches) -> Result<(OsChain<'_>, &str)> {
+fn extract_args<'a>(matches: &'a ArgMatches) -> Result<(OsChain<'a>, &'a str)> {
     let log_level = match matches.occurrences_of("verbose") {
         0 => Level::Error,
         1 => Level::Warn,

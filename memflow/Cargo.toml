@@ -39,7 +39,8 @@ rangemap = "^0.1.14"
 # plugins
 libloading = { version = "^0.7.2", optional = true }
 dirs = { version = "^4.0.0", optional = true }
-pelite = { version = "0.9", optional = true, default-features = false }
+# enable unsafe_alignment for now, this is UB, but the idea is to fix pelite in upstream
+pelite = { version = "0.9", optional = true, default-features = false, features = ["unsafe_alignment"] }
 abi_stable = { version = "^0.10.3", optional = true }
 once_cell = { version = "^1.9", optional = true }
 

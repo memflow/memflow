@@ -321,11 +321,12 @@ pub fn module_section_list_callback(
     fn section_call(
         iter: impl Iterator<Item = (umem, umem, ReprCString)>,
         callback: &mut SectionCallback,
+        info: &ModuleInfo,
     ) {
         iter.take_while(|(base, size, name)| {
             callback.call(SectionInfo {
                 name: name.clone(),
-                base: Address::from(*base),
+                base: info.base + *base,
                 size: *size,
             })
         })
@@ -347,7 +348,7 @@ pub fn module_section_list_callback(
                 })
             });
 
-            section_call(iter, &mut callback);
+            section_call(iter, &mut callback, info);
 
             Ok(())
         } else {
@@ -364,7 +365,7 @@ pub fn module_section_list_callback(
                     .map(|n| (s.sh_addr as umem, s.sh_size as umem, ReprCString::from(n)))
             });
 
-            section_call(iter, &mut callback);
+            section_call(iter, &mut callback, info);
 
             Ok(())
         }
@@ -379,7 +380,7 @@ pub fn module_section_list_callback(
                 })
             });
 
-            section_call(iter, &mut callback);
+            section_call(iter, &mut callback, info);
 
             Ok(())
         }

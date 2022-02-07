@@ -389,6 +389,7 @@ impl Inventory {
     /// let inventory = Inventory::scan();
     /// ```
     pub fn scan() -> Self {
+        // add default paths
         #[cfg(unix)]
         let extra_paths: Vec<&str> = vec![
             "/opt",
@@ -407,6 +408,7 @@ impl Inventory {
 
         let path_iter = extra_paths.into_iter().map(PathBuf::from);
 
+        // add $PATH
         let path_var = std::env::var_os("PATH");
         let path_iter = path_iter.chain(
             path_var
@@ -416,6 +418,7 @@ impl Inventory {
                 .flatten(),
         );
 
+        // add user directory
         #[cfg(unix)]
         let path_iter = path_iter.chain(
             dirs::home_dir()
@@ -436,6 +439,14 @@ impl Inventory {
             ret.add_dir(path).ok();
         }
 
+        // add custom path from environment variable
+        if let Some(extra_plugin_paths) = option_env!("MEMFLOW_EXTRA_PLUGIN_PATHS") {
+            for p in extra_plugin_paths.split(":") {
+                ret.add_dir(p.into()).ok();
+            }
+        }
+
+        // add current working directory
         if let Ok(pwd) = std::env::current_dir() {
             ret.add_dir(pwd).ok();
         }

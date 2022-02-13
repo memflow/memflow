@@ -6,7 +6,7 @@ The very core of the library is a [PhysicalMemory](mem/phys_mem/index.html) that
 This object that can be defined both statically, and pluginsally with the use of the `dynamic` feature.
 If `plugins` is enabled, it is possible to dynamically load libraries that provide Direct Memory Access.
 
-Through the use of OS abstraction layers, like [memflow-win32](https://github.com/memflow/memflow/tree/master/memflow-win32),
+Through the use of OS abstraction layers, like [memflow-win32](https://github.com/memflow/memflow-win32),
 user can gain access to virtual memory of individual processes,
 by creating objects that implement [VirtualMemory](mem/virt_mem/index.html).
 

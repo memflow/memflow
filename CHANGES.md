@@ -2,6 +2,9 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
+## 0.2.0-beta1
+- Entirely new cglue based plugin architecture and various other major improvements
+
 ## 0.1.5
 - Added memflow::prelude::v1 and memflow_win32::prelude::v1 modules
 - Added new fields to FFI

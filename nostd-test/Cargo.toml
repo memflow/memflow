@@ -1,7 +1,7 @@
 [package]
 name = "nostd-test"
-version = "0.1.5"
-authors = ["Aurimas Blažulionis <0x60@pm.me>"]
+version = "0.2.0-beta1"
+authors = ["Aurimas Blažulionis <0x60@pm.me>", "ko1N <ko1N1337@gmail.com>"]
 edition = "2018"
 homepage = "https://memflow.github.io"
 repository = "https://github.com/memflow/memflow"

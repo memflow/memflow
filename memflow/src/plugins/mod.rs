@@ -441,7 +441,7 @@ impl Inventory {
 
         // add custom path from environment variable
         if let Some(extra_plugin_paths) = option_env!("MEMFLOW_EXTRA_PLUGIN_PATHS") {
-            for p in extra_plugin_paths.split(":") {
+            for p in extra_plugin_paths.split(':') {
                 ret.add_dir(p.into()).ok();
             }
         }

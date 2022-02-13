@@ -16,7 +16,7 @@ panic = "abort"
 
 [dependencies]
 rlibc = "1.0.0"
-uefi = "0.13.0"
-uefi-services = { version = "0.10.0", git = "https://github.com/rust-osdev/uefi-rs" }
+uefi = "0.14.0"
+uefi-services = "0.11.0"
 log = "0.4"
 memflow = { path = "../memflow", default-features = false }

@@ -6,6 +6,7 @@ use crate::os::*;
 use crate::types::umem;
 use cglue::prelude::v1::ReprCString;
 use dataview::Pod;
+use std::vec::Vec;
 
 #[cfg(feature = "goblin")]
 use goblin::{
@@ -147,7 +148,7 @@ pub fn module_import_list_callback(
 
             if let Some(imports) = pe
                 .iat()
-                .map(|imports| Some(imports))
+                .map(Some)
                 .or_else(|e| {
                     if let pelite::Error::Null = e {
                         Ok(None)
@@ -241,7 +242,7 @@ pub fn module_export_list_callback(
 
             if let Some(exports) = pe
                 .exports()
-                .map(|exports| Some(exports))
+                .map(Some)
                 .or_else(|e| {
                     if let pelite::Error::Null = e {
                         Ok(None)
@@ -269,7 +270,7 @@ pub fn module_export_list_callback(
                 export_call(iter, &mut callback);
             }
 
-            return Ok(());
+            Ok(())
         } else {
             Err(Error::from(ErrorKind::InvalidExeFile))
         }

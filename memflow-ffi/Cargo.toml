@@ -8,7 +8,7 @@ documentation = "https://docs.rs/memflow-ffi"
 readme = "README.md"
 homepage = "https://memflow.github.io"
 repository = "https://github.com/memflow/memflow"
-license-file = "../LICENSE"
+license = "MIT"
 keywords = [ "memflow", "introspection", "memory", "dma" ]
 categories = [ "api-bindings", "memory-management", "os" ]
 

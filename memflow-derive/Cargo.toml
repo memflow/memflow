@@ -26,4 +26,4 @@ darling = "^0.13.1"
 proc-macro-crate = "^1.1"
 
 [dev-dependencies]
-memflow = { path = "../memflow" }
+memflow = { version = "0.2.0-beta1", path = "../memflow" }

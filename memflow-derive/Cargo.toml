@@ -24,6 +24,3 @@ syn = "^1.0.85"
 quote = "^1.0.14"
 darling = "^0.13.1"
 proc-macro-crate = "^1.1"
-
-[dev-dependencies]
-memflow = { version = "0.2.0-beta1", path = "../memflow" }

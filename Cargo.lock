@@ -645,7 +645,6 @@ name = "memflow-derive"
 version = "0.2.0-beta1"
 dependencies = [
  "darling",
- "memflow",
  "proc-macro-crate",
  "proc-macro2",
  "quote",

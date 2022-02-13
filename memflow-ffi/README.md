@@ -46,4 +46,4 @@ int main(int argc, char *argv[]) {
 }
 ```
 
-Additional examples can be found in the `examples` folder as well as in the [memflow-win32-ffi](https://github.com/memflow/memflow/memflow-win32-ffi) crate.
+Additional examples can be found in the `examples` folder.

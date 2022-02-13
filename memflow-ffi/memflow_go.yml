@@ -1,0 +1,43 @@
+---
+GENERATOR:
+  PackageName: memflow_go
+  PackageDescription: "core components of the memflow physical memory introspection framework"
+  PackageLicense: "MIT"
+  Includes: ["memflow.h"]
+  FlagGroups:
+    - { name: "CFLAGS", traits: ["linux"], flags: [ -I../../memflow-ffi/ ] }
+    - { name: "LDFLAGS", traits: ["linux"], flags: [ -L../../target/release -lm -ldl -lpthread -l:libmemflow_ffi.a ] }
+
+PARSER:
+  IncludePaths: ["./"]
+  SourcesPaths: ["memflow.h"]
+
+TRANSLATOR:
+  ConstRules:
+    defines: expand
+  Rules: 
+    global: 
+      - { transform: lower }
+      - { action: accept, from: "^log_" }
+      - { action: accept, from: "^inventory_" }
+      - { action: accept, from: "^connector_" }
+      - { action: accept, from: "^phys_" }
+      - { action: accept, from: "^virt_" }
+      - { action: replace, from: "_", to: _ }
+      - { transform: export }
+    const:
+      - { action: replace, from: "_", to: _ }
+    type: 
+      - { action: accept, from: "^MU" }
+      - { action: accept, from: "Inventory" }
+      - { action: accept, from: "^Connector" }
+      - { action: accept, from: "^Physical" }
+      - { action: accept, from: "^Virtual" }
+      - { action: accept, from: "^Translation" }
+      - { action: accept, from: "^Page" }
+      - { action: replace, from: "_t$" }
+    private:
+      - { transform: unexport }
+    post-global: 
+      - { action: replace, from: _$ }
+      - { load: snakecase }

@@ -2,12 +2,16 @@
 Basic connector which works on mapped memory.
 */
 
-use crate::error::{Error, Result};
-use crate::iter::FnExtend;
+use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 use crate::mem::{
-    MemoryMap, PhysicalMemory, PhysicalMemoryMetadata, PhysicalReadData, PhysicalWriteData,
+    MemData, MemoryMap, PhysicalMemory, PhysicalMemoryMetadata, PhysicalReadData,
+    PhysicalWriteData, ReadFailCallback, WriteFailCallback,
 };
-use crate::types::Address;
+use crate::types::{umem, Address};
+
+use crate::cglue::*;
+
+use std::convert::TryInto;
 
 pub struct MappedPhysicalMemory<T, F> {
     info: F,
@@ -30,14 +34,17 @@ impl MappedPhysicalMemory<&'static mut [u8], MemoryMap<&'static mut [u8]>> {
     ///
     /// This connector assumes the memory map is valid, and writeable. Failure for these conditions
     /// to be met leads to undefined behaviour (most likely a segfault) when reading/writing.
-    pub unsafe fn from_addrmap_mut(map: MemoryMap<(Address, usize)>) -> Self {
+    pub unsafe fn from_addrmap_mut(map: MemoryMap<(Address, umem)>) -> Self {
         let mut ret_map = MemoryMap::new();
 
         map.into_iter()
             .map(|(base, (real_base, size))| {
                 (
                     base,
-                    std::slice::from_raw_parts_mut(real_base.as_u64() as _, size),
+                    std::slice::from_raw_parts_mut(
+                        real_base.to_umem() as _,
+                        size.try_into().unwrap(),
+                    ),
                 )
             })
             .for_each(|(base, buf)| {
@@ -55,14 +62,14 @@ impl MappedPhysicalMemory<&'static [u8], MemoryMap<&'static [u8]>> {
     ///
     /// This connector assumes the memory map is valid. Failure for this condition to be met leads
     /// to undefined behaviour (most likely a segfault) when reading.
-    pub unsafe fn from_addrmap(map: MemoryMap<(Address, usize)>) -> Self {
+    pub unsafe fn from_addrmap(map: MemoryMap<(Address, umem)>) -> Self {
         let mut ret_map = MemoryMap::new();
 
         map.into_iter()
             .map(|(base, (real_base, size))| {
                 (
                     base,
-                    std::slice::from_raw_parts(real_base.as_u64() as _, size),
+                    std::slice::from_raw_parts(real_base.to_umem() as _, size.try_into().unwrap()),
                 )
             })
             .for_each(|(base, buf)| {
@@ -86,42 +93,48 @@ impl<T: AsRef<[u8]>, F: AsRef<MemoryMap<T>>> MappedPhysicalMemory<T, F> {
 impl<'a, F: AsRef<MemoryMap<&'a mut [u8]>> + Send> PhysicalMemory
     for MappedPhysicalMemory<&'a mut [u8], F>
 {
-    fn phys_read_raw_list(&mut self, data: &mut [PhysicalReadData]) -> Result<()> {
-        let mut void = FnExtend::void();
-        for (mapped_buf, buf) in self.info.as_ref().map_iter(
-            data.iter_mut()
-                .map(|PhysicalReadData(addr, buf)| (*addr, &mut **buf)),
-            &mut void,
-        ) {
+    fn phys_read_raw_iter<'b>(
+        &mut self,
+        data: CIterator<PhysicalReadData<'b>>,
+        out_fail: &mut ReadFailCallback<'_, 'b>,
+    ) -> Result<()> {
+        for MemData(mapped_buf, mut buf) in self.info.as_ref().map_iter(data, out_fail) {
             buf.copy_from_slice(mapped_buf.as_ref());
         }
         Ok(())
     }
 
-    fn phys_write_raw_list(&mut self, data: &[PhysicalWriteData]) -> Result<()> {
-        let mut void = FnExtend::void();
-
-        for (mapped_buf, buf) in self
-            .info
-            .as_ref()
-            .map_iter(data.iter().copied().map(<_>::from), &mut void)
-        {
-            mapped_buf.as_mut().copy_from_slice(buf);
+    fn phys_write_raw_iter<'b>(
+        &mut self,
+        data: CIterator<PhysicalWriteData<'b>>,
+        out_fail: &mut WriteFailCallback<'_, 'b>,
+    ) -> Result<()> {
+        for MemData(mapped_buf, buf) in self.info.as_ref().map_iter(data, out_fail) {
+            mapped_buf.as_mut().copy_from_slice(buf.into());
         }
 
         Ok(())
     }
 
     fn metadata(&self) -> PhysicalMemoryMetadata {
+        let max_address = self
+            .info
+            .as_ref()
+            .iter()
+            .last()
+            .map(|map| map.base().to_umem() + map.output().len() as umem)
+            .unwrap()
+            - 1;
+        let real_size = self
+            .info
+            .as_ref()
+            .iter()
+            .fold(0, |s, m| s + m.output().len() as umem);
         PhysicalMemoryMetadata {
-            size: self
-                .info
-                .as_ref()
-                .iter()
-                .last()
-                .map(|map| map.base().as_usize() + map.output().len())
-                .unwrap(),
+            max_address: max_address.into(),
+            real_size,
             readonly: false,
+            ideal_batch_size: u32::MAX,
         }
     }
 }
@@ -129,32 +142,58 @@ impl<'a, F: AsRef<MemoryMap<&'a mut [u8]>> + Send> PhysicalMemory
 impl<'a, F: AsRef<MemoryMap<&'a [u8]>> + Send> PhysicalMemory
     for MappedPhysicalMemory<&'a [u8], F>
 {
-    fn phys_read_raw_list(&mut self, data: &mut [PhysicalReadData]) -> Result<()> {
-        let mut void = FnExtend::void();
-        for (mapped_buf, buf) in self.info.as_ref().map_iter(
-            data.iter_mut()
-                .map(|PhysicalReadData(addr, buf)| (*addr, &mut **buf)),
-            &mut void,
-        ) {
+    fn phys_read_raw_iter<'b>(
+        &mut self,
+        data: CIterator<PhysicalReadData<'b>>,
+        out_fail: &mut ReadFailCallback<'_, 'b>,
+    ) -> Result<()> {
+        for MemData(mapped_buf, mut buf) in self.info.as_ref().map_iter(data, out_fail) {
             buf.copy_from_slice(mapped_buf.as_ref());
         }
         Ok(())
     }
 
-    fn phys_write_raw_list(&mut self, _data: &[PhysicalWriteData]) -> Result<()> {
-        Err(Error::Connector("Target mapping is not writeable"))
+    fn phys_write_raw_iter<'b>(
+        &mut self,
+        _data: CIterator<PhysicalWriteData<'b>>,
+        _out_fail: &mut WriteFailCallback<'_, 'b>,
+    ) -> Result<()> {
+        Err(Error(ErrorOrigin::Connector, ErrorKind::ReadOnly)
+            .log_error("target mapping is not writeable"))
     }
 
     fn metadata(&self) -> PhysicalMemoryMetadata {
+        let max_address = self
+            .info
+            .as_ref()
+            .iter()
+            .last()
+            .map(|map| map.base().to_umem() + map.output().len() as umem)
+            .unwrap()
+            - 1;
+        let real_size = self
+            .info
+            .as_ref()
+            .iter()
+            .fold(0, |s, m| s + m.output().len() as umem);
         PhysicalMemoryMetadata {
-            size: self
-                .info
-                .as_ref()
-                .iter()
-                .last()
-                .map(|map| map.base().as_usize() + map.output().len())
-                .unwrap(),
+            max_address: max_address.into(),
+            real_size,
             readonly: true,
+            ideal_batch_size: u32::MAX,
         }
     }
 }
+
+#[cfg(feature = "plugins")]
+cglue_impl_group!(
+    MappedPhysicalMemory<T = &'cglue_a mut [u8], F: AsRef<MemoryMap<&'cglue_a mut [u8]>>>,
+    crate::plugins::ConnectorInstance,
+    {}
+);
+#[cfg(feature = "plugins")]
+cglue_impl_group!(
+    MappedPhysicalMemory<T = &'cglue_a [u8], F: AsRef<MemoryMap<&'cglue_a [u8]>>>,
+    crate::plugins::ConnectorInstance,
+    {}
+);

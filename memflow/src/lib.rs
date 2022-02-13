@@ -3,8 +3,8 @@ memflow is a library that allows live memory introspection of running systems an
 Due to its modular approach it trivial to support almost any scenario where Direct Memory Access is available.
 
 The very core of the library is a [PhysicalMemory](mem/phys_mem/index.html) that provides direct memory access in an abstract environment.
-This object that can be defined both statically, and dynamically with the use of the `inventory` feature.
-If `inventory` is enabled, it is possible to dynamically load libraries that provide Direct Memory Access.
+This object that can be defined both statically, and pluginsally with the use of the `dynamic` feature.
+If `plugins` is enabled, it is possible to dynamically load libraries that provide Direct Memory Access.
 
 Through the use of OS abstraction layers, like [memflow-win32](https://github.com/memflow/memflow/tree/master/memflow-win32),
 user can gain access to virtual memory of individual processes,
@@ -42,27 +42,57 @@ pub mod mem;
 
 pub mod connector;
 
-pub mod process;
+#[cfg(feature = "plugins")]
+pub mod plugins;
+
+pub mod os;
 
 pub mod iter;
 
+// forward declare
+#[doc(hidden)]
 pub mod derive {
-    pub use memflow_derive::*;
+    pub use ::memflow_derive::*;
 }
 
+#[doc(hidden)]
+pub mod cglue {
+    pub use ::cglue::prelude::v1::*;
+}
+
+#[doc(hidden)]
+#[cfg(feature = "abi_stable")]
+pub mod abi_stable {
+    pub use ::abi_stable::*;
+}
+
+#[doc(hidden)]
+pub mod dataview {
+    pub use ::dataview::*;
+    pub use ::memflow_derive::Pod;
+}
+
+#[doc(hidden)]
+#[cfg(any(feature = "dummy_mem", test))]
+pub mod dummy;
+
+#[doc(hidden)]
 pub mod prelude {
     pub mod v1 {
         pub use crate::architecture::*;
+        pub use crate::cglue::*;
         pub use crate::connector::*;
+        pub use crate::dataview::*;
         pub use crate::derive::*;
         pub use crate::error::*;
         pub use crate::iter::*;
         pub use crate::mem::*;
-        pub use crate::process::*;
+        pub use crate::os::*;
+        #[cfg(feature = "plugins")]
+        pub use crate::plugins::os::*;
+        #[cfg(feature = "plugins")]
+        pub use crate::plugins::*;
         pub use crate::types::*;
     }
     pub use v1::*;
 }
-
-#[deprecated]
-pub use prelude::v1::*;

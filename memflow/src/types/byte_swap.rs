@@ -15,7 +15,7 @@ use core::marker::PhantomData;
 ///
 /// ```
 /// use memflow::types::ByteSwap;
-/// use memflow_derive::*;
+/// use memflow::derive::*;
 ///
 /// #[repr(C)]
 /// #[derive(ByteSwap)]

@@ -9,32 +9,27 @@ This module also contains functions to interface with dynamically loaded connect
 The inventory system is feature gated behind the `inventory` feature.
 */
 
-pub mod args;
-#[doc(hidden)]
-pub use args::ConnectorArgs;
-
-#[cfg(feature = "inventory")]
-pub mod inventory;
-#[doc(hidden)]
-#[cfg(feature = "inventory")]
-pub use inventory::{
-    Connector, ConnectorDescriptor, ConnectorInstance, ConnectorInventory, ConnectorType,
-    MEMFLOW_CONNECTOR_VERSION,
-};
-
+// TODO: move all of this in a helper module and only keep the connector plugin stuff
 #[cfg(feature = "std")]
 pub mod fileio;
 #[doc(hidden)]
 #[cfg(feature = "std")]
-pub use fileio::FileIOMemory;
+pub use fileio::{CloneFile, FileIoMemory};
 
 #[cfg(feature = "filemap")]
 pub mod filemap;
 #[cfg(feature = "filemap")]
 pub use filemap::{
-    MMAPInfo, MMAPInfoMut, ReadMappedFilePhysicalMemory, WriteMappedFilePhysicalMemory,
+    MmapInfo, MmapInfoMut, ReadMappedFilePhysicalMemory, WriteMappedFilePhysicalMemory,
 };
 
 pub mod mmap;
 #[doc(hidden)]
 pub use mmap::MappedPhysicalMemory;
+
+pub mod cpu_state;
+#[doc(hidden)]
+pub use cpu_state::{ConnectorCpuState, ConnectorCpuStateInner, CpuState};
+#[doc(hidden)]
+#[cfg(feature = "plugins")]
+pub use cpu_state::{CpuStateArcBox, IntoCpuStateArcBox};

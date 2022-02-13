@@ -5,16 +5,12 @@ debug = true
 [workspace]
 members = [
     "memflow",
-    "memflow-win32",
     "memflow-ffi",
-    "memflow-win32-ffi",
     "memflow-bench",
 ]
 default-members = [
     "memflow",
-    "memflow-win32",
     "memflow-ffi",
-    "memflow-win32-ffi",
     "memflow-bench",
 ]
 

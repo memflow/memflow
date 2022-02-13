@@ -12,29 +12,34 @@ jobs:
     strategy:
       matrix:
         os: [macos-latest, ubuntu-latest, windows-latest]
+        flags: [--all-features, --no-default-features]
     steps:
       - uses: actions/checkout@v2
 
       - name: Build
-        run: cargo build --workspace --all-features --verbose
+        run: cargo build --workspace ${{ matrix.flags }} --verbose
 
       - name: Build examples
-        run: cargo build --workspace --all-features --examples --verbose
+        run: cargo build --workspace ${{ matrix.flags }} --examples --verbose
 
-  build-cross-aarch64:
+  build-cross-targets:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [aarch64-unknown-linux-gnu, armv7-unknown-linux-gnueabihf, i686-unknown-linux-gnu]
     steps:
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
-          target: aarch64-unknown-linux-gnu
+          target: ${{ matrix.target }}
           override: true
       - uses: actions-rs/cargo@v1
         with:
           use-cross: true
           command: build
-          args: --target aarch64-unknown-linux-gnu --workspace --all-features --verbose
+          args: --target ${{ matrix.target }} --workspace --all-features --verbose
             
   test:
     runs-on: ${{ matrix.os }}
@@ -44,6 +49,9 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
+      - name: Pre-build binaries (for inventory integration tests)
+        run: cargo build --workspace --all-features --verbose
+
       - name: Run all tests
         run: cargo test --workspace --all-features --verbose
         if: runner.os == 'Linux'
@@ -52,20 +60,31 @@ jobs:
         run: cargo test --workspace --exclude memflow-derive --all-features --verbose
         if: runner.os != 'Linux'
 
-  test-cross-aarch64:
+  test-cross:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [aarch64-unknown-linux-gnu, i686-unknown-linux-gnu]
     steps:
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
         with:
-          toolchain: stable
-          target: aarch64-unknown-linux-gnu
+          toolchain: nightly
+          target: ${{ matrix.target }}
           override: true
-      - uses: actions-rs/cargo@v1
+      - name: Pre-build binaries (for inventory integration tests)
+        uses: actions-rs/cargo@v1
+        with:
+          use-cross: true
+          command: build
+          args: --target ${{ matrix.target }} --workspace --all-features --verbose --release
+      - name: Run all tests
+        uses: actions-rs/cargo@v1
         with:
           use-cross: true
           command: test
-          args: --target aarch64-unknown-linux-gnu --workspace --all-features --verbose
+          args: -Zdoctest-xcompile --target ${{ matrix.target }} --workspace --all-features --verbose --release
 
   lint:
     runs-on: ubuntu-latest
@@ -90,12 +109,12 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: nightly-2020-11-24
+          toolchain: nightly-2021-12-19
           override: true
-      - run: rustup toolchain install nightly-2020-11-24
-      - run: rustup +nightly-2020-11-24 component add rust-src
+      - run: rustup toolchain install nightly-2021-12-19
+      - run: rustup +nightly-2021-12-19 component add rust-src
       - name: Build no_std crate
-        run: cd nostd-test; cargo +nightly-2020-11-24 build --all-features --verbose
+        run: cd nostd-test; cargo +nightly-2021-12-19 build --all-features --verbose
 
   build-coverage:
     runs-on: ubuntu-latest

@@ -1,39 +1,32 @@
-/*!
-This module covers all implementations and traits related to
-reading/writing [physical](phys/index.html) and [virtual](virt/index.html) memory.
+//! This module covers all implementations and traits related to
+//! reading/writing [physical](phys_mem/index.html) and [virtual](virt_mem/index.html) memory.
+//!
+//! The [cache](cache/index.html) module contains all caching related
+//! implementations. The caches just wrap the physical and virtual accessors
+//! and are themselves a memory backend.
+//!
+//! TODO: more documentation
 
-The [cache](cache/index.html) module contains all caching related
-implementations. The caches just wrap the physical and virtual accessors
-and are themselves a memory backend.
-
-TODO: more documentation
-*/
-
-pub mod cache;
+pub mod mem_data;
 pub mod mem_map;
+pub mod memory_view;
 pub mod phys_mem;
-pub mod phys_mem_batcher;
 pub mod virt_mem;
-pub mod virt_mem_batcher;
 pub mod virt_translate;
 
-#[cfg(any(feature = "dummy_mem", test))]
-pub mod dummy;
-
-#[doc(hidden)]
-pub use cache::*; // TODO: specify pub declarations
-#[doc(hidden)]
-pub use mem_map::MemoryMap;
-#[doc(hidden)]
-pub use phys_mem::{
-    CloneablePhysicalMemory, PhysicalMemory, PhysicalMemoryBox, PhysicalMemoryMetadata,
-    PhysicalReadData, PhysicalReadIterator, PhysicalWriteData, PhysicalWriteIterator,
+pub use mem_map::{MemoryMap, PhysicalMemoryMapping};
+pub use phys_mem::{CachedPhysicalMemory, PhysicalMemory, PhysicalMemoryMetadata};
+pub use virt_mem::VirtualDma;
+//#[doc(hidden)]
+//pub use virt_mem_batcher::VirtualMemoryBatcher;
+pub use virt_translate::{
+    CachedVirtualTranslate, DirectTranslate, VirtualTranslate, VirtualTranslate2,
+    VirtualTranslate3, VtopFailureCallback, VtopOutputCallback,
 };
-#[doc(hidden)]
-pub use phys_mem_batcher::PhysicalMemoryBatcher;
-#[doc(hidden)]
-pub use virt_mem::{VirtualDMA, VirtualMemory, VirtualReadData, VirtualWriteData};
-#[doc(hidden)]
-pub use virt_mem_batcher::VirtualMemoryBatcher;
-#[doc(hidden)]
-pub use virt_translate::{DirectTranslate, VirtualTranslate};
+
+pub use memory_view::{MemoryView, MemoryViewMetadata};
+
+#[cfg(feature = "std")]
+pub use memory_view::MemoryCursor;
+
+pub use mem_data::*;

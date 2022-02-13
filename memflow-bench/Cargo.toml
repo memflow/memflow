@@ -14,17 +14,16 @@ publish = false
 
 [dependencies]
 memflow = { path = "../memflow", features = ["dummy_mem"] }
-rand = "0.7"
-rand_xorshift = "0.2"
+log = "^0.4.14"
+rand = "^0.8.4"
+rand_xorshift = "^0.3"
 
 # This branch provides throughput plots
 criterion = { git = "https://github.com/h33p/criterion.rs.git", branch = "tput" }
 
-memflow-win32 = { path = "../memflow-win32" }
-
 [dev-dependencies]
-memflow = { path = "../memflow", features = ["dummy_mem"] }
-memflow-win32 = { path = "../memflow-win32" }
+memflow = { path = "../memflow", features = ["dummy_mem", "plugins"] }
+simplelog = "^0.11.1"
 
 [features]
 default = []
@@ -33,9 +32,9 @@ default = []
 name = "read_dummy"
 harness = false
 
-#[[bench]]
-#name = "read_win32"
-#harness = false
+[[bench]]
+name = "read_win32"
+harness = false
 
 [[bench]]
 name = "batcher"

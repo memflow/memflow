@@ -39,7 +39,7 @@ where
     fn next(&mut self) -> Option<Self::Item> {
         //If empty, buffer up the output deque
         if self.buf_out.is_empty() {
-            while let Some(elem) = self.iter.next() {
+            for elem in self.iter.by_ref() {
                 match (self.fi)(elem) {
                     (true, elem) => {
                         self.buf.push_back(elem);

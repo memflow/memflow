@@ -1,19 +1,22 @@
 use criterion::*;
 
-use memflow::mem::{CachedMemoryAccess, PhysicalMemory};
+use memflow::mem::{CachedPhysicalMemory, PhysicalMemory};
 
 use memflow::architecture;
+use memflow::cglue::*;
 use memflow::error::Result;
-use memflow::mem::PhysicalReadData;
+use memflow::mem::{MemData, PhysicalReadData};
 use memflow::types::*;
 
 use rand::prelude::*;
 use rand::{Rng, SeedableRng};
 use rand_xorshift::XorShiftRng as CurRng;
 
-fn rwtest<T: PhysicalMemory>(
+use std::convert::TryInto;
+
+fn rwtest(
     bench: &mut Bencher,
-    mem: &mut T,
+    mut mem: impl PhysicalMemory,
     (start, end): (Address, Address),
     chunk_sizes: &[usize],
     chunk_counts: &[usize],
@@ -25,29 +28,34 @@ fn rwtest<T: PhysicalMemory>(
 
     for i in chunk_sizes {
         for o in chunk_counts {
-            let mut vbufs = vec![vec![0 as u8; *i]; *o];
+            let mut vbufs = vec![vec![0_u8; *i]; *o];
             let mut done_size = 0;
 
             while done_size < read_size {
-                let base_addr = rng.gen_range(start.as_u64(), end.as_u64());
+                let base_addr = rng.gen_range(start.to_umem()..end.to_umem());
 
                 let mut bufs = Vec::with_capacity(*o);
 
                 bufs.extend(vbufs.iter_mut().map(|vec| {
-                    let addr = (base_addr + rng.gen_range(0, 0x2000)).into();
+                    let addr = (base_addr + rng.gen_range(0..0x2000)).into();
 
-                    PhysicalReadData(
+                    MemData(
                         PhysicalAddress::with_page(
                             addr,
                             PageType::default().write(true),
-                            size::kb(4),
+                            mem::kb(4),
                         ),
-                        vec.as_mut_slice(),
+                        vec.as_mut_slice().into(),
                     )
                 }));
 
                 bench.iter(|| {
-                    let _ = black_box(mem.phys_read_raw_list(&mut bufs));
+                    let mut iter = bufs
+                        .iter_mut()
+                        .map(|MemData(a, d): &mut PhysicalReadData| MemData(*a, d.into()));
+                    let _ = black_box(
+                        mem.phys_read_raw_iter((&mut iter).into(), &mut (&mut |_| false).into()),
+                    );
                 });
 
                 done_size += *i * *o;
@@ -60,9 +68,9 @@ fn rwtest<T: PhysicalMemory>(
     total_size
 }
 
-fn read_test_with_mem<T: PhysicalMemory>(
+fn read_test_with_mem(
     bench: &mut Bencher,
-    mem: &mut T,
+    mem: impl PhysicalMemory,
     chunk_size: usize,
     chunks: usize,
     start_end: (Address, Address),
@@ -77,29 +85,35 @@ fn read_test_with_mem<T: PhysicalMemory>(
     ));
 }
 
-fn read_test_with_ctx<T: PhysicalMemory>(
+fn read_test_with_ctx(
     bench: &mut Bencher,
     cache_size: u64,
     chunk_size: usize,
     chunks: usize,
-    mut mem: T,
+    mem: impl PhysicalMemory,
 ) {
     let mut rng = CurRng::from_rng(thread_rng()).unwrap();
 
-    let start = Address::from(rng.gen_range(0, size::mb(50)));
+    let start = Address::from(rng.gen_range(0..size::mb(50)));
     let end = start + size::mb(1);
 
     if cache_size > 0 {
-        let mut mem = CachedMemoryAccess::builder(&mut mem)
+        let mut cached_mem = CachedPhysicalMemory::builder(mem)
             .arch(architecture::x86::x64::ARCH)
             .cache_size(size::mb(cache_size as usize))
             .page_type_mask(PageType::PAGE_TABLE | PageType::READ_ONLY | PageType::WRITEABLE)
             .build()
             .unwrap();
 
-        read_test_with_mem(bench, &mut mem, chunk_size, chunks, (start, end));
+        read_test_with_mem(
+            bench,
+            cached_mem.forward_mut(),
+            chunk_size,
+            chunks,
+            (start, end),
+        );
     } else {
-        read_test_with_mem(bench, &mut mem, chunk_size, chunks, (start, end));
+        read_test_with_mem(bench, mem, chunk_size, chunks, (start, end));
     }
 }
 
@@ -118,9 +132,9 @@ fn seq_read_params<T: PhysicalMemory>(
                 read_test_with_ctx(
                     b,
                     black_box(cache_size),
-                    black_box(size as usize),
+                    black_box(size.try_into().unwrap()),
                     black_box(1),
-                    initialize_ctx().unwrap(),
+                    initialize_ctx().unwrap().forward_mut(),
                 )
             },
         );
@@ -143,9 +157,9 @@ fn chunk_read_params<T: PhysicalMemory>(
                     read_test_with_ctx(
                         b,
                         black_box(cache_size),
-                        black_box(size as usize),
-                        black_box(chunk_size as usize),
-                        initialize_ctx().unwrap(),
+                        black_box(size.try_into().unwrap()),
+                        black_box(chunk_size.try_into().unwrap()),
+                        initialize_ctx().unwrap().forward_mut(),
                     )
                 },
             );

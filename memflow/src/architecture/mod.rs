@@ -5,7 +5,7 @@ Each architecture implements the `Architecture` trait
 and all function calls are dispatched into their own
 architecture specific sub-modules.
 
-Virtual address translations are done using `ScopedVirtualTranslate`
+Virtual address translations are done using `VirtualTranslate3`
 trait, which is linked to a particular architecture.
 
 Each architecture also has a `ByteOrder` assigned to it.
@@ -13,18 +13,10 @@ When reading/writing data from/to the target it is necessary
 that memflow know the proper byte order of the target system.
 */
 
+pub mod arm;
 pub mod x86;
 
-mod mmu_spec;
-
-pub use mmu_spec::ArchMMUSpec;
-
-use crate::error::{Error, Result};
-use crate::iter::{FnExtend, SplitAtIndex};
-use crate::mem::PhysicalMemory;
-
-use crate::types::{Address, PhysicalAddress};
-pub use bumpalo::{collections::Vec as BumpVec, Bump};
+use crate::types::size;
 
 /// Identifies the byte order of a architecture
 ///
@@ -32,64 +24,15 @@ pub use bumpalo::{collections::Vec as BumpVec, Bump};
 /// The memory will be automatically converted to the endianess memflow is currently running on.
 ///
 /// See the [wikipedia article](https://en.wikipedia.org/wiki/Endianness) for more information on the subject.
+#[repr(u8)]
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize))]
-#[repr(u8)]
+#[cfg_attr(feature = "abi_stable", derive(::abi_stable::StableAbi))]
 pub enum Endianess {
     /// Little Endianess
     LittleEndian,
     /// Big Endianess
     BigEndian,
-}
-
-/// Translates virtual memory to physical using internal translation base (usually a process' dtb)
-///
-/// This trait abstracts virtual address translation for a single virtual memory scope.
-/// On x86 architectures, it is a single `Address` - a CR3 register. But other architectures may
-/// use multiple translation bases, or use a completely different translation mechanism (MIPS).
-pub trait ScopedVirtualTranslate: Clone + Copy + Send {
-    fn virt_to_phys<T: PhysicalMemory>(
-        &self,
-        mem: &mut T,
-        addr: Address,
-    ) -> Result<PhysicalAddress> {
-        let arena = Bump::new();
-        let mut output = None;
-        let mut success = FnExtend::new(|elem: (PhysicalAddress, _)| {
-            if output.is_none() {
-                output = Some(elem.0);
-            }
-        });
-        let mut output_err = None;
-        let mut fail = FnExtend::new(|elem: (Error, _, _)| output_err = Some(elem.0));
-        self.virt_to_phys_iter(
-            mem,
-            Some((addr, 1)).into_iter(),
-            &mut success,
-            &mut fail,
-            &arena,
-        );
-        output.map(Ok).unwrap_or_else(|| Err(output_err.unwrap()))
-    }
-
-    fn virt_to_phys_iter<
-        T: PhysicalMemory + ?Sized,
-        B: SplitAtIndex,
-        VI: Iterator<Item = (Address, B)>,
-        VO: Extend<(PhysicalAddress, B)>,
-        FO: Extend<(Error, Address, B)>,
-    >(
-        &self,
-        mem: &mut T,
-        addrs: VI,
-        out: &mut VO,
-        out_fail: &mut FO,
-        arena: &Bump,
-    );
-
-    fn translation_table_id(&self, address: Address) -> usize;
-
-    fn arch(&self) -> ArchitectureObj;
 }
 
 pub trait Architecture: Send + Sync + 'static {
@@ -143,6 +86,10 @@ pub trait Architecture: Send + Sync + 'static {
     /// This function will return the pointer width as a `usize` value.
     /// See `Architecture::bits()` for more information.
     ///
+    /// # Remarks
+    ///
+    /// The pointer width will never overflow a `usize` value.
+    ///
     /// # Examples
     ///
     /// ```
@@ -165,6 +112,9 @@ pub trait Architecture: Send + Sync + 'static {
     ///
     /// ```
     fn address_space_bits(&self) -> u8;
+
+    /// Returns a FFI-safe identifier
+    fn ident(&self) -> ArchitectureIdent;
 }
 
 impl std::fmt::Debug for ArchitectureObj {
@@ -187,6 +137,59 @@ impl std::cmp::PartialEq<ArchitectureObj> for ArchitectureObj {
     #[allow(clippy::vtable_address_comparisons)]
     fn eq(&self, other: &ArchitectureObj) -> bool {
         std::ptr::eq(*self, *other)
+    }
+}
+
+#[repr(C)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+#[cfg_attr(feature = "abi_stable", derive(::abi_stable::StableAbi))]
+pub enum ArchitectureIdent {
+    /// Unknown architecture. Could be third-party implemented. memflow knows how to work on them,
+    /// but is unable to instantiate them.
+    Unknown(usize),
+    /// X86 with specified bitness and address extensions
+    ///
+    /// First argument - `bitness` controls whether it's 32, or 64 bit variant.
+    /// Second argument - `address_extensions` control whether address extensions are
+    /// enabled (PAE on x32, or LA57 on x64). Warning: LA57 is currently unsupported.
+    X86(u8, bool),
+    /// Arm 64-bit architecture with specified page size
+    ///
+    /// Valid page sizes are 4kb, 16kb, 64kb. Only 4kb is supported at the moment
+    AArch64(usize),
+}
+
+impl std::fmt::Display for ArchitectureIdent {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ArchitectureIdent::X86(32, false) => f.pad("x86_32"),
+            ArchitectureIdent::X86(32, true) => f.pad("x86_32 PAE"),
+            ArchitectureIdent::X86(64, false) => f.pad("x86_64"),
+            ArchitectureIdent::X86(64, true) => f.pad("x86_64 LA57"),
+            ArchitectureIdent::X86(_, _) => f.pad("x86"),
+            ArchitectureIdent::AArch64(_) => f.pad("AArch64"),
+            ArchitectureIdent::Unknown(id) => f.debug_tuple("Unknown").field(&id).finish(),
+        }
+    }
+}
+
+impl ArchitectureIdent {
+    pub fn into_obj(self) -> ArchitectureObj {
+        self.into()
+    }
+}
+
+impl From<ArchitectureIdent> for ArchitectureObj {
+    fn from(arch: ArchitectureIdent) -> ArchitectureObj {
+        const KB4: usize = size::kb(4);
+        match arch {
+            ArchitectureIdent::X86(32, false) => x86::x32::ARCH,
+            ArchitectureIdent::X86(32, true) => x86::x32_pae::ARCH,
+            ArchitectureIdent::X86(64, false) => x86::x64::ARCH,
+            ArchitectureIdent::AArch64(KB4) => arm::aarch64::ARCH,
+            _ => panic!("unsupported architecture! {:?}", arch),
+        }
     }
 }
 

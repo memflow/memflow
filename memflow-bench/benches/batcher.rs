@@ -15,21 +15,13 @@ impl NullMem {
 }
 
 impl PhysicalMemory for NullMem {
-    fn phys_read_raw_iter<'a>(
-        &mut self,
-        data: CIterator<PhysicalReadData<'a>>,
-        out_fail: &mut ReadFailCallback<'_, 'a>,
-    ) -> Result<()> {
-        black_box((data, out_fail));
+    fn phys_read_raw_iter(&mut self, data: PhysicalReadMemOps) -> Result<()> {
+        black_box(data);
         Ok(())
     }
 
-    fn phys_write_raw_iter<'a>(
-        &mut self,
-        data: CIterator<PhysicalWriteData<'a>>,
-        out_fail: &mut WriteFailCallback<'_, 'a>,
-    ) -> Result<()> {
-        black_box((data, out_fail));
+    fn phys_write_raw_iter(&mut self, data: PhysicalWriteMemOps) -> Result<()> {
+        black_box(data);
         Ok(())
     }
 
@@ -56,19 +48,21 @@ fn read_test_nobatcher<T: MemoryView>(
     mem: &mut T,
     mut rng: CurRng,
     size: umem,
-    tbuf: &mut [ReadData],
+    tbuf: &mut [ReadDataRaw],
 ) {
     let base_addr = Address::from(rng.gen_range(0..size));
 
-    for MemData(addr, _) in tbuf.iter_mut().take(chunk_size) {
+    for MemData3(addr, _, _) in tbuf.iter_mut().take(chunk_size) {
         *addr = base_addr + rng.gen_range(0usize..0x2000);
     }
 
-    let mut iter = tbuf[..chunk_size]
+    let iter = tbuf[..chunk_size]
         .iter_mut()
-        .map(|MemData(a, b): &mut ReadData| MemData(*a, b.into()));
+        .map(|MemData3(a, b, c): &mut ReadDataRaw| MemData3(*a, *b, c.into()));
 
-    let _ = black_box(mem.read_raw_iter((&mut iter).into(), &mut (&mut |_| true).into()));
+    let _ = black_box(MemOps::with_raw(iter, None, None, |data| {
+        mem.read_raw_iter(data)
+    }));
 }
 
 fn read_test_batcher<T: MemoryView>(chunk_size: usize, mem: &mut T, mut rng: CurRng, size: umem) {
@@ -100,7 +94,7 @@ fn read_test_with_ctx<T: MemoryView>(
         unsafe { TSLICE }
             .iter_mut()
             .map(|arr| {
-                MemData(Address::INVALID, unsafe {
+                MemData3(Address::INVALID, Address::INVALID, unsafe {
                     std::mem::transmute(&mut arr[..])
                 })
             })

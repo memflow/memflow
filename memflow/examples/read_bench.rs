@@ -115,8 +115,8 @@ fn read_bench(mut kernel: OsInstanceArcBox) -> Result<()> {
 
             println!("Mapped memory map (with up to 1GB gaps):");
 
-            for MemData(address, size) in mem_map {
-                println!("{:x}-{:x}", address, address + size);
+            for MemData3(address, size, pt) in mem_map {
+                println!("{:x}-{:x} {:?}", address, address + size, pt);
             }
 
             rwtest(

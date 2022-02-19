@@ -4,8 +4,8 @@ Basic connector which works on mapped memory.
 
 use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 use crate::mem::{
-    MemData, MemoryMap, PhysicalMemory, PhysicalMemoryMetadata, PhysicalReadData,
-    PhysicalWriteData, ReadFailCallback, WriteFailCallback,
+    opt_call, MemData2, MemData3, MemoryMap, PhysicalMemory, PhysicalMemoryMetadata,
+    PhysicalReadMemOps, PhysicalWriteMemOps,
 };
 use crate::types::{umem, Address};
 
@@ -93,24 +93,22 @@ impl<T: AsRef<[u8]>, F: AsRef<MemoryMap<T>>> MappedPhysicalMemory<T, F> {
 impl<'a, F: AsRef<MemoryMap<&'a mut [u8]>> + Send> PhysicalMemory
     for MappedPhysicalMemory<&'a mut [u8], F>
 {
-    fn phys_read_raw_iter<'b>(
-        &mut self,
-        data: CIterator<PhysicalReadData<'b>>,
-        out_fail: &mut ReadFailCallback<'_, 'b>,
-    ) -> Result<()> {
-        for MemData(mapped_buf, mut buf) in self.info.as_ref().map_iter(data, out_fail) {
+    fn phys_read_raw_iter(&mut self, mut data: PhysicalReadMemOps) -> Result<()> {
+        for MemData3(mapped_buf, meta_addr, mut buf) in
+            self.info.as_ref().map_iter(data.inp, data.out_fail)
+        {
             buf.copy_from_slice(mapped_buf.as_ref());
+            opt_call(data.out.as_deref_mut(), MemData2(meta_addr, buf));
         }
         Ok(())
     }
 
-    fn phys_write_raw_iter<'b>(
-        &mut self,
-        data: CIterator<PhysicalWriteData<'b>>,
-        out_fail: &mut WriteFailCallback<'_, 'b>,
-    ) -> Result<()> {
-        for MemData(mapped_buf, buf) in self.info.as_ref().map_iter(data, out_fail) {
+    fn phys_write_raw_iter(&mut self, mut data: PhysicalWriteMemOps) -> Result<()> {
+        for MemData3(mapped_buf, meta_addr, buf) in
+            self.info.as_ref().map_iter(data.inp, data.out_fail)
+        {
             mapped_buf.as_mut().copy_from_slice(buf.into());
+            opt_call(data.out.as_deref_mut(), MemData2(meta_addr, buf));
         }
 
         Ok(())
@@ -142,22 +140,17 @@ impl<'a, F: AsRef<MemoryMap<&'a mut [u8]>> + Send> PhysicalMemory
 impl<'a, F: AsRef<MemoryMap<&'a [u8]>> + Send> PhysicalMemory
     for MappedPhysicalMemory<&'a [u8], F>
 {
-    fn phys_read_raw_iter<'b>(
-        &mut self,
-        data: CIterator<PhysicalReadData<'b>>,
-        out_fail: &mut ReadFailCallback<'_, 'b>,
-    ) -> Result<()> {
-        for MemData(mapped_buf, mut buf) in self.info.as_ref().map_iter(data, out_fail) {
+    fn phys_read_raw_iter(&mut self, mut data: PhysicalReadMemOps) -> Result<()> {
+        for MemData3(mapped_buf, meta_addr, mut buf) in
+            self.info.as_ref().map_iter(data.inp, data.out_fail)
+        {
             buf.copy_from_slice(mapped_buf.as_ref());
+            opt_call(data.out.as_deref_mut(), MemData2(meta_addr, buf));
         }
         Ok(())
     }
 
-    fn phys_write_raw_iter<'b>(
-        &mut self,
-        _data: CIterator<PhysicalWriteData<'b>>,
-        _out_fail: &mut WriteFailCallback<'_, 'b>,
-    ) -> Result<()> {
+    fn phys_write_raw_iter(&mut self, _data: PhysicalWriteMemOps) -> Result<()> {
         Err(Error(ErrorOrigin::Connector, ErrorKind::ReadOnly)
             .log_error("target mapping is not writeable"))
     }

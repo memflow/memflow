@@ -54,27 +54,29 @@ pub use cursor::MemoryCursor;
 #[int_result(PartialResult)]
 pub trait MemoryView: Send {
     #[int_result]
-    fn read_raw_iter<'a>(
-        &mut self,
-        data: CIterator<ReadData<'a>>,
-        out_fail: &mut ReadFailCallback<'_, 'a>,
-    ) -> Result<()>;
+    fn read_raw_iter(&mut self, data: ReadRawMemOps) -> Result<()>;
 
     #[int_result]
-    fn write_raw_iter<'a>(
-        &mut self,
-        data: CIterator<WriteData<'a>>,
-        out_fail: &mut WriteFailCallback<'_, 'a>,
-    ) -> Result<()>;
+    fn write_raw_iter(&mut self, data: WriteRawMemOps) -> Result<()>;
 
     fn metadata(&self) -> MemoryViewMetadata;
 
     // Read helpers
 
+    #[int_result]
+    fn read_iter(&mut self, data: ReadMemOps) -> Result<()> {
+        MemOps::with_raw(
+            data.inp.map(|MemData2(a, b)| MemData3(a, a, b)),
+            data.out,
+            data.out_fail,
+            |data| self.read_raw_iter(data),
+        )
+    }
+
     fn read_raw_list(&mut self, data: &mut [ReadData]) -> PartialResult<()> {
         let mut out = Ok(());
 
-        let callback = &mut |MemData(_, mut d): ReadData| {
+        let callback = &mut |MemData2(_, mut d): ReadData| {
             out = Err(PartialError::PartialVirtualRead(()));
 
             // Default behaviour is to zero out any failed data
@@ -85,15 +87,19 @@ pub trait MemoryView: Send {
             true
         };
 
-        let mut iter = data.iter().map(|MemData(d1, d2)| MemData(*d1, d2.into()));
+        let iter = data
+            .iter()
+            .map(|MemData2(d1, d2)| MemData3(*d1, *d1, d2.into()));
 
-        self.read_raw_iter((&mut iter).into(), &mut callback.into())?;
+        MemOps::with_raw(iter, None, Some(&mut callback.into()), |data| {
+            self.read_raw_iter(data)
+        })?;
 
         out
     }
 
     fn read_raw_into(&mut self, addr: Address, out: &mut [u8]) -> PartialResult<()> {
-        self.read_raw_list(&mut [MemData(addr, out.into())])
+        self.read_raw_list(&mut [MemData2(addr, out.into())])
     }
 
     #[skip_func]
@@ -178,6 +184,16 @@ pub trait MemoryView: Send {
 
     // Write helpers
 
+    #[int_result]
+    fn write_iter(&mut self, data: WriteMemOps) -> Result<()> {
+        MemOps::with_raw(
+            data.inp.map(|MemData2(a, b)| MemData3(a, a, b)),
+            data.out,
+            data.out_fail,
+            |data| self.write_raw_iter(data),
+        )
+    }
+
     fn write_raw_list(&mut self, data: &[WriteData]) -> PartialResult<()> {
         let mut out = Ok(());
 
@@ -186,15 +202,17 @@ pub trait MemoryView: Send {
             true
         };
 
-        let mut iter = data.iter().copied();
+        let iter = data.iter().copied();
 
-        self.write_raw_iter((&mut iter).into(), &mut callback.into())?;
+        MemOps::with_raw(iter, None, Some(&mut callback.into()), |data| {
+            self.write_iter(data)
+        })?;
 
         out
     }
 
     fn write_raw(&mut self, addr: Address, data: &[u8]) -> PartialResult<()> {
-        self.write_raw_list(&[MemData(addr, data.into())])
+        self.write_raw_list(&[MemData2(addr, data.into())])
     }
 
     #[skip_func]

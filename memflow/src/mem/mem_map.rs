@@ -1,7 +1,7 @@
 use crate::iter::SplitAtIndex;
 use crate::types::{umem, Address, PhysicalAddress};
 
-use crate::mem::mem_data::MemData;
+use crate::mem::mem_data::{opt_call, MemData2, MemData3};
 use cglue::callback::*;
 use std::cmp::Ordering;
 use std::convert::TryInto;
@@ -21,7 +21,7 @@ use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 /// # Examples
 ///
 /// ```
-/// use memflow::prelude::{MemoryMap, MemData, umem};
+/// use memflow::prelude::{MemoryMap, MemData2, umem};
 ///
 /// let mut map = MemoryMap::new();
 /// map.push_remap(0x1000.into(), 0x1000, 0.into());      // push region from 0x1000 - 0x1FFF
@@ -30,12 +30,12 @@ use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 /// println!("{:?}", map);
 ///
 /// // handle unmapped memory regions
-/// let failed = &mut |MemData(a, b)| {
+/// let failed = &mut |MemData2(a, b)| {
 ///     println!("Unmapped: {} {}", a, b);
 ///     true
 /// };
 ///
-/// let hw_addr = map.map(0x10ff.into(), 8 as umem, failed);
+/// let hw_addr = map.map(0x10ff.into(), 8 as umem, Some(failed));
 /// ```
 #[derive(Clone)]
 pub struct MemoryMap<M> {
@@ -110,15 +110,15 @@ impl<M: SplitAtIndex> MemoryMap<M> {
     /// (for buf-to-buf copies).
     ///
     /// Invalid regions get pushed to the `out_fail` parameter. This function requries `self`
-    pub fn map<'a, T: 'a + SplitAtIndex, V: Callbackable<MemData<Address, T>>>(
+    pub fn map<'a, T: 'a + SplitAtIndex, V: Callbackable<MemData2<Address, T>>>(
         &'a self,
         addr: Address,
         buf: T,
-        out_fail: &'a mut V,
-    ) -> impl Iterator<Item = MemData<M, T>> + 'a {
+        out_fail: Option<&'a mut V>,
+    ) -> impl Iterator<Item = MemData3<M, Address, T>> + 'a {
         MemoryMapIterator::new(
             &self.mappings,
-            Some(MemData(addr, buf)).into_iter(),
+            Some(MemData3(addr, addr, buf)).into_iter(),
             out_fail,
         )
     }
@@ -132,13 +132,13 @@ impl<M: SplitAtIndex> MemoryMap<M> {
     pub fn map_base_iter<
         'a,
         T: 'a + SplitAtIndex,
-        I: 'a + Iterator<Item = MemData<Address, T>>,
-        V: Callbackable<MemData<Address, T>>,
+        I: 'a + Iterator<Item = MemData3<Address, Address, T>>,
+        V: Callbackable<MemData2<Address, T>>,
     >(
         &'a self,
         iter: I,
-        out_fail: &'a mut V,
-    ) -> impl Iterator<Item = MemData<M, T>> + 'a {
+        out_fail: Option<&'a mut V>,
+    ) -> MemoryMapIterator<'a, I, M, T, V> {
         MemoryMapIterator::new(&self.mappings, iter, out_fail)
     }
 
@@ -151,16 +151,17 @@ impl<M: SplitAtIndex> MemoryMap<M> {
     pub fn map_iter<
         'a,
         T: 'a + SplitAtIndex,
-        I: 'a + Iterator<Item = MemData<PhysicalAddress, T>>,
-        V: Callbackable<MemData<Address, T>>,
+        I: 'a + Iterator<Item = MemData3<PhysicalAddress, Address, T>>,
+        V: Callbackable<MemData2<Address, T>>,
     >(
         &'a self,
         iter: I,
-        out_fail: &'a mut V,
-    ) -> impl Iterator<Item = MemData<M, T>> + 'a {
+        out_fail: Option<&'a mut V>,
+    ) -> MemoryMapIterator<'a, impl Iterator<Item = MemData3<Address, Address, T>> + 'a, M, T, V>
+    {
         MemoryMapIterator::new(
             &self.mappings,
-            iter.map(|MemData(addr, buf)| MemData(addr.address(), buf)),
+            iter.map(|MemData3(addr, meta_addr, buf)| MemData3(addr.address(), meta_addr, buf)),
             out_fail,
         )
     }
@@ -390,25 +391,25 @@ impl MemoryMap<(Address, umem)> {
 
 const MIN_BSEARCH_THRESH: usize = 32;
 
-pub type MapFailCallback<'a, T> = OpaqueCallback<'a, MemData<Address, T>>;
+pub type MapFailCallback<'a, T> = OpaqueCallback<'a, MemData3<Address, Address, T>>;
 
 pub struct MemoryMapIterator<'a, I, M, T, C> {
     map: &'a [MemoryMapping<M>],
     in_iter: I,
-    fail_out: &'a mut C,
-    cur_elem: Option<MemData<Address, T>>,
+    fail_out: Option<&'a mut C>,
+    cur_elem: Option<MemData3<Address, Address, T>>,
     cur_map_pos: usize,
 }
 
 impl<
         'a,
-        I: Iterator<Item = MemData<Address, T>>,
+        I: Iterator<Item = MemData3<Address, Address, T>>,
         M: SplitAtIndex,
         T: SplitAtIndex,
-        C: Callbackable<MemData<Address, T>>,
+        C: Callbackable<MemData2<Address, T>>,
     > MemoryMapIterator<'a, I, M, T, C>
 {
-    fn new(map: &'a [MemoryMapping<M>], in_iter: I, fail_out: &'a mut C) -> Self {
+    fn new(map: &'a [MemoryMapping<M>], in_iter: I, fail_out: Option<&'a mut C>) -> Self {
         Self {
             map,
             in_iter,
@@ -418,8 +419,12 @@ impl<
         }
     }
 
-    fn get_next(&mut self) -> Option<MemData<M, T>> {
-        if let Some(MemData(mut addr, buf)) = self.cur_elem.take() {
+    pub fn fail_out(&mut self) -> Option<&mut C> {
+        self.fail_out.as_deref_mut()
+    }
+
+    fn get_next(&mut self) -> Option<MemData3<M, Address, T>> {
+        if let Some(MemData3(mut addr, mut meta_addr, buf)) = self.cur_elem.take() {
             if self.map.len() >= MIN_BSEARCH_THRESH && self.cur_map_pos == 0 {
                 self.cur_map_pos = match self.map.binary_search_by(|map_elem| {
                     if map_elem.base > addr {
@@ -442,10 +447,14 @@ impl<
                     let (left_reject, right) = buf.split_at(offset);
 
                     if let Some(left_reject) = left_reject {
-                        let _ = self.fail_out.call(MemData(addr, left_reject));
+                        opt_call(
+                            self.fail_out.as_deref_mut(),
+                            MemData2(meta_addr, left_reject),
+                        );
                     }
 
                     addr += offset;
+                    meta_addr += offset;
 
                     if let Some(leftover) = right {
                         let off = map_elem.base.to_umem() + output.length() - addr.to_umem();
@@ -460,7 +469,7 @@ impl<
                                 //If memory is in right order, this will skip the current mapping,
                                 //but not reset the search
                                 *cur_map_pos = i + 1;
-                                MemData(addr + ret_length, x)
+                                MemData3(addr + ret_length, meta_addr + ret_length, x)
                             })
                             .or_else(|| {
                                 *cur_map_pos = 0;
@@ -474,6 +483,7 @@ impl<
                             .split_at(ret_length)
                             .0
                             .zip(ret)
+                            .map(|(a, b)| (a, meta_addr, b))
                             .map(<_>::into);
                     }
 
@@ -481,7 +491,7 @@ impl<
                 }
             }
 
-            let _ = self.fail_out.call(MemData(addr, buf));
+            let _ = opt_call(self.fail_out.as_deref_mut(), MemData2(meta_addr, buf));
         }
         None
     }
@@ -489,13 +499,13 @@ impl<
 
 impl<
         'a,
-        I: Iterator<Item = MemData<Address, T>>,
+        I: Iterator<Item = MemData3<Address, Address, T>>,
         M: SplitAtIndex,
         T: SplitAtIndex,
-        C: Callbackable<MemData<Address, T>>,
+        C: Callbackable<MemData2<Address, T>>,
     > Iterator for MemoryMapIterator<'a, I, M, T, C>
 {
-    type Item = MemData<M, T>;
+    type Item = MemData3<M, Address, T>;
 
     fn next(&mut self) -> Option<Self::Item> {
         //Could optimize this and move over to new method, but would need to fuse the iter
@@ -572,7 +582,7 @@ mod tests {
 
         let mut void_panic = |x| panic!("Should not have mapped {:?}", x);
         assert_eq!(
-            (map.map::<umem, _>(0x10ff.into(), 1, &mut void_panic)
+            (map.map::<umem, _>(0x10ff.into(), 1, Some(&mut void_panic))
                 .next()
                 .unwrap()
                 .0)
@@ -580,7 +590,7 @@ mod tests {
             Address::from(0x00ff)
         );
         assert_eq!(
-            (map.map::<umem, _>(0x30ff.into(), 1, &mut void_panic)
+            (map.map::<umem, _>(0x30ff.into(), 1, Some(&mut void_panic))
                 .next()
                 .unwrap()
                 .0)
@@ -599,7 +609,7 @@ mod tests {
         let mut void = |_| true;
 
         assert_eq!(
-            (map.map::<umem, _>(0x3000.into(), 1, &mut void_panic)
+            (map.map::<umem, _>(0x3000.into(), 1, Some(&mut void_panic))
                 .next()
                 .unwrap()
                 .0)
@@ -607,15 +617,21 @@ mod tests {
             Address::from(0x2000)
         );
         assert_eq!(
-            (map.map::<umem, _>(0x3fff.into(), 1, &mut void_panic)
+            (map.map::<umem, _>(0x3fff.into(), 1, Some(&mut void_panic))
                 .next()
                 .unwrap()
                 .0)
                 .0,
             Address::from(0x2fff)
         );
-        assert_eq!(map.map::<umem, _>(0x2fff.into(), 1, &mut void).next(), None);
-        assert_eq!(map.map::<umem, _>(0x4000.into(), 1, &mut void).next(), None);
+        assert_eq!(
+            map.map::<umem, _>(0x2fff.into(), 1, Some(&mut void)).next(),
+            None
+        );
+        assert_eq!(
+            map.map::<umem, _>(0x4000.into(), 1, Some(&mut void)).next(),
+            None
+        );
     }
 
     #[test]
@@ -627,19 +643,23 @@ mod tests {
         let mut void = vec![];
         let mut cbvoid: OpaqueCallback<_> = (&mut void).into();
         assert_eq!(
-            map.map::<umem, _>(0x00ff.into(), 1, &mut cbvoid).next(),
+            map.map::<umem, _>(0x00ff.into(), 1, Some(&mut cbvoid))
+                .next(),
             None
         );
         assert_eq!(
-            map.map::<umem, _>(0x20ff.into(), 1, &mut cbvoid).next(),
+            map.map::<umem, _>(0x20ff.into(), 1, Some(&mut cbvoid))
+                .next(),
             None
         );
         assert_eq!(
-            map.map::<umem, _>(0x4000.into(), 1, &mut cbvoid).next(),
+            map.map::<umem, _>(0x4000.into(), 1, Some(&mut cbvoid))
+                .next(),
             None
         );
         assert_eq!(
-            map.map::<umem, _>(0x40ff.into(), 1, &mut cbvoid).next(),
+            map.map::<umem, _>(0x40ff.into(), 1, Some(&mut cbvoid))
+                .next(),
             None
         );
 
@@ -654,7 +674,7 @@ mod tests {
 
         let mut void_panic = |x| panic!("Should not have mapped {:?}", x);
         assert_eq!(
-            (map.map::<umem, _>(0x10ff.into(), 1, &mut void_panic)
+            (map.map::<umem, _>(0x10ff.into(), 1, Some(&mut void_panic))
                 .next()
                 .unwrap()
                 .0)
@@ -662,7 +682,7 @@ mod tests {
             Address::from(0x00ff)
         );
         assert_eq!(
-            (map.map::<umem, _>(0x30ff.into(), 1, &mut void_panic)
+            (map.map::<umem, _>(0x30ff.into(), 1, Some(&mut void_panic))
                 .next()
                 .unwrap()
                 .0)
@@ -681,7 +701,7 @@ mod tests {
         let mut void = |_| true;
 
         assert_eq!(
-            (map.map::<umem, _>(0x3000.into(), 1, &mut void_panic)
+            (map.map::<umem, _>(0x3000.into(), 1, Some(&mut void_panic))
                 .next()
                 .unwrap()
                 .0)
@@ -689,15 +709,21 @@ mod tests {
             Address::from(0x2000)
         );
         assert_eq!(
-            (map.map::<umem, _>(0x3fff.into(), 1, &mut void_panic)
+            (map.map::<umem, _>(0x3fff.into(), 1, Some(&mut void_panic))
                 .next()
                 .unwrap()
                 .0)
                 .0,
             Address::from(0x2fff)
         );
-        assert_eq!(map.map::<umem, _>(0x2fff.into(), 1, &mut void).next(), None);
-        assert_eq!(map.map::<umem, _>(0x4000.into(), 1, &mut void).next(), None);
+        assert_eq!(
+            map.map::<umem, _>(0x2fff.into(), 1, Some(&mut void)).next(),
+            None
+        );
+        assert_eq!(
+            map.map::<umem, _>(0x4000.into(), 1, Some(&mut void)).next(),
+            None
+        );
     }
 
     #[test]
@@ -710,7 +736,7 @@ mod tests {
         let mut void = |_| true;
 
         assert_eq!(
-            (map.map::<umem, _>(0x2000.into(), 1, &mut void_panic)
+            (map.map::<umem, _>(0x2000.into(), 1, Some(&mut void_panic))
                 .next()
                 .unwrap()
                 .0)
@@ -718,15 +744,21 @@ mod tests {
             Address::from(0x2000)
         );
         assert_eq!(
-            (map.map::<umem, _>(0x2fff.into(), 1, &mut void_panic)
+            (map.map::<umem, _>(0x2fff.into(), 1, Some(&mut void_panic))
                 .next()
                 .unwrap()
                 .0)
                 .0,
             Address::from(0x2fff)
         );
-        assert_eq!(map.map::<umem, _>(0x3fff.into(), 1, &mut void).next(), None);
-        assert_eq!(map.map::<umem, _>(0x3000.into(), 1, &mut void).next(), None);
+        assert_eq!(
+            map.map::<umem, _>(0x3fff.into(), 1, Some(&mut void)).next(),
+            None
+        );
+        assert_eq!(
+            map.map::<umem, _>(0x3000.into(), 1, Some(&mut void)).next(),
+            None
+        );
     }
 
     #[test]

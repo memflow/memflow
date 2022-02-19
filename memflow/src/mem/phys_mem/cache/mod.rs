@@ -33,15 +33,14 @@ use crate::architecture::ArchitectureObj;
 use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 use crate::iter::PageChunks;
 use crate::mem::{
-    MemData, PhysicalMemory, PhysicalMemoryMapping, PhysicalMemoryMetadata, PhysicalReadData,
-    PhysicalWriteData, ReadFailCallback, WriteFailCallback,
+    MemData3, MemOps, PhysicalMemory, PhysicalMemoryMapping, PhysicalMemoryMetadata,
+    PhysicalReadMemOps, PhysicalWriteMemOps,
 };
 use page_cache::{PageCache, PageValidity};
 
 use crate::types::cache::{CacheValidator, DefaultCacheValidator};
 
 use crate::types::{size, PageType};
-use cglue::iter::CIterator;
 
 use bumpalo::Bump;
 
@@ -129,28 +128,26 @@ impl<'a, T: PhysicalMemory> CachedPhysicalMemory<'a, T, DefaultCacheValidator> {
 
 // forward PhysicalMemory trait fncs
 impl<'a, T: PhysicalMemory, Q: CacheValidator> PhysicalMemory for CachedPhysicalMemory<'a, T, Q> {
-    fn phys_read_raw_iter<'b>(
+    fn phys_read_raw_iter(
         &mut self,
-        data: CIterator<PhysicalReadData<'b>>,
-        out_fail: &mut ReadFailCallback<'_, 'b>,
+        //data: PhysicalReadMemOps,
+        data: PhysicalReadMemOps,
     ) -> Result<()> {
         self.cache.validator.update_validity();
         self.arena.reset();
-        self.cache
-            .cached_read(&mut self.mem, data, out_fail, &self.arena)
+        self.cache.cached_read(&mut self.mem, data, &self.arena)
     }
 
-    fn phys_write_raw_iter<'b>(
+    fn phys_write_raw_iter(
         &mut self,
-        data: CIterator<PhysicalWriteData<'b>>,
-        out_fail: &mut WriteFailCallback<'_, 'b>,
+        MemOps { inp, out, out_fail }: PhysicalWriteMemOps,
     ) -> Result<()> {
         self.cache.validator.update_validity();
 
-        let cache = &mut self.cache;
         let mem = &mut self.mem;
+        let cache = &mut self.cache;
 
-        let mut data = data.map(move |MemData(addr, data)| {
+        let inp = inp.map(move |MemData3(addr, meta_addr, data)| {
             if cache.is_cached_page_type(addr.page_type()) {
                 for (paddr, data_chunk) in data.page_chunks(addr.address(), cache.page_size()) {
                     let mut cached_page = cache.cached_page_mut(paddr, false);
@@ -163,10 +160,12 @@ impl<'a, T: PhysicalMemory, Q: CacheValidator> PhysicalMemory for CachedPhysical
                     cache.put_entry(cached_page);
                 }
             }
-            MemData(addr, data)
+            MemData3(addr, meta_addr, data)
         });
 
-        mem.phys_write_raw_iter((&mut data).into(), out_fail)
+        MemOps::with_raw(inp, out, out_fail, move |data| {
+            mem.phys_write_raw_iter(data)
+        })
     }
 
     #[inline]

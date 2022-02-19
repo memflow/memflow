@@ -1,6 +1,6 @@
 use criterion::*;
 
-use memflow::mem::{MemData, MemoryView};
+use memflow::mem::{MemData2, MemoryView};
 
 use memflow::error::Result;
 use memflow::os::*;
@@ -35,12 +35,12 @@ fn rwtest<T: MemoryView>(
 
                 let mut bufs = Vec::with_capacity(*o);
 
-                for MemData(addr, _) in bufs.iter_mut() {
+                for MemData2(addr, _) in bufs.iter_mut() {
                     *addr = (base_addr + rng.gen_range(0..0x2000)).into();
                 }
 
                 bufs.extend(vbufs.iter_mut().map(|vec| {
-                    MemData(
+                    MemData2(
                         (base_addr + rng.gen_range(0..0x2000)).into(),
                         vec.as_mut_slice().into(),
                     )

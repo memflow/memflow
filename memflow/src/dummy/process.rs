@@ -7,7 +7,7 @@ use crate::mem::{mem_data::*, memory_view::*};
 use crate::os::process::*;
 use crate::os::*;
 use crate::plugins::*;
-use crate::types::{imem, umem, util::GapRemover, Address};
+use crate::types::{imem, umem, util::GapRemover, Address, PageType};
 
 use crate::cglue::*;
 use rand::{thread_rng, Rng};
@@ -154,26 +154,22 @@ impl<T: MemoryView> Process for DummyProcess<T> {
         end: Address,
         out: MemoryRangeCallback,
     ) {
-        GapRemover::new(out, gap_size, start, end)
-            .extend(self.proc.modules.iter().map(|m| MemData(m.base, m.size)))
+        GapRemover::new(out, gap_size, start, end).extend(
+            self.proc
+                .modules
+                .iter()
+                .map(|m| MemData3(m.base, m.size, PageType::UNKNOWN)),
+        )
     }
 }
 
 impl<T: MemoryView> MemoryView for DummyProcess<T> {
-    fn read_raw_iter<'a>(
-        &mut self,
-        data: CIterator<ReadData<'a>>,
-        out_fail: &mut ReadFailCallback<'_, 'a>,
-    ) -> Result<()> {
-        self.mem.read_raw_iter(data, out_fail)
+    fn read_raw_iter(&mut self, data: ReadRawMemOps) -> Result<()> {
+        self.mem.read_raw_iter(data)
     }
 
-    fn write_raw_iter<'a>(
-        &mut self,
-        data: CIterator<WriteData<'a>>,
-        out_fail: &mut WriteFailCallback<'_, 'a>,
-    ) -> Result<()> {
-        self.mem.write_raw_iter(data, out_fail)
+    fn write_raw_iter(&mut self, data: WriteRawMemOps) -> Result<()> {
+        self.mem.write_raw_iter(data)
     }
 
     fn metadata(&self) -> MemoryViewMetadata {

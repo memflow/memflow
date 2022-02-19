@@ -25,6 +25,7 @@ unsafe fn shorten_pair_lifetime<'a: 't, 'b: 't, 't, O>(
 #[derive(Debug)]
 pub struct TranslateData<T> {
     pub addr: Address,
+    pub meta_addr: Address,
     pub buf: T,
 }
 
@@ -66,13 +67,19 @@ impl<T: SplitAtIndex> SplitAtIndex for TranslateData<T> {
         Self: Sized,
     {
         let addr = self.addr;
+        let meta_addr = self.meta_addr;
         let (bleft, bright) = self.buf.split_at(idx);
 
         (
-            bleft.map(|buf| TranslateData { addr, buf }),
+            bleft.map(|buf| TranslateData {
+                addr,
+                meta_addr,
+                buf,
+            }),
             bright.map(|buf| TranslateData {
                 buf,
                 addr: addr + idx,
+                meta_addr: meta_addr + idx,
             }),
         )
     }
@@ -82,13 +89,19 @@ impl<T: SplitAtIndex> SplitAtIndex for TranslateData<T> {
         Self: Sized,
     {
         let addr = self.addr;
+        let meta_addr = self.meta_addr;
         let (bleft, bright) = self.buf.split_at_mut(idx);
 
         (
-            bleft.map(|buf| TranslateData { addr, buf }),
+            bleft.map(|buf| TranslateData {
+                addr,
+                meta_addr,
+                buf,
+            }),
             bright.map(|buf| TranslateData {
                 buf,
                 addr: addr + idx,
+                meta_addr: meta_addr + idx,
             }),
         )
     }

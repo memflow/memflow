@@ -4,8 +4,8 @@ Basic connector which works on file i/o operations (`Seek`, `Read`, `Write`).
 
 use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 use crate::mem::{
-    MemData, MemoryMap, PhysicalMemory, PhysicalMemoryMetadata, PhysicalReadData,
-    PhysicalWriteData, ReadFailCallback, WriteFailCallback,
+    opt_call, MemData2, MemData3, MemoryMap, PhysicalMemory, PhysicalMemoryMetadata,
+    PhysicalReadMemOps, PhysicalWriteMemOps,
 };
 use crate::types::{umem, Address};
 
@@ -130,38 +130,58 @@ impl<T: Seek + Read + Write + Send> FileIoMemory<T> {
 }
 
 impl<T: Seek + Read + Write + Send> PhysicalMemory for FileIoMemory<T> {
-    fn phys_read_raw_iter<'a>(
-        &mut self,
-        data: CIterator<PhysicalReadData<'a>>,
-        out_fail: &mut ReadFailCallback<'_, 'a>,
-    ) -> Result<()> {
-        for MemData((file_off, _), buf) in self.mem_map.map_iter(data, out_fail) {
-            self.reader
+    fn phys_read_raw_iter(&mut self, mut data: PhysicalReadMemOps) -> Result<()> {
+        let mut iter = self.mem_map.map_iter(data.inp, data.out_fail);
+        while let Some(MemData3((file_off, _), meta_addr, mut buf)) = iter.next() {
+            if self
+                .reader
                 .seek(SeekFrom::Start(file_off.to_umem() as u64))
                 .map_err(|err| {
                     Error(ErrorOrigin::Connector, ErrorKind::UnableToSeekFile).log_error(err)
-                })?;
-            self.reader.read_exact(buf.into()).map_err(|err| {
-                Error(ErrorOrigin::Connector, ErrorKind::UnableToWriteFile).log_error(err)
-            })?;
+                })
+                .is_ok()
+            {
+                if self
+                    .reader
+                    .read_exact(&mut *buf)
+                    .map_err(|err| {
+                        Error(ErrorOrigin::Connector, ErrorKind::UnableToReadFile).log_error(err)
+                    })
+                    .is_ok()
+                {
+                    opt_call(data.out.as_deref_mut(), MemData2(meta_addr, buf));
+                    continue;
+                }
+            }
+            opt_call(iter.fail_out(), MemData2(meta_addr, buf));
         }
         Ok(())
     }
 
-    fn phys_write_raw_iter<'a>(
-        &mut self,
-        data: CIterator<PhysicalWriteData<'a>>,
-        out_fail: &mut WriteFailCallback<'_, 'a>,
-    ) -> Result<()> {
-        for MemData((file_off, _), buf) in self.mem_map.map_iter(data, out_fail) {
-            self.reader
+    fn phys_write_raw_iter(&mut self, mut data: PhysicalWriteMemOps) -> Result<()> {
+        let mut iter = self.mem_map.map_iter(data.inp, data.out_fail);
+        while let Some(MemData3((file_off, _), meta_addr, buf)) = iter.next() {
+            if self
+                .reader
                 .seek(SeekFrom::Start(file_off.to_umem() as u64))
                 .map_err(|err| {
                     Error(ErrorOrigin::Connector, ErrorKind::UnableToSeekFile).log_error(err)
-                })?;
-            self.reader.write(buf.into()).map_err(|err| {
-                Error(ErrorOrigin::Connector, ErrorKind::UnableToWriteFile).log_error(err)
-            })?;
+                })
+                .is_ok()
+            {
+                if self
+                    .reader
+                    .write_all(&*buf)
+                    .map_err(|err| {
+                        Error(ErrorOrigin::Connector, ErrorKind::UnableToWriteFile).log_error(err)
+                    })
+                    .is_ok()
+                {
+                    opt_call(data.out.as_deref_mut(), MemData2(meta_addr, buf));
+                    continue;
+                }
+            }
+            opt_call(iter.fail_out(), MemData2(meta_addr, buf));
         }
         Ok(())
     }

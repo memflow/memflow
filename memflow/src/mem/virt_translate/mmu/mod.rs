@@ -4,7 +4,7 @@ pub(crate) mod translate_data;
 
 use super::VtopFailureCallback;
 use crate::iter::SplitAtIndex;
-use crate::mem::MemData;
+use crate::mem::MemData3;
 use crate::types::{umem, Address};
 pub(crate) use def::ArchMmuDef;
 pub(crate) use fixed_slice_vec::FixedSliceVec as MVec;
@@ -29,7 +29,7 @@ pub trait MmuTranslationBase: Clone + Copy + core::fmt::Debug {
     fn virt_addr_filter<B: SplitAtIndex>(
         &self,
         spec: &ArchMmuSpec,
-        addr: MemData<Address, B>,
+        addr: MemData3<Address, Address, B>,
         work_group: (&mut TranslationChunk<Self>, &mut TranslateDataVec<B>),
         out_fail: &mut VtopFailureCallback<B>,
     );
@@ -43,7 +43,7 @@ pub trait MmuTranslationBase: Clone + Copy + core::fmt::Debug {
         work_vecs: &mut (TranslateVec, TranslateDataVec<B>),
         wait_vecs: &mut (TranslateVec, TranslateDataVec<B>),
     ) where
-        VI: Iterator<Item = MemData<Address, B>>,
+        VI: Iterator<Item = MemData3<Address, Address, B>>,
         B: SplitAtIndex,
     {
         let mut init_chunk = TranslationChunk::new(*self, FlagsType::NONE);
@@ -79,7 +79,7 @@ impl MmuTranslationBase for Address {
     fn virt_addr_filter<B>(
         &self,
         spec: &ArchMmuSpec,
-        addr: MemData<Address, B>,
+        addr: MemData3<Address, Address, B>,
         work_group: (&mut TranslationChunk<Self>, &mut TranslateDataVec<B>),
         out_fail: &mut VtopFailureCallback<B>,
     ) where

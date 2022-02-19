@@ -20,42 +20,56 @@ impl<T: MemoryView> RemapView<T> {
 }
 
 impl<T: MemoryView> MemoryView for RemapView<T> {
-    fn read_raw_iter<'a>(
-        &mut self,
-        data: CIterator<ReadData<'a>>,
-        out_fail: &mut ReadFailCallback<'_, 'a>,
-    ) -> Result<()> {
-        let out_fail = std::cell::RefCell::new(out_fail);
+    fn read_raw_iter(&mut self, MemOps { inp, out_fail, out }: ReadRawMemOps) -> Result<()> {
+        let out_fail = out_fail.map(|of| std::cell::RefCell::new(of));
 
-        let mut out_fail1 = |data| out_fail.borrow_mut().call(data);
-        let mut out_fail2 = |data| out_fail.borrow_mut().call(data);
+        let mut out_fail1 = out_fail
+            .as_ref()
+            .map(|of| move |data| of.borrow_mut().call(data));
+        let mut out_fail2 = out_fail
+            .as_ref()
+            .map(|of| move |data| of.borrow_mut().call(data));
+        let mut out_fail2 = out_fail2.as_mut().map(<_>::into);
+        let out_fail2 = out_fail2.as_mut();
 
-        let mut iter = self
-            .mem_map
-            .map_base_iter(data, &mut out_fail1)
-            .map(|MemData((a, _), b)| MemData(a, b));
+        let mut out = out.map(|o| move |data| o.call(data));
+        let mut out = out.as_mut().map(<_>::into);
+        let out = out.as_mut();
 
-        self.mem
-            .read_raw_iter((&mut iter).into(), &mut (&mut out_fail2).into())
+        let mem_map = &mut self.mem_map;
+        let mem = &mut self.mem;
+
+        let iter = mem_map
+            .map_base_iter(inp, out_fail1.as_mut())
+            .map(|MemData3((a, _), m, b)| MemData3(a, m, b));
+
+        MemOps::with_raw(iter, out, out_fail2, |data| mem.read_raw_iter(data))
     }
 
-    fn write_raw_iter<'a>(
-        &mut self,
-        data: CIterator<WriteData<'a>>,
-        out_fail: &mut WriteFailCallback<'_, 'a>,
-    ) -> Result<()> {
-        let out_fail = std::cell::RefCell::new(out_fail);
+    fn write_raw_iter(&mut self, MemOps { inp, out_fail, out }: WriteRawMemOps) -> Result<()> {
+        let out_fail = out_fail.map(|of| std::cell::RefCell::new(of));
 
-        let mut out_fail1 = |data| out_fail.borrow_mut().call(data);
-        let mut out_fail2 = |data| out_fail.borrow_mut().call(data);
+        let mut out_fail1 = out_fail
+            .as_ref()
+            .map(|of| move |data| of.borrow_mut().call(data));
+        let mut out_fail2 = out_fail
+            .as_ref()
+            .map(|of| move |data| of.borrow_mut().call(data));
+        let mut out_fail2 = out_fail2.as_mut().map(<_>::into);
+        let out_fail2 = out_fail2.as_mut();
 
-        let mut iter = self
-            .mem_map
-            .map_base_iter(data, &mut out_fail1)
-            .map(|MemData((a, _), b)| MemData(a, b));
+        let mut out = out.map(|o| move |data| o.call(data));
+        let mut out = out.as_mut().map(<_>::into);
+        let out = out.as_mut();
 
-        self.mem
-            .write_raw_iter((&mut iter).into(), &mut (&mut out_fail2).into())
+        let mem_map = &mut self.mem_map;
+        let mem = &mut self.mem;
+
+        let iter = mem_map
+            .map_base_iter(inp, out_fail1.as_mut())
+            .map(|MemData3((a, _), m, b)| MemData3(a, m, b));
+
+        MemOps::with_raw(iter, out, out_fail2, |data| mem.write_raw_iter(data))
     }
 
     fn metadata(&self) -> MemoryViewMetadata {

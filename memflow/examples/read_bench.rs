@@ -115,8 +115,8 @@ fn read_bench(mut kernel: OsInstanceArcBox) -> Result<()> {
 
             println!("Mapped memory map (with up to 1GB gaps):");
 
-            for MemData(address, size) in mem_map {
-                println!("{:x}-{:x}", address, address + size);
+            for MemData3(address, size, pt) in mem_map {
+                println!("{:x}-{:x} {:?}", address, address + size, pt);
             }
 
             rwtest(
@@ -155,7 +155,7 @@ fn main() -> Result<()> {
 }
 
 fn parse_args() -> ArgMatches {
-    App::new("read_bench example")
+    Command::new("read_bench example")
         .version(crate_version!())
         .author(crate_authors!())
         .arg(Arg::new("verbose").short('v').multiple_occurrences(true))

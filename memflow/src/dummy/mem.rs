@@ -3,10 +3,7 @@ use crate::connector::MappedPhysicalMemory;
 use crate::derive::connector;
 use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 use crate::mem::mem_data::*;
-use crate::mem::{
-    MemoryMap, PhysicalMemory, PhysicalMemoryMapping, PhysicalMemoryMetadata, ReadFailCallback,
-    WriteFailCallback,
-};
+use crate::mem::{MemoryMap, PhysicalMemory, PhysicalMemoryMapping, PhysicalMemoryMetadata};
 use crate::plugins::*;
 use crate::types::{size, umem, Address};
 
@@ -54,21 +51,13 @@ impl Clone for DummyMemory {
 
 impl PhysicalMemory for DummyMemory {
     #[inline]
-    fn phys_read_raw_iter<'a>(
-        &mut self,
-        data: CIterator<PhysicalReadData<'a>>,
-        out_fail: &mut ReadFailCallback<'_, 'a>,
-    ) -> Result<()> {
-        self.mem.phys_read_raw_iter(data, out_fail)
+    fn phys_read_raw_iter(&mut self, data: PhysicalReadMemOps) -> Result<()> {
+        self.mem.phys_read_raw_iter(data)
     }
 
     #[inline]
-    fn phys_write_raw_iter<'a>(
-        &mut self,
-        data: CIterator<PhysicalWriteData<'a>>,
-        out_fail: &mut WriteFailCallback<'_, 'a>,
-    ) -> Result<()> {
-        self.mem.phys_write_raw_iter(data, out_fail)
+    fn phys_write_raw_iter(&mut self, data: PhysicalWriteMemOps) -> Result<()> {
+        self.mem.phys_write_raw_iter(data)
     }
 
     #[inline]

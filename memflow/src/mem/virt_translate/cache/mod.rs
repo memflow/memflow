@@ -5,7 +5,7 @@ mod tlb_cache;
 use crate::architecture::ArchitectureObj;
 use crate::iter::{PageChunks, SplitAtIndex};
 use crate::mem::virt_translate::VirtualTranslate2;
-use crate::mem::{MemData, PhysicalMemory};
+use crate::mem::{MemData3, PhysicalMemory};
 use crate::types::cache::{CacheValidator, DefaultCacheValidator};
 use crate::types::{umem, Address};
 use tlb_cache::TlbCache;
@@ -151,7 +151,7 @@ impl<V: VirtualTranslate2, Q: CacheValidator> VirtualTranslate2 for CachedVirtua
         T: PhysicalMemory + ?Sized,
         B: SplitAtIndex,
         D: VirtualTranslate3,
-        VI: Iterator<Item = MemData<Address, B>>,
+        VI: Iterator<Item = MemData3<Address, Address, B>>,
     {
         self.tlb.validator.update_validity();
         self.arena.reset();
@@ -167,34 +167,34 @@ impl<V: VirtualTranslate2, Q: CacheValidator> VirtualTranslate2 for CachedVirtua
 
         let arch = self.arch;
         let mut addrs = addrs
-            .filter_map(|MemData(addr, buf)| {
+            .filter_map(|MemData3(addr, meta_addr, buf)| {
                 if tlb.is_read_too_long(arch, buf.length() as umem) {
-                    uncached_in.push(MemData(addr, buf));
+                    uncached_in.push(MemData3(addr, meta_addr, buf));
                     None
                 } else {
-                    Some((addr, buf))
+                    Some((addr, meta_addr, buf))
                 }
             })
-            .flat_map(|(addr, buf)| {
-                buf.page_chunks_by(addr, arch.page_size(), |addr, split, _| {
+            .flat_map(|(addr, meta_addr, buf)| {
+                (meta_addr, buf).page_chunks_by(addr, arch.page_size(), |addr, (_, split), _| {
                     tlb.try_entry(translator, addr + split.length(), arch)
                         .is_some()
                         || tlb.try_entry(translator, addr, arch).is_some()
                 })
             })
-            .filter_map(|(addr, buf)| {
+            .filter_map(|(addr, (meta_addr, buf))| {
                 if let Some(entry) = tlb.try_entry(translator, addr, arch) {
                     hitc += 1;
                     debug_assert!(buf.length() <= arch.page_size() as umem);
                     // TODO: handle case
                     let _ = match entry {
-                        Ok(entry) => out.call(MemData(entry.phys_addr, buf)),
-                        Err(error) => out_fail.call((error, MemData(addr, buf))),
+                        Ok(entry) => out.call(MemData3(entry.phys_addr, meta_addr, buf)),
+                        Err(error) => out_fail.call((error, MemData3(addr, meta_addr, buf))),
                     };
                     None
                 } else {
                     misc += core::cmp::max(1, buf.length() / arch.page_size() as umem);
-                    Some(MemData(addr, (addr, buf)))
+                    Some(MemData3(addr, meta_addr, (addr, buf)))
                 }
             })
             .peekable();
@@ -215,19 +215,21 @@ impl<V: VirtualTranslate2, Q: CacheValidator> VirtualTranslate2 for CachedVirtua
             vat.virt_to_phys_iter(phys_mem, translator, uncached_iter, out, out_fail);
         }
 
-        out.extend(uncached_out.into_iter().map(|MemData(paddr, (addr, buf))| {
-            tlb.cache_entry(translator, addr, paddr, arch);
-            MemData(paddr, buf)
-        }));
-
-        out_fail.extend(
-            uncached_out_fail
+        out.extend(
+            uncached_out
                 .into_iter()
-                .map(|(err, MemData(vaddr, (_, buf)))| {
-                    tlb.cache_invalid_if_uncached(translator, vaddr, buf.length() as umem, arch);
-                    (err, MemData(vaddr, buf))
+                .map(|MemData3(paddr, meta_addr, (addr, buf))| {
+                    tlb.cache_entry(translator, addr, paddr, arch);
+                    MemData3(paddr, meta_addr, buf)
                 }),
         );
+
+        out_fail.extend(uncached_out_fail.into_iter().map(
+            |(err, MemData3(vaddr, meta_addr, (_, buf)))| {
+                tlb.cache_invalid_if_uncached(translator, vaddr, buf.length() as umem, arch);
+                (err, MemData3(vaddr, meta_addr, buf))
+            },
+        ));
 
         self.hitc += hitc;
         self.misc += misc;

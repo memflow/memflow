@@ -1,4 +1,4 @@
-use clap::{crate_authors, crate_version, App, Arg, ArgMatches};
+use clap::{crate_authors, crate_version, Arg, ArgMatches, Command};
 use log::Level;
 /// A simple kernel module list example using memflow
 use memflow::prelude::v1::*;
@@ -30,7 +30,7 @@ fn main() -> Result<()> {
 }
 
 fn parse_args() -> ArgMatches {
-    App::new("kernel_modules example")
+    Command::new("kernel_modules example")
         .version(crate_version!())
         .author(crate_authors!())
         .arg(Arg::new("verbose").short('v').multiple_occurrences(true))

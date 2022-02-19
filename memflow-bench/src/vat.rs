@@ -19,11 +19,11 @@ fn vat_test_with_mem(
 ) {
     let mut rng = CurRng::from_rng(thread_rng()).unwrap();
 
-    let mut bufs = vec![MemData(Address::null(), 1); translations];
+    let mut bufs = vec![MemData2(Address::null(), 1); translations];
 
     let base_addr = rng.gen_range(module.base.to_umem()..(module.base.to_umem() + module.size));
 
-    for MemData(address, _) in bufs.iter_mut() {
+    for MemData2(address, _) in bufs.iter_mut() {
         *address = (base_addr + rng.gen_range(0..0x2000)).into();
     }
 

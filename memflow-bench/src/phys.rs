@@ -1,11 +1,11 @@
 use criterion::*;
 
-use memflow::mem::{CachedPhysicalMemory, PhysicalMemory};
+use memflow::mem::{CachedPhysicalMemory, MemOps, PhysicalMemory};
 
 use memflow::architecture;
 use memflow::cglue::*;
 use memflow::error::Result;
-use memflow::mem::{MemData, PhysicalReadData};
+use memflow::mem::{MemData3, PhysicalReadData};
 use memflow::types::*;
 
 use rand::prelude::*;
@@ -39,23 +39,24 @@ fn rwtest(
                 bufs.extend(vbufs.iter_mut().map(|vec| {
                     let addr = (base_addr + rng.gen_range(0..0x2000)).into();
 
-                    MemData(
+                    MemData3(
                         PhysicalAddress::with_page(
                             addr,
                             PageType::default().write(true),
                             mem::kb(4),
                         ),
+                        Address::NULL,
                         vec.as_mut_slice().into(),
                     )
                 }));
 
                 bench.iter(|| {
-                    let mut iter = bufs
+                    let iter = bufs
                         .iter_mut()
-                        .map(|MemData(a, d): &mut PhysicalReadData| MemData(*a, d.into()));
-                    let _ = black_box(
-                        mem.phys_read_raw_iter((&mut iter).into(), &mut (&mut |_| false).into()),
-                    );
+                        .map(|MemData3(a, b, d): &mut PhysicalReadData| MemData3(*a, *b, d.into()));
+                    let _ = black_box(MemOps::with_raw(iter, None, None, |data| {
+                        mem.phys_read_raw_iter(data)
+                    }));
                 });
 
                 done_size += *i * *o;

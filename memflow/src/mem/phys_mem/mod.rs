@@ -37,16 +37,17 @@ pub use cache::*;
 /// use memflow::mem::{
 ///     MemoryMap,
 ///     PhysicalMemoryMapping,
-///     MemData,
 ///     phys_mem::{
 ///         PhysicalMemory,
 ///         PhysicalMemoryMetadata,
 ///     },
 ///     mem_data::{
-///         PhysicalReadData,
-///         PhysicalWriteData,
-///         ReadFailCallback,
-///         WriteFailCallback,
+///         MemOps,
+///         PhysicalReadMemOps,
+///         PhysicalWriteMemOps,
+///         opt_call,
+///         MemData3,
+///         MemData2,
 ///     }
 /// };
 ///
@@ -60,30 +61,38 @@ pub use cache::*;
 /// }
 ///
 /// impl PhysicalMemory for MemoryBackend {
-///     fn phys_read_raw_iter<'a>(
+///     fn phys_read_raw_iter(
 ///         &mut self,
-///         data: CIterator<PhysicalReadData<'a>>,
-///         _: &mut ReadFailCallback<'_, 'a>
+///         MemOps {
+///             inp,
+///             mut out,
+///             ..
+///         }: PhysicalReadMemOps,
 ///     ) -> Result<()> {
-///         data
-///             .for_each(|MemData(addr, mut out)| {
+///         inp
+///             .for_each(|MemData3(addr, meta_addr, mut data)| {
 ///                 let addr: usize = addr.to_umem().try_into().unwrap();
-///                 let len = out.len();
-///                 out.copy_from_slice(&self.mem[addr..(addr + len)])
+///                 let len = data.len();
+///                 data.copy_from_slice(&self.mem[addr..(addr + len)]);
+///                 opt_call(out.as_deref_mut(), MemData2(meta_addr, data));
 ///             });
 ///         Ok(())
 ///     }
 ///
-///     fn phys_write_raw_iter<'a>(
+///     fn phys_write_raw_iter(
 ///         &mut self,
-///         data: CIterator<PhysicalWriteData<'a>>,
-///         _: &mut WriteFailCallback<'_, 'a>
+///         MemOps {
+///             inp,
+///             mut out,
+///             ..
+///         }: PhysicalWriteMemOps,
 ///     ) -> Result<()> {
-///         data
-///             .for_each(|MemData(addr, data)| {
+///         inp
+///             .for_each(|MemData3(addr, meta_addr, data)| {
 ///                 let addr: usize = addr.to_umem().try_into().unwrap();
 ///                 let len = data.len();
-///                 self.mem[addr..(addr + len)].copy_from_slice(&data)
+///                 self.mem[addr..(addr + len)].copy_from_slice(&data);
+///                 opt_call(out.as_deref_mut(), MemData2(meta_addr, data));
 ///             });
 ///         Ok(())
 ///     }
@@ -118,16 +127,8 @@ pub use cache::*;
 #[int_result]
 #[cglue_forward]
 pub trait PhysicalMemory: Send {
-    fn phys_read_raw_iter<'a>(
-        &mut self,
-        data: CIterator<PhysicalReadData<'a>>,
-        out_fail: &mut ReadFailCallback<'_, 'a>,
-    ) -> Result<()>;
-    fn phys_write_raw_iter<'a>(
-        &mut self,
-        data: CIterator<PhysicalWriteData<'a>>,
-        out_fail: &mut WriteFailCallback<'_, 'a>,
-    ) -> Result<()>;
+    fn phys_read_raw_iter(&mut self, data: PhysicalReadMemOps) -> Result<()>;
+    fn phys_write_raw_iter(&mut self, data: PhysicalWriteMemOps) -> Result<()>;
 
     /// Retrieve metadata about the physical memory
     ///
@@ -165,14 +166,17 @@ pub trait PhysicalMemory: Send {
     where
         Self: Sized,
     {
-        let mut iter = Some(MemData(addr, out.as_bytes_mut().into())).into_iter();
-        self.phys_read_raw_iter(
-            (&mut iter).into(),
-            &mut (&mut |MemData(_, mut d): ReadData| {
-                d.iter_mut().for_each(|b| *b = 0);
-                true
-            })
-                .into(),
+        MemOps::with(
+            std::iter::once((addr, CSliceMut::from(out.as_bytes_mut()))),
+            None,
+            Some(
+                &mut (&mut |MemData2(_, mut d): ReadData| {
+                    d.iter_mut().for_each(|b| *b = 0);
+                    true
+                })
+                    .into(),
+            ),
+            |data| self.phys_read_raw_iter(data),
         )
     }
 
@@ -181,8 +185,12 @@ pub trait PhysicalMemory: Send {
     where
         Self: Sized,
     {
-        let mut iter = Some(MemData(addr, data.as_bytes().into())).into_iter();
-        self.phys_write_raw_iter((&mut iter).into(), &mut (&mut |_| true).into())
+        MemOps::with(
+            std::iter::once((addr, CSliceRef::from(data.as_bytes()))),
+            None,
+            None,
+            |data| self.phys_write_raw_iter(data),
+        )
     }
 
     #[vtbl_only('static, wrap_with_obj(MemoryView))]
@@ -210,22 +218,24 @@ pub struct PhysicalMemoryView<T> {
 }
 
 impl<T: PhysicalMemory> MemoryView for PhysicalMemoryView<T> {
-    fn read_raw_iter<'a>(
-        &mut self,
-        data: CIterator<ReadData<'a>>,
-        out_fail: &mut ReadFailCallback<'_, 'a>,
-    ) -> Result<()> {
-        let mut iter = data.map(|MemData(addr, data)| MemData(addr.into(), data));
-        self.mem.phys_read_raw_iter((&mut iter).into(), out_fail)
+    fn read_raw_iter(&mut self, MemOps { inp, out, out_fail }: ReadRawMemOps) -> Result<()> {
+        let inp =
+            &mut inp.map(|MemData3(addr, meta_addr, data)| MemData3(addr.into(), meta_addr, data));
+        let inp = inp.into();
+
+        let data = MemOps { inp, out, out_fail };
+
+        self.mem.phys_read_raw_iter(data)
     }
 
-    fn write_raw_iter<'a>(
-        &mut self,
-        data: CIterator<WriteData<'a>>,
-        out_fail: &mut WriteFailCallback<'_, 'a>,
-    ) -> Result<()> {
-        let mut iter = data.map(|MemData(addr, data)| MemData(addr.into(), data));
-        self.mem.phys_write_raw_iter((&mut iter).into(), out_fail)
+    fn write_raw_iter(&mut self, MemOps { inp, out, out_fail }: WriteRawMemOps) -> Result<()> {
+        let inp =
+            &mut inp.map(|MemData3(addr, meta_addr, data)| MemData3(addr.into(), meta_addr, data));
+        let inp = inp.into();
+
+        let data = MemOps { inp, out, out_fail };
+
+        self.mem.phys_write_raw_iter(data)
     }
 
     fn metadata(&self) -> MemoryViewMetadata {

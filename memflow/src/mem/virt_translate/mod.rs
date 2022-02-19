@@ -1,6 +1,6 @@
 use std::prelude::v1::*;
 
-use super::{MemoryRange, MemoryRangeCallback};
+use super::{MemoryRange, MemoryRangeCallback, VtopRange};
 
 use std::cmp::*;
 
@@ -35,7 +35,7 @@ mod tests;
 
 use crate::error::{Result, *};
 
-use crate::mem::{MemData, PhysicalMemory};
+use crate::mem::{MemData2, MemData3, PhysicalMemory};
 use crate::types::{imem, umem, Address, Page, PhysicalAddress};
 
 #[cglue_trait]
@@ -43,7 +43,7 @@ use crate::types::{imem, umem, Address, Page, PhysicalAddress};
 pub trait VirtualTranslate: Send {
     fn virt_to_phys_list(
         &mut self,
-        addrs: &[MemoryRange],
+        addrs: &[VtopRange],
         out: VirtualTranslationCallback,
         out_fail: VirtualTranslationFailCallback,
     );
@@ -56,7 +56,7 @@ pub trait VirtualTranslate: Send {
     ) {
         assert!(end >= start);
         self.virt_to_phys_list(
-            &[MemData(start, (end - start) as umem)],
+            &[MemData2(start, (end - start) as umem)],
             out,
             (&mut |_| true).into(),
         )
@@ -114,9 +114,9 @@ pub trait VirtualTranslate: Send {
             (&mut |VirtualTranslation {
                        in_virtual,
                        size,
-                       out_physical: _,
+                       out_physical,
                    }| {
-                gap_remover.push_range(MemData(in_virtual, size));
+                gap_remover.push_range(MemData3(in_virtual, size, out_physical.page_type));
                 true
             })
                 .into(),
@@ -127,7 +127,7 @@ pub trait VirtualTranslate: Send {
         let mut out = Err(Error(ErrorOrigin::VirtualTranslate, ErrorKind::OutOfBounds));
 
         self.virt_to_phys_list(
-            &[MemData(address, 1)],
+            &[MemData2(address, 1)],
             (&mut |VirtualTranslation {
                        in_virtual: _,
                        size: _,
@@ -292,7 +292,7 @@ where
     /// # use memflow::error::Result;
     /// # use memflow::types::{PhysicalAddress, Address, umem};
     /// # use memflow::dummy::{DummyMemory, DummyOs};
-    /// use memflow::mem::{VirtualTranslate2, DirectTranslate, MemData};
+    /// use memflow::mem::{VirtualTranslate2, DirectTranslate, MemData3};
     /// use memflow::types::size;
     /// use memflow::architecture::x86::x64;
     /// use memflow::cglue::FromExtend;
@@ -318,7 +318,7 @@ where
     /// let addresses = buffer
     ///     .chunks_mut(CHUNK_SIZE)
     ///     .enumerate()
-    ///     .map(|(i, buf)| MemData(virtual_base + ((i + 1) * size::kb(4) - 1), buf));
+    ///     .map(|(i, buf)| MemData3(virtual_base + ((i + 1) * size::kb(4) - 1), Address::NULL, buf));
     ///
     /// let mut translated_data = vec![];
     /// let mut failed_translations = &mut |_| true;
@@ -350,7 +350,7 @@ where
         T: PhysicalMemory + ?Sized,
         B: SplitAtIndex,
         D: VirtualTranslate3,
-        VI: Iterator<Item = MemData<Address, B>>;
+        VI: Iterator<Item = MemData3<Address, Address, B>>;
 
     /// Translate a single virtual address
     ///
@@ -405,7 +405,7 @@ where
         vaddr: Address,
     ) -> Result<PhysicalAddress> {
         let mut output = None;
-        let success = &mut |elem: MemData<PhysicalAddress, _>| {
+        let success = &mut |elem: MemData3<PhysicalAddress, Address, _>| {
             if output.is_none() {
                 output = Some(elem.0);
             }
@@ -420,7 +420,7 @@ where
         self.virt_to_phys_iter(
             phys_mem,
             translator,
-            Some(MemData::<_, umem>(vaddr, 1)).into_iter(),
+            Some(MemData3::<_, _, umem>(vaddr, vaddr, 1)).into_iter(),
             &mut success.into(),
             &mut fail.into(),
         );
@@ -446,7 +446,7 @@ where
         U: PhysicalMemory + ?Sized,
         B: SplitAtIndex,
         D: VirtualTranslate3,
-        VI: Iterator<Item = MemData<Address, B>>,
+        VI: Iterator<Item = MemData3<Address, Address, B>>,
     {
         (**self).virt_to_phys_iter(phys_mem, translator, addrs, out, out_fail)
     }
@@ -504,7 +504,7 @@ pub trait VirtualTranslate3: Clone + Copy + Send {
         let mut buf: [std::mem::MaybeUninit<u8>; 512] =
             unsafe { std::mem::MaybeUninit::uninit().assume_init() };
         let mut output = None;
-        let success = &mut |elem: MemData<PhysicalAddress, _>| {
+        let success = &mut |elem: MemData3<PhysicalAddress, Address, _>| {
             if output.is_none() {
                 output = Some(elem.0);
             }
@@ -517,7 +517,7 @@ pub trait VirtualTranslate3: Clone + Copy + Send {
         };
         self.virt_to_phys_iter(
             mem,
-            Some(MemData::<_, umem>(addr, 1)).into_iter(),
+            Some(MemData3::<_, _, umem>(addr, addr, 1)).into_iter(),
             &mut success.into(),
             &mut fail.into(),
             &mut buf,
@@ -528,7 +528,7 @@ pub trait VirtualTranslate3: Clone + Copy + Send {
     fn virt_to_phys_iter<
         T: PhysicalMemory + ?Sized,
         B: SplitAtIndex,
-        VI: Iterator<Item = MemData<Address, B>>,
+        VI: Iterator<Item = MemData3<Address, Address, B>>,
     >(
         &self,
         mem: &mut T,
@@ -543,5 +543,5 @@ pub trait VirtualTranslate3: Clone + Copy + Send {
     fn arch(&self) -> ArchitectureObj;
 }
 
-pub type VtopOutputCallback<'a, B> = OpaqueCallback<'a, MemData<PhysicalAddress, B>>;
-pub type VtopFailureCallback<'a, B> = OpaqueCallback<'a, (Error, MemData<Address, B>)>;
+pub type VtopOutputCallback<'a, B> = OpaqueCallback<'a, MemData3<PhysicalAddress, Address, B>>;
+pub type VtopFailureCallback<'a, B> = OpaqueCallback<'a, (Error, MemData3<Address, Address, B>)>;

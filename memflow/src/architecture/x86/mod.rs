@@ -10,7 +10,7 @@ use crate::mem::virt_translate::{
 
 use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 use crate::iter::SplitAtIndex;
-use crate::mem::{MemData, PhysicalMemory};
+use crate::mem::{MemData3, PhysicalMemory};
 use crate::types::{umem, Address};
 
 use std::ptr;
@@ -67,7 +67,7 @@ impl VirtualTranslate3 for X86VirtualTranslate {
     fn virt_to_phys_iter<
         T: PhysicalMemory + ?Sized,
         B: SplitAtIndex,
-        VI: Iterator<Item = MemData<Address, B>>,
+        VI: Iterator<Item = MemData3<Address, Address, B>>,
     >(
         &self,
         mem: &mut T,

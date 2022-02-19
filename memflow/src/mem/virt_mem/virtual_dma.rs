@@ -15,7 +15,7 @@ use crate::mem::{
 use crate::types::{umem, Address, PhysicalAddress};
 
 use bumpalo::{collections::Vec as BumpVec, Bump};
-use cglue::{callback::FromExtend, iter::CIterator};
+use cglue::callback::FromExtend;
 
 /// The VirtualDma struct provides a default implementation to access virtual memory
 /// from user provided [`PhysicalMemory`] and [`VirtualTranslate2`] objects.
@@ -186,53 +186,62 @@ where
     }
 }
 
+#[allow(clippy::needless_option_as_deref)]
 impl<T: PhysicalMemory, V: VirtualTranslate2, D: VirtualTranslate3> MemoryView
     for VirtualDma<T, V, D>
 {
     fn read_raw_iter<'a>(
         &mut self,
-        data: CIterator<ReadData<'a>>,
-        out_fail: &mut ReadFailCallback<'_, 'a>,
+        MemOps {
+            inp,
+            out,
+            mut out_fail,
+        }: ReadRawMemOps,
     ) -> Result<()> {
         self.arena.reset();
-        // TODO: size_hint
-        let mut translation = BumpVec::with_capacity_in(data.size_hint().0, &self.arena);
+        let mut translation = BumpVec::with_capacity_in(inp.size_hint().0, &self.arena);
 
-        //let mut partial_read = false;
         self.vat.virt_to_phys_iter(
             &mut self.phys_mem,
             &self.translator,
-            data,
+            inp,
             &mut translation.from_extend(),
-            &mut (&mut |(_, rdata): (_, ReadData<'a>)| out_fail.call(rdata)).into(),
+            &mut (&mut |(_, MemData3(_, meta, buf)): (_, _)| {
+                opt_call(out_fail.as_deref_mut(), MemData2(meta, buf))
+            })
+                .into(),
         );
 
-        let mut iter = translation.into_iter();
-
-        self.phys_mem
-            .phys_read_raw_iter((&mut iter).into(), &mut (&mut |_| true).into())
+        MemOps::with_raw(translation.into_iter(), out, out_fail, |data| {
+            self.phys_mem.phys_read_raw_iter(data)
+        })
     }
 
-    fn write_raw_iter<'a>(
+    fn write_raw_iter(
         &mut self,
-        data: CIterator<WriteData<'a>>,
-        out_fail: &mut WriteFailCallback<'_, 'a>,
+        MemOps {
+            inp,
+            out,
+            mut out_fail,
+        }: WriteRawMemOps,
     ) -> Result<()> {
         self.arena.reset();
-        let mut translation = BumpVec::with_capacity_in(data.size_hint().0, &self.arena);
+        let mut translation = BumpVec::with_capacity_in(inp.size_hint().0, &self.arena);
 
         self.vat.virt_to_phys_iter(
             &mut self.phys_mem,
             &self.translator,
-            data,
+            inp,
             &mut translation.from_extend(),
-            &mut (&mut |(_, wdata): (_, WriteData<'a>)| out_fail.call(wdata)).into(),
+            &mut (&mut |(_, MemData3(_, meta, buf)): (_, _)| {
+                opt_call(out_fail.as_deref_mut(), MemData2(meta, buf))
+            })
+                .into(),
         );
 
-        let mut iter = translation.into_iter();
-
-        self.phys_mem
-            .phys_write_raw_iter((&mut iter).into(), &mut (&mut |_| true).into())
+        MemOps::with_raw(translation.into_iter(), out, out_fail, |data| {
+            self.phys_mem.phys_write_raw_iter(data)
+        })
     }
 
     fn metadata(&self) -> MemoryViewMetadata {
@@ -258,7 +267,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate2, D: VirtualTranslate3> VirtualTrans
 {
     fn virt_to_phys_list(
         &mut self,
-        addrs: &[MemoryRange],
+        addrs: &[VtopRange],
         mut out: VirtualTranslationCallback,
         mut out_fail: VirtualTranslationFailCallback,
     ) {
@@ -267,16 +276,16 @@ impl<T: PhysicalMemory, V: VirtualTranslate2, D: VirtualTranslate3> VirtualTrans
             &self.translator,
             addrs
                 .iter()
-                .map(|&MemData(address, size)| MemData(address, (address, size))),
-            &mut (&mut |MemData(a, b): MemData<PhysicalAddress, (Address, umem)>| {
+                .map(|&MemData2(address, size)| MemData3(address, address, size)),
+            &mut (&mut |MemData3(a, b, c): MemData3<PhysicalAddress, Address, umem>| {
                 out.call(VirtualTranslation {
-                    in_virtual: b.0,
-                    size: b.1,
+                    in_virtual: b,
+                    size: c,
                     out_physical: a,
                 })
             })
                 .into(),
-            &mut (&mut |(_e, MemData(from, (_, size)))| {
+            &mut (&mut |(_e, MemData3(from, _, size))| {
                 out_fail.call(VirtualTranslationFail { from, size })
             })
                 .into(),

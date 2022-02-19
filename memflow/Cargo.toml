@@ -1,6 +1,6 @@
 [package]
 name = "memflow"
-version = "0.2.0-beta1"
+version = "0.2.0-beta2"
 authors = ["ko1N <ko1N1337@gmail.com>", "Aurimas Blažulionis <0x60@pm.me>"]
 edition = "2018"
 description = "core components of the memflow physical memory introspection framework"
@@ -8,7 +8,6 @@ documentation = "https://docs.rs/memflow"
 readme = "../README.md"
 homepage = "https://memflow.github.io"
 repository = "https://github.com/memflow/memflow"
-license-file = "../LICENSE"
 license = "MIT"
 keywords = [ "memflow", "introspection", "memory", "dma" ]
 categories = [ "memory-management", "os" ]
@@ -31,10 +30,10 @@ bumpalo = { version = "^3.9.1", features = ["collections"] }
 no-std-compat = { version = "^0.4.1", features = ["alloc"] }
 itertools = { version = "^0.10.3", default-features = false }
 memmap = { version = "^0.7.0", optional = true }
-hashbrown = "^0.11.2"
+hashbrown = "^0.12"
 fixed-slice-vec = "^0.8.0"
-cglue = { version = ">=0.2.5", default-features = false }
-rangemap = "^0.1.14"
+cglue = { version = ">=0.2.8", default-features = false }
+rangemap = "^1.0"
 
 # plugins
 libloading = { version = "^0.7.2", optional = true }

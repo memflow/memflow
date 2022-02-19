@@ -25,7 +25,7 @@ fn main() {
 }
 
 fn parse_args() -> String {
-    let matches = App::new("multithreading example")
+    let matches = Command::new("multithreading example")
         .version(crate_version!())
         .author(crate_authors!())
         .arg(Arg::new("verbose").short('v').multiple_occurrences(true))

@@ -518,21 +518,36 @@ struct CSliceMut {
 };
 
 /**
+ * Generic type representing an address, original address,and associated data.
+ *
+ * This base type is always used for initialization, but the commonly used type aliases are:
+ * `ReadDataIn`, `WriteDataIn`, `PhysicalReadDataIn`, and `PhysicalWriteDataIn`.
+ */
+template<typename A, typename M, typename T>
+struct MemData3 {
+    A _0;
+    M _1;
+    T _2;
+};
+
+/**
+ * MemData type for physical memory reads.
+ */
+using PhysicalReadData = MemData3<PhysicalAddress, Address, CSliceMut<uint8_t>>;
+
+/**
  * Generic type representing an address and associated data.
  *
  * This base type is always used for initialization, but the commonly used type aliases are:
  * `ReadData`, `WriteData`, `PhysicalReadData`, and `PhysicalWriteData`.
  */
 template<typename A, typename T>
-struct MemData {
+struct MemData2 {
     A _0;
     T _1;
 };
 
-/**
- * MemData type for physical memory reads.
- */
-using PhysicalReadData = MemData<PhysicalAddress, CSliceMut<uint8_t>>;
+using ReadData = MemData2<Address, CSliceMut<uint8_t>>;
 
 /**
  * FFI compatible iterator.
@@ -672,11 +687,6 @@ struct CPPIterator {
     }
 };
 
-/**
- * MemData type for regular memory reads.
- */
-using ReadData = MemData<Address, CSliceMut<uint8_t>>;
-
 template<typename T, typename F>
 struct Callback {
     T *context;
@@ -713,7 +723,19 @@ struct Callback {
 template<typename T>
 using OpaqueCallback = Callback<void, T>;
 
-using ReadFailCallback = OpaqueCallback<ReadData>;
+/**
+ * Data needed to perform memory operations.
+ *
+ * `inp` is an iterator containing
+ */
+template<typename T, typename P>
+struct MemOps {
+    CIterator<T> inp;
+    OpaqueCallback<P> *out;
+    OpaqueCallback<P> *out_fail;
+};
+
+using PhysicalReadMemOps = MemOps<PhysicalReadData, ReadData>;
 
 /**
  * Wrapper around const slices.
@@ -780,14 +802,11 @@ struct CSliceRef {
 /**
  * MemData type for physical memory writes.
  */
-using PhysicalWriteData = MemData<PhysicalAddress, CSliceRef<uint8_t>>;
+using PhysicalWriteData = MemData3<PhysicalAddress, Address, CSliceRef<uint8_t>>;
 
-/**
- * MemData type for regular memory writes.
- */
-using WriteData = MemData<Address, CSliceRef<uint8_t>>;
+using WriteData = MemData2<Address, CSliceRef<uint8_t>>;
 
-using WriteFailCallback = OpaqueCallback<WriteData>;
+using PhysicalWriteMemOps = MemOps<PhysicalWriteData, WriteData>;
 
 struct PhysicalMemoryMetadata {
     Address max_address;
@@ -893,6 +912,20 @@ struct CGlueObjContainer<T, void, void> {
     }
 };
 
+/**
+ * MemData type for regular memory reads.
+ */
+using ReadDataRaw = MemData3<Address, Address, CSliceMut<uint8_t>>;
+
+using ReadRawMemOps = MemOps<ReadDataRaw, ReadData>;
+
+/**
+ * MemData type for regular memory writes.
+ */
+using WriteDataRaw = MemData3<Address, Address, CSliceRef<uint8_t>>;
+
+using WriteRawMemOps = MemOps<WriteDataRaw, WriteData>;
+
 struct MemoryViewMetadata {
     Address max_address;
     umem real_size;
@@ -900,6 +933,10 @@ struct MemoryViewMetadata {
     bool little_endian;
     uint8_t arch_bits;
 };
+
+using ReadCallback = OpaqueCallback<ReadData>;
+
+using WriteCallback = OpaqueCallback<WriteData>;
 
 /**
  * CGlue vtable for trait MemoryView.
@@ -909,11 +946,13 @@ struct MemoryViewMetadata {
 template<typename CGlueC>
 struct MemoryViewVtbl {
     typedef typename CGlueC::Context Context;
-    int32_t (*read_raw_iter)(CGlueC *cont, CIterator<ReadData> data, ReadFailCallback *out_fail);
-    int32_t (*write_raw_iter)(CGlueC *cont, CIterator<WriteData> data, WriteFailCallback *out_fail);
+    int32_t (*read_raw_iter)(CGlueC *cont, ReadRawMemOps data);
+    int32_t (*write_raw_iter)(CGlueC *cont, WriteRawMemOps data);
     MemoryViewMetadata (*metadata)(const CGlueC *cont);
+    int32_t (*read_iter)(CGlueC *cont, CIterator<ReadData> inp, ReadCallback *out, ReadCallback *out_fail);
     int32_t (*read_raw_list)(CGlueC *cont, CSliceMut<ReadData> data);
     int32_t (*read_raw_into)(CGlueC *cont, Address addr, CSliceMut<uint8_t> out);
+    int32_t (*write_iter)(CGlueC *cont, CIterator<WriteData> inp, WriteCallback *out, WriteCallback *out_fail);
     int32_t (*write_raw_list)(CGlueC *cont, CSliceRef<WriteData> data);
     int32_t (*write_raw)(CGlueC *cont, Address addr, CSliceRef<uint8_t> data);
 };
@@ -925,8 +964,10 @@ constexpr MemoryViewVtblImpl() :
         &Impl::read_raw_iter,
         &Impl::write_raw_iter,
         &Impl::metadata,
+        &Impl::read_iter,
         &Impl::read_raw_list,
         &Impl::read_raw_into,
+        &Impl::write_iter,
         &Impl::write_raw_list,
         &Impl::write_raw
     } {}
@@ -960,8 +1001,8 @@ using MemoryViewBase = CGlueTraitObj<CGlueInst, MemoryViewVtbl<CGlueObjContainer
 template<typename CGlueC>
 struct PhysicalMemoryVtbl {
     typedef typename CGlueC::Context Context;
-    int32_t (*phys_read_raw_iter)(CGlueC *cont, CIterator<PhysicalReadData> data, ReadFailCallback *out_fail);
-    int32_t (*phys_write_raw_iter)(CGlueC *cont, CIterator<PhysicalWriteData> data, WriteFailCallback *out_fail);
+    int32_t (*phys_read_raw_iter)(CGlueC *cont, PhysicalReadMemOps data);
+    int32_t (*phys_write_raw_iter)(CGlueC *cont, PhysicalWriteMemOps data);
     PhysicalMemoryMetadata (*metadata)(const CGlueC *cont);
     void (*set_mem_map)(CGlueC *cont, CSliceRef<PhysicalMemoryMapping> _mem_map);
     MemoryViewBase<CBox<void>, Context> (*into_phys_view)(CGlueC cont);
@@ -1160,13 +1201,13 @@ struct ConnectorInstance {
         return __ret;
     }
 
-    inline int32_t phys_read_raw_iter(CIterator<PhysicalReadData> data, ReadFailCallback * out_fail) noexcept {
-        int32_t __ret = (this->vtbl_physicalmemory)->phys_read_raw_iter(&this->container, data, out_fail);
+    inline int32_t phys_read_raw_iter(PhysicalReadMemOps data) noexcept {
+        int32_t __ret = (this->vtbl_physicalmemory)->phys_read_raw_iter(&this->container, data);
         return __ret;
     }
 
-    inline int32_t phys_write_raw_iter(CIterator<PhysicalWriteData> data, WriteFailCallback * out_fail) noexcept {
-        int32_t __ret = (this->vtbl_physicalmemory)->phys_write_raw_iter(&this->container, data, out_fail);
+    inline int32_t phys_write_raw_iter(PhysicalWriteMemOps data) noexcept {
+        int32_t __ret = (this->vtbl_physicalmemory)->phys_write_raw_iter(&this->container, data);
         return __ret;
     }
 
@@ -1563,7 +1604,7 @@ using SectionCallback = OpaqueCallback<SectionInfo>;
 
 using imem = int64_t;
 
-using MemoryRange = MemData<Address, umem>;
+using MemoryRange = MemData3<Address, umem, PageType>;
 
 using MemoryRangeCallback = OpaqueCallback<MemoryRange>;
 
@@ -1617,6 +1658,8 @@ constexpr ProcessVtblImpl() :
         &Impl::mapped_mem
     } {}
 };
+
+using VtopRange = MemData2<Address, umem>;
 
 /**
  * Virtual page range information with physical mappings used for callbacks
@@ -1689,7 +1732,7 @@ struct COption {
 template<typename CGlueC>
 struct VirtualTranslateVtbl {
     typedef typename CGlueC::Context Context;
-    void (*virt_to_phys_list)(CGlueC *cont, CSliceRef<MemoryRange> addrs, VirtualTranslationCallback out, VirtualTranslationFailCallback out_fail);
+    void (*virt_to_phys_list)(CGlueC *cont, CSliceRef<VtopRange> addrs, VirtualTranslationCallback out, VirtualTranslationFailCallback out_fail);
     void (*virt_to_phys_range)(CGlueC *cont, Address start, Address end, VirtualTranslationCallback out);
     void (*virt_translation_map_range)(CGlueC *cont, Address start, Address end, VirtualTranslationCallback out);
     void (*virt_page_map_range)(CGlueC *cont, imem gap_size, Address start, Address end, MemoryRangeCallback out);
@@ -1749,18 +1792,23 @@ struct ProcessInstance {
 
     typedef CGlueCtx Context;
 
-    inline int32_t read_raw_iter(CIterator<ReadData> data, ReadFailCallback * out_fail) noexcept {
-        int32_t __ret = (this->vtbl_memoryview)->read_raw_iter(&this->container, data, out_fail);
+    inline int32_t read_raw_iter(ReadRawMemOps data) noexcept {
+        int32_t __ret = (this->vtbl_memoryview)->read_raw_iter(&this->container, data);
         return __ret;
     }
 
-    inline int32_t write_raw_iter(CIterator<WriteData> data, WriteFailCallback * out_fail) noexcept {
-        int32_t __ret = (this->vtbl_memoryview)->write_raw_iter(&this->container, data, out_fail);
+    inline int32_t write_raw_iter(WriteRawMemOps data) noexcept {
+        int32_t __ret = (this->vtbl_memoryview)->write_raw_iter(&this->container, data);
         return __ret;
     }
 
     inline MemoryViewMetadata metadata() const noexcept {
         MemoryViewMetadata __ret = (this->vtbl_memoryview)->metadata(&this->container);
+        return __ret;
+    }
+
+    inline int32_t read_iter(CIterator<ReadData> inp, ReadCallback * out, ReadCallback * out_fail) noexcept {
+        int32_t __ret = (this->vtbl_memoryview)->read_iter(&this->container, inp, out, out_fail);
         return __ret;
     }
 
@@ -1771,6 +1819,11 @@ struct ProcessInstance {
 
     inline int32_t read_raw_into(Address addr, CSliceMut<uint8_t> out) noexcept {
         int32_t __ret = (this->vtbl_memoryview)->read_raw_into(&this->container, addr, out);
+        return __ret;
+    }
+
+    inline int32_t write_iter(CIterator<WriteData> inp, WriteCallback * out, WriteCallback * out_fail) noexcept {
+        int32_t __ret = (this->vtbl_memoryview)->write_iter(&this->container, inp, out, out_fail);
         return __ret;
     }
 
@@ -1869,7 +1922,7 @@ struct ProcessInstance {
 
     }
 
-    inline void virt_to_phys_list(CSliceRef<MemoryRange> addrs, VirtualTranslationCallback out, VirtualTranslationFailCallback out_fail) noexcept {
+    inline void virt_to_phys_list(CSliceRef<VtopRange> addrs, VirtualTranslationCallback out, VirtualTranslationFailCallback out_fail) noexcept {
     (this->vtbl_virtualtranslate)->virt_to_phys_list(&this->container, addrs, out, out_fail);
 
     }
@@ -1997,18 +2050,23 @@ struct IntoProcessInstance {
         return __ret;
     }
 
-    inline int32_t read_raw_iter(CIterator<ReadData> data, ReadFailCallback * out_fail) noexcept {
-        int32_t __ret = (this->vtbl_memoryview)->read_raw_iter(&this->container, data, out_fail);
+    inline int32_t read_raw_iter(ReadRawMemOps data) noexcept {
+        int32_t __ret = (this->vtbl_memoryview)->read_raw_iter(&this->container, data);
         return __ret;
     }
 
-    inline int32_t write_raw_iter(CIterator<WriteData> data, WriteFailCallback * out_fail) noexcept {
-        int32_t __ret = (this->vtbl_memoryview)->write_raw_iter(&this->container, data, out_fail);
+    inline int32_t write_raw_iter(WriteRawMemOps data) noexcept {
+        int32_t __ret = (this->vtbl_memoryview)->write_raw_iter(&this->container, data);
         return __ret;
     }
 
     inline MemoryViewMetadata metadata() const noexcept {
         MemoryViewMetadata __ret = (this->vtbl_memoryview)->metadata(&this->container);
+        return __ret;
+    }
+
+    inline int32_t read_iter(CIterator<ReadData> inp, ReadCallback * out, ReadCallback * out_fail) noexcept {
+        int32_t __ret = (this->vtbl_memoryview)->read_iter(&this->container, inp, out, out_fail);
         return __ret;
     }
 
@@ -2019,6 +2077,11 @@ struct IntoProcessInstance {
 
     inline int32_t read_raw_into(Address addr, CSliceMut<uint8_t> out) noexcept {
         int32_t __ret = (this->vtbl_memoryview)->read_raw_into(&this->container, addr, out);
+        return __ret;
+    }
+
+    inline int32_t write_iter(CIterator<WriteData> inp, WriteCallback * out, WriteCallback * out_fail) noexcept {
+        int32_t __ret = (this->vtbl_memoryview)->write_iter(&this->container, inp, out, out_fail);
         return __ret;
     }
 
@@ -2117,7 +2180,7 @@ struct IntoProcessInstance {
 
     }
 
-    inline void virt_to_phys_list(CSliceRef<MemoryRange> addrs, VirtualTranslationCallback out, VirtualTranslationFailCallback out_fail) noexcept {
+    inline void virt_to_phys_list(CSliceRef<VtopRange> addrs, VirtualTranslationCallback out, VirtualTranslationFailCallback out_fail) noexcept {
     (this->vtbl_virtualtranslate)->virt_to_phys_list(&this->container, addrs, out, out_fail);
 
     }
@@ -2552,18 +2615,23 @@ struct OsInstance {
         return __ret;
     }
 
-    inline int32_t read_raw_iter(CIterator<ReadData> data, ReadFailCallback * out_fail) noexcept {
-        int32_t __ret = (this->vtbl_memoryview)->read_raw_iter(&this->container, data, out_fail);
+    inline int32_t read_raw_iter(ReadRawMemOps data) noexcept {
+        int32_t __ret = (this->vtbl_memoryview)->read_raw_iter(&this->container, data);
         return __ret;
     }
 
-    inline int32_t write_raw_iter(CIterator<WriteData> data, WriteFailCallback * out_fail) noexcept {
-        int32_t __ret = (this->vtbl_memoryview)->write_raw_iter(&this->container, data, out_fail);
+    inline int32_t write_raw_iter(WriteRawMemOps data) noexcept {
+        int32_t __ret = (this->vtbl_memoryview)->write_raw_iter(&this->container, data);
         return __ret;
     }
 
     inline MemoryViewMetadata memoryview_metadata() const noexcept {
         MemoryViewMetadata __ret = (this->vtbl_memoryview)->metadata(&this->container);
+        return __ret;
+    }
+
+    inline int32_t read_iter(CIterator<ReadData> inp, ReadCallback * out, ReadCallback * out_fail) noexcept {
+        int32_t __ret = (this->vtbl_memoryview)->read_iter(&this->container, inp, out, out_fail);
         return __ret;
     }
 
@@ -2574,6 +2642,11 @@ struct OsInstance {
 
     inline int32_t read_raw_into(Address addr, CSliceMut<uint8_t> out) noexcept {
         int32_t __ret = (this->vtbl_memoryview)->read_raw_into(&this->container, addr, out);
+        return __ret;
+    }
+
+    inline int32_t write_iter(CIterator<WriteData> inp, WriteCallback * out, WriteCallback * out_fail) noexcept {
+        int32_t __ret = (this->vtbl_memoryview)->write_iter(&this->container, inp, out, out_fail);
         return __ret;
     }
 
@@ -2599,13 +2672,13 @@ struct OsInstance {
         return __ret;
     }
 
-    inline int32_t phys_read_raw_iter(CIterator<PhysicalReadData> data, ReadFailCallback * out_fail) noexcept {
-        int32_t __ret = (this->vtbl_physicalmemory)->phys_read_raw_iter(&this->container, data, out_fail);
+    inline int32_t phys_read_raw_iter(PhysicalReadMemOps data) noexcept {
+        int32_t __ret = (this->vtbl_physicalmemory)->phys_read_raw_iter(&this->container, data);
         return __ret;
     }
 
-    inline int32_t phys_write_raw_iter(CIterator<PhysicalWriteData> data, WriteFailCallback * out_fail) noexcept {
-        int32_t __ret = (this->vtbl_physicalmemory)->phys_write_raw_iter(&this->container, data, out_fail);
+    inline int32_t phys_write_raw_iter(PhysicalWriteMemOps data) noexcept {
+        int32_t __ret = (this->vtbl_physicalmemory)->phys_write_raw_iter(&this->container, data);
         return __ret;
     }
 
@@ -2968,18 +3041,23 @@ struct CGlueTraitObj<T, MemoryViewVtbl<CGlueObjContainer<T, C, R>>, C, R> {
 
     typedef C Context;
 
-    inline int32_t read_raw_iter(CIterator<ReadData> data, ReadFailCallback * out_fail) noexcept {
-        int32_t __ret = (this->vtbl)->read_raw_iter(&this->container, data, out_fail);
+    inline int32_t read_raw_iter(ReadRawMemOps data) noexcept {
+        int32_t __ret = (this->vtbl)->read_raw_iter(&this->container, data);
         return __ret;
     }
 
-    inline int32_t write_raw_iter(CIterator<WriteData> data, WriteFailCallback * out_fail) noexcept {
-        int32_t __ret = (this->vtbl)->write_raw_iter(&this->container, data, out_fail);
+    inline int32_t write_raw_iter(WriteRawMemOps data) noexcept {
+        int32_t __ret = (this->vtbl)->write_raw_iter(&this->container, data);
         return __ret;
     }
 
     inline MemoryViewMetadata metadata() const noexcept {
         MemoryViewMetadata __ret = (this->vtbl)->metadata(&this->container);
+        return __ret;
+    }
+
+    inline int32_t read_iter(CIterator<ReadData> inp, ReadCallback * out, ReadCallback * out_fail) noexcept {
+        int32_t __ret = (this->vtbl)->read_iter(&this->container, inp, out, out_fail);
         return __ret;
     }
 
@@ -2990,6 +3068,11 @@ struct CGlueTraitObj<T, MemoryViewVtbl<CGlueObjContainer<T, C, R>>, C, R> {
 
     inline int32_t read_raw_into(Address addr, CSliceMut<uint8_t> out) noexcept {
         int32_t __ret = (this->vtbl)->read_raw_into(&this->container, addr, out);
+        return __ret;
+    }
+
+    inline int32_t write_iter(CIterator<WriteData> inp, WriteCallback * out, WriteCallback * out_fail) noexcept {
+        int32_t __ret = (this->vtbl)->write_iter(&this->container, inp, out, out_fail);
         return __ret;
     }
 
@@ -3018,13 +3101,13 @@ struct CGlueTraitObj<T, PhysicalMemoryVtbl<CGlueObjContainer<T, C, R>>, C, R> {
 
     typedef C Context;
 
-    inline int32_t phys_read_raw_iter(CIterator<PhysicalReadData> data, ReadFailCallback * out_fail) noexcept {
-        int32_t __ret = (this->vtbl)->phys_read_raw_iter(&this->container, data, out_fail);
+    inline int32_t phys_read_raw_iter(PhysicalReadMemOps data) noexcept {
+        int32_t __ret = (this->vtbl)->phys_read_raw_iter(&this->container, data);
         return __ret;
     }
 
-    inline int32_t phys_write_raw_iter(CIterator<PhysicalWriteData> data, WriteFailCallback * out_fail) noexcept {
-        int32_t __ret = (this->vtbl)->phys_write_raw_iter(&this->container, data, out_fail);
+    inline int32_t phys_write_raw_iter(PhysicalWriteMemOps data) noexcept {
+        int32_t __ret = (this->vtbl)->phys_write_raw_iter(&this->container, data);
         return __ret;
     }
 
@@ -3217,7 +3300,7 @@ struct CGlueTraitObj<T, VirtualTranslateVtbl<CGlueObjContainer<T, C, R>>, C, R> 
 
     typedef C Context;
 
-    inline void virt_to_phys_list(CSliceRef<MemoryRange> addrs, VirtualTranslationCallback out, VirtualTranslationFailCallback out_fail) noexcept {
+    inline void virt_to_phys_list(CSliceRef<VtopRange> addrs, VirtualTranslationCallback out, VirtualTranslationFailCallback out_fail) noexcept {
     (this->vtbl)->virt_to_phys_list(&this->container, addrs, out, out_fail);
 
     }

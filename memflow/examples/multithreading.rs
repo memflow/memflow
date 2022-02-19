@@ -92,7 +92,7 @@ pub fn main() {
 }
 
 fn parse_args() -> Result<(String, ConnectorArgs, String, OsArgs, log::Level)> {
-    let matches = App::new("multithreading example")
+    let matches = Command::new("multithreading example")
         .version(crate_version!())
         .author(crate_authors!())
         .arg(Arg::new("verbose").short('v').multiple_occurrences(true))

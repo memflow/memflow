@@ -1,6 +1,6 @@
 [package]
 name = "memflow-derive"
-version = "0.2.0-beta1"
+version = "0.2.0-beta2"
 authors = ["ko1N <ko1N1337@gmail.com>", "Aurimas Blažulionis <0x60@pm.me>"]
 edition = "2018"
 description = "derive macros for the memflow physical memory introspection framework"
@@ -8,7 +8,6 @@ documentation = "https://docs.rs/memflow-derive"
 readme = "README.md"
 homepage = "https://memflow.github.io"
 repository = "https://github.com/memflow/memflow"
-license-file = "../LICENSE"
 license = "MIT"
 keywords = [ "memflow", "introspection", "memory", "dma" ]
 categories = [ "memory-management", "os" ]

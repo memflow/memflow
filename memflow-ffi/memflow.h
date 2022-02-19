@@ -425,20 +425,21 @@ typedef struct CSliceMut_u8 {
 } CSliceMut_u8;
 
 /**
- * Generic type representing an address and associated data.
+ * Generic type representing an address, original address,and associated data.
  *
  * This base type is always used for initialization, but the commonly used type aliases are:
- * `ReadData`, `WriteData`, `PhysicalReadData`, and `PhysicalWriteData`.
+ * `ReadDataIn`, `WriteDataIn`, `PhysicalReadDataIn`, and `PhysicalWriteDataIn`.
  */
-typedef struct MemData_PhysicalAddress__CSliceMut_u8 {
+typedef struct MemData3_PhysicalAddress__Address__CSliceMut_u8 {
     struct PhysicalAddress _0;
-    struct CSliceMut_u8 _1;
-} MemData_PhysicalAddress__CSliceMut_u8;
+    Address _1;
+    struct CSliceMut_u8 _2;
+} MemData3_PhysicalAddress__Address__CSliceMut_u8;
 
 /**
  * MemData type for physical memory reads.
  */
-typedef struct MemData_PhysicalAddress__CSliceMut_u8 PhysicalReadData;
+typedef struct MemData3_PhysicalAddress__Address__CSliceMut_u8 PhysicalReadData;
 
 /**
  * FFI compatible iterator.
@@ -488,15 +489,12 @@ typedef struct CIterator_PhysicalReadData {
  * This base type is always used for initialization, but the commonly used type aliases are:
  * `ReadData`, `WriteData`, `PhysicalReadData`, and `PhysicalWriteData`.
  */
-typedef struct MemData_Address__CSliceMut_u8 {
+typedef struct MemData2_Address__CSliceMut_u8 {
     Address _0;
     struct CSliceMut_u8 _1;
-} MemData_Address__CSliceMut_u8;
+} MemData2_Address__CSliceMut_u8;
 
-/**
- * MemData type for regular memory reads.
- */
-typedef struct MemData_Address__CSliceMut_u8 ReadData;
+typedef struct MemData2_Address__CSliceMut_u8 ReadData;
 
 typedef struct Callback_c_void__ReadData {
     void *context;
@@ -505,7 +503,18 @@ typedef struct Callback_c_void__ReadData {
 
 typedef struct Callback_c_void__ReadData OpaqueCallback_ReadData;
 
-typedef OpaqueCallback_ReadData ReadFailCallback;
+/**
+ * Data needed to perform memory operations.
+ *
+ * `inp` is an iterator containing
+ */
+typedef struct MemOps_PhysicalReadData__ReadData {
+    struct CIterator_PhysicalReadData inp;
+    OpaqueCallback_ReadData *out;
+    OpaqueCallback_ReadData *out_fail;
+} MemOps_PhysicalReadData__ReadData;
+
+typedef struct MemOps_PhysicalReadData__ReadData PhysicalReadMemOps;
 
 /**
  * Wrapper around const slices.
@@ -535,20 +544,21 @@ typedef struct CSliceRef_u8 {
 } CSliceRef_u8;
 
 /**
- * Generic type representing an address and associated data.
+ * Generic type representing an address, original address,and associated data.
  *
  * This base type is always used for initialization, but the commonly used type aliases are:
- * `ReadData`, `WriteData`, `PhysicalReadData`, and `PhysicalWriteData`.
+ * `ReadDataIn`, `WriteDataIn`, `PhysicalReadDataIn`, and `PhysicalWriteDataIn`.
  */
-typedef struct MemData_PhysicalAddress__CSliceRef_u8 {
+typedef struct MemData3_PhysicalAddress__Address__CSliceRef_u8 {
     struct PhysicalAddress _0;
-    struct CSliceRef_u8 _1;
-} MemData_PhysicalAddress__CSliceRef_u8;
+    Address _1;
+    struct CSliceRef_u8 _2;
+} MemData3_PhysicalAddress__Address__CSliceRef_u8;
 
 /**
  * MemData type for physical memory writes.
  */
-typedef struct MemData_PhysicalAddress__CSliceRef_u8 PhysicalWriteData;
+typedef struct MemData3_PhysicalAddress__Address__CSliceRef_u8 PhysicalWriteData;
 
 /**
  * FFI compatible iterator.
@@ -598,15 +608,12 @@ typedef struct CIterator_PhysicalWriteData {
  * This base type is always used for initialization, but the commonly used type aliases are:
  * `ReadData`, `WriteData`, `PhysicalReadData`, and `PhysicalWriteData`.
  */
-typedef struct MemData_Address__CSliceRef_u8 {
+typedef struct MemData2_Address__CSliceRef_u8 {
     Address _0;
     struct CSliceRef_u8 _1;
-} MemData_Address__CSliceRef_u8;
+} MemData2_Address__CSliceRef_u8;
 
-/**
- * MemData type for regular memory writes.
- */
-typedef struct MemData_Address__CSliceRef_u8 WriteData;
+typedef struct MemData2_Address__CSliceRef_u8 WriteData;
 
 typedef struct Callback_c_void__WriteData {
     void *context;
@@ -615,7 +622,18 @@ typedef struct Callback_c_void__WriteData {
 
 typedef struct Callback_c_void__WriteData OpaqueCallback_WriteData;
 
-typedef OpaqueCallback_WriteData WriteFailCallback;
+/**
+ * Data needed to perform memory operations.
+ *
+ * `inp` is an iterator containing
+ */
+typedef struct MemOps_PhysicalWriteData__WriteData {
+    struct CIterator_PhysicalWriteData inp;
+    OpaqueCallback_WriteData *out;
+    OpaqueCallback_WriteData *out_fail;
+} MemOps_PhysicalWriteData__WriteData;
+
+typedef struct MemOps_PhysicalWriteData__WriteData PhysicalWriteMemOps;
 
 typedef struct PhysicalMemoryMetadata {
     Address max_address;
@@ -656,6 +674,158 @@ typedef struct CSliceRef_PhysicalMemoryMapping {
     const struct PhysicalMemoryMapping *data;
     uintptr_t len;
 } CSliceRef_PhysicalMemoryMapping;
+
+/**
+ * Generic type representing an address, original address,and associated data.
+ *
+ * This base type is always used for initialization, but the commonly used type aliases are:
+ * `ReadDataIn`, `WriteDataIn`, `PhysicalReadDataIn`, and `PhysicalWriteDataIn`.
+ */
+typedef struct MemData3_Address__Address__CSliceMut_u8 {
+    Address _0;
+    Address _1;
+    struct CSliceMut_u8 _2;
+} MemData3_Address__Address__CSliceMut_u8;
+
+/**
+ * MemData type for regular memory reads.
+ */
+typedef struct MemData3_Address__Address__CSliceMut_u8 ReadDataRaw;
+
+/**
+ * FFI compatible iterator.
+ *
+ * Any mutable reference to an iterator can be converted to a `CIterator`.
+ *
+ * `CIterator<T>` implements `Iterator<Item = T>`.
+ *
+ * # Examples
+ *
+ * Using [`AsCIterator`](AsCIterator) helper:
+ *
+ * ```
+ * use cglue::iter::{CIterator, AsCIterator};
+ *
+ * extern "C" fn sum_all(iter: CIterator<usize>) -> usize {
+ *     iter.sum()
+ * }
+ *
+ * let mut iter = (0..10).map(|v| v * v);
+ *
+ * assert_eq!(sum_all(iter.as_citer()), 285);
+ * ```
+ *
+ * Converting with `Into` trait:
+ *
+ * ```
+ * use cglue::iter::{CIterator, AsCIterator};
+ *
+ * extern "C" fn sum_all(iter: CIterator<usize>) -> usize {
+ *     iter.sum()
+ * }
+ *
+ * let mut iter = (0..=10).map(|v| v * v);
+ *
+ * assert_eq!(sum_all((&mut iter).into()), 385);
+ * ```
+ */
+typedef struct CIterator_ReadDataRaw {
+    void *iter;
+    int32_t (*func)(void*, ReadDataRaw *out);
+} CIterator_ReadDataRaw;
+
+/**
+ * Data needed to perform memory operations.
+ *
+ * `inp` is an iterator containing
+ */
+typedef struct MemOps_ReadDataRaw__ReadData {
+    struct CIterator_ReadDataRaw inp;
+    OpaqueCallback_ReadData *out;
+    OpaqueCallback_ReadData *out_fail;
+} MemOps_ReadDataRaw__ReadData;
+
+typedef struct MemOps_ReadDataRaw__ReadData ReadRawMemOps;
+
+/**
+ * Generic type representing an address, original address,and associated data.
+ *
+ * This base type is always used for initialization, but the commonly used type aliases are:
+ * `ReadDataIn`, `WriteDataIn`, `PhysicalReadDataIn`, and `PhysicalWriteDataIn`.
+ */
+typedef struct MemData3_Address__Address__CSliceRef_u8 {
+    Address _0;
+    Address _1;
+    struct CSliceRef_u8 _2;
+} MemData3_Address__Address__CSliceRef_u8;
+
+/**
+ * MemData type for regular memory writes.
+ */
+typedef struct MemData3_Address__Address__CSliceRef_u8 WriteDataRaw;
+
+/**
+ * FFI compatible iterator.
+ *
+ * Any mutable reference to an iterator can be converted to a `CIterator`.
+ *
+ * `CIterator<T>` implements `Iterator<Item = T>`.
+ *
+ * # Examples
+ *
+ * Using [`AsCIterator`](AsCIterator) helper:
+ *
+ * ```
+ * use cglue::iter::{CIterator, AsCIterator};
+ *
+ * extern "C" fn sum_all(iter: CIterator<usize>) -> usize {
+ *     iter.sum()
+ * }
+ *
+ * let mut iter = (0..10).map(|v| v * v);
+ *
+ * assert_eq!(sum_all(iter.as_citer()), 285);
+ * ```
+ *
+ * Converting with `Into` trait:
+ *
+ * ```
+ * use cglue::iter::{CIterator, AsCIterator};
+ *
+ * extern "C" fn sum_all(iter: CIterator<usize>) -> usize {
+ *     iter.sum()
+ * }
+ *
+ * let mut iter = (0..=10).map(|v| v * v);
+ *
+ * assert_eq!(sum_all((&mut iter).into()), 385);
+ * ```
+ */
+typedef struct CIterator_WriteDataRaw {
+    void *iter;
+    int32_t (*func)(void*, WriteDataRaw *out);
+} CIterator_WriteDataRaw;
+
+/**
+ * Data needed to perform memory operations.
+ *
+ * `inp` is an iterator containing
+ */
+typedef struct MemOps_WriteDataRaw__WriteData {
+    struct CIterator_WriteDataRaw inp;
+    OpaqueCallback_WriteData *out;
+    OpaqueCallback_WriteData *out_fail;
+} MemOps_WriteDataRaw__WriteData;
+
+typedef struct MemOps_WriteDataRaw__WriteData WriteRawMemOps;
+
+typedef struct MemoryViewMetadata {
+    Address max_address;
+    umem real_size;
+    bool readonly;
+    bool little_endian;
+    uint8_t arch_bits;
+} MemoryViewMetadata;
 
 /**
  * FFI compatible iterator.
@@ -699,6 +869,19 @@ typedef struct CIterator_ReadData {
     int32_t (*func)(void*, ReadData *out);
 } CIterator_ReadData;
 
+typedef OpaqueCallback_ReadData ReadCallback;
+
+/**
+ * Wrapper around mutable slices.
+ *
+ * This is meant as a safe type to pass across the FFI boundary with similar semantics as regular
+ * slice. However, not all functionality is present, use the slice conversion functions.
+ */
+typedef struct CSliceMut_ReadData {
+    ReadData *data;
+    uintptr_t len;
+} CSliceMut_ReadData;
+
 /**
  * FFI compatible iterator.
  *
@@ -741,24 +924,7 @@ typedef struct CIterator_WriteData {
     int32_t (*func)(void*, WriteData *out);
 } CIterator_WriteData;
 
-typedef struct MemoryViewMetadata {
-    Address max_address;
-    umem real_size;
-    bool readonly;
-    bool little_endian;
-    uint8_t arch_bits;
-} MemoryViewMetadata;
-
-/**
- * Wrapper around mutable slices.
- *
- * This is meant as a safe type to pass across the FFI boundary with similar semantics as regular
- * slice. However, not all functionality is present, use the slice conversion functions.
- */
-typedef struct CSliceMut_ReadData {
-    ReadData *data;
-    uintptr_t len;
-} CSliceMut_ReadData;
+typedef OpaqueCallback_WriteData WriteCallback;
 
 /**
  * Wrapper around const slices.
@@ -1269,17 +1435,18 @@ typedef OpaqueCallback_SectionInfo SectionCallback;
 typedef int64_t imem;
 
 /**
- * Generic type representing an address and associated data.
+ * Generic type representing an address, original address,and associated data.
  *
  * This base type is always used for initialization, but the commonly used type aliases are:
- * `ReadData`, `WriteData`, `PhysicalReadData`, and `PhysicalWriteData`.
+ * `ReadDataIn`, `WriteDataIn`, `PhysicalReadDataIn`, and `PhysicalWriteDataIn`.
  */
-typedef struct MemData_Address__umem {
+typedef struct MemData3_Address__umem__PageType {
     Address _0;
     umem _1;
-} MemData_Address__umem;
+    PageType _2;
+} MemData3_Address__umem__PageType;
 
-typedef struct MemData_Address__umem MemoryRange;
+typedef struct MemData3_Address__umem__PageType MemoryRange;
 
 typedef struct Callback_c_void__MemoryRange {
     void *context;
@@ -1289,6 +1456,19 @@ typedef struct Callback_c_void__MemoryRange {
 typedef struct Callback_c_void__MemoryRange OpaqueCallback_MemoryRange;
 
 typedef OpaqueCallback_MemoryRange MemoryRangeCallback;
+
+/**
+ * Generic type representing an address and associated data.
+ *
+ * This base type is always used for initialization, but the commonly used type aliases are:
+ * `ReadData`, `WriteData`, `PhysicalReadData`, and `PhysicalWriteData`.
+ */
+typedef struct MemData2_Address__umem {
+    Address _0;
+    umem _1;
+} MemData2_Address__umem;
+
+typedef struct MemData2_Address__umem VtopRange;
 
 /**
  * Wrapper around const slices.
@@ -1312,10 +1492,10 @@ typedef OpaqueCallback_MemoryRange MemoryRangeCallback;
  * assert_eq!(&arr, slice);
  * ```
  */
-typedef struct CSliceRef_MemoryRange {
-    const MemoryRange *data;
+typedef struct CSliceRef_VtopRange {
+    const VtopRange *data;
     uintptr_t len;
-} CSliceRef_MemoryRange;
+} CSliceRef_VtopRange;
 
 /**
  * Virtual page range information with physical mappings used for callbacks
@@ -1445,11 +1625,13 @@ typedef struct OsInnerVtbl_OsInstanceContainer_CBox_c_void_____CArc_c_void {
  * This virtual function table contains ABI-safe interface for the given trait.
  */
 typedef struct MemoryViewVtbl_OsInstanceContainer_CBox_c_void_____CArc_c_void {
-    int32_t (*read_raw_iter)(struct OsInstanceContainer_CBox_c_void_____CArc_c_void *cont, struct CIterator_ReadData data, ReadFailCallback *out_fail);
-    int32_t (*write_raw_iter)(struct OsInstanceContainer_CBox_c_void_____CArc_c_void *cont, struct CIterator_WriteData data, WriteFailCallback *out_fail);
+    int32_t (*read_raw_iter)(struct OsInstanceContainer_CBox_c_void_____CArc_c_void *cont, ReadRawMemOps data);
+    int32_t (*write_raw_iter)(struct OsInstanceContainer_CBox_c_void_____CArc_c_void *cont, WriteRawMemOps data);
     struct MemoryViewMetadata (*metadata)(const struct OsInstanceContainer_CBox_c_void_____CArc_c_void *cont);
+    int32_t (*read_iter)(struct OsInstanceContainer_CBox_c_void_____CArc_c_void *cont, struct CIterator_ReadData inp, ReadCallback *out, ReadCallback *out_fail);
     int32_t (*read_raw_list)(struct OsInstanceContainer_CBox_c_void_____CArc_c_void *cont, struct CSliceMut_ReadData data);
     int32_t (*read_raw_into)(struct OsInstanceContainer_CBox_c_void_____CArc_c_void *cont, Address addr, struct CSliceMut_u8 out);
+    int32_t (*write_iter)(struct OsInstanceContainer_CBox_c_void_____CArc_c_void *cont, struct CIterator_WriteData inp, WriteCallback *out, WriteCallback *out_fail);
     int32_t (*write_raw_list)(struct OsInstanceContainer_CBox_c_void_____CArc_c_void *cont, struct CSliceRef_WriteData data);
     int32_t (*write_raw)(struct OsInstanceContainer_CBox_c_void_____CArc_c_void *cont, Address addr, struct CSliceRef_u8 data);
 } MemoryViewVtbl_OsInstanceContainer_CBox_c_void_____CArc_c_void;
@@ -1612,8 +1794,8 @@ typedef struct OsKeyboardInnerVtbl_OsInstanceContainer_CBox_c_void_____CArc_c_vo
  * This virtual function table contains ABI-safe interface for the given trait.
  */
 typedef struct PhysicalMemoryVtbl_OsInstanceContainer_CBox_c_void_____CArc_c_void {
-    int32_t (*phys_read_raw_iter)(struct OsInstanceContainer_CBox_c_void_____CArc_c_void *cont, struct CIterator_PhysicalReadData data, ReadFailCallback *out_fail);
-    int32_t (*phys_write_raw_iter)(struct OsInstanceContainer_CBox_c_void_____CArc_c_void *cont, struct CIterator_PhysicalWriteData data, WriteFailCallback *out_fail);
+    int32_t (*phys_read_raw_iter)(struct OsInstanceContainer_CBox_c_void_____CArc_c_void *cont, PhysicalReadMemOps data);
+    int32_t (*phys_write_raw_iter)(struct OsInstanceContainer_CBox_c_void_____CArc_c_void *cont, PhysicalWriteMemOps data);
     struct PhysicalMemoryMetadata (*metadata)(const struct OsInstanceContainer_CBox_c_void_____CArc_c_void *cont);
     void (*set_mem_map)(struct OsInstanceContainer_CBox_c_void_____CArc_c_void *cont, struct CSliceRef_PhysicalMemoryMapping _mem_map);
     MemoryViewBase_CBox_c_void_____CArc_c_void (*into_phys_view)(struct OsInstanceContainer_CBox_c_void_____CArc_c_void cont);
@@ -1669,11 +1851,13 @@ typedef struct ProcessInstanceContainer_CBox_c_void_____CArc_c_void {
  * This virtual function table contains ABI-safe interface for the given trait.
  */
 typedef struct MemoryViewVtbl_ProcessInstanceContainer_CBox_c_void_____CArc_c_void {
-    int32_t (*read_raw_iter)(struct ProcessInstanceContainer_CBox_c_void_____CArc_c_void *cont, struct CIterator_ReadData data, ReadFailCallback *out_fail);
-    int32_t (*write_raw_iter)(struct ProcessInstanceContainer_CBox_c_void_____CArc_c_void *cont, struct CIterator_WriteData data, WriteFailCallback *out_fail);
+    int32_t (*read_raw_iter)(struct ProcessInstanceContainer_CBox_c_void_____CArc_c_void *cont, ReadRawMemOps data);
+    int32_t (*write_raw_iter)(struct ProcessInstanceContainer_CBox_c_void_____CArc_c_void *cont, WriteRawMemOps data);
     struct MemoryViewMetadata (*metadata)(const struct ProcessInstanceContainer_CBox_c_void_____CArc_c_void *cont);
+    int32_t (*read_iter)(struct ProcessInstanceContainer_CBox_c_void_____CArc_c_void *cont, struct CIterator_ReadData inp, ReadCallback *out, ReadCallback *out_fail);
     int32_t (*read_raw_list)(struct ProcessInstanceContainer_CBox_c_void_____CArc_c_void *cont, struct CSliceMut_ReadData data);
     int32_t (*read_raw_into)(struct ProcessInstanceContainer_CBox_c_void_____CArc_c_void *cont, Address addr, struct CSliceMut_u8 out);
+    int32_t (*write_iter)(struct ProcessInstanceContainer_CBox_c_void_____CArc_c_void *cont, struct CIterator_WriteData inp, WriteCallback *out, WriteCallback *out_fail);
     int32_t (*write_raw_list)(struct ProcessInstanceContainer_CBox_c_void_____CArc_c_void *cont, struct CSliceRef_WriteData data);
     int32_t (*write_raw)(struct ProcessInstanceContainer_CBox_c_void_____CArc_c_void *cont, Address addr, struct CSliceRef_u8 data);
 } MemoryViewVtbl_ProcessInstanceContainer_CBox_c_void_____CArc_c_void;
@@ -1709,7 +1893,7 @@ typedef struct ProcessVtbl_ProcessInstanceContainer_CBox_c_void_____CArc_c_void 
  * This virtual function table contains ABI-safe interface for the given trait.
  */
 typedef struct VirtualTranslateVtbl_ProcessInstanceContainer_CBox_c_void_____CArc_c_void {
-    void (*virt_to_phys_list)(struct ProcessInstanceContainer_CBox_c_void_____CArc_c_void *cont, struct CSliceRef_MemoryRange addrs, VirtualTranslationCallback out, VirtualTranslationFailCallback out_fail);
+    void (*virt_to_phys_list)(struct ProcessInstanceContainer_CBox_c_void_____CArc_c_void *cont, struct CSliceRef_VtopRange addrs, VirtualTranslationCallback out, VirtualTranslationFailCallback out_fail);
     void (*virt_to_phys_range)(struct ProcessInstanceContainer_CBox_c_void_____CArc_c_void *cont, Address start, Address end, VirtualTranslationCallback out);
     void (*virt_translation_map_range)(struct ProcessInstanceContainer_CBox_c_void_____CArc_c_void *cont, Address start, Address end, VirtualTranslationCallback out);
     void (*virt_page_map_range)(struct ProcessInstanceContainer_CBox_c_void_____CArc_c_void *cont, imem gap_size, Address start, Address end, MemoryRangeCallback out);
@@ -1774,11 +1958,13 @@ typedef struct CloneVtbl_IntoProcessInstanceContainer_CBox_c_void_____CArc_c_voi
  * This virtual function table contains ABI-safe interface for the given trait.
  */
 typedef struct MemoryViewVtbl_IntoProcessInstanceContainer_CBox_c_void_____CArc_c_void {
-    int32_t (*read_raw_iter)(struct IntoProcessInstanceContainer_CBox_c_void_____CArc_c_void *cont, struct CIterator_ReadData data, ReadFailCallback *out_fail);
-    int32_t (*write_raw_iter)(struct IntoProcessInstanceContainer_CBox_c_void_____CArc_c_void *cont, struct CIterator_WriteData data, WriteFailCallback *out_fail);
+    int32_t (*read_raw_iter)(struct IntoProcessInstanceContainer_CBox_c_void_____CArc_c_void *cont, ReadRawMemOps data);
+    int32_t (*write_raw_iter)(struct IntoProcessInstanceContainer_CBox_c_void_____CArc_c_void *cont, WriteRawMemOps data);
     struct MemoryViewMetadata (*metadata)(const struct IntoProcessInstanceContainer_CBox_c_void_____CArc_c_void *cont);
+    int32_t (*read_iter)(struct IntoProcessInstanceContainer_CBox_c_void_____CArc_c_void *cont, struct CIterator_ReadData inp, ReadCallback *out, ReadCallback *out_fail);
     int32_t (*read_raw_list)(struct IntoProcessInstanceContainer_CBox_c_void_____CArc_c_void *cont, struct CSliceMut_ReadData data);
     int32_t (*read_raw_into)(struct IntoProcessInstanceContainer_CBox_c_void_____CArc_c_void *cont, Address addr, struct CSliceMut_u8 out);
+    int32_t (*write_iter)(struct IntoProcessInstanceContainer_CBox_c_void_____CArc_c_void *cont, struct CIterator_WriteData inp, WriteCallback *out, WriteCallback *out_fail);
     int32_t (*write_raw_list)(struct IntoProcessInstanceContainer_CBox_c_void_____CArc_c_void *cont, struct CSliceRef_WriteData data);
     int32_t (*write_raw)(struct IntoProcessInstanceContainer_CBox_c_void_____CArc_c_void *cont, Address addr, struct CSliceRef_u8 data);
 } MemoryViewVtbl_IntoProcessInstanceContainer_CBox_c_void_____CArc_c_void;
@@ -1814,7 +2000,7 @@ typedef struct ProcessVtbl_IntoProcessInstanceContainer_CBox_c_void_____CArc_c_v
  * This virtual function table contains ABI-safe interface for the given trait.
  */
 typedef struct VirtualTranslateVtbl_IntoProcessInstanceContainer_CBox_c_void_____CArc_c_void {
-    void (*virt_to_phys_list)(struct IntoProcessInstanceContainer_CBox_c_void_____CArc_c_void *cont, struct CSliceRef_MemoryRange addrs, VirtualTranslationCallback out, VirtualTranslationFailCallback out_fail);
+    void (*virt_to_phys_list)(struct IntoProcessInstanceContainer_CBox_c_void_____CArc_c_void *cont, struct CSliceRef_VtopRange addrs, VirtualTranslationCallback out, VirtualTranslationFailCallback out_fail);
     void (*virt_to_phys_range)(struct IntoProcessInstanceContainer_CBox_c_void_____CArc_c_void *cont, Address start, Address end, VirtualTranslationCallback out);
     void (*virt_translation_map_range)(struct IntoProcessInstanceContainer_CBox_c_void_____CArc_c_void *cont, Address start, Address end, VirtualTranslationCallback out);
     void (*virt_page_map_range)(struct IntoProcessInstanceContainer_CBox_c_void_____CArc_c_void *cont, imem gap_size, Address start, Address end, MemoryRangeCallback out);
@@ -1886,11 +2072,13 @@ typedef struct CGlueObjContainer_CBox_c_void_____CArc_c_void_____MemoryViewRetTm
  * This virtual function table contains ABI-safe interface for the given trait.
  */
 typedef struct MemoryViewVtbl_CGlueObjContainer_CBox_c_void_____CArc_c_void_____MemoryViewRetTmp_CArc_c_void {
-    int32_t (*read_raw_iter)(struct CGlueObjContainer_CBox_c_void_____CArc_c_void_____MemoryViewRetTmp_CArc_c_void *cont, struct CIterator_ReadData data, ReadFailCallback *out_fail);
-    int32_t (*write_raw_iter)(struct CGlueObjContainer_CBox_c_void_____CArc_c_void_____MemoryViewRetTmp_CArc_c_void *cont, struct CIterator_WriteData data, WriteFailCallback *out_fail);
+    int32_t (*read_raw_iter)(struct CGlueObjContainer_CBox_c_void_____CArc_c_void_____MemoryViewRetTmp_CArc_c_void *cont, ReadRawMemOps data);
+    int32_t (*write_raw_iter)(struct CGlueObjContainer_CBox_c_void_____CArc_c_void_____MemoryViewRetTmp_CArc_c_void *cont, WriteRawMemOps data);
     struct MemoryViewMetadata (*metadata)(const struct CGlueObjContainer_CBox_c_void_____CArc_c_void_____MemoryViewRetTmp_CArc_c_void *cont);
+    int32_t (*read_iter)(struct CGlueObjContainer_CBox_c_void_____CArc_c_void_____MemoryViewRetTmp_CArc_c_void *cont, struct CIterator_ReadData inp, ReadCallback *out, ReadCallback *out_fail);
     int32_t (*read_raw_list)(struct CGlueObjContainer_CBox_c_void_____CArc_c_void_____MemoryViewRetTmp_CArc_c_void *cont, struct CSliceMut_ReadData data);
     int32_t (*read_raw_into)(struct CGlueObjContainer_CBox_c_void_____CArc_c_void_____MemoryViewRetTmp_CArc_c_void *cont, Address addr, struct CSliceMut_u8 out);
+    int32_t (*write_iter)(struct CGlueObjContainer_CBox_c_void_____CArc_c_void_____MemoryViewRetTmp_CArc_c_void *cont, struct CIterator_WriteData inp, WriteCallback *out, WriteCallback *out_fail);
     int32_t (*write_raw_list)(struct CGlueObjContainer_CBox_c_void_____CArc_c_void_____MemoryViewRetTmp_CArc_c_void *cont, struct CSliceRef_WriteData data);
     int32_t (*write_raw)(struct CGlueObjContainer_CBox_c_void_____CArc_c_void_____MemoryViewRetTmp_CArc_c_void *cont, Address addr, struct CSliceRef_u8 data);
 } MemoryViewVtbl_CGlueObjContainer_CBox_c_void_____CArc_c_void_____MemoryViewRetTmp_CArc_c_void;
@@ -1915,8 +2103,8 @@ typedef struct CGlueTraitObj_CBox_c_void_____MemoryViewVtbl_CGlueObjContainer_CB
  * This virtual function table contains ABI-safe interface for the given trait.
  */
 typedef struct PhysicalMemoryVtbl_ConnectorInstanceContainer_CBox_c_void_____CArc_c_void {
-    int32_t (*phys_read_raw_iter)(struct ConnectorInstanceContainer_CBox_c_void_____CArc_c_void *cont, struct CIterator_PhysicalReadData data, ReadFailCallback *out_fail);
-    int32_t (*phys_write_raw_iter)(struct ConnectorInstanceContainer_CBox_c_void_____CArc_c_void *cont, struct CIterator_PhysicalWriteData data, WriteFailCallback *out_fail);
+    int32_t (*phys_read_raw_iter)(struct ConnectorInstanceContainer_CBox_c_void_____CArc_c_void *cont, PhysicalReadMemOps data);
+    int32_t (*phys_write_raw_iter)(struct ConnectorInstanceContainer_CBox_c_void_____CArc_c_void *cont, PhysicalWriteMemOps data);
     struct PhysicalMemoryMetadata (*metadata)(const struct ConnectorInstanceContainer_CBox_c_void_____CArc_c_void *cont);
     void (*set_mem_map)(struct ConnectorInstanceContainer_CBox_c_void_____CArc_c_void *cont, struct CSliceRef_PhysicalMemoryMapping _mem_map);
     MemoryViewBase_CBox_c_void_____CArc_c_void (*into_phys_view)(struct ConnectorInstanceContainer_CBox_c_void_____CArc_c_void cont);
@@ -2226,18 +2414,23 @@ static inline void mf_keyboard_drop(struct CGlueTraitObj_CBox_c_void_____Keyboar
 
 }
 
-static inline int32_t mf_read_raw_iter(void *self, struct CIterator_ReadData data, ReadFailCallback * out_fail)  {
-    int32_t __ret = (((struct CGlueTraitObj_CBox_c_void_____MemoryViewVtbl_CGlueObjContainer_CBox_c_void_____CArc_c_void_____MemoryViewRetTmp_CArc_c_void______________CArc_c_void_____MemoryViewRetTmp_CArc_c_void *)self)->vtbl)->read_raw_iter(&((struct CGlueTraitObj_CBox_c_void_____MemoryViewVtbl_CGlueObjContainer_CBox_c_void_____CArc_c_void_____MemoryViewRetTmp_CArc_c_void______________CArc_c_void_____MemoryViewRetTmp_CArc_c_void *)self)->container, data, out_fail);
+static inline int32_t mf_read_raw_iter(void *self, ReadRawMemOps data)  {
+    int32_t __ret = (((struct CGlueTraitObj_CBox_c_void_____MemoryViewVtbl_CGlueObjContainer_CBox_c_void_____CArc_c_void_____MemoryViewRetTmp_CArc_c_void______________CArc_c_void_____MemoryViewRetTmp_CArc_c_void *)self)->vtbl)->read_raw_iter(&((struct CGlueTraitObj_CBox_c_void_____MemoryViewVtbl_CGlueObjContainer_CBox_c_void_____CArc_c_void_____MemoryViewRetTmp_CArc_c_void______________CArc_c_void_____MemoryViewRetTmp_CArc_c_void *)self)->container, data);
     return __ret;
 }
 
-static inline int32_t mf_write_raw_iter(void *self, struct CIterator_WriteData data, WriteFailCallback * out_fail)  {
-    int32_t __ret = (((struct CGlueTraitObj_CBox_c_void_____MemoryViewVtbl_CGlueObjContainer_CBox_c_void_____CArc_c_void_____MemoryViewRetTmp_CArc_c_void______________CArc_c_void_____MemoryViewRetTmp_CArc_c_void *)self)->vtbl)->write_raw_iter(&((struct CGlueTraitObj_CBox_c_void_____MemoryViewVtbl_CGlueObjContainer_CBox_c_void_____CArc_c_void_____MemoryViewRetTmp_CArc_c_void______________CArc_c_void_____MemoryViewRetTmp_CArc_c_void *)self)->container, data, out_fail);
+static inline int32_t mf_write_raw_iter(void *self, WriteRawMemOps data)  {
+    int32_t __ret = (((struct CGlueTraitObj_CBox_c_void_____MemoryViewVtbl_CGlueObjContainer_CBox_c_void_____CArc_c_void_____MemoryViewRetTmp_CArc_c_void______________CArc_c_void_____MemoryViewRetTmp_CArc_c_void *)self)->vtbl)->write_raw_iter(&((struct CGlueTraitObj_CBox_c_void_____MemoryViewVtbl_CGlueObjContainer_CBox_c_void_____CArc_c_void_____MemoryViewRetTmp_CArc_c_void______________CArc_c_void_____MemoryViewRetTmp_CArc_c_void *)self)->container, data);
     return __ret;
 }
 
 static inline struct MemoryViewMetadata mf_metadata(const void *self)  {
     struct MemoryViewMetadata __ret = (((const struct CGlueTraitObj_CBox_c_void_____MemoryViewVtbl_CGlueObjContainer_CBox_c_void_____CArc_c_void_____MemoryViewRetTmp_CArc_c_void______________CArc_c_void_____MemoryViewRetTmp_CArc_c_void *)self)->vtbl)->metadata(&((const struct CGlueTraitObj_CBox_c_void_____MemoryViewVtbl_CGlueObjContainer_CBox_c_void_____CArc_c_void_____MemoryViewRetTmp_CArc_c_void______________CArc_c_void_____MemoryViewRetTmp_CArc_c_void *)self)->container);
+    return __ret;
+}
+
+static inline int32_t mf_read_iter(void *self, struct CIterator_ReadData inp, ReadCallback * out, ReadCallback * out_fail)  {
+    int32_t __ret = (((struct CGlueTraitObj_CBox_c_void_____MemoryViewVtbl_CGlueObjContainer_CBox_c_void_____CArc_c_void_____MemoryViewRetTmp_CArc_c_void______________CArc_c_void_____MemoryViewRetTmp_CArc_c_void *)self)->vtbl)->read_iter(&((struct CGlueTraitObj_CBox_c_void_____MemoryViewVtbl_CGlueObjContainer_CBox_c_void_____CArc_c_void_____MemoryViewRetTmp_CArc_c_void______________CArc_c_void_____MemoryViewRetTmp_CArc_c_void *)self)->container, inp, out, out_fail);
     return __ret;
 }
 
@@ -2248,6 +2441,11 @@ static inline int32_t mf_read_raw_list(void *self, struct CSliceMut_ReadData dat
 
 static inline int32_t mf_read_raw_into(void *self, Address addr, struct CSliceMut_u8 out)  {
     int32_t __ret = (((struct CGlueTraitObj_CBox_c_void_____MemoryViewVtbl_CGlueObjContainer_CBox_c_void_____CArc_c_void_____MemoryViewRetTmp_CArc_c_void______________CArc_c_void_____MemoryViewRetTmp_CArc_c_void *)self)->vtbl)->read_raw_into(&((struct CGlueTraitObj_CBox_c_void_____MemoryViewVtbl_CGlueObjContainer_CBox_c_void_____CArc_c_void_____MemoryViewRetTmp_CArc_c_void______________CArc_c_void_____MemoryViewRetTmp_CArc_c_void *)self)->container, addr, out);
+    return __ret;
+}
+
+static inline int32_t mf_write_iter(void *self, struct CIterator_WriteData inp, WriteCallback * out, WriteCallback * out_fail)  {
+    int32_t __ret = (((struct CGlueTraitObj_CBox_c_void_____MemoryViewVtbl_CGlueObjContainer_CBox_c_void_____CArc_c_void_____MemoryViewRetTmp_CArc_c_void______________CArc_c_void_____MemoryViewRetTmp_CArc_c_void *)self)->vtbl)->write_iter(&((struct CGlueTraitObj_CBox_c_void_____MemoryViewVtbl_CGlueObjContainer_CBox_c_void_____CArc_c_void_____MemoryViewRetTmp_CArc_c_void______________CArc_c_void_____MemoryViewRetTmp_CArc_c_void *)self)->container, inp, out, out_fail);
     return __ret;
 }
 
@@ -2423,18 +2621,23 @@ static inline const struct OsInfo * mf_osinstance_info(const void *self)  {
     return __ret;
 }
 
-static inline int32_t mf_osinstance_read_raw_iter(void *self, struct CIterator_ReadData data, ReadFailCallback * out_fail)  {
-    int32_t __ret = (((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_memoryview)->read_raw_iter(&((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->container, data, out_fail);
+static inline int32_t mf_osinstance_read_raw_iter(void *self, ReadRawMemOps data)  {
+    int32_t __ret = (((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_memoryview)->read_raw_iter(&((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->container, data);
     return __ret;
 }
 
-static inline int32_t mf_osinstance_write_raw_iter(void *self, struct CIterator_WriteData data, WriteFailCallback * out_fail)  {
-    int32_t __ret = (((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_memoryview)->write_raw_iter(&((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->container, data, out_fail);
+static inline int32_t mf_osinstance_write_raw_iter(void *self, WriteRawMemOps data)  {
+    int32_t __ret = (((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_memoryview)->write_raw_iter(&((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->container, data);
     return __ret;
 }
 
 static inline struct MemoryViewMetadata mf_osinstance_metadata(const void *self)  {
     struct MemoryViewMetadata __ret = (((const struct OsInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_memoryview)->metadata(&((const struct OsInstance_CBox_c_void_____CArc_c_void *)self)->container);
+    return __ret;
+}
+
+static inline int32_t mf_osinstance_read_iter(void *self, struct CIterator_ReadData inp, ReadCallback * out, ReadCallback * out_fail)  {
+    int32_t __ret = (((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_memoryview)->read_iter(&((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->container, inp, out, out_fail);
     return __ret;
 }
 
@@ -2445,6 +2648,11 @@ static inline int32_t mf_osinstance_read_raw_list(void *self, struct CSliceMut_R
 
 static inline int32_t mf_osinstance_read_raw_into(void *self, Address addr, struct CSliceMut_u8 out)  {
     int32_t __ret = (((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_memoryview)->read_raw_into(&((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->container, addr, out);
+    return __ret;
+}
+
+static inline int32_t mf_osinstance_write_iter(void *self, struct CIterator_WriteData inp, WriteCallback * out, WriteCallback * out_fail)  {
+    int32_t __ret = (((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_memoryview)->write_iter(&((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->container, inp, out, out_fail);
     return __ret;
 }
 
@@ -2497,13 +2705,13 @@ static inline int32_t mf_osinstance_into_keyboard(struct OsInstance_CBox_c_void_
     return __ret;
 }
 
-static inline int32_t mf_osinstance_phys_read_raw_iter(void *self, struct CIterator_PhysicalReadData data, ReadFailCallback * out_fail)  {
-    int32_t __ret = (((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_physicalmemory)->phys_read_raw_iter(&((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->container, data, out_fail);
+static inline int32_t mf_osinstance_phys_read_raw_iter(void *self, PhysicalReadMemOps data)  {
+    int32_t __ret = (((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_physicalmemory)->phys_read_raw_iter(&((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->container, data);
     return __ret;
 }
 
-static inline int32_t mf_osinstance_phys_write_raw_iter(void *self, struct CIterator_PhysicalWriteData data, WriteFailCallback * out_fail)  {
-    int32_t __ret = (((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_physicalmemory)->phys_write_raw_iter(&((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->container, data, out_fail);
+static inline int32_t mf_osinstance_phys_write_raw_iter(void *self, PhysicalWriteMemOps data)  {
+    int32_t __ret = (((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_physicalmemory)->phys_write_raw_iter(&((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->container, data);
     return __ret;
 }
 
@@ -2524,18 +2732,23 @@ static inline MemoryViewBase_CBox_c_void_____CArc_c_void mf_osinstance_phys_view
     return __ret;
 }
 
-static inline int32_t mf_processinstance_read_raw_iter(void *self, struct CIterator_ReadData data, ReadFailCallback * out_fail)  {
-    int32_t __ret = (((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_memoryview)->read_raw_iter(&((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, data, out_fail);
+static inline int32_t mf_processinstance_read_raw_iter(void *self, ReadRawMemOps data)  {
+    int32_t __ret = (((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_memoryview)->read_raw_iter(&((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, data);
     return __ret;
 }
 
-static inline int32_t mf_processinstance_write_raw_iter(void *self, struct CIterator_WriteData data, WriteFailCallback * out_fail)  {
-    int32_t __ret = (((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_memoryview)->write_raw_iter(&((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, data, out_fail);
+static inline int32_t mf_processinstance_write_raw_iter(void *self, WriteRawMemOps data)  {
+    int32_t __ret = (((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_memoryview)->write_raw_iter(&((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, data);
     return __ret;
 }
 
 static inline struct MemoryViewMetadata mf_processinstance_metadata(const void *self)  {
     struct MemoryViewMetadata __ret = (((const struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_memoryview)->metadata(&((const struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->container);
+    return __ret;
+}
+
+static inline int32_t mf_processinstance_read_iter(void *self, struct CIterator_ReadData inp, ReadCallback * out, ReadCallback * out_fail)  {
+    int32_t __ret = (((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_memoryview)->read_iter(&((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, inp, out, out_fail);
     return __ret;
 }
 
@@ -2546,6 +2759,11 @@ static inline int32_t mf_processinstance_read_raw_list(void *self, struct CSlice
 
 static inline int32_t mf_processinstance_read_raw_into(void *self, Address addr, struct CSliceMut_u8 out)  {
     int32_t __ret = (((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_memoryview)->read_raw_into(&((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, addr, out);
+    return __ret;
+}
+
+static inline int32_t mf_processinstance_write_iter(void *self, struct CIterator_WriteData inp, WriteCallback * out, WriteCallback * out_fail)  {
+    int32_t __ret = (((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_memoryview)->write_iter(&((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, inp, out, out_fail);
     return __ret;
 }
 
@@ -2650,7 +2868,7 @@ static inline void mf_processinstance_mapped_mem(void *self, imem gap_size, Memo
 
 }
 
-static inline void mf_processinstance_virt_to_phys_list(void *self, struct CSliceRef_MemoryRange addrs, VirtualTranslationCallback out, VirtualTranslationFailCallback out_fail)  {
+static inline void mf_processinstance_virt_to_phys_list(void *self, struct CSliceRef_VtopRange addrs, VirtualTranslationCallback out, VirtualTranslationFailCallback out_fail)  {
 (((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_virtualtranslate)->virt_to_phys_list(&((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, addrs, out, out_fail);
 
 }
@@ -2707,18 +2925,23 @@ static inline void mf_intoprocessinstance_drop(struct IntoProcessInstance_CBox_c
 
 }
 
-static inline int32_t mf_intoprocessinstance_read_raw_iter(void *self, struct CIterator_ReadData data, ReadFailCallback * out_fail)  {
-    int32_t __ret = (((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_memoryview)->read_raw_iter(&((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, data, out_fail);
+static inline int32_t mf_intoprocessinstance_read_raw_iter(void *self, ReadRawMemOps data)  {
+    int32_t __ret = (((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_memoryview)->read_raw_iter(&((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, data);
     return __ret;
 }
 
-static inline int32_t mf_intoprocessinstance_write_raw_iter(void *self, struct CIterator_WriteData data, WriteFailCallback * out_fail)  {
-    int32_t __ret = (((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_memoryview)->write_raw_iter(&((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, data, out_fail);
+static inline int32_t mf_intoprocessinstance_write_raw_iter(void *self, WriteRawMemOps data)  {
+    int32_t __ret = (((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_memoryview)->write_raw_iter(&((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, data);
     return __ret;
 }
 
 static inline struct MemoryViewMetadata mf_intoprocessinstance_metadata(const void *self)  {
     struct MemoryViewMetadata __ret = (((const struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_memoryview)->metadata(&((const struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->container);
+    return __ret;
+}
+
+static inline int32_t mf_intoprocessinstance_read_iter(void *self, struct CIterator_ReadData inp, ReadCallback * out, ReadCallback * out_fail)  {
+    int32_t __ret = (((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_memoryview)->read_iter(&((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, inp, out, out_fail);
     return __ret;
 }
 
@@ -2729,6 +2952,11 @@ static inline int32_t mf_intoprocessinstance_read_raw_list(void *self, struct CS
 
 static inline int32_t mf_intoprocessinstance_read_raw_into(void *self, Address addr, struct CSliceMut_u8 out)  {
     int32_t __ret = (((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_memoryview)->read_raw_into(&((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, addr, out);
+    return __ret;
+}
+
+static inline int32_t mf_intoprocessinstance_write_iter(void *self, struct CIterator_WriteData inp, WriteCallback * out, WriteCallback * out_fail)  {
+    int32_t __ret = (((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_memoryview)->write_iter(&((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, inp, out, out_fail);
     return __ret;
 }
 
@@ -2827,7 +3055,7 @@ static inline void mf_intoprocessinstance_mapped_mem(void *self, imem gap_size, 
 
 }
 
-static inline void mf_intoprocessinstance_virt_to_phys_list(void *self, struct CSliceRef_MemoryRange addrs, VirtualTranslationCallback out, VirtualTranslationFailCallback out_fail)  {
+static inline void mf_intoprocessinstance_virt_to_phys_list(void *self, struct CSliceRef_VtopRange addrs, VirtualTranslationCallback out, VirtualTranslationFailCallback out_fail)  {
 (((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_virtualtranslate)->virt_to_phys_list(&((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, addrs, out, out_fail);
 
 }
@@ -2872,13 +3100,13 @@ static inline void mf_intoprocessinstance_virt_page_map(void *self, imem gap_siz
 
 }
 
-static inline int32_t mf_connectorinstance_phys_read_raw_iter(void *self, struct CIterator_PhysicalReadData data, ReadFailCallback * out_fail)  {
-    int32_t __ret = (((struct ConnectorInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_physicalmemory)->phys_read_raw_iter(&((struct ConnectorInstance_CBox_c_void_____CArc_c_void *)self)->container, data, out_fail);
+static inline int32_t mf_connectorinstance_phys_read_raw_iter(void *self, PhysicalReadMemOps data)  {
+    int32_t __ret = (((struct ConnectorInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_physicalmemory)->phys_read_raw_iter(&((struct ConnectorInstance_CBox_c_void_____CArc_c_void *)self)->container, data);
     return __ret;
 }
 
-static inline int32_t mf_connectorinstance_phys_write_raw_iter(void *self, struct CIterator_PhysicalWriteData data, WriteFailCallback * out_fail)  {
-    int32_t __ret = (((struct ConnectorInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_physicalmemory)->phys_write_raw_iter(&((struct ConnectorInstance_CBox_c_void_____CArc_c_void *)self)->container, data, out_fail);
+static inline int32_t mf_connectorinstance_phys_write_raw_iter(void *self, PhysicalWriteMemOps data)  {
+    int32_t __ret = (((struct ConnectorInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_physicalmemory)->phys_write_raw_iter(&((struct ConnectorInstance_CBox_c_void_____CArc_c_void *)self)->container, data);
     return __ret;
 }
 

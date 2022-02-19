@@ -63,12 +63,84 @@ pub trait MemoryView: Send {
 
     // Read helpers
 
+    /// Read arbitrary amount of data.
+    ///
+    /// # Arguments
+    ///
+    /// * `inp` - input iterator of (address, buffer) pairs.
+    /// * `out` - optional callback for any successful reads - along the way `inp` pairs may be
+    /// split and only parts of the reads may succeed. This callback will return any successful
+    /// chunks that have their buffers filled in.
+    /// * `out_fail` - optional callback for any unsuccessful reads - this is the opposite of
+    /// `out`, meaning any unsuccessful chunks with buffers in an unspecified state.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use memflow::types::Address;
+    /// use memflow::mem::{MemoryView, MemData2};
+    ///
+    /// fn read(mut mem: impl MemoryView, read_addrs: &[Address]) {
+    ///
+    ///     let mut bufs = vec![0u8; 8 * read_addrs.len()];
+    ///
+    ///     let data = read_addrs
+    ///         .iter()
+    ///         .zip(bufs.chunks_mut(8))
+    ///         .map(|(&a, chunk)| MemData2(a, chunk.into()));
+    ///
+    ///     mem.read_iter(data, None, None).unwrap();
+    ///
+    ///     println!("{:?}", bufs);
+    ///
+    ///     # assert!(!bufs.chunks_exact(2).inspect(|c| println!("{:?}", c)).any(|c| c != &[255, 0]));
+    /// }
+    /// # use memflow::dummy::DummyOs;
+    /// # use memflow::types::size;
+    /// # use memflow::os::Process;
+    /// # let proc = DummyOs::quick_process(
+    /// #     size::mb(2),
+    /// #     &[255, 0].iter().cycle().copied().take(32).collect::<Vec<u8>>()
+    /// # );
+    /// # let virt_base = proc.info().address;
+    /// # read(proc, &[virt_base, virt_base + 16usize]);
+    /// ```
     #[int_result]
-    fn read_iter(&mut self, data: ReadMemOps) -> Result<()> {
+    #[vtbl_only]
+    #[custom_impl(
+        // Types within the C interface other than self and additional wrappers.
+        {
+            inp: CIterator<ReadData<'a>>,
+            out: Option<&mut ReadCallback<'b, 'a>>,
+            out_fail: Option<&mut ReadCallback<'b, 'a>>,
+        },
+        // Unwrapped return type
+        Result<()>,
+        // Conversion in trait impl to C arguments (signature names are expected).
+        {},
+        // This is the body of C impl minus the automatic wrapping.
+        {
+            MemOps::with_raw(
+                inp.map(|MemData2(a, b)| MemData3(a, a, b)),
+                out,
+                out_fail,
+                |data| this.read_raw_iter(data),
+            )
+        },
+        // This part is processed in the trait impl after the call returns (impl_func_ret,
+        // nothing extra needs to happen here).
+        {},
+    )]
+    fn read_iter<'a, 'b>(
+        &mut self,
+        inp: impl Iterator<Item = ReadData<'a>>,
+        out: Option<&mut ReadCallback<'b, 'a>>,
+        out_fail: Option<&mut ReadCallback<'b, 'a>>,
+    ) -> Result<()> {
         MemOps::with_raw(
-            data.inp.map(|MemData2(a, b)| MemData3(a, a, b)),
-            data.out,
-            data.out_fail,
+            inp.map(|MemData2(a, b)| MemData3(a, a, b)),
+            out,
+            out_fail,
             |data| self.read_raw_iter(data),
         )
     }
@@ -184,12 +256,81 @@ pub trait MemoryView: Send {
 
     // Write helpers
 
+    /// Write arbitrary amount of data.
+    ///
+    /// # Arguments
+    ///
+    /// * `inp` - input iterator of (address, buffer) pairs.
+    /// * `out` - optional callback for any successful writes - along the way `inp` pairs may be
+    /// split and only parts of the writes may succeed. This callback will return any successful
+    /// chunks that have their buffers filled in.
+    /// * `out_fail` - optional callback for any unsuccessful writes - this is the opposite of
+    /// `out`, meaning any unsuccessful chunks with buffers in an unspecified state.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use memflow::types::Address;
+    /// use memflow::mem::{MemoryView, MemData2};
+    /// use dataview::Pod;
+    ///
+    /// fn write(mut mem: impl MemoryView, writes: &[(Address, usize)]) {
+    ///
+    ///     let data = writes
+    ///         .iter()
+    ///         .map(|(a, chunk)| MemData2(*a, chunk.as_bytes().into()));
+    ///
+    ///     mem.write_iter(data, None, None).unwrap();
+    ///
+    ///     # assert_eq!(mem.read::<usize>(writes[0].0), Ok(3));
+    ///     # assert_eq!(mem.read::<usize>(writes[1].0), Ok(4));
+    /// }
+    /// # use memflow::dummy::DummyOs;
+    /// # use memflow::types::size;
+    /// # use memflow::os::Process;
+    /// # let proc = DummyOs::quick_process(
+    /// #     size::mb(2),
+    /// #     &[255, 0].iter().cycle().copied().take(32).collect::<Vec<u8>>()
+    /// # );
+    /// # let virt_base = proc.info().address;
+    /// # write(proc, &[(virt_base, 3), (virt_base + 16usize, 4)]);
+    /// ```
     #[int_result]
-    fn write_iter(&mut self, data: WriteMemOps) -> Result<()> {
+    #[vtbl_only]
+    #[custom_impl(
+        // Types within the C interface other than self and additional wrappers.
+        {
+            inp: CIterator<WriteData<'a>>,
+            out: Option<&mut WriteCallback<'b, 'a>>,
+            out_fail: Option<&mut WriteCallback<'b, 'a>>,
+        },
+        // Unwrapped return type
+        Result<()>,
+        // Conversion in trait impl to C arguments (signature names are expected).
+        {},
+        // This is the body of C impl minus the automatic wrapping.
+        {
+            MemOps::with_raw(
+                inp.map(|MemData2(a, b)| MemData3(a, a, b)),
+                out,
+                out_fail,
+                |data| this.write_raw_iter(data),
+            )
+        },
+        // This part is processed in the trait impl after the call returns (impl_func_ret,
+        // nothing extra needs to happen here).
+        {},
+    )]
+    fn write_iter<'a, 'b>(
+        &mut self,
+        inp: impl Iterator<Item = WriteData<'a>>,
+        out: Option<&mut WriteCallback<'b, 'a>>,
+        out_fail: Option<&mut WriteCallback<'b, 'a>>,
+    ) -> Result<()> {
         MemOps::with_raw(
-            data.inp.map(|MemData2(a, b)| MemData3(a, a, b)),
-            data.out,
-            data.out_fail,
+            inp.map(|MemData2(a, b)| MemData3(a, a, b)),
+            out,
+            out_fail,
             |data| self.write_raw_iter(data),
         )
     }
@@ -205,7 +346,7 @@ pub trait MemoryView: Send {
         let iter = data.iter().copied();
 
         MemOps::with_raw(iter, None, Some(&mut callback.into()), |data| {
-            self.write_iter(data)
+            self.write_iter(data.inp, data.out, data.out_fail)
         })?;
 
         out

@@ -107,7 +107,7 @@ fn kernel_modules(kernel: &mut impl Os) -> Result<Vec<ModuleInfo>> {
 }
 
 fn parse_args() -> ArgMatches {
-    App::new("integration example")
+    Command::new("integration example")
         .version(crate_version!())
         .author(crate_authors!())
         .arg(Arg::new("verbose").short('v').multiple_occurrences(true))

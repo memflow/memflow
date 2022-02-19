@@ -90,6 +90,7 @@ impl<T: AsRef<[u8]>, F: AsRef<MemoryMap<T>>> MappedPhysicalMemory<T, F> {
     }
 }
 
+#[allow(clippy::needless_option_as_deref)]
 impl<'a, F: AsRef<MemoryMap<&'a mut [u8]>> + Send> PhysicalMemory
     for MappedPhysicalMemory<&'a mut [u8], F>
 {
@@ -137,6 +138,7 @@ impl<'a, F: AsRef<MemoryMap<&'a mut [u8]>> + Send> PhysicalMemory
     }
 }
 
+#[allow(clippy::needless_option_as_deref)]
 impl<'a, F: AsRef<MemoryMap<&'a [u8]>> + Send> PhysicalMemory
     for MappedPhysicalMemory<&'a [u8], F>
 {

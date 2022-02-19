@@ -155,7 +155,7 @@ fn main() -> Result<()> {
 }
 
 fn parse_args() -> ArgMatches {
-    App::new("read_bench example")
+    Command::new("read_bench example")
         .version(crate_version!())
         .author(crate_authors!())
         .arg(Arg::new("verbose").short('v').multiple_occurrences(true))

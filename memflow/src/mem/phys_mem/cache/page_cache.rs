@@ -40,6 +40,7 @@ pub struct PageCache<'a, T> {
 
 unsafe impl<'a, T> Send for PageCache<'a, T> {}
 
+#[allow(clippy::needless_option_as_deref)]
 impl<'a, T: CacheValidator> PageCache<'a, T> {
     pub fn new(arch: ArchitectureObj, size: usize, page_type_mask: PageType, validator: T) -> Self {
         Self::with_page_size(arch.page_size(), size, page_type_mask, validator)

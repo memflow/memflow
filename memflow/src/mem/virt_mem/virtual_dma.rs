@@ -186,6 +186,7 @@ where
     }
 }
 
+#[allow(clippy::needless_option_as_deref)]
 impl<T: PhysicalMemory, V: VirtualTranslate2, D: VirtualTranslate3> MemoryView
     for VirtualDma<T, V, D>
 {

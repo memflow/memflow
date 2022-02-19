@@ -21,7 +21,7 @@ impl<T: MemoryView> RemapView<T> {
 
 impl<T: MemoryView> MemoryView for RemapView<T> {
     fn read_raw_iter(&mut self, MemOps { inp, out_fail, out }: ReadRawMemOps) -> Result<()> {
-        let out_fail = out_fail.map(|of| std::cell::RefCell::new(of));
+        let out_fail = out_fail.map(std::cell::RefCell::new);
 
         let mut out_fail1 = out_fail
             .as_ref()
@@ -47,7 +47,7 @@ impl<T: MemoryView> MemoryView for RemapView<T> {
     }
 
     fn write_raw_iter(&mut self, MemOps { inp, out_fail, out }: WriteRawMemOps) -> Result<()> {
-        let out_fail = out_fail.map(|of| std::cell::RefCell::new(of));
+        let out_fail = out_fail.map(std::cell::RefCell::new);
 
         let mut out_fail1 = out_fail
             .as_ref()

@@ -30,10 +30,10 @@ bumpalo = { version = "^3.9.1", features = ["collections"] }
 no-std-compat = { version = "^0.4.1", features = ["alloc"] }
 itertools = { version = "^0.10.3", default-features = false }
 memmap = { version = "^0.7.0", optional = true }
-hashbrown = "^0.11.2"
+hashbrown = "^0.12"
 fixed-slice-vec = "^0.8.0"
 cglue = { version = ">=0.2.8", default-features = false }
-rangemap = "^0.1.14"
+rangemap = "^1.0"
 
 # plugins
 libloading = { version = "^0.7.2", optional = true }

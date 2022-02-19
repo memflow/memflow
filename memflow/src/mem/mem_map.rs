@@ -401,6 +401,7 @@ pub struct MemoryMapIterator<'a, I, M, T, C> {
     cur_map_pos: usize,
 }
 
+#[allow(clippy::needless_option_as_deref)]
 impl<
         'a,
         I: Iterator<Item = MemData3<Address, Address, T>>,

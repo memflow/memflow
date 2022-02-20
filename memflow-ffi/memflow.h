@@ -430,16 +430,16 @@ typedef struct CSliceMut_u8 {
  * This base type is always used for initialization, but the commonly used type aliases are:
  * `ReadDataIn`, `WriteDataIn`, `PhysicalReadDataIn`, and `PhysicalWriteDataIn`.
  */
-typedef struct MemData3_PhysicalAddress__Address__CSliceMut_u8 {
+typedef struct CTup3_PhysicalAddress__Address__CSliceMut_u8 {
     struct PhysicalAddress _0;
     Address _1;
     struct CSliceMut_u8 _2;
-} MemData3_PhysicalAddress__Address__CSliceMut_u8;
+} CTup3_PhysicalAddress__Address__CSliceMut_u8;
 
 /**
  * MemData type for physical memory reads.
  */
-typedef struct MemData3_PhysicalAddress__Address__CSliceMut_u8 PhysicalReadData;
+typedef struct CTup3_PhysicalAddress__Address__CSliceMut_u8 PhysicalReadData;
 
 /**
  * FFI compatible iterator.
@@ -489,12 +489,12 @@ typedef struct CIterator_PhysicalReadData {
  * This base type is always used for initialization, but the commonly used type aliases are:
  * `ReadData`, `WriteData`, `PhysicalReadData`, and `PhysicalWriteData`.
  */
-typedef struct MemData2_Address__CSliceMut_u8 {
+typedef struct CTup2_Address__CSliceMut_u8 {
     Address _0;
     struct CSliceMut_u8 _1;
-} MemData2_Address__CSliceMut_u8;
+} CTup2_Address__CSliceMut_u8;
 
-typedef struct MemData2_Address__CSliceMut_u8 ReadData;
+typedef struct CTup2_Address__CSliceMut_u8 ReadData;
 
 typedef struct Callback_c_void__ReadData {
     void *context;
@@ -549,16 +549,16 @@ typedef struct CSliceRef_u8 {
  * This base type is always used for initialization, but the commonly used type aliases are:
  * `ReadDataIn`, `WriteDataIn`, `PhysicalReadDataIn`, and `PhysicalWriteDataIn`.
  */
-typedef struct MemData3_PhysicalAddress__Address__CSliceRef_u8 {
+typedef struct CTup3_PhysicalAddress__Address__CSliceRef_u8 {
     struct PhysicalAddress _0;
     Address _1;
     struct CSliceRef_u8 _2;
-} MemData3_PhysicalAddress__Address__CSliceRef_u8;
+} CTup3_PhysicalAddress__Address__CSliceRef_u8;
 
 /**
  * MemData type for physical memory writes.
  */
-typedef struct MemData3_PhysicalAddress__Address__CSliceRef_u8 PhysicalWriteData;
+typedef struct CTup3_PhysicalAddress__Address__CSliceRef_u8 PhysicalWriteData;
 
 /**
  * FFI compatible iterator.
@@ -608,12 +608,12 @@ typedef struct CIterator_PhysicalWriteData {
  * This base type is always used for initialization, but the commonly used type aliases are:
  * `ReadData`, `WriteData`, `PhysicalReadData`, and `PhysicalWriteData`.
  */
-typedef struct MemData2_Address__CSliceRef_u8 {
+typedef struct CTup2_Address__CSliceRef_u8 {
     Address _0;
     struct CSliceRef_u8 _1;
-} MemData2_Address__CSliceRef_u8;
+} CTup2_Address__CSliceRef_u8;
 
-typedef struct MemData2_Address__CSliceRef_u8 WriteData;
+typedef struct CTup2_Address__CSliceRef_u8 WriteData;
 
 typedef struct Callback_c_void__WriteData {
     void *context;
@@ -681,16 +681,16 @@ typedef struct CSliceRef_PhysicalMemoryMapping {
  * This base type is always used for initialization, but the commonly used type aliases are:
  * `ReadDataIn`, `WriteDataIn`, `PhysicalReadDataIn`, and `PhysicalWriteDataIn`.
  */
-typedef struct MemData3_Address__Address__CSliceMut_u8 {
+typedef struct CTup3_Address__Address__CSliceMut_u8 {
     Address _0;
     Address _1;
     struct CSliceMut_u8 _2;
-} MemData3_Address__Address__CSliceMut_u8;
+} CTup3_Address__Address__CSliceMut_u8;
 
 /**
  * MemData type for regular memory reads.
  */
-typedef struct MemData3_Address__Address__CSliceMut_u8 ReadDataRaw;
+typedef struct CTup3_Address__Address__CSliceMut_u8 ReadDataRaw;
 
 /**
  * FFI compatible iterator.
@@ -753,16 +753,16 @@ typedef struct MemOps_ReadDataRaw__ReadData ReadRawMemOps;
  * This base type is always used for initialization, but the commonly used type aliases are:
  * `ReadDataIn`, `WriteDataIn`, `PhysicalReadDataIn`, and `PhysicalWriteDataIn`.
  */
-typedef struct MemData3_Address__Address__CSliceRef_u8 {
+typedef struct CTup3_Address__Address__CSliceRef_u8 {
     Address _0;
     Address _1;
     struct CSliceRef_u8 _2;
-} MemData3_Address__Address__CSliceRef_u8;
+} CTup3_Address__Address__CSliceRef_u8;
 
 /**
  * MemData type for regular memory writes.
  */
-typedef struct MemData3_Address__Address__CSliceRef_u8 WriteDataRaw;
+typedef struct CTup3_Address__Address__CSliceRef_u8 WriteDataRaw;
 
 /**
  * FFI compatible iterator.
@@ -1440,13 +1440,13 @@ typedef int64_t imem;
  * This base type is always used for initialization, but the commonly used type aliases are:
  * `ReadDataIn`, `WriteDataIn`, `PhysicalReadDataIn`, and `PhysicalWriteDataIn`.
  */
-typedef struct MemData3_Address__umem__PageType {
+typedef struct CTup3_Address__umem__PageType {
     Address _0;
     umem _1;
     PageType _2;
-} MemData3_Address__umem__PageType;
+} CTup3_Address__umem__PageType;
 
-typedef struct MemData3_Address__umem__PageType MemoryRange;
+typedef struct CTup3_Address__umem__PageType MemoryRange;
 
 typedef struct Callback_c_void__MemoryRange {
     void *context;
@@ -1463,12 +1463,12 @@ typedef OpaqueCallback_MemoryRange MemoryRangeCallback;
  * This base type is always used for initialization, but the commonly used type aliases are:
  * `ReadData`, `WriteData`, `PhysicalReadData`, and `PhysicalWriteData`.
  */
-typedef struct MemData2_Address__umem {
+typedef struct CTup2_Address__umem {
     Address _0;
     umem _1;
-} MemData2_Address__umem;
+} CTup2_Address__umem;
 
-typedef struct MemData2_Address__umem VtopRange;
+typedef struct CTup2_Address__umem VtopRange;
 
 /**
  * Wrapper around const slices.

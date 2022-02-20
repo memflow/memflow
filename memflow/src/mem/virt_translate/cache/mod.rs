@@ -5,9 +5,10 @@ mod tlb_cache;
 use crate::architecture::ArchitectureObj;
 use crate::iter::{PageChunks, SplitAtIndex};
 use crate::mem::virt_translate::VirtualTranslate2;
-use crate::mem::{MemData3, PhysicalMemory};
+use crate::mem::PhysicalMemory;
 use crate::types::cache::{CacheValidator, DefaultCacheValidator};
 use crate::types::{umem, Address};
+use cglue::tuple::*;
 use tlb_cache::TlbCache;
 
 use super::{VirtualTranslate3, VtopFailureCallback, VtopOutputCallback};
@@ -151,7 +152,7 @@ impl<V: VirtualTranslate2, Q: CacheValidator> VirtualTranslate2 for CachedVirtua
         T: PhysicalMemory + ?Sized,
         B: SplitAtIndex,
         D: VirtualTranslate3,
-        VI: Iterator<Item = MemData3<Address, Address, B>>,
+        VI: Iterator<Item = CTup3<Address, Address, B>>,
     {
         self.tlb.validator.update_validity();
         self.arena.reset();
@@ -167,9 +168,9 @@ impl<V: VirtualTranslate2, Q: CacheValidator> VirtualTranslate2 for CachedVirtua
 
         let arch = self.arch;
         let mut addrs = addrs
-            .filter_map(|MemData3(addr, meta_addr, buf)| {
+            .filter_map(|CTup3(addr, meta_addr, buf)| {
                 if tlb.is_read_too_long(arch, buf.length() as umem) {
-                    uncached_in.push(MemData3(addr, meta_addr, buf));
+                    uncached_in.push(CTup3(addr, meta_addr, buf));
                     None
                 } else {
                     Some((addr, meta_addr, buf))
@@ -188,13 +189,13 @@ impl<V: VirtualTranslate2, Q: CacheValidator> VirtualTranslate2 for CachedVirtua
                     debug_assert!(buf.length() <= arch.page_size() as umem);
                     // TODO: handle case
                     let _ = match entry {
-                        Ok(entry) => out.call(MemData3(entry.phys_addr, meta_addr, buf)),
-                        Err(error) => out_fail.call((error, MemData3(addr, meta_addr, buf))),
+                        Ok(entry) => out.call(CTup3(entry.phys_addr, meta_addr, buf)),
+                        Err(error) => out_fail.call((error, CTup3(addr, meta_addr, buf))),
                     };
                     None
                 } else {
                     misc += core::cmp::max(1, buf.length() / arch.page_size() as umem);
-                    Some(MemData3(addr, meta_addr, (addr, buf)))
+                    Some(CTup3(addr, meta_addr, (addr, buf)))
                 }
             })
             .peekable();
@@ -218,16 +219,16 @@ impl<V: VirtualTranslate2, Q: CacheValidator> VirtualTranslate2 for CachedVirtua
         out.extend(
             uncached_out
                 .into_iter()
-                .map(|MemData3(paddr, meta_addr, (addr, buf))| {
+                .map(|CTup3(paddr, meta_addr, (addr, buf))| {
                     tlb.cache_entry(translator, addr, paddr, arch);
-                    MemData3(paddr, meta_addr, buf)
+                    CTup3(paddr, meta_addr, buf)
                 }),
         );
 
         out_fail.extend(uncached_out_fail.into_iter().map(
-            |(err, MemData3(vaddr, meta_addr, (_, buf)))| {
+            |(err, CTup3(vaddr, meta_addr, (_, buf)))| {
                 tlb.cache_invalid_if_uncached(translator, vaddr, buf.length() as umem, arch);
-                (err, MemData3(vaddr, meta_addr, buf))
+                (err, CTup3(vaddr, meta_addr, buf))
             },
         ));
 

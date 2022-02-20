@@ -78,7 +78,8 @@ pub trait MemoryView: Send {
     ///
     /// ```
     /// use memflow::types::Address;
-    /// use memflow::mem::{MemoryView, MemData2};
+    /// use memflow::mem::MemoryView;
+    /// use memflow::cglue::CTup2;
     ///
     /// fn read(mut mem: impl MemoryView, read_addrs: &[Address]) {
     ///
@@ -87,7 +88,7 @@ pub trait MemoryView: Send {
     ///     let data = read_addrs
     ///         .iter()
     ///         .zip(bufs.chunks_mut(8))
-    ///         .map(|(&a, chunk)| MemData2(a, chunk.into()));
+    ///         .map(|(&a, chunk)| CTup2(a, chunk.into()));
     ///
     ///     mem.read_iter(data, None, None).unwrap();
     ///
@@ -121,7 +122,7 @@ pub trait MemoryView: Send {
         // This is the body of C impl minus the automatic wrapping.
         {
             MemOps::with_raw(
-                inp.map(|MemData2(a, b)| MemData3(a, a, b)),
+                inp.map(|CTup2(a, b)| CTup3(a, a, b)),
                 out,
                 out_fail,
                 |data| this.read_raw_iter(data),
@@ -138,7 +139,7 @@ pub trait MemoryView: Send {
         out_fail: Option<&mut ReadCallback<'b, 'a>>,
     ) -> Result<()> {
         MemOps::with_raw(
-            inp.map(|MemData2(a, b)| MemData3(a, a, b)),
+            inp.map(|CTup2(a, b)| CTup3(a, a, b)),
             out,
             out_fail,
             |data| self.read_raw_iter(data),
@@ -148,7 +149,7 @@ pub trait MemoryView: Send {
     fn read_raw_list(&mut self, data: &mut [ReadData]) -> PartialResult<()> {
         let mut out = Ok(());
 
-        let callback = &mut |MemData2(_, mut d): ReadData| {
+        let callback = &mut |CTup2(_, mut d): ReadData| {
             out = Err(PartialError::PartialVirtualRead(()));
 
             // Default behaviour is to zero out any failed data
@@ -159,9 +160,7 @@ pub trait MemoryView: Send {
             true
         };
 
-        let iter = data
-            .iter()
-            .map(|MemData2(d1, d2)| MemData3(*d1, *d1, d2.into()));
+        let iter = data.iter().map(|CTup2(d1, d2)| CTup3(*d1, *d1, d2.into()));
 
         MemOps::with_raw(iter, None, Some(&mut callback.into()), |data| {
             self.read_raw_iter(data)
@@ -171,7 +170,7 @@ pub trait MemoryView: Send {
     }
 
     fn read_raw_into(&mut self, addr: Address, out: &mut [u8]) -> PartialResult<()> {
-        self.read_raw_list(&mut [MemData2(addr, out.into())])
+        self.read_raw_list(&mut [CTup2(addr, out.into())])
     }
 
     #[skip_func]
@@ -271,14 +270,15 @@ pub trait MemoryView: Send {
     ///
     /// ```
     /// use memflow::types::Address;
-    /// use memflow::mem::{MemoryView, MemData2};
+    /// use memflow::mem::MemoryView;
+    /// use memflow::cglue::CTup2;
     /// use dataview::Pod;
     ///
     /// fn write(mut mem: impl MemoryView, writes: &[(Address, usize)]) {
     ///
     ///     let data = writes
     ///         .iter()
-    ///         .map(|(a, chunk)| MemData2(*a, chunk.as_bytes().into()));
+    ///         .map(|(a, chunk)| CTup2(*a, chunk.as_bytes().into()));
     ///
     ///     mem.write_iter(data, None, None).unwrap();
     ///
@@ -311,7 +311,7 @@ pub trait MemoryView: Send {
         // This is the body of C impl minus the automatic wrapping.
         {
             MemOps::with_raw(
-                inp.map(|MemData2(a, b)| MemData3(a, a, b)),
+                inp.map(|CTup2(a, b)| CTup3(a, a, b)),
                 out,
                 out_fail,
                 |data| this.write_raw_iter(data),
@@ -328,7 +328,7 @@ pub trait MemoryView: Send {
         out_fail: Option<&mut WriteCallback<'b, 'a>>,
     ) -> Result<()> {
         MemOps::with_raw(
-            inp.map(|MemData2(a, b)| MemData3(a, a, b)),
+            inp.map(|CTup2(a, b)| CTup3(a, a, b)),
             out,
             out_fail,
             |data| self.write_raw_iter(data),
@@ -353,7 +353,7 @@ pub trait MemoryView: Send {
     }
 
     fn write_raw(&mut self, addr: Address, data: &[u8]) -> PartialResult<()> {
-        self.write_raw_list(&[MemData2(addr, data.into())])
+        self.write_raw_list(&[CTup2(addr, data.into())])
     }
 
     #[skip_func]

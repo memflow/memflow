@@ -2,8 +2,9 @@ use crate::architecture::Endianess;
 use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 use crate::iter::FlowIters;
 use crate::iter::SplitAtIndex;
-use crate::mem::{MemData3, PhysicalMemory, PhysicalReadData};
+use crate::mem::{PhysicalMemory, PhysicalReadData};
 use crate::types::{umem, Address, PageType, PhysicalAddress, UMEM_BITS};
+use cglue::tuple::*;
 
 use super::super::{VtopFailureCallback, VtopOutputCallback};
 use super::translate_data::{
@@ -120,7 +121,7 @@ impl ArchMmuSpec {
     /// +2^address_space_bits)`. It may result in 2 ranges, and it may have up to 2 failed ranges
     pub(crate) fn virt_addr_filter<C, B>(
         &self,
-        MemData3(addr, meta_addr, buf): MemData3<Address, Address, B>,
+        CTup3(addr, meta_addr, buf): CTup3<Address, Address, B>,
         (chunks, addrs_out): (&mut TranslationChunk<C>, &mut TranslateDataVec<B>),
         fail_out: &mut VtopFailureCallback<B>,
     ) where
@@ -143,7 +144,7 @@ impl ArchMmuSpec {
             // TODO: handle condition
             let _ = fail_out.call((
                 Error(ErrorOrigin::Mmu, ErrorKind::OutOfMemoryRange),
-                MemData3(data.addr, data.meta_addr, data.buf),
+                CTup3(data.addr, data.meta_addr, data.buf),
             ));
         }
 
@@ -162,7 +163,7 @@ impl ArchMmuSpec {
                 // TODO: handle condition
                 let _ = fail_out.call((
                     Error(ErrorOrigin::Mmu, ErrorKind::OutOfMemoryRange),
-                    MemData3(data.addr, data.meta_addr, data.buf),
+                    CTup3(data.addr, data.meta_addr, data.buf),
                 ));
             }
 
@@ -179,7 +180,7 @@ impl ArchMmuSpec {
                     // TODO: handle condition
                     let _ = fail_out.call((
                         Error(ErrorOrigin::Mmu, ErrorKind::OutOfMemoryRange),
-                        MemData3(higher.addr, higher.meta_addr, higher.buf),
+                        CTup3(higher.addr, higher.meta_addr, higher.buf),
                     ));
                 }
             }
@@ -336,7 +337,7 @@ impl ArchMmuSpec {
         T: PhysicalMemory + ?Sized,
         B: SplitAtIndex,
         D: MmuTranslationBase,
-        VI: Iterator<Item = MemData3<Address, Address, B>>,
+        VI: Iterator<Item = CTup3<Address, Address, B>>,
     {
         vtop_trace!("virt_to_phys_iter_with_mmu");
 
@@ -469,13 +470,13 @@ impl ArchMmuSpec {
                 vtop_trace!("read_pt_address_iter failure: {}", err);
 
                 while let Some(data) = working_pair.1.pop() {
-                    if !out_fail.call((err, MemData3(data.addr, data.meta_addr, data.buf))) {
+                    if !out_fail.call((err, CTup3(data.addr, data.meta_addr, data.buf))) {
                         return;
                     }
                 }
 
                 while let Some(data) = waiting_pair.1.pop() {
-                    if !out_fail.call((err, MemData3(data.addr, data.meta_addr, data.buf))) {
+                    if !out_fail.call((err, CTup3(data.addr, data.meta_addr, data.buf))) {
                         return;
                     }
                 }
@@ -544,7 +545,7 @@ impl ArchMmuSpec {
         pt_buf.extend((0..).map(|_| 0).take(pte_size * chunks.len()));
 
         for (chunk, tr_chunk) in pt_buf.chunks_exact_mut(pte_size).zip(chunks.iter()) {
-            pt_read.push(MemData3(
+            pt_read.push(CTup3(
                 PhysicalAddress::with_page(
                     tr_chunk.pt_addr,
                     PageType::PAGE_TABLE,
@@ -557,12 +558,12 @@ impl ArchMmuSpec {
 
         let mut pt_iter = pt_read
             .iter_mut()
-            .map(|MemData3(a, b, d): &mut PhysicalReadData| MemData3(*a, *b, d.into()));
+            .map(|CTup3(a, b, d): &mut PhysicalReadData| CTup3(*a, *b, d.into()));
 
         mem.phys_read_raw_iter((&mut pt_iter).into())?;
 
         // Move the read value into the chunk
-        for (ref mut chunk, MemData3(_, _, buf)) in chunks.iter_mut().zip(pt_read.iter()) {
+        for (ref mut chunk, CTup3(_, _, buf)) in chunks.iter_mut().zip(pt_read.iter()) {
             let pt_addr = buf_to_addr(&*buf);
             chunk.pt_addr = pt_addr;
             // We assume the flags may either always inherit or never inherit.
@@ -586,7 +587,7 @@ impl ArchMmuSpec {
         tmp_addrs: &mut TranslateDataVec<B>,
     ) where
         D: MmuTranslationBase,
-        VI: Iterator<Item = MemData3<Address, Address, B>>,
+        VI: Iterator<Item = CTup3<Address, Address, B>>,
     {
         // If there is a waiting stack, use it
         if !waiting_pair.0.is_empty() {
@@ -681,7 +682,7 @@ impl ArchMmuSpec {
                     // TODO: handle condition..
                     let _ = out_fail.call((
                         Error(ErrorOrigin::Mmu, ErrorKind::OutOfMemoryRange),
-                        MemData3(entry.addr, entry.meta_addr, entry.buf),
+                        CTup3(entry.addr, entry.meta_addr, entry.buf),
                     ));
                 }
             } else if self.is_final_mapping(chunk.pt_addr, chunk.step) {
@@ -691,7 +692,7 @@ impl ArchMmuSpec {
                 let prev_flags = chunk.prev_flags;
                 while let Some(entry) = chunk.pop_data(working_addrs) {
                     // TODO: handle condition..
-                    let _ = out.call(MemData3(
+                    let _ = out.call(CTup3(
                         self.get_phys_page(pt_addr, entry.addr, step, prev_flags),
                         entry.meta_addr,
                         entry.buf,

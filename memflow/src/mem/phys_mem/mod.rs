@@ -46,12 +46,10 @@ pub use cache::*;
 ///         PhysicalReadMemOps,
 ///         PhysicalWriteMemOps,
 ///         opt_call,
-///         MemData3,
-///         MemData2,
 ///     }
 /// };
 ///
-/// use memflow::cglue::CIterator;
+/// use memflow::cglue::{CIterator, CTup2, CTup3};
 ///
 /// use memflow::types::{PhysicalAddress, Address, umem};
 /// use memflow::error::Result;
@@ -70,11 +68,11 @@ pub use cache::*;
 ///         }: PhysicalReadMemOps,
 ///     ) -> Result<()> {
 ///         inp
-///             .for_each(|MemData3(addr, meta_addr, mut data)| {
+///             .for_each(|CTup3(addr, meta_addr, mut data)| {
 ///                 let addr: usize = addr.to_umem().try_into().unwrap();
 ///                 let len = data.len();
 ///                 data.copy_from_slice(&self.mem[addr..(addr + len)]);
-///                 opt_call(out.as_deref_mut(), MemData2(meta_addr, data));
+///                 opt_call(out.as_deref_mut(), CTup2(meta_addr, data));
 ///             });
 ///         Ok(())
 ///     }
@@ -88,11 +86,11 @@ pub use cache::*;
 ///         }: PhysicalWriteMemOps,
 ///     ) -> Result<()> {
 ///         inp
-///             .for_each(|MemData3(addr, meta_addr, data)| {
+///             .for_each(|CTup3(addr, meta_addr, data)| {
 ///                 let addr: usize = addr.to_umem().try_into().unwrap();
 ///                 let len = data.len();
 ///                 self.mem[addr..(addr + len)].copy_from_slice(&data);
-///                 opt_call(out.as_deref_mut(), MemData2(meta_addr, data));
+///                 opt_call(out.as_deref_mut(), CTup2(meta_addr, data));
 ///             });
 ///         Ok(())
 ///     }
@@ -170,7 +168,7 @@ pub trait PhysicalMemory: Send {
             std::iter::once((addr, CSliceMut::from(out.as_bytes_mut()))),
             None,
             Some(
-                &mut (&mut |MemData2(_, mut d): ReadData| {
+                &mut (&mut |CTup2(_, mut d): ReadData| {
                     d.iter_mut().for_each(|b| *b = 0);
                     true
                 })
@@ -219,8 +217,7 @@ pub struct PhysicalMemoryView<T> {
 
 impl<T: PhysicalMemory> MemoryView for PhysicalMemoryView<T> {
     fn read_raw_iter(&mut self, MemOps { inp, out, out_fail }: ReadRawMemOps) -> Result<()> {
-        let inp =
-            &mut inp.map(|MemData3(addr, meta_addr, data)| MemData3(addr.into(), meta_addr, data));
+        let inp = &mut inp.map(|CTup3(addr, meta_addr, data)| CTup3(addr.into(), meta_addr, data));
         let inp = inp.into();
 
         let data = MemOps { inp, out, out_fail };
@@ -229,8 +226,7 @@ impl<T: PhysicalMemory> MemoryView for PhysicalMemoryView<T> {
     }
 
     fn write_raw_iter(&mut self, MemOps { inp, out, out_fail }: WriteRawMemOps) -> Result<()> {
-        let inp =
-            &mut inp.map(|MemData3(addr, meta_addr, data)| MemData3(addr.into(), meta_addr, data));
+        let inp = &mut inp.map(|CTup3(addr, meta_addr, data)| CTup3(addr.into(), meta_addr, data));
         let inp = inp.into();
 
         let data = MemOps { inp, out, out_fail };

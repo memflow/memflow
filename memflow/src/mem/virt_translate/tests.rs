@@ -2,10 +2,11 @@ use crate::architecture::x86::x64;
 use crate::cglue::ForwardMut;
 use crate::dummy::{DummyMemory, DummyOs};
 use crate::mem::{
-    DirectTranslate, MemData3, MemoryView, PhysicalMemory, VirtualDma, VirtualTranslate,
-    VirtualTranslate2, VirtualTranslate3,
+    DirectTranslate, MemoryView, PhysicalMemory, VirtualDma, VirtualTranslate, VirtualTranslate2,
+    VirtualTranslate3,
 };
 use crate::types::{mem, size, PageType};
+use cglue::tuple::*;
 
 #[test]
 fn test_vtop() {
@@ -88,7 +89,7 @@ fn test_virt_page_map() {
 
     let page_map = virt_mem.virt_page_map_vec(0);
 
-    for MemData3(address, size, pt) in page_map.iter() {
+    for CTup3(address, size, pt) in page_map.iter() {
         println!("{:x}-{:x} ({:x}) {:?}", address, *address + *size, size, pt);
     }
 

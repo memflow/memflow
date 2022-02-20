@@ -4,8 +4,8 @@ Basic connector which works on file i/o operations (`Seek`, `Read`, `Write`).
 
 use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 use crate::mem::{
-    opt_call, MemData2, MemData3, MemoryMap, PhysicalMemory, PhysicalMemoryMetadata,
-    PhysicalReadMemOps, PhysicalWriteMemOps,
+    opt_call, MemoryMap, PhysicalMemory, PhysicalMemoryMetadata, PhysicalReadMemOps,
+    PhysicalWriteMemOps,
 };
 use crate::types::{umem, Address};
 
@@ -13,7 +13,6 @@ use std::fs::File;
 use std::io::{self, Read, Seek, SeekFrom, Write};
 use std::ops::{Deref, DerefMut};
 
-#[cfg(feature = "plugins")]
 use crate::cglue::*;
 
 /// File that implements Clone
@@ -135,7 +134,7 @@ impl<T: Seek + Read + Write + Send> FileIoMemory<T> {
 impl<T: Seek + Read + Write + Send> PhysicalMemory for FileIoMemory<T> {
     fn phys_read_raw_iter(&mut self, mut data: PhysicalReadMemOps) -> Result<()> {
         let mut iter = self.mem_map.map_iter(data.inp, data.out_fail);
-        while let Some(MemData3((file_off, _), meta_addr, mut buf)) = iter.next() {
+        while let Some(CTup3((file_off, _), meta_addr, mut buf)) = iter.next() {
             if self
                 .reader
                 .seek(SeekFrom::Start(file_off.to_umem() as u64))
@@ -152,18 +151,18 @@ impl<T: Seek + Read + Write + Send> PhysicalMemory for FileIoMemory<T> {
                     })
                     .is_ok()
                 {
-                    opt_call(data.out.as_deref_mut(), MemData2(meta_addr, buf));
+                    opt_call(data.out.as_deref_mut(), CTup2(meta_addr, buf));
                     continue;
                 }
             }
-            opt_call(iter.fail_out(), MemData2(meta_addr, buf));
+            opt_call(iter.fail_out(), CTup2(meta_addr, buf));
         }
         Ok(())
     }
 
     fn phys_write_raw_iter(&mut self, mut data: PhysicalWriteMemOps) -> Result<()> {
         let mut iter = self.mem_map.map_iter(data.inp, data.out_fail);
-        while let Some(MemData3((file_off, _), meta_addr, buf)) = iter.next() {
+        while let Some(CTup3((file_off, _), meta_addr, buf)) = iter.next() {
             if self
                 .reader
                 .seek(SeekFrom::Start(file_off.to_umem() as u64))
@@ -180,11 +179,11 @@ impl<T: Seek + Read + Write + Send> PhysicalMemory for FileIoMemory<T> {
                     })
                     .is_ok()
                 {
-                    opt_call(data.out.as_deref_mut(), MemData2(meta_addr, buf));
+                    opt_call(data.out.as_deref_mut(), CTup2(meta_addr, buf));
                     continue;
                 }
             }
-            opt_call(iter.fail_out(), MemData2(meta_addr, buf));
+            opt_call(iter.fail_out(), CTup2(meta_addr, buf));
         }
         Ok(())
     }

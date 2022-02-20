@@ -524,7 +524,7 @@ struct CSliceMut {
  * `ReadDataIn`, `WriteDataIn`, `PhysicalReadDataIn`, and `PhysicalWriteDataIn`.
  */
 template<typename A, typename M, typename T>
-struct MemData3 {
+struct CTup3 {
     A _0;
     M _1;
     T _2;
@@ -533,7 +533,7 @@ struct MemData3 {
 /**
  * MemData type for physical memory reads.
  */
-using PhysicalReadData = MemData3<PhysicalAddress, Address, CSliceMut<uint8_t>>;
+using PhysicalReadData = CTup3<PhysicalAddress, Address, CSliceMut<uint8_t>>;
 
 /**
  * Generic type representing an address and associated data.
@@ -542,12 +542,12 @@ using PhysicalReadData = MemData3<PhysicalAddress, Address, CSliceMut<uint8_t>>;
  * `ReadData`, `WriteData`, `PhysicalReadData`, and `PhysicalWriteData`.
  */
 template<typename A, typename T>
-struct MemData2 {
+struct CTup2 {
     A _0;
     T _1;
 };
 
-using ReadData = MemData2<Address, CSliceMut<uint8_t>>;
+using ReadData = CTup2<Address, CSliceMut<uint8_t>>;
 
 /**
  * FFI compatible iterator.
@@ -802,9 +802,9 @@ struct CSliceRef {
 /**
  * MemData type for physical memory writes.
  */
-using PhysicalWriteData = MemData3<PhysicalAddress, Address, CSliceRef<uint8_t>>;
+using PhysicalWriteData = CTup3<PhysicalAddress, Address, CSliceRef<uint8_t>>;
 
-using WriteData = MemData2<Address, CSliceRef<uint8_t>>;
+using WriteData = CTup2<Address, CSliceRef<uint8_t>>;
 
 using PhysicalWriteMemOps = MemOps<PhysicalWriteData, WriteData>;
 
@@ -915,14 +915,14 @@ struct CGlueObjContainer<T, void, void> {
 /**
  * MemData type for regular memory reads.
  */
-using ReadDataRaw = MemData3<Address, Address, CSliceMut<uint8_t>>;
+using ReadDataRaw = CTup3<Address, Address, CSliceMut<uint8_t>>;
 
 using ReadRawMemOps = MemOps<ReadDataRaw, ReadData>;
 
 /**
  * MemData type for regular memory writes.
  */
-using WriteDataRaw = MemData3<Address, Address, CSliceRef<uint8_t>>;
+using WriteDataRaw = CTup3<Address, Address, CSliceRef<uint8_t>>;
 
 using WriteRawMemOps = MemOps<WriteDataRaw, WriteData>;
 
@@ -1604,7 +1604,7 @@ using SectionCallback = OpaqueCallback<SectionInfo>;
 
 using imem = int64_t;
 
-using MemoryRange = MemData3<Address, umem, PageType>;
+using MemoryRange = CTup3<Address, umem, PageType>;
 
 using MemoryRangeCallback = OpaqueCallback<MemoryRange>;
 
@@ -1659,7 +1659,7 @@ constexpr ProcessVtblImpl() :
     } {}
 };
 
-using VtopRange = MemData2<Address, umem>;
+using VtopRange = CTup2<Address, umem>;
 
 /**
  * Virtual page range information with physical mappings used for callbacks

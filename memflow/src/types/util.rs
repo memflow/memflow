@@ -1,4 +1,4 @@
-use crate::mem::mem_data::{MemData3, MemoryRange, MemoryRangeCallback};
+use crate::mem::mem_data::{MemoryRange, MemoryRangeCallback};
 use crate::types::{imem, umem, Address, PageType};
 use cglue::prelude::v1::*;
 use std::prelude::v1::*;
@@ -22,7 +22,7 @@ impl<'a> GapRemover<'a> {
         }
     }
 
-    pub fn push_range(&mut self, MemData3(in_virtual, size, page_type): MemoryRange) {
+    pub fn push_range(&mut self, CTup3(in_virtual, size, page_type): MemoryRange) {
         self.map.insert(in_virtual..(in_virtual + size), page_type);
     }
 }
@@ -58,7 +58,7 @@ impl<'a> Drop for GapRemover<'a> {
                 let address = r.start;
                 assert!(r.end >= address);
                 let size = r.end - address;
-                MemData3(address, size as umem, *p)
+                CTup3(address, size as umem, *p)
             })
             .feed_into(self.out.take().unwrap());
     }

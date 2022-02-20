@@ -1,8 +1,9 @@
 use crate::iter::SplitAtIndex;
 use crate::types::{umem, Address, PhysicalAddress};
 
-use crate::mem::mem_data::{opt_call, MemData2, MemData3};
+use crate::mem::mem_data::opt_call;
 use cglue::callback::*;
+use cglue::tuple::*;
 use std::cmp::Ordering;
 use std::convert::TryInto;
 use std::default::Default;
@@ -21,7 +22,7 @@ use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 /// # Examples
 ///
 /// ```
-/// use memflow::prelude::{MemoryMap, MemData2, umem};
+/// use memflow::prelude::{MemoryMap, CTup2, umem};
 ///
 /// let mut map = MemoryMap::new();
 /// map.push_remap(0x1000.into(), 0x1000, 0.into());      // push region from 0x1000 - 0x1FFF
@@ -30,7 +31,7 @@ use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 /// println!("{:?}", map);
 ///
 /// // handle unmapped memory regions
-/// let failed = &mut |MemData2(a, b)| {
+/// let failed = &mut |CTup2(a, b)| {
 ///     println!("Unmapped: {} {}", a, b);
 ///     true
 /// };
@@ -110,15 +111,15 @@ impl<M: SplitAtIndex> MemoryMap<M> {
     /// (for buf-to-buf copies).
     ///
     /// Invalid regions get pushed to the `out_fail` parameter. This function requries `self`
-    pub fn map<'a, T: 'a + SplitAtIndex, V: Callbackable<MemData2<Address, T>>>(
+    pub fn map<'a, T: 'a + SplitAtIndex, V: Callbackable<CTup2<Address, T>>>(
         &'a self,
         addr: Address,
         buf: T,
         out_fail: Option<&'a mut V>,
-    ) -> impl Iterator<Item = MemData3<M, Address, T>> + 'a {
+    ) -> impl Iterator<Item = CTup3<M, Address, T>> + 'a {
         MemoryMapIterator::new(
             &self.mappings,
-            Some(MemData3(addr, addr, buf)).into_iter(),
+            Some(CTup3(addr, addr, buf)).into_iter(),
             out_fail,
         )
     }
@@ -132,8 +133,8 @@ impl<M: SplitAtIndex> MemoryMap<M> {
     pub fn map_base_iter<
         'a,
         T: 'a + SplitAtIndex,
-        I: 'a + Iterator<Item = MemData3<Address, Address, T>>,
-        V: Callbackable<MemData2<Address, T>>,
+        I: 'a + Iterator<Item = CTup3<Address, Address, T>>,
+        V: Callbackable<CTup2<Address, T>>,
     >(
         &'a self,
         iter: I,
@@ -151,17 +152,16 @@ impl<M: SplitAtIndex> MemoryMap<M> {
     pub fn map_iter<
         'a,
         T: 'a + SplitAtIndex,
-        I: 'a + Iterator<Item = MemData3<PhysicalAddress, Address, T>>,
-        V: Callbackable<MemData2<Address, T>>,
+        I: 'a + Iterator<Item = CTup3<PhysicalAddress, Address, T>>,
+        V: Callbackable<CTup2<Address, T>>,
     >(
         &'a self,
         iter: I,
         out_fail: Option<&'a mut V>,
-    ) -> MemoryMapIterator<'a, impl Iterator<Item = MemData3<Address, Address, T>> + 'a, M, T, V>
-    {
+    ) -> MemoryMapIterator<'a, impl Iterator<Item = CTup3<Address, Address, T>> + 'a, M, T, V> {
         MemoryMapIterator::new(
             &self.mappings,
-            iter.map(|MemData3(addr, meta_addr, buf)| MemData3(addr.address(), meta_addr, buf)),
+            iter.map(|CTup3(addr, meta_addr, buf)| CTup3(addr.address(), meta_addr, buf)),
             out_fail,
         )
     }
@@ -391,23 +391,23 @@ impl MemoryMap<(Address, umem)> {
 
 const MIN_BSEARCH_THRESH: usize = 32;
 
-pub type MapFailCallback<'a, T> = OpaqueCallback<'a, MemData3<Address, Address, T>>;
+pub type MapFailCallback<'a, T> = OpaqueCallback<'a, CTup3<Address, Address, T>>;
 
 pub struct MemoryMapIterator<'a, I, M, T, C> {
     map: &'a [MemoryMapping<M>],
     in_iter: I,
     fail_out: Option<&'a mut C>,
-    cur_elem: Option<MemData3<Address, Address, T>>,
+    cur_elem: Option<CTup3<Address, Address, T>>,
     cur_map_pos: usize,
 }
 
 #[allow(clippy::needless_option_as_deref)]
 impl<
         'a,
-        I: Iterator<Item = MemData3<Address, Address, T>>,
+        I: Iterator<Item = CTup3<Address, Address, T>>,
         M: SplitAtIndex,
         T: SplitAtIndex,
-        C: Callbackable<MemData2<Address, T>>,
+        C: Callbackable<CTup2<Address, T>>,
     > MemoryMapIterator<'a, I, M, T, C>
 {
     fn new(map: &'a [MemoryMapping<M>], in_iter: I, fail_out: Option<&'a mut C>) -> Self {
@@ -424,8 +424,8 @@ impl<
         self.fail_out.as_deref_mut()
     }
 
-    fn get_next(&mut self) -> Option<MemData3<M, Address, T>> {
-        if let Some(MemData3(mut addr, mut meta_addr, buf)) = self.cur_elem.take() {
+    fn get_next(&mut self) -> Option<CTup3<M, Address, T>> {
+        if let Some(CTup3(mut addr, mut meta_addr, buf)) = self.cur_elem.take() {
             if self.map.len() >= MIN_BSEARCH_THRESH && self.cur_map_pos == 0 {
                 self.cur_map_pos = match self.map.binary_search_by(|map_elem| {
                     if map_elem.base > addr {
@@ -448,10 +448,7 @@ impl<
                     let (left_reject, right) = buf.split_at(offset);
 
                     if let Some(left_reject) = left_reject {
-                        opt_call(
-                            self.fail_out.as_deref_mut(),
-                            MemData2(meta_addr, left_reject),
-                        );
+                        opt_call(self.fail_out.as_deref_mut(), CTup2(meta_addr, left_reject));
                     }
 
                     addr += offset;
@@ -470,7 +467,7 @@ impl<
                                 //If memory is in right order, this will skip the current mapping,
                                 //but not reset the search
                                 *cur_map_pos = i + 1;
-                                MemData3(addr + ret_length, meta_addr + ret_length, x)
+                                CTup3(addr + ret_length, meta_addr + ret_length, x)
                             })
                             .or_else(|| {
                                 *cur_map_pos = 0;
@@ -492,7 +489,7 @@ impl<
                 }
             }
 
-            let _ = opt_call(self.fail_out.as_deref_mut(), MemData2(meta_addr, buf));
+            let _ = opt_call(self.fail_out.as_deref_mut(), CTup2(meta_addr, buf));
         }
         None
     }
@@ -500,13 +497,13 @@ impl<
 
 impl<
         'a,
-        I: Iterator<Item = MemData3<Address, Address, T>>,
+        I: Iterator<Item = CTup3<Address, Address, T>>,
         M: SplitAtIndex,
         T: SplitAtIndex,
-        C: Callbackable<MemData2<Address, T>>,
+        C: Callbackable<CTup2<Address, T>>,
     > Iterator for MemoryMapIterator<'a, I, M, T, C>
 {
-    type Item = MemData3<M, Address, T>;
+    type Item = CTup3<M, Address, T>;
 
     fn next(&mut self) -> Option<Self::Item> {
         //Could optimize this and move over to new method, but would need to fuse the iter

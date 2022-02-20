@@ -4,6 +4,7 @@ use std::time::{Duration, Instant};
 use clap::*;
 use log::Level;
 
+use memflow::cglue::*;
 use memflow::error::Result;
 use memflow::mem::*;
 use memflow::os::{ModuleInfo, OsInner, Process};
@@ -115,7 +116,7 @@ fn read_bench(mut kernel: OsInstanceArcBox) -> Result<()> {
 
             println!("Mapped memory map (with up to 1GB gaps):");
 
-            for MemData3(address, size, pt) in mem_map {
+            for CTup3(address, size, pt) in mem_map {
                 println!("{:x}-{:x} {:?}", address, address + size, pt);
             }
 

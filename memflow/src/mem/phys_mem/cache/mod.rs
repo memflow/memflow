@@ -33,9 +33,10 @@ use crate::architecture::ArchitectureObj;
 use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 use crate::iter::PageChunks;
 use crate::mem::{
-    MemData3, MemOps, PhysicalMemory, PhysicalMemoryMapping, PhysicalMemoryMetadata,
-    PhysicalReadMemOps, PhysicalWriteMemOps,
+    MemOps, PhysicalMemory, PhysicalMemoryMapping, PhysicalMemoryMetadata, PhysicalReadMemOps,
+    PhysicalWriteMemOps,
 };
+use cglue::tuple::*;
 use page_cache::{PageCache, PageValidity};
 
 use crate::types::cache::{CacheValidator, DefaultCacheValidator};
@@ -147,7 +148,7 @@ impl<'a, T: PhysicalMemory, Q: CacheValidator> PhysicalMemory for CachedPhysical
         let mem = &mut self.mem;
         let cache = &mut self.cache;
 
-        let inp = inp.map(move |MemData3(addr, meta_addr, data)| {
+        let inp = inp.map(move |CTup3(addr, meta_addr, data)| {
             if cache.is_cached_page_type(addr.page_type()) {
                 for (paddr, data_chunk) in data.page_chunks(addr.address(), cache.page_size()) {
                     let mut cached_page = cache.cached_page_mut(paddr, false);
@@ -160,7 +161,7 @@ impl<'a, T: PhysicalMemory, Q: CacheValidator> PhysicalMemory for CachedPhysical
                     cache.put_entry(cached_page);
                 }
             }
-            MemData3(addr, meta_addr, data)
+            CTup3(addr, meta_addr, data)
         });
 
         MemOps::with_raw(inp, out, out_fail, move |data| {

@@ -13,6 +13,7 @@ use crate::mem::{
     MemoryView, PhysicalMemory, PhysicalMemoryMetadata,
 };
 use crate::types::{umem, Address, PhysicalAddress};
+use cglue::tuple::*;
 
 use bumpalo::{collections::Vec as BumpVec, Bump};
 use cglue::callback::FromExtend;
@@ -206,8 +207,8 @@ impl<T: PhysicalMemory, V: VirtualTranslate2, D: VirtualTranslate3> MemoryView
             &self.translator,
             inp,
             &mut translation.from_extend(),
-            &mut (&mut |(_, MemData3(_, meta, buf)): (_, _)| {
-                opt_call(out_fail.as_deref_mut(), MemData2(meta, buf))
+            &mut (&mut |(_, CTup3(_, meta, buf)): (_, _)| {
+                opt_call(out_fail.as_deref_mut(), CTup2(meta, buf))
             })
                 .into(),
         );
@@ -233,8 +234,8 @@ impl<T: PhysicalMemory, V: VirtualTranslate2, D: VirtualTranslate3> MemoryView
             &self.translator,
             inp,
             &mut translation.from_extend(),
-            &mut (&mut |(_, MemData3(_, meta, buf)): (_, _)| {
-                opt_call(out_fail.as_deref_mut(), MemData2(meta, buf))
+            &mut (&mut |(_, CTup3(_, meta, buf)): (_, _)| {
+                opt_call(out_fail.as_deref_mut(), CTup2(meta, buf))
             })
                 .into(),
         );
@@ -276,8 +277,8 @@ impl<T: PhysicalMemory, V: VirtualTranslate2, D: VirtualTranslate3> VirtualTrans
             &self.translator,
             addrs
                 .iter()
-                .map(|&MemData2(address, size)| MemData3(address, address, size)),
-            &mut (&mut |MemData3(a, b, c): MemData3<PhysicalAddress, Address, umem>| {
+                .map(|&CTup2(address, size)| CTup3(address, address, size)),
+            &mut (&mut |CTup3(a, b, c): CTup3<PhysicalAddress, Address, umem>| {
                 out.call(VirtualTranslation {
                     in_virtual: b,
                     size: c,
@@ -285,7 +286,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate2, D: VirtualTranslate3> VirtualTrans
                 })
             })
                 .into(),
-            &mut (&mut |(_e, MemData3(from, _, size))| {
+            &mut (&mut |(_e, CTup3(from, _, size))| {
                 out_fail.call(VirtualTranslationFail { from, size })
             })
                 .into(),

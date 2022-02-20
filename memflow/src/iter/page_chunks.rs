@@ -1,4 +1,4 @@
-use crate::cglue::{CSliceMut, CSliceRef};
+use crate::cglue::{CSliceMut, CSliceRef, CTup2, CTup3};
 use crate::types::{clamp_to_usize, imem, umem, Address};
 use core::convert::TryInto;
 use std::iter::*;
@@ -309,6 +309,103 @@ impl<'a, T> SplitAtIndex for CSliceMut<'a, T> {
 
     fn length(&self) -> umem {
         self.len() as umem
+    }
+}
+
+impl<T: SplitAtIndex> SplitAtIndex for CTup2<Address, T> {
+    fn split_at(self, idx: umem) -> (Option<Self>, Option<Self>) {
+        let (left, right) = self.1.split_at(idx);
+
+        if let Some(left) = left {
+            let left_len = left.length();
+            (
+                Some(CTup2(self.0, left)),
+                Some(self.0 + left_len).zip(right).map(<_>::into),
+            )
+        } else {
+            (None, Some(self.0).zip(right).map(<_>::into))
+        }
+    }
+
+    unsafe fn split_at_mut(&mut self, idx: umem) -> (Option<Self>, Option<Self>) {
+        let (left, right) = self.1.split_at_mut(idx);
+
+        if let Some(left) = left {
+            let left_len = left.length();
+            (
+                Some(CTup2(self.0, left)),
+                Some(self.0 + left_len).zip(right).map(<_>::into),
+            )
+        } else {
+            (None, Some(self.0).zip(right).map(<_>::into))
+        }
+    }
+
+    fn length(&self) -> umem {
+        self.1.length()
+    }
+
+    fn size_hint(&self) -> usize {
+        self.1.size_hint()
+    }
+}
+impl<T: SplitAtIndex> SplitAtIndex for CTup3<Address, Address, T> {
+    fn split_at(self, idx: umem) -> (Option<Self>, Option<Self>) {
+        let (left, right) = self.2.split_at(idx);
+
+        let meta = self.1;
+
+        if let Some(left) = left {
+            let left_len = left.length();
+            (
+                Some(CTup3(self.0, meta, left)),
+                Some(self.0 + left_len)
+                    .zip(right)
+                    .map(|(a, b)| (a, meta + left_len, b))
+                    .map(<_>::into),
+            )
+        } else {
+            (
+                None,
+                Some(self.0)
+                    .zip(right)
+                    .map(|(a, b)| (a, meta, b))
+                    .map(<_>::into),
+            )
+        }
+    }
+
+    unsafe fn split_at_mut(&mut self, idx: umem) -> (Option<Self>, Option<Self>) {
+        let (left, right) = self.2.split_at_mut(idx);
+
+        let meta = self.1;
+
+        if let Some(left) = left {
+            let left_len = left.length();
+            (
+                Some(CTup3(self.0, meta, left)),
+                Some(self.0 + left_len)
+                    .zip(right)
+                    .map(|(a, b)| (a, meta + left_len, b))
+                    .map(<_>::into),
+            )
+        } else {
+            (
+                None,
+                Some(self.0)
+                    .zip(right)
+                    .map(|(a, b)| (a, meta, b))
+                    .map(<_>::into),
+            )
+        }
+    }
+
+    fn length(&self) -> umem {
+        self.2.length()
+    }
+
+    fn size_hint(&self) -> usize {
+        self.2.size_hint()
     }
 }
 

@@ -158,7 +158,7 @@ impl<T: MemoryView> Process for DummyProcess<T> {
             self.proc
                 .modules
                 .iter()
-                .map(|m| MemData3(m.base, m.size, PageType::UNKNOWN)),
+                .map(|m| CTup3(m.base, m.size, PageType::UNKNOWN)),
         )
     }
 }

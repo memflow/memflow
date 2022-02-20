@@ -41,7 +41,7 @@ impl<T: MemoryView> MemoryView for RemapView<T> {
 
         let iter = mem_map
             .map_base_iter(inp, out_fail1.as_mut())
-            .map(|MemData3((a, _), m, b)| MemData3(a, m, b));
+            .map(|CTup3((a, _), m, b)| CTup3(a, m, b));
 
         MemOps::with_raw(iter, out, out_fail2, |data| mem.read_raw_iter(data))
     }
@@ -67,7 +67,7 @@ impl<T: MemoryView> MemoryView for RemapView<T> {
 
         let iter = mem_map
             .map_base_iter(inp, out_fail1.as_mut())
-            .map(|MemData3((a, _), m, b)| MemData3(a, m, b));
+            .map(|CTup3((a, _), m, b)| CTup3(a, m, b));
 
         MemOps::with_raw(iter, out, out_fail2, |data| mem.write_raw_iter(data))
     }

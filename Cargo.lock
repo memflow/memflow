@@ -142,9 +142,9 @@ checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
 name = "cglue"
-version = "0.2.8"
+version = "0.2.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b6504256bcb285d53fd267c524816b219ea8eb4b376f8ddde9297483ed77de78"
+checksum = "15d7ac3d7a04e9aa5fdcd74126bed0217e3b9064dc55883fc1af63caffe07267"
 dependencies = [
  "abi_stable",
  "cglue-macro",

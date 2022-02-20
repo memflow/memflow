@@ -12,8 +12,9 @@ use crate::mem::virt_translate::{
 
 use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 use crate::iter::SplitAtIndex;
-use crate::mem::{MemData3, PhysicalMemory};
+use crate::mem::PhysicalMemory;
 use crate::types::{size, umem, Address};
+use cglue::tuple::*;
 
 pub struct ArmArchitecture {
     /// Defines how many bits does the native word size have
@@ -92,7 +93,7 @@ impl MmuTranslationBase for ArmPageTableBase {
     fn virt_addr_filter<B>(
         &self,
         spec: &ArchMmuSpec,
-        addr: MemData3<Address, Address, B>,
+        addr: CTup3<Address, Address, B>,
         work_group: (&mut TranslationChunk<Self>, &mut TranslateDataVec<B>),
         out_fail: &mut VtopFailureCallback<B>,
     ) where
@@ -106,7 +107,7 @@ impl VirtualTranslate3 for ArmVirtualTranslate {
     fn virt_to_phys_iter<
         T: PhysicalMemory + ?Sized,
         B: SplitAtIndex,
-        VI: Iterator<Item = MemData3<Address, Address, B>>,
+        VI: Iterator<Item = CTup3<Address, Address, B>>,
     >(
         &self,
         mem: &mut T,

@@ -52,13 +52,13 @@ fn read_test_nobatcher<T: MemoryView>(
 ) {
     let base_addr = Address::from(rng.gen_range(0..size));
 
-    for MemData3(addr, _, _) in tbuf.iter_mut().take(chunk_size) {
+    for CTup3(addr, _, _) in tbuf.iter_mut().take(chunk_size) {
         *addr = base_addr + rng.gen_range(0usize..0x2000);
     }
 
     let iter = tbuf[..chunk_size]
         .iter_mut()
-        .map(|MemData3(a, b, c): &mut ReadDataRaw| MemData3(*a, *b, c.into()));
+        .map(|CTup3(a, b, c): &mut ReadDataRaw| CTup3(*a, *b, c.into()));
 
     let _ = black_box(MemOps::with_raw(iter, None, None, |data| {
         mem.read_raw_iter(data)
@@ -94,7 +94,7 @@ fn read_test_with_ctx<T: MemoryView>(
         unsafe { TSLICE }
             .iter_mut()
             .map(|arr| {
-                MemData3(Address::INVALID, Address::INVALID, unsafe {
+                CTup3(Address::INVALID, Address::INVALID, unsafe {
                     std::mem::transmute(&mut arr[..])
                 })
             })

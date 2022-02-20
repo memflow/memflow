@@ -425,10 +425,7 @@ typedef struct CSliceMut_u8 {
 } CSliceMut_u8;
 
 /**
- * Generic type representing an address, original address,and associated data.
- *
- * This base type is always used for initialization, but the commonly used type aliases are:
- * `ReadDataIn`, `WriteDataIn`, `PhysicalReadDataIn`, and `PhysicalWriteDataIn`.
+ * FFI-safe 3 element tuple.
  */
 typedef struct CTup3_PhysicalAddress__Address__CSliceMut_u8 {
     struct PhysicalAddress _0;
@@ -484,10 +481,7 @@ typedef struct CIterator_PhysicalReadData {
 } CIterator_PhysicalReadData;
 
 /**
- * Generic type representing an address and associated data.
- *
- * This base type is always used for initialization, but the commonly used type aliases are:
- * `ReadData`, `WriteData`, `PhysicalReadData`, and `PhysicalWriteData`.
+ * FFI-safe 2 element tuple.
  */
 typedef struct CTup2_Address__CSliceMut_u8 {
     Address _0;
@@ -544,10 +538,7 @@ typedef struct CSliceRef_u8 {
 } CSliceRef_u8;
 
 /**
- * Generic type representing an address, original address,and associated data.
- *
- * This base type is always used for initialization, but the commonly used type aliases are:
- * `ReadDataIn`, `WriteDataIn`, `PhysicalReadDataIn`, and `PhysicalWriteDataIn`.
+ * FFI-safe 3 element tuple.
  */
 typedef struct CTup3_PhysicalAddress__Address__CSliceRef_u8 {
     struct PhysicalAddress _0;
@@ -603,10 +594,7 @@ typedef struct CIterator_PhysicalWriteData {
 } CIterator_PhysicalWriteData;
 
 /**
- * Generic type representing an address and associated data.
- *
- * This base type is always used for initialization, but the commonly used type aliases are:
- * `ReadData`, `WriteData`, `PhysicalReadData`, and `PhysicalWriteData`.
+ * FFI-safe 2 element tuple.
  */
 typedef struct CTup2_Address__CSliceRef_u8 {
     Address _0;
@@ -676,10 +664,7 @@ typedef struct CSliceRef_PhysicalMemoryMapping {
 } CSliceRef_PhysicalMemoryMapping;
 
 /**
- * Generic type representing an address, original address,and associated data.
- *
- * This base type is always used for initialization, but the commonly used type aliases are:
- * `ReadDataIn`, `WriteDataIn`, `PhysicalReadDataIn`, and `PhysicalWriteDataIn`.
+ * FFI-safe 3 element tuple.
  */
 typedef struct CTup3_Address__Address__CSliceMut_u8 {
     Address _0;
@@ -748,10 +733,7 @@ typedef struct MemOps_ReadDataRaw__ReadData {
 typedef struct MemOps_ReadDataRaw__ReadData ReadRawMemOps;
 
 /**
- * Generic type representing an address, original address,and associated data.
- *
- * This base type is always used for initialization, but the commonly used type aliases are:
- * `ReadDataIn`, `WriteDataIn`, `PhysicalReadDataIn`, and `PhysicalWriteDataIn`.
+ * FFI-safe 3 element tuple.
  */
 typedef struct CTup3_Address__Address__CSliceRef_u8 {
     Address _0;
@@ -1435,10 +1417,7 @@ typedef OpaqueCallback_SectionInfo SectionCallback;
 typedef int64_t imem;
 
 /**
- * Generic type representing an address, original address,and associated data.
- *
- * This base type is always used for initialization, but the commonly used type aliases are:
- * `ReadDataIn`, `WriteDataIn`, `PhysicalReadDataIn`, and `PhysicalWriteDataIn`.
+ * FFI-safe 3 element tuple.
  */
 typedef struct CTup3_Address__umem__PageType {
     Address _0;
@@ -1458,10 +1437,7 @@ typedef struct Callback_c_void__MemoryRange OpaqueCallback_MemoryRange;
 typedef OpaqueCallback_MemoryRange MemoryRangeCallback;
 
 /**
- * Generic type representing an address and associated data.
- *
- * This base type is always used for initialization, but the commonly used type aliases are:
- * `ReadData`, `WriteData`, `PhysicalReadData`, and `PhysicalWriteData`.
+ * FFI-safe 2 element tuple.
  */
 typedef struct CTup2_Address__umem {
     Address _0;

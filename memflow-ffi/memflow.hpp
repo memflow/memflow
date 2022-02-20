@@ -518,16 +518,13 @@ struct CSliceMut {
 };
 
 /**
- * Generic type representing an address, original address,and associated data.
- *
- * This base type is always used for initialization, but the commonly used type aliases are:
- * `ReadDataIn`, `WriteDataIn`, `PhysicalReadDataIn`, and `PhysicalWriteDataIn`.
+ * FFI-safe 3 element tuple.
  */
-template<typename A, typename M, typename T>
+template<typename A, typename B, typename C>
 struct CTup3 {
     A _0;
-    M _1;
-    T _2;
+    B _1;
+    C _2;
 };
 
 /**
@@ -536,15 +533,12 @@ struct CTup3 {
 using PhysicalReadData = CTup3<PhysicalAddress, Address, CSliceMut<uint8_t>>;
 
 /**
- * Generic type representing an address and associated data.
- *
- * This base type is always used for initialization, but the commonly used type aliases are:
- * `ReadData`, `WriteData`, `PhysicalReadData`, and `PhysicalWriteData`.
+ * FFI-safe 2 element tuple.
  */
-template<typename A, typename T>
+template<typename A, typename B>
 struct CTup2 {
     A _0;
-    T _1;
+    B _1;
 };
 
 using ReadData = CTup2<Address, CSliceMut<uint8_t>>;

@@ -196,7 +196,10 @@ pub trait PhysicalMemory: Send {
     where
         Self: Sized,
     {
-        PhysicalMemoryView { mem: self }
+        PhysicalMemoryView {
+            mem: self,
+            zero_fill_gaps: false,
+        }
     }
 
     #[vtbl_only('_, wrap_with_obj(MemoryView))]
@@ -213,16 +216,54 @@ pub trait PhysicalMemory: Send {
 #[cfg_attr(feature = "abi_stable", derive(::abi_stable::StableAbi))]
 pub struct PhysicalMemoryView<T> {
     mem: T,
+    zero_fill_gaps: bool,
+}
+
+impl<T> PhysicalMemoryView<T> {
+    pub fn zero_fill_gaps(mut self) -> Self {
+        self.zero_fill_gaps = true;
+        self
+    }
 }
 
 impl<T: PhysicalMemory> MemoryView for PhysicalMemoryView<T> {
-    fn read_raw_iter(&mut self, MemOps { inp, out, out_fail }: ReadRawMemOps) -> Result<()> {
+    fn read_raw_iter<'a>(
+        &mut self,
+        MemOps { inp, out, out_fail }: ReadRawMemOps<'a, '_, '_, '_>,
+    ) -> Result<()> {
         let inp = &mut inp.map(|CTup3(addr, meta_addr, data)| CTup3(addr.into(), meta_addr, data));
         let inp = inp.into();
 
-        let data = MemOps { inp, out, out_fail };
+        if self.zero_fill_gaps && out.is_some() && out_fail.is_some() {
+            let out = std::cell::RefCell::new(out.unwrap());
 
-        self.mem.phys_read_raw_iter(data)
+            let ma = self.mem.metadata().max_address;
+
+            let out1 = &mut |data| out.borrow_mut().call(data);
+            let out = &mut |data| out.borrow_mut().call(data);
+            let out = &mut out.into();
+            let out = Some(out);
+
+            let out_fail = out_fail.unwrap();
+
+            let out_fail = &mut |mut data: ReadData<'a>| {
+                if data.0 < ma {
+                    data.1.iter_mut().for_each(|b| *b = 0);
+                    out1(data)
+                } else {
+                    out_fail.call(data)
+                }
+            };
+
+            let out_fail = &mut out_fail.into();
+            let out_fail = Some(out_fail);
+
+            let data = MemOps { inp, out, out_fail };
+            self.mem.phys_read_raw_iter(data)
+        } else {
+            let data = MemOps { inp, out, out_fail };
+            self.mem.phys_read_raw_iter(data)
+        }
     }
 
     fn write_raw_iter(&mut self, MemOps { inp, out, out_fail }: WriteRawMemOps) -> Result<()> {

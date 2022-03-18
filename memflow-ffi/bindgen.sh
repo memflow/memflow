@@ -11,5 +11,9 @@ run_twice() {
 	fi
 }
 
+# update cglue-bindgen
+cargo +nightly install cglue-bindgen
+
+# generate c and cpp bindings
 run_twice rustup run nightly cglue-bindgen +nightly -c cglue.toml -- --config cbindgen.toml --crate memflow-ffi --output memflow.h -l C
 run_twice rustup run nightly cglue-bindgen +nightly -c cglue.toml -- --config cbindgen.toml --crate memflow-ffi --output memflow.hpp -l C++

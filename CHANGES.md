@@ -2,6 +2,13 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
+## 0.2.0-beta3
+- Added missing functions to retrieve exports/imports/sections from kernel modules
+- Added functions to retrieve primary kernel module
+
+## 0.2.0-beta2
+- Memory API and Address rework
+
 ## 0.2.0-beta1
 - Entirely new cglue based plugin architecture and various other major improvements
 

@@ -2,10 +2,12 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
-## 0.2.0-beta3
+## 0.2.0-beta4
 - Added missing functions to retrieve exports/imports/sections from kernel modules
 - Added functions to retrieve primary kernel module
 
+## 0.2.0-beta3
+- Allow for PhysicalMemoryView to fill in gaps with zeros
 ## 0.2.0-beta2
 - Memory API and Address rework
 

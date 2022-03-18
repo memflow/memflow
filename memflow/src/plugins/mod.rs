@@ -154,7 +154,10 @@ pub trait Loadable: Sized {
 
     /// Checks if plugin with the same `ident` already exists in input list
     fn exists(&self, instances: &[LibInstance<Self>]) -> bool {
-        instances.iter().any(|i| i.loader.ident() == self.ident())
+        instances
+            .iter()
+            .filter_map(|i| i.state.as_option())
+            .any(|(_, l)| l.ident() == self.ident())
     }
 
     /// Identifier string of the plugin
@@ -190,7 +193,10 @@ pub trait Loadable: Sized {
                 "{} has a different version. version {} required, found {}.",
                 export, MEMFLOW_PLUGIN_VERSION, descriptor.plugin_version
             );
-            Err(Error(ErrorOrigin::Inventory, ErrorKind::VersionMismatch))
+            Ok(LibInstance {
+                path: path.as_ref().to_path_buf(),
+                state: LibInstanceState::VersionMismatch,
+            })
         } else if VerifyLayout::check::<Self::CInputArg>(Some(descriptor.input_layout))
             .and(VerifyLayout::check::<Self::Instance>(Some(
                 descriptor.output_layout,
@@ -199,12 +205,17 @@ pub trait Loadable: Sized {
         {
             Ok(LibInstance {
                 path: path.as_ref().to_path_buf(),
-                library: library.clone(),
-                loader: Self::new(descriptor),
+                state: LibInstanceState::Loaded {
+                    library: library.clone(),
+                    loader: Self::new(descriptor),
+                },
             })
         } else {
             warn!("{} has invalid ABI.", export);
-            Err(Error(ErrorOrigin::Inventory, ErrorKind::InvalidAbi))
+            Ok(LibInstance {
+                path: path.as_ref().to_path_buf(),
+                state: LibInstanceState::InvalidAbi,
+            })
         }
     }
 
@@ -264,21 +275,25 @@ pub trait Loadable: Sized {
     fn load_append(path: impl AsRef<Path>, out: &mut Vec<LibInstance<Self>>) -> Result<()> {
         let libs = Self::load_all(path.as_ref())?;
         for lib in libs.into_iter() {
-            if !lib.loader.exists(out) {
-                info!(
-                    "adding plugin '{}/{}': {:?}",
-                    Self::plugin_type(),
-                    lib.loader.ident(),
-                    path.as_ref()
-                );
-                out.push(lib);
+            if let LibInstanceState::Loaded { library: _, loader } = &lib.state {
+                if !loader.exists(out) {
+                    info!(
+                        "adding plugin '{}/{}': {:?}",
+                        Self::plugin_type(),
+                        loader.ident(),
+                        path.as_ref()
+                    );
+                    out.push(lib);
+                } else {
+                    debug!(
+                        "skipping library '{}' because it was added already: {:?}",
+                        loader.ident(),
+                        path.as_ref()
+                    );
+                    return Err(Error(ErrorOrigin::Inventory, ErrorKind::AlreadyExists));
+                }
             } else {
-                debug!(
-                    "skipping library '{}' because it was added already: {:?}",
-                    lib.loader.ident(),
-                    path.as_ref()
-                );
-                return Err(Error(ErrorOrigin::Inventory, ErrorKind::AlreadyExists));
+                out.push(lib);
             }
         }
 
@@ -508,7 +523,8 @@ impl Inventory {
     pub fn available_connectors(&self) -> Vec<String> {
         self.connectors
             .iter()
-            .map(|c| c.loader.ident().to_string())
+            .filter_map(|c| c.state.as_option())
+            .map(|s| s.1.ident().to_string())
             .collect::<Vec<_>>()
     }
 
@@ -516,7 +532,8 @@ impl Inventory {
     pub fn available_os(&self) -> Vec<String> {
         self.os_layers
             .iter()
-            .map(|c| c.loader.ident().to_string())
+            .filter_map(|c| c.state.as_option())
+            .map(|s| s.1.ident().to_string())
             .collect::<Vec<_>>()
     }
 
@@ -535,43 +552,53 @@ impl Inventory {
     }
 
     fn help_internal<T: Loadable>(libs: &[LibInstance<T>], name: &str) -> Result<String> {
-        let lib = libs
+        let loader = libs
             .iter()
-            .find(|c| c.loader.ident() == name)
+            .filter_map(|c| c.state.as_option().map(|s| s.1))
+            .find(|s| s.ident() == name)
             .ok_or_else(|| {
+                error!("unable to find plugin with name '{}'.", name,);
                 error!(
-                    "unable to find plugin with name '{}'. available `{}` plugins are: {}",
-                    name,
+                    "possible available `{}` plugins are: {}",
                     T::plugin_type(),
-                    libs.iter()
-                        .map(|c| c.loader.ident().to_string())
-                        .collect::<Vec<_>>()
-                        .join(", ")
+                    Self::plugin_list_available(libs),
+                );
+                error!(
+                    "outdated/mismatched `{}` plugins where found at: {}",
+                    T::plugin_type(),
+                    Self::plugin_list_unavailable(libs),
                 );
                 Error(ErrorOrigin::Inventory, ErrorKind::PluginNotFound)
             })?;
 
-        lib.loader.help()
+        loader.help()
     }
 
     /// Returns a list of all available targets of the connector.
     ///
     /// This function returns an error in case the connector does not implement this feature.
     pub fn connector_target_list(&self, name: &str) -> Result<Vec<TargetInfo>> {
-        let lib = self
+        let loader = self
             .connectors
             .iter()
-            .find(|c| c.loader.ident() == name)
+            .filter_map(|c| c.state.as_option().map(|s| s.1))
+            .find(|s| s.ident() == name)
             .ok_or_else(|| {
+                error!("unable to find plugin with name '{}'.", name,);
                 error!(
-                    "unable to find connector with name '{}'. available connectors are: {}",
-                    name,
-                    self.available_connectors().join(", "),
+                    "possible available `{}` plugins are: {}",
+                    LoadableConnector::plugin_type(),
+                    Self::plugin_list_available(&self.connectors),
+                );
+                error!(
+                    "outdated/mismatched `{}` plugins where found at: {}",
+                    LoadableConnector::plugin_type(),
+                    Self::plugin_list_unavailable(&self.connectors),
                 );
                 Error(ErrorOrigin::Inventory, ErrorKind::PluginNotFound)
             })?;
 
-        lib.loader.target_list()
+        loader.target_list()
     }
 
     /// Creates a new Connector / OS builder.
@@ -725,28 +752,35 @@ impl Inventory {
     ) -> Result<T::Instance> {
         let lib = libs
             .iter()
-            .find(|c| c.loader.ident() == name)
+            .filter(|l| l.state.is_loaded())
+            .find(|l| l.ident() == Some(name))
             .ok_or_else(|| {
+                error!("unable to find plugin with name '{}'.", name,);
                 error!(
-                    "unable to find plugin with name '{}'. available `{}` plugins are: {}",
-                    name,
+                    "possible available `{}` plugins are: {}",
                     T::plugin_type(),
-                    libs.iter()
-                        .map(|c| c.loader.ident().to_string())
-                        .collect::<Vec<_>>()
-                        .join(", ")
+                    Self::plugin_list_available(libs),
+                );
+                error!(
+                    "outdated/mismatched `{}` plugins where found at: {}",
+                    T::plugin_type(),
+                    Self::plugin_list_unavailable(libs),
                 );
                 Error(ErrorOrigin::Inventory, ErrorKind::PluginNotFound)
             })?;
 
-        info!(
-            "attempting to load `{}` type plugin `{}` from `{}`",
-            T::plugin_type(),
-            lib.loader.ident(),
-            lib.path.to_string_lossy(),
-        );
+        if let LibInstanceState::Loaded { library, loader } = &lib.state {
+            info!(
+                "attempting to load `{}` type plugin `{}` from `{}`",
+                T::plugin_type(),
+                loader.ident(),
+                lib.path.to_string_lossy(),
+            );
 
-        lib.loader.instantiate(lib.library.clone(), input, args)
+            loader.instantiate(library.clone(), input, args)
+        } else {
+            unreachable!()
+        }
     }
 
     /// Sets the maximum logging level in all plugins and updates the
@@ -761,11 +795,34 @@ impl Inventory {
 
         self.connectors
             .iter()
-            .map(|c| c.library.as_ref())
-            .chain(self.os_layers.iter().map(|o| o.library.as_ref()))
-            .filter_map(|l| *l)
+            .filter_map(|c| c.state.as_option())
+            .map(|s| s.0)
+            .chain(
+                self.os_layers
+                    .iter()
+                    .filter_map(|o| o.state.as_option())
+                    .map(|s| s.0),
+            )
+            .filter_map(|s| *s.as_ref())
             .filter_map(LibContext::try_get_logger)
             .for_each(|l| l.on_level_change(level));
+    }
+
+    /// Returns a comma-seperated list of plugin identifiers of all available plugins
+    fn plugin_list_available<T: Loadable>(libs: &[LibInstance<T>]) -> String {
+        libs.iter()
+            .filter_map(|c| c.state.as_option().map(|s| s.1.ident().to_string()))
+            .collect::<Vec<_>>()
+            .join(", ")
+    }
+
+    /// Returns a comma-seperated list of plugin paths of all un-available plugins that where found but could not be loaded. (e.g. because of ABI mismatch)
+    fn plugin_list_unavailable<T: Loadable>(libs: &[LibInstance<T>]) -> String {
+        libs.iter()
+            .filter(|c| !c.state.is_loaded())
+            .map(|c| c.path.to_string_lossy())
+            .collect::<Vec<_>>()
+            .join(", ")
     }
 }
 
@@ -1068,6 +1125,41 @@ impl<'a> OsBuilder<'a> {
 #[derive(Clone)]
 pub struct LibInstance<T> {
     path: PathBuf,
-    library: CArc<LibContext>,
-    loader: T,
+    state: LibInstanceState<T>,
+}
+
+impl<T: Loadable> LibInstance<T> {
+    pub fn ident(&self) -> Option<&str> {
+        self.state.as_option().map(|s| s.1.ident())
+    }
+}
+
+#[repr(C)]
+#[derive(Clone)]
+pub enum LibInstanceState<T> {
+    Loaded {
+        library: CArc<LibContext>,
+        loader: T,
+    },
+    VersionMismatch,
+    InvalidAbi,
+}
+
+impl<T> LibInstanceState<T> {
+    pub fn is_loaded(&self) -> bool {
+        match self {
+            LibInstanceState::Loaded {
+                library: _,
+                loader: _,
+            } => true,
+            _ => false,
+        }
+    }
+
+    pub fn as_option(&self) -> Option<(&CArc<LibContext>, &T)> {
+        match self {
+            LibInstanceState::Loaded { library, loader } => Some((&library, &loader)),
+            _ => None,
+        }
+    }
 }

@@ -503,6 +503,40 @@ impl<'a> OsInner<'a> for DummyOs {
         Err(Error(ErrorOrigin::OsLayer, ErrorKind::ModuleNotFound))
     }
 
+    /// Retrieves address of the primary module structure of the process
+    ///
+    /// This will generally be for the initial executable that was run
+    fn primary_module_address(&mut self) -> Result<Address> {
+        Err(Error(ErrorOrigin::OsLayer, ErrorKind::ModuleNotFound))
+    }
+
+    /// Retrieves a list of all imports of a given module
+    fn module_import_list_callback(
+        &mut self,
+        _info: &ModuleInfo,
+        _callback: ImportCallback,
+    ) -> Result<()> {
+        Ok(())
+    }
+
+    /// Retrieves a list of all exports of a given module
+    fn module_export_list_callback(
+        &mut self,
+        _info: &ModuleInfo,
+        _callback: ExportCallback,
+    ) -> Result<()> {
+        Ok(())
+    }
+
+    /// Retrieves a list of all sections of a given module
+    fn module_section_list_callback(
+        &mut self,
+        _info: &ModuleInfo,
+        _callback: SectionCallback,
+    ) -> Result<()> {
+        Ok(())
+    }
+
     /// Retrieves the kernel info
     fn info(&self) -> &OsInfo {
         &self.info

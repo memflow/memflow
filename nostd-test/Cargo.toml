@@ -5,7 +5,6 @@ authors = ["Aurimas Blažulionis <0x60@pm.me>", "ko1N <ko1N1337@gmail.com>"]
 edition = "2018"
 homepage = "https://memflow.github.io"
 repository = "https://github.com/memflow/memflow"
-license-file = "../LICENSE"
 license = "MIT"
 publish = false
 

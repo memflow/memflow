@@ -235,14 +235,6 @@ pub trait OsInner<'a>: Send {
         unsafe { sptr.as_mut().unwrap() }.module_address_list_callback(inner_callback.into())
     }
 
-    /// Retrieves a module list for the OS
-    #[skip_func]
-    fn module_list(&mut self) -> Result<Vec<ModuleInfo>> {
-        let mut ret = vec![];
-        self.module_list_callback((&mut ret).into())?;
-        Ok(ret)
-    }
-
     /// Retrieves a module by its structure address
     ///
     /// # Arguments
@@ -263,6 +255,117 @@ pub trait OsInner<'a>: Send {
             }
         };
         self.module_list_callback(callback.into())?;
+        ret
+    }
+
+    /// Retrieves a module list for the OS
+    #[skip_func]
+    fn module_list(&mut self) -> Result<Vec<ModuleInfo>> {
+        let mut ret = vec![];
+        self.module_list_callback((&mut ret).into())?;
+        Ok(ret)
+    }
+
+    /// Retrieves address of the primary module of the OS
+    ///
+    /// This will generally be for the main kernel process/module
+    fn primary_module_address(&mut self) -> Result<Address>;
+
+    /// Retrieves information for the primary module of the OS
+    ///
+    /// This will generally be for the main kernel process/module
+    fn primary_module(&mut self) -> Result<ModuleInfo> {
+        let addr = self.primary_module_address()?;
+        self.module_by_address(addr)
+    }
+
+    /// Retrieves a list of all imports of a given module
+    fn module_import_list_callback(
+        &mut self,
+        info: &ModuleInfo,
+        callback: ImportCallback,
+    ) -> Result<()>;
+
+    /// Retrieves a list of all exports of a given module
+    fn module_export_list_callback(
+        &mut self,
+        info: &ModuleInfo,
+        callback: ExportCallback,
+    ) -> Result<()>;
+
+    /// Retrieves a list of all sections of a given module
+    fn module_section_list_callback(
+        &mut self,
+        info: &ModuleInfo,
+        callback: SectionCallback,
+    ) -> Result<()>;
+
+    /// Retrieves a list of all imports of a given module
+    #[skip_func]
+    fn module_import_list(&mut self, info: &ModuleInfo) -> Result<Vec<ImportInfo>> {
+        let mut ret = vec![];
+        self.module_import_list_callback(info, (&mut ret).into())?;
+        Ok(ret)
+    }
+
+    /// Retrieves a list of all exports of a given module
+    #[skip_func]
+    fn module_export_list(&mut self, info: &ModuleInfo) -> Result<Vec<ExportInfo>> {
+        let mut ret = vec![];
+        self.module_export_list_callback(info, (&mut ret).into())?;
+        Ok(ret)
+    }
+
+    /// Retrieves a list of all sections of a given module
+    #[skip_func]
+    fn module_section_list(&mut self, info: &ModuleInfo) -> Result<Vec<SectionInfo>> {
+        let mut ret = vec![];
+        self.module_section_list_callback(info, (&mut ret).into())?;
+        Ok(ret)
+    }
+
+    /// Finds a single import of a given module by its name
+    fn module_import_by_name(&mut self, info: &ModuleInfo, name: &str) -> Result<ImportInfo> {
+        let mut ret = Err(Error(ErrorOrigin::OsLayer, ErrorKind::ImportNotFound));
+        let callback = &mut |data: ImportInfo| {
+            if data.name.as_ref() == name {
+                ret = Ok(data);
+                false
+            } else {
+                true
+            }
+        };
+        self.module_import_list_callback(info, callback.into())?;
+        ret
+    }
+
+    /// Finds a single export of a given module by its name
+    fn module_export_by_name(&mut self, info: &ModuleInfo, name: &str) -> Result<ExportInfo> {
+        let mut ret = Err(Error(ErrorOrigin::OsLayer, ErrorKind::ImportNotFound));
+        let callback = &mut |data: ExportInfo| {
+            if data.name.as_ref() == name {
+                ret = Ok(data);
+                false
+            } else {
+                true
+            }
+        };
+        self.module_export_list_callback(info, callback.into())?;
+        ret
+    }
+
+    /// Finds a single section of a given module by its name
+    fn module_section_by_name(&mut self, info: &ModuleInfo, name: &str) -> Result<SectionInfo> {
+        let mut ret = Err(Error(ErrorOrigin::OsLayer, ErrorKind::ImportNotFound));
+        let callback = &mut |data: SectionInfo| {
+            if data.name.as_ref() == name {
+                ret = Ok(data);
+                false
+            } else {
+                true
+            }
+        };
+        self.module_section_list_callback(info, callback.into())?;
         ret
     }
 

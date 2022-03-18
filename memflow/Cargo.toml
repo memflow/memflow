@@ -92,6 +92,10 @@ name = "kernel_modules"
 path = "examples/kernel_modules.rs"
 
 [[example]]
+name = "kernel_exports"
+path = "examples/kernel_exports.rs"
+
+[[example]]
 name = "keyboard"
 path = "examples/keyboard.rs"
 

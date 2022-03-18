@@ -1,6 +1,6 @@
+/// A simple kernel module list example using memflow
 use clap::{crate_authors, crate_version, Arg, ArgMatches, Command};
 use log::Level;
-/// A simple kernel module list example using memflow
 use memflow::prelude::v1::*;
 
 fn main() -> Result<()> {
@@ -70,13 +70,19 @@ fn extract_args(matches: &ArgMatches) -> Result<OsChain<'_>> {
     )
     .unwrap();
 
-    if let Some(((conn_idx, conn), (os_idx, os))) = matches
+    let conn_iter = matches
         .indices_of("connector")
         .zip(matches.values_of("connector"))
-        .zip(matches.indices_of("os").zip(matches.values_of("os")))
-    {
-        Ok(OsChain::new(conn_idx.zip(conn), os_idx.zip(os))?)
-    } else {
-        Err(ErrorKind::ArgValidation.into())
-    }
+        .map(|(a, b)| a.zip(b))
+        .into_iter()
+        .flatten();
+
+    let os_iter = matches
+        .indices_of("os")
+        .zip(matches.values_of("os"))
+        .map(|(a, b)| a.zip(b))
+        .into_iter()
+        .flatten();
+
+    Ok(OsChain::new(conn_iter, os_iter)?)
 }

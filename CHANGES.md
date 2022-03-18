@@ -2,6 +2,10 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
+## 0.2.0-beta5
+- Cleaned up plugin search paths and matched them with memflowup
+- Improved error messages
+
 ## 0.2.0-beta4
 - Added missing functions to retrieve exports/imports/sections from kernel modules
 - Added functions to retrieve primary kernel module

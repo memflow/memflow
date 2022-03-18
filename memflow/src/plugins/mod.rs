@@ -407,24 +407,16 @@ impl Inventory {
         // add default paths
         #[cfg(unix)]
         let extra_paths: Vec<&str> = vec![
-            "/opt",
-            "/lib",
-            "/usr/lib/",
+            "/usr/lib/", // deprecated
             "/usr/local/lib",
-            "/lib32",
-            "/lib64",
-            "/usr/lib32",
-            "/usr/lib64",
-            "/usr/local/lib32",
-            "/usr/local/lib64",
         ];
         #[cfg(not(unix))]
-        let extra_paths: Vec<&str> = vec![];
+        let extra_paths: Vec<&str> = vec![r"C:\Program Files\"];
 
         let path_iter = extra_paths.into_iter().map(PathBuf::from);
 
-        // add $PATH
-        let path_var = std::env::var_os("PATH");
+        // add $MEMFLOW_PLUGIN_PATH
+        let path_var = std::env::var_os("MEMFLOW_PLUGIN_PATH");
         let path_iter = path_iter.chain(
             path_var
                 .as_ref()
@@ -452,13 +444,6 @@ impl Inventory {
         for mut path in path_iter {
             path.push("memflow");
             ret.add_dir(path).ok();
-        }
-
-        // add custom path from environment variable
-        if let Some(extra_plugin_paths) = option_env!("MEMFLOW_EXTRA_PLUGIN_PATHS") {
-            for p in extra_plugin_paths.split(':') {
-                ret.add_dir(p.into()).ok();
-            }
         }
 
         // add current working directory

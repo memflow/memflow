@@ -273,27 +273,41 @@ pub trait Loadable: Sized {
     /// cannot guarantee that the implementation of the library matches the one
     /// specified here.
     fn load_append(path: impl AsRef<Path>, out: &mut Vec<LibInstance<Self>>) -> Result<()> {
+        // try to get the canonical path
+        let canonical_path =
+            std::fs::canonicalize(path.as_ref()).unwrap_or(path.as_ref().to_owned());
+
         let libs = Self::load_all(path.as_ref())?;
         for lib in libs.into_iter() {
-            if let LibInstanceState::Loaded { library: _, loader } = &lib.state {
-                if !loader.exists(out) {
-                    info!(
-                        "adding plugin '{}/{}': {:?}",
-                        Self::plugin_type(),
-                        loader.ident(),
-                        path.as_ref()
-                    );
-                    out.push(lib);
+            // check if the canonical path was already added
+            if !out.iter().any(|o| o.path == canonical_path) {
+                if let LibInstanceState::Loaded { library: _, loader } = &lib.state {
+                    // check if the ident already exists
+                    if !loader.exists(out) {
+                        info!(
+                            "adding plugin '{}/{}': {:?}",
+                            Self::plugin_type(),
+                            loader.ident(),
+                            path.as_ref()
+                        );
+                        out.push(lib);
+                    } else {
+                        debug!(
+                            "skipping library '{}' because it was added already: {:?}",
+                            loader.ident(),
+                            path.as_ref()
+                        );
+                        return Err(Error(ErrorOrigin::Inventory, ErrorKind::AlreadyExists));
+                    }
                 } else {
-                    debug!(
-                        "skipping library '{}' because it was added already: {:?}",
-                        loader.ident(),
-                        path.as_ref()
-                    );
-                    return Err(Error(ErrorOrigin::Inventory, ErrorKind::AlreadyExists));
+                    out.push(lib);
                 }
             } else {
-                out.push(lib);
+                debug!(
+                    "skipping library at '{:?}' because it was added already",
+                    path.as_ref()
+                );
+                return Err(Error(ErrorOrigin::Inventory, ErrorKind::AlreadyExists));
             }
         }
 
@@ -407,7 +421,7 @@ impl Inventory {
         // add default paths
         #[cfg(unix)]
         let extra_paths: Vec<&str> = vec![
-            "/usr/lib/", // deprecated
+            "/usr/lib", // deprecated
             "/usr/local/lib",
         ];
         #[cfg(not(unix))]

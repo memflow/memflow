@@ -275,7 +275,7 @@ pub trait Loadable: Sized {
     fn load_append(path: impl AsRef<Path>, out: &mut Vec<LibInstance<Self>>) -> Result<()> {
         // try to get the canonical path
         let canonical_path =
-            std::fs::canonicalize(path.as_ref()).unwrap_or(path.as_ref().to_owned());
+            std::fs::canonicalize(path.as_ref()).unwrap_or_else(|_| path.as_ref().to_owned());
 
         let libs = Self::load_all(path.as_ref())?;
         for lib in libs.into_iter() {
@@ -469,7 +469,7 @@ impl Inventory {
         // add $MEMFLOW_PLUGIN_PATH at compile time
         if let Some(extra_plugin_paths) = option_env!("MEMFLOW_PLUGIN_PATH") {
             for p in std::env::split_paths(extra_plugin_paths) {
-                ret.add_dir(p.into()).ok();
+                ret.add_dir(p).ok();
             }
         }
 
@@ -856,7 +856,7 @@ impl<'a> BuildStep<'a> {
     ///
     /// `kvm:5`, or `qemu:win10:memmap=map`.
     pub fn new_connector(input: &'a str) -> Result<Self> {
-        let (name, args) = input.split_once(":").unwrap_or((input, ""));
+        let (name, args) = input.split_once(':').unwrap_or((input, ""));
 
         Ok(Self::Connector {
             name,
@@ -874,7 +874,7 @@ impl<'a> BuildStep<'a> {
     ///
     /// `win32`, or `win32::dtb=0xdeadbeef`.
     pub fn new_os(input: &'a str) -> Result<Self> {
-        let (name, args) = input.split_once(":").unwrap_or((input, ""));
+        let (name, args) = input.split_once(':').unwrap_or((input, ""));
 
         Ok(Self::Os {
             name,
@@ -1159,18 +1159,18 @@ pub enum LibInstanceState<T> {
 
 impl<T> LibInstanceState<T> {
     pub fn is_loaded(&self) -> bool {
-        match self {
+        matches!(
+            self,
             LibInstanceState::Loaded {
                 library: _,
                 loader: _,
-            } => true,
-            _ => false,
-        }
+            }
+        )
     }
 
     pub fn as_option(&self) -> Option<(&CArc<LibContext>, &T)> {
         match self {
-            LibInstanceState::Loaded { library, loader } => Some((&library, &loader)),
+            LibInstanceState::Loaded { library, loader } => Some((library, loader)),
             _ => None,
         }
     }

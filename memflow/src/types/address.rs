@@ -203,7 +203,7 @@ impl Address {
     ///
     /// println!("address: {}", Address::NULL);
     /// ```
-    pub const NULL: Address = Address { 0: 0 };
+    pub const NULL: Address = Address(0);
 
     /// A address with an invalid value.
     ///
@@ -214,7 +214,7 @@ impl Address {
     ///
     /// println!("address: {}", Address::INVALID);
     /// ```
-    pub const INVALID: Address = Address { 0: !0 };
+    pub const INVALID: Address = Address(!0);
 
     /// Returns an address with a value of zero.
     ///
@@ -352,13 +352,11 @@ impl Address {
     /// let aligned = addr.as_mem_aligned(mem::kb(4));
     /// assert_eq!(aligned, Address::from(0x1000));
     /// ```
-    pub const fn as_mem_aligned(self, mem_size: umem) -> Address {
-        Address {
-            0: self.0 - self.0 % mem_size,
-        }
+    pub const fn as_mem_aligned(self, mem_size: umem) -> Self {
+        Self(self.0 - self.0 % mem_size)
     }
 
-    pub const fn as_page_aligned(self, page_size: usize) -> Address {
+    pub const fn as_page_aligned(self, page_size: usize) -> Self {
         self.as_mem_aligned(page_size as umem)
     }
 
@@ -396,17 +394,13 @@ impl Address {
     /// Wrapping (modular) addition. Computes `self + rhs`,
     /// wrapping around at the boundary of the type.
     pub const fn wrapping_add(self, other: Self) -> Self {
-        Self {
-            0: self.0.wrapping_add(other.0),
-        }
+        Self(self.0.wrapping_add(other.0))
     }
 
     /// Wrapping (modular) subtraction. Computes `self - rhs`,
     /// wrapping around at the boundary of the type.
     pub const fn wrapping_sub(self, other: Self) -> Self {
-        Self {
-            0: self.0.wrapping_sub(other.0),
-        }
+        Self(self.0.wrapping_sub(other.0))
     }
 }
 
@@ -469,7 +463,7 @@ impl_address_from!(i128);
 impl<U: PrimitiveAddress> From<U> for Address {
     #[inline(always)]
     fn from(val: U) -> Self {
-        Self { 0: val.to_umem() }
+        Self(val.to_umem())
     }
 }
 
@@ -484,9 +478,7 @@ impl From<PhysicalAddress> for Address {
 impl<U: PrimitiveAddress, T: ?Sized> From<Pointer<U, T>> for Address {
     #[inline(always)]
     fn from(ptr: Pointer<U, T>) -> Self {
-        Self {
-            0: ptr.inner.to_umem(),
-        }
+        Self(ptr.inner.to_umem())
     }
 }
 
@@ -616,9 +608,7 @@ impl<'a, T: Into<umem> + Copy> ops::Add<&'a T> for Address {
     type Output = Self;
 
     fn add(self, other: &'a T) -> Self {
-        Self {
-            0: self.0 + (*other).into(),
-        }
+        Self(self.0 + (*other).into())
     }
 }
 
@@ -627,9 +617,7 @@ impl<'a, T: Into<umem> + Copy> ops::Sub<&'a T> for Address {
     type Output = Self;
 
     fn sub(self, other: &'a T) -> Self {
-        Self {
-            0: self.0 - (*other).into(),
-        }
+        Self(self.0 - (*other).into())
     }
 }
 

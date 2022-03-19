@@ -338,7 +338,7 @@ mod tests {
     fn standard_buffer(size: usize) -> Vec<u8> {
         (0..size)
             .step_by(std::mem::size_of_val(&size))
-            .flat_map(|v| v.to_le_bytes().iter().copied().collect::<Vec<u8>>())
+            .flat_map(|v| v.to_le_bytes().to_vec())
             .collect()
     }
 

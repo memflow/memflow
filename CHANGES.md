@@ -6,6 +6,8 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 - Cleaned up plugin search paths and matched them with memflowup
 - Improved error messages
 - Plugins are resolved to their canonical path before adding
+- Added VirtualTranslate as optional trait on Os
+- Updated to latest cglue
 
 ## 0.2.0-beta4
 - Added missing functions to retrieve exports/imports/sections from kernel modules

@@ -268,18 +268,6 @@ using umem = uint64_t;
  * This type will not handle overflow for 32-bit or 64-bit addresses / lengths.
  */
 using Address = umem;
-/**
- * A address with the value of zero.
- *
- * # Examples
- *
- * ```
- * use memflow::types::Address;
- *
- * println!("address: {}", Address::NULL);
- * ```
- */
-static const Address Address_NULL = 0;
 
 /**
  * Describes the type of a page using a bitflag.
@@ -2482,7 +2470,7 @@ constexpr OsKeyboardInnerVtblImpl() :
 };
 
 /**
- * Trait group potentially implementing `:: cglue :: ext :: core :: clone :: Clone < > + for < 'cglue_c > OsInner < 'cglue_c, > + MemoryView < > + for < 'cglue_c > OsKeyboardInner < 'cglue_c, > + PhysicalMemory < >` traits.
+ * Trait group potentially implementing `:: cglue :: ext :: core :: clone :: Clone < > + for < 'cglue_c > OsInner < 'cglue_c, > + MemoryView < > + for < 'cglue_c > OsKeyboardInner < 'cglue_c, > + PhysicalMemory < > + VirtualTranslate < >` traits.
  *
  * Optional traits are not implemented here, however. There are numerous conversion
  * functions available for safely retrieving a concrete collection of traits.
@@ -2506,9 +2494,10 @@ struct OsInstance {
     const MemoryViewVtbl<OsInstanceContainer<CGlueInst, CGlueCtx>> *vtbl_memoryview;
     const OsKeyboardInnerVtbl<OsInstanceContainer<CGlueInst, CGlueCtx>> *vtbl_oskeyboardinner;
     const PhysicalMemoryVtbl<OsInstanceContainer<CGlueInst, CGlueCtx>> *vtbl_physicalmemory;
+    const VirtualTranslateVtbl<OsInstanceContainer<CGlueInst, CGlueCtx>> *vtbl_virtualtranslate;
     OsInstanceContainer<CGlueInst, CGlueCtx> container;
 
-    OsInstance() : container{} , vtbl_clone{}, vtbl_osinner{}, vtbl_memoryview{}, vtbl_oskeyboardinner{}, vtbl_physicalmemory{} {}
+    OsInstance() : container{} , vtbl_clone{}, vtbl_osinner{}, vtbl_memoryview{}, vtbl_oskeyboardinner{}, vtbl_physicalmemory{}, vtbl_virtualtranslate{} {}
 
     ~OsInstance() noexcept {
         mem_drop(std::move(container));
@@ -2523,6 +2512,7 @@ struct OsInstance {
             __ret.vtbl_memoryview = this->vtbl_memoryview;
             __ret.vtbl_oskeyboardinner = this->vtbl_oskeyboardinner;
             __ret.vtbl_physicalmemory = this->vtbl_physicalmemory;
+            __ret.vtbl_virtualtranslate = this->vtbl_virtualtranslate;
         __ret.container = (this->vtbl_clone)->clone(&this->container);
         return __ret;
     }
@@ -2752,6 +2742,51 @@ struct OsInstance {
     inline MemoryViewBase<CBox<void>, Context> phys_view() noexcept {
         MemoryViewBase<CBox<void>, Context> __ret = (this->vtbl_physicalmemory)->phys_view(&this->container);
         return __ret;
+    }
+
+    inline void virt_to_phys_list(CSliceRef<VtopRange> addrs, VirtualTranslationCallback out, VirtualTranslationFailCallback out_fail) noexcept {
+    (this->vtbl_virtualtranslate)->virt_to_phys_list(&this->container, addrs, out, out_fail);
+
+    }
+
+    inline void virt_to_phys_range(Address start, Address end, VirtualTranslationCallback out) noexcept {
+    (this->vtbl_virtualtranslate)->virt_to_phys_range(&this->container, start, end, out);
+
+    }
+
+    inline void virt_translation_map_range(Address start, Address end, VirtualTranslationCallback out) noexcept {
+    (this->vtbl_virtualtranslate)->virt_translation_map_range(&this->container, start, end, out);
+
+    }
+
+    inline void virt_page_map_range(imem gap_size, Address start, Address end, MemoryRangeCallback out) noexcept {
+    (this->vtbl_virtualtranslate)->virt_page_map_range(&this->container, gap_size, start, end, out);
+
+    }
+
+    inline int32_t virt_to_phys(Address address, PhysicalAddress * ok_out) noexcept {
+        int32_t __ret = (this->vtbl_virtualtranslate)->virt_to_phys(&this->container, address, ok_out);
+        return __ret;
+    }
+
+    inline int32_t virt_page_info(Address addr, Page * ok_out) noexcept {
+        int32_t __ret = (this->vtbl_virtualtranslate)->virt_page_info(&this->container, addr, ok_out);
+        return __ret;
+    }
+
+    inline void virt_translation_map(VirtualTranslationCallback out) noexcept {
+    (this->vtbl_virtualtranslate)->virt_translation_map(&this->container, out);
+
+    }
+
+    inline COption<Address> phys_to_virt(Address phys) noexcept {
+        COption<Address> __ret = (this->vtbl_virtualtranslate)->phys_to_virt(&this->container, phys);
+        return __ret;
+    }
+
+    inline void virt_page_map(imem gap_size, MemoryRangeCallback out) noexcept {
+    (this->vtbl_virtualtranslate)->virt_page_map(&this->container, gap_size, out);
+
     }
 
 };

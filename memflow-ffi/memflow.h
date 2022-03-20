@@ -106,6 +106,8 @@ struct OsInstance_CBox_c_void_____CArc_c_void;
 struct OsInstanceContainer_CBox_c_void_____CArc_c_void;
 struct OsInstance_CBox_c_void_____CArc_c_void;
 struct OsInstanceContainer_CBox_c_void_____CArc_c_void;
+struct OsInstance_CBox_c_void_____CArc_c_void;
+struct OsInstanceContainer_CBox_c_void_____CArc_c_void;
 struct ProcessInstance_CBox_c_void_____CArc_c_void;
 struct ProcessInstanceContainer_CBox_c_void_____CArc_c_void;
 struct ProcessInstance_CBox_c_void_____CArc_c_void;
@@ -317,18 +319,6 @@ typedef uint64_t umem;
  * This type will not handle overflow for 32-bit or 64-bit addresses / lengths.
  */
 typedef umem Address;
-/**
- * A address with the value of zero.
- *
- * # Examples
- *
- * ```
- * use memflow::types::Address;
- *
- * println!("address: {}", Address::NULL);
- * ```
- */
-#define Address_NULL 0
 
 /**
  * Describes the type of a page using a bitflag.
@@ -1787,7 +1777,24 @@ typedef struct PhysicalMemoryVtbl_OsInstanceContainer_CBox_c_void_____CArc_c_voi
 } PhysicalMemoryVtbl_OsInstanceContainer_CBox_c_void_____CArc_c_void;
 
 /**
- * Trait group potentially implementing `:: cglue :: ext :: core :: clone :: Clone < > + for < 'cglue_c > OsInner < 'cglue_c, > + MemoryView < > + for < 'cglue_c > OsKeyboardInner < 'cglue_c, > + PhysicalMemory < >` traits.
+ * CGlue vtable for trait VirtualTranslate.
+ *
+ * This virtual function table contains ABI-safe interface for the given trait.
+ */
+typedef struct VirtualTranslateVtbl_OsInstanceContainer_CBox_c_void_____CArc_c_void {
+    void (*virt_to_phys_list)(struct OsInstanceContainer_CBox_c_void_____CArc_c_void *cont, struct CSliceRef_VtopRange addrs, VirtualTranslationCallback out, VirtualTranslationFailCallback out_fail);
+    void (*virt_to_phys_range)(struct OsInstanceContainer_CBox_c_void_____CArc_c_void *cont, Address start, Address end, VirtualTranslationCallback out);
+    void (*virt_translation_map_range)(struct OsInstanceContainer_CBox_c_void_____CArc_c_void *cont, Address start, Address end, VirtualTranslationCallback out);
+    void (*virt_page_map_range)(struct OsInstanceContainer_CBox_c_void_____CArc_c_void *cont, imem gap_size, Address start, Address end, MemoryRangeCallback out);
+    int32_t (*virt_to_phys)(struct OsInstanceContainer_CBox_c_void_____CArc_c_void *cont, Address address, struct PhysicalAddress *ok_out);
+    int32_t (*virt_page_info)(struct OsInstanceContainer_CBox_c_void_____CArc_c_void *cont, Address addr, struct Page *ok_out);
+    void (*virt_translation_map)(struct OsInstanceContainer_CBox_c_void_____CArc_c_void *cont, VirtualTranslationCallback out);
+    struct COption_Address (*phys_to_virt)(struct OsInstanceContainer_CBox_c_void_____CArc_c_void *cont, Address phys);
+    void (*virt_page_map)(struct OsInstanceContainer_CBox_c_void_____CArc_c_void *cont, imem gap_size, MemoryRangeCallback out);
+} VirtualTranslateVtbl_OsInstanceContainer_CBox_c_void_____CArc_c_void;
+
+/**
+ * Trait group potentially implementing `:: cglue :: ext :: core :: clone :: Clone < > + for < 'cglue_c > OsInner < 'cglue_c, > + MemoryView < > + for < 'cglue_c > OsKeyboardInner < 'cglue_c, > + PhysicalMemory < > + VirtualTranslate < >` traits.
  *
  * Optional traits are not implemented here, however. There are numerous conversion
  * functions available for safely retrieving a concrete collection of traits.
@@ -1810,6 +1817,7 @@ typedef struct OsInstance_CBox_c_void_____CArc_c_void {
     const struct MemoryViewVtbl_OsInstanceContainer_CBox_c_void_____CArc_c_void *vtbl_memoryview;
     const struct OsKeyboardInnerVtbl_OsInstanceContainer_CBox_c_void_____CArc_c_void *vtbl_oskeyboardinner;
     const struct PhysicalMemoryVtbl_OsInstanceContainer_CBox_c_void_____CArc_c_void *vtbl_physicalmemory;
+    const struct VirtualTranslateVtbl_OsInstanceContainer_CBox_c_void_____CArc_c_void *vtbl_virtualtranslate;
     struct OsInstanceContainer_CBox_c_void_____CArc_c_void container;
 } OsInstance_CBox_c_void_____CArc_c_void;
 
@@ -2754,6 +2762,51 @@ static inline MemoryViewBase_CBox_c_void_____CArc_c_void mf_osinstance_into_phys
 static inline MemoryViewBase_CBox_c_void_____CArc_c_void mf_osinstance_phys_view(void *self)  {
     MemoryViewBase_CBox_c_void_____CArc_c_void __ret = (((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_physicalmemory)->phys_view(&((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->container);
     return __ret;
+}
+
+static inline void mf_osinstance_virt_to_phys_list(void *self, struct CSliceRef_VtopRange addrs, VirtualTranslationCallback out, VirtualTranslationFailCallback out_fail)  {
+(((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_virtualtranslate)->virt_to_phys_list(&((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->container, addrs, out, out_fail);
+
+}
+
+static inline void mf_osinstance_virt_to_phys_range(void *self, Address start, Address end, VirtualTranslationCallback out)  {
+(((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_virtualtranslate)->virt_to_phys_range(&((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->container, start, end, out);
+
+}
+
+static inline void mf_osinstance_virt_translation_map_range(void *self, Address start, Address end, VirtualTranslationCallback out)  {
+(((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_virtualtranslate)->virt_translation_map_range(&((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->container, start, end, out);
+
+}
+
+static inline void mf_osinstance_virt_page_map_range(void *self, imem gap_size, Address start, Address end, MemoryRangeCallback out)  {
+(((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_virtualtranslate)->virt_page_map_range(&((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->container, gap_size, start, end, out);
+
+}
+
+static inline int32_t mf_osinstance_virt_to_phys(void *self, Address address, struct PhysicalAddress * ok_out)  {
+    int32_t __ret = (((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_virtualtranslate)->virt_to_phys(&((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->container, address, ok_out);
+    return __ret;
+}
+
+static inline int32_t mf_osinstance_virt_page_info(void *self, Address addr, struct Page * ok_out)  {
+    int32_t __ret = (((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_virtualtranslate)->virt_page_info(&((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->container, addr, ok_out);
+    return __ret;
+}
+
+static inline void mf_osinstance_virt_translation_map(void *self, VirtualTranslationCallback out)  {
+(((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_virtualtranslate)->virt_translation_map(&((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->container, out);
+
+}
+
+static inline struct COption_Address mf_osinstance_phys_to_virt(void *self, Address phys)  {
+    struct COption_Address __ret = (((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_virtualtranslate)->phys_to_virt(&((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->container, phys);
+    return __ret;
+}
+
+static inline void mf_osinstance_virt_page_map(void *self, imem gap_size, MemoryRangeCallback out)  {
+(((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_virtualtranslate)->virt_page_map(&((struct OsInstance_CBox_c_void_____CArc_c_void *)self)->container, gap_size, out);
+
 }
 
 static inline int32_t mf_processinstance_read_raw_iter(void *self, ReadRawMemOps data)  {

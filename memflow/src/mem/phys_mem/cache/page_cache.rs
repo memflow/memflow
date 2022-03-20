@@ -286,12 +286,11 @@ impl<'a, T: CacheValidator> PageCache<'a, T> {
                     }
 
                     if !wlistcache.is_empty() {
-                        let mut iter =
-                            wlistcache
-                                .iter()
-                                .map(|CTup3(addr, _, buf): &PhysicalReadData| {
-                                    CTup3(*addr, addr.address(), buf.into())
-                                });
+                        let mut iter = wlistcache.iter_mut().map(
+                            |CTup3(addr, _, buf): &mut PhysicalReadData| {
+                                CTup3(*addr, addr.address(), buf.into())
+                            },
+                        );
 
                         let callback = &mut |CTup2(addr, buf): ReadData<'a>| {
                             self.validate_page(addr, buf.into());

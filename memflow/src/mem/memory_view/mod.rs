@@ -160,7 +160,9 @@ pub trait MemoryView: Send {
             true
         };
 
-        let iter = data.iter().map(|CTup2(d1, d2)| CTup3(*d1, *d1, d2.into()));
+        let iter = data
+            .iter_mut()
+            .map(|CTup2(d1, d2)| CTup3(*d1, *d1, d2.into()));
 
         MemOps::with_raw(iter, None, Some(&mut callback.into()), |data| {
             self.read_raw_iter(data)

@@ -314,10 +314,10 @@ pub fn export_list_callback(
             Ok(())
         }
         Object::PE(pe) => {
-            let iter = pe
-                .exports
-                .iter()
-                .filter_map(|e| e.name.map(|name| (e.offset as umem, name.into())));
+            let iter = pe.exports.iter().filter_map(|e| {
+                e.name
+                    .map(|name| (e.offset.unwrap_or(0usize) as umem, name.into()))
+            });
 
             export_call(iter, &mut callback);
 

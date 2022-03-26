@@ -99,6 +99,33 @@ pub trait VirtualTranslate: Send {
             .feed_into(out);
     }
 
+    /// Retrieves mapped virtual pages in the specified range.
+    ///
+    /// In case a range from [`Address::null()`], [`Address::invalid()`] is specified
+    /// this function will return all mappings.
+    ///
+    /// # Example:
+    ///
+    /// ```
+    /// use memflow::prelude::v1::*;
+    /// # use memflow::dummy::{DummyMemory, DummyOs};
+    /// # use memflow::architecture::x86::x64;
+    /// # let dummy_mem = DummyMemory::new(size::mb(16));
+    /// # let mut dummy_os = DummyOs::new(dummy_mem);
+    /// # let (dtb, virt_base) = dummy_os.alloc_dtb(size::mb(2), &[]);
+    /// # let translator = x64::new_translator(dtb);
+    /// # let arch = x64::ARCH;
+    /// # let mut virt_mem = VirtualDma::new(dummy_os.forward_mut(), arch, translator);
+    /// println!("{:>16} {:>12} {:<}", "ADDR", "SIZE", "TYPE");
+    ///
+    /// let callback = &mut |CTup3(addr, size, pagety)| {
+    ///     println!("{:>16x} {:>12x} {:<?}", addr, size, pagety);
+    ///     true
+    /// };
+    ///
+    /// // display all mappings with a gap size of 0
+    /// virt_mem.virt_page_map_range(0, Address::null(), Address::invalid(), callback.into());
+    /// ```
     fn virt_page_map_range(
         &mut self,
         gap_size: imem,
@@ -174,9 +201,9 @@ pub trait VirtualTranslate: Send {
 
     /// Attempt to translate a physical address into a virtual one.
     ///
-    /// This function is the reverse of [`virt_to_phys`](VirtualTranslate::virt_to_phys). Note, that there could be multiple virtual
+    /// This function is the reverse of [`virt_to_phys`](Self::virt_to_phys). Note, that there could be multiple virtual
     /// addresses for one physical address. If all candidates are needed, use
-    /// [`phys_to_virt_vec`](VirtualTranslate::phys_to_virt_vec) function.
+    /// [`phys_to_virt_vec`](Self::phys_to_virt_vec) function.
     fn phys_to_virt(&mut self, phys: Address) -> Option<Address> {
         let mut virt = None;
 
@@ -221,10 +248,67 @@ pub trait VirtualTranslate: Send {
         virt
     }
 
+    /// Retrieves all mapped virtual pages.
+    ///
+    /// The [`virt_page_map`](Self::virt_page_map) function is a convenience wrapper for calling
+    /// [`virt_page_map_range`](Self::virt_page_map_range)`(gap_size, Address::null(), Address::invalid(), out)`.
+    ///
+    /// # Example:
+    ///
+    /// ```
+    /// use memflow::prelude::v1::*;
+    /// # use memflow::dummy::{DummyMemory, DummyOs};
+    /// # use memflow::architecture::x86::x64;
+    /// # let dummy_mem = DummyMemory::new(size::mb(16));
+    /// # let mut dummy_os = DummyOs::new(dummy_mem);
+    /// # let (dtb, virt_base) = dummy_os.alloc_dtb(size::mb(2), &[]);
+    /// # let translator = x64::new_translator(dtb);
+    /// # let arch = x64::ARCH;
+    /// # let mut virt_mem = VirtualDma::new(dummy_os.forward_mut(), arch, translator);
+    /// println!("{:>16} {:>12} {:<}", "ADDR", "SIZE", "TYPE");
+    ///
+    /// let callback = &mut |CTup3(addr, size, pagety)| {
+    ///     println!("{:>16x} {:>12x} {:<?}", addr, size, pagety);
+    ///     true
+    /// };
+    ///
+    /// // display all mappings with a gap size of 0
+    /// virt_mem.virt_page_map(0, callback.into());
+    /// ```
     fn virt_page_map(&mut self, gap_size: imem, out: MemoryRangeCallback) {
         self.virt_page_map_range(gap_size, Address::null(), Address::invalid(), out)
     }
 
+    /// Returns a [`Vec`] of all mapped virtual pages.
+    ///
+    /// The [`virt_page_map`](Self::virt_page_map) function is a convenience wrapper for calling
+    /// [`virt_page_map_range`](Self::virt_page_map_range)`(gap_size, Address::null(), Address::invalid(), out)`.
+    ///
+    /// # Remarks:
+    ///
+    /// This function has to allocate all MemoryRanges when they are put into a [`Vec`].
+    /// If the additional allocations are undesired please use the provided [`virt_page_map`](Self::virt_page_map) with an appropiate callback.
+    ///
+    /// # Example:
+    ///
+    /// ```
+    /// use memflow::prelude::v1::*;
+    /// # use memflow::dummy::{DummyMemory, DummyOs};
+    /// # use memflow::architecture::x86::x64;
+    /// # let dummy_mem = DummyMemory::new(size::mb(16));
+    /// # let mut dummy_os = DummyOs::new(dummy_mem);
+    /// # let (dtb, virt_base) = dummy_os.alloc_dtb(size::mb(2), &[]);
+    /// # let translator = x64::new_translator(dtb);
+    /// # let arch = x64::ARCH;
+    /// # let mut virt_mem = VirtualDma::new(dummy_os.forward_mut(), arch, translator);
+    /// // acquire all mappings with a gap size of 0
+    /// let maps = virt_mem.virt_page_map_vec(0);
+    ///
+    /// println!("{:>16} {:>12} {:<}", "ADDR", "SIZE", "TYPE");
+    /// for CTup3(addr, size, pagety) in maps.iter() {
+    ///     println!("{:>16x} {:>12x} {:<?}", addr, size, pagety);
+    /// };
+    /// ```
     #[skip_func]
     fn virt_page_map_vec(&mut self, gap_size: imem) -> Vec<MemoryRange> {
         let mut out = vec![];

@@ -11,26 +11,24 @@ fn main() -> Result<()> {
     let inventory = Inventory::scan();
     let mut os = inventory.builder().os_chain(chain).build()?;
 
-    let module_list = os.module_list()?;
+    let vt = os
+        .as_mut_impl_virtualtranslate()
+        .expect("VirtualTranslate is not implemented for this OS plugin");
 
-    // Print module list, formatted
-    println!(
-        "{:>16} {:>16} {:>8} {:>24} {:<}",
-        "INTERNAL ADDR", "BASE", "SIZE", "NAME", "PATH"
-    );
+    // Print map list, formatted
+    println!("{:>16} {:>12} {:<}", "ADDR", "SIZE", "TYPE");
 
-    for m in module_list {
-        println!(
-            "{:>16x} {:>16x} {:>8x} {:>24} {}",
-            m.address, m.base, m.size, m.name, m.path
-        );
-    }
+    let callback = &mut |CTup3(addr, size, pagety)| {
+        println!("{:>16x} {:>12x} {:<?}", addr, size, pagety);
+        true
+    };
+    vt.virt_page_map(0, callback.into());
 
     Ok(())
 }
 
 fn parse_args() -> ArgMatches {
-    Command::new("kernel_modules example")
+    Command::new("kernel_maps example")
         .version(crate_version!())
         .author(crate_authors!())
         .arg(Arg::new("verbose").short('v').multiple_occurrences(true))

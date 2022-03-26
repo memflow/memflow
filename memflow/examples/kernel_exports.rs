@@ -14,7 +14,7 @@ fn main() -> Result<()> {
     let ntoskrnl = os.primary_module()?;
     let exports = os.module_export_list(&ntoskrnl)?;
 
-    // Print process list, formatted
+    // Print export list, formatted
     println!("{:>8} {:>32}", "OFFS", "NAME");
 
     for e in exports {
@@ -25,7 +25,7 @@ fn main() -> Result<()> {
 }
 
 fn parse_args() -> ArgMatches {
-    Command::new("kernel_modules example")
+    Command::new("kernel_exports example")
         .version(crate_version!())
         .author(crate_authors!())
         .arg(Arg::new("verbose").short('v').multiple_occurrences(true))

@@ -407,7 +407,7 @@ pub trait MemoryView: Send {
     /// The string must be null-terminated.
     /// If no null terminator is found the this function will return an error.
     ///
-    /// For reading fixed-size char arrays the [`virt_read_char_array`] should be used.
+    /// For reading fixed-size char arrays the [`read_char_array`](Self::read_char_array) should be used.
     #[skip_func]
     fn read_char_string_n(&mut self, addr: Address, n: usize) -> PartialResult<String> {
         let mut buf = vec![0; std::cmp::min(32, n)];

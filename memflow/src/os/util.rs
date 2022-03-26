@@ -117,15 +117,25 @@ fn custom_parse(buf: &[u8]) -> Result<Object<'_>> {
         .map_err(|_| Error(ErrorOrigin::OsLayer, ErrorKind::InvalidExeFile))
 }
 
+#[inline]
 pub fn module_import_list_callback(
     mem: &mut impl MemoryView,
     info: &ModuleInfo,
+    callback: ImportCallback,
+) -> Result<()> {
+    import_list_callback(mem, info.base, info.size, callback)
+}
+
+pub fn import_list_callback(
+    mem: &mut impl MemoryView,
+    base: Address,
+    size: umem,
     mut callback: ImportCallback,
 ) -> Result<()> {
-    let mut module_image = aligned_alloc(info.size as usize);
+    let mut module_image = aligned_alloc(size as usize);
     let module_image = module_image.as_bytes_mut();
 
-    mem.read_raw_into(info.base, module_image).data_part()?;
+    mem.read_raw_into(base, module_image).data_part()?;
 
     fn import_call(iter: impl Iterator<Item = (umem, ReprCString)>, callback: &mut ImportCallback) {
         iter.take_while(|(offset, name)| {
@@ -213,15 +223,25 @@ pub fn module_import_list_callback(
     ret
 }
 
+#[inline]
 pub fn module_export_list_callback(
     mem: &mut impl MemoryView,
     info: &ModuleInfo,
+    callback: ExportCallback,
+) -> Result<()> {
+    export_list_callback(mem, info.base, info.size, callback)
+}
+
+pub fn export_list_callback(
+    mem: &mut impl MemoryView,
+    base: Address,
+    size: umem,
     mut callback: ExportCallback,
 ) -> Result<()> {
-    let mut module_image = aligned_alloc(info.size as usize);
+    let mut module_image = aligned_alloc(size as usize);
     let module_image = module_image.as_bytes_mut();
 
-    mem.read_raw_into(info.base, module_image).data_part()?;
+    mem.read_raw_into(base, module_image).data_part()?;
 
     fn export_call(iter: impl Iterator<Item = (umem, ReprCString)>, callback: &mut ExportCallback) {
         iter.take_while(|(offset, name)| {
@@ -309,26 +329,36 @@ pub fn module_export_list_callback(
     ret
 }
 
+#[inline]
 pub fn module_section_list_callback(
     mem: &mut impl MemoryView,
     info: &ModuleInfo,
+    callback: SectionCallback,
+) -> Result<()> {
+    section_list_callback(mem, info.base, info.size, callback)
+}
+
+pub fn section_list_callback(
+    mem: &mut impl MemoryView,
+    base: Address,
+    size: umem,
     mut callback: SectionCallback,
 ) -> Result<()> {
-    let mut module_image = aligned_alloc(info.size as usize);
+    let mut module_image = aligned_alloc(size as usize);
     let module_image = module_image.as_bytes_mut();
 
-    mem.read_raw_into(info.base, module_image).data_part()?;
+    mem.read_raw_into(base, module_image).data_part()?;
 
     fn section_call(
         iter: impl Iterator<Item = (umem, umem, ReprCString)>,
         callback: &mut SectionCallback,
-        info: &ModuleInfo,
+        base: Address,
     ) {
-        iter.take_while(|(base, size, name)| {
+        iter.take_while(|(section_base, section_size, name)| {
             callback.call(SectionInfo {
                 name: name.clone(),
-                base: info.base + *base,
-                size: *size,
+                base: base + *section_base,
+                size: *section_size,
             })
         })
         .for_each(|_| {});
@@ -349,7 +379,7 @@ pub fn module_section_list_callback(
                 })
             });
 
-            section_call(iter, &mut callback, info);
+            section_call(iter, &mut callback, base);
 
             Ok(())
         } else {
@@ -366,7 +396,7 @@ pub fn module_section_list_callback(
                     .map(|n| (s.sh_addr as umem, s.sh_size as umem, ReprCString::from(n)))
             });
 
-            section_call(iter, &mut callback, info);
+            section_call(iter, &mut callback, base);
 
             Ok(())
         }
@@ -381,7 +411,7 @@ pub fn module_section_list_callback(
                 })
             });
 
-            section_call(iter, &mut callback, info);
+            section_call(iter, &mut callback, base);
 
             Ok(())
         }

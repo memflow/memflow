@@ -5,21 +5,45 @@
 [![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Discord](https://img.shields.io/discord/738739624976973835?color=%20%237289da&label=Discord)](https://discord.gg/afsEtMR)
 
-## physical memory introspection framework
+## machine introspection made easy
 
-memflow is a library that allows live memory introspection of running systems and their snapshots. Due to its modular approach, it is trivial to support almost any scenario where Direct Memory Access is available.
+memflow is a library that enables introspection of various machines (hardware, virtual machines, memory dumps) in a generic fashion. There are 2 primary types of objects in memflow - _Connectors_ and _OS layers_. Connector provides raw access to physical memory of a machine. Meanwhile, OS layer builds a higher level abstraction over running operating system, providing access to running processes, input events, etc. These objects are incredibly flexible as they can be chained together to gain access to a process running multiple levels of virtualization deep (see figure below).
 
-The very core of the library is a [PhysicalMemory](https://docs.rs/memflow/latest/memflow/mem/phys_mem/trait.PhysicalMemory.html) that provides direct memory access in an abstract environment. This object that can be defined both statically, and dynamically with the use of the `plugins` feature. If `plugins` is enabled, it is possible to dynamically load libraries that provide Direct Memory Access.
+```
++-----------+        +-----------+
+| native OS |        | leechcore |
++-+---------+        +-+---------+
+  |                    |
+  |  +-----------+     |  +----------+
+  +--|  QEMU VM  |     +--| Win32 OS |
+     +-+---------+        +-+--------+
+       |                    |
+       |  +----------+      |  +-----------+
+       +--| Win32 OS |      +--| lsass.exe |
+          +-+--------+         +-----------+
+            |
+            |  +-----------+
+            +--|  Hyper-V  |
+               +-+---------+
+                 |
+                 |  +----------+
+                 +--| Linux OS |
+                    +-+--------+
+                      |
+                      |  +-----------+
+                      +--| SSHD Proc |
+                         +-----------+
 
-Through the use of OS abstraction layers, like [memflow-win32](https://github.com/memflow/memflow/tree/master/memflow-win32), users can gain access to virtual memory of individual processes by creating objects that implement [VirtualMemory](https://docs.rs/memflow/latest/memflow/mem/virt_mem/trait.VirtualMemory.html).
+(Example chains of access. For illustrative purposes only - Hyper-V Connector and Linux OS are not yet available)
+```
 
-Bridging the two is done by a highly throughput optimized virtual address translation function, which allows for crazy fast memory transfers at scale.
+As a library user, you do not have to worry about delicacies of chaining - everything is provided, batteries included. See one of our [examples](memflow/examples/process_list.rs) on how simple it is to build a chain (excluding parsing). All Connectors and OS layers are dynamically loadable with common interface binding them.
 
-The core is architecture-independent (as long as addresses fit in 64-bits), and currently, both 32, and 64-bit versions of the x86 family are available to be used.
+All of this flexibility is provided with very robust and efficient backend - memory interface is batchable and divisible, which gets taken advantage of by our throughput optimized virtual address translation pipeline that is able to walk the entire process virtual address space in under a second. Connectors and OS layers can be composed with the vast library of generic caching mechanisms, utility functions and data structures.
 
-For non-rust libraries, it is possible to use the [FFI](https://github.com/memflow/memflow/tree/master/memflow-ffi) to interface with the library.
+The memflow ecosystem is not bound to just Rust - Connector and OS layer functions are linked together using C ABI, thus users can write code that interfaces with them in other languages, such as C, C++, Zig, etc. In addition, these plugins can too be implemented in foreign languages - everything is open.
 
-In the repository, you can find various examples available (which use the memflow-win32 layer)
+Overall, memflow is the most robust, efficient and flexible solution out there for machine introspection.
 
 ## Getting started
 
@@ -27,11 +51,9 @@ Make sure that your rustc version is at least `1.51.0` or newer.
 
 memflow uses a plugin based approach and is capable of loading different physical memory backends (so-called [`connectors`](#connectors)) at runtime. On top of the physical memory backends memflow is also capable of loading plugins for interfacing with a specific target OS at runtime.
 
-To get started, you want to at least install one connector. On Linux based hosts you can simply execute the `install.sh` found in each connector repository to install the connector. When running `./install.sh --system` the connector is installed system-wide. When omitting the `--system` argument the connector is just installed for the current user.
+To get started, you want to at least install one connector. For that, use the [memflowup](https://github.com/memflow/memflowup) utility.
 
-When using the memflow-daemon it is required to install each connector system-wide (or at least under the root user) so the daemon can access it. Some connectors also require elevated privileges, which might also require them to be accessible from the root user.
-
-Note that all connectors should be built with the `--all-features` flag to be accessible as a dynamically loaded plugin.
+### Manual installation
 
 The recommended installation locations for connectors on Linux are:
 ```
@@ -45,13 +67,6 @@ The recommended installation locations for connectors on Windows are:
 ```
 
 Additionally, connectors can be placed in any directory of the environment PATH or the working directory of the program as well.
-
-For Windows target support the `win32` plugin has to be built:
-```bash
-cargo build --release --all-features --workspace
-```
-
-This will create the OS plugin in `target/release/libmemflow_win32.so` which has to be copied to one of the plugin folders mentioned above.
 
 For more information about how to get started with memflow please head over to the YouTube series produced by [h33p](https://github.com/h33p/):
 
@@ -75,13 +90,13 @@ Alternatively, you can run the benchmarks via `cargo bench` (can pass regex filt
 All examples support the memflow connector `plugins` inventory system.
 You will have to install at least one `connector` to use the examples. Refer to the [getting started](#getting-started) section for more details.
 
-Run memflow\_win32/read\_keys example with a procfs connector:
+Run memflow/read\_keys example with a qemu connector:
 
-`RUST_SETPTRACE=1 cargo run --example read_keys -- -vv -c qemu -a [vmname]`
+`RUST_SETPTRACE=1 cargo run --example read_keys -- -vv -c qemu -a [vmname] -o win32`
 
-Run memflow\_win32/read\_bench example with a coredump connector:
+Run memflow/read\_bench example with a coredump connector:
 
-`cargo run --example read_bench --release -- -vv -c coredump -a coredump_win10_64bit.raw`
+`cargo run --example read_bench --release -- -vv -c coredump -a coredump_win10_64bit.raw -o win32`
 
 Note: In the examples above the `qemu` connector requires `'CAP_SYS_PTRACE=ep'` permissions. The runner script in this repository will set the appropriate flags when the `RUST_SETPTRACE` environment variable is passed to it.
 

@@ -15,23 +15,23 @@ memflow is a library that enables introspection of various machines (hardware, v
 +-+---------+        +-+---------+
   |                    |
   |  +-----------+     |  +----------+
-  +--|  QEMU VM  |     +--| Win32 OS |
+  +->|  QEMU VM  |     +->| Win32 OS |
      +-+---------+        +-+--------+
        |                    |
        |  +----------+      |  +-----------+
-       +--| Win32 OS |      +--| lsass.exe |
+       +->| Win32 OS |      +->| lsass.exe |
           +-+--------+         +-----------+
             |
             |  +-----------+
-            +--|  Hyper-V  |
+            +->|  Hyper-V  |
                +-+---------+
                  |
                  |  +----------+
-                 +--| Linux OS |
+                 +->| Linux OS |
                     +-+--------+
                       |
                       |  +-----------+
-                      +--| SSHD Proc |
+                      +->| SSHD Proc |
                          +-----------+
 
 (Example chains of access. For illustrative purposes only - Hyper-V Connector and Linux OS are not yet available)

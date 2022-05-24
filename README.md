@@ -51,7 +51,7 @@ Make sure that your rustc version is at least `1.51.0` or newer.
 
 memflow uses a plugin based approach and is capable of loading different physical memory backends (so-called [`connectors`](#connectors)) at runtime. On top of the physical memory backends memflow is also capable of loading plugins for interfacing with a specific target OS at runtime.
 
-To get started, you want to at least install one connector. For that, use the [memflowup](https://github.com/memflow/memflowup) utility.
+To get started, you want to at least install one connector. For that, use the [memflowup](https://github.com/memflow/memflowup) utility (use dev channel).
 
 ### Manual installation
 
@@ -102,7 +102,8 @@ Note: In the examples above the `qemu` connector requires `'CAP_SYS_PTRACE=ep'` 
 
 ## Documentation
 
-Extensive code documentation can be found at [docs.rs](https://docs.rs/memflow/0.1/).
+Extensive code documentation can be found at [docs.rs](https://docs.rs/memflow/0.2.0-beta/)
+(it currently is relatively out of date).
 
 An additional getting started guide as well as a higher level
 explanation of the inner workings of memflow can be found at [memflow.github.io](https://memflow.github.io).
@@ -121,9 +122,13 @@ memflow currently requires at least rustc version `1.51.0` or newer.
 | mac x86_64    | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
 | win x86_64    | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
 | linux aarch64 | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
+| linux i686    | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
+| linux armv7   | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
 | no-std        | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :x:                |
 
 ## Target support
+
+By default, memflow supports analyzing 64-bit machines on any machine - be it 32 or 64 bit. Using memflow without `default_features` can disable 64-bit support on 32-bit machines for an efficiency gain, while enabling `128_bit_mem` feature can be done for theoretical future 128-bit machine analysis. Note that all connectors and OS layers must be compiled with the same memory features enabled, and memflowup currently only compiles the default set of features.
 
 memflow-win32 is tested on the latest Windows 11 and Windows 10 versions all the way down to Windows NT 4.0. If you found a version that does not work please submit an issue with the major/minor version as well as the build number.
 

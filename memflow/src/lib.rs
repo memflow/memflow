@@ -36,7 +36,7 @@
 //!                       |  +-----------+
 //!                       +->| SSHD Proc |
 //!                          +-----------+
-//! 
+//!
 //! (Example chains of access. For illustrative purposes only - Hyper-V Connector and Linux OS are not yet available)
 //! ```
 //!
@@ -64,7 +64,30 @@
 //! conerned with OS abstractions, [architecture](crate::architecture) module defines
 //! specification of a computer architecture, as well as several built-in architectures,
 //! [types](crate::types) concerns itself with data types used throughout memflow, while
-//! [plugins](crate::plugins) module defines the dynamically loadable plugin types
+//! [plugins](crate::plugins) module defines the dynamically loadable plugin types.
+//!
+//! ## Getting started
+//!
+//! To quickly get started with memflow, simply include its prelude:
+//!
+//! ```
+//! use memflow::prelude::v1::*;
+//! ```
+//!
+//! Afterwards, you will want to build a memflow object using the plugin inventory:
+//!
+//! ```
+//! use memflow::prelude::v1::*;
+//!
+//! # fn main() -> Result<()> {
+//! let inventory = Inventory::scan();
+//! # let inventory = inventory.with_workspace()?;
+//!
+//! let conn = inventory.create_connector("dummy", None, None)?;
+//! # Ok(())
+//! # }
+//!
+//! ```
 //!
 //! ## Core traits
 //!
@@ -103,24 +126,14 @@
 //! use memflow::prelude::v1::*;
 //! # use memflow::dummy::{DummyMemory, DummyOs};
 //!
+//! // Define the function with `impl Trait` notation
 //! fn special_read(mem: &mut impl MemoryView) -> Result<u64> {
 //!     mem.read(Address::from(0x42)).data()
 //! }
 //!
-//! // Use it with plugin
+//! // Use it with plugin object
 //! let mut inventory = Inventory::scan();
-//! # let paths = std::fs::read_dir("../target/").unwrap();
-//! # for path in paths {
-//! #     match path.unwrap().file_name().to_str() {
-//! #         Some("release") | Some("debug") | None => {},
-//! #         Some(x) => {
-//! #             inventory.add_dir_filtered(format!("../target/{}/release/deps", x).into(), "ffi").ok();
-//! #             inventory.add_dir_filtered(format!("../target/{}/debug/deps", x).into(), "ffi").ok();
-//! #         }
-//! #     }
-//! # }
-//! # inventory.add_dir_filtered("../target/release/deps".into(), "ffi").ok();
-//! # inventory.add_dir_filtered("../target/debug/deps".into(), "ffi").ok();
+//! # let mut inventory = inventory.with_workspace().unwrap();
 //! let args = str::parse(":4m").unwrap();
 //! let conn = inventory.create_connector("dummy", None, Some(&args))
 //!     .unwrap();

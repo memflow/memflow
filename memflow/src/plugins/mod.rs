@@ -519,6 +519,30 @@ impl Inventory {
         self.add_dir_filtered(dir, "")
     }
 
+    /// Adds cargo workspace to the inventory
+    ///
+    /// This function is used behind the scenes by the documentation, however, is not particularly
+    /// useful for end users.
+    pub fn with_workspace(mut self) -> Result<Self> {
+        let paths = std::fs::read_dir("../target/").map_err(|_| ErrorKind::UnableToReadDir)?;
+        for path in paths {
+            match path.unwrap().file_name().to_str() {
+                Some("release") | Some("debug") | None => {}
+                Some(x) => {
+                    self.add_dir_filtered(format!("../target/{}/release/deps", x).into(), "ffi")
+                        .ok();
+                    self.add_dir_filtered(format!("../target/{}/debug/deps", x).into(), "ffi")
+                        .ok();
+                }
+            }
+        }
+        self.add_dir_filtered("../target/release/deps".into(), "ffi")
+            .ok();
+        self.add_dir_filtered("../target/debug/deps".into(), "ffi")
+            .ok();
+        Ok(self)
+    }
+
     /// Adds a single library to the inventory
     ///
     /// # Safety
@@ -729,19 +753,7 @@ impl Inventory {
     /// ```
     /// use memflow::plugins::{Inventory, ConnectorArgs};
     ///
-    /// # let mut inventory = Inventory::scan();
-    /// # let paths = std::fs::read_dir("../target/").unwrap();
-    /// # for path in paths {
-    /// #     match path.unwrap().file_name().to_str() {
-    /// #         Some("release") | Some("debug") | None => {},
-    /// #         Some(x) => {
-    /// #             inventory.add_dir_filtered(format!("../target/{}/release/deps", x).into(), "ffi").ok();
-    /// #             inventory.add_dir_filtered(format!("../target/{}/debug/deps", x).into(), "ffi").ok();
-    /// #         }
-    /// #     }
-    /// # }
-    /// # inventory.add_dir_filtered("../target/release/deps".into(), "ffi").ok();
-    /// # inventory.add_dir_filtered("../target/debug/deps".into(), "ffi").ok();
+    /// # let inventory = Inventory::scan().with_workspace().unwrap();
     /// let args = str::parse(":4m").unwrap();
     /// let os = inventory.create_os("dummy", None, Some(&args))
     ///     .unwrap();

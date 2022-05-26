@@ -68,7 +68,7 @@
 //!
 //! ## Getting started
 //!
-//! To quickly get started with memflow, simply include its prelude:
+//! To quickly get started with the memflow library, simply include its prelude:
 //!
 //! ```
 //! use memflow::prelude::v1::*;
@@ -77,8 +77,7 @@
 //! Afterwards, you will want to build a memflow object using the plugin inventory:
 //!
 //! ```
-//! use memflow::prelude::v1::*;
-//!
+//! # use memflow::prelude::v1::*;
 //! # fn main() -> Result<()> {
 //! let inventory = Inventory::scan();
 //! # let inventory = inventory.with_workspace()?;
@@ -110,6 +109,10 @@
 //! MemoryView. Users performing physical reads may use the
 //! [phys_view](crate::mem::phys_mem::PhysicalMemory::phys_view) function to access a view to this
 //! physical address space and gain access to the helper methods.
+//!
+//! [VirtualTranslate](crate::mem::virt_translate::VirtualTranslate) trait is optionally provided
+//! by processes in order to translate virtual addresses into physical ones. This is a lower level
+//! trait.
 //!
 //! # Philosophy
 //!

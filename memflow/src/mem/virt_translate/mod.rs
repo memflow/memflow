@@ -1,3 +1,65 @@
+//! Virtual address translation
+//!
+//! This module describes virtual to physical address translation interfaces.
+//!
+//! * [VirtualTranslate](VirtualTranslate) - user facing trait providing a way to translate
+//! addresses.
+//!
+//! * [VirtualTranslate2](VirtualTranslate2) - internally used trait that translates pairs of
+//! buffers and virtual addresses into pairs of buffers and their corresponding physical addresses.
+//! Is used to provide [virtual memory view](crate::mem::virt_mem::virtual_dma). This trait is also
+//! a [point of caching](crate::mem::virt_translate::cache) for the translations.
+//!
+//! * [VirtualTranslate3](VirtualTranslate3) - a sub-scope that translates addresses of a single
+//! address space. Objects that implement VirtualTranslate3 are designed to be cheap to construct,
+//! because they use pooled resources from VirtualTranslate2 objects. This is equivalent to storing
+//! a single VirtualTranslate2 state for the OS, while constructing VirtualTranslate3 instances for
+//! each process. This is precisely what is being done in our Win32 OS (see
+//! [here](https://github.com/memflow/memflow-win32/blob/791bb7afb8a984034dde314c136b7675b44e3abf/src/win32/process.rs#L348),
+//! and
+//! [here](https://github.com/memflow/memflow-win32/blob/791bb7afb8a984034dde314c136b7675b44e3abf/src/win32/process.rs#L314)).
+//!
+//! Below figure shows entire pipeline of a virtual address translating object with caching.
+//!
+//! ```text
+//! +--------------------------+
+//! |      (Win32Process)      |
+//! |     VirtualTranslate     | (Contains VT2+VT3+Phys)
+//! |        MemoryView        |
+//! +--------------------------+
+//!             |
+//!             |
+//! +-----------+--------------+
+//! | (CachedVirtualTranslate) | (Accepts VT3+Phys)
+//! |    VirtualTranslate2     | (Point of caching)
+//! +--------------------------+
+//!             |
+//!             |
+//!    +--------+----------+
+//!    | (DirectTranslate) | (Accepts VT3+Phys)
+//!    | VirtualTranslate2 | (Contains 64MB buffer)
+//!    +-------------------+
+//!             |
+//!             |
+//!  +----------+-------------+
+//!  | (X86 VirtualTranslate) | (Accepts 64MB buffer+Phys)
+//!  |   VirtualTranslate3    | (Contains CR3+ArchMmuSpec)
+//!  +------------------------+
+//!             |
+//!             |
+//!      +------+------+
+//!      | ArchMmuSpec | (Accepts translation root (CR3), buffer, Phys)
+//!      +-------------+ (Contains architecture specification)
+//!             |
+//!             |
+//!     +-------+--------+
+//!     | PhysicalMemory | (Accepts special page flags)
+//!     +----------------+
+//!             |
+//!             |
+//!            ... (Further nesting)
+//! ```
+
 use std::prelude::v1::*;
 
 use super::{MemoryRange, MemoryRangeCallback, VtopRange};
@@ -21,15 +83,6 @@ pub mod cache;
 
 pub use cache::*;
 
-//use crate::error::{Error, Result};
-//use crate::iter::SplitAtIndex;
-//use crate::mem::{MemData, PhysicalMemory};
-//use crate::types::{size, umem};
-//
-//use crate::types::{Address, PhysicalAddress};
-//
-//use cglue::callback::OpaqueCallback;
-
 #[cfg(test)]
 mod tests;
 
@@ -38,9 +91,51 @@ use crate::error::{Result, *};
 use crate::mem::PhysicalMemory;
 use crate::types::{imem, umem, Address, Page, PhysicalAddress};
 
+/// Translates virtual addresses into physical ones.
+///
+/// This is a simple user-facing trait to perform virtual address translations. Implementor needs
+/// to implement only 1 function - [virt_to_phys_list](VirtualTranslate::virt_to_phys_list). Other
+/// functions are provided as helpers built on top of the base function.
+///
+/// For overview how this trait relates to other virtual translation traits,
+/// check out documentation of [this module](self).
 #[cglue_trait]
 #[int_result]
 pub trait VirtualTranslate: Send {
+    /// Translate a list of address ranges into physical address space.
+    ///
+    /// This function will take addresses in `addrs` and produce translation of them into `out`.
+    /// Any unsuccessful ranges will be sent to `out_fail`.
+    ///
+    /// # Remarks
+    ///
+    /// Note that the number of outputs may not match the number of inputs - virtual address space
+    /// does not usually map linearly to the physical one, thus the input may need to be split into
+    /// smaller parts, which may not be combined back together.
+    ///
+    /// # Example:
+    ///
+    /// ```
+    /// use memflow::prelude::v1::*;
+    /// # use memflow::dummy::DummyOs;
+    ///
+    /// // Virtual translation test
+    /// fn vtop(mem: &mut impl VirtualTranslate, addr: Address) {
+    ///     let mut cnt = 0;
+    ///     mem.virt_to_phys_list(
+    ///         &[CTup2(addr, 0x2000)],
+    ///         // Successfully translated
+    ///         (&mut |_| { cnt += 1; true }).into(),
+    ///         // Failed to translate
+    ///         (&mut |v| panic!("Failed to translate: {:?}", v)).into()
+    ///     );
+    ///     // We attempt to translate 2 pages, thus there are 2 outputs.
+    ///     assert_eq!(2, cnt);
+    /// }
+    /// # let mut proc = DummyOs::quick_process(size::mb(2), &[]);
+    /// # let addr = proc.info().address;
+    /// # vtop(&mut proc.mem, addr);
+    /// ```
     fn virt_to_phys_list(
         &mut self,
         addrs: &[VtopRange],
@@ -48,6 +143,32 @@ pub trait VirtualTranslate: Send {
         out_fail: VirtualTranslationFailCallback,
     );
 
+    /// Translate a single virtual address range into physical address space.
+    ///
+    /// This function is a helper for [`virt_to_phys_list`](Self::virt_to_phys_list) that translates
+    /// just a single range, and has no failure output. It is otherwise identical.
+    ///
+    /// # Example:
+    ///
+    /// ```
+    /// use memflow::prelude::v1::*;
+    /// # use memflow::dummy::DummyOs;
+    ///
+    /// // Virtual translation test
+    /// fn vtop(mem: &mut impl VirtualTranslate, addr: Address) {
+    ///     let mut cnt = 0;
+    ///     mem.virt_to_phys_range(
+    ///         addr, addr + 0x2000,
+    ///         // Successfully translated
+    ///         (&mut |_| { cnt += 1; true }).into(),
+    ///     );
+    ///     // We attempt to translate 2 pages, thus there are 2 outputs.
+    ///     assert_eq!(2, cnt);
+    /// }
+    /// # let mut proc = DummyOs::quick_process(size::mb(2), &[]);
+    /// # let addr = proc.info().address;
+    /// # vtop(&mut proc.mem, addr);
+    /// ```
     fn virt_to_phys_range(
         &mut self,
         start: Address,
@@ -62,6 +183,41 @@ pub trait VirtualTranslate: Send {
         )
     }
 
+    /// Translate a single virtual address range into physical address space and coalesce nearby
+    /// regions.
+    ///
+    /// This function is nearly identical to [`virt_to_phys_range`](Self::virt_to_phys_range), however,
+    /// it performs additional post-processing of the output to combine consecutive ranges, and
+    /// output them in sorted order (by input virtual address).
+    ///
+    /// # Example:
+    ///
+    /// ```
+    /// use memflow::prelude::v1::*;
+    /// use memflow::dummy::{DummyOs, DummyMemory};
+    ///
+    /// // Create a dummy OS
+    /// let mem = DummyMemory::new(size::mb(1));
+    /// let mut os = DummyOs::new(mem);
+    ///
+    /// // Create a process with 1+10 randomly placed regions
+    /// let pid = os.alloc_process(size::kb(4), &[]);
+    /// let proc = os.process_by_pid(pid).unwrap().proc;
+    /// os.process_alloc_random_mem(&proc, 10, 1);
+    /// let mut mem = os.process_by_pid(pid).unwrap().mem;
+    ///
+    /// // Translate entire address space
+    /// let mut output = vec![];
+    ///
+    /// mem.virt_translation_map_range(
+    ///     Address::null(),
+    ///     Address::invalid(),
+    ///     (&mut output).into()
+    /// );
+    ///
+    /// // There should be 11 memory ranges.
+    /// assert_eq!(11, output.len());
+    /// ```
     fn virt_translation_map_range(
         &mut self,
         start: Address,
@@ -103,6 +259,8 @@ pub trait VirtualTranslate: Send {
     ///
     /// In case a range from [`Address::null()`], [`Address::invalid()`] is specified
     /// this function will return all mappings.
+    ///
+    /// Given negative gap size, they will not be removed.
     ///
     /// # Example:
     ///
@@ -150,6 +308,24 @@ pub trait VirtualTranslate: Send {
         );
     }
 
+    /// Translate a single virtual address into a single physical address.
+    ///
+    /// This is the simplest translation function that performs single address translation.
+    ///
+    /// # Example:
+    ///
+    /// ```
+    /// use memflow::prelude::v1::*;
+    /// # use memflow::dummy::DummyOs;
+    ///
+    /// // Virtual translation test
+    /// fn vtop(mem: &mut impl VirtualTranslate, addr: Address) {
+    ///     assert!(mem.virt_to_phys(addr).is_ok());
+    /// }
+    /// # let mut proc = DummyOs::quick_process(size::mb(2), &[]);
+    /// # let addr = proc.info().address;
+    /// # vtop(&mut proc.mem, addr);
+    /// ```
     fn virt_to_phys(&mut self, address: Address) -> Result<PhysicalAddress> {
         let mut out = Err(Error(ErrorOrigin::VirtualTranslate, ErrorKind::OutOfBounds));
 
@@ -170,11 +346,61 @@ pub trait VirtualTranslate: Send {
         out
     }
 
+    /// Retrieve page information at virtual address.
+    ///
+    /// This function is equivalent to calling
+    /// [containing_page](crate::types::physical_address::PhysicalAddress::containing_page) on
+    /// [`virt_to_phys`](Self::virt_to_phys) result.
+    ///
+    /// # Example:
+    ///
+    /// ```
+    /// use memflow::prelude::v1::*;
+    /// # use memflow::dummy::DummyOs;
+    ///
+    /// // Virtual translation test
+    /// fn vtop(mem: &mut impl VirtualTranslate, addr: Address) {
+    ///     let page = mem.virt_page_info(addr).unwrap();
+    ///     assert_eq!(page.page_size, mem::kb(4));
+    ///     assert_eq!(page.page_type, PageType::WRITEABLE);
+    /// }
+    /// # let mut proc = DummyOs::quick_process(size::mb(2), &[]);
+    /// # let addr = proc.info().address;
+    /// # vtop(&mut proc.mem, addr);
+    /// ```
     fn virt_page_info(&mut self, addr: Address) -> Result<Page> {
         let paddr = self.virt_to_phys(addr)?;
         Ok(paddr.containing_page())
     }
 
+    /// Retrieve a vector of physical pages within given range.
+    ///
+    /// This is equivalent to calling [`virt_page_map_range`](Self::virt_page_map_range) with a
+    /// vector output argument.
+    ///
+    /// # Example:
+    ///
+    /// ```
+    /// use memflow::prelude::v1::*;
+    /// # use memflow::dummy::{DummyMemory, DummyOs};
+    /// # use memflow::architecture::x86::x64;
+    /// # let dummy_mem = DummyMemory::new(size::mb(16));
+    /// # let mut dummy_os = DummyOs::new(dummy_mem);
+    /// # let (dtb, virt_base) = dummy_os.alloc_dtb(size::mb(2), &[]);
+    /// # let translator = x64::new_translator(dtb);
+    /// # let arch = x64::ARCH;
+    /// # let mut virt_mem = VirtualDma::new(dummy_os.forward_mut(), arch, translator);
+    /// println!("{:>16} {:>12} {:<}", "ADDR", "SIZE", "TYPE");
+    ///
+    /// // display all mappings with a gap size of 0
+    /// let out = virt_mem.virt_page_map_range_vec(0, Address::null(), Address::invalid());
+    ///
+    /// assert!(out.len() > 0);
+    ///
+    /// for CTup3(addr, size, pagety) in out {
+    ///     println!("{:>16x} {:>12x} {:<?}", addr, size, pagety);
+    /// }
+    /// ```
     #[skip_func]
     fn virt_page_map_range_vec(
         &mut self,
@@ -188,10 +414,67 @@ pub trait VirtualTranslate: Send {
     }
 
     // page map helpers
+
+    /// Get virtual translation map over entire address space.
+    ///
+    /// This is equivalent to [`virt_translation_map_range`](Self::virt_translation_map_range) with a
+    /// range from null to highest address.
+    ///
+    /// # Example:
+    ///
+    /// ```
+    /// use memflow::prelude::v1::*;
+    /// use memflow::dummy::{DummyOs, DummyMemory};
+    ///
+    /// // Create a dummy OS
+    /// let mem = DummyMemory::new(size::mb(1));
+    /// let mut os = DummyOs::new(mem);
+    ///
+    /// // Create a process with 1+10 randomly placed regions
+    /// let pid = os.alloc_process(size::kb(4), &[]);
+    /// let proc = os.process_by_pid(pid).unwrap().proc;
+    /// os.process_alloc_random_mem(&proc, 10, 1);
+    /// let mut mem = os.process_by_pid(pid).unwrap().mem;
+    ///
+    /// // Translate entire address space
+    /// let mut output = vec![];
+    ///
+    /// mem.virt_translation_map((&mut output).into());
+    ///
+    /// // There should be 11 memory ranges.
+    /// assert_eq!(11, output.len());
+    /// ```
     fn virt_translation_map(&mut self, out: VirtualTranslationCallback) {
         self.virt_translation_map_range(Address::null(), Address::invalid(), out)
     }
 
+    /// Get virtual translation map over entire address space and return it as a vector.
+    ///
+    /// This is a [`virt_translation_map`](Self::virt_translation_map) helper that stores results
+    /// into a vector that gets returned.
+    ///
+    /// # Example:
+    ///
+    /// ```
+    /// use memflow::prelude::v1::*;
+    /// use memflow::dummy::{DummyOs, DummyMemory};
+    ///
+    /// // Create a dummy OS
+    /// let mem = DummyMemory::new(size::mb(1));
+    /// let mut os = DummyOs::new(mem);
+    ///
+    /// // Create a process with 1+10 randomly placed regions
+    /// let pid = os.alloc_process(size::kb(4), &[]);
+    /// let proc = os.process_by_pid(pid).unwrap().proc;
+    /// os.process_alloc_random_mem(&proc, 10, 1);
+    /// let mut mem = os.process_by_pid(pid).unwrap().mem;
+    ///
+    /// // Translate entire address space
+    /// let output = mem.virt_translation_map_vec();
+    ///
+    /// // There should be 11 memory ranges.
+    /// assert_eq!(11, output.len());
+    /// ```
     #[skip_func]
     fn virt_translation_map_vec(&mut self) -> Vec<VirtualTranslation> {
         let mut out = vec![];
@@ -201,9 +484,26 @@ pub trait VirtualTranslate: Send {
 
     /// Attempt to translate a physical address into a virtual one.
     ///
-    /// This function is the reverse of [`virt_to_phys`](Self::virt_to_phys). Note, that there could be multiple virtual
-    /// addresses for one physical address. If all candidates are needed, use
-    /// [`phys_to_virt_vec`](Self::phys_to_virt_vec) function.
+    /// This function is the reverse of [`virt_to_phys`](Self::virt_to_phys). Note, that there
+    /// could could be multiple virtual addresses for one physical address. If all candidates
+    /// are needed, use [`phys_to_virt_vec`](Self::phys_to_virt_vec) function.
+    ///
+    /// # Example:
+    ///
+    /// ```
+    /// use memflow::prelude::v1::*;
+    /// # use memflow::dummy::DummyOs;
+    ///
+    /// // Virtual translation and reversal test
+    /// fn vtop_ptov(mem: &mut impl VirtualTranslate, addr: Address) {
+    ///     let paddr = mem.virt_to_phys(addr).unwrap();
+    ///     let vaddr = mem.phys_to_virt(paddr.address());
+    ///     assert_eq!(vaddr, Some(addr));
+    /// }
+    /// # let mut proc = DummyOs::quick_process(size::mb(2), &[]);
+    /// # let addr = proc.info().address;
+    /// # vtop_ptov(&mut proc.mem, addr);
+    /// ```
     fn phys_to_virt(&mut self, phys: Address) -> Option<Address> {
         let mut virt = None;
 
@@ -226,6 +526,26 @@ pub trait VirtualTranslate: Send {
     }
 
     /// Retrieve all virtual address that map into a given physical address.
+    ///
+    /// This function is the reverse of [`virt_to_phys`](Self::virt_to_phys), and it retrieves all
+    /// physical addresses that map to this virtual address.
+    ///
+    /// # Example:
+    ///
+    /// ```
+    /// use memflow::prelude::v1::*;
+    /// # use memflow::dummy::DummyOs;
+    ///
+    /// // Virtual translation and reversal test
+    /// fn vtop_ptov(mem: &mut impl VirtualTranslate, addr: Address) {
+    ///     let paddr = mem.virt_to_phys(addr).unwrap();
+    ///     let vaddrs = mem.phys_to_virt_vec(paddr.address());
+    ///     assert_eq!(&vaddrs, &[addr]);
+    /// }
+    /// # let mut proc = DummyOs::quick_process(size::mb(2), &[]);
+    /// # let addr = proc.info().address;
+    /// # vtop_ptov(&mut proc.mem, addr);
+    /// ```
     #[skip_func]
     fn phys_to_virt_vec(&mut self, phys: Address) -> Vec<Address> {
         let mut virt = vec![];
@@ -350,7 +670,7 @@ impl PartialEq for VirtualTranslation {
 }
 
 #[repr(C)]
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 #[cfg_attr(feature = "abi_stable", derive(::abi_stable::StableAbi))]
 pub struct VirtualTranslationFail {

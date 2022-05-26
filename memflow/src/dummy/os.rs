@@ -314,25 +314,55 @@ impl DummyOs {
         )
     }
 
+    pub fn process_alloc_random_mem(&mut self, proc: &DummyProcessInfo, cnt: usize, size: usize) {
+        for _ in 0..cnt {
+            let virt_base = (Address::null()
+                + self
+                    .rng
+                    .gen_range(0x0001_0000_0000_u64..((!0_u64) << 20) >> 20))
+            .as_mem_aligned(mem::gb(2));
+
+            self.alloc_mem_to_dtb(proc.dtb, virt_base, size, &[]);
+        }
+    }
+
     pub fn alloc_dtb_const_base(
         &mut self,
         virt_base: Address,
         map_size: usize,
         test_buf: &[u8],
     ) -> Address {
-        let mut cur_len = 0;
+        let dtb = self.alloc_pt_page().addr;
 
-        let dtb = self.alloc_pt_page();
+        unsafe {
+            *(self
+                .mem
+                .buf
+                .as_ptr()
+                .add(clamp_to_usize(dtb.to_umem()))
+                .cast::<PageTable>() as *mut _) = PageTable::new()
+        };
+
+        self.alloc_mem_to_dtb(dtb, virt_base, map_size, test_buf)
+    }
+
+    pub fn alloc_mem_to_dtb(
+        &mut self,
+        dtb: Address,
+        virt_base: Address,
+        map_size: usize,
+        test_buf: &[u8],
+    ) -> Address {
+        let mut cur_len = 0;
 
         let pml4 = unsafe {
             &mut *(self
                 .mem
                 .buf
                 .as_ptr()
-                .add(clamp_to_usize(dtb.addr.to_umem()))
+                .add(clamp_to_usize(dtb.to_umem()))
                 .cast::<PageTable>() as *mut _)
         };
-        *pml4 = PageTable::new();
 
         let mut pt_mapper =
             unsafe { OffsetPageTable::new(pml4, VirtAddr::from_ptr(self.mem.buf.as_ptr())) };
@@ -397,7 +427,7 @@ impl DummyOs {
             cur_len += page_info.size.to_size() as usize;
         }
 
-        dtb.addr
+        dtb
     }
 
     //Given it's the tests, we will have a panic if out of mem

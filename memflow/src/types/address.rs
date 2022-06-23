@@ -257,8 +257,8 @@ impl Address {
     ///
     /// println!("mask: {}", Address::bit_mask(0..11));
     /// ```
-    pub const fn bit_mask_u8(bits: ops::Range<u8>) -> Address {
-        Address((!0 >> (UMEM_BITS - 1 - bits.end)) & !((1 << bits.start) - 1))
+    pub const fn bit_mask_u8(bits: ops::RangeInclusive<u8>) -> Address {
+        Address((!0 >> (UMEM_BITS - 1 - *bits.end())) & !((1 << *bits.start()) - 1))
     }
 
     /// Checks wether the address is zero or not.

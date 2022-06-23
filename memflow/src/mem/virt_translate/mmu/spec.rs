@@ -69,7 +69,7 @@ impl ArchMmuSpec {
                 } else {
                     def.pte_size.to_le().trailing_zeros() as u8
                 };
-            let mask = Address::bit_mask_u8(min..max);
+            let mask = Address::bit_mask_u8(min..=max);
             pte_addr_masks[i] = mask.to_umem();
 
             pt_leaf_size[i] = def.pt_leaf_size(i);
@@ -77,8 +77,8 @@ impl ArchMmuSpec {
 
             let (min, max) = def.virt_addr_bit_range(i);
             virt_addr_bit_ranges[i] = (min, max);
-            virt_addr_masks[i] = Address::bit_mask_u8(0..(max - min - 1)).to_umem();
-            virt_addr_page_masks[i] = Address::bit_mask_u8(0..(max - 1)).to_umem();
+            virt_addr_masks[i] = Address::bit_mask_u8(0..=max - min - 1).to_umem();
+            virt_addr_page_masks[i] = Address::bit_mask_u8(0..=max - 1).to_umem();
 
             i += 1;
         }

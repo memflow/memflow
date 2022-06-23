@@ -723,6 +723,16 @@ mod tests {
     }
 
     #[test]
+    fn test_bit_mask_u8() {
+        assert_eq!(Address::bit_mask_u8(0..=11).to_umem(), 0xfff);
+        assert_eq!(Address::bit_mask_u8(12..=20).to_umem(), 0x001f_f000);
+        assert_eq!(Address::bit_mask_u8(21..=29).to_umem(), 0x3fe0_0000);
+        assert_eq!(Address::bit_mask_u8(30..=38).to_umem(), 0x007f_c000_0000);
+        assert_eq!(Address::bit_mask_u8(39..=47).to_umem(), 0xff80_0000_0000);
+        assert_eq!(Address::bit_mask_u8(12..=51).to_umem(), 0x000f_ffff_ffff_f000);
+    }
+
+    #[test]
     fn test_ops() {
         assert_eq!(Address::from(10_u64) + 5usize, Address::from(15_u64));
 

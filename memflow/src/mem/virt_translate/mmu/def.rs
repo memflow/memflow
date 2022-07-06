@@ -74,7 +74,7 @@ impl ArchMmuDef {
             } else {
                 self.pte_size.to_le().trailing_zeros() as u8
             };
-        let mask = Address::bit_mask(min..max);
+        let mask = Address::bit_mask(min..=max);
         pte_addr.to_umem() & umem::from_le(mask.to_umem())
     }
 

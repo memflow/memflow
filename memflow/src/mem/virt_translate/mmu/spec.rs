@@ -137,7 +137,7 @@ impl ArchMmuSpec {
 
         // Trim to virt address space limit
         let (left, reject) = tr_data
-            .split_inclusive_at(Address::bit_mask(0..(self.def.addr_size * 8 - 1)).to_umem());
+            .split_inclusive_at(Address::bit_mask(0..=(self.def.addr_size * 8 - 1)).to_umem());
         let left = left.unwrap();
 
         if let Some(data) = reject {
@@ -170,7 +170,8 @@ impl ArchMmuSpec {
             if let Some(higher) = higher {
                 // The upper half has to be all negative (all bits set), so compare the masks
                 // to see if it is the case.
-                let lhs = Address::bit_mask(virt_bit_range..(self.def.addr_size * 8 - 1)).to_umem();
+                let lhs =
+                    Address::bit_mask(virt_bit_range..=(self.def.addr_size * 8 - 1)).to_umem();
                 let rhs = higher.addr.to_umem() & lhs;
 
                 if (lhs ^ rhs) == 0 {

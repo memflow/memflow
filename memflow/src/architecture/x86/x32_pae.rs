@@ -46,7 +46,7 @@ mod tests {
         let mask_addr = Address::invalid();
         assert_eq!(
             mmu.pte_addr_mask(mask_addr, 0),
-            Address::bit_mask(5..35).to_umem()
+            Address::bit_mask(5..=35).to_umem()
         );
         assert_eq!(
             mmu.pte_addr_mask(mask_addr, 1),

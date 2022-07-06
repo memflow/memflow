@@ -49,15 +49,15 @@ mod tests {
         );
         assert_eq!(
             mmu.pte_addr_mask(mask_addr, 1),
-            Address::bit_mask(12..51).to_umem()
+            Address::bit_mask(12..=51).to_umem()
         );
         assert_eq!(
             mmu.pte_addr_mask(mask_addr, 2),
-            Address::bit_mask(12..51).to_umem()
+            Address::bit_mask(12..=51).to_umem()
         );
         assert_eq!(
             mmu.pte_addr_mask(mask_addr, 3),
-            Address::bit_mask(12..51).to_umem()
+            Address::bit_mask(12..=51).to_umem()
         );
     }
 

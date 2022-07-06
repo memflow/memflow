@@ -238,7 +238,7 @@ impl Address {
     /// ```
     /// use memflow::types::Address;
     ///
-    /// println!("mask: {}", Address::bit_mask(0..11));
+    /// println!("mask: {}", Address::bit_mask(0..=11));
     /// ```
     pub fn bit_mask<T: TryInto<u8>>(bits: ops::RangeInclusive<T>) -> Address
     where
@@ -389,7 +389,7 @@ impl Address {
     /// use memflow::types::Address;
     ///
     /// let addr = Address::from(123456789);
-    /// println!("bits[0..2] = {}", addr.extract_bits(0..2));
+    /// println!("bits[0..2] = {}", addr.extract_bits(0..=2));
     /// ```
     pub fn extract_bits<T: TryInto<u8>>(self, bits: ops::RangeInclusive<T>) -> Address
     where

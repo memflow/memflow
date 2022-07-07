@@ -238,12 +238,16 @@ impl Address {
     /// ```
     /// use memflow::types::Address;
     ///
-    /// println!("mask: {}", Address::bit_mask(0..11));
+    /// println!("mask: {}", Address::bit_mask(0..=11));
     /// ```
-    pub fn bit_mask<T: TryInto<u8>>(bits: ops::Range<T>) -> Address {
+    pub fn bit_mask<T: TryInto<u8>>(bits: ops::RangeInclusive<T>) -> Address
+    where
+        T: TryInto<u8>,
+        T: Copy,
+    {
         Address(
-            (!0 >> ((UMEM_BITS - 1) - bits.end.try_into().ok().unwrap()))
-                & !((1 << bits.start.try_into().ok().unwrap()) - 1),
+            (!0 >> ((UMEM_BITS - 1) - (*bits.end()).try_into().ok().unwrap()))
+                & !((1 << (*bits.start()).try_into().ok().unwrap()) - 1),
         )
     }
 
@@ -255,10 +259,10 @@ impl Address {
     /// ```
     /// use memflow::types::Address;
     ///
-    /// println!("mask: {}", Address::bit_mask(0..11));
+    /// println!("mask: {}", Address::bit_mask_u8(0..=11));
     /// ```
-    pub const fn bit_mask_u8(bits: ops::Range<u8>) -> Address {
-        Address((!0 >> (UMEM_BITS - 1 - bits.end)) & !((1 << bits.start) - 1))
+    pub const fn bit_mask_u8(bits: ops::RangeInclusive<u8>) -> Address {
+        Address((!0 >> (UMEM_BITS - 1 - *bits.end())) & !((1 << *bits.start()) - 1))
     }
 
     /// Checks wether the address is zero or not.
@@ -385,9 +389,12 @@ impl Address {
     /// use memflow::types::Address;
     ///
     /// let addr = Address::from(123456789);
-    /// println!("bits[0..2] = {}", addr.extract_bits(0..2));
+    /// println!("bits[0..2] = {}", addr.extract_bits(0..=2));
     /// ```
-    pub fn extract_bits<T: TryInto<u8>>(self, bits: ops::Range<T>) -> Address {
+    pub fn extract_bits<T: TryInto<u8>>(self, bits: ops::RangeInclusive<T>) -> Address
+    where
+        T: Copy,
+    {
         (self.0 & Address::bit_mask(bits).to_umem()).into()
     }
 
@@ -714,12 +721,25 @@ mod tests {
 
     #[test]
     fn test_bit_mask() {
-        assert_eq!(Address::bit_mask(0..11).to_umem(), 0xfff);
-        assert_eq!(Address::bit_mask(12..20).to_umem(), 0x001f_f000);
-        assert_eq!(Address::bit_mask(21..29).to_umem(), 0x3fe0_0000);
-        assert_eq!(Address::bit_mask(30..38).to_umem(), 0x007f_c000_0000);
-        assert_eq!(Address::bit_mask(39..47).to_umem(), 0xff80_0000_0000);
-        assert_eq!(Address::bit_mask(12..51).to_umem(), 0x000f_ffff_ffff_f000);
+        assert_eq!(Address::bit_mask(0..=11).to_umem(), 0xfff);
+        assert_eq!(Address::bit_mask(12..=20).to_umem(), 0x001f_f000);
+        assert_eq!(Address::bit_mask(21..=29).to_umem(), 0x3fe0_0000);
+        assert_eq!(Address::bit_mask(30..=38).to_umem(), 0x007f_c000_0000);
+        assert_eq!(Address::bit_mask(39..=47).to_umem(), 0xff80_0000_0000);
+        assert_eq!(Address::bit_mask(12..=51).to_umem(), 0x000f_ffff_ffff_f000);
+    }
+
+    #[test]
+    fn test_bit_mask_u8() {
+        assert_eq!(Address::bit_mask_u8(0..=11).to_umem(), 0xfff);
+        assert_eq!(Address::bit_mask_u8(12..=20).to_umem(), 0x001f_f000);
+        assert_eq!(Address::bit_mask_u8(21..=29).to_umem(), 0x3fe0_0000);
+        assert_eq!(Address::bit_mask_u8(30..=38).to_umem(), 0x007f_c000_0000);
+        assert_eq!(Address::bit_mask_u8(39..=47).to_umem(), 0xff80_0000_0000);
+        assert_eq!(
+            Address::bit_mask_u8(12..=51).to_umem(),
+            0x000f_ffff_ffff_f000
+        );
     }
 
     #[test]

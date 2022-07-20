@@ -1,6 +1,0 @@
-virt_read_unicode_string() should return ReprCString (like virt_read_cstr)
-
-win32 helper functions should be unified with the process trait
-
-win32 should not set process name twice (eproc name + fullname)?
-  -> unify code paths

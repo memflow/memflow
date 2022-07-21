@@ -2,6 +2,10 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
+## 0.2.0-beta6
+- Added additional export/import/section helpers
+- Dependency updates
+
 ## 0.2.0-beta5
 - Cleaned up plugin search paths and matched them with memflowup
 - Improved error messages

@@ -9,7 +9,7 @@ use std::time::Duration;
 
 use super::{
     args::split_str_args, Args, LibArc, LibContext, Loadable, OsInstanceArcBox, PluginDescriptor,
-    PluginLogger, TargetInfo,
+    TargetInfo,
 };
 
 use crate::connector::cpu_state::*;
@@ -18,32 +18,7 @@ use cglue::trait_group::c_void;
 cglue_trait_group!(ConnectorInstance<'a>, { PhysicalMemory, Clone }, { ConnectorCpuStateInner<'a> });
 pub type MuConnectorInstanceArcBox<'a> = std::mem::MaybeUninit<ConnectorInstanceArcBox<'a>>;
 
-pub fn create<T: 'static + PhysicalMemory + Clone>(
-    args: Option<&ConnectorArgs>,
-    lib: LibArc,
-    logger: Option<&'static PluginLogger>,
-    out: &mut MuConnectorInstanceArcBox<'static>,
-    create_fn: impl Fn(&ConnectorArgs) -> Result<T>,
-) -> i32
-where
-    (T, LibArc): Into<ConnectorInstanceBaseArcBox<'static, T, c_void>>,
-    (
-        CachedPhysicalMemory<'static, T, TimedCacheValidator>,
-        LibArc,
-    ): Into<
-        ConnectorInstanceBaseArcBox<
-            'static,
-            CachedPhysicalMemory<'static, T, TimedCacheValidator>,
-            c_void,
-        >,
-    >,
-{
-    super::util::create(args, lib, logger, out, |a, lib| {
-        Ok(into_connector(create_fn(a)?, lib, a))
-    })
-}
-
-pub fn into_connector<T: Send + 'static + PhysicalMemory>(
+pub fn create_instance<T: Send + 'static + PhysicalMemory>(
     conn: T,
     lib: LibArc,
     args: &ConnectorArgs,

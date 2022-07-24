@@ -101,13 +101,36 @@ pub fn find_export_by_prefix(
         .collect::<Vec<_>>())
 }
 
+/// Wrapper for instantiating object.
+///
+/// This function will initialize the [`PluginLogger`],
+/// parse args into `Args`, and call the create_fn
+///
+/// This function is used by the connector proc macro
+pub fn create_wrapper<A: Default, T>(
+    args: Option<&A>,
+    lib: LibArc,
+    logger: Option<&'static PluginLogger>,
+    out: &mut MaybeUninit<T>,
+    create_fn: impl FnOnce(&A, LibArc) -> Result<T, Error>,
+) -> i32 {
+    if let Some(logger) = logger {
+        logger.init().ok();
+    }
+
+    let default: A = Default::default();
+    let args = args.unwrap_or(&default);
+
+    into_int_out_result(create_fn(args, lib), out)
+}
+
 /// Wrapper for instantiating object with all needed parameters
 ///
 /// This function will initialize the [`PluginLogger`],
-/// and call the create_fn with `input` forwarded.
+/// parse args into `Args` and call the create_fn with `input` forwarded.
 ///
-/// This function is used by the proc macros
-pub fn create_bare<A: Default, T, I>(
+/// This function is used by the connector proc macro
+pub fn create_wrapper_with_input<A: Default, T, I>(
     args: Option<&A>,
     input: I,
     lib: LibArc,
@@ -129,26 +152,4 @@ pub fn create_bare<A: Default, T, I>(
         }),
         out,
     )
-}
-
-/// Wrapper for instantiating object.
-///
-/// This function will parse args into `Args`, and call the create_fn
-///
-/// This function is used by the proc macros
-pub fn create<A: Default, T>(
-    args: Option<&A>,
-    lib: LibArc,
-    logger: Option<&'static PluginLogger>,
-    out: &mut MaybeUninit<T>,
-    create_fn: impl FnOnce(&A, LibArc) -> Result<T, Error>,
-) -> i32 {
-    if let Some(logger) = logger {
-        logger.init().ok();
-    }
-
-    let default: A = Default::default();
-    let args = args.unwrap_or(&default);
-
-    into_int_out_result(create_fn(args, lib), out)
 }

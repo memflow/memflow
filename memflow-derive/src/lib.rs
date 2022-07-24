@@ -15,6 +15,13 @@ struct ConnectorFactoryArgs {
     help_fn: Option<String>,
     #[darling(default)]
     target_list_fn: Option<String>,
+    #[darling(default)]
+    accept_input: bool,
+    #[darling(default)]
+    return_wrapped: bool,
+
+    #[darling(default)]
+    default_caching: Option<bool>,
 }
 
 #[derive(Debug, FromMeta)]
@@ -37,16 +44,47 @@ fn validate_plugin_name(name: &str) {
     }
 }
 
-// We should add conditional compilation for the crate-type here
-// so our rust libraries who use a connector wont export those functions
-// again by themselves (e.g. the ffi).
-//
-// This would also lead to possible duplicated symbols if
-// multiple connectors are imported.
-//
-// See https://github.com/rust-lang/rust/issues/20267 for the tracking issue.
-//
-// #[cfg(crate_type = "cdylib")]
+/// We should add conditional compilation for the crate-type here
+/// so our rust libraries who use a connector wont export those functions
+/// again by themselves (e.g. the ffi).
+///
+/// This would also lead to possible duplicated symbols if
+/// multiple connectors are imported.
+///
+/// See https://github.com/rust-lang/rust/issues/20267 for the tracking issue.
+///
+/// #[cfg(crate_type = "cdylib")]
+///
+/// Examples:
+/// ```ignore
+/// #[connector(name = "coredump", help_fn = "help")]
+/// pub fn create_connector<'a>(args: &ConnectorArgs) -> Result<CoreDump<'a>> { ... }
+/// ```
+///
+/// ```ignore
+/// #[connector(name = "coredump", help_fn = "help", return_wrapped = true)]
+/// pub fn create_connector<'a>(
+///     args: &ConnectorArgs,
+///     lib: LibArc,
+/// ) -> Result<ConnectorInstanceArcBox<'static>> { ... }
+/// ```
+///
+/// ```
+/// #[connector(name = "coredump", help_fn = "help", accept_input = true)]
+/// pub fn create_connector<'a>(
+///     args: &ConnectorArgs,
+///     os: Option<OsInstanceArcBox<'_>>,
+/// ) -> Result<CoreDump<'a>> { ... }
+/// ```
+///
+/// ```
+/// #[connector(name = "coredump", help_fn = "help", accept_input = true, return_wrapped = true)]
+/// pub fn create_connector<'a>(
+///     args: &ConnectorArgs,
+///     os: Option<OsInstanceArcBox<'_>>,
+///     lib: LibArc,
+/// ) -> Result<ConnectorInstanceArcBox<'static>> { ... }
+/// ```
 #[proc_macro_attribute]
 pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
     let crate_path = crate_path();
@@ -90,16 +128,51 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
     let func = parse_macro_input!(input as ItemFn);
     let func_name = &func.sig.ident;
 
+    let func_accept_input = args.accept_input;
+    let func_return_wrapped = args.return_wrapped;
+
+    // create wrapping function according to input/output configuration
+    let create_fn_gen_inner = if func_accept_input {
+        if !func_return_wrapped {
+            // args + os
+            quote! {
+                #crate_path::plugins::util::create_wrapper_with_input(args, os.into(), lib, logger, out, |a, os, lib| {
+                    Ok(#crate_path::plugins::connector::create_instance(#func_name(a, os)?, lib, a))
+                })
+            }
+        } else {
+            // args + os + lib
+            quote! {
+                #crate_path::plugins::util::create_wrapper_with_input(args, os.into(), lib, logger, out, #func_name)
+            }
+        }
+    } else {
+        if !func_return_wrapped {
+            // args
+            // TODO: wrap
+            quote! {
+                #crate_path::plugins::util::create_wrapper(args, lib, logger, out, |a, lib| {
+                    Ok(#crate_path::plugins::connector::create_instance(#func_name(a)?, lib, a))
+                })
+            }
+        } else {
+            // args + lib
+            quote! {
+                #crate_path::plugins::util::create_wrapper(args, lib, logger, out, #func_name)
+            }
+        }
+    };
+
     let create_fn_gen = quote! {
             #[doc(hidden)]
             extern "C" fn mf_create(
                 args: Option<&#crate_path::plugins::connector::ConnectorArgs>,
-                _: cglue::option::COption<#crate_path::plugins::os::OsInstanceArcBox>,
+                os: cglue::option::COption<#crate_path::plugins::os::OsInstanceArcBox>,
                 lib: #crate_path::plugins::LibArc,
                 logger: Option<&'static #crate_path::plugins::PluginLogger>,
                 out: &mut #crate_path::plugins::connector::MuConnectorInstanceArcBox<'static>
             ) -> i32 {
-                #crate_path::plugins::connector::create(args, lib, logger, out, #func_name)
+                #create_fn_gen_inner
             }
     };
 
@@ -144,125 +217,7 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
         #[no_mangle]
         pub static #connector_descriptor: #crate_path::plugins::ConnectorDescriptor = #crate_path::plugins::ConnectorDescriptor {
             plugin_version: #crate_path::plugins::MEMFLOW_PLUGIN_VERSION,
-            input_layout: <<#crate_path::plugins::LoadableConnector as #crate_path::plugins::Loadable>::CInputArg as #crate_path::abi_stable::StableAbi>::LAYOUT,
-            output_layout: <<#crate_path::plugins::LoadableConnector as #crate_path::plugins::Loadable>::Instance as #crate_path::abi_stable::StableAbi>::LAYOUT,
-            name: #crate_path::cglue::CSliceRef::from_str(#connector_name),
-            version: #crate_path::cglue::CSliceRef::from_str(#version_gen),
-            description: #crate_path::cglue::CSliceRef::from_str(#description_gen),
-            help_callback: #help_gen,
-            target_list_callback: #target_list_gen,
-            create: mf_create,
-        };
-
-        #create_fn_gen
-
-        #help_fn_gen
-
-        #target_list_fn_gen
-
-        #func
-    };
-
-    gen.into()
-}
-
-#[proc_macro_attribute]
-pub fn connector_bare(args: TokenStream, input: TokenStream) -> TokenStream {
-    let crate_path = crate_path();
-
-    let attr_args = parse_macro_input!(args as AttributeArgs);
-    let args = match ConnectorFactoryArgs::from_list(&attr_args) {
-        Ok(v) => v,
-        Err(e) => return TokenStream::from(e.write_errors()),
-    };
-
-    let connector_name = args.name;
-    validate_plugin_name(&connector_name);
-
-    let version_gen = args
-        .version
-        .map_or_else(|| quote! { env!("CARGO_PKG_VERSION") }, |v| quote! { #v });
-
-    let description_gen = args.description.map_or_else(
-        || quote! { env!("CARGO_PKG_DESCRIPTION") },
-        |d| quote! { #d },
-    );
-
-    let help_gen = if args.help_fn.is_some() {
-        quote! { Some(mf_help_callback) }
-    } else {
-        quote! { None }
-    };
-
-    let target_list_gen = if args.target_list_fn.is_some() {
-        quote! { Some(mf_target_list_callback) }
-    } else {
-        quote! { None }
-    };
-
-    let connector_descriptor: proc_macro2::TokenStream =
-        ["MEMFLOW_CONNECTOR_", &(&connector_name).to_uppercase()]
-            .concat()
-            .parse()
-            .unwrap();
-
-    let func = parse_macro_input!(input as ItemFn);
-    let func_name = &func.sig.ident;
-
-    let create_fn_gen = quote! {
-            #[doc(hidden)]
-            extern "C" fn mf_create(
-                args: Option<&#crate_path::plugins::connector::ConnectorArgs>,
-                os: cglue::option::COption<#crate_path::plugins::os::OsInstanceArcBox<'static>>,
-                lib: #crate_path::plugins::LibArc,
-                logger: Option<&'static #crate_path::plugins::PluginLogger>,
-                out: &mut #crate_path::plugins::connector::MuConnectorInstanceArcBox<'static>
-            ) -> i32 {
-                #crate_path::plugins::create_bare(args, os.into(), lib, logger, out, #func_name)
-            }
-    };
-
-    let help_fn_gen = args.help_fn.map(|v| v.parse().unwrap()).map_or_else(
-        proc_macro2::TokenStream::new,
-        |func_name: proc_macro2::TokenStream| {
-            quote! {
-                #[doc(hidden)]
-                extern "C" fn mf_help_callback(
-                    mut callback: #crate_path::plugins::HelpCallback,
-                ) {
-                    let helpstr = #func_name();
-                    let _ = callback.call(helpstr.into());
-                }
-            }
-        },
-    );
-
-    let target_list_fn_gen = args.target_list_fn.map(|v| v.parse().unwrap()).map_or_else(
-        proc_macro2::TokenStream::new,
-        |func_name: proc_macro2::TokenStream| {
-            quote! {
-                #[doc(hidden)]
-                extern "C" fn mf_target_list_callback(
-                    mut callback: #crate_path::plugins::TargetCallback,
-                ) -> i32 {
-                    #func_name()
-                        .map(|mut targets| {
-                            targets
-                                .into_iter()
-                                .take_while(|t| callback.call(t.clone()))
-                                .for_each(|_| ());
-                        })
-                        .into_int_result()
-                }
-            }
-        },
-    );
-
-    let gen = quote! {
-        #[doc(hidden)]
-        #[no_mangle]
-        pub static #connector_descriptor: #crate_path::plugins::ConnectorDescriptor = #crate_path::plugins::ConnectorDescriptor {
-            plugin_version: #crate_path::plugins::MEMFLOW_PLUGIN_VERSION,
+            accept_input: #func_accept_input,
             input_layout: <<#crate_path::plugins::LoadableConnector as #crate_path::plugins::Loadable>::CInputArg as #crate_path::abi_stable::StableAbi>::LAYOUT,
             output_layout: <<#crate_path::plugins::LoadableConnector as #crate_path::plugins::Loadable>::Instance as #crate_path::abi_stable::StableAbi>::LAYOUT,
             name: #crate_path::cglue::CSliceRef::from_str(#connector_name),

@@ -33,7 +33,7 @@ pub fn create<T: 'static + Os + Clone + OsInstanceVtableFiller<'static, CBox<'st
 where
     (T, LibArc): Into<OsInstanceBaseArcBox<'static, T, c_void>>,
 {
-    super::util::create(args, lib, logger, out, |a, lib| {
+    super::util::create_wrapper(args, lib, logger, out, |a, lib| {
         Ok(group_obj!((create_fn(a, conn)?, lib) as OsInstance))
     })
 }

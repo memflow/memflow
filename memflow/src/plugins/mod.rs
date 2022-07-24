@@ -35,8 +35,9 @@ pub type OsInputArg = <LoadableOs as Loadable>::InputArg;
 pub mod logger;
 pub use logger::*; // TODO: restrict
 
-pub(crate) mod util;
-pub use util::create_bare;
+// TODO: proper visibility
+//pub(crate) mod util;
+pub mod util;
 
 use crate::error::{Result, *};
 
@@ -50,7 +51,7 @@ use libloading::Library;
 use once_cell::sync::OnceCell;
 
 /// Exported memflow plugins version
-pub const MEMFLOW_PLUGIN_VERSION: i32 = -8;
+pub const MEMFLOW_PLUGIN_VERSION: i32 = -9;
 
 /// Help and Target callbacks
 pub type HelpCallback<'a> = OpaqueCallback<'a, ReprCString>;
@@ -107,6 +108,9 @@ pub struct PluginDescriptor<T: Loadable> {
     ///
     /// If the versions mismatch the inventory will refuse to load.
     pub plugin_version: i32,
+
+    /// Does the plugin accept an input parameter?
+    pub accept_input: bool,
 
     /// Layout of the input type.
     pub input_layout: &'static TypeLayout,

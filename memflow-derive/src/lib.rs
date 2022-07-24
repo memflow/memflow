@@ -20,7 +20,7 @@ struct ConnectorFactoryArgs {
     #[darling(default)]
     return_wrapped: bool,
     #[darling(default)]
-    no_cache: bool,
+    no_default_cache: bool,
 }
 
 #[derive(Debug, FromMeta)]
@@ -73,7 +73,7 @@ fn validate_plugin_name(name: &str) {
 /// `target_list_fn` - Name of the function that provides a list of all targets to the user
 /// `accept_input` - Wether or not this Connector is able to accept an Os-Plugin as an input
 /// `return_wrapped` - Wether or not the return value is an already wrapped cglue object or if the macro needs to construct it
-/// `no_cache` - Disables the default caching behavior if no cache configuration is supplied by the user.
+/// `no_default_cache` - Disables the default caching behavior if no cache configuration is supplied by the user.
 ///
 /// Caching:
 ///
@@ -81,8 +81,8 @@ fn validate_plugin_name(name: &str) {
 /// Either the user did not specify any caching, which results in the default caching configuration being used, or the user
 /// did choose a custom caching configuration which will override the default caching configuration.
 ///
-/// In case `no_cache` is used the default behavior will be to use no caching. If the user supplies a cache configuration even
-/// if `no_cache` is set the [`memflow::plugins::connector::create_instance`] function will still instantiate the requested configuration.
+/// In case `no_default_cache` is used the default behavior will be to use no caching. If the user supplies a cache configuration even
+/// if `no_default_cache` is set the [`memflow::plugins::connector::create_instance`] function will still instantiate the requested configuration.
 ///
 /// In case `return_wrapped` is set to true the caching behavior has to be handled by the end user simply by
 /// calling [`memflow::plugins::connector::create_instance`] with the appropiate arguments.
@@ -103,7 +103,7 @@ fn validate_plugin_name(name: &str) {
 /// ```
 /// # use ::memflow::prelude::v1::*;
 /// # use ::memflow::dummy::*;
-/// #[connector(name = "dummy_conn", no_cache = true)]
+/// #[connector(name = "dummy_conn", no_default_cache = true)]
 /// pub fn create_connector(_args: &ConnectorArgs) -> Result<DummyMemory> {
 ///     Ok(DummyMemory::new(size::mb(16)))
 /// }
@@ -159,7 +159,7 @@ fn validate_plugin_name(name: &str) {
 /// #[connector(name = "dummy_conn", accept_input = true)]
 /// pub fn create_connector(
 ///     _args: &ConnectorArgs,
-///     _os: Option<OsInstanceArcBox<'_>>,
+///     _os: Option<OsInstanceArcBox<'static>>,
 /// ) -> Result<DummyMemory> {
 ///     Ok(DummyMemory::new(size::mb(16)))
 /// }
@@ -172,7 +172,7 @@ fn validate_plugin_name(name: &str) {
 /// #[connector(name = "dummy_conn", accept_input = true, return_wrapped = true)]
 /// pub fn create_connector<'a>(
 ///     args: &ConnectorArgs,
-///     _os: Option<OsInstanceArcBox<'_>>,
+///     _os: Option<OsInstanceArcBox<'static>>,
 ///     lib: LibArc,
 /// ) -> Result<ConnectorInstanceArcBox<'static>> {
 ///     let connector = DummyMemory::new(size::mb(16));
@@ -225,7 +225,7 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
     let func_accept_input = args.accept_input;
     let func_return_wrapped = args.return_wrapped;
 
-    let no_cache = args.no_cache;
+    let no_default_cache = args.no_default_cache;
 
     // create wrapping function according to input/output configuration
     let create_fn_gen_inner = if func_accept_input {
@@ -233,7 +233,7 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
             // args + os
             quote! {
                 #crate_path::plugins::wrap_with_input(args, os.into(), lib, logger, out, |a, os, lib| {
-                    Ok(#crate_path::plugins::connector::create_instance(#func_name(a, os)?, lib, a, #no_cache))
+                    Ok(#crate_path::plugins::connector::create_instance(#func_name(a, os)?, lib, a, #no_default_cache))
                 })
             }
         } else {
@@ -247,7 +247,7 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
             // args
             quote! {
                 #crate_path::plugins::wrap(args, lib, logger, out, |a, lib| {
-                    Ok(#crate_path::plugins::connector::create_instance(#func_name(a)?, lib, a, #no_cache))
+                    Ok(#crate_path::plugins::connector::create_instance(#func_name(a)?, lib, a, #no_default_cache))
                 })
             }
         } else {
@@ -262,7 +262,7 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
             #[doc(hidden)]
             extern "C" fn mf_create(
                 args: Option<&#crate_path::plugins::connector::ConnectorArgs>,
-                os: #crate_path::cglue::option::COption<#crate_path::plugins::os::OsInstanceArcBox>,
+                os: #crate_path::cglue::option::COption<#crate_path::plugins::os::OsInstanceArcBox<'static>>,
                 lib: #crate_path::plugins::LibArc,
                 logger: Option<&'static #crate_path::plugins::PluginLogger>,
                 out: &mut #crate_path::plugins::connector::MuConnectorInstanceArcBox<'static>

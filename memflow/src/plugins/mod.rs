@@ -35,9 +35,8 @@ pub type OsInputArg = <LoadableOs as Loadable>::InputArg;
 pub mod logger;
 pub use logger::*; // TODO: restrict
 
-// TODO: proper visibility
-//pub(crate) mod util;
-pub mod util;
+pub(crate) mod util;
+pub use util::{wrap, wrap_with_input};
 
 use crate::error::{Result, *};
 

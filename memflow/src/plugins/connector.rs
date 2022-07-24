@@ -18,6 +18,8 @@ use cglue::trait_group::c_void;
 cglue_trait_group!(ConnectorInstance<'a>, { PhysicalMemory, Clone }, { ConnectorCpuStateInner<'a> });
 pub type MuConnectorInstanceArcBox<'a> = std::mem::MaybeUninit<ConnectorInstanceArcBox<'a>>;
 
+/// This creates a cglue plugin instance from the given [`PhysicalMemory`] object.
+/// This also configures caching based on the provided input `args`.
 pub fn create_instance<T: Send + 'static + PhysicalMemory>(
     conn: T,
     lib: LibArc,
@@ -59,6 +61,7 @@ where
 
         group_obj!((conn, lib) as ConnectorInstance)
     } else {
+        // this is identical to: `group_obj!((conn, lib) as ConnectorInstance)`
         let obj = (conn, lib).into();
         obj.into_opaque()
     }

@@ -3,13 +3,9 @@ use super::process::*;
 
 use crate::architecture::ArchitectureIdent;
 use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
-use crate::mem::phys_mem::*;
-use crate::mem::virt_mem::*;
-use crate::mem::*;
-use crate::os::process::*;
-use crate::os::root::*;
-use crate::os::*;
-use crate::plugins::*;
+use crate::mem::{phys_mem::*, virt_mem::*, *};
+use crate::os::{process::*, root::*, *};
+use crate::plugins::{self, *};
 use crate::types::{clamp_to_usize, imem, mem, size, umem, Address};
 
 use crate::cglue::*;
@@ -599,6 +595,7 @@ impl PhysicalMemory for DummyOs {
 #[no_mangle]
 pub static MEMFLOW_OS_DUMMY: OsDescriptor = OsDescriptor {
     plugin_version: MEMFLOW_PLUGIN_VERSION,
+    accept_input: false,
     input_layout: <<LoadableOs as Loadable>::CInputArg as ::abi_stable::StableAbi>::LAYOUT,
     output_layout: <<LoadableOs as Loadable>::Instance as ::abi_stable::StableAbi>::LAYOUT,
     name: CSliceRef::from_str("dummy"),
@@ -612,19 +609,15 @@ pub static MEMFLOW_OS_DUMMY: OsDescriptor = OsDescriptor {
 #[doc(hidden)]
 extern "C" fn mf_create(
     args: Option<&OsArgs>,
-    mem: COption<ConnectorInstanceArcBox>,
+    _connector: COption<ConnectorInstanceArcBox>,
     lib: LibArc,
     logger: Option<&'static PluginLogger>,
     out: &mut MuOsInstanceArcBox<'static>,
 ) -> i32 {
-    create_bare(args, mem.into(), lib, logger, out, build_dummy)
+    plugins::wrap(args, lib, logger, out, create_dummy)
 }
 
-pub fn build_dummy(
-    args: &OsArgs,
-    _mem: Option<ConnectorInstanceArcBox>,
-    lib: LibArc,
-) -> Result<OsInstanceArcBox<'static>> {
+pub fn create_dummy(args: &OsArgs, lib: LibArc) -> Result<OsInstanceArcBox<'static>> {
     let size = super::mem::parse_size(&args.extra_args)?;
     let mem = DummyMemory::new(size);
     let mut os = DummyOs::new(mem);

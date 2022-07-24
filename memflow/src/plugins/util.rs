@@ -107,7 +107,7 @@ pub fn find_export_by_prefix(
 /// parse args into `Args`, and call the create_fn
 ///
 /// This function is used by the connector proc macro
-pub fn create_wrapper<A: Default, T>(
+pub fn wrap<A: Default, T>(
     args: Option<&A>,
     lib: LibArc,
     logger: Option<&'static PluginLogger>,
@@ -130,7 +130,7 @@ pub fn create_wrapper<A: Default, T>(
 /// parse args into `Args` and call the create_fn with `input` forwarded.
 ///
 /// This function is used by the connector proc macro
-pub fn create_wrapper_with_input<A: Default, T, I>(
+pub fn wrap_with_input<A: Default, T, I>(
     args: Option<&A>,
     input: I,
     lib: LibArc,

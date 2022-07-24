@@ -33,6 +33,10 @@ struct OsFactoryArgs {
     description: Option<String>,
     #[darling(default)]
     help_fn: Option<String>,
+    #[darling(default)]
+    accept_input: bool,
+    #[darling(default)]
+    return_wrapped: bool,
 }
 
 fn validate_plugin_name(name: &str) {
@@ -44,6 +48,12 @@ fn validate_plugin_name(name: &str) {
     }
 }
 
+/// Creates a memflow connector plugin.
+/// This function takes care of supplying all necessary underlying structures
+/// for exposing a memflow connector plugin in the form of a dylib.
+///
+/// Remarks:
+///
 /// We should add conditional compilation for the crate-type here
 /// so our rust libraries who use a connector wont export those functions
 /// again by themselves (e.g. the ffi).
@@ -56,34 +66,52 @@ fn validate_plugin_name(name: &str) {
 /// #[cfg(crate_type = "cdylib")]
 ///
 /// Examples:
-/// ```ignore
-/// #[connector(name = "coredump", help_fn = "help")]
-/// pub fn create_connector<'a>(args: &ConnectorArgs) -> Result<CoreDump<'a>> { ... }
+/// ```
+/// # use ::memflow::prelude::v1::*;
+/// # use ::memflow::dummy::*;
+/// #[connector(name = "dummy_conn")]
+/// pub fn create_connector(_args: &ConnectorArgs) -> Result<DummyMemory> {
+///     Ok(DummyMemory::new(size::mb(16)))
+/// }
 /// ```
 ///
-/// ```ignore
-/// #[connector(name = "coredump", help_fn = "help", return_wrapped = true)]
-/// pub fn create_connector<'a>(
+/// ```
+/// # use ::memflow::prelude::v1::*;
+/// # use ::memflow::dummy::*;
+/// #[connector(name = "dummy_conn", return_wrapped = true)]
+/// pub fn create_connector(
 ///     args: &ConnectorArgs,
 ///     lib: LibArc,
-/// ) -> Result<ConnectorInstanceArcBox<'static>> { ... }
+/// ) -> Result<ConnectorInstanceArcBox<'static>> {
+///     let connector = DummyMemory::new(size::mb(16));
+///     Ok(memflow::plugins::connector::create_instance(connector, lib, args))
+/// }
 /// ```
 ///
 /// ```
-/// #[connector(name = "coredump", help_fn = "help", accept_input = true)]
-/// pub fn create_connector<'a>(
-///     args: &ConnectorArgs,
-///     os: Option<OsInstanceArcBox<'_>>,
-/// ) -> Result<CoreDump<'a>> { ... }
+/// # use ::memflow::prelude::v1::*;
+/// # use ::memflow::dummy::*;
+/// #[connector(name = "dummy_conn", accept_input = true)]
+/// pub fn create_connector(
+///     _args: &ConnectorArgs,
+///     _os: Option<OsInstanceArcBox<'_>>,
+/// ) -> Result<DummyMemory> {
+///     Ok(DummyMemory::new(size::mb(16)))
+/// }
 /// ```
 ///
 /// ```
-/// #[connector(name = "coredump", help_fn = "help", accept_input = true, return_wrapped = true)]
+/// # use ::memflow::prelude::v1::*;
+/// # use ::memflow::dummy::*;
+/// #[connector(name = "dummy_conn", accept_input = true, return_wrapped = true)]
 /// pub fn create_connector<'a>(
 ///     args: &ConnectorArgs,
-///     os: Option<OsInstanceArcBox<'_>>,
+///     _os: Option<OsInstanceArcBox<'_>>,
 ///     lib: LibArc,
-/// ) -> Result<ConnectorInstanceArcBox<'static>> { ... }
+/// ) -> Result<ConnectorInstanceArcBox<'static>> {
+///     let connector = DummyMemory::new(size::mb(16));
+///     Ok(memflow::plugins::connector::create_instance(connector, lib, args))
+/// }
 /// ```
 #[proc_macro_attribute]
 pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
@@ -136,29 +164,28 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
         if !func_return_wrapped {
             // args + os
             quote! {
-                #crate_path::plugins::util::create_wrapper_with_input(args, os.into(), lib, logger, out, |a, os, lib| {
+                #crate_path::plugins::wrap_with_input(args, os.into(), lib, logger, out, |a, os, lib| {
                     Ok(#crate_path::plugins::connector::create_instance(#func_name(a, os)?, lib, a))
                 })
             }
         } else {
             // args + os + lib
             quote! {
-                #crate_path::plugins::util::create_wrapper_with_input(args, os.into(), lib, logger, out, #func_name)
+                #crate_path::plugins::wrap_with_input(args, os.into(), lib, logger, out, #func_name)
             }
         }
     } else {
         if !func_return_wrapped {
             // args
-            // TODO: wrap
             quote! {
-                #crate_path::plugins::util::create_wrapper(args, lib, logger, out, |a, lib| {
+                #crate_path::plugins::wrap(args, lib, logger, out, |a, lib| {
                     Ok(#crate_path::plugins::connector::create_instance(#func_name(a)?, lib, a))
                 })
             }
         } else {
             // args + lib
             quote! {
-                #crate_path::plugins::util::create_wrapper(args, lib, logger, out, #func_name)
+                #crate_path::plugins::wrap(args, lib, logger, out, #func_name)
             }
         }
     };
@@ -167,7 +194,7 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
             #[doc(hidden)]
             extern "C" fn mf_create(
                 args: Option<&#crate_path::plugins::connector::ConnectorArgs>,
-                os: cglue::option::COption<#crate_path::plugins::os::OsInstanceArcBox>,
+                os: #crate_path::cglue::option::COption<#crate_path::plugins::os::OsInstanceArcBox>,
                 lib: #crate_path::plugins::LibArc,
                 logger: Option<&'static #crate_path::plugins::PluginLogger>,
                 out: &mut #crate_path::plugins::connector::MuConnectorInstanceArcBox<'static>
@@ -240,8 +267,66 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
     gen.into()
 }
 
+/// Creates a memflow os plugin.
+/// This function takes care of supplying all necessary underlying structures
+/// for exposing a memflow os plugin in the form of a dylib.
+///
+/// Examples:
+/// ```
+/// # use ::memflow::prelude::v1::*;
+/// # use ::memflow::dummy::*;
+/// #[os(name = "dummy_os")]
+/// pub fn create_os(
+///     _args: &OsArgs,
+/// ) -> Result<DummyOs> {
+///     let phys_mem = DummyMemory::new(size::mb(16));
+///     Ok(DummyOs::new(phys_mem))
+/// }
+/// ```
+///
+/// ```
+/// # use ::memflow::prelude::v1::*;
+/// # use ::memflow::dummy::*;
+/// #[os(name = "dummy_os", return_wrapped = true)]
+/// pub fn create_os(
+///     args: &OsArgs,
+///     lib: LibArc,
+/// ) -> Result<OsInstanceArcBox<'static>> {
+///     let phys_mem = DummyMemory::new(size::mb(16));
+///     let os = DummyOs::new(phys_mem);
+///     Ok(memflow::plugins::os::create_instance(os, lib, args))
+/// }
+/// ```
+///
+/// ```
+/// # use ::memflow::prelude::v1::*;
+/// # use ::memflow::dummy::*;
+/// #[os(name = "dummy_os", accept_input = true)]
+/// pub fn create_os(
+///     args: &OsArgs,
+///     _connector: Option<ConnectorInstanceArcBox<'static>>,
+/// ) -> Result<DummyOs> {
+///     let phys_mem = DummyMemory::new(size::mb(16));
+///     Ok(DummyOs::new(phys_mem))
+/// }
+/// ```
+///
+/// ```
+/// # use ::memflow::prelude::v1::*;
+/// # use ::memflow::dummy::*;
+/// #[os(name = "dummy_os", accept_input = true, return_wrapped = true)]
+/// pub fn create_os(
+///     args: &OsArgs,
+///     _connector: Option<ConnectorInstanceArcBox<'static>>,
+///     lib: LibArc,
+/// ) -> Result<OsInstanceArcBox<'static>> {
+///     let phys_mem = DummyMemory::new(size::mb(16));
+///     let os = DummyOs::new(phys_mem);
+///     Ok(memflow::plugins::os::create_instance(os, lib, args))
+/// }
+/// ```
 #[proc_macro_attribute]
-pub fn os_layer(args: TokenStream, input: TokenStream) -> TokenStream {
+pub fn os(args: TokenStream, input: TokenStream) -> TokenStream {
     let crate_path = crate_path();
 
     let attr_args = parse_macro_input!(args as AttributeArgs);
@@ -276,103 +361,50 @@ pub fn os_layer(args: TokenStream, input: TokenStream) -> TokenStream {
     let func = parse_macro_input!(input as ItemFn);
     let func_name = &func.sig.ident;
 
-    let create_fn_gen = quote! {
-            #[doc(hidden)]
-            extern "C" fn mf_create(
-                args: Option<&#crate_path::plugins::os::OsArgs>,
-                mem: #crate_path::cglue::COption<#crate_path::plugins::connector::ConnectorInstanceArcBox<'static>>,
-                lib: #crate_path::plugins::LibArc,
-                logger: Option<&'static #crate_path::plugins::PluginLogger>,
-                out: &mut #crate_path::plugins::os::MuOsInstanceArcBox<'static>
-            ) -> i32 {
-                #crate_path::plugins::os::create(args, mem.into(), lib, logger, out, #func_name)
-            }
-    };
+    let func_accept_input = args.accept_input;
+    let func_return_wrapped = args.return_wrapped;
 
-    let help_fn_gen = args.help_fn.map(|v| v.parse().unwrap()).map_or_else(
-        proc_macro2::TokenStream::new,
-        |func_name: proc_macro2::TokenStream| {
+    // create wrapping function according to input/output configuration
+    let create_fn_gen_inner = if func_accept_input {
+        if !func_return_wrapped {
+            // inputs: args + os
             quote! {
-                #[doc(hidden)]
-                extern "C" fn mf_help_callback(
-                    mut callback: #crate_path::plugins::HelpCallback,
-                ) {
-                    let helpstr = #func_name();
-                    let _ = callback.call(helpstr.into());
-                }
+                #crate_path::plugins::wrap_with_input(args, connector.into(), lib, logger, out, |a, os, lib| {
+                    Ok(#crate_path::plugins::os::create_instance(#func_name(a, os)?, lib, a))
+                })
             }
-        },
-    );
-
-    let gen = quote! {
-        #[doc(hidden)]
-        #[no_mangle]
-        pub static #os_descriptor: #crate_path::plugins::OsLayerDescriptor = #crate_path::plugins::OsLayerDescriptor {
-            os_version: #crate_path::plugins::MEMFLOW_PLUGIN_VERSION,
-            name: #os_name,
-            version: #version_gen,
-            description: #description_gen,
-            help_callback: #help_gen,
-            target_list_callback: None, // non existent on Os Plugins
-            create: mf_create,
-        };
-
-        #create_fn_gen
-
-        #help_fn_gen
-
-        #func
-    };
-
-    gen.into()
-}
-
-#[proc_macro_attribute]
-pub fn os_layer_bare(args: TokenStream, input: TokenStream) -> TokenStream {
-    let crate_path = crate_path();
-
-    let attr_args = parse_macro_input!(args as AttributeArgs);
-    let args = match OsFactoryArgs::from_list(&attr_args) {
-        Ok(v) => v,
-        Err(e) => return TokenStream::from(e.write_errors()),
-    };
-
-    let os_name = args.name;
-    validate_plugin_name(&os_name);
-
-    let version_gen = args
-        .version
-        .map_or_else(|| quote! { env!("CARGO_PKG_VERSION") }, |v| quote! { #v });
-
-    let description_gen = args.description.map_or_else(
-        || quote! { env!("CARGO_PKG_DESCRIPTION") },
-        |d| quote! { #d },
-    );
-
-    let help_gen = if args.help_fn.is_some() {
-        quote! { Some(mf_help_callback) }
+        } else {
+            // inputs: args + os + lib
+            quote! {
+                #crate_path::plugins::wrap_with_input(args, connector.into(), lib, logger, out, #func_name)
+            }
+        }
     } else {
-        quote! { None }
+        if !func_return_wrapped {
+            // inputs: args
+            quote! {
+                #crate_path::plugins::wrap(args, lib, logger, out, |a, lib| {
+                    Ok(#crate_path::plugins::os::create_instance(#func_name(a)?, lib, a))
+                })
+            }
+        } else {
+            // inputs: args + lib
+            quote! {
+                #crate_path::plugins::wrap(args, lib, logger, out, #func_name)
+            }
+        }
     };
-
-    let os_descriptor: proc_macro2::TokenStream = ["MEMFLOW_OS_", &(&os_name).to_uppercase()]
-        .concat()
-        .parse()
-        .unwrap();
-
-    let func = parse_macro_input!(input as ItemFn);
-    let func_name = &func.sig.ident;
 
     let create_fn_gen = quote! {
         #[doc(hidden)]
         extern "C" fn mf_create(
             args: Option<&#crate_path::plugins::os::OsArgs>,
-            mem: #crate_path::cglue::COption<#crate_path::plugins::connector::ConnectorInstanceArcBox<'static>>,
+            connector: #crate_path::cglue::COption<#crate_path::plugins::connector::ConnectorInstanceArcBox<'static>>,
             lib: #crate_path::plugins::LibArc,
             logger: Option<&'static #crate_path::plugins::PluginLogger>,
             out: &mut #crate_path::plugins::os::MuOsInstanceArcBox<'static>
         ) -> i32 {
-            #crate_path::plugins::create_bare(args, mem.into(), lib, logger, out, #func_name)
+            #create_fn_gen_inner
         }
     };
 
@@ -396,6 +428,7 @@ pub fn os_layer_bare(args: TokenStream, input: TokenStream) -> TokenStream {
         #[no_mangle]
         pub static #os_descriptor: #crate_path::plugins::os::OsDescriptor = #crate_path::plugins::os::OsDescriptor {
             plugin_version: #crate_path::plugins::MEMFLOW_PLUGIN_VERSION,
+            accept_input: #func_accept_input,
             input_layout: <<#crate_path::plugins::os::LoadableOs as #crate_path::plugins::Loadable>::CInputArg as #crate_path::abi_stable::StableAbi>::LAYOUT,
             output_layout: <<#crate_path::plugins::os::LoadableOs as #crate_path::plugins::Loadable>::Instance as #crate_path::abi_stable::StableAbi>::LAYOUT,
             name: #crate_path::cglue::CSliceRef::from_str(#os_name),

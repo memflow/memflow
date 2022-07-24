@@ -7,9 +7,10 @@ use crate::os::keyboard::*;
 use crate::os::process::*;
 use crate::os::root::*;
 
+use super::LibArc;
 use super::{
-    args::split_str_args, Args, ConnectorInstanceArcBox, LibArc, LibContext, Loadable,
-    PluginDescriptor, PluginLogger, TargetInfo,
+    args::split_str_args, Args, ConnectorInstanceArcBox, LibContext, Loadable, PluginDescriptor,
+    TargetInfo,
 };
 
 use cglue::trait_group::c_void;
@@ -22,20 +23,17 @@ pub type MuOsInstanceArcBox<'a> = std::mem::MaybeUninit<OsInstanceArcBox<'a>>;
 cglue_trait_group!(ProcessInstance, { Process, MemoryView }, { VirtualTranslate });
 cglue_trait_group!(IntoProcessInstance, { Process, MemoryView, Clone }, { VirtualTranslate });
 
-pub fn create<T: 'static + Os + Clone + OsInstanceVtableFiller<'static, CBox<'static, T>, LibArc>>(
-    args: Option<&OsArgs>,
-    conn: ConnectorInstanceArcBox,
+/// This creates a cglue plugin instance from the given [`Os`] object.
+/// In the future this also might enable features (like caching) based on the input `args`.
+pub fn create_instance<T: Send + 'static + Os>(
+    conn: T,
     lib: LibArc,
-    logger: Option<&'static PluginLogger>,
-    out: &mut MuOsInstanceArcBox<'static>,
-    create_fn: impl Fn(&OsArgs, ConnectorInstanceArcBox) -> Result<T>,
-) -> i32
+    _args: &OsArgs,
+) -> OsInstanceArcBox<'static>
 where
     (T, LibArc): Into<OsInstanceBaseArcBox<'static, T, c_void>>,
 {
-    super::util::create_wrapper(args, lib, logger, out, |a, lib| {
-        Ok(group_obj!((create_fn(a, conn)?, lib) as OsInstance))
-    })
+    group_obj!((conn, lib) as OsInstance)
 }
 
 #[repr(C)]

@@ -19,9 +19,8 @@ struct ConnectorFactoryArgs {
     accept_input: bool,
     #[darling(default)]
     return_wrapped: bool,
-
     #[darling(default)]
-    default_caching: Option<bool>,
+    no_cache: bool,
 }
 
 #[derive(Debug, FromMeta)]
@@ -65,16 +64,81 @@ fn validate_plugin_name(name: &str) {
 ///
 /// #[cfg(crate_type = "cdylib")]
 ///
+/// Macro Parameters:
+///
+/// `name` - The name of the plugin
+/// `version` - The version of the plugin
+/// `description` - Short description of the plugin
+/// `help_fn` - Name of the function that provides a help text to the user
+/// `target_list_fn` - Name of the function that provides a list of all targets to the user
+/// `accept_input` - Wether or not this Connector is able to accept an Os-Plugin as an input
+/// `return_wrapped` - Wether or not the return value is an already wrapped cglue object or if the macro needs to construct it
+/// `no_cache` - Disables the default caching behavior if no cache configuration is supplied by the user.
+///
+/// Caching:
+///
+/// By default the proc macro will call [`memflow::plugins::connector::create_instance`] internally which will handle the caching functionality.
+/// Either the user did not specify any caching, which results in the default caching configuration being used, or the user
+/// did choose a custom caching configuration which will override the default caching configuration.
+///
+/// In case `no_cache` is used the default behavior will be to use no caching. If the user supplies a cache configuration even
+/// if `no_cache` is set the [`memflow::plugins::connector::create_instance`] function will still instantiate the requested configuration.
+///
+/// In case `return_wrapped` is set to true the caching behavior has to be handled by the end user simply by
+/// calling [`memflow::plugins::connector::create_instance`] with the appropiate arguments.
+///
 /// Examples:
+///
+/// Simple usage:
 /// ```
 /// # use ::memflow::prelude::v1::*;
 /// # use ::memflow::dummy::*;
-/// #[connector(name = "dummy_conn")]
+/// #[connector(name = "dummy_conn", version = "1.0.0", description = "Dummy Plugin for Testing purposes")]
 /// pub fn create_connector(_args: &ConnectorArgs) -> Result<DummyMemory> {
 ///     Ok(DummyMemory::new(size::mb(16)))
 /// }
 /// ```
 ///
+/// Disable default caching:
+/// ```
+/// # use ::memflow::prelude::v1::*;
+/// # use ::memflow::dummy::*;
+/// #[connector(name = "dummy_conn", no_cache = true)]
+/// pub fn create_connector(_args: &ConnectorArgs) -> Result<DummyMemory> {
+///     Ok(DummyMemory::new(size::mb(16)))
+/// }
+/// ```
+///
+/// Custom help function:
+/// ```
+/// # use ::memflow::prelude::v1::*;
+/// # use ::memflow::dummy::*;
+/// #[connector(name = "dummy_conn", help_fn = "help")]
+/// pub fn create_connector(_args: &ConnectorArgs) -> Result<DummyMemory> {
+///     Ok(DummyMemory::new(size::mb(16)))
+/// }
+///
+/// pub fn help() -> String {
+///     "Dummy Plugin for Testing purposes".to_string()
+/// }
+/// ```
+///
+/// Custom target list function:
+/// ```
+/// # use ::memflow::prelude::v1::*;
+/// # use ::memflow::dummy::*;
+/// # use std::vec::Vec;
+/// #[connector(name = "dummy_conn", target_list_fn = "target_list")]
+/// pub fn create_connector(_args: &ConnectorArgs) -> Result<DummyMemory> {
+///     Ok(DummyMemory::new(size::mb(16)))
+/// }
+///
+/// pub fn target_list() -> Result<Vec<TargetInfo>> {
+///     Ok(Vec::new())
+/// }
+/// ```
+///
+/// Wrapped return with manually created connector instance:
 /// ```
 /// # use ::memflow::prelude::v1::*;
 /// # use ::memflow::dummy::*;
@@ -84,10 +148,11 @@ fn validate_plugin_name(name: &str) {
 ///     lib: LibArc,
 /// ) -> Result<ConnectorInstanceArcBox<'static>> {
 ///     let connector = DummyMemory::new(size::mb(16));
-///     Ok(memflow::plugins::connector::create_instance(connector, lib, args))
+///     Ok(memflow::plugins::connector::create_instance(connector, lib, args, false))
 /// }
 /// ```
 ///
+/// Connector with input parameter:
 /// ```
 /// # use ::memflow::prelude::v1::*;
 /// # use ::memflow::dummy::*;
@@ -100,6 +165,7 @@ fn validate_plugin_name(name: &str) {
 /// }
 /// ```
 ///
+/// Connector with input parameter and manually created connector instance:
 /// ```
 /// # use ::memflow::prelude::v1::*;
 /// # use ::memflow::dummy::*;
@@ -110,7 +176,7 @@ fn validate_plugin_name(name: &str) {
 ///     lib: LibArc,
 /// ) -> Result<ConnectorInstanceArcBox<'static>> {
 ///     let connector = DummyMemory::new(size::mb(16));
-///     Ok(memflow::plugins::connector::create_instance(connector, lib, args))
+///     Ok(memflow::plugins::connector::create_instance(connector, lib, args, false))
 /// }
 /// ```
 #[proc_macro_attribute]
@@ -159,13 +225,15 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
     let func_accept_input = args.accept_input;
     let func_return_wrapped = args.return_wrapped;
 
+    let no_cache = args.no_cache;
+
     // create wrapping function according to input/output configuration
     let create_fn_gen_inner = if func_accept_input {
         if !func_return_wrapped {
             // args + os
             quote! {
                 #crate_path::plugins::wrap_with_input(args, os.into(), lib, logger, out, |a, os, lib| {
-                    Ok(#crate_path::plugins::connector::create_instance(#func_name(a, os)?, lib, a))
+                    Ok(#crate_path::plugins::connector::create_instance(#func_name(a, os)?, lib, a, #no_cache))
                 })
             }
         } else {
@@ -179,7 +247,7 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
             // args
             quote! {
                 #crate_path::plugins::wrap(args, lib, logger, out, |a, lib| {
-                    Ok(#crate_path::plugins::connector::create_instance(#func_name(a)?, lib, a))
+                    Ok(#crate_path::plugins::connector::create_instance(#func_name(a)?, lib, a, #no_cache))
                 })
             }
         } else {
@@ -271,19 +339,48 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
 /// This function takes care of supplying all necessary underlying structures
 /// for exposing a memflow os plugin in the form of a dylib.
 ///
+/// Macro Parameters:
+///
+/// `name` - The name of the plugin
+/// `version` - The version of the plugin
+/// `description` - Short description of the plugin
+/// `help_fn` - Name of the function that provides a help text to the user
+/// `accept_input` - Wether or not this Os-Plugin is able to accept a connector as an input
+/// `return_wrapped` - Wether or not the return value is an already wrapped cglue object or if the macro needs to construct it
+///
 /// Examples:
+///
+/// Simple usage:
 /// ```
 /// # use ::memflow::prelude::v1::*;
 /// # use ::memflow::dummy::*;
-/// #[os(name = "dummy_os")]
+/// #[os(name = "dummy_os", version = "1.0.0", description = "Dummy Plugin for Testing purposes")]
 /// pub fn create_os(
 ///     _args: &OsArgs,
 /// ) -> Result<DummyOs> {
 ///     let phys_mem = DummyMemory::new(size::mb(16));
 ///     Ok(DummyOs::new(phys_mem))
 /// }
+///
+/// ```
+/// Custom help function:
+/// ```
+/// # use ::memflow::prelude::v1::*;
+/// # use ::memflow::dummy::*;
+/// #[os(name = "dummy_os", help_fn = "help")]
+/// pub fn create_os(
+///     _args: &OsArgs,
+/// ) -> Result<DummyOs> {
+///     let phys_mem = DummyMemory::new(size::mb(16));
+///     Ok(DummyOs::new(phys_mem))
+/// }
+///
+/// pub fn help() -> String {
+///     "Dummy Plugin for Testing purposes".to_string()
+/// }
 /// ```
 ///
+/// Wrapped return with manually created os instance:
 /// ```
 /// # use ::memflow::prelude::v1::*;
 /// # use ::memflow::dummy::*;
@@ -298,6 +395,7 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
 /// }
 /// ```
 ///
+/// Os with input parameter:
 /// ```
 /// # use ::memflow::prelude::v1::*;
 /// # use ::memflow::dummy::*;
@@ -311,6 +409,7 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
 /// }
 /// ```
 ///
+/// Os with input parameter and manually created os instance:
 /// ```
 /// # use ::memflow::prelude::v1::*;
 /// # use ::memflow::dummy::*;
@@ -367,14 +466,14 @@ pub fn os(args: TokenStream, input: TokenStream) -> TokenStream {
     // create wrapping function according to input/output configuration
     let create_fn_gen_inner = if func_accept_input {
         if !func_return_wrapped {
-            // inputs: args + os
+            // inputs: args + connector
             quote! {
                 #crate_path::plugins::wrap_with_input(args, connector.into(), lib, logger, out, |a, os, lib| {
                     Ok(#crate_path::plugins::os::create_instance(#func_name(a, os)?, lib, a))
                 })
             }
         } else {
-            // inputs: args + os + lib
+            // inputs: args + connector + lib
             quote! {
                 #crate_path::plugins::wrap_with_input(args, connector.into(), lib, logger, out, #func_name)
             }

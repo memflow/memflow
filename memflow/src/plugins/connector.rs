@@ -24,6 +24,7 @@ pub fn create_instance<T: Send + 'static + PhysicalMemory>(
     conn: T,
     lib: LibArc,
     args: &ConnectorArgs,
+    no_default_cache: bool,
 ) -> ConnectorInstanceArcBox<'static>
 where
     (T, LibArc): Into<ConnectorInstanceBaseArcBox<'static, T, c_void>>,
@@ -38,7 +39,13 @@ where
         >,
     >,
 {
-    if let COption::Some(cache) = args.page_cache {
+    let default_cache = !no_default_cache;
+    let page_cache = if args.page_cache.is_some() || default_cache {
+        Some(args.page_cache.as_ref().map(|&c| c).unwrap_or_default())
+    } else {
+        None
+    };
+    if let Some(cache) = page_cache {
         let mut builder = CachedPhysicalMemory::builder(conn);
 
         builder = if cache.page_size > 0 {
@@ -167,15 +174,20 @@ impl std::str::FromStr for ConnectorArgs {
             .next()
             .and_then(|s| if s.is_empty() { None } else { Some(s.into()) });
 
+        let extra_args = iter.next().unwrap_or("").parse()?;
+
+        let page_cache = if let Some(s) = iter.next() {
+            // allow user to see the parse error
+            Some(s.parse()?)
+        } else {
+            None
+        }
+        .into();
+
         Ok(Self {
             target,
-            extra_args: iter.next().unwrap_or("").parse()?,
-            page_cache: if let Some(s) = iter.next() {
-                Some(PageCacheParams::from_str(s)?)
-            } else {
-                Some(Default::default())
-            }
-            .into(),
+            extra_args,
+            page_cache,
         })
     }
 }

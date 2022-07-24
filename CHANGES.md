@@ -2,6 +2,9 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
+## 0.2.0-beta7
+- Unified and simplified plugin proc macros and updated their documentation
+
 ## 0.2.0-beta6
 - Added additional export/import/section helpers
 - Dependency updates

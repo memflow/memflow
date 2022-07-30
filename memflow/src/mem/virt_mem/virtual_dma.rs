@@ -130,9 +130,19 @@ impl<T: PhysicalMemory, V: VirtualTranslate2, D: VirtualTranslate3> VirtualDma<T
         self.proc_arch
     }
 
-    /// Returns the Directory Table Base of this process.
-    pub fn translator(&self) -> &impl VirtualTranslate3 {
+    /// Replaces current process architecture with a new one.
+    pub fn set_proc_arch(&mut self, new_arch: ArchitectureObj) -> ArchitectureObj {
+        core::mem::replace(&mut self.proc_arch, new_arch)
+    }
+
+    /// Returns the Directory Table Base of this process..
+    pub fn translator(&self) -> &D {
         &self.translator
+    }
+
+    /// Replace current translator with a new one.
+    pub fn set_translator(&mut self, new_translator: D) -> D {
+        core::mem::replace(&mut self.translator, new_translator)
     }
 
     /// A wrapper around `read_addr64` and `read_addr32` that will use the pointer size of this context's process.

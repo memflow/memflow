@@ -57,7 +57,7 @@ int main(int argc, char *argv[]) {
 
 	int i = 0;
 
-	os.process_info_list_callback([i](ProcessInfo info) mutable {
+	os.process_info_list_callback([&i](ProcessInfo info) {
 		char sys_arch[11];
 		char proc_arch[11];
 

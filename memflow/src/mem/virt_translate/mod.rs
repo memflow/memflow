@@ -833,7 +833,7 @@ where
 }
 
 // forward impls
-impl<'a, T, P> VirtualTranslate2 for P
+impl<T, P> VirtualTranslate2 for P
 where
     T: VirtualTranslate2 + ?Sized,
     P: std::ops::DerefMut<Target = T> + Send,

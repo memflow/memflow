@@ -5,7 +5,7 @@ use crate::mem::MemoryView;
 use crate::os::*;
 use crate::types::umem;
 use cglue::prelude::v1::ReprCString;
-use dataview::Pod;
+use dataview::PodMethods;
 use std::vec::Vec;
 
 #[cfg(feature = "goblin")]

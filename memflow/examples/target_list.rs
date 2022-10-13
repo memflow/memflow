@@ -28,18 +28,18 @@ fn parse_args() -> String {
     let matches = Command::new("multithreading example")
         .version(crate_version!())
         .author(crate_authors!())
-        .arg(Arg::new("verbose").short('v').multiple_occurrences(true))
+        .arg(Arg::new("verbose").short('v').action(ArgAction::Count))
         .arg(
             Arg::new("connector")
                 .long("connector")
                 .short('c')
-                .takes_value(true)
+                .action(ArgAction::Set)
                 .required(true),
         )
         .get_matches();
 
     // set log level
-    let log_level = match matches.occurrences_of("verbose") {
+    let log_level = match matches.get_count("verbose") {
         0 => Level::Error,
         1 => Level::Warn,
         2 => Level::Info,
@@ -55,5 +55,5 @@ fn parse_args() -> String {
     )
     .unwrap();
 
-    matches.value_of("connector").unwrap().into()
+    matches.get_one::<String>("connector").unwrap().into()
 }

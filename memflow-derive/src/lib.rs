@@ -214,7 +214,7 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
     };
 
     let connector_descriptor: proc_macro2::TokenStream =
-        ["MEMFLOW_CONNECTOR_", &(&connector_name).to_uppercase()]
+        ["MEMFLOW_CONNECTOR_", &connector_name.to_uppercase()]
             .concat()
             .parse()
             .unwrap();
@@ -228,6 +228,7 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
     let no_default_cache = args.no_default_cache;
 
     // create wrapping function according to input/output configuration
+    #[allow(clippy::collapsible_else_if)]
     let create_fn_gen_inner = if func_accept_input {
         if !func_return_wrapped {
             // args + os
@@ -452,7 +453,7 @@ pub fn os(args: TokenStream, input: TokenStream) -> TokenStream {
         quote! { None }
     };
 
-    let os_descriptor: proc_macro2::TokenStream = ["MEMFLOW_OS_", &(&os_name).to_uppercase()]
+    let os_descriptor: proc_macro2::TokenStream = ["MEMFLOW_OS_", &os_name.to_uppercase()]
         .concat()
         .parse()
         .unwrap();
@@ -464,6 +465,7 @@ pub fn os(args: TokenStream, input: TokenStream) -> TokenStream {
     let func_return_wrapped = args.return_wrapped;
 
     // create wrapping function according to input/output configuration
+    #[allow(clippy::collapsible_else_if)]
     let create_fn_gen_inner = if func_accept_input {
         if !func_return_wrapped {
             // inputs: args + connector

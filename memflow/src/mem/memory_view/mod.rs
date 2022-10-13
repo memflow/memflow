@@ -274,7 +274,7 @@ pub trait MemoryView: Send {
     /// use memflow::types::Address;
     /// use memflow::mem::MemoryView;
     /// use memflow::cglue::CTup2;
-    /// use dataview::Pod;
+    /// use dataview::PodMethods;
     ///
     /// fn write(mut mem: impl MemoryView, writes: &[(Address, usize)]) {
     ///

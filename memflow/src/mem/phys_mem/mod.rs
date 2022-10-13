@@ -1,5 +1,5 @@
 use crate::cglue::*;
-use crate::dataview::Pod;
+use crate::dataview::{Pod, PodMethods};
 use crate::error::Result;
 use crate::types::{umem, Address, PhysicalAddress};
 

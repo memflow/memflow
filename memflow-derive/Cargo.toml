@@ -22,7 +22,7 @@ proc-macro = true
 proc-macro2 = "^1.0.36"
 syn = "^1.0.85"
 quote = "^1.0.14"
-darling = "^0.13.1"
+darling = "^0.14.1"
 proc-macro-crate = "^1.1"
 
 [dev-dependencies]

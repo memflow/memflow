@@ -99,9 +99,7 @@ impl<T: MemoryView> Process for DummyProcess<T> {
         self.proc
             .modules
             .iter()
-            .filter(|m| m.address == address)
-            .filter(|m| m.arch == architecture)
-            .next()
+            .find(|m| m.address == address && m.arch == architecture)
             .cloned()
             .ok_or(Error(ErrorOrigin::OsLayer, ErrorKind::ModuleNotFound))
     }

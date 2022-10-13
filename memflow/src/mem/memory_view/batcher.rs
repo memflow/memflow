@@ -1,7 +1,7 @@
 use std::prelude::v1::*;
 
 use super::*;
-use crate::dataview::Pod;
+use crate::dataview::PodMethods;
 use crate::error::PartialResult;
 use crate::types::Address;
 

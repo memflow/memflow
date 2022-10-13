@@ -565,7 +565,7 @@ impl ArchMmuSpec {
 
         // Move the read value into the chunk
         for (ref mut chunk, CTup3(_, _, buf)) in chunks.iter_mut().zip(pt_read.iter()) {
-            let pt_addr = buf_to_addr(&*buf);
+            let pt_addr = buf_to_addr(buf);
             chunk.pt_addr = pt_addr;
             // We assume the flags may either always inherit or never inherit.
             // Thus, if there is a more insane architecture, that has it mixed,

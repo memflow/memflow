@@ -23,7 +23,7 @@ pub type ExitCode = i32;
 ///
 /// In case the exit code isn't known ProcessState::Unknown is set.
 #[repr(C)]
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 #[cfg_attr(feature = "abi_stable", derive(::abi_stable::StableAbi))]
 pub enum ProcessState {

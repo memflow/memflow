@@ -23,7 +23,7 @@ crate-type = ["lib", "cdylib", "staticlib"]
 [dependencies]
 memflow = { version = "0.2.0-beta7", path = "../memflow" }
 log = "^0.4.14"
-simplelog = "^0.11.1"
+simplelog = "^0.12.0"
 
 [features]
 default = []

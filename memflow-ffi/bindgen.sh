@@ -12,6 +12,7 @@ run_twice() {
 }
 
 # update cglue-bindgen
+cargo +nightly install cbindgen
 cargo +nightly install cglue-bindgen
 
 # generate c and cpp bindings

@@ -319,6 +319,30 @@ typedef uint64_t umem;
  * This type will not handle overflow for 32-bit or 64-bit addresses / lengths.
  */
 typedef umem Address;
+/**
+ * A address with the value of zero.
+ *
+ * # Examples
+ *
+ * ```
+ * use memflow::types::Address;
+ *
+ * println!("address: {}", Address::NULL);
+ * ```
+ */
+#define Address_NULL 0
+/**
+ * A address with an invalid value.
+ *
+ * # Examples
+ *
+ * ```
+ * use memflow::types::Address;
+ *
+ * println!("address: {}", Address::INVALID);
+ * ```
+ */
+#define Address_INVALID ~0
 
 /**
  * Describes the type of a page using a bitflag.
@@ -365,6 +389,10 @@ typedef struct PhysicalAddress {
     PageType page_type;
     uint8_t page_size_log2;
 } PhysicalAddress;
+/**
+ * A physical address with an invalid value.
+ */
+#define PhysicalAddress_INVALID (PhysicalAddress){ .address = Address_INVALID, .page_type = PageType_UNKNOWN, .page_size_log2 = 0 }
 
 /**
  * FFI-safe box
@@ -1514,6 +1542,10 @@ typedef struct Page {
      */
     umem page_size;
 } Page;
+/**
+ * A page object that is invalid.
+ */
+#define Page_INVALID (Page){ .page_type = PageType_UNKNOWN, .page_base = Address_INVALID, .page_size = 0 }
 
 /**
  * FFI-safe Option.

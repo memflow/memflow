@@ -268,6 +268,30 @@ using umem = uint64_t;
  * This type will not handle overflow for 32-bit or 64-bit addresses / lengths.
  */
 using Address = umem;
+/**
+ * A address with the value of zero.
+ *
+ * # Examples
+ *
+ * ```
+ * use memflow::types::Address;
+ *
+ * println!("address: {}", Address::NULL);
+ * ```
+ */
+constexpr static const Address Address_NULL = 0;
+/**
+ * A address with an invalid value.
+ *
+ * # Examples
+ *
+ * ```
+ * use memflow::types::Address;
+ *
+ * println!("address: {}", Address::INVALID);
+ * ```
+ */
+constexpr static const Address Address_INVALID = ~0;
 
 /**
  * Describes the type of a page using a bitflag.
@@ -276,27 +300,27 @@ using PageType = uint8_t;
 /**
  * The page explicitly has no flags.
  */
-static const PageType PageType_NONE = 0;
+constexpr static const PageType PageType_NONE = 0;
 /**
  * The page type is not known.
  */
-static const PageType PageType_UNKNOWN = 1;
+constexpr static const PageType PageType_UNKNOWN = 1;
 /**
  * The page contains page table entries.
  */
-static const PageType PageType_PAGE_TABLE = 2;
+constexpr static const PageType PageType_PAGE_TABLE = 2;
 /**
  * The page is a writeable page.
  */
-static const PageType PageType_WRITEABLE = 4;
+constexpr static const PageType PageType_WRITEABLE = 4;
 /**
  * The page is read only.
  */
-static const PageType PageType_READ_ONLY = 8;
+constexpr static const PageType PageType_READ_ONLY = 8;
 /**
  * The page is not executable.
  */
-static const PageType PageType_NOEXEC = 16;
+constexpr static const PageType PageType_NOEXEC = 16;
 
 /**
  * This type represents a wrapper over a [address](address/index.html)
@@ -314,6 +338,10 @@ struct PhysicalAddress {
     PageType page_type;
     uint8_t page_size_log2;
 };
+/**
+ * A physical address with an invalid value.
+ */
+constexpr static const PhysicalAddress PhysicalAddress_INVALID = PhysicalAddress{ /* .address = */ Address_INVALID, /* .page_type = */ PageType_UNKNOWN, /* .page_size_log2 = */ 0 };
 
 /**
  * FFI-Safe Arc
@@ -1680,6 +1708,10 @@ struct Page {
      */
     umem page_size;
 };
+/**
+ * A page object that is invalid.
+ */
+constexpr static const Page Page_INVALID = Page{ /* .page_type = */ PageType_UNKNOWN, /* .page_base = */ Address_INVALID, /* .page_size = */ 0 };
 
 /**
  * FFI-safe Option.

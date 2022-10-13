@@ -41,7 +41,7 @@ where
 {
     let default_cache = !no_default_cache;
     let page_cache = if args.page_cache.is_some() || default_cache {
-        Some(args.page_cache.as_ref().map(|&c| c).unwrap_or_default())
+        Some(args.page_cache.as_ref().copied().unwrap_or_default())
     } else {
         None
     };

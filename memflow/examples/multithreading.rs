@@ -95,39 +95,39 @@ fn parse_args() -> Result<(String, ConnectorArgs, String, OsArgs, log::Level)> {
     let matches = Command::new("multithreading example")
         .version(crate_version!())
         .author(crate_authors!())
-        .arg(Arg::new("verbose").short('v').multiple_occurrences(true))
+        .arg(Arg::new("verbose").short('v').action(ArgAction::Count))
         .arg(
             Arg::new("connector")
                 .long("connector")
                 .short('c')
-                .takes_value(true)
+                .action(ArgAction::Set)
                 .required(true),
         )
         .arg(
             Arg::new("connector-args")
                 .long("connector-args")
                 .short('x')
-                .takes_value(true)
+                .action(ArgAction::Set)
                 .default_value(""),
         )
         .arg(
             Arg::new("os")
                 .long("os")
                 .short('o')
-                .takes_value(true)
+                .action(ArgAction::Set)
                 .required(true),
         )
         .arg(
             Arg::new("os-args")
                 .long("os-args")
                 .short('y')
-                .takes_value(true)
+                .action(ArgAction::Set)
                 .default_value(""),
         )
         .get_matches();
 
     // set log level
-    let level = match matches.occurrences_of("verbose") {
+    let level = match matches.get_count("verbose") {
         0 => Level::Error,
         1 => Level::Warn,
         2 => Level::Info,
@@ -138,23 +138,23 @@ fn parse_args() -> Result<(String, ConnectorArgs, String, OsArgs, log::Level)> {
 
     Ok((
         matches
-            .value_of("connector")
+            .get_one::<String>("connector")
             .ok_or_else(|| {
                 Error(ErrorOrigin::Other, ErrorKind::Configuration)
                     .log_error("failed to parse connector")
             })?
             .into(),
-        str::parse(matches.value_of("connector-args").ok_or_else(|| {
+        str::parse(matches.get_one::<String>("connector-args").ok_or_else(|| {
             Error(ErrorOrigin::Other, ErrorKind::Configuration)
                 .log_error("failed to parse connector args")
         })?)?,
         matches
-            .value_of("os")
+            .get_one::<String>("os")
             .ok_or_else(|| {
                 Error(ErrorOrigin::Other, ErrorKind::Configuration).log_error("failed to parse os")
             })?
             .into(),
-        str::parse(matches.value_of("os-args").ok_or_else(|| {
+        str::parse(matches.get_one::<String>("os-args").ok_or_else(|| {
             Error(ErrorOrigin::Other, ErrorKind::Configuration).log_error("failed to parse os args")
         })?)?,
         level,

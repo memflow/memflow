@@ -147,6 +147,12 @@ These are the currently officially existing connectors:
 
 In case you write your own connector please hit us up with a pull request so we can maintain a list of third-party connectors as well.
 
+## Build on memflow
+
+Additional projects from the community:
+- [.NET wrapper for memflow-ffi](https://github.com/uberhalit/memflow.NET) by @uberhalit
+- [rhai integration](https://github.com/dankope/rhai-memflow) by @dankope
+
 ## Acknowledgements
 - [CasualX](https://github.com/casualx/) for his wonderful pelite crate
 - [ufrisk](https://github.com/ufrisk/) for his prior work on the subject and many inspirations

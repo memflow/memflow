@@ -234,6 +234,7 @@ impl<T: PhysicalMemory> MemoryView for PhysicalMemoryView<T> {
         let inp = &mut inp.map(|CTup3(addr, meta_addr, data)| CTup3(addr.into(), meta_addr, data));
         let inp = inp.into();
 
+        #[allow(clippy::unnecessary_unwrap)]
         if self.zero_fill_gaps && out.is_some() && out_fail.is_some() {
             let out = std::cell::RefCell::new(out.unwrap());
 

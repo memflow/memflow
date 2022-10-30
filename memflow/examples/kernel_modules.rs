@@ -83,5 +83,5 @@ fn extract_args(matches: &ArgMatches) -> Result<OsChain<'_>> {
         .into_iter()
         .flatten();
 
-    Ok(OsChain::new(conn_iter, os_iter)?)
+    OsChain::new(conn_iter, os_iter)
 }

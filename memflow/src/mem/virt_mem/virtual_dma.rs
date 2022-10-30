@@ -210,7 +210,10 @@ impl<T: PhysicalMemory, V: VirtualTranslate2, D: VirtualTranslate3> MemoryView
         }: ReadRawMemOps,
     ) -> Result<()> {
         self.arena.reset();
-        let mut translation = BumpVec::with_capacity_in(inp.size_hint().0, &self.arena);
+
+        // Safety: aliasing here is fine as arena is not accessed inside the invoked MemOps callback
+        let arena: &Bump = unsafe { &*(&self.arena as *const _) };
+        let mut translation = BumpVec::with_capacity_in(inp.size_hint().0, arena);
 
         self.vat.virt_to_phys_iter(
             &mut self.phys_mem,
@@ -237,7 +240,10 @@ impl<T: PhysicalMemory, V: VirtualTranslate2, D: VirtualTranslate3> MemoryView
         }: WriteRawMemOps,
     ) -> Result<()> {
         self.arena.reset();
-        let mut translation = BumpVec::with_capacity_in(inp.size_hint().0, &self.arena);
+
+        // Safety: aliasing here is fine as arena is not accessed inside the invoked MemOps callback
+        let arena: &Bump = unsafe { &*(&self.arena as *const _) };
+        let mut translation = BumpVec::with_capacity_in(inp.size_hint().0, arena);
 
         self.vat.virt_to_phys_iter(
             &mut self.phys_mem,

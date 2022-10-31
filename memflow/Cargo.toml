@@ -1,6 +1,6 @@
 [package]
 name = "memflow"
-version = "0.2.0-beta8"
+version = "0.2.0-beta9"
 authors = ["ko1N <ko1N1337@gmail.com>", "Aurimas Blažulionis <0x60@pm.me>"]
 edition = "2018"
 description = "core components of the memflow physical memory introspection framework"

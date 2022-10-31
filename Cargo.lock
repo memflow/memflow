@@ -585,7 +585,7 @@ checksum = "2dffe52ecf27772e601905b7522cb4ef790d2cc203488bbd0e2fe85fcb74566d"
 
 [[package]]
 name = "memflow"
-version = "0.2.0-beta8"
+version = "0.2.0-beta9"
 dependencies = [
  "abi_stable",
  "bitflags",
@@ -644,7 +644,7 @@ dependencies = [
 
 [[package]]
 name = "memflow-ffi"
-version = "0.2.0-beta8"
+version = "0.2.0-beta9"
 dependencies = [
  "log",
  "memflow",

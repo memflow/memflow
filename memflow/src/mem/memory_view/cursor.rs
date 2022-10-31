@@ -35,11 +35,11 @@ use std::io::{Error, ErrorKind, Read, Result, Seek, SeekFrom, Write};
 use super::MemoryView;
 use crate::types::{umem, Address};
 
-/// MemoryCursor implments a Cursor around the [`VirtualMemory`] trait.
+/// MemoryCursor implments a Cursor around the [`MemoryView`] trait.
 ///
 /// The cursor provides the [`Read`](https://doc.rust-lang.org/std/io/trait.Read.html),
 /// [`Write`](https://doc.rust-lang.org/std/io/trait.Write.html) and [`Seek`](https://doc.rust-lang.org/std/io/trait.Seek.html) traits
-/// for the underlying [`VirtualMemory`] object.
+/// for the underlying [`MemoryView`] object.
 ///
 /// # Examples:
 ///
@@ -130,14 +130,14 @@ impl<T: MemoryView> MemoryCursor<T> {
         }
     }
 
-    /// Creates a new MemoryCursor by wrapping around a [`VirtualMemory`] object
+    /// Creates a new MemoryCursor by wrapping around a [`MemoryView`] object
     /// at the desired starting position.
     ///
     /// Cursor initial position is * `address`.
     ///
     /// # Examples:
     ///
-    /// Borrowing a [`VirtualMemory`] object:
+    /// Borrowing a [`MemoryView`] object:
     /// ```
     /// use memflow::dummy::DummyMemory;
     /// use memflow::types::size;
@@ -155,7 +155,7 @@ impl<T: MemoryView> MemoryCursor<T> {
     /// let mut cursor = MemoryCursor::at(virt_mem, 0x1000.into());
     /// ```
     ///
-    /// Taking (temporary) ownership of a [`VirtualMemory`] object:
+    /// Taking (temporary) ownership of a [`MemoryView`] object:
     /// ```
     /// use memflow::dummy::DummyMemory;
     /// use memflow::types::size;
@@ -176,7 +176,7 @@ impl<T: MemoryView> MemoryCursor<T> {
         Self { mem, address }
     }
 
-    /// Consumes this cursor, returning the underlying [`VirtualMemory`] object.
+    /// Consumes this cursor, returning the underlying [`MemoryView`] object.
     ///
     /// # Examples
     ///
@@ -201,7 +201,7 @@ impl<T: MemoryView> MemoryCursor<T> {
         self.mem
     }
 
-    /// Gets a reference to the underlying [`VirtualMemory`] object in this cursor.
+    /// Gets a reference to the underlying [`MemoryView`] object in this cursor.
     ///
     /// # Examples
     ///
@@ -226,7 +226,7 @@ impl<T: MemoryView> MemoryCursor<T> {
         &self.mem
     }
 
-    /// Gets a mutable reference to the underlying [`VirtualMemory`] object in this cursor.
+    /// Gets a mutable reference to the underlying [`MemoryView`] object in this cursor.
     ///
     /// # Examples
     ///

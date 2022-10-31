@@ -191,7 +191,7 @@ pub unsafe extern "C" fn connector_clone(
 ///
 /// # Safety
 ///
-/// `conn` has to point to a valid [`ConnectorInstance`] created by one of the provided
+/// `conn` has to point to a valid [`ConnectorInstance`](ConnectorInstanceArcBox) created by one of the provided
 /// functions.
 ///
 /// There has to be no instance of `PhysicalMemory` created from the input `conn`, because they

@@ -88,10 +88,12 @@
 //!
 //! ```
 //!
-//! ## Core traits
+//! ## Traits
 //!
 //! While Connectors and OS layers are the primary user facing objects, functionality of these
 //! objects is provided through a set of traits.
+//!
+//! ### Core traits
 //!
 //! [MemoryView](crate::mem::memory_view::MemoryView) is the primary trait of issuing read and
 //! write operations. Required functions are a bit intimidating, because memflow wants IO to be
@@ -113,6 +115,62 @@
 //! [VirtualTranslate](crate::mem::virt_translate::VirtualTranslate) trait is optionally provided
 //! by processes in order to translate virtual addresses into physical ones. This is a lower level
 //! trait.
+//!
+//! ### Class diagrams
+//!
+//! ```text
+//! +----------------------------+    +----------------------------+
+//! |                            |    |                            |
+//! |          Connector         |    |         OS Layer           |
+//! |                            |    |                            |
+//! | +------------------------+ |    | +------------------------+ |
+//! | |     PhysicalMemory     | |    | |        OsInner         | |
+//! | +------------------------+ |    | +------------------------+ |
+//! |                            |    |                            |
+//! | +------------------------+ |    | +------------------------+ |
+//! | |         Clone          | |    | |         Clone          | |
+//! | +------------------------+ |    | +------------------------+ |
+//! |                            |    |                            |
+//! |         Optional:          |    |         Optional:          |
+//! |                            |    |                            |
+//! | +------------------------+ |    | +------------------------+ |
+//! | | ConnectorCpuStateInner | |    | |       MemoryView       | |
+//! | +------------------------+ |    | +------------------------+ |
+//! |                            |    |                            |
+//! +----------------------------+    | +------------------------+ |
+//!                                   | |    VirtualTranslate    | |
+//!                                   | +------------------------+ |
+//!                                   |                            |
+//!                                   | +------------------------+ |
+//!                                   | |     PhysicalMemory     | |
+//!                                   | +------------------------+ |
+//!                                   |                            |
+//!                                   | +------------------------+ |
+//!                                   | |    OsKeyboardInner     | |
+//! +----------------------------+    | +------------------------+ |
+//! |                            |    +----------------------------+
+//! |     IntoProcessInstance    |
+//! |                            |
+//! | +------------------------+ |    +----------------------------+
+//! | |        Process         | |    |                            |
+//! | +------------------------+ |    |       ProcessInstance      |
+//! |                            |    |                            |
+//! | +------------------------+ |    | +------------------------+ |
+//! | |       MemoryView       | |    | |        Process         | |
+//! | +------------------------+ |    | +------------------------+ |
+//! |                            |    |                            |
+//! | +------------------------+ |    | +------------------------+ |
+//! | |         Clone          | |    | |       MemoryView       | |
+//! | +------------------------+ |    | +------------------------+ |
+//! |                            |    |                            |
+//! |         Optional:          |    |         Optional:          |
+//! |                            |    |                            |
+//! | +------------------------+ |    | +------------------------+ |
+//! | |    VirtualTranslate    | |    | |    VirtualTranslate    | |
+//! | +------------------------+ |    | +------------------------+ |
+//! |                            |    |                            |
+//! +----------------------------+    +----------------------------+
+//! ```
 //!
 //! # Philosophy
 //!

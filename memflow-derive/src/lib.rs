@@ -60,7 +60,7 @@ fn validate_plugin_name(name: &str) {
 /// This would also lead to possible duplicated symbols if
 /// multiple connectors are imported.
 ///
-/// See https://github.com/rust-lang/rust/issues/20267 for the tracking issue.
+/// See <https://github.com/rust-lang/rust/issues/20267> for the tracking issue.
 ///
 /// #[cfg(crate_type = "cdylib")]
 ///
@@ -77,15 +77,15 @@ fn validate_plugin_name(name: &str) {
 ///
 /// Caching:
 ///
-/// By default the proc macro will call [`memflow::plugins::connector::create_instance`] internally which will handle the caching functionality.
+/// By default the proc macro will call `memflow::plugins::connector::create_instance` internally which will handle the caching functionality.
 /// Either the user did not specify any caching, which results in the default caching configuration being used, or the user
 /// did choose a custom caching configuration which will override the default caching configuration.
 ///
 /// In case `no_default_cache` is used the default behavior will be to use no caching. If the user supplies a cache configuration even
-/// if `no_default_cache` is set the [`memflow::plugins::connector::create_instance`] function will still instantiate the requested configuration.
+/// if `no_default_cache` is set the `memflow::plugins::connector::create_instance` function will still instantiate the requested configuration.
 ///
 /// In case `return_wrapped` is set to true the caching behavior has to be handled by the end user simply by
-/// calling [`memflow::plugins::connector::create_instance`] with the appropiate arguments.
+/// calling `memflow::plugins::connector::create_instance` with the appropiate arguments.
 ///
 /// Examples:
 ///
@@ -578,7 +578,7 @@ pub fn os(args: TokenStream, input: TokenStream) -> TokenStream {
 ///
 /// # Remarks:
 /// This custom derive macro is required because the dataview proc macro searches for ::dataview::derive_pod!().
-/// See https://github.com/CasualX/dataview/blob/master/derive_pod/lib.rs for the original implementation.
+/// See <https://github.com/CasualX/dataview/blob/master/derive_pod/lib.rs> for the original implementation.
 #[proc_macro_derive(Pod)]
 pub fn pod_derive(input: TokenStream) -> TokenStream {
     let crate_path = crate_path();

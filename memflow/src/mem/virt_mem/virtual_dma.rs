@@ -211,12 +211,11 @@ impl<T: PhysicalMemory, V: VirtualTranslate2, D: VirtualTranslate3> MemoryView
     ) -> Result<()> {
         self.arena.reset();
 
-        // Safety: aliasing here is fine as arena is not accessed inside the invoked MemOps callback
-        let arena: &Bump = unsafe { &*(&self.arena as *const _) };
-        let mut translation = BumpVec::with_capacity_in(inp.size_hint().0, arena);
+        let mut translation = BumpVec::with_capacity_in(inp.size_hint().0, &self.arena);
+        let phys_mem = &mut self.phys_mem;
 
         self.vat.virt_to_phys_iter(
-            &mut self.phys_mem,
+            phys_mem,
             &self.translator,
             inp,
             &mut translation.from_extend(),
@@ -227,7 +226,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate2, D: VirtualTranslate3> MemoryView
         );
 
         MemOps::with_raw(translation.into_iter(), out, out_fail, |data| {
-            self.phys_mem.phys_read_raw_iter(data)
+            phys_mem.phys_read_raw_iter(data)
         })
     }
 
@@ -241,12 +240,11 @@ impl<T: PhysicalMemory, V: VirtualTranslate2, D: VirtualTranslate3> MemoryView
     ) -> Result<()> {
         self.arena.reset();
 
-        // Safety: aliasing here is fine as arena is not accessed inside the invoked MemOps callback
-        let arena: &Bump = unsafe { &*(&self.arena as *const _) };
-        let mut translation = BumpVec::with_capacity_in(inp.size_hint().0, arena);
+        let mut translation = BumpVec::with_capacity_in(inp.size_hint().0, &self.arena);
+        let phys_mem = &mut self.phys_mem;
 
         self.vat.virt_to_phys_iter(
-            &mut self.phys_mem,
+            phys_mem,
             &self.translator,
             inp,
             &mut translation.from_extend(),
@@ -257,7 +255,7 @@ impl<T: PhysicalMemory, V: VirtualTranslate2, D: VirtualTranslate3> MemoryView
         );
 
         MemOps::with_raw(translation.into_iter(), out, out_fail, |data| {
-            self.phys_mem.phys_write_raw_iter(data)
+            phys_mem.phys_write_raw_iter(data)
         })
     }
 

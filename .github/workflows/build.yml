@@ -126,7 +126,7 @@ jobs:
         run: cd memflow-ffi; ./verify_headers.sh
 
       - name: Build memflow
-        run: cargo build --workspace ${{ matrix.flags }} --verbose
+        run: cargo build --workspace --release --verbose
 
       - name: Build c examples
         run: cd memflow-ffi/examples/c; make all

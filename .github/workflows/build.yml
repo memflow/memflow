@@ -81,7 +81,7 @@ jobs:
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
         with:
-          toolchain: 1.65.0
+          toolchain: nightly # currently required due to -Zdoctest-xcompile
           target: ${{ matrix.target }}
           override: true
       - name: Pre-build binaries (for inventory integration tests)
@@ -111,7 +111,28 @@ jobs:
       - uses: actions-rs/clippy-check@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          args: --all-targets --all-features --workspace -- -D clippy:all
+          args: --all-targets --all-features --workspace -- -D clippy::all
+
+  build-ffi:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: 1.65.0
+          override: true
+      - name: Validate c and c++ headers
+        run: |
+          cd memflow-ffi
+          ./verify_headers.sh
+      - name: Build c examples
+        run: |
+          cd examples/c
+          make all
+      - name: Build c++ examples
+        run: |
+          cd ../cpp
+          make all
 
   build-nostd:
     runs-on: ${{ matrix.os }}

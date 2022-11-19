@@ -8,14 +8,6 @@ use crate::prelude::v1::{Result, *};
 use crate::cglue::*;
 use std::prelude::v1::*;
 
-/// OS supertrait for all possible lifetimes
-///
-/// Use this for convenience. Chances are, once GAT are implemented, only `OS` will be kept.
-///
-/// It naturally provides all `OsInner` functions.
-pub trait Os: for<'a> OsInner<'a> {}
-impl<T: for<'a> OsInner<'a>> Os for T {}
-
 /// High level OS trait implemented by OS layers.
 ///
 /// This trait provides all necessary functions for handling an OS, retrieving processes, and
@@ -24,9 +16,11 @@ impl<T: for<'a> OsInner<'a>> Os for T {}
 /// There are also methods for accessing system level modules.
 #[cfg_attr(feature = "plugins", cglue_trait)]
 #[int_result]
-pub trait OsInner<'a>: Send {
+pub trait Os: Send {
     #[wrap_with_group(crate::plugins::os::ProcessInstance)]
-    type ProcessType: crate::os::process::Process + MemoryView + 'a;
+    type ProcessType<'a>: crate::os::process::Process + MemoryView + 'a
+    where
+        Self: 'a;
     #[wrap_with_group(crate::plugins::os::IntoProcessInstance)]
     type IntoProcessType: crate::os::process::Process + MemoryView + Clone + 'static;
 
@@ -115,7 +109,8 @@ pub trait OsInner<'a>: Send {
     /// Construct a process by its info, borrowing the OS
     ///
     /// It will share the underlying memory resources
-    fn process_by_info(&'a mut self, info: ProcessInfo) -> Result<Self::ProcessType>;
+    fn process_by_info(&mut self, info: ProcessInfo) -> Result<Self::ProcessType<'_>>;
+
     /// Construct a process by its info, consuming the OS
     ///
     /// This function will consume the Kernel instance and move its resources into the process
@@ -128,7 +123,7 @@ pub trait OsInner<'a>: Send {
     /// If no process with the specified address can be found this function will return an Error.
     ///
     /// This function can be useful for quickly accessing a process.
-    fn process_by_address(&'a mut self, addr: Address) -> Result<Self::ProcessType> {
+    fn process_by_address(&mut self, addr: Address) -> Result<Self::ProcessType<'_>> {
         self.process_info_by_address(addr)
             .and_then(move |i| self.process_by_info(i))
     }
@@ -144,7 +139,7 @@ pub trait OsInner<'a>: Send {
     /// # Remarks:
     ///
     /// This function only returns processes whose state is not [`ProcessState::Dead`].
-    fn process_by_name(&'a mut self, name: &str) -> Result<Self::ProcessType> {
+    fn process_by_name(&mut self, name: &str) -> Result<Self::ProcessType<'_>> {
         self.process_info_by_name(name)
             .and_then(move |i| self.process_by_info(i))
     }
@@ -156,7 +151,7 @@ pub trait OsInner<'a>: Send {
     /// If no process with the specified ID can be found this function will return an Error.
     ///
     /// This function can be useful for quickly accessing a process.
-    fn process_by_pid(&'a mut self, pid: Pid) -> Result<Self::ProcessType> {
+    fn process_by_pid(&mut self, pid: Pid) -> Result<Self::ProcessType<'_>> {
         self.process_info_by_pid(pid)
             .and_then(move |i| self.process_by_info(i))
     }

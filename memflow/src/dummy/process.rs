@@ -178,7 +178,7 @@ impl<T: MemoryView> MemoryView for DummyProcess<T> {
 #[cfg(test)]
 mod tests {
     use super::super::*;
-    use crate::os::{OsInner, Process};
+    use crate::os::{Os, Process};
     use crate::types::size;
 
     #[test]

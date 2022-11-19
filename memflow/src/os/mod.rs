@@ -21,7 +21,7 @@ pub mod process;
 pub mod root;
 pub mod util;
 
-pub use keyboard::{Keyboard, KeyboardState, OsKeyboard, OsKeyboardInner};
+pub use keyboard::{Keyboard, KeyboardState, OsKeyboard};
 
 pub use module::{
     ExportCallback, ExportInfo, ImportCallback, ImportInfo, ModuleAddressCallback,
@@ -30,7 +30,7 @@ pub use module::{
 
 pub use process::{Pid, Process, ProcessInfo, ProcessInfoCallback, ProcessState};
 
-pub use root::{Os, OsInfo, OsInner};
+pub use root::{Os, OsInfo};
 
 use crate::types::Address;
 

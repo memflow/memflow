@@ -226,7 +226,7 @@ impl<T: MmuTranslationBase> TranslationChunk<T> {
         let step_size = spec.page_size_step_unchecked(self.step + 1);
 
         let addr_diff = self.max_addr.wrapping_sub(self.min_addr).to_umem();
-        let add = if addr_diff % step_size != 0 { 1 } else { 0 };
+        let add = u64::from(addr_diff % step_size != 0);
 
         self.addr_count as umem * (addr_diff / step_size + add)
     }

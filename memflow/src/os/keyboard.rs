@@ -3,23 +3,17 @@
 use crate::cglue::*;
 use crate::prelude::v1::Result;
 
-/// OsKeyboard supertrait for all possible lifetimes
-///
-/// Use this for convenience. Chances are, once GAT are implemented, only `OsKeyboard` will be kept.
-///
-/// It naturally provides all `OsKeyboardInner` functions.
-pub trait OsKeyboard: for<'a> OsKeyboardInner<'a> {}
-impl<T: for<'a> OsKeyboardInner<'a>> OsKeyboard for T {}
-
 #[cfg_attr(feature = "plugins", cglue_trait)]
 #[int_result]
-pub trait OsKeyboardInner<'a>: Send {
+pub trait OsKeyboard: Send {
     #[wrap_with_obj(crate::os::keyboard::Keyboard)]
-    type KeyboardType: crate::os::keyboard::Keyboard + 'a;
+    type KeyboardType<'a>: crate::os::keyboard::Keyboard + 'a
+    where
+        Self: 'a;
     #[wrap_with_group(crate::os::keyboard::IntoKeyboard)]
     type IntoKeyboardType: crate::os::keyboard::Keyboard + Clone + 'static;
 
-    fn keyboard(&'a mut self) -> Result<Self::KeyboardType>;
+    fn keyboard(&mut self) -> Result<Self::KeyboardType<'_>>;
     fn into_keyboard(self) -> Result<Self::IntoKeyboardType>;
 }
 

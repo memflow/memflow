@@ -178,7 +178,7 @@ pub trait MemoryView: Send {
     #[skip_func]
     fn read_raw(&mut self, addr: Address, len: usize) -> PartialResult<Vec<u8>> {
         let mut buf = vec![0u8; len];
-        self.read_raw_into(addr, &mut *buf).map_data(|_| buf)
+        self.read_raw_into(addr, &mut buf).map_data(|_| buf)
     }
 
     #[skip_func]

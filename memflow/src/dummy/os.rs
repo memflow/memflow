@@ -145,7 +145,7 @@ impl DummyOs {
         self.mem
     }
 
-    pub fn quick_process(virt_size: usize, buffer: &[u8]) -> <Self as OsInner>::IntoProcessType {
+    pub fn quick_process(virt_size: usize, buffer: &[u8]) -> <Self as Os>::IntoProcessType {
         let mem = DummyMemory::new(virt_size + size::mb(2));
         let mut os = Self::new(mem);
         let pid = os.alloc_process(virt_size, buffer);
@@ -447,8 +447,8 @@ impl DummyOs {
 
 pub type DummyVirtMem<T> = VirtualDma<T, DirectTranslate, X86VirtualTranslate>;
 
-impl<'a> OsInner<'a> for DummyOs {
-    type ProcessType = DummyProcess<DummyVirtMem<Fwd<&'a mut DummyMemory>>>;
+impl Os for DummyOs {
+    type ProcessType<'a> = DummyProcess<DummyVirtMem<Fwd<&'a mut DummyMemory>>>;
     type IntoProcessType = DummyProcess<DummyVirtMem<DummyMemory>>;
 
     /// Walks a process list and calls a callback for each process structure address
@@ -475,7 +475,7 @@ impl<'a> OsInner<'a> for DummyOs {
     /// Creates a process by its internal address
     ///
     /// It will share the underlying memory resources
-    fn process_by_info(&'a mut self, info: ProcessInfo) -> Result<Self::ProcessType> {
+    fn process_by_info(&mut self, info: ProcessInfo) -> Result<Self::ProcessType<'_>> {
         let proc = self
             .processes
             .iter()

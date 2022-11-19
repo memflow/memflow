@@ -12,14 +12,14 @@ fn main() -> Result<()> {
     let inventory = Inventory::scan();
     let os = inventory.builder().os_chain(chain).build()?;
 
-    if !os.check_impl_oskeyboardinner() {
+    if !os.check_impl_oskeyboard() {
         return Err(
             Error(ErrorOrigin::Other, ErrorKind::UnsupportedOptionalFeature)
                 .log_error("keyboard feature is not implemented for the given os plugin"),
         );
     }
 
-    let mut keyboard = into!(os impl OsKeyboardInner).unwrap().into_keyboard()?;
+    let mut keyboard = into!(os impl OsKeyboard).unwrap().into_keyboard()?;
 
     loop {
         println!("space down: {:?}", keyboard.is_down(0x20)); // VK_SPACE

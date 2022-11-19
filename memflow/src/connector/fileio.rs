@@ -1,6 +1,4 @@
-/*!
-Basic connector which works on file i/o operations (`Seek`, `Read`, `Write`).
-*/
+//! Basic connector which works on file i/o operations (`Seek`, `Read`, `Write`).
 
 use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 use crate::mem::{
@@ -145,7 +143,7 @@ impl<T: Seek + Read + Write + Send> PhysicalMemory for FileIoMemory<T> {
             {
                 if self
                     .reader
-                    .read_exact(&mut *buf)
+                    .read_exact(&mut buf)
                     .map_err(|err| {
                         Error(ErrorOrigin::Connector, ErrorKind::UnableToReadFile).log_error(err)
                     })
@@ -173,7 +171,7 @@ impl<T: Seek + Read + Write + Send> PhysicalMemory for FileIoMemory<T> {
             {
                 if self
                     .reader
-                    .write_all(&*buf)
+                    .write_all(&buf)
                     .map_err(|err| {
                         Error(ErrorOrigin::Connector, ErrorKind::UnableToWriteFile).log_error(err)
                     })

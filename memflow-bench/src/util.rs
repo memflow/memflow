@@ -47,7 +47,7 @@ pub fn build_os(
     Ok(ret)
 }
 
-pub fn find_proc<T: Os>(os: &mut T) -> Result<(<T as OsInner<'_>>::ProcessType, ModuleInfo)> {
+pub fn find_proc<T: Os>(os: &mut T) -> Result<(<T as Os>::ProcessType<'_>, ModuleInfo)> {
     let infos = os.process_info_list()?;
 
     let mut data = None;

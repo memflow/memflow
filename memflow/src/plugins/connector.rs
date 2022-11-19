@@ -15,7 +15,7 @@ use super::{
 use crate::connector::cpu_state::*;
 use cglue::trait_group::c_void;
 
-cglue_trait_group!(ConnectorInstance<'a>, { PhysicalMemory, Clone }, { ConnectorCpuState });
+cglue_trait_group!(ConnectorInstance, { PhysicalMemory, Clone }, { ConnectorCpuState });
 pub type MuConnectorInstanceArcBox<'a> = std::mem::MaybeUninit<ConnectorInstanceArcBox<'a>>;
 
 /// This creates a cglue plugin instance from the given [`PhysicalMemory`] object.

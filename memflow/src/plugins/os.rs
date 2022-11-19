@@ -17,7 +17,7 @@ use cglue::trait_group::c_void;
 
 pub type OptionArchitectureIdent<'a> = Option<&'a crate::architecture::ArchitectureIdent>;
 
-cglue_trait_group!(OsInstance<'a>, { Os, Clone }, { PhysicalMemory, MemoryView, VirtualTranslate, OsKeyboard });
+cglue_trait_group!(OsInstance, { Os, Clone }, { PhysicalMemory, MemoryView, VirtualTranslate, OsKeyboard });
 pub type MuOsInstanceArcBox<'a> = std::mem::MaybeUninit<OsInstanceArcBox<'a>>;
 
 cglue_trait_group!(ProcessInstance, { Process, MemoryView }, { VirtualTranslate });

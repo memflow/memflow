@@ -85,7 +85,7 @@ impl PageInfo {
     }
 }
 
-cglue_impl_group!(DummyOs, OsInstance<'a>, PhysicalMemory);
+cglue_impl_group!(DummyOs, OsInstance, PhysicalMemory);
 
 pub struct DummyOs {
     mem: DummyMemory,

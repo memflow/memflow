@@ -160,7 +160,7 @@ template<typename CGlueCtx = void>
 using CloneRetTmp = void;
 
 template<typename CGlueCtx = void>
-using ConnectorCpuStateInnerRetTmp = void;
+using ConnectorCpuStateRetTmp = void;
 
 template<typename CGlueCtx = void>
 using CpuStateRetTmp = void;
@@ -231,10 +231,10 @@ template<typename CGlueCtx = void>
 using MemoryViewRetTmp = void;
 
 template<typename CGlueCtx = void>
-using OsInnerRetTmp = void;
+using OsKeyboardRetTmp = void;
 
 template<typename CGlueCtx = void>
-using OsKeyboardInnerRetTmp = void;
+using OsRetTmp = void;
 
 template<typename CGlueCtx = void>
 using PhysicalMemoryRetTmp = void;
@@ -1149,28 +1149,28 @@ struct IntoCpuState {
 };
 
 /**
- * CGlue vtable for trait ConnectorCpuStateInner.
+ * CGlue vtable for trait ConnectorCpuState.
  *
  * This virtual function table contains ABI-safe interface for the given trait.
  */
 template<typename CGlueC>
-struct ConnectorCpuStateInnerVtbl {
+struct ConnectorCpuStateVtbl {
     typedef typename CGlueC::Context Context;
     int32_t (*cpu_state)(CGlueC *cont, CpuStateBase<CBox<void>, Context> *ok_out);
     int32_t (*into_cpu_state)(CGlueC cont, IntoCpuState<CBox<void>, Context> *ok_out);
 };
 
 template<typename Impl>
-struct ConnectorCpuStateInnerVtblImpl : ConnectorCpuStateInnerVtbl<typename Impl::Parent> {
-constexpr ConnectorCpuStateInnerVtblImpl() :
-    ConnectorCpuStateInnerVtbl<typename Impl::Parent> {
+struct ConnectorCpuStateVtblImpl : ConnectorCpuStateVtbl<typename Impl::Parent> {
+constexpr ConnectorCpuStateVtblImpl() :
+    ConnectorCpuStateVtbl<typename Impl::Parent> {
         &Impl::cpu_state,
         &Impl::into_cpu_state
     } {}
 };
 
 /**
- * Trait group potentially implementing `:: cglue :: ext :: core :: clone :: Clone < > + PhysicalMemory < > + for < 'cglue_c > ConnectorCpuStateInner < 'cglue_c, >` traits.
+ * Trait group potentially implementing `:: cglue :: ext :: core :: clone :: Clone < > + PhysicalMemory < > + ConnectorCpuState < >` traits.
  *
  * Optional traits are not implemented here, however. There are numerous conversion
  * functions available for safely retrieving a concrete collection of traits.
@@ -1191,10 +1191,10 @@ template<typename CGlueInst = CBox<void>, typename CGlueCtx = CArc<void>>
 struct ConnectorInstance {
     const CloneVtbl<ConnectorInstanceContainer<CGlueInst, CGlueCtx>> *vtbl_clone;
     const PhysicalMemoryVtbl<ConnectorInstanceContainer<CGlueInst, CGlueCtx>> *vtbl_physicalmemory;
-    const ConnectorCpuStateInnerVtbl<ConnectorInstanceContainer<CGlueInst, CGlueCtx>> *vtbl_connectorcpustateinner;
+    const ConnectorCpuStateVtbl<ConnectorInstanceContainer<CGlueInst, CGlueCtx>> *vtbl_connectorcpustate;
     ConnectorInstanceContainer<CGlueInst, CGlueCtx> container;
 
-    ConnectorInstance() : container{} , vtbl_clone{}, vtbl_physicalmemory{}, vtbl_connectorcpustateinner{} {}
+    ConnectorInstance() : container{} , vtbl_clone{}, vtbl_physicalmemory{}, vtbl_connectorcpustate{} {}
 
     ~ConnectorInstance() noexcept {
         mem_drop(std::move(container));
@@ -1206,7 +1206,7 @@ struct ConnectorInstance {
         ConnectorInstance __ret;
             __ret.vtbl_clone = this->vtbl_clone;
             __ret.vtbl_physicalmemory = this->vtbl_physicalmemory;
-            __ret.vtbl_connectorcpustateinner = this->vtbl_connectorcpustateinner;
+            __ret.vtbl_connectorcpustate = this->vtbl_connectorcpustate;
         __ret.container = (this->vtbl_clone)->clone(&this->container);
         return __ret;
     }
@@ -1244,13 +1244,13 @@ struct ConnectorInstance {
     }
 
     inline int32_t cpu_state(CpuStateBase<CBox<void>, Context> * ok_out) noexcept {
-        int32_t __ret = (this->vtbl_connectorcpustateinner)->cpu_state(&this->container, ok_out);
+        int32_t __ret = (this->vtbl_connectorcpustate)->cpu_state(&this->container, ok_out);
         return __ret;
     }
 
     inline int32_t into_cpu_state(IntoCpuState<CBox<void>, Context> * ok_out) && noexcept {
         auto ___ctx = StoreAll()[this->container.clone_context(), StoreAll()];
-        int32_t __ret = (this->vtbl_connectorcpustateinner)->into_cpu_state(this->container, ok_out);
+        int32_t __ret = (this->vtbl_connectorcpustate)->into_cpu_state(this->container, ok_out);
         mem_forget(this->container);
         return __ret;
     }
@@ -2264,12 +2264,12 @@ struct OsInfo {
 };
 
 /**
- * CGlue vtable for trait OsInner.
+ * CGlue vtable for trait Os.
  *
  * This virtual function table contains ABI-safe interface for the given trait.
  */
 template<typename CGlueC>
-struct OsInnerVtbl {
+struct OsVtbl {
     typedef typename CGlueC::Context Context;
     int32_t (*process_address_list_callback)(CGlueC *cont, AddressCallback callback);
     int32_t (*process_info_list_callback)(CGlueC *cont, ProcessInfoCallback callback);
@@ -2300,9 +2300,9 @@ struct OsInnerVtbl {
 };
 
 template<typename Impl>
-struct OsInnerVtblImpl : OsInnerVtbl<typename Impl::Parent> {
-constexpr OsInnerVtblImpl() :
-    OsInnerVtbl<typename Impl::Parent> {
+struct OsVtblImpl : OsVtbl<typename Impl::Parent> {
+constexpr OsVtblImpl() :
+    OsVtbl<typename Impl::Parent> {
         &Impl::process_address_list_callback,
         &Impl::process_info_list_callback,
         &Impl::process_info_by_address,
@@ -2481,28 +2481,28 @@ struct IntoKeyboard {
 };
 
 /**
- * CGlue vtable for trait OsKeyboardInner.
+ * CGlue vtable for trait OsKeyboard.
  *
  * This virtual function table contains ABI-safe interface for the given trait.
  */
 template<typename CGlueC>
-struct OsKeyboardInnerVtbl {
+struct OsKeyboardVtbl {
     typedef typename CGlueC::Context Context;
     int32_t (*keyboard)(CGlueC *cont, KeyboardBase<CBox<void>, Context> *ok_out);
     int32_t (*into_keyboard)(CGlueC cont, IntoKeyboard<CBox<void>, Context> *ok_out);
 };
 
 template<typename Impl>
-struct OsKeyboardInnerVtblImpl : OsKeyboardInnerVtbl<typename Impl::Parent> {
-constexpr OsKeyboardInnerVtblImpl() :
-    OsKeyboardInnerVtbl<typename Impl::Parent> {
+struct OsKeyboardVtblImpl : OsKeyboardVtbl<typename Impl::Parent> {
+constexpr OsKeyboardVtblImpl() :
+    OsKeyboardVtbl<typename Impl::Parent> {
         &Impl::keyboard,
         &Impl::into_keyboard
     } {}
 };
 
 /**
- * Trait group potentially implementing `:: cglue :: ext :: core :: clone :: Clone < > + for < 'cglue_c > OsInner < 'cglue_c, > + MemoryView < > + for < 'cglue_c > OsKeyboardInner < 'cglue_c, > + PhysicalMemory < > + VirtualTranslate < >` traits.
+ * Trait group potentially implementing `:: cglue :: ext :: core :: clone :: Clone < > + Os < > + MemoryView < > + OsKeyboard < > + PhysicalMemory < > + VirtualTranslate < >` traits.
  *
  * Optional traits are not implemented here, however. There are numerous conversion
  * functions available for safely retrieving a concrete collection of traits.
@@ -2522,14 +2522,14 @@ constexpr OsKeyboardInnerVtblImpl() :
 template<typename CGlueInst = CBox<void>, typename CGlueCtx = CArc<void>>
 struct OsInstance {
     const CloneVtbl<OsInstanceContainer<CGlueInst, CGlueCtx>> *vtbl_clone;
-    const OsInnerVtbl<OsInstanceContainer<CGlueInst, CGlueCtx>> *vtbl_osinner;
+    const OsVtbl<OsInstanceContainer<CGlueInst, CGlueCtx>> *vtbl_os;
     const MemoryViewVtbl<OsInstanceContainer<CGlueInst, CGlueCtx>> *vtbl_memoryview;
-    const OsKeyboardInnerVtbl<OsInstanceContainer<CGlueInst, CGlueCtx>> *vtbl_oskeyboardinner;
+    const OsKeyboardVtbl<OsInstanceContainer<CGlueInst, CGlueCtx>> *vtbl_oskeyboard;
     const PhysicalMemoryVtbl<OsInstanceContainer<CGlueInst, CGlueCtx>> *vtbl_physicalmemory;
     const VirtualTranslateVtbl<OsInstanceContainer<CGlueInst, CGlueCtx>> *vtbl_virtualtranslate;
     OsInstanceContainer<CGlueInst, CGlueCtx> container;
 
-    OsInstance() : container{} , vtbl_clone{}, vtbl_osinner{}, vtbl_memoryview{}, vtbl_oskeyboardinner{}, vtbl_physicalmemory{}, vtbl_virtualtranslate{} {}
+    OsInstance() : container{} , vtbl_clone{}, vtbl_os{}, vtbl_memoryview{}, vtbl_oskeyboard{}, vtbl_physicalmemory{}, vtbl_virtualtranslate{} {}
 
     ~OsInstance() noexcept {
         mem_drop(std::move(container));
@@ -2540,9 +2540,9 @@ struct OsInstance {
     inline OsInstance clone() const noexcept {
         OsInstance __ret;
             __ret.vtbl_clone = this->vtbl_clone;
-            __ret.vtbl_osinner = this->vtbl_osinner;
+            __ret.vtbl_os = this->vtbl_os;
             __ret.vtbl_memoryview = this->vtbl_memoryview;
-            __ret.vtbl_oskeyboardinner = this->vtbl_oskeyboardinner;
+            __ret.vtbl_oskeyboard = this->vtbl_oskeyboard;
             __ret.vtbl_physicalmemory = this->vtbl_physicalmemory;
             __ret.vtbl_virtualtranslate = this->vtbl_virtualtranslate;
         __ret.container = (this->vtbl_clone)->clone(&this->container);
@@ -2550,140 +2550,140 @@ struct OsInstance {
     }
 
     inline int32_t process_address_list_callback(AddressCallback callback) noexcept {
-        int32_t __ret = (this->vtbl_osinner)->process_address_list_callback(&this->container, callback);
+        int32_t __ret = (this->vtbl_os)->process_address_list_callback(&this->container, callback);
         return __ret;
     }
 
     inline int32_t process_info_list_callback(ProcessInfoCallback callback) noexcept {
-        int32_t __ret = (this->vtbl_osinner)->process_info_list_callback(&this->container, callback);
+        int32_t __ret = (this->vtbl_os)->process_info_list_callback(&this->container, callback);
         return __ret;
     }
 
     inline int32_t process_info_by_address(Address address, ProcessInfo * ok_out) noexcept {
-        int32_t __ret = (this->vtbl_osinner)->process_info_by_address(&this->container, address, ok_out);
+        int32_t __ret = (this->vtbl_os)->process_info_by_address(&this->container, address, ok_out);
         return __ret;
     }
 
     inline int32_t process_info_by_name(CSliceRef<uint8_t> name, ProcessInfo * ok_out) noexcept {
-        int32_t __ret = (this->vtbl_osinner)->process_info_by_name(&this->container, name, ok_out);
+        int32_t __ret = (this->vtbl_os)->process_info_by_name(&this->container, name, ok_out);
         return __ret;
     }
 
     inline int32_t process_info_by_pid(Pid pid, ProcessInfo * ok_out) noexcept {
-        int32_t __ret = (this->vtbl_osinner)->process_info_by_pid(&this->container, pid, ok_out);
+        int32_t __ret = (this->vtbl_os)->process_info_by_pid(&this->container, pid, ok_out);
         return __ret;
     }
 
     inline int32_t process_by_info(ProcessInfo info, ProcessInstance<CBox<void>, Context> * ok_out) noexcept {
-        int32_t __ret = (this->vtbl_osinner)->process_by_info(&this->container, info, ok_out);
+        int32_t __ret = (this->vtbl_os)->process_by_info(&this->container, info, ok_out);
         return __ret;
     }
 
     inline int32_t into_process_by_info(ProcessInfo info, IntoProcessInstance<CBox<void>, Context> * ok_out) && noexcept {
         auto ___ctx = StoreAll()[this->container.clone_context(), StoreAll()];
-        int32_t __ret = (this->vtbl_osinner)->into_process_by_info(this->container, info, ok_out);
+        int32_t __ret = (this->vtbl_os)->into_process_by_info(this->container, info, ok_out);
         mem_forget(this->container);
         return __ret;
     }
 
     inline int32_t process_by_address(Address addr, ProcessInstance<CBox<void>, Context> * ok_out) noexcept {
-        int32_t __ret = (this->vtbl_osinner)->process_by_address(&this->container, addr, ok_out);
+        int32_t __ret = (this->vtbl_os)->process_by_address(&this->container, addr, ok_out);
         return __ret;
     }
 
     inline int32_t process_by_name(CSliceRef<uint8_t> name, ProcessInstance<CBox<void>, Context> * ok_out) noexcept {
-        int32_t __ret = (this->vtbl_osinner)->process_by_name(&this->container, name, ok_out);
+        int32_t __ret = (this->vtbl_os)->process_by_name(&this->container, name, ok_out);
         return __ret;
     }
 
     inline int32_t process_by_pid(Pid pid, ProcessInstance<CBox<void>, Context> * ok_out) noexcept {
-        int32_t __ret = (this->vtbl_osinner)->process_by_pid(&this->container, pid, ok_out);
+        int32_t __ret = (this->vtbl_os)->process_by_pid(&this->container, pid, ok_out);
         return __ret;
     }
 
     inline int32_t into_process_by_address(Address addr, IntoProcessInstance<CBox<void>, Context> * ok_out) && noexcept {
         auto ___ctx = StoreAll()[this->container.clone_context(), StoreAll()];
-        int32_t __ret = (this->vtbl_osinner)->into_process_by_address(this->container, addr, ok_out);
+        int32_t __ret = (this->vtbl_os)->into_process_by_address(this->container, addr, ok_out);
         mem_forget(this->container);
         return __ret;
     }
 
     inline int32_t into_process_by_name(CSliceRef<uint8_t> name, IntoProcessInstance<CBox<void>, Context> * ok_out) && noexcept {
         auto ___ctx = StoreAll()[this->container.clone_context(), StoreAll()];
-        int32_t __ret = (this->vtbl_osinner)->into_process_by_name(this->container, name, ok_out);
+        int32_t __ret = (this->vtbl_os)->into_process_by_name(this->container, name, ok_out);
         mem_forget(this->container);
         return __ret;
     }
 
     inline int32_t into_process_by_pid(Pid pid, IntoProcessInstance<CBox<void>, Context> * ok_out) && noexcept {
         auto ___ctx = StoreAll()[this->container.clone_context(), StoreAll()];
-        int32_t __ret = (this->vtbl_osinner)->into_process_by_pid(this->container, pid, ok_out);
+        int32_t __ret = (this->vtbl_os)->into_process_by_pid(this->container, pid, ok_out);
         mem_forget(this->container);
         return __ret;
     }
 
     inline int32_t module_address_list_callback(AddressCallback callback) noexcept {
-        int32_t __ret = (this->vtbl_osinner)->module_address_list_callback(&this->container, callback);
+        int32_t __ret = (this->vtbl_os)->module_address_list_callback(&this->container, callback);
         return __ret;
     }
 
     inline int32_t module_list_callback(ModuleInfoCallback callback) noexcept {
-        int32_t __ret = (this->vtbl_osinner)->module_list_callback(&this->container, callback);
+        int32_t __ret = (this->vtbl_os)->module_list_callback(&this->container, callback);
         return __ret;
     }
 
     inline int32_t module_by_address(Address address, ModuleInfo * ok_out) noexcept {
-        int32_t __ret = (this->vtbl_osinner)->module_by_address(&this->container, address, ok_out);
+        int32_t __ret = (this->vtbl_os)->module_by_address(&this->container, address, ok_out);
         return __ret;
     }
 
     inline int32_t module_by_name(CSliceRef<uint8_t> name, ModuleInfo * ok_out) noexcept {
-        int32_t __ret = (this->vtbl_osinner)->module_by_name(&this->container, name, ok_out);
+        int32_t __ret = (this->vtbl_os)->module_by_name(&this->container, name, ok_out);
         return __ret;
     }
 
     inline int32_t primary_module_address(Address * ok_out) noexcept {
-        int32_t __ret = (this->vtbl_osinner)->primary_module_address(&this->container, ok_out);
+        int32_t __ret = (this->vtbl_os)->primary_module_address(&this->container, ok_out);
         return __ret;
     }
 
     inline int32_t primary_module(ModuleInfo * ok_out) noexcept {
-        int32_t __ret = (this->vtbl_osinner)->primary_module(&this->container, ok_out);
+        int32_t __ret = (this->vtbl_os)->primary_module(&this->container, ok_out);
         return __ret;
     }
 
     inline int32_t module_import_list_callback(const ModuleInfo * info, ImportCallback callback) noexcept {
-        int32_t __ret = (this->vtbl_osinner)->module_import_list_callback(&this->container, info, callback);
+        int32_t __ret = (this->vtbl_os)->module_import_list_callback(&this->container, info, callback);
         return __ret;
     }
 
     inline int32_t module_export_list_callback(const ModuleInfo * info, ExportCallback callback) noexcept {
-        int32_t __ret = (this->vtbl_osinner)->module_export_list_callback(&this->container, info, callback);
+        int32_t __ret = (this->vtbl_os)->module_export_list_callback(&this->container, info, callback);
         return __ret;
     }
 
     inline int32_t module_section_list_callback(const ModuleInfo * info, SectionCallback callback) noexcept {
-        int32_t __ret = (this->vtbl_osinner)->module_section_list_callback(&this->container, info, callback);
+        int32_t __ret = (this->vtbl_os)->module_section_list_callback(&this->container, info, callback);
         return __ret;
     }
 
     inline int32_t module_import_by_name(const ModuleInfo * info, CSliceRef<uint8_t> name, ImportInfo * ok_out) noexcept {
-        int32_t __ret = (this->vtbl_osinner)->module_import_by_name(&this->container, info, name, ok_out);
+        int32_t __ret = (this->vtbl_os)->module_import_by_name(&this->container, info, name, ok_out);
         return __ret;
     }
 
     inline int32_t module_export_by_name(const ModuleInfo * info, CSliceRef<uint8_t> name, ExportInfo * ok_out) noexcept {
-        int32_t __ret = (this->vtbl_osinner)->module_export_by_name(&this->container, info, name, ok_out);
+        int32_t __ret = (this->vtbl_os)->module_export_by_name(&this->container, info, name, ok_out);
         return __ret;
     }
 
     inline int32_t module_section_by_name(const ModuleInfo * info, CSliceRef<uint8_t> name, SectionInfo * ok_out) noexcept {
-        int32_t __ret = (this->vtbl_osinner)->module_section_by_name(&this->container, info, name, ok_out);
+        int32_t __ret = (this->vtbl_os)->module_section_by_name(&this->container, info, name, ok_out);
         return __ret;
     }
 
     inline const OsInfo * info() const noexcept {
-        const OsInfo * __ret = (this->vtbl_osinner)->info(&this->container);
+        const OsInfo * __ret = (this->vtbl_os)->info(&this->container);
         return __ret;
     }
 
@@ -2733,13 +2733,13 @@ struct OsInstance {
     }
 
     inline int32_t keyboard(KeyboardBase<CBox<void>, Context> * ok_out) noexcept {
-        int32_t __ret = (this->vtbl_oskeyboardinner)->keyboard(&this->container, ok_out);
+        int32_t __ret = (this->vtbl_oskeyboard)->keyboard(&this->container, ok_out);
         return __ret;
     }
 
     inline int32_t into_keyboard(IntoKeyboard<CBox<void>, Context> * ok_out) && noexcept {
         auto ___ctx = StoreAll()[this->container.clone_context(), StoreAll()];
-        int32_t __ret = (this->vtbl_oskeyboardinner)->into_keyboard(this->container, ok_out);
+        int32_t __ret = (this->vtbl_oskeyboard)->into_keyboard(this->container, ok_out);
         mem_forget(this->container);
         return __ret;
     }
@@ -3081,7 +3081,7 @@ void connector_clone(const ConnectorInstanceArcBox *conn, MuConnectorInstanceArc
  *
  * # Safety
  *
- * `conn` has to point to a valid [`ConnectorInstance`] created by one of the provided
+ * `conn` has to point to a valid [`ConnectorInstance`](ConnectorInstanceArcBox) created by one of the provided
  * functions.
  *
  * There has to be no instance of `PhysicalMemory` created from the input `conn`, because they
@@ -3278,8 +3278,8 @@ struct CGlueTraitObj<T, CpuStateVtbl<CGlueObjContainer<T, C, R>>, C, R> {
 };
 
 template<typename T, typename C, typename R>
-struct CGlueTraitObj<T, ConnectorCpuStateInnerVtbl<CGlueObjContainer<T, C, R>>, C, R> {
-    const ConnectorCpuStateInnerVtbl<CGlueObjContainer<T, C, R>> *vtbl;
+struct CGlueTraitObj<T, ConnectorCpuStateVtbl<CGlueObjContainer<T, C, R>>, C, R> {
+    const ConnectorCpuStateVtbl<CGlueObjContainer<T, C, R>> *vtbl;
     CGlueObjContainer<T, C, R> container;
 
     CGlueTraitObj() : container{} {}
@@ -3465,8 +3465,8 @@ struct CGlueTraitObj<T, VirtualTranslateVtbl<CGlueObjContainer<T, C, R>>, C, R> 
 };
 
 template<typename T, typename C, typename R>
-struct CGlueTraitObj<T, OsInnerVtbl<CGlueObjContainer<T, C, R>>, C, R> {
-    const OsInnerVtbl<CGlueObjContainer<T, C, R>> *vtbl;
+struct CGlueTraitObj<T, OsVtbl<CGlueObjContainer<T, C, R>>, C, R> {
+    const OsVtbl<CGlueObjContainer<T, C, R>> *vtbl;
     CGlueObjContainer<T, C, R> container;
 
     CGlueTraitObj() : container{} {}
@@ -3668,8 +3668,8 @@ struct CGlueTraitObj<T, KeyboardVtbl<CGlueObjContainer<T, C, R>>, C, R> {
 };
 
 template<typename T, typename C, typename R>
-struct CGlueTraitObj<T, OsKeyboardInnerVtbl<CGlueObjContainer<T, C, R>>, C, R> {
-    const OsKeyboardInnerVtbl<CGlueObjContainer<T, C, R>> *vtbl;
+struct CGlueTraitObj<T, OsKeyboardVtbl<CGlueObjContainer<T, C, R>>, C, R> {
+    const OsKeyboardVtbl<CGlueObjContainer<T, C, R>> *vtbl;
     CGlueObjContainer<T, C, R> container;
 
     CGlueTraitObj() : container{} {}

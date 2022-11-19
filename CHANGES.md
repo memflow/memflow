@@ -2,6 +2,10 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
+## 0.2.0-beta10
+- Removed all 'Inner' types and replaced them with GAT - this also shifts memflow to a minimum rust version of 1.65.0
+
+## 0.2.0-beta9
 ## 0.2.0-beta8
 - Hotfix for new bumpalo release
 

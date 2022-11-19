@@ -122,17 +122,11 @@ jobs:
           toolchain: nightly # required by cglue codegen
           override: true
       - name: Validate c and c++ headers
-        run: |
-          cd memflow-ffi
-          ./verify_headers.sh
+        run: cd memflow-ffi; ./verify_headers.sh
       - name: Build c examples
-        run: |
-          cd examples/c
-          make all
+        run: cd memflow-ffi/examples/c; make all
       - name: Build c++ examples
-        run: |
-          cd ../cpp
-          make all
+        run: cd memflow-ffi/examples/cpp; make all
 
   build-nostd:
     runs-on: ${{ matrix.os }}

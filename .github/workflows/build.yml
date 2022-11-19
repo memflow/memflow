@@ -121,8 +121,13 @@ jobs:
         with:
           toolchain: nightly # required by cglue codegen
           override: true
+
       - name: Validate c and c++ headers
         run: cd memflow-ffi; ./verify_headers.sh
+
+      - name: Build memflow
+        run: cargo build --workspace ${{ matrix.flags }} --verbose
+
       - name: Build c examples
         run: cd memflow-ffi/examples/c; make all
       - name: Build c++ examples

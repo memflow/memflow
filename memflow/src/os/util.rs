@@ -151,7 +151,7 @@ pub fn import_list_callback(
 
     #[cfg(feature = "pelite")]
     let ret = ret.or_else(|_| {
-        if let Ok(pe) = pelite::PeFile::from_bytes(module_image) {
+        if let Ok(pe) = pelite::PeView::from_bytes(module_image) {
             use pelite::pe32::imports::Import as Import32;
             use pelite::pe64::imports::Import as Import64;
             use pelite::Wrap::*;
@@ -257,7 +257,7 @@ pub fn export_list_callback(
 
     #[cfg(feature = "pelite")]
     let ret = ret.or_else(|_| {
-        if let Ok(pe) = pelite::PeFile::from_bytes(module_image) {
+        if let Ok(pe) = pelite::PeView::from_bytes(module_image) {
             use pelite::pe64::exports::Export;
 
             if let Some(exports) = pe
@@ -368,7 +368,7 @@ pub fn section_list_callback(
 
     #[cfg(feature = "pelite")]
     let ret = ret.or_else(|_| {
-        if let Ok(pe) = pelite::PeFile::from_bytes(module_image) {
+        if let Ok(pe) = pelite::PeView::from_bytes(module_image) {
             let iter = pe.section_headers().iter().filter_map(|sh| {
                 sh.name().ok().map(|name| {
                     (

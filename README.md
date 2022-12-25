@@ -149,6 +149,10 @@ In case you write your own connector please hit us up with a pull request so we 
 
 ## Build on memflow
 
+Officialy supported projects:
+- [memflow-py](https://github.com/memflow/memflow-py) Python Wrapper for memflow (thanks to [dank](https://github.com/dankope))
+
+
 Additional projects from the community:
 - [.NET wrapper for memflow-ffi](https://github.com/uberhalit/memflow.NET) by [uberhalit](https://github.com/uberhalit)
 - [rhai integration](https://github.com/dankope/rhai-memflow) by [dank](https://github.com/dankope)

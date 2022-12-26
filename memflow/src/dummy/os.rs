@@ -365,9 +365,7 @@ impl DummyOs {
 
         while cur_len < map_size {
             let page_info = self.next_page_for_address(cur_len.into());
-            let flags = PageTableFlags::PRESENT
-                | PageTableFlags::WRITABLE
-                | PageTableFlags::USER_ACCESSIBLE;
+            let flags = PageTableFlags::PRESENT | PageTableFlags::WRITABLE;
 
             if test_buf.len() >= (cur_len + page_info.size.to_size() as usize) {
                 self.mem
@@ -422,7 +420,7 @@ impl DummyOs {
                         .is_ok(),
                 };
             }
-            cur_len += page_info.size.to_size() as usize;
+            cur_len += page_info.size.to_size();
         }
 
         dtb

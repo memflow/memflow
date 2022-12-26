@@ -105,14 +105,14 @@ impl Loadable for LoadableOs {
                 let mut ret = vec![];
                 (help_callback)((&mut ret).into());
                 ret.first().map(|h| h.to_string()).ok_or_else(|| {
-                    Error(ErrorOrigin::Connector, ErrorKind::NotSupported).log_error(&format!(
+                    Error(ErrorOrigin::Connector, ErrorKind::NotSupported).log_error(format!(
                         "Os-Plugin `{}` did not return any help text.",
                         self.ident()
                     ))
                 })
             }
             None => Err(
-                Error(ErrorOrigin::Connector, ErrorKind::NotSupported).log_error(&format!(
+                Error(ErrorOrigin::Connector, ErrorKind::NotSupported).log_error(format!(
                     "Os-Plugin `{}` does not support help text.",
                     self.ident()
                 )),

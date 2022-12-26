@@ -214,6 +214,10 @@
 
 //#![warn(missing_docs)]
 
+// due to the fact that umem equals u64 when compiling with a x86_64 target clippy issues false-positives on these conversions.
+// targets other than x86_64 still might require those.
+#![allow(clippy::unnecessary_cast)]
+// no-std-compat
 #![cfg_attr(not(feature = "std"), no_std)]
 extern crate no_std_compat as std;
 

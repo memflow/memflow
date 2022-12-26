@@ -55,6 +55,7 @@ pub const fn clamp_to_usize(val: umem) -> usize {
     ret as usize
 }
 
+#[allow(clippy::manual_clamp)]
 pub const fn clamp_to_isize(val: imem) -> isize {
     let max = core::isize::MAX as imem;
     let min = core::isize::MIN as imem;

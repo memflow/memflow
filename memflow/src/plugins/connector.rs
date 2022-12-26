@@ -241,14 +241,14 @@ impl Loadable for LoadableConnector {
                 let mut ret = vec![];
                 (help_callback)((&mut ret).into());
                 ret.first().map(|h| h.to_string()).ok_or_else(|| {
-                    Error(ErrorOrigin::Connector, ErrorKind::NotSupported).log_error(&format!(
+                    Error(ErrorOrigin::Connector, ErrorKind::NotSupported).log_error(format!(
                         "Connector `{}` did not return any help text.",
                         self.ident()
                     ))
                 })
             }
             None => Err(
-                Error(ErrorOrigin::Connector, ErrorKind::NotSupported).log_error(&format!(
+                Error(ErrorOrigin::Connector, ErrorKind::NotSupported).log_error(format!(
                     "Connector `{}` does not support help text.",
                     self.ident()
                 )),
@@ -265,7 +265,7 @@ impl Loadable for LoadableConnector {
                 Ok(ret)
             }
             None => Err(
-                Error(ErrorOrigin::Connector, ErrorKind::NotSupported).log_error(&format!(
+                Error(ErrorOrigin::Connector, ErrorKind::NotSupported).log_error(format!(
                     "Connector `{}` does not support target listing.",
                     self.ident()
                 )),

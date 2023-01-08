@@ -924,7 +924,11 @@ fn builder_from_args<'a>(
     layers.sort_by(|(a, _), (b, _)| a.cmp(b));
 
     if layers.windows(2).any(|w| !w[0].1.validate_next(&w[1].1)) {
-        return Err(Error(ErrorOrigin::Other, ErrorKind::ArgValidation));
+        return Err(
+            Error(ErrorOrigin::Other, ErrorKind::ArgValidation).log_error(
+                "invalid builder configuration, build steps cannot be used in the given order",
+            ),
+        );
     }
 
     Ok(layers.into_iter().map(|(_, s)| s).collect())
@@ -954,7 +958,11 @@ impl<'a> TryFrom<Vec<BuildStep<'a>>> for ConnectorChain<'a> {
 
     fn try_from(steps: Vec<BuildStep<'a>>) -> Result<Self> {
         if !matches!(steps.last(), Some(BuildStep::Connector { .. })) {
-            return Err(Error(ErrorOrigin::Other, ErrorKind::ArgValidation));
+            return Err(
+                Error(ErrorOrigin::Other, ErrorKind::ArgValidation).log_error(
+                    "last build step for ConnectorChain has to be of type BuildStep::Connector",
+                ),
+            );
         }
 
         Ok(Self(steps))
@@ -985,7 +993,8 @@ impl<'a> TryFrom<Vec<BuildStep<'a>>> for OsChain<'a> {
 
     fn try_from(steps: Vec<BuildStep<'a>>) -> Result<Self> {
         if !matches!(steps.last(), Some(BuildStep::Os { .. })) {
-            return Err(Error(ErrorOrigin::Other, ErrorKind::ArgValidation));
+            return Err(Error(ErrorOrigin::Other, ErrorKind::ArgValidation)
+                .log_error("last build step for OsChain has to be of type BuildStep::Os"));
         }
 
         Ok(Self(steps))

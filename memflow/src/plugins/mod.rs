@@ -6,6 +6,7 @@ All functionality in this module is gated behind `plugins` feature.
 
 use crate::cglue::*;
 use cglue::trait_group::c_void;
+use core::convert::{TryFrom, TryInto};
 use std::prelude::v1::*;
 
 pub mod args;
@@ -944,7 +945,14 @@ impl<'a> ConnectorChain<'a> {
         os_layers: impl Iterator<Item = (usize, &'a str)>,
     ) -> Result<Self> {
         let steps = builder_from_args(connectors, os_layers)?;
+        steps.try_into()
+    }
+}
 
+impl<'a> TryFrom<Vec<BuildStep<'a>>> for ConnectorChain<'a> {
+    type Error = Error;
+
+    fn try_from(steps: Vec<BuildStep<'a>>) -> Result<Self> {
         if !matches!(steps.last(), Some(BuildStep::Connector { .. })) {
             return Err(Error(ErrorOrigin::Other, ErrorKind::ArgValidation));
         }
@@ -968,7 +976,14 @@ impl<'a> OsChain<'a> {
         os_layers: impl Iterator<Item = (usize, &'a str)>,
     ) -> Result<Self> {
         let steps = builder_from_args(connectors, os_layers)?;
+        steps.try_into()
+    }
+}
 
+impl<'a> TryFrom<Vec<BuildStep<'a>>> for OsChain<'a> {
+    type Error = Error;
+
+    fn try_from(steps: Vec<BuildStep<'a>>) -> Result<Self> {
         if !matches!(steps.last(), Some(BuildStep::Os { .. })) {
             return Err(Error(ErrorOrigin::Other, ErrorKind::ArgValidation));
         }

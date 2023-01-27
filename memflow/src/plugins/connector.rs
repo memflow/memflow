@@ -97,7 +97,7 @@ impl std::str::FromStr for PageCacheParams {
     type Err = crate::error::Error;
 
     fn from_str(vargs: &str) -> Result<Self> {
-        let mut sp = vargs.splitn(2, ',');
+        let mut sp = vargs.splitn(3, ',');
         let (size, time, page_size) = (
             sp.next().ok_or_else(|| {
                 Error(ErrorOrigin::OsLayer, ErrorKind::Configuration)
@@ -136,6 +136,8 @@ impl std::str::FromStr for PageCacheParams {
         })?;
 
         let size = size * size_mul;
+
+        println!("time {}", time);
 
         let validity_time = time.parse::<u64>().map_err(|_| {
             Error(ErrorOrigin::OsLayer, ErrorKind::Configuration)
@@ -287,5 +289,30 @@ impl Loadable for LoadableConnector {
         let res =
             (self.descriptor.create)(args, input.into(), library.into_opaque(), logger, &mut out);
         unsafe { from_int_result(res, out) }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    pub fn connector_args_parse() {
+        simplelog::TermLogger::init(
+            log::LevelFilter::Debug,
+            simplelog::Config::default(),
+            simplelog::TerminalMode::Stdout,
+            simplelog::ColorChoice::Auto,
+        )
+        .unwrap();
+
+        let args: ConnectorArgs = "target:extra=value:1kb,10,FF"
+            .parse()
+            .expect("unable to parse args");
+        assert_eq!(args.target.unwrap(), ReprCString::from("target"));
+        assert_eq!(args.extra_args.get("extra").unwrap(), "value");
+        assert_eq!(args.page_cache.unwrap().size, 1024);
+        assert_eq!(args.page_cache.unwrap().validity_time, 10);
+        assert_eq!(args.page_cache.unwrap().page_size, 255);
     }
 }

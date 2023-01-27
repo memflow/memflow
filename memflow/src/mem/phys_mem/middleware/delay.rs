@@ -6,13 +6,13 @@ use crate::mem::{
     PhysicalWriteMemOps,
 };
 
-/// The cache object that can use as a drop-in replacement for any Connector.
+/// The delay middleware introduces delay and jitter into physical reads which allows
+/// users to simulate different connectors and setups.
 ///
-/// Since this cache implements [`PhysicalMemory`] it can be used as a replacement
-/// in all structs and functions that require a [`PhysicalMemory`] object.
+/// Since this middleware implements [`PhysicalMemory`] it can be used as a replacement
+/// in all structs and functions that require the [`PhysicalMemory`] trait.
 pub struct DelayedPhysicalMemory<T> {
     mem: T,
-    // TODO: jitter, etc.
     delay: Duration,
 }
 
@@ -29,12 +29,12 @@ where
 }
 
 impl<T: PhysicalMemory> DelayedPhysicalMemory<T> {
-    /// Constructs a new cache based on the given `PageCache`.
+    /// Constructs a new middleware with the given delay.
     ///
-    /// This function is used when manually constructing a cache inside of the memflow crate itself.
+    /// This function is used when manually constructing a middleware inside of the memflow crate itself.
     ///
     /// For general usage it is advised to just use the [builder](struct.DelayedPhysicalMemoryBuilder.html)
-    /// to construct the cache.
+    /// to construct the delay.
     pub fn new(mem: T, delay: Duration) -> Self {
         Self { mem, delay }
     }
@@ -52,17 +52,16 @@ impl<T: PhysicalMemory> DelayedPhysicalMemory<T> {
     /// use memflow::mem::{PhysicalMemory, DelayedPhysicalMemory, MemoryView};
     ///
     /// fn build<T: PhysicalMemory>(mem: T) -> T {
-    ///     let mut cache = DelayedPhysicalMemory::builder(mem)
-    ///         .arch(x64::ARCH)
+    ///     let mut middleware = DelayedPhysicalMemory::builder(mem)
     ///         .build()
     ///         .unwrap();
     ///
-    ///     // use the cache...
-    ///     let value: u64 = cache.phys_view().read(0.into()).unwrap();
+    ///     // use the middleware...
+    ///     let value: u64 = middleware.phys_view().read(0.into()).unwrap();
     ///     assert_eq!(value, MAGIC_VALUE);
     ///
     ///     // retrieve ownership of mem and return it back
-    ///     cache.into_inner()
+    ///     middleware.into_inner()
     /// }
     /// # use memflow::dummy::DummyMemory;
     /// # use memflow::types::size;
@@ -76,7 +75,7 @@ impl<T: PhysicalMemory> DelayedPhysicalMemory<T> {
 }
 
 impl<'a, T: PhysicalMemory> DelayedPhysicalMemory<T> {
-    /// Returns a new builder for this cache with default settings.
+    /// Returns a new builder for the delay middleware with default settings.
     pub fn builder(mem: T) -> DelayedPhysicalMemoryBuilder<T> {
         DelayedPhysicalMemoryBuilder::new(mem)
     }
@@ -119,12 +118,8 @@ impl<T: PhysicalMemory> DelayedPhysicalMemoryBuilder<T> {
     /// Creates a new `DelayedPhysicalMemory` builder.
     /// The memory object is mandatory as the DelayedPhysicalMemory struct wraps around it.
     ///
-    /// This type of cache also is required to know the exact page size of the target system.
-    /// This can either be set directly via the `page_size()` method or via the `arch()` method.
-    /// If no page size has been set this builder will fail to build the DelayedPhysicalMemory.
-    ///
-    /// Without further adjustments this function creates a cache that is 2 megabytes in size and caches
-    /// pages that contain pagetable entries as well as read-only pages.
+    /// Without further adjustments this function creates a middleware with a delay of 10 milliseconds
+    /// for each read and write.
     ///
     /// It is also possible to either let the `DelayedPhysicalMemory` object own or just borrow the underlying memory object.
     ///
@@ -136,14 +131,13 @@ impl<T: PhysicalMemory> DelayedPhysicalMemoryBuilder<T> {
     /// use memflow::mem::{PhysicalMemory, DelayedPhysicalMemory, MemoryView};
     ///
     /// fn build<T: PhysicalMemory>(mem: T) {
-    ///     let mut cache = DelayedPhysicalMemory::builder(mem)
-    ///         .arch(x64::ARCH)
+    ///     let mut middleware = DelayedPhysicalMemory::builder(mem)
     ///         .build()
     ///         .unwrap();
     ///
-    ///     cache.phys_write(0.into(), &MAGIC_VALUE);
+    ///     middleware.phys_write(0.into(), &MAGIC_VALUE);
     ///
-    ///     let mut mem = cache.into_inner();
+    ///     let mut mem = middleware.into_inner();
     ///
     ///     let value: u64 = mem.phys_view().read(0.into()).unwrap();
     ///     assert_eq!(value, MAGIC_VALUE);
@@ -165,7 +159,6 @@ impl<T: PhysicalMemory> DelayedPhysicalMemoryBuilder<T> {
     /// fn build<T: PhysicalMemory>(mem: Fwd<&mut T>)
     ///     -> impl PhysicalMemory + '_ {
     ///     DelayedPhysicalMemory::builder(mem)
-    ///         .arch(x64::ARCH)
     ///         .build()
     ///         .unwrap()
     /// }
@@ -174,15 +167,15 @@ impl<T: PhysicalMemory> DelayedPhysicalMemoryBuilder<T> {
     /// # use memflow::types::size;
     /// # let mut mem = DummyMemory::new(size::mb(4));
     /// # mem.phys_write(0.into(), &MAGIC_VALUE).unwrap();
-    /// let mut cache = build(mem.forward_mut());
+    /// let mut middleware = build(mem.forward_mut());
     ///
-    /// let value: u64 = cache.phys_view().read(0.into()).unwrap();
+    /// let value: u64 = middleware.phys_view().read(0.into()).unwrap();
     /// assert_eq!(value, MAGIC_VALUE);
     ///
-    /// cache.phys_write(0.into(), &0u64).unwrap();
+    /// middleware.phys_write(0.into(), &0u64).unwrap();
     ///
     /// // We drop the cache and are able to use mem again
-    /// std::mem::drop(cache);
+    /// std::mem::drop(middleware);
     ///
     /// let value: u64 = mem.phys_view().read(0.into()).unwrap();
     /// assert_ne!(value, MAGIC_VALUE);
@@ -194,23 +187,18 @@ impl<T: PhysicalMemory> DelayedPhysicalMemoryBuilder<T> {
         }
     }
 
-    /// Changes the page size of the cache.
-    ///
-    /// The cache has to know the exact page size of the target system internally to give reasonable performance.
-    /// The page size can be either set directly via this function or it can be fetched from the `Architecture`
-    /// via the `arch()` method of the builder.
-    ///
-    /// If the page size is not set the builder will fail.
+    /// Changes the delay of the middleware.
     ///
     /// # Examples
     ///
     /// ```
     /// use memflow::types::size;
     /// use memflow::mem::{PhysicalMemory, DelayedPhysicalMemory};
+    /// use std::time::Duration;
     ///
     /// fn build<T: PhysicalMemory>(mem: T) {
-    ///     let cache = DelayedPhysicalMemory::builder(mem)
-    ///         .page_size(size::kb(4))
+    ///     let middleware = DelayedPhysicalMemory::builder(mem)
+    ///         .delay(Duration::from_millis(10))
     ///         .build()
     ///         .unwrap();
     /// }
@@ -230,7 +218,7 @@ impl<T: PhysicalMemory> DelayedPhysicalMemoryBuilder<T> {
 }
 
 #[cfg(feature = "plugins")]
-cglue::cglue_impl_group!(
+::cglue::cglue_impl_group!(
     DelayedPhysicalMemory<T: PhysicalMemory>,
     crate::plugins::ConnectorInstance,
     {}

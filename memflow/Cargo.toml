@@ -11,6 +11,7 @@ repository = "https://github.com/memflow/memflow"
 license = "MIT"
 keywords = [ "memflow", "introspection", "memory", "dma" ]
 categories = [ "memory-management", "os" ]
+rust-version = "1.65.0"
 
 [badges]
 maintenance = { status = "actively-developed" }
@@ -45,7 +46,7 @@ once_cell = { version = "^1.9", optional = true }
 
 goblin = { version = "^0.5.1", optional = true, features = ["pe32", "pe64", "elf32", "elf64", "mach32", "mach64"] }
 serde = { version = "^1.0.133", optional = true, default-features = false, features = ["derive", "alloc"] }
-toml = { version = "^0.5.8", optional = true }
+toml = { version = "^0.7", optional = true }
 
 [dev-dependencies]
 rand = { version = "^0.8.4" }

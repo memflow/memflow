@@ -960,7 +960,7 @@ impl<'a> TryFrom<Vec<BuildStep<'a>>> for ConnectorChain<'a> {
         if !matches!(steps.last(), Some(BuildStep::Connector { .. })) {
             return Err(
                 Error(ErrorOrigin::Other, ErrorKind::ArgValidation).log_error(
-                    "last build step for ConnectorChain has to be of type BuildStep::Connector",
+                    "invalid builder configuration, last build step has to be a connector",
                 ),
             );
         }
@@ -994,7 +994,7 @@ impl<'a> TryFrom<Vec<BuildStep<'a>>> for OsChain<'a> {
     fn try_from(steps: Vec<BuildStep<'a>>) -> Result<Self> {
         if !matches!(steps.last(), Some(BuildStep::Os { .. })) {
             return Err(Error(ErrorOrigin::Other, ErrorKind::ArgValidation)
-                .log_error("last build step for OsChain has to be of type BuildStep::Os"));
+                .log_error("invalid builder configuration, last build step has to be a os"));
         }
 
         Ok(Self(steps))

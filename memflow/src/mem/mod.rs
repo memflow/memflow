@@ -15,7 +15,9 @@ pub mod virt_mem;
 pub mod virt_translate;
 
 pub use mem_map::{MemoryMap, PhysicalMemoryMapping};
-pub use phys_mem::{CachedPhysicalMemory, PhysicalMemory, PhysicalMemoryMetadata};
+pub use phys_mem::{
+    CachedPhysicalMemory, DelayedPhysicalMemory, PhysicalMemory, PhysicalMemoryMetadata,
+};
 pub use virt_mem::VirtualDma;
 //#[doc(hidden)]
 //pub use virt_mem_batcher::VirtualMemoryBatcher;

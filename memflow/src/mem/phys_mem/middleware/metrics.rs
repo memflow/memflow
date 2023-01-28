@@ -88,15 +88,13 @@ impl<T: PhysicalMemory> PhysicalMemory for PhysicalMemoryMetrics<T> {
         &mut self,
         MemOps { inp, out_fail, out }: PhysicalReadMemOps,
     ) -> Result<()> {
-        let vec = inp.collect::<Vec<_>>();
-        let number_of_bytes = vec.iter().fold(0, |a, d| a + d.2.len());
+        let mut number_of_bytes = 0;
+        let iter = inp.inspect(|e| number_of_bytes += e.2.len());
 
         let start_time = Instant::now();
 
         let mem = &mut self.mem;
-        let result = MemOps::with_raw(vec.into_iter(), out, out_fail, |data| {
-            mem.phys_read_raw_iter(data)
-        });
+        let result = MemOps::with_raw(iter, out, out_fail, |data| mem.phys_read_raw_iter(data));
 
         self.reads
             .add(start_time.elapsed().as_secs_f64(), number_of_bytes);
@@ -120,15 +118,13 @@ impl<T: PhysicalMemory> PhysicalMemory for PhysicalMemoryMetrics<T> {
         &mut self,
         MemOps { inp, out_fail, out }: PhysicalWriteMemOps,
     ) -> Result<()> {
-        let vec = inp.collect::<Vec<_>>();
-        let number_of_bytes = vec.iter().fold(0, |a, d| a + d.2.len());
+        let mut number_of_bytes = 0;
+        let iter = inp.inspect(|e| number_of_bytes += e.2.len());
 
         let start_time = Instant::now();
 
         let mem = &mut self.mem;
-        let result = MemOps::with_raw(vec.into_iter(), out, out_fail, |data| {
-            mem.phys_write_raw_iter(data)
-        });
+        let result = MemOps::with_raw(iter, out, out_fail, |data| mem.phys_write_raw_iter(data));
 
         self.writes
             .add(start_time.elapsed().as_secs_f64(), number_of_bytes);

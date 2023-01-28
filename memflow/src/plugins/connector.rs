@@ -79,7 +79,7 @@ where
         );
 
         let conn = DelayedPhysicalMemory::builder(conn)
-            .delay(Duration::from_millis(args.middleware_args.delay))
+            .delay(Duration::from_micros(args.middleware_args.delay))
             .build()
             .unwrap();
         group_obj!((conn, lib.clone()) as ConnectorInstance)

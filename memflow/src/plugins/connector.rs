@@ -1,3 +1,6 @@
+use ::log::info;
+use ::std::time::Duration;
+
 use crate::cglue::{
     result::{from_int_result, from_int_result_empty},
     *,
@@ -5,7 +8,6 @@ use crate::cglue::{
 use crate::error::*;
 use crate::mem::phys_mem::*;
 use crate::types::{cache::TimedCacheValidator, size};
-use std::time::Duration;
 
 use super::{
     args::split_str_args, Args, LibArc, LibContext, Loadable, OsInstanceArcBox, PluginDescriptor,
@@ -40,81 +42,107 @@ where
         >,
     >,
 {
-    let default_cache = !no_default_cache;
-    let middleware = if args.middleware.is_some() || default_cache {
-        Some(args.middleware.as_ref().copied().unwrap_or_default())
-    } else {
-        None
-    };
-    if let Some(middleware) = middleware {
-        let mut builder = CachedPhysicalMemory::builder(conn);
-
-        builder = if middleware.cache_page_size > 0 {
-            builder.page_size(middleware.cache_page_size)
+    // check if user explicitly enabled caching or alternatively fall back to auto configuration of the connector
+    let use_cache = Option::<bool>::from(args.middleware_args.cache).unwrap_or(!no_default_cache);
+    let conn = if use_cache {
+        let cache_page_size = if args.middleware_args.cache_page_size > 0 {
+            args.middleware_args.cache_page_size
         } else {
-            builder.page_size(size::kb(4))
+            size::kb(4)
         };
 
-        if middleware.cache_size > 0 {
-            builder = builder.cache_size(middleware.cache_size);
+        info!("Inserting `CachedPhysicalMemory` middleware with size={}, validity_time={}, page_size={}",
+            args.middleware_args.cache_size, args.middleware_args.cache_validity_time, cache_page_size);
+
+        let mut builder = CachedPhysicalMemory::builder(conn).page_size(cache_page_size);
+
+        if args.middleware_args.cache_size > 0 {
+            builder = builder.cache_size(args.middleware_args.cache_size);
         }
 
-        if middleware.cache_validity_time > 0 {
+        if args.middleware_args.cache_validity_time > 0 {
             builder = builder.validator(TimedCacheValidator::new(
-                Duration::from_millis(middleware.cache_validity_time).into(),
+                Duration::from_millis(args.middleware_args.cache_validity_time).into(),
             ))
         }
 
-        // TODO: optional features not forwarded?
         let conn = builder.build().unwrap();
-        let obj = group_obj!((conn, lib.clone()) as ConnectorInstance);
-
-        if cfg!(feature = "std") && middleware.delay > 0 {
-            let conn = DelayedPhysicalMemory::builder(obj)
-                .delay(Duration::from_millis(middleware.delay))
-                .build()
-                .unwrap();
-            group_obj!((conn, lib) as ConnectorInstance)
-        } else {
-            obj
-        }
+        group_obj!((conn, lib.clone()) as ConnectorInstance)
     } else {
-        // this is identical to: `group_obj!((conn, lib) as ConnectorInstance)`
-        let obj = (conn, lib).into();
-        obj.into_opaque()
-    }
-}
+        group_obj!((conn, lib.clone()) as ConnectorInstance)
+    };
 
-#[repr(C)]
-#[derive(Default, Clone, Copy, Debug)]
-#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
-pub struct ConnectorCacheArgs {
-    pub size: usize,
-    pub validity_time: u64,
-    pub page_size: usize,
-}
+    let conn = if args.middleware_args.delay > 0 {
+        info!(
+            "Inserting `DelayedPhysicalMemory` middleware with delay={}",
+            args.middleware_args.delay
+        );
 
-impl ConnectorCacheArgs {
-    pub fn new(size: usize, validity_time: u64, page_size: usize) -> Self {
-        Self {
-            size,
-            validity_time,
-            page_size,
-        }
-    }
+        let conn = DelayedPhysicalMemory::builder(conn)
+            .delay(Duration::from_millis(args.middleware_args.delay))
+            .build()
+            .unwrap();
+        group_obj!((conn, lib.clone()) as ConnectorInstance)
+    } else {
+        conn
+    };
+
+    let conn = if args.middleware_args.metrics {
+        info!("Inserting `PhysicalMemoryMetrics` middleware",);
+        let conn = PhysicalMemoryMetrics::new(conn);
+        group_obj!((conn, lib) as ConnectorInstance)
+    } else {
+        conn
+    };
+
+    // TODO: optional features not forwarded?
+    conn
 }
 
 #[repr(C)]
 #[derive(Default, Clone, Copy)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 pub struct ConnectorMiddlewareArgs {
-    pub cache: COption<ConnectorCacheArgs>,
+    pub cache: COption<bool>,
+    pub cache_size: usize,
+    pub cache_validity_time: u64,
+    pub cache_page_size: usize,
+
     pub delay: u64,
+
+    pub metrics: bool,
 }
 
 impl ConnectorMiddlewareArgs {
-    pub fn new(cache: COption<ConnectorCacheArgs>, delay: u64) -> Self {
-        Self { cache, delay }
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn cache(mut self, cache: bool) -> Self {
+        self.cache = COption::Some(cache);
+        self
+    }
+    pub fn cache_size(mut self, size: usize) -> Self {
+        self.cache_size = size;
+        self
+    }
+    pub fn cache_validity_time(mut self, validity_time: u64) -> Self {
+        self.cache_validity_time = validity_time;
+        self
+    }
+    pub fn cache_page_size(mut self, page_size: usize) -> Self {
+        self.cache_page_size = page_size;
+        self
+    }
+
+    pub fn delay(mut self, delay: u64) -> Self {
+        self.delay = delay;
+        self
+    }
+
+    pub fn metrics(mut self, metrics: bool) -> Self {
+        self.metrics = metrics;
+        self
     }
 }
 
@@ -124,11 +152,10 @@ impl std::str::FromStr for ConnectorMiddlewareArgs {
     fn from_str(vargs: &str) -> Result<Self> {
         let args: Args = vargs.parse()?;
 
-        let (size, time, page_size) = (
-            args.get("cache_size").ok_or_else(|| {
-                Error(ErrorOrigin::OsLayer, ErrorKind::Configuration)
-                    .log_error("Failed to parse Page Cache size")
-            })?,
+        let (cache, size, time, page_size) = (
+            args.get("cache")
+                .map(|s| s.to_lowercase() == "true" || s == "1"),
+            args.get("cache_size").unwrap_or("0kb"),
             args.get("cache_time").unwrap_or("0"),
             args.get("cache_page_size").unwrap_or("0"),
         );
@@ -182,11 +209,20 @@ impl std::str::FromStr for ConnectorMiddlewareArgs {
                     .log_error("Failed to parse delay configuration")
             })?;
 
+        let metrics = args
+            .get("metrics")
+            .map(|s| s.to_lowercase() == "true" || s == "1")
+            .unwrap_or_default();
+
         Ok(Self {
+            cache: cache.into(),
             cache_size,
             cache_validity_time,
             cache_page_size,
+
             delay,
+
+            metrics,
         })
     }
 }
@@ -197,7 +233,7 @@ impl std::str::FromStr for ConnectorMiddlewareArgs {
 pub struct ConnectorArgs {
     pub target: Option<ReprCString>,
     pub extra_args: Args,
-    pub middleware: COption<ConnectorMiddlewareArgs>,
+    pub middleware_args: ConnectorMiddlewareArgs,
 }
 
 impl std::str::FromStr for ConnectorArgs {
@@ -212,18 +248,17 @@ impl std::str::FromStr for ConnectorArgs {
 
         let extra_args = iter.next().unwrap_or("").parse()?;
 
-        let middleware = if let Some(s) = iter.next() {
+        let middleware_args = if let Some(s) = iter.next() {
             // allow user to see the parse error
-            Some(s.parse()?)
+            s.parse()?
         } else {
-            None
-        }
-        .into();
+            ConnectorMiddlewareArgs::default()
+        };
 
         Ok(Self {
             target,
             extra_args,
-            middleware,
+            middleware_args,
         })
     }
 }
@@ -232,12 +267,12 @@ impl ConnectorArgs {
     pub fn new(
         target: Option<&str>,
         extra_args: Args,
-        middleware: Option<ConnectorMiddlewareArgs>,
+        middleware_args: Option<ConnectorMiddlewareArgs>,
     ) -> Self {
         Self {
             target: target.map(<_>::into),
             extra_args,
-            middleware: middleware.into(),
+            middleware_args: middleware_args.unwrap_or_default(),
         }
     }
 }
@@ -338,34 +373,23 @@ mod tests {
                 .expect("unable to parse args");
         assert_eq!(args.target.unwrap(), ReprCString::from("target"));
         assert_eq!(args.extra_args.get("extra").unwrap(), "value");
-        assert_eq!(args.middleware.unwrap().cache_size, 1024);
-        assert_eq!(args.middleware.unwrap().cache_validity_time, 10);
-        assert_eq!(args.middleware.unwrap().cache_page_size, 0x1000);
+        assert_eq!(Option::<bool>::from(args.middleware_args.cache), None);
+        assert_eq!(args.middleware_args.cache_size, 1024);
+        assert_eq!(args.middleware_args.cache_validity_time, 10);
+        assert_eq!(args.middleware_args.cache_page_size, 0x1000);
     }
 
     #[test]
     pub fn connector_args_with_cache() {
         let args: ConnectorArgs =
-            "target:extra=value:cache=false,cache_size=1kb,cache_time=10,cache_page_size=1000"
+            "target:extra=value:cache=true,cache_size=1kb,cache_time=10,cache_page_size=1000"
                 .parse()
                 .expect("unable to parse args");
         assert_eq!(args.target.unwrap(), ReprCString::from("target"));
         assert_eq!(args.extra_args.get("extra").unwrap(), "value");
-        assert_eq!(args.middleware.unwrap().cache_size, 1024);
-        assert_eq!(args.middleware.unwrap().cache_validity_time, 10);
-        assert_eq!(args.middleware.unwrap().cache_page_size, 0x1000);
-    }
-
-    #[test]
-    pub fn connector_args_without_cache() {
-        let args: ConnectorArgs =
-            "target:extra=value:cache_size=1kb,cache_time=10,cache_page_size=1000"
-                .parse()
-                .expect("unable to parse args");
-        assert_eq!(args.target.unwrap(), ReprCString::from("target"));
-        assert_eq!(args.extra_args.get("extra").unwrap(), "value");
-        assert_eq!(args.middleware.unwrap().cache_size, 1024);
-        assert_eq!(args.middleware.unwrap().cache_validity_time, 10);
-        assert_eq!(args.middleware.unwrap().cache_page_size, 0x1000);
+        assert_eq!(Option::<bool>::from(args.middleware_args.cache), Some(true));
+        assert_eq!(args.middleware_args.cache_size, 1024);
+        assert_eq!(args.middleware_args.cache_validity_time, 10);
+        assert_eq!(args.middleware_args.cache_page_size, 0x1000);
     }
 }

@@ -49,7 +49,7 @@ pub use cursor::MemoryCursor;
 /// # let virt_base = proc.info().address;
 /// # read(&mut proc, virt_base);
 /// ```
-#[cglue_trait]
+#[cfg_attr(feature = "plugins", cglue_trait)]
 #[cglue_forward]
 #[int_result(PartialResult)]
 pub trait MemoryView: Send {

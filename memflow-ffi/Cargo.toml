@@ -21,7 +21,7 @@ name = "memflow_ffi"
 crate-type = ["lib", "cdylib", "staticlib"]
 
 [dependencies]
-memflow = { version = "0.2.0-beta9", path = "../memflow" }
+memflow = { version = "0.2.0-beta", path = "../memflow" }
 log = "^0.4.14"
 simplelog = "^0.12.0"
 

@@ -99,7 +99,7 @@ use crate::types::{imem, umem, Address, Page, PhysicalAddress};
 ///
 /// For overview how this trait relates to other virtual translation traits,
 /// check out documentation of [this module](self).
-#[cglue_trait]
+#[cfg_attr(feature = "plugins", cglue_trait)]
 #[int_result]
 pub trait VirtualTranslate: Send {
     /// Translate a list of address ranges into physical address space.

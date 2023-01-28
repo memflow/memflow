@@ -22,7 +22,7 @@ pub fn build_os(
     }
 
     let page_cache_params = if cache_size > 0 {
-        Some(ConnectorMiddlewareArgs::new(cache_size, 0, 0, 0))
+        Some(ConnectorMiddlewareArgs::new().cache_size(cache_size))
     } else {
         None
     };

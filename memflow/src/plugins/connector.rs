@@ -39,16 +39,6 @@ where
             c_void,
         >,
     >,
-    (
-        DelayedPhysicalMemory<CachedPhysicalMemory<'static, T, TimedCacheValidator>>,
-        LibArc,
-    ): Into<
-        ConnectorInstanceBaseArcBox<
-            'static,
-            DelayedPhysicalMemory<CachedPhysicalMemory<'static, T, TimedCacheValidator>>,
-            c_void,
-        >,
-    >,
 {
     let default_cache = !no_default_cache;
     let middleware = if args.middleware.is_some() || default_cache {
@@ -77,15 +67,16 @@ where
 
         // TODO: optional features not forwarded?
         let conn = builder.build().unwrap();
+        let obj = group_obj!((conn, lib.clone()) as ConnectorInstance);
 
         if cfg!(feature = "std") && middleware.delay > 0 {
-            let conn = DelayedPhysicalMemory::builder(conn)
+            let conn = DelayedPhysicalMemory::builder(obj)
                 .delay(Duration::from_millis(middleware.delay))
                 .build()
                 .unwrap();
             group_obj!((conn, lib) as ConnectorInstance)
         } else {
-            group_obj!((conn, lib) as ConnectorInstance)
+            obj
         }
     } else {
         // this is identical to: `group_obj!((conn, lib) as ConnectorInstance)`
@@ -97,26 +88,33 @@ where
 #[repr(C)]
 #[derive(Default, Clone, Copy, Debug)]
 #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+pub struct ConnectorCacheArgs {
+    pub size: usize,
+    pub validity_time: u64,
+    pub page_size: usize,
+}
+
+impl ConnectorCacheArgs {
+    pub fn new(size: usize, validity_time: u64, page_size: usize) -> Self {
+        Self {
+            size,
+            validity_time,
+            page_size,
+        }
+    }
+}
+
+#[repr(C)]
+#[derive(Default, Clone, Copy)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
 pub struct ConnectorMiddlewareArgs {
-    pub cache_size: usize,
-    pub cache_validity_time: u64,
-    pub cache_page_size: usize,
+    pub cache: COption<ConnectorCacheArgs>,
     pub delay: u64,
 }
 
 impl ConnectorMiddlewareArgs {
-    pub fn new(
-        cache_size: usize,
-        cache_validity_time: u64,
-        cache_page_size: usize,
-        delay: u64,
-    ) -> Self {
-        Self {
-            cache_size,
-            cache_validity_time,
-            cache_page_size,
-            delay,
-        }
+    pub fn new(cache: COption<ConnectorCacheArgs>, delay: u64) -> Self {
+        Self { cache, delay }
     }
 }
 
@@ -334,6 +332,32 @@ mod tests {
 
     #[test]
     pub fn connector_args_parse() {
+        let args: ConnectorArgs =
+            "target:extra=value:cache_size=1kb,cache_time=10,cache_page_size=1000"
+                .parse()
+                .expect("unable to parse args");
+        assert_eq!(args.target.unwrap(), ReprCString::from("target"));
+        assert_eq!(args.extra_args.get("extra").unwrap(), "value");
+        assert_eq!(args.middleware.unwrap().cache_size, 1024);
+        assert_eq!(args.middleware.unwrap().cache_validity_time, 10);
+        assert_eq!(args.middleware.unwrap().cache_page_size, 0x1000);
+    }
+
+    #[test]
+    pub fn connector_args_with_cache() {
+        let args: ConnectorArgs =
+            "target:extra=value:cache=false,cache_size=1kb,cache_time=10,cache_page_size=1000"
+                .parse()
+                .expect("unable to parse args");
+        assert_eq!(args.target.unwrap(), ReprCString::from("target"));
+        assert_eq!(args.extra_args.get("extra").unwrap(), "value");
+        assert_eq!(args.middleware.unwrap().cache_size, 1024);
+        assert_eq!(args.middleware.unwrap().cache_validity_time, 10);
+        assert_eq!(args.middleware.unwrap().cache_page_size, 0x1000);
+    }
+
+    #[test]
+    pub fn connector_args_without_cache() {
         let args: ConnectorArgs =
             "target:extra=value:cache_size=1kb,cache_time=10,cache_page_size=1000"
                 .parse()

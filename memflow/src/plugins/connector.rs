@@ -78,7 +78,7 @@ where
         // TODO: optional features not forwarded?
         let conn = builder.build().unwrap();
 
-        if middleware.delay > 0 {
+        if cfg!(feature = "std") && middleware.delay > 0 {
             let conn = DelayedPhysicalMemory::builder(conn)
                 .delay(Duration::from_millis(middleware.delay))
                 .build()

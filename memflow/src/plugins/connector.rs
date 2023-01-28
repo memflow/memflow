@@ -64,6 +64,7 @@ where
             ))
         }
 
+        // TODO: optional features not forwarded?
         let conn = builder.build().unwrap();
 
         group_obj!((conn, lib) as ConnectorInstance)
@@ -298,14 +299,6 @@ mod tests {
 
     #[test]
     pub fn connector_args_parse() {
-        simplelog::TermLogger::init(
-            log::LevelFilter::Debug,
-            simplelog::Config::default(),
-            simplelog::TerminalMode::Stdout,
-            simplelog::ColorChoice::Auto,
-        )
-        .unwrap();
-
         let args: ConnectorArgs = "target:extra=value:1kb,10,FF"
             .parse()
             .expect("unable to parse args");

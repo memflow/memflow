@@ -83,6 +83,7 @@ impl<'a, T: PhysicalMemory> DelayedPhysicalMemory<T> {
 
 // forward PhysicalMemory trait fncs
 impl<T: PhysicalMemory> PhysicalMemory for DelayedPhysicalMemory<T> {
+    #[inline]
     fn phys_read_raw_iter(
         &mut self,
         //data: PhysicalReadMemOps,
@@ -92,6 +93,7 @@ impl<T: PhysicalMemory> PhysicalMemory for DelayedPhysicalMemory<T> {
         self.mem.phys_read_raw_iter(data)
     }
 
+    #[inline]
     fn phys_write_raw_iter(&mut self, data: PhysicalWriteMemOps) -> Result<()> {
         thread::sleep(self.delay);
         self.mem.phys_write_raw_iter(data)

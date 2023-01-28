@@ -20,8 +20,8 @@ pub type LibArc = CArc<c_void>;
 
 pub mod connector;
 pub use connector::{
-    cglue_connectorinstance::*, ConnectorArgs, ConnectorDescriptor, LoadableConnector,
-    PageCacheParams,
+    cglue_connectorinstance::*, ConnectorArgs, ConnectorDescriptor, ConnectorMiddlewareArgs,
+    LoadableConnector,
 };
 pub type ConnectorInputArg = <LoadableConnector as Loadable>::InputArg;
 

@@ -74,7 +74,7 @@ impl<T: PhysicalMemory> DelayedPhysicalMemory<T> {
     }
 }
 
-impl<'a, T: PhysicalMemory> DelayedPhysicalMemory<T> {
+impl<T: PhysicalMemory> DelayedPhysicalMemory<T> {
     /// Returns a new builder for the delay middleware with default settings.
     pub fn builder(mem: T) -> DelayedPhysicalMemoryBuilder<T> {
         DelayedPhysicalMemoryBuilder::new(mem)
@@ -210,7 +210,7 @@ impl<T: PhysicalMemory> DelayedPhysicalMemoryBuilder<T> {
     }
 
     /// Builds the `DelayedPhysicalMemory` object or returns an error.
-    pub fn build<'a>(self) -> Result<DelayedPhysicalMemory<T>> {
+    pub fn build(self) -> Result<DelayedPhysicalMemory<T>> {
         Ok(DelayedPhysicalMemory::new(self.mem, self.delay))
     }
 }

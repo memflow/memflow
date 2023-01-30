@@ -87,16 +87,15 @@ where
         conn
     };
 
-    let conn = if args.middleware_args.metrics {
+    if args.middleware_args.metrics {
         info!("Inserting `PhysicalMemoryMetrics` middleware",);
         let conn = PhysicalMemoryMetrics::new(conn);
         group_obj!((conn, lib) as ConnectorInstance)
     } else {
         conn
-    };
+    }
 
     // TODO: optional features not forwarded?
-    conn
 }
 
 #[repr(C)]

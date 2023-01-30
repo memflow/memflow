@@ -102,7 +102,8 @@ impl<T: PhysicalMemory> PhysicalMemory for PhysicalMemoryMetrics<T> {
         //if self.reads.total_count() % 10000 == 0 {
         if self.last_read_info.elapsed().as_secs_f64() >= 1f64 {
             info!(
-                "Read Metrics: average_latency={:.4}ms; average_bytes={}; bandwidth={} bytes/s",
+                "Read Metrics: reads_per_second={} average_latency={:.4}ms; average_bytes={}; bytes_per_second={}",
+                self.reads.len(),
                 self.reads.average_latency().unwrap_or_default() * 1000f64,
                 self.reads.average_bytes().unwrap_or_default(),
                 self.reads.bandwidth().unwrap_or_default(),
@@ -132,7 +133,8 @@ impl<T: PhysicalMemory> PhysicalMemory for PhysicalMemoryMetrics<T> {
         //if self.writes.total_count() % 10000 == 0 {
         if self.last_write_info.elapsed().as_secs_f64() >= 1f64 {
             info!(
-                "Write Metrics: average_latency={:.4}ms; average_bytes={}; bandwidth={} bytes/s",
+                "Write Metrics: writes_per_second={} average_latency={:.4}ms; average_bytes={}; bytes_per_second={}",
+                self.writes.len(),
                 self.writes.average_latency().unwrap_or_default() * 1000f64,
                 self.writes.average_bytes().unwrap_or_default(),
                 self.writes.bandwidth().unwrap_or_default(),

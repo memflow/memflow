@@ -11,6 +11,7 @@ To read from a specific module the following steps have to be done:
   - Find the module_info for the given module in the process
   - Allocate a buffer which will fit the entire module
   - Read the entire module into the buffer and ignore partial read errors
+  - Write the contents of the retrieved buffer to the specified output location
 
 
 Usage:
@@ -83,7 +84,7 @@ int main(int argc, char *argv[]) {
 			// read module into buffer, in this case -2 / -3 are partial read/write errors
 			void *module_buffer = malloc(module_info.size);
 			ret = mf_processinstance_read_raw_into(&target_process, module_info.base, MUT_SLICE(u8, module_buffer, module_info.size));
-			if (ret != -2) {
+			if (ret == -2) {
 				printf("%s warning: %s] module only read partially\n", target_proc, target_module);
 			}
 

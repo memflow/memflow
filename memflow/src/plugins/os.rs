@@ -48,7 +48,7 @@ impl std::str::FromStr for OsArgs {
     type Err = crate::error::Error;
 
     fn from_str(s: &str) -> Result<Self> {
-        let mut iter = split_str_args(s);
+        let mut iter = split_str_args(s, ':');
 
         let target = iter
             .next()

@@ -125,6 +125,9 @@ impl std::str::FromStr for Args {
             }
         }
 
+        //let split: Vec<_> = split_str_args(s, ',').collect();
+
+        let mut map = HashMap::new();
         for (i, kv) in split.iter().enumerate() {
             let kvsplit = kv.split('=').collect::<Vec<_>>();
             if kvsplit.len() == 2 {
@@ -429,21 +432,22 @@ impl fmt::Debug for ArgDescriptor {
 /// let v: Vec<_> = split_str_args("a:\"hel:lo:c").collect();
 /// assert_eq!(v, ["a", "\"hel:lo:c"]);
 /// ```
-pub fn split_str_args(inp: &str) -> impl Iterator<Item = &str> {
+pub fn split_str_args(inp: &str, split_char: char) -> impl Iterator<Item = &str> {
     let mut prev_char = '\0';
     let mut quotation_char = None;
 
     const VALID_QUOTES: &str = "\"'`";
+    assert!(!VALID_QUOTES.contains(split_char));
 
     inp.split(move |c| {
-        let ret = if c == ':' {
+        let ret = if c == split_char {
             let ret = quotation_char.is_none() || Some(prev_char) == quotation_char;
             if ret {
                 quotation_char = None;
             }
             ret
         } else {
-            if prev_char == ':' && quotation_char.is_none() && VALID_QUOTES.contains(c) {
+            if prev_char == split_char && quotation_char.is_none() && VALID_QUOTES.contains(c) {
                 quotation_char = Some(c);
             }
             false
@@ -580,6 +584,26 @@ mod tests {
         let args2: Args = args.to_string().parse().unwrap();
         assert_eq!(args2.get("opt1").unwrap(), "test1");
         assert_eq!(args2.get("opt2").unwrap(), "test2,test3=test4");
+    }
+
+    #[test]
+    pub fn slashes() {
+        let argstr = "device=vmware://,remote=rpc://insecure:computername.local";
+        let args: Args = argstr.parse().unwrap();
+        let args2: Args = args.to_string().parse().unwrap();
+        assert_eq!(args2.get("device").unwrap(), "vmware://");
+        assert_eq!(
+            args2.get("remote").unwrap(),
+            "rpc://insecure:computername.local"
+        );
+    }
+
+    #[test]
+    pub fn slashes_quotes() {
+        let argstr = "device=\"RAWUDP://ip=127.0.0.1\"";
+        let args: Args = argstr.parse().unwrap();
+        let args2: Args = args.to_string().parse().unwrap();
+        assert_eq!(args2.get("device").unwrap(), "RAWUDP://ip=127.0.0.1");
     }
 
     #[test]

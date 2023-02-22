@@ -239,7 +239,7 @@ impl std::str::FromStr for ConnectorArgs {
     type Err = crate::error::Error;
 
     fn from_str(s: &str) -> Result<Self> {
-        let mut iter = split_str_args(s);
+        let mut iter = split_str_args(s, ':');
 
         let target = iter
             .next()
@@ -390,5 +390,17 @@ mod tests {
         assert_eq!(args.middleware_args.cache_size, 1024);
         assert_eq!(args.middleware_args.cache_validity_time, 10);
         assert_eq!(args.middleware_args.cache_page_size, 0x1000);
+    }
+
+    #[test]
+    pub fn connector_args_url() {
+        let args: ConnectorArgs = ":device=\"RAWUDP://ip=127.0.0.1:8080\":"
+            .parse()
+            .expect("unable to parse args");
+        assert_eq!(args.target, None);
+        assert_eq!(
+            args.extra_args.get("device").unwrap(),
+            "RAWUDP://ip=127.0.0.1:8080"
+        );
     }
 }

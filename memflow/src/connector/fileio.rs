@@ -109,15 +109,23 @@ impl Write for &CloneFile {
 ///
 /// use std::fs::File;
 ///
-/// fn open(file: &File) {
+/// fn open(file: File) {
 ///     let map = MemoryMap::new();
 ///     let connector = FileIoMemory::try_with_reader(file, map);
 /// }
 /// ```
-#[derive(Clone)]
 pub struct FileIoMemory<T> {
     reader: T,
     mem_map: MemoryMap<(Address, umem)>,
+}
+
+// Disable `clone()` for the file i/o connector.
+impl<T> Clone for FileIoMemory<T> {
+    fn clone(&self) -> Self {
+        panic!(
+            "Unable to clone file i/o memory. Multiple open write handles to a single file descriptor are not supported."
+        );
+    }
 }
 
 impl<T: Seek + Read + Write + Send> FileIoMemory<T> {

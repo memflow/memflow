@@ -29,7 +29,9 @@ impl Clone for CloneFile {
     /// If file cloning fails.
     fn clone(&self) -> Self {
         Self {
-            file: self.file.try_clone().unwrap(),
+            file: self.file.try_clone().expect(
+                "Unable to clone file. Multiple open write handles to a single file descriptor are not supported."
+            ),
         }
     }
 }
@@ -104,14 +106,15 @@ impl Write for &CloneFile {
 ///
 /// # Examples
 /// ```
-/// use memflow::connector::FileIoMemory;
+/// use memflow::connector::{CloneFile, FileIoMemory};
 /// use memflow::mem::MemoryMap;
 ///
 /// use std::fs::File;
 ///
-/// fn open(file: &File) {
+/// fn open(file: File) {
+///     let clone_file: CloneFile = file.into();
 ///     let map = MemoryMap::new();
-///     let connector = FileIoMemory::try_with_reader(file, map);
+///     let connector = FileIoMemory::try_with_reader(clone_file, map);
 /// }
 /// ```
 #[derive(Clone)]

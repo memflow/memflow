@@ -113,8 +113,7 @@ impl Write for &CloneFile {
 ///
 /// fn open(file: File) {
 ///     let clone_file: CloneFile = file.into();
-///     let map = MemoryMap::new();
-///     let connector = FileIoMemory::try_with_reader(clone_file, map);
+///     let connector = FileIoMemory::new(clone_file);
 /// }
 /// ```
 #[derive(Clone)]
@@ -124,7 +123,17 @@ pub struct FileIoMemory<T> {
 }
 
 impl<T: Seek + Read + Write + Send> FileIoMemory<T> {
-    pub fn try_with_reader(reader: T, mem_map: MemoryMap<(Address, umem)>) -> Result<Self> {
+    /// Creates a new connector with an identity mapped memory map.
+    pub fn new(reader: T) -> Result<Self> {
+        // use an identity mapped memory map
+        let mut mem_map = MemoryMap::new();
+        mem_map.push_remap(0x0.into(), !0, 0x0.into());
+
+        Self::with_mem_map(reader, mem_map)
+    }
+
+    /// Creates a new connector with a custom memory map.
+    pub fn with_mem_map(reader: T, mem_map: MemoryMap<(Address, umem)>) -> Result<Self> {
         Ok(Self { reader, mem_map })
     }
 }

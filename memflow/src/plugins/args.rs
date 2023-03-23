@@ -444,10 +444,8 @@ pub fn split_str_args(inp: &str, split_char: char) -> impl Iterator<Item = &str>
             }
         }
 
-        if quotation_char.is_none() {
-            if c == split_char {
-                ret = true;
-            }
+        if quotation_char.is_none() && c == split_char {
+            ret = true;
         }
 
         prev_char = c;

@@ -109,31 +109,18 @@ impl std::str::FromStr for Args {
     ///
     /// This function can be used to initialize a connector from user input.
     fn from_str(s: &str) -> Result<Self> {
-        let mut map = HashMap::new();
-
-        let quotes = s.split('"');
-        let mut split = vec![];
-        for (i, kv) in quotes.clone().enumerate() {
-            if i % 2 == 0 {
-                let s = kv.split(',');
-                split.extend(s.map(|s| s.to_owned()));
-            } else if split.is_empty() {
-                split.push(kv.to_owned());
-            } else {
-                let prev = split.pop().unwrap();
-                map.insert(prev[..prev.len() - 1].to_string(), kv.to_string());
-            }
-        }
-
-        //let split: Vec<_> = split_str_args(s, ',').collect();
+        let split = split_str_args(s, ',').collect::<Vec<_>>();
 
         let mut map = HashMap::new();
         for (i, kv) in split.iter().enumerate() {
-            let kvsplit = kv.split('=').collect::<Vec<_>>();
+            let kvsplit = split_str_args(kv, '=').collect::<Vec<_>>();
             if kvsplit.len() == 2 {
-                map.insert(kvsplit[0].to_string(), kvsplit[1].to_string());
+                map.insert(
+                    kvsplit[0].trim_matches('"').to_string(),
+                    kvsplit[1].trim_matches('"').to_string(),
+                );
             } else if i == 0 && !kv.is_empty() {
-                map.insert("default".to_string(), kv.to_string());
+                map.insert("default".to_string(), kv.trim_matches('"').to_string());
             }
         }
 
@@ -417,62 +404,65 @@ impl fmt::Debug for ArgDescriptor {
 /// ```
 /// use memflow::plugins::args::split_str_args;
 ///
-/// let v: Vec<_> = split_str_args("a:b:c").collect();
+/// let v: Vec<_> = split_str_args("a:b:c", ':').collect();
 /// assert_eq!(v, ["a", "b", "c"]);
 ///
-/// let v: Vec<_> = split_str_args("a::c").collect();
+/// let v: Vec<_> = split_str_args("a::c", ':').collect();
 /// assert_eq!(v, ["a", "", "c"]);
 ///
-/// let v: Vec<_> = split_str_args("a:\"hello\":c").collect();
-/// assert_eq!(v, ["a", "hello", "c"]);
+/// let v: Vec<_> = split_str_args("a:\"hello\":c", ':').collect();
+/// assert_eq!(v, ["a", "\"hello\"", "c"]);
 ///
-/// let v: Vec<_> = split_str_args("a:\"hel:lo\":c").collect();
-/// assert_eq!(v, ["a", "hel:lo", "c"]);
+/// let v: Vec<_> = split_str_args("a:\"hel:lo\":c", ':').collect();
+/// assert_eq!(v, ["a", "\"hel:lo\"", "c"]);
 ///
-/// let v: Vec<_> = split_str_args("a:\"hel:lo:c").collect();
+/// let v: Vec<_> = split_str_args("a:\"hel:lo:c", ':').collect();
 /// assert_eq!(v, ["a", "\"hel:lo:c"]);
 /// ```
-pub fn split_str_args(inp: &str, split_char: char) -> impl Iterator<Item = &str> {
+pub fn split_str_args(inp: &str, split_char: char) -> impl Iterator<Item = String> {
+    let mut tokens = vec![];
+    let mut token = String::new();
+
     let mut prev_char = '\0';
     let mut quotation_char = None;
 
     const VALID_QUOTES: &str = "\"'`";
     assert!(!VALID_QUOTES.contains(split_char));
 
-    inp.split(move |c| {
-        let ret = if c == split_char {
-            let ret = quotation_char.is_none() || Some(prev_char) == quotation_char;
-            if ret {
+    for c in inp.chars() {
+        // found an unescaped quote
+        if VALID_QUOTES.contains(c) && prev_char != '\\' {
+            // scan string up until we find the same quotation char again
+            if quotation_char == Some(c) {
                 quotation_char = None;
-            }
-            ret
-        } else {
-            if prev_char == split_char && quotation_char.is_none() && VALID_QUOTES.contains(c) {
+            } else {
                 quotation_char = Some(c);
             }
-            false
-        };
+        }
+
+        if quotation_char.is_none() {
+            if c == split_char {
+                // start new token / end prev token
+                tokens.push(token);
+                token = String::new();
+            } else {
+                // add to current token
+                token.push(c);
+            }
+        } else {
+            // just add to current token and ignore split_char
+            token.push(c);
+        }
 
         prev_char = c;
+    }
 
-        ret
-    })
-    .map(|s| {
-        if let Some(c) = s.chars().next().and_then(|a| {
-            if s.ends_with(a) && VALID_QUOTES.contains(a) {
-                Some(a)
-            } else {
-                None
-            }
-        }) {
-            s.split_once(c)
-                .and_then(|(_, a)| a.rsplit_once(c))
-                .map(|(a, _)| a)
-                .unwrap_or("")
-        } else {
-            s
-        }
-    })
+    // TODO: if we are still in quotation char this is technically an error
+
+    // add last token
+    tokens.push(token);
+
+    tokens.into_iter()
 }
 
 pub fn parse_vatcache(args: &Args) -> Result<Option<(usize, u64)>> {
@@ -599,10 +589,39 @@ mod tests {
     }
 
     #[test]
+    pub fn slashes_quotes_split() {
+        let v: Vec<_> = split_str_args(
+            "url1=\"uri://ip=test:test@test,test\",url2=\"test:test@test.de,test2:test2@test2.de\"",
+            ',',
+        )
+        .collect();
+        assert_eq!(
+            v,
+            [
+                "url1=\"uri://ip=test:test@test,test\"",
+                "url2=\"test:test@test.de,test2:test2@test2.de\""
+            ]
+        );
+    }
+
+    #[test]
     pub fn slashes_quotes() {
         let argstr = "device=\"RAWUDP://ip=127.0.0.1\"";
         let args: Args = argstr.parse().unwrap();
         let args2: Args = args.to_string().parse().unwrap();
+        assert_eq!(args2.get("device").unwrap(), "RAWUDP://ip=127.0.0.1");
+    }
+
+    #[test]
+    pub fn slashes_mixed_quotes() {
+        let argstr = "device=\"RAWUDP://ip=127.0.0.1\"";
+        let args: Args = argstr.parse().unwrap();
+        assert_eq!(args.get("device").unwrap(), "RAWUDP://ip=127.0.0.1");
+
+        let arg2str = args.to_string();
+        assert_eq!(arg2str, "device=\"RAWUDP://ip=127.0.0.1\"");
+
+        let args2: Args = arg2str.parse().unwrap();
         assert_eq!(args2.get("device").unwrap(), "RAWUDP://ip=127.0.0.1");
     }
 

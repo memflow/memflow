@@ -245,7 +245,7 @@ impl std::str::FromStr for ConnectorArgs {
             .next()
             .and_then(|s| if s.is_empty() { None } else { Some(s.into()) });
 
-        let extra_args = iter.next().unwrap_or("").parse()?;
+        let extra_args = iter.next().unwrap_or_else(|| String::default()).parse()?;
 
         let middleware_args = if let Some(s) = iter.next() {
             // allow user to see the parse error

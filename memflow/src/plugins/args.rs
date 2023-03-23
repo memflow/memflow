@@ -115,12 +115,9 @@ impl std::str::FromStr for Args {
         for (i, kv) in split.iter().enumerate() {
             let kvsplit = split_str_args(kv, '=').collect::<Vec<_>>();
             if kvsplit.len() == 2 {
-                map.insert(
-                    kvsplit[0].trim_matches('"').to_string(),
-                    kvsplit[1].trim_matches('"').to_string(),
-                );
+                map.insert(kvsplit[0].to_string(), kvsplit[1].to_string());
             } else if i == 0 && !kv.is_empty() {
-                map.insert("default".to_string(), kv.trim_matches('"').to_string());
+                map.insert("default".to_string(), kv.to_string());
             }
         }
 
@@ -411,13 +408,19 @@ impl fmt::Debug for ArgDescriptor {
 /// assert_eq!(v, ["a", "", "c"]);
 ///
 /// let v: Vec<_> = split_str_args("a:\"hello\":c", ':').collect();
-/// assert_eq!(v, ["a", "\"hello\"", "c"]);
+/// assert_eq!(v, ["a", "hello", "c"]);
 ///
 /// let v: Vec<_> = split_str_args("a:\"hel:lo\":c", ':').collect();
-/// assert_eq!(v, ["a", "\"hel:lo\"", "c"]);
+/// assert_eq!(v, ["a", "hel:lo", "c"]);
 ///
 /// let v: Vec<_> = split_str_args("a:\"hel:lo:c", ':').collect();
 /// assert_eq!(v, ["a", "\"hel:lo:c"]);
+///
+/// let v: Vec<_> = split_str_args("a:'hel\":lo\"':c", ':').collect();
+/// assert_eq!(v, ["a", "hel\":lo\"", "c"]);
+///
+/// let v: Vec<_> = split_str_args("a:hel\":lo\":c", ':').collect();
+/// assert_eq!(v, ["a", "hel\":lo\"", "c"]);
 /// ```
 pub fn split_str_args(inp: &str, split_char: char) -> impl Iterator<Item = &str> {
     let mut prev_char = '\0';
@@ -432,22 +435,39 @@ pub fn split_str_args(inp: &str, split_char: char) -> impl Iterator<Item = &str>
         // found an unescaped quote
         if VALID_QUOTES.contains(c) && prev_char != '\\' {
             // scan string up until we find the same quotation char again
-            if quotation_char == Some(c) {
-                quotation_char = None;
-            } else {
-                quotation_char = Some(c);
+            match quotation_char {
+                Some(qc) if qc == c => {
+                    quotation_char = None;
+                }
+                None => quotation_char = Some(c),
+                _ => (),
             }
         }
 
         if quotation_char.is_none() {
             if c == split_char {
-                // start new token / end prev token
                 ret = true;
             }
         }
 
         prev_char = c;
         ret
+    })
+    .map(|s| {
+        if let Some(c) = s.chars().next().and_then(|a| {
+            if s.ends_with(a) && VALID_QUOTES.contains(a) {
+                Some(a)
+            } else {
+                None
+            }
+        }) {
+            s.split_once(c)
+                .and_then(|(_, a)| a.rsplit_once(c))
+                .map(|(a, _)| a)
+                .unwrap_or("")
+        } else {
+            s
+        }
     })
 }
 
@@ -600,7 +620,7 @@ mod tests {
 
     #[test]
     pub fn slashes_mixed_quotes() {
-        let argstr = "device=\"RAWUDP://ip=127.0.0.1\"";
+        let argstr = "device=`RAWUDP://ip=127.0.0.1`";
         let args: Args = argstr.parse().unwrap();
         assert_eq!(args.get("device").unwrap(), "RAWUDP://ip=127.0.0.1");
 
@@ -609,6 +629,19 @@ mod tests {
 
         let args2: Args = arg2str.parse().unwrap();
         assert_eq!(args2.get("device").unwrap(), "RAWUDP://ip=127.0.0.1");
+    }
+
+    #[test]
+    pub fn slashes_quotes_complex() {
+        let argstr =
+            "url1=\"uri://ip=test:test@test,test\",url2=\"test:test@test.de,test2:test2@test2.de\"";
+        let args: Args = argstr.parse().unwrap();
+        let args2: Args = args.to_string().parse().unwrap();
+        assert_eq!(args2.get("url1").unwrap(), "uri://ip=test:test@test,test");
+        assert_eq!(
+            args2.get("url2").unwrap(),
+            "test:test@test.de,test2:test2@test2.de"
+        );
     }
 
     #[test]

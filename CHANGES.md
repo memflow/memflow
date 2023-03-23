@@ -8,6 +8,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 - Added DelayedPhysicalMemory middleware (usage: --connector kvm:::delay=200 where delay is specified in microseconds)
 - Added PhysicalMemoryMetrics middleware (usage: --connector kvm:::metrics=true)
 - Updated FileIoMemory constructor with a default identity mapped memory mapping.
+- Rewrote argument parser to properly handle quotes in complex arguments.
 
 ## 0.2.0-beta9
 ## 0.2.0-beta8

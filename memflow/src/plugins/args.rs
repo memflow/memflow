@@ -419,17 +419,16 @@ impl fmt::Debug for ArgDescriptor {
 /// let v: Vec<_> = split_str_args("a:\"hel:lo:c", ':').collect();
 /// assert_eq!(v, ["a", "\"hel:lo:c"]);
 /// ```
-pub fn split_str_args(inp: &str, split_char: char) -> impl Iterator<Item = String> {
-    let mut tokens = vec![];
-    let mut token = String::new();
-
+pub fn split_str_args(inp: &str, split_char: char) -> impl Iterator<Item = &str> {
     let mut prev_char = '\0';
     let mut quotation_char = None;
 
     const VALID_QUOTES: &str = "\"'`";
     assert!(!VALID_QUOTES.contains(split_char));
 
-    for c in inp.chars() {
+    inp.split(move |c| {
+        let mut ret = false;
+
         // found an unescaped quote
         if VALID_QUOTES.contains(c) && prev_char != '\\' {
             // scan string up until we find the same quotation char again
@@ -443,26 +442,13 @@ pub fn split_str_args(inp: &str, split_char: char) -> impl Iterator<Item = Strin
         if quotation_char.is_none() {
             if c == split_char {
                 // start new token / end prev token
-                tokens.push(token);
-                token = String::new();
-            } else {
-                // add to current token
-                token.push(c);
+                ret = true;
             }
-        } else {
-            // just add to current token and ignore split_char
-            token.push(c);
         }
 
         prev_char = c;
-    }
-
-    // TODO: if we are still in quotation char this is technically an error
-
-    // add last token
-    tokens.push(token);
-
-    tokens.into_iter()
+        ret
+    })
 }
 
 pub fn parse_vatcache(args: &Args) -> Result<Option<(usize, u64)>> {

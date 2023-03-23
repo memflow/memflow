@@ -126,8 +126,14 @@ impl<T: Seek + Read + Write + Send> FileIoMemory<T> {
     /// Creates a new connector with an identity mapped memory map.
     pub fn new(reader: T) -> Result<Self> {
         // use an identity mapped memory map
+        Self::with_size(reader, !0)
+    }
+
+    /// Creates a new connector with an identity mapped memory map with the given `size`.
+    pub fn with_size(reader: T, size: umem) -> Result<Self> {
+        // use an identity mapped memory map
         let mut mem_map = MemoryMap::new();
-        mem_map.push_remap(0x0.into(), !0, 0x0.into());
+        mem_map.push_remap(0x0.into(), size, 0x0.into());
 
         Self::with_mem_map(reader, mem_map)
     }

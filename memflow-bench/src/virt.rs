@@ -126,7 +126,7 @@ fn chunk_read_params(
         for &chunk_size in [1, 4, 16, 64].iter() {
             group.throughput(Throughput::Bytes(size * chunk_size));
             group.bench_with_input(
-                BenchmarkId::new(format!("{}_s{:x}", func_name, size), size * chunk_size),
+                BenchmarkId::new(format!("{func_name}_s{size:x}"), size * chunk_size),
                 &size,
                 |b, &size| {
                     read_test_with_os(
@@ -149,14 +149,14 @@ pub fn seq_read(
 ) {
     let plot_config = PlotConfiguration::default().summary_scale(AxisScale::Logarithmic);
 
-    let group_name = format!("{}_virt_seq_read", backend_name);
+    let group_name = format!("{backend_name}_virt_seq_read");
 
     let mut group = c.benchmark_group(group_name.clone());
     group.plot_config(plot_config);
 
     seq_read_params(
         &mut group,
-        format!("{}_nocache", group_name),
+        format!("{group_name}_nocache"),
         0,
         false,
         initialize_ctx,
@@ -164,21 +164,21 @@ pub fn seq_read(
     if use_caches {
         seq_read_params(
             &mut group,
-            format!("{}_tlb_nocache", group_name),
+            format!("{group_name}_tlb_nocache"),
             0,
             true,
             initialize_ctx,
         );
         seq_read_params(
             &mut group,
-            format!("{}_cache", group_name),
+            format!("{group_name}_cache"),
             2,
             false,
             initialize_ctx,
         );
         seq_read_params(
             &mut group,
-            format!("{}_tlb_cache", group_name),
+            format!("{group_name}_tlb_cache"),
             2,
             true,
             initialize_ctx,
@@ -194,14 +194,14 @@ pub fn chunk_read(
 ) {
     let plot_config = PlotConfiguration::default().summary_scale(AxisScale::Logarithmic);
 
-    let group_name = format!("{}_virt_chunk_read", backend_name);
+    let group_name = format!("{backend_name}_virt_chunk_read");
 
     let mut group = c.benchmark_group(group_name.clone());
     group.plot_config(plot_config);
 
     chunk_read_params(
         &mut group,
-        format!("{}_nocache", group_name),
+        format!("{group_name}_nocache"),
         0,
         false,
         initialize_ctx,
@@ -210,21 +210,21 @@ pub fn chunk_read(
     if use_caches {
         chunk_read_params(
             &mut group,
-            format!("{}_tlb_nocache", group_name),
+            format!("{group_name}_tlb_nocache"),
             0,
             true,
             initialize_ctx,
         );
         chunk_read_params(
             &mut group,
-            format!("{}_cache", group_name),
+            format!("{group_name}_cache"),
             2,
             false,
             initialize_ctx,
         );
         chunk_read_params(
             &mut group,
-            format!("{}_tlb_cache", group_name),
+            format!("{group_name}_tlb_cache"),
             2,
             true,
             initialize_ctx,

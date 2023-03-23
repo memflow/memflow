@@ -20,7 +20,7 @@ fn main() -> Result<()> {
     println!("{:>16} {:>12} {:<}", "ADDR", "SIZE", "TYPE");
 
     let callback = &mut |CTup3(addr, size, pagety)| {
-        println!("{:>16x} {:>12x} {:<?}", addr, size, pagety);
+        println!("{addr:>16x} {size:>12x} {pagety:<?}");
         true
     };
     vt.virt_page_map(0, callback.into());

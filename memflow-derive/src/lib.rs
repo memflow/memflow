@@ -583,7 +583,7 @@ pub fn os(args: TokenStream, input: TokenStream) -> TokenStream {
 pub fn pod_derive(input: TokenStream) -> TokenStream {
     let crate_path = crate_path();
 
-    format!("{}::dataview::derive_pod!{{ {} }}", crate_path, input)
+    format!("{crate_path}::dataview::derive_pod!{{ {input} }}")
         .parse()
         .unwrap()
 }

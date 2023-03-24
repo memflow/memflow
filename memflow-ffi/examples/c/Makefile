@@ -13,11 +13,17 @@ phys_mem.out: phys_mem.o
 process_list.out: process_list.o
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
 
+module_list.out: module_list.o
+	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
+
+module_dump.out: module_dump.o
+	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
+
 find_process.out: find_process.o
 	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
 
 .PHONY: all
-all: phys_mem.out process_list.out find_process.out
+all: phys_mem.out process_list.out module_list.out module_dump.out find_process.out
 
 .DEFAULT_GOAL := all
 

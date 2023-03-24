@@ -38,11 +38,11 @@ fn main() -> Result<()> {
         let mut out = [0u8; 32];
         let phys_mem = as_mut!(os impl PhysicalMemory).expect("no phys mem found");
         phys_mem.phys_read_into(0x1000.into(), &mut out).unwrap();
-        println!("Kernel Physical Read: {:?}", out);
+        println!("Kernel Physical Read: {out:?}");
 
         let virt_mem = as_mut!(os impl MemoryView).expect("no virt mem found");
         virt_mem.read_into(os_base, &mut out).unwrap();
-        println!("Kernel Virtual Read: {:?}", out);
+        println!("Kernel Virtual Read: {out:?}");
     }
 
     {

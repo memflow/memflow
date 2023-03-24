@@ -140,20 +140,20 @@ fn chunk_read<T: PhysicalMemory>(
 ) {
     let plot_config = PlotConfiguration::default().summary_scale(AxisScale::Logarithmic);
 
-    let group_name = format!("{}_batched_read", backend_name);
+    let group_name = format!("{backend_name}_batched_read");
 
     let mut group = c.benchmark_group(group_name.clone());
     group.plot_config(plot_config);
 
     chunk_read_params(
         &mut group,
-        format!("{}_without", group_name),
+        format!("{group_name}_without"),
         false,
         initialize_ctx,
     );
     chunk_read_params(
         &mut group,
-        format!("{}_with", group_name),
+        format!("{group_name}_with"),
         true,
         initialize_ctx,
     );

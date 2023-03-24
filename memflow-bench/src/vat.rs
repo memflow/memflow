@@ -91,14 +91,14 @@ pub fn chunk_vat(
 ) {
     let plot_config = PlotConfiguration::default().summary_scale(AxisScale::Logarithmic);
 
-    let group_name = format!("{}_chunk_vat", backend_name);
+    let group_name = format!("{backend_name}_chunk_vat");
 
     let mut group = c.benchmark_group(group_name.clone());
     group.plot_config(plot_config);
 
     chunk_vat_params(
         &mut group,
-        format!("{}_nocache", group_name),
+        format!("{group_name}_nocache"),
         0,
         false,
         initialize_ctx,
@@ -106,21 +106,21 @@ pub fn chunk_vat(
     if use_caches {
         chunk_vat_params(
             &mut group,
-            format!("{}_tlb_nocache", group_name),
+            format!("{group_name}_tlb_nocache"),
             0,
             true,
             initialize_ctx,
         );
         chunk_vat_params(
             &mut group,
-            format!("{}_cache", group_name),
+            format!("{group_name}_cache"),
             2,
             false,
             initialize_ctx,
         );
         chunk_vat_params(
             &mut group,
-            format!("{}_tlb_cache", group_name),
+            format!("{group_name}_tlb_cache"),
             2,
             true,
             initialize_ctx,

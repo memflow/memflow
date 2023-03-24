@@ -4,6 +4,11 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## 0.2.0-beta10
 - Removed all 'Inner' types and replaced them with GAT - this also shifts memflow to a minimum rust version of 1.65.0
+- Improved cache configuration when using plugins (usage: --connector kvm:::cache=true,cache_size=1kb,cache_time=10,cache_page_size=1000 where size and page_size is specified in hex)
+- Added DelayedPhysicalMemory middleware (usage: --connector kvm:::delay=200 where delay is specified in microseconds)
+- Added PhysicalMemoryMetrics middleware (usage: --connector kvm:::metrics=true)
+- Updated FileIoMemory constructor with a default identity mapped memory mapping.
+- Rewrote argument parser to properly handle quotes in complex arguments.
 
 ## 0.2.0-beta9
 ## 0.2.0-beta8

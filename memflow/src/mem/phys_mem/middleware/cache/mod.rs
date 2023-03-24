@@ -129,11 +129,7 @@ impl<'a, T: PhysicalMemory> CachedPhysicalMemory<'a, T, DefaultCacheValidator> {
 
 // forward PhysicalMemory trait fncs
 impl<'a, T: PhysicalMemory, Q: CacheValidator> PhysicalMemory for CachedPhysicalMemory<'a, T, Q> {
-    fn phys_read_raw_iter(
-        &mut self,
-        //data: PhysicalReadMemOps,
-        data: PhysicalReadMemOps,
-    ) -> Result<()> {
+    fn phys_read_raw_iter(&mut self, data: PhysicalReadMemOps) -> Result<()> {
         self.cache.validator.update_validity();
         self.arena.reset();
         self.cache.cached_read(&mut self.mem, data, &self.arena)
@@ -141,6 +137,7 @@ impl<'a, T: PhysicalMemory, Q: CacheValidator> PhysicalMemory for CachedPhysical
 
     fn phys_write_raw_iter(
         &mut self,
+        //data: PhysicalWriteMemOps,
         MemOps { inp, out, out_fail }: PhysicalWriteMemOps,
     ) -> Result<()> {
         self.cache.validator.update_validity();

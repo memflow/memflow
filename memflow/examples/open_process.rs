@@ -20,13 +20,13 @@ fn main() -> Result<()> {
     let module_info = process
         .module_by_name(proc_name)
         .expect("unable to find module in process");
-    println!("{:?}", module_info);
+    println!("{module_info:?}");
 
     let export_count = process
         .module_export_list(&module_info)
         .expect("unable to get exports")
         .len();
-    println!("Exports: {}", export_count);
+    println!("Exports: {export_count}");
 
     Ok(())
 }

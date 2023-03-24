@@ -67,7 +67,6 @@ int main(int argc, char *argv[]) {
 
 	// load all available plugins
 	Inventory *inventory = inventory_scan();
-	printf("Hello, World from C!\n");
 
 	printf("inventory initialized: %p\n", inventory);
 

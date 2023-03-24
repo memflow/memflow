@@ -10,9 +10,9 @@ use std::prelude::v1::*;
 
 use crate::mem::memory_view::*;
 
-pub mod cache;
+pub mod middleware;
 
-pub use cache::*;
+pub use middleware::*;
 
 // TODO:
 // - check endianess here and return an error

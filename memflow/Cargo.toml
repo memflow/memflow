@@ -1,6 +1,6 @@
 [package]
 name = "memflow"
-version = "0.2.0-beta9"
+version = "0.2.0-beta10"
 authors = ["ko1N <ko1N1337@gmail.com>", "Aurimas Blažulionis <0x60@pm.me>"]
 edition = "2018"
 description = "core components of the memflow physical memory introspection framework"
@@ -11,6 +11,7 @@ repository = "https://github.com/memflow/memflow"
 license = "MIT"
 keywords = [ "memflow", "introspection", "memory", "dma" ]
 categories = [ "memory-management", "os" ]
+rust-version = "1.65.0"
 
 [badges]
 maintenance = { status = "actively-developed" }
@@ -30,7 +31,7 @@ bumpalo = { version = "^3.11.1", features = ["collections"] }
 no-std-compat = { version = "^0.4.1", features = ["alloc"] }
 itertools = { version = "^0.10.3", default-features = false }
 memmap = { version = "^0.7.0", optional = true }
-hashbrown = "^0.12"
+hashbrown = "^0.13"
 fixed-slice-vec = "^0.10.0"
 cglue = { version = ">=0.2.10", default-features = false }
 rangemap = "^1.0"
@@ -45,7 +46,7 @@ once_cell = { version = "^1.9", optional = true }
 
 goblin = { version = "^0.5.1", optional = true, features = ["pe32", "pe64", "elf32", "elf64", "mach32", "mach64"] }
 serde = { version = "^1.0.133", optional = true, default-features = false, features = ["derive", "alloc"] }
-toml = { version = "^0.5.8", optional = true }
+toml = { version = "^0.7", optional = true }
 
 [dev-dependencies]
 rand = { version = "^0.8.4" }

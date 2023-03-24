@@ -719,7 +719,7 @@ dependencies = [
 
 [[package]]
 name = "memflow-ffi"
-version = "0.2.0-beta9"
+version = "0.2.0-beta10"
 dependencies = [
  "log",
  "memflow",

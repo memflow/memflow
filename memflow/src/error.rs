@@ -389,7 +389,7 @@ pub type Result<T> = result::Result<T, Error>;
 /// Specialized `PartialResult` type for memflow results with recoverable errors.
 pub type PartialResult<T> = result::Result<T, PartialError<T>>;
 
-/// Specialized `PartialResult` exntesion for results.
+/// Specialized `PartialResult` extension for results.
 pub trait PartialResultExt<T> {
     /// Tries to extract the data from the `Result`.
     /// This will return a full error even if a partial error happened.

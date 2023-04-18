@@ -1,9 +1,9 @@
-use crate::architecture::x86::x64;
+use crate::architecture::x86::{x64, X86VirtualTranslate};
 use crate::error::*;
 use crate::mem::virt_translate::VirtualTranslate3;
 
 use crate::architecture::ArchitectureIdent;
-use crate::mem::{mem_data::*, memory_view::*};
+use crate::mem::{mem_data::*, memory_view::*, PhysicalMemory, VirtualDma, VirtualTranslate2};
 use crate::os::process::*;
 use crate::os::*;
 use crate::plugins::*;
@@ -55,12 +55,19 @@ pub struct DummyProcess<T> {
     pub mem: T,
 }
 
-impl<T: MemoryView> Process for DummyProcess<T> {
+impl<T: PhysicalMemory, V: VirtualTranslate2> Process
+    for DummyProcess<VirtualDma<T, V, X86VirtualTranslate>>
+{
     /// Retrieves virtual address translator for the process (if applicable)
     //fn vat(&mut self) -> Option<&mut Self::VirtualTranslateType>;
 
     fn state(&mut self) -> ProcessState {
         ProcessState::Alive
+    }
+
+    fn set_dtb(&mut self, dtb1: Address, _dtb2: Address) -> Result<()> {
+        self.mem.set_translator(x64::new_translator(dtb1));
+        Ok(())
     }
 
     /// Walks the process' module list and calls the provided callback for each module

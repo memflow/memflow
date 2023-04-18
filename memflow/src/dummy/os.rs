@@ -268,6 +268,8 @@ impl DummyOs {
                 command_line: "/some/dummy --dummyarg".into(),
                 sys_arch: x64::ARCH.ident(),
                 proc_arch: x64::ARCH.ident(),
+                dtb1: dtb,
+                dtb2: Address::invalid(),
             },
             dtb,
             map_size,

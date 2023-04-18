@@ -2,6 +2,10 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
+## 0.2.0-beta11
+- Added dtb1 and dtb2 fields to ProcessInfo structure
+- Added a function to the process trait which allows overriding dtb1/dtb2 with a custom value
+
 ## 0.2.0-beta10
 - Removed all 'Inner' types and replaced them with GAT - this also shifts memflow to a minimum rust version of 1.65.0
 - Improved cache configuration when using plugins (usage: --connector kvm:::cache=true,cache_size=1kb,cache_time=10,cache_page_size=1000 where size and page_size is specified in hex)

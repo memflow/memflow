@@ -1268,6 +1268,17 @@ typedef struct ProcessInfo {
      * On windows this technique is called [`WOW64`](https://docs.microsoft.com/en-us/windows/win32/winprog64/wow64-implementation-details).
      */
     struct ArchitectureIdent proc_arch;
+    /**
+     * Directory Table Base
+     *
+     * # Remarks
+     *
+     * These fields contain the translation base used to translate virtual memory addresses into physical memory addresses.
+     * On x86 systems only `dtb1` is set because only one dtb is used.
+     * On arm systems both `dtb1` and `dtb2` are set to their corresponding values.
+     */
+    Address dtb1;
+    Address dtb2;
 } ProcessInfo;
 
 typedef struct Callback_c_void__ProcessInfo {
@@ -1893,6 +1904,7 @@ typedef struct MemoryViewVtbl_ProcessInstanceContainer_CBox_c_void_____CArc_c_vo
  */
 typedef struct ProcessVtbl_ProcessInstanceContainer_CBox_c_void_____CArc_c_void {
     struct ProcessState (*state)(struct ProcessInstanceContainer_CBox_c_void_____CArc_c_void *cont);
+    int32_t (*set_dtb)(struct ProcessInstanceContainer_CBox_c_void_____CArc_c_void *cont, Address dtb1, Address dtb2);
     int32_t (*module_address_list_callback)(struct ProcessInstanceContainer_CBox_c_void_____CArc_c_void *cont, const struct ArchitectureIdent *target_arch, ModuleAddressCallback callback);
     int32_t (*module_list_callback)(struct ProcessInstanceContainer_CBox_c_void_____CArc_c_void *cont, const struct ArchitectureIdent *target_arch, ModuleInfoCallback callback);
     int32_t (*module_by_address)(struct ProcessInstanceContainer_CBox_c_void_____CArc_c_void *cont, Address address, struct ArchitectureIdent architecture, struct ModuleInfo *ok_out);
@@ -2000,6 +2012,7 @@ typedef struct MemoryViewVtbl_IntoProcessInstanceContainer_CBox_c_void_____CArc_
  */
 typedef struct ProcessVtbl_IntoProcessInstanceContainer_CBox_c_void_____CArc_c_void {
     struct ProcessState (*state)(struct IntoProcessInstanceContainer_CBox_c_void_____CArc_c_void *cont);
+    int32_t (*set_dtb)(struct IntoProcessInstanceContainer_CBox_c_void_____CArc_c_void *cont, Address dtb1, Address dtb2);
     int32_t (*module_address_list_callback)(struct IntoProcessInstanceContainer_CBox_c_void_____CArc_c_void *cont, const struct ArchitectureIdent *target_arch, ModuleAddressCallback callback);
     int32_t (*module_list_callback)(struct IntoProcessInstanceContainer_CBox_c_void_____CArc_c_void *cont, const struct ArchitectureIdent *target_arch, ModuleInfoCallback callback);
     int32_t (*module_by_address)(struct IntoProcessInstanceContainer_CBox_c_void_____CArc_c_void *cont, Address address, struct ArchitectureIdent architecture, struct ModuleInfo *ok_out);
@@ -2897,6 +2910,11 @@ static inline struct ProcessState mf_processinstance_state(void *self)  {
     return __ret;
 }
 
+static inline int32_t mf_processinstance_set_dtb(void *self, Address dtb1, Address dtb2)  {
+    int32_t __ret = (((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_process)->set_dtb(&((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, dtb1, dtb2);
+    return __ret;
+}
+
 static inline int32_t mf_processinstance_module_address_list_callback(void *self, const struct ArchitectureIdent * target_arch, ModuleAddressCallback callback)  {
     int32_t __ret = (((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_process)->module_address_list_callback(&((struct ProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, target_arch, callback);
     return __ret;
@@ -3081,6 +3099,11 @@ static inline int32_t mf_intoprocessinstance_write_raw(void *self, Address addr,
 
 static inline struct ProcessState mf_intoprocessinstance_state(void *self)  {
     struct ProcessState __ret = (((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_process)->state(&((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->container);
+    return __ret;
+}
+
+static inline int32_t mf_intoprocessinstance_set_dtb(void *self, Address dtb1, Address dtb2)  {
+    int32_t __ret = (((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->vtbl_process)->set_dtb(&((struct IntoProcessInstance_CBox_c_void_____CArc_c_void *)self)->container, dtb1, dtb2);
     return __ret;
 }
 

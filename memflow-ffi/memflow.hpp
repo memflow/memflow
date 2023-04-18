@@ -1453,6 +1453,17 @@ struct ProcessInfo {
      * On windows this technique is called [`WOW64`](https://docs.microsoft.com/en-us/windows/win32/winprog64/wow64-implementation-details).
      */
     ArchitectureIdent proc_arch;
+    /**
+     * Directory Table Base
+     *
+     * # Remarks
+     *
+     * These fields contain the translation base used to translate virtual memory addresses into physical memory addresses.
+     * On x86 systems only `dtb1` is set because only one dtb is used.
+     * On arm systems both `dtb1` and `dtb2` are set to their corresponding values.
+     */
+    Address dtb1;
+    Address dtb2;
 };
 
 using ProcessInfoCallback = OpaqueCallback<ProcessInfo>;
@@ -1627,6 +1638,7 @@ template<typename CGlueC>
 struct ProcessVtbl {
     typedef typename CGlueC::Context Context;
     ProcessState (*state)(CGlueC *cont);
+    int32_t (*set_dtb)(CGlueC *cont, Address dtb1, Address dtb2);
     int32_t (*module_address_list_callback)(CGlueC *cont, const ArchitectureIdent *target_arch, ModuleAddressCallback callback);
     int32_t (*module_list_callback)(CGlueC *cont, const ArchitectureIdent *target_arch, ModuleInfoCallback callback);
     int32_t (*module_by_address)(CGlueC *cont, Address address, ArchitectureIdent architecture, ModuleInfo *ok_out);
@@ -1650,6 +1662,7 @@ struct ProcessVtblImpl : ProcessVtbl<typename Impl::Parent> {
 constexpr ProcessVtblImpl() :
     ProcessVtbl<typename Impl::Parent> {
         &Impl::state,
+        &Impl::set_dtb,
         &Impl::module_address_list_callback,
         &Impl::module_list_callback,
         &Impl::module_by_address,
@@ -1853,6 +1866,11 @@ struct ProcessInstance {
 
     inline ProcessState state() noexcept {
         ProcessState __ret = (this->vtbl_process)->state(&this->container);
+        return __ret;
+    }
+
+    inline int32_t set_dtb(Address dtb1, Address dtb2) noexcept {
+        int32_t __ret = (this->vtbl_process)->set_dtb(&this->container, dtb1, dtb2);
         return __ret;
     }
 
@@ -2111,6 +2129,11 @@ struct IntoProcessInstance {
 
     inline ProcessState state() noexcept {
         ProcessState __ret = (this->vtbl_process)->state(&this->container);
+        return __ret;
+    }
+
+    inline int32_t set_dtb(Address dtb1, Address dtb2) noexcept {
+        int32_t __ret = (this->vtbl_process)->set_dtb(&this->container, dtb1, dtb2);
         return __ret;
     }
 
@@ -3319,6 +3342,11 @@ struct CGlueTraitObj<T, ProcessVtbl<CGlueObjContainer<T, C, R>>, C, R> {
 
     inline ProcessState state() noexcept {
         ProcessState __ret = (this->vtbl)->state(&this->container);
+        return __ret;
+    }
+
+    inline int32_t set_dtb(Address dtb1, Address dtb2) noexcept {
+        int32_t __ret = (this->vtbl)->set_dtb(&this->container, dtb1, dtb2);
         return __ret;
     }
 

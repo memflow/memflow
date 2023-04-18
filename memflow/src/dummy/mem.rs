@@ -1,3 +1,5 @@
+use std::alloc::{alloc, Layout};
+
 use crate::cglue::*;
 use crate::connector::MappedPhysicalMemory;
 use crate::derive::connector;
@@ -16,7 +18,9 @@ pub struct DummyMemory {
 
 impl DummyMemory {
     pub fn new(size: usize) -> Self {
-        let buf = vec![0_u8; size].into_boxed_slice();
+        let mem_layout = Layout::from_size_align(size, 0x1000).unwrap();
+        let mem_ptr = unsafe { alloc(mem_layout) };
+        let buf = unsafe { Vec::from_raw_parts(mem_ptr, size, size) }.into_boxed_slice();
 
         let mut map = MemoryMap::new();
         map.push_range(
@@ -42,10 +46,14 @@ impl Clone for DummyMemory {
 
         let mem = unsafe { MappedPhysicalMemory::from_addrmap_mut(map) };
 
-        Self {
-            buf: self.buf.clone(),
-            mem,
-        }
+        // create a aligned copy of self.buf
+        let mem_layout = Layout::from_size_align(self.buf.len(), 0x1000).unwrap();
+        let mem_ptr = unsafe { alloc(mem_layout) };
+        let mut buf = unsafe { Vec::from_raw_parts(mem_ptr, self.buf.len(), self.buf.len()) }
+            .into_boxed_slice();
+        buf.copy_from_slice(self.buf.as_ref());
+
+        Self { buf, mem }
     }
 }
 

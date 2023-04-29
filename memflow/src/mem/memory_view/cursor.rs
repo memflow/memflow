@@ -400,7 +400,7 @@ mod tests {
         assert_eq!(cursor.stream_position().unwrap(), 4); // check if cursor moved 4 bytes
 
         let mut read_buf = [0u8; 4];
-        assert_eq!(cursor.seek(SeekFrom::Start(0)).unwrap(), 0); // roll back cursor to start
+        assert!(cursor.rewind().is_ok()); // roll back cursor to start
         assert_eq!(cursor.read(&mut read_buf).unwrap(), 4); // read 4 bytes from the start
         assert_eq!(read_buf, write_buf); // compare buffers
     }

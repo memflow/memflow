@@ -1,6 +1,5 @@
 use crate::architecture::x86::{x64, X86VirtualTranslate};
 use crate::error::*;
-use crate::mem::virt_translate::VirtualTranslate3;
 
 use crate::architecture::ArchitectureIdent;
 use crate::mem::{mem_data::*, memory_view::*, PhysicalMemory, VirtualDma, VirtualTranslate2};
@@ -41,7 +40,7 @@ impl DummyProcessInfo {
         }
     }
 
-    pub fn translator(&self) -> impl VirtualTranslate3 {
+    pub fn translator(&self) -> X86VirtualTranslate {
         x64::new_translator(self.dtb)
     }
 }
@@ -66,7 +65,8 @@ impl<T: PhysicalMemory, V: VirtualTranslate2> Process
     }
 
     fn set_dtb(&mut self, dtb1: Address, _dtb2: Address) -> Result<()> {
-        self.mem.set_translator(x64::new_translator(dtb1));
+        self.proc.dtb = dtb1;
+        self.mem.set_translator(self.proc.translator());
         Ok(())
     }
 

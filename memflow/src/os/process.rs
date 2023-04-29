@@ -61,7 +61,7 @@ pub trait Process: Send {
     ///
     /// # Remarks
     ///
-    /// In case the architecture only uses a single dtb for translation the second parameter should be set to `Address::null()`.
+    /// In case the architecture only uses a single dtb for translation the second parameter should be set to `Address::invalid()`.
     fn set_dtb(&mut self, dtb1: Address, dtb2: Address) -> Result<()>;
 
     /// Walks the process' module list and calls the provided callback for each module structure

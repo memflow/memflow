@@ -17,6 +17,7 @@
 
 pub mod keyboard;
 pub mod module;
+pub mod module_view;
 pub mod process;
 pub mod root;
 pub mod util;
@@ -29,6 +30,8 @@ pub use module::{
 };
 
 pub use process::{Pid, Process, ProcessInfo, ProcessInfoCallback, ProcessState};
+
+pub use module_view::ModuleView;
 
 pub use root::{Os, OsInfo};
 

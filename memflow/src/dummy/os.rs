@@ -630,6 +630,11 @@ pub fn create_dummy(args: &OsArgs, lib: LibArc) -> Result<OsInstanceArcBox<'stat
         ),
         &[],
     );
+    let os = CBox::from(os);
     let obj = group_obj!((os, lib) as OsInstance);
     Ok(obj)
+    // Err(Error(
+    //     ErrorOrigin::Connector,
+    //     ErrorKind::InvalidMemorySizeUnit,
+    // ))
 }

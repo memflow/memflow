@@ -239,14 +239,13 @@ impl DummyOs {
         let pml4 = unsafe {
             &mut *(self
                 .mem
-                .buf
-                .as_ptr()
+                .buf_ptr()
                 .add(dtb_base.to_umem().try_into().unwrap())
                 .cast::<PageTable>() as *mut _)
         };
 
         let pt_mapper =
-            unsafe { OffsetPageTable::new(pml4, VirtAddr::from_ptr(self.mem.buf.as_ptr())) };
+            unsafe { OffsetPageTable::new(pml4, VirtAddr::from_ptr(self.mem.buf_ptr())) };
 
         pt_mapper
             .translate_addr(VirtAddr::new(virt_addr.to_umem() as u64))
@@ -335,8 +334,7 @@ impl DummyOs {
         unsafe {
             *(self
                 .mem
-                .buf
-                .as_ptr()
+                .buf_ptr()
                 .add(clamp_to_usize(dtb.to_umem()))
                 .cast::<PageTable>() as *mut _) = PageTable::new()
         };
@@ -356,14 +354,13 @@ impl DummyOs {
         let pml4 = unsafe {
             &mut *(self
                 .mem
-                .buf
-                .as_ptr()
+                .buf_ptr()
                 .add(clamp_to_usize(dtb.to_umem()))
                 .cast::<PageTable>() as *mut _)
         };
 
         let mut pt_mapper =
-            unsafe { OffsetPageTable::new(pml4, VirtAddr::from_ptr(self.mem.buf.as_ptr())) };
+            unsafe { OffsetPageTable::new(pml4, VirtAddr::from_ptr(self.mem.buf_ptr())) };
 
         while cur_len < map_size {
             let page_info = self.next_page_for_address(cur_len.into());

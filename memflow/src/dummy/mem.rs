@@ -1,5 +1,3 @@
-use std::alloc::{alloc, Layout};
-
 use crate::cglue::*;
 use crate::connector::MappedPhysicalMemory;
 use crate::derive::connector;
@@ -11,27 +9,39 @@ use crate::types::{size, umem, Address};
 
 cglue_impl_group!(DummyMemory, ConnectorInstance, {});
 
+#[derive(Copy, Clone)]
+#[repr(C, align(0x1000))]
+struct AlignedPage([u8; 0x1000]);
+
 pub struct DummyMemory {
-    pub(crate) buf: Box<[u8]>,
-    pub(crate) mem: MappedPhysicalMemory<&'static mut [u8], MemoryMap<&'static mut [u8]>>,
+    buf: Box<[AlignedPage]>,
+    mem: MappedPhysicalMemory<&'static mut [u8], MemoryMap<&'static mut [u8]>>,
 }
 
 impl DummyMemory {
+    /// Creates a new DummyMemory object with the given size
+    ///
+    /// # Remarks:
+    ///
+    /// If the provided size is not aligned to 0x1000 bytes DummyMemory will over-allocate to enforce the alignment.
     pub fn new(size: usize) -> Self {
-        let mem_layout = Layout::from_size_align(size, 0x1000).unwrap();
-        let mem_ptr = unsafe { alloc(mem_layout) };
-        let buf = unsafe { Vec::from_raw_parts(mem_ptr, size, size) }.into_boxed_slice();
+        let pages = (size / 0x1000) + (size % 0x1000).min(1);
+        let buf = vec![AlignedPage([0_u8; 0x1000]); pages].into_boxed_slice();
 
         let mut map = MemoryMap::new();
         map.push_range(
             Address::null(),
-            buf.len().into(),
+            (buf.len() * 0x1000).into(),
             (buf.as_ptr() as umem).into(),
         );
 
         let buf_mem = unsafe { MappedPhysicalMemory::from_addrmap_mut(map) };
 
         Self { buf, mem: buf_mem }
+    }
+
+    pub(crate) fn buf_ptr(&self) -> *const u8 {
+        self.buf.as_ptr().cast::<u8>()
     }
 }
 
@@ -40,20 +50,16 @@ impl Clone for DummyMemory {
         let mut map = MemoryMap::new();
         map.push_range(
             Address::null(),
-            self.buf.len().into(),
+            (self.buf.len() * 0x1000).into(),
             (self.buf.as_ptr() as usize).into(),
         );
 
         let mem = unsafe { MappedPhysicalMemory::from_addrmap_mut(map) };
 
-        // create a aligned copy of self.buf
-        let mem_layout = Layout::from_size_align(self.buf.len(), 0x1000).unwrap();
-        let mem_ptr = unsafe { alloc(mem_layout) };
-        let mut buf = unsafe { Vec::from_raw_parts(mem_ptr, self.buf.len(), self.buf.len()) }
-            .into_boxed_slice();
-        buf.copy_from_slice(self.buf.as_ref());
-
-        Self { buf, mem }
+        Self {
+            buf: self.buf.clone(),
+            mem,
+        }
     }
 }
 

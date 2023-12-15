@@ -114,7 +114,7 @@ If you decide to build the latest documentation you can do it by issuing:
 
 ## Compilation support
 
-memflow currently requires at least rustc version `1.51.0` or newer.
+memflow currently requires at least rustc version `1.70.0` or newer.
 
 | target        | build              | tests              | benches            | compiles on stable |
 |---------------|--------------------|--------------------|--------------------|--------------------|

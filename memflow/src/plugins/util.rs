@@ -63,7 +63,7 @@ pub fn find_export_by_prefix(
     path: impl AsRef<Path>,
     prefix: &str,
 ) -> crate::error::Result<Vec<String>> {
-    use goblin::mach::Mach;
+    use goblin::mach::{Mach, SingleArch};
 
     let buffer = std::fs::read(path.as_ref())
         .map_err(|err| Error(ErrorOrigin::Inventory, ErrorKind::UnableToReadFile).log_trace(err))?;
@@ -73,6 +73,10 @@ pub fn find_export_by_prefix(
         Mach::Binary(mach) => mach,
         Mach::Fat(mach) => (0..mach.narches)
             .filter_map(|i| mach.get(i).ok())
+            .filter_map(|a| match a {
+                SingleArch::MachO(mach) => Some(mach),
+                SingleArch::Archive(_) => None,
+            })
             .next()
             .ok_or_else(|| {
                 Error(ErrorOrigin::Inventory, ErrorKind::InvalidExeFile)

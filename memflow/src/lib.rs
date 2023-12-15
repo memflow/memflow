@@ -272,7 +272,9 @@ pub mod dataview {
 #[cfg(any(feature = "dummy_mem", test))]
 pub mod dummy;
 
+// TODO: modules should be cleanly seperated here and only necessary types should be exported
 #[doc(hidden)]
+#[allow(ambiguous_glob_reexports)]
 pub mod prelude {
     pub mod v1 {
         pub use crate::architecture::*;

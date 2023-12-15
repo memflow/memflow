@@ -1,8 +1,8 @@
-use darling::FromMeta;
+use darling::{ast::NestedMeta, FromMeta};
 use proc_macro::TokenStream;
 use proc_macro_crate::*;
 use quote::{format_ident, quote};
-use syn::{parse_macro_input, AttributeArgs, Data, DeriveInput, Fields, ItemFn};
+use syn::{parse_macro_input, Data, DeriveInput, Fields, ItemFn};
 
 #[derive(Debug, FromMeta)]
 struct ConnectorFactoryArgs {
@@ -183,7 +183,10 @@ fn validate_plugin_name(name: &str) {
 pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
     let crate_path = crate_path();
 
-    let attr_args = parse_macro_input!(args as AttributeArgs);
+    let attr_args = match NestedMeta::parse_meta_list(args.into()) {
+        Ok(v) => v,
+        Err(e) => return TokenStream::from(darling::Error::from(e).write_errors()),
+    };
     let args = match ConnectorFactoryArgs::from_list(&attr_args) {
         Ok(v) => v,
         Err(e) => return TokenStream::from(e.write_errors()),
@@ -429,7 +432,10 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
 pub fn os(args: TokenStream, input: TokenStream) -> TokenStream {
     let crate_path = crate_path();
 
-    let attr_args = parse_macro_input!(args as AttributeArgs);
+    let attr_args = match NestedMeta::parse_meta_list(args.into()) {
+        Ok(v) => v,
+        Err(e) => return TokenStream::from(darling::Error::from(e).write_errors()),
+    };
     let args = match OsFactoryArgs::from_list(&attr_args) {
         Ok(v) => v,
         Err(e) => return TokenStream::from(e.write_errors()),
@@ -628,7 +634,7 @@ fn crate_path() -> proc_macro2::TokenStream {
     quote!(#col #ident)
 }
 
-fn crate_path_ident() -> (Option<syn::token::Colon2>, proc_macro2::Ident) {
+fn crate_path_ident() -> (Option<syn::token::PathSep>, proc_macro2::Ident) {
     match crate_path_fixed() {
         FoundCrate::Itself => (None, format_ident!("crate")),
         FoundCrate::Name(name) => (Some(Default::default()), format_ident!("{}", name)),

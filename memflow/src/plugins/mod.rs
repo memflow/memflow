@@ -41,7 +41,7 @@ pub use util::{wrap, wrap_with_input};
 
 use crate::error::{Result, *};
 
-use log::*;
+use log::{debug, error, info, warn, LevelFilter};
 use std::fs::read_dir;
 use std::mem::MaybeUninit;
 use std::path::{Path, PathBuf};

@@ -3,11 +3,10 @@ use crate::error::*;
 
 use crate::architecture::ArchitectureIdent;
 use crate::mem::{mem_data::*, memory_view::*, PhysicalMemory, VirtualDma, VirtualTranslate2};
-use crate::os::module_view::*;
 use crate::os::process::*;
 use crate::os::*;
 use crate::plugins::*;
-use crate::types::{imem, umem, util::GapRemover, Address, PageType};
+use crate::types::{gap_remover::GapRemover, imem, umem, Address, PageType};
 
 use crate::cglue::*;
 use rand::{thread_rng, Rng};
@@ -49,35 +48,6 @@ impl DummyProcessInfo {
 cglue_impl_group!(DummyProcess<T>, ProcessInstance, {});
 cglue_impl_group!(DummyProcess<T>, IntoProcessInstance, {});
 
-pub struct DummyModuleView<'a, T> {
-    pub process: &'a mut DummyProcess<T>,
-    pub target_arch: Option<ArchitectureIdent>,
-}
-
-impl<'a, T: PhysicalMemory, V: VirtualTranslate2> ModuleView
-    for DummyModuleView<'a, VirtualDma<T, V, X86VirtualTranslate>>
-{
-    /// Walks the process' module list and calls the provided callback for each module
-    fn module_address_list_callback(&mut self, callback: ModuleAddressCallback) -> Result<()> {
-        self.process
-            .proc
-            .modules
-            .iter()
-            .filter_map(|m| {
-                if self.target_arch.is_none() || Some(m.arch) == self.target_arch {
-                    Some(ModuleAddressInfo {
-                        address: m.address,
-                        arch: m.arch,
-                    })
-                } else {
-                    None
-                }
-            })
-            .feed_into(callback);
-        Ok(())
-    }
-}
-
 #[derive(Clone)]
 pub struct DummyProcess<T> {
     pub proc: DummyProcessInfo,
@@ -87,19 +57,6 @@ pub struct DummyProcess<T> {
 impl<T: PhysicalMemory, V: VirtualTranslate2> Process
     for DummyProcess<VirtualDma<T, V, X86VirtualTranslate>>
 {
-    type ModuleViewType<'a> = DummyModuleView<'a, VirtualDma<T, V, X86VirtualTranslate>> where T: 'a, V: 'a, Self: 'a;
-    //type ModuleViewType<'a> = DummyModuleView<Fwd<&'a mut DummyVirtMem<T>>> where T: 'a;
-
-    fn module_view(
-        &mut self,
-        target_arch: Option<ArchitectureIdent>,
-    ) -> Result<Self::ModuleViewType<'_>> {
-        Ok(DummyModuleView {
-            process: self,
-            target_arch,
-        })
-    }
-
     /// Retrieves virtual address translator for the process (if applicable)
     //fn vat(&mut self) -> Option<&mut Self::VirtualTranslateType>;
 
@@ -228,9 +185,7 @@ impl<T: MemoryView> MemoryView for DummyProcess<T> {
 #[cfg(test)]
 mod tests {
     use super::super::*;
-    use super::ModuleViewBase;
     use crate::cglue::*;
-    use crate::dummy::process::DummyModuleView;
     use crate::os::{Os, Process};
     use crate::plugins::ProcessInstance;
     use crate::types::size;
@@ -246,22 +201,6 @@ mod tests {
 
         let module = prc.primary_module();
         assert!(module.is_ok())
-    }
-
-    #[test]
-    pub fn cglue_memory_view() {
-        let mem = DummyMemory::new(size::mb(64));
-        let mut os = DummyOs::new(mem);
-
-        let pid = os.alloc_process(size::mb(60), &[]);
-        let mut prc = os.process_by_pid(pid).unwrap();
-
-        let module_view = DummyModuleView {
-            process: &mut prc,
-            target_arch: None,
-        };
-
-        let _obj = trait_obj!(module_view as ModuleView);
     }
 
     #[test]

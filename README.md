@@ -47,7 +47,7 @@ Overall, memflow is the most robust, efficient and flexible solution out there f
 
 ## Getting started
 
-Make sure that your rustc version is at least `1.65.0` or newer.
+Make sure that your rustc version is at least `1.70.0` or newer.
 
 memflow uses a plugin based approach and is capable of loading different physical memory backends (so-called [`connectors`](#connectors)) at runtime. On top of the physical memory backends memflow is also capable of loading plugins for interfacing with a specific target OS at runtime.
 

@@ -11,7 +11,7 @@ repository = "https://github.com/memflow/memflow"
 license = "MIT"
 keywords = [ "memflow", "introspection", "memory", "dma" ]
 categories = [ "memory-management", "os" ]
-rust-version = "1.65.0"
+rust-version = "1.70.0"
 
 [badges]
 maintenance = { status = "actively-developed" }

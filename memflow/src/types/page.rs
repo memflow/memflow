@@ -4,12 +4,17 @@ This module contains data structures related to information about a page.
 
 use super::{umem, Address};
 
+use bitflags::bitflags;
+
+/// Describes the type of a page using a bitflag.
+#[repr(transparent)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+#[cfg_attr(feature = "abi_stable", derive(::abi_stable::StableAbi))]
+pub struct PageType(u8);
+
 bitflags! {
-    /// Describes the type of a page using a bitflag.
-    #[repr(transparent)]
-    #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
-    #[cfg_attr(feature = "abi_stable", derive(::abi_stable::StableAbi))]
-    pub struct PageType: u8 {
+    impl PageType: u8 {
         /// The page explicitly has no flags.
         const NONE = 0b0000_0000;
         /// The page type is not known.

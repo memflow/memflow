@@ -21,7 +21,7 @@ codecov = { repository = "github", branch = "master", service = "github" }
 memflow-derive = { version = "0.2.0-beta3", path = "../memflow-derive" }
 dataview = { version = "^1.0.0", default-features = false }
 log = { version = "^0.4.14", default-features = false }
-bitflags = "^1.3.2"
+bitflags = "^2.4.1"
 coarsetime = { version = "^0.1.20", optional = true }
 smallvec = { version = "^1.7.0", default-features = false }
 x86_64 = { version = "0.14.8", default-features = false }

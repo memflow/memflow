@@ -10,7 +10,7 @@ use crate::types::{clamp_to_usize, imem, mem, size, umem, Address};
 
 use crate::cglue::*;
 use rand::seq::SliceRandom;
-use rand::{thread_rng, Rng, SeedableRng};
+use rand::{Rng, SeedableRng};
 use rand_xorshift::XorShiftRng;
 use std::collections::VecDeque;
 use std::convert::TryInto;
@@ -152,14 +152,25 @@ impl DummyOs {
         os.into_process_by_pid(pid).unwrap()
     }
 
+    /// Creates a new DummyOs object with a fixed default seed
+    ///
+    /// Note:
+    ///
+    /// Using a fixed seed for the rng will provide reproducability throughout test cases.
     pub fn new(mem: DummyMemory) -> Self {
-        Self::with_rng(mem, SeedableRng::from_rng(thread_rng()).unwrap())
+        Self::with_seed(mem, 1)
     }
 
+    /// Creates a new DummyOs object with the given seed as a starting value for the RNG
     pub fn with_seed(mem: DummyMemory, seed: u64) -> Self {
         Self::with_rng(mem, SeedableRng::seed_from_u64(seed))
     }
 
+    /// Creates a new DummyOs object with the given RNG.
+    ///
+    /// Note:
+    ///
+    /// The RNG has to be of type `XorShiftRng`.
     pub fn with_rng(mem: DummyMemory, mut rng: XorShiftRng) -> Self {
         let mut page_prelist = vec![];
 

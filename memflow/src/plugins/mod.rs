@@ -141,6 +141,9 @@ pub struct PluginDescriptor<T: Loadable> {
     pub create: CreateFn<T>,
 }
 
+// This warning is misleading here. `Loadable::ArgsType` isn't constrained to be `#[repr(C)]` here
+// but both `ConnectorArgs` and `OsArgs` that use it are marked as `#[repr(C)]`.
+#[allow(improper_ctypes_definitions)]
 pub type CreateFn<T> = extern "C" fn(
     Option<&<T as Loadable>::ArgsType>,
     <T as Loadable>::CInputArg,

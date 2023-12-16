@@ -1,5 +1,5 @@
-///! This module contains helper functions for creating various byte sizes.
-///! All function are const and will be [optimized](https://rust.godbolt.org/z/T6LiwJ) by rustc.
+//! This module contains helper functions for creating various byte sizes.
+//! All function are const and will be [optimized](https://rust.godbolt.org/z/T6LiwJ) by rustc.
 use super::{imem, umem};
 
 #[macro_export]

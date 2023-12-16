@@ -74,7 +74,7 @@ use crate::iter::SplitAtIndex;
 pub use direct_translate::DirectTranslate;
 
 use crate::architecture::ArchitectureObj;
-use crate::types::util::GapRemover;
+use crate::types::gap_remover::GapRemover;
 
 #[macro_use]
 pub mod mmu;

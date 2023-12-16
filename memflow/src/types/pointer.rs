@@ -362,7 +362,7 @@ impl<U: PrimitiveAddress, T: ?Sized> PartialEq for Pointer<U, T> {
 impl<U: PrimitiveAddress, T: ?Sized> PartialOrd for Pointer<U, T> {
     #[inline(always)]
     fn partial_cmp(&self, rhs: &Pointer<U, T>) -> Option<cmp::Ordering> {
-        self.inner.partial_cmp(&rhs.inner)
+        Some(self.cmp(rhs))
     }
 }
 impl<U: PrimitiveAddress, T: ?Sized> Ord for Pointer<U, T> {

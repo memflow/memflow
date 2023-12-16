@@ -160,7 +160,7 @@ fn test_virt_read_small_shifted() {
 fn test_virt_write_small_shifted() {
     let dummy_mem = DummyMemory::new(size::mb(2));
     let mut dummy_os = DummyOs::new(dummy_mem);
-    let mut buf = vec![0u8; 128];
+    let mut buf = [0u8; 128];
     let mut input = vec![0u8; buf.len()];
     for (i, item) in input.iter_mut().enumerate() {
         *item = i as u8;

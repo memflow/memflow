@@ -4,12 +4,37 @@ This module contains data structures related to information about a page.
 
 use super::{umem, Address};
 
-bitflags! {
-    /// Describes the type of a page using a bitflag.
-    #[repr(transparent)]
-    #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
-    #[cfg_attr(feature = "abi_stable", derive(::abi_stable::StableAbi))]
-    pub struct PageType: u8 {
+use bitflags::bitflags;
+
+/// Describes the type of a page using a bitflag.
+#[repr(transparent)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+#[cfg_attr(feature = "abi_stable", derive(::abi_stable::StableAbi))]
+pub struct PageType(u8);
+
+/// A hack to expand bitfield consts in a way that cbindgen understands
+macro_rules! expand_bitflag_consts {
+    (impl $name:ident: $ty:ty {
+        $(
+            $(#[$meta:meta])*
+            const $flag:ident = $val:literal;
+        )*
+    }) => {
+        impl $name {
+            $(
+                $(#[$meta])*
+                pub const $flag: Self = Self($val);
+            )*
+        }
+        bitflags! {
+            impl $name: $ty {}
+        }
+    };
+}
+
+expand_bitflag_consts! {
+    impl PageType: u8 {
         /// The page explicitly has no flags.
         const NONE = 0b0000_0000;
         /// The page type is not known.

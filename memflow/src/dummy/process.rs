@@ -6,7 +6,7 @@ use crate::mem::{mem_data::*, memory_view::*, PhysicalMemory, VirtualDma, Virtua
 use crate::os::process::*;
 use crate::os::*;
 use crate::plugins::*;
-use crate::types::{imem, umem, util::GapRemover, Address, PageType};
+use crate::types::{gap_remover::GapRemover, imem, umem, Address, PageType};
 
 use crate::cglue::*;
 use rand::{thread_rng, Rng};
@@ -185,7 +185,9 @@ impl<T: MemoryView> MemoryView for DummyProcess<T> {
 #[cfg(test)]
 mod tests {
     use super::super::*;
+    use crate::cglue::*;
     use crate::os::{Os, Process};
+    use crate::plugins::ProcessInstance;
     use crate::types::size;
 
     #[test]
@@ -199,5 +201,15 @@ mod tests {
 
         let module = prc.primary_module();
         assert!(module.is_ok())
+    }
+
+    #[test]
+    pub fn cglue_process() {
+        let mem = DummyMemory::new(size::mb(64));
+        let mut os = DummyOs::new(mem);
+
+        let pid = os.alloc_process(size::mb(60), &[]);
+        let prc = os.into_process_by_pid(pid).unwrap();
+        let _obj = group_obj!(prc as ProcessInstance);
     }
 }

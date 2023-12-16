@@ -115,11 +115,14 @@ impl<T: SplitAtIndex> SplitAtIndex for TranslateData<T> {
     }
 }
 
+#[repr(transparent)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
+#[cfg_attr(feature = "abi_stable", derive(::abi_stable::StableAbi))]
+pub struct FlagsType(u8);
+
 bitflags! {
-    #[repr(transparent)]
-    #[cfg_attr(feature = "serde", derive(::serde::Serialize, ::serde::Deserialize))]
-    #[cfg_attr(feature = "abi_stable", derive(::abi_stable::StableAbi))]
-    pub struct FlagsType: u8 {
+    impl FlagsType: u8 {
         const NONE = 0b00;
         // Maps MMUDef's writeable_bit
         const WRITEABLE = 0b01;

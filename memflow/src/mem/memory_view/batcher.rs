@@ -12,9 +12,16 @@ use crate::types::Address;
 /// ```
 /// use memflow::prelude::v1::*;
 /// use memflow::dummy::DummyMemory;
+/// # use memflow::dummy::DummyOs;
+/// # use memflow::architecture::x86::x64;
 ///
-/// let mut mem = DummyMemory::new(size::mb(1));
-/// let mut batcher = MemoryViewBatcher::new(&mut mem);
+/// # let phys_mem = DummyMemory::new(size::mb(16));
+/// # let mut os = DummyOs::new(phys_mem);
+/// # let (dtb, _) = os.alloc_dtb(size::mb(8), &[]);
+/// # let phys_mem = os.into_inner();
+/// # let translator = x64::new_translator(dtb);
+/// let mut virt_mem = VirtualDma::new(phys_mem, x64::ARCH, translator);
+/// let mut batcher = MemoryViewBatcher::new(&mut virt_mem);
 /// ```
 pub struct MemoryViewBatcher<'a, T: MemoryView> {
     vmem: &'a mut T,
@@ -30,9 +37,16 @@ impl<'a, T: MemoryView> MemoryViewBatcher<'a, T> {
     /// ```
     /// use memflow::prelude::v1::*;
     /// use memflow::dummy::DummyMemory;
+    /// # use memflow::dummy::DummyOs;
+    /// # use memflow::architecture::x86::x64;
     ///
-    /// let mut mem = DummyMemory::new(size::mb(1));
-    /// let mut batcher = MemoryViewBatcher::new(&mut mem);
+    /// # let phys_mem = DummyMemory::new(size::mb(16));
+    /// # let mut os = DummyOs::new(phys_mem);
+    /// # let (dtb, _) = os.alloc_dtb(size::mb(8), &[]);
+    /// # let phys_mem = os.into_inner();
+    /// # let translator = x64::new_translator(dtb);
+    /// let mut virt_mem = VirtualDma::new(phys_mem, x64::ARCH, translator);
+    /// let mut batcher = MemoryViewBatcher::new(&mut virt_mem);
     /// ```
     pub fn new(vmem: &'a mut T) -> Self {
         Self {
@@ -43,40 +57,65 @@ impl<'a, T: MemoryView> MemoryViewBatcher<'a, T> {
     }
 
     /// Reserves capacity for the read list.
+    /// Reserves capacity for at least `additional` more elements to be handled
+    /// in the given `MemoryViewBatcher<'a, T>`. The internal collection may reserve
+    /// more space to speculatively avoid frequent reallocations.
     ///
     /// # Arguments
     ///
-    /// * `capacity`: The number of elements to reserve space for.
+    /// * `capacity`: The number of operations to reserve space for.
     ///
     /// # Examples
     ///
     /// ```
     /// use memflow::prelude::v1::*;
     /// use memflow::dummy::DummyMemory;
+    /// # use memflow::dummy::DummyOs;
+    /// # use memflow::architecture::x86::x64;
     ///
-    /// let mut mem = DummyMemory::new(size::mb(1));
-    /// let mut batcher = MemoryViewBatcher::new(&mut mem);
+    /// # let phys_mem = DummyMemory::new(size::mb(16));
+    /// # let mut os = DummyOs::new(phys_mem);
+    /// # let (dtb, _) = os.alloc_dtb(size::mb(8), &[]);
+    /// # let phys_mem = os.into_inner();
+    /// # let translator = x64::new_translator(dtb);
+    /// let mut virt_mem = VirtualDma::new(phys_mem, x64::ARCH, translator);
+    /// let mut batcher = MemoryViewBatcher::new(&mut virt_mem);
     ///
-    /// batcher.read_prealloc(10);
+    /// // Reserve space 10 operations
+    /// batcher.reserve(10);
     /// ```
-    pub fn read_prealloc(&mut self, capacity: usize) -> &mut Self {
+    ///
+    /// # Panics
+    ///
+    /// Panics if the new capacity exceeds `isize::MAX` bytes.
+    pub fn reserve(&mut self, capacity: usize) -> &mut Self {
         self.read_list.reserve(capacity);
         self
     }
 
-    /// Commits the reads and writes in the batch to memory.
+    /// Executes all pending operations in this batch.
+    ///
+    /// This also consumes and discards this batcher so it cannot be used anymore.
+    /// The same behavior can be achieved by implicitly calling `drop` on the batcher
+    /// (for example, when going out of scope).
     ///
     /// # Examples
     ///
     /// ```
     /// use memflow::prelude::v1::*;
     /// use memflow::dummy::DummyMemory;
+    /// # use memflow::dummy::DummyOs;
+    /// # use memflow::architecture::x86::x64;
     ///
-    /// let mut mem = DummyMemory::new(size::mb(1));
-    /// let mut batcher = MemoryViewBatcher::new(&mut mem);
+    /// # let phys_mem = DummyMemory::new(size::mb(16));
+    /// # let mut os = DummyOs::new(phys_mem);
+    /// # let (dtb, _) = os.alloc_dtb(size::mb(8), &[]);
+    /// # let phys_mem = os.into_inner();
+    /// # let translator = x64::new_translator(dtb);
+    /// let mut virt_mem = VirtualDma::new(phys_mem, x64::ARCH, translator);
+    /// let mut batcher = MemoryViewBatcher::new(&mut virt_mem);
     ///
-    /// // call read / write functions here
-    ///
+    /// // commit the batch to memory, this is optional and just used to check if the operations succeed
     /// batcher.commit_rw().unwrap();
     /// ```
     pub fn commit_rw(&mut self) -> PartialResult<()> {
@@ -93,7 +132,7 @@ impl<'a, T: MemoryView> MemoryViewBatcher<'a, T> {
         Ok(())
     }
 
-    /// Appends a batch of raw read data to the batch.
+    /// Appends an iterator over read operations `ReadIter` to this batch.
     ///
     /// # Arguments
     ///
@@ -104,14 +143,27 @@ impl<'a, T: MemoryView> MemoryViewBatcher<'a, T> {
     /// ```
     /// use memflow::prelude::v1::*;
     /// use memflow::dummy::DummyMemory;
+    /// # use memflow::dummy::DummyOs;
+    /// # use memflow::architecture::x86::x64;
     ///
-    /// let mut mem = DummyMemory::new(size::mb(1));
-    /// let mut batcher = MemoryViewBatcher::new(&mut mem);
+    /// # let phys_mem = DummyMemory::new(size::mb(16));
+    /// # let mut os = DummyOs::new(phys_mem);
+    /// # let (dtb, virt_base) = os.alloc_dtb(size::mb(8), &[]);
+    /// # let phys_mem = os.into_inner();
+    /// # let translator = x64::new_translator(dtb);
+    /// let mut virt_mem = VirtualDma::new(phys_mem, x64::ARCH, translator);
     ///
-    /// let addr = Address::from(0x1000);
+    /// let addr = virt_base; // some arbitrary address
     /// let mut buf = [0u8; 8];
     ///
-    /// batcher.read_raw_iter(std::iter::once(CTup2(addr, buf.as_mut())).into_iter());
+    /// // create the batcher
+    /// let mut batcher = MemoryViewBatcher::new(&mut virt_mem);
+    ///
+    /// // append the read command
+    /// batcher.read_raw_iter(std::iter::once(CTup2(addr, buf.as_mut().into())).into_iter());
+    ///
+    /// // commit the batch to memory, this is optional and just used to check if the operations succeed
+    /// assert!(batcher.commit_rw().is_ok());
     /// ```
     pub fn read_raw_iter(&mut self, iter: impl ReadIterator<'a>) -> &mut Self {
         self.read_list.extend(iter);
@@ -130,16 +182,33 @@ impl<'a, T: MemoryView> MemoryViewBatcher<'a, T> {
     /// ```
     /// use memflow::prelude::v1::*;
     /// use memflow::dummy::DummyMemory;
+    /// # use memflow::dummy::DummyOs;
+    /// # use memflow::architecture::x86::x64;
     ///
-    /// let mut mem = DummyMemory::new(size::mb(1));
-    /// let mut batch = MemoryViewBatcher::new(&mut mem);
+    /// # let phys_mem = DummyMemory::new(size::mb(16));
+    /// # let mut os = DummyOs::new(phys_mem);
+    /// # let (dtb, virt_base) = os.alloc_dtb(size::mb(8), &[]);
+    /// # let phys_mem = os.into_inner();
+    /// # let translator = x64::new_translator(dtb);
+    /// let mut virt_mem = VirtualDma::new(phys_mem, x64::ARCH, translator);
     ///
-    /// let write_data = &[0x10, 0x20, 0x30, 0x40];
-    /// batch.write_raw_into(Address::from(0x1000), write_data);
+    /// let addr = virt_base; // some arbitrary address
+    /// let write_data = [0x10, 0x20, 0x30, 0x40];
+    /// let mut read_data = [0u8; 4];
     ///
-    /// assert!(batch.commit_rw().is_ok());
-    /// let read_data = &mut [0u8; 4];
-    /// mem.read_raw(Address::from(0x1000), read_data).unwrap();
+    /// {
+    ///     // create batcher in a new scope
+    ///     let mut batcher = MemoryViewBatcher::new(&mut virt_mem);
+    ///
+    ///     // write the `write_data` array to memory
+    ///     batcher.write_raw_into(addr, &write_data);
+    ///
+    ///     // commit the batch to memory, this is optional and just used to check if the operations succeed
+    ///     assert!(batcher.commit_rw().is_ok());
+    /// }
+    ///
+    /// // check if the batched write was successful
+    /// virt_mem.read_raw_into(addr, &mut read_data).unwrap();
     /// assert_eq!(read_data, write_data);
     /// ```
     pub fn write_raw_iter(&mut self, iter: impl WriteIterator<'a>) -> &mut Self {
@@ -159,15 +228,25 @@ impl<'a, T: MemoryView> MemoryViewBatcher<'a, T> {
     /// ```
     /// use memflow::prelude::v1::*;
     /// use memflow::dummy::DummyMemory;
+    /// # use memflow::dummy::DummyOs;
+    /// # use memflow::architecture::x86::x64;
     ///
-    /// let mut mem = DummyMemory::new(size::mb(1));
-    /// let mut batcher = MemoryViewBatcher::new(&mut mem);
+    /// # let phys_mem = DummyMemory::new(size::mb(16));
+    /// # let mut os = DummyOs::new(phys_mem);
+    /// # let (dtb, virt_base) = os.alloc_dtb(size::mb(8), &[]);
+    /// # let phys_mem = os.into_inner();
+    /// # let translator = x64::new_translator(dtb);
+    /// let mut virt_mem = VirtualDma::new(phys_mem, x64::ARCH, translator);
+    ///
+    /// let addr = virt_base; // some arbitrary address
     /// let mut buffer = [0u8; 4];
     ///
-    /// // Read 4 bytes from address 0x0 and store the result in `buffer`
-    /// batcher.read_raw_into(Address::from(0x0), &mut buffer);
+    /// let mut batcher = MemoryViewBatcher::new(&mut virt_mem);
     ///
-    /// // Commit the read request to memory
+    /// // read 4 bytes from some address and store the result in `buffer`
+    /// batcher.read_raw_into(addr, &mut buffer);
+    ///
+    /// // commit the batch to memory, this is optional and just used to check if the operations succeed
     /// batcher.commit_rw().unwrap();
     /// ```
     pub fn read_raw_into<'b: 'a>(&mut self, addr: Address, out: &'b mut [u8]) -> &mut Self {
@@ -186,17 +265,34 @@ impl<'a, T: MemoryView> MemoryViewBatcher<'a, T> {
     /// ```
     /// use memflow::prelude::v1::*;
     /// use memflow::dummy::DummyMemory;
+    /// # use memflow::dummy::DummyOs;
+    /// # use memflow::architecture::x86::x64;
     ///
-    /// let mut mem = DummyMemory::new(0x1000);
-    /// mem.write_bytes(Address::from(0x1000), b"hello world").unwrap();
+    /// # let phys_mem = DummyMemory::new(size::mb(16));
+    /// # let mut os = DummyOs::new(phys_mem);
+    /// # let (dtb, virt_base) = os.alloc_dtb(size::mb(8), &[]);
+    /// # let phys_mem = os.into_inner();
+    /// # let translator = x64::new_translator(dtb);
+    /// let mut virt_mem = VirtualDma::new(phys_mem, x64::ARCH, translator);
+    ///
+    /// let addr = virt_base; // some arbitrary address
+    ///
+    /// // writes the text 'hello world' to the specified address in memory
+    /// virt_mem.write(addr, b"hello world").unwrap();
     ///
     /// let mut buffer = [0u8; 11];
     ///
-    /// let mut batcher = MemoryViewBatcher::new(&mut mem);
-    /// batcher.read_into(Address::from(0x1000), &mut buffer);
-    /// batcher.commit_rw().unwrap();
+    /// {
+    ///     // creates a batcher and reads 11 bytes from memory
+    ///     let mut batcher = MemoryViewBatcher::new(&mut virt_mem);
+    ///     batcher.read_into(addr, &mut buffer);
     ///
-    /// assert_eq!(buffer, b"hello world");
+    ///     // commit the batch to memory, this is optional and just used to check if the operations succeed
+    ///     batcher.commit_rw().unwrap();
+    /// }
+    ///
+    /// // compare the memory
+    /// assert_eq!(&buffer, b"hello world");
     /// ```
     pub fn read_into<'b: 'a, F: Pod + ?Sized>(
         &mut self,
@@ -213,16 +309,33 @@ impl<'a, T: MemoryView> MemoryViewBatcher<'a, T> {
     /// ```
     /// use memflow::prelude::v1::*;
     /// use memflow::dummy::DummyMemory;
+    /// # use memflow::dummy::DummyOs;
+    /// # use memflow::architecture::x86::x64;
     ///
-    /// let mut mem = DummyMemory::new(size::mb(1));
-    /// let mut batch = MemoryViewBatcher::new(&mut mem);
+    /// # let phys_mem = DummyMemory::new(size::mb(16));
+    /// # let mut os = DummyOs::new(phys_mem);
+    /// # let (dtb, virt_base) = os.alloc_dtb(size::mb(8), &[]);
+    /// # let phys_mem = os.into_inner();
+    /// # let translator = x64::new_translator(dtb);
+    /// let mut virt_mem = VirtualDma::new(phys_mem, x64::ARCH, translator);
     ///
-    /// let write_data = &[0x10, 0x20, 0x30, 0x40];
-    /// batch.write_raw_into(Address::from(0x1000), write_data);
+    /// let addr = virt_base; // some arbitrary address
+    /// let write_data = [0x10, 0x20, 0x30, 0x40];
+    /// let mut read_data = [0u8; 4];
     ///
-    /// assert!(batch.commit_rw().is_ok());
-    /// let read_data = &mut [0u8; 4];
-    /// mem.read_raw(Address::from(0x1000), read_data).unwrap();
+    /// {
+    ///     // create batcher in a new scope
+    ///     let mut batcher = MemoryViewBatcher::new(&mut virt_mem);
+    ///
+    ///     // writes the block to memory at the specified address
+    ///     batcher.write_raw_into(addr, &write_data);
+    ///
+    ///     // commit the batch to memory, this is optional and just used to check if the operations succeed
+    ///     assert!(batcher.commit_rw().is_ok());
+    /// }
+    ///
+    /// // check if the write succeeded
+    /// virt_mem.read_raw_into(addr, &mut read_data).unwrap();
     /// assert_eq!(read_data, write_data);
     /// ```
     pub fn write_raw_into<'b: 'a>(&mut self, addr: Address, out: &'b [u8]) -> &mut Self {
@@ -236,17 +349,34 @@ impl<'a, T: MemoryView> MemoryViewBatcher<'a, T> {
     /// ```
     /// use memflow::prelude::v1::*;
     /// use memflow::dummy::DummyMemory;
+    /// # use memflow::dummy::DummyOs;
+    /// # use memflow::architecture::x86::x64;
     ///
-    /// let mut mem = DummyMemory::new(size::mb(1));
-    /// let mut batch = MemoryViewBatcher::new(&mut mem);
+    /// # let phys_mem = DummyMemory::new(size::mb(16));
+    /// # let mut os = DummyOs::new(phys_mem);
+    /// # let (dtb, virt_base) = os.alloc_dtb(size::mb(8), &[]);
+    /// # let phys_mem = os.into_inner();
+    /// # let translator = x64::new_translator(dtb);
+    /// let mut virt_mem = VirtualDma::new(phys_mem, x64::ARCH, translator);
     ///
+    /// let addr = virt_base; // some arbitrary address
     /// let write_data = 0xdeadbeefu64;
-    /// batch.write_into(Address::from(0x1000), &write_data);
+    /// let mut read_data = 0u64;
     ///
-    /// assert!(batch.commit_rw().is_ok());
-    /// let read_data = &mut 0u64;
-    /// mem.read_into(Address::from(0x1000), read_data).unwrap();
-    /// assert_eq!(*read_data, write_data);
+    /// {
+    ///     // create batcher in a new scope
+    ///     let mut batcher = MemoryViewBatcher::new(&mut virt_mem);
+    ///
+    ///     // writes the block to memory at the specified address
+    ///     batcher.write_into(addr, &write_data);
+    ///
+    ///     // commit the batch to memory, this is optional and just used to check if the operations succeed
+    ///     assert!(batcher.commit_rw().is_ok());
+    /// }
+    ///
+    /// // check if the write succeeded
+    /// virt_mem.read_into(addr, &mut read_data).unwrap();
+    /// assert_eq!(read_data, write_data);
     /// ```
     pub fn write_into<'b: 'a, F: Pod + ?Sized>(&mut self, addr: Address, out: &'b F) -> &mut Self {
         self.write_raw_into(addr, out.as_bytes())

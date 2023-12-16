@@ -21,7 +21,8 @@ codecov = { repository = "github", branch = "master", service = "github" }
 memflow-derive = { version = "0.2.0-beta3", path = "../memflow-derive" }
 dataview = { version = "^1.0.0", default-features = false }
 log = { version = "^0.4.14", default-features = false }
-bitflags = "^2.4.1"
+# we keep bitflags on version 1.x due to the various issues with cbindgen macro expansion and other issues 
+bitflags = "1.3"
 coarsetime = { version = "^0.1.20", optional = true }
 smallvec = { version = "^1.7.0", default-features = false }
 x86_64 = { version = "0.14.8", default-features = false }

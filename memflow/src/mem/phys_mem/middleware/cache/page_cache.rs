@@ -90,7 +90,7 @@ impl<'a, T: CacheValidator> PageCache<'a, T> {
     fn take_page(&mut self, addr: Address, skip_validator: bool) -> PageValidity<'a> {
         let page_index = self.page_index(addr);
 
-        let bufopt = std::mem::replace(&mut self.page_refs[page_index], None);
+        let bufopt = self.page_refs[page_index].take();
 
         if let Some(buf) = bufopt {
             if self.address[page_index] == addr.as_page_aligned(self.page_size)

@@ -959,10 +959,16 @@ struct MemoryViewVtbl {
     int32_t (*read_raw_iter)(CGlueC *cont, ReadRawMemOps data);
     int32_t (*write_raw_iter)(CGlueC *cont, WriteRawMemOps data);
     MemoryViewMetadata (*metadata)(const CGlueC *cont);
-    int32_t (*read_iter)(CGlueC *cont, CIterator<ReadData> inp, ReadCallback *out, ReadCallback *out_fail);
+    int32_t (*read_iter)(CGlueC *cont,
+                         CIterator<ReadData> inp,
+                         ReadCallback *out,
+                         ReadCallback *out_fail);
     int32_t (*read_raw_list)(CGlueC *cont, CSliceMut<ReadData> data);
     int32_t (*read_raw_into)(CGlueC *cont, Address addr, CSliceMut<uint8_t> out);
-    int32_t (*write_iter)(CGlueC *cont, CIterator<WriteData> inp, WriteCallback *out, WriteCallback *out_fail);
+    int32_t (*write_iter)(CGlueC *cont,
+                          CIterator<WriteData> inp,
+                          WriteCallback *out,
+                          WriteCallback *out_fail);
     int32_t (*write_raw_list)(CGlueC *cont, CSliceRef<WriteData> data);
     int32_t (*write_raw)(CGlueC *cont, Address addr, CSliceRef<uint8_t> data);
 };
@@ -1453,6 +1459,17 @@ struct ProcessInfo {
      * On windows this technique is called [`WOW64`](https://docs.microsoft.com/en-us/windows/win32/winprog64/wow64-implementation-details).
      */
     ArchitectureIdent proc_arch;
+    /**
+     * Directory Table Base
+     *
+     * # Remarks
+     *
+     * These fields contain the translation base used to translate virtual memory addresses into physical memory addresses.
+     * On x86 systems only `dtb1` is set because only one dtb is used.
+     * On arm systems both `dtb1` and `dtb2` are set to their corresponding values.
+     */
+    Address dtb1;
+    Address dtb2;
 };
 
 using ProcessInfoCallback = OpaqueCallback<ProcessInfo>;
@@ -1627,21 +1644,51 @@ template<typename CGlueC>
 struct ProcessVtbl {
     typedef typename CGlueC::Context Context;
     ProcessState (*state)(CGlueC *cont);
-    int32_t (*module_address_list_callback)(CGlueC *cont, const ArchitectureIdent *target_arch, ModuleAddressCallback callback);
-    int32_t (*module_list_callback)(CGlueC *cont, const ArchitectureIdent *target_arch, ModuleInfoCallback callback);
-    int32_t (*module_by_address)(CGlueC *cont, Address address, ArchitectureIdent architecture, ModuleInfo *ok_out);
-    int32_t (*module_by_name_arch)(CGlueC *cont, CSliceRef<uint8_t> name, const ArchitectureIdent *architecture, ModuleInfo *ok_out);
+    int32_t (*set_dtb)(CGlueC *cont, Address dtb1, Address dtb2);
+    int32_t (*module_address_list_callback)(CGlueC *cont,
+                                            const ArchitectureIdent *target_arch,
+                                            ModuleAddressCallback callback);
+    int32_t (*module_list_callback)(CGlueC *cont,
+                                    const ArchitectureIdent *target_arch,
+                                    ModuleInfoCallback callback);
+    int32_t (*module_by_address)(CGlueC *cont,
+                                 Address address,
+                                 ArchitectureIdent architecture,
+                                 ModuleInfo *ok_out);
+    int32_t (*module_by_name_arch)(CGlueC *cont,
+                                   CSliceRef<uint8_t> name,
+                                   const ArchitectureIdent *architecture,
+                                   ModuleInfo *ok_out);
     int32_t (*module_by_name)(CGlueC *cont, CSliceRef<uint8_t> name, ModuleInfo *ok_out);
     int32_t (*primary_module_address)(CGlueC *cont, Address *ok_out);
     int32_t (*primary_module)(CGlueC *cont, ModuleInfo *ok_out);
-    int32_t (*module_import_list_callback)(CGlueC *cont, const ModuleInfo *info, ImportCallback callback);
-    int32_t (*module_export_list_callback)(CGlueC *cont, const ModuleInfo *info, ExportCallback callback);
-    int32_t (*module_section_list_callback)(CGlueC *cont, const ModuleInfo *info, SectionCallback callback);
-    int32_t (*module_import_by_name)(CGlueC *cont, const ModuleInfo *info, CSliceRef<uint8_t> name, ImportInfo *ok_out);
-    int32_t (*module_export_by_name)(CGlueC *cont, const ModuleInfo *info, CSliceRef<uint8_t> name, ExportInfo *ok_out);
-    int32_t (*module_section_by_name)(CGlueC *cont, const ModuleInfo *info, CSliceRef<uint8_t> name, SectionInfo *ok_out);
+    int32_t (*module_import_list_callback)(CGlueC *cont,
+                                           const ModuleInfo *info,
+                                           ImportCallback callback);
+    int32_t (*module_export_list_callback)(CGlueC *cont,
+                                           const ModuleInfo *info,
+                                           ExportCallback callback);
+    int32_t (*module_section_list_callback)(CGlueC *cont,
+                                            const ModuleInfo *info,
+                                            SectionCallback callback);
+    int32_t (*module_import_by_name)(CGlueC *cont,
+                                     const ModuleInfo *info,
+                                     CSliceRef<uint8_t> name,
+                                     ImportInfo *ok_out);
+    int32_t (*module_export_by_name)(CGlueC *cont,
+                                     const ModuleInfo *info,
+                                     CSliceRef<uint8_t> name,
+                                     ExportInfo *ok_out);
+    int32_t (*module_section_by_name)(CGlueC *cont,
+                                      const ModuleInfo *info,
+                                      CSliceRef<uint8_t> name,
+                                      SectionInfo *ok_out);
     const ProcessInfo *(*info)(const CGlueC *cont);
-    void (*mapped_mem_range)(CGlueC *cont, imem gap_size, Address start, Address end, MemoryRangeCallback out);
+    void (*mapped_mem_range)(CGlueC *cont,
+                             imem gap_size,
+                             Address start,
+                             Address end,
+                             MemoryRangeCallback out);
     void (*mapped_mem)(CGlueC *cont, imem gap_size, MemoryRangeCallback out);
 };
 
@@ -1650,6 +1697,7 @@ struct ProcessVtblImpl : ProcessVtbl<typename Impl::Parent> {
 constexpr ProcessVtblImpl() :
     ProcessVtbl<typename Impl::Parent> {
         &Impl::state,
+        &Impl::set_dtb,
         &Impl::module_address_list_callback,
         &Impl::module_list_callback,
         &Impl::module_by_address,
@@ -1746,10 +1794,23 @@ struct COption {
 template<typename CGlueC>
 struct VirtualTranslateVtbl {
     typedef typename CGlueC::Context Context;
-    void (*virt_to_phys_list)(CGlueC *cont, CSliceRef<VtopRange> addrs, VirtualTranslationCallback out, VirtualTranslationFailCallback out_fail);
-    void (*virt_to_phys_range)(CGlueC *cont, Address start, Address end, VirtualTranslationCallback out);
-    void (*virt_translation_map_range)(CGlueC *cont, Address start, Address end, VirtualTranslationCallback out);
-    void (*virt_page_map_range)(CGlueC *cont, imem gap_size, Address start, Address end, MemoryRangeCallback out);
+    void (*virt_to_phys_list)(CGlueC *cont,
+                              CSliceRef<VtopRange> addrs,
+                              VirtualTranslationCallback out,
+                              VirtualTranslationFailCallback out_fail);
+    void (*virt_to_phys_range)(CGlueC *cont,
+                               Address start,
+                               Address end,
+                               VirtualTranslationCallback out);
+    void (*virt_translation_map_range)(CGlueC *cont,
+                                       Address start,
+                                       Address end,
+                                       VirtualTranslationCallback out);
+    void (*virt_page_map_range)(CGlueC *cont,
+                                imem gap_size,
+                                Address start,
+                                Address end,
+                                MemoryRangeCallback out);
     int32_t (*virt_to_phys)(CGlueC *cont, Address address, PhysicalAddress *ok_out);
     int32_t (*virt_page_info)(CGlueC *cont, Address addr, Page *ok_out);
     void (*virt_translation_map)(CGlueC *cont, VirtualTranslationCallback out);
@@ -1853,6 +1914,11 @@ struct ProcessInstance {
 
     inline ProcessState state() noexcept {
         ProcessState __ret = (this->vtbl_process)->state(&this->container);
+        return __ret;
+    }
+
+    inline int32_t set_dtb(Address dtb1, Address dtb2) noexcept {
+        int32_t __ret = (this->vtbl_process)->set_dtb(&this->container, dtb1, dtb2);
         return __ret;
     }
 
@@ -2114,6 +2180,11 @@ struct IntoProcessInstance {
         return __ret;
     }
 
+    inline int32_t set_dtb(Address dtb1, Address dtb2) noexcept {
+        int32_t __ret = (this->vtbl_process)->set_dtb(&this->container, dtb1, dtb2);
+        return __ret;
+    }
+
     inline int32_t module_address_list_callback(const ArchitectureIdent * target_arch, ModuleAddressCallback callback) noexcept {
         int32_t __ret = (this->vtbl_process)->module_address_list_callback(&this->container, target_arch, callback);
         return __ret;
@@ -2273,29 +2344,64 @@ struct OsVtbl {
     typedef typename CGlueC::Context Context;
     int32_t (*process_address_list_callback)(CGlueC *cont, AddressCallback callback);
     int32_t (*process_info_list_callback)(CGlueC *cont, ProcessInfoCallback callback);
-    int32_t (*process_info_by_address)(CGlueC *cont, Address address, ProcessInfo *ok_out);
-    int32_t (*process_info_by_name)(CGlueC *cont, CSliceRef<uint8_t> name, ProcessInfo *ok_out);
+    int32_t (*process_info_by_address)(CGlueC *cont,
+                                       Address address,
+                                       ProcessInfo *ok_out);
+    int32_t (*process_info_by_name)(CGlueC *cont,
+                                    CSliceRef<uint8_t> name,
+                                    ProcessInfo *ok_out);
     int32_t (*process_info_by_pid)(CGlueC *cont, Pid pid, ProcessInfo *ok_out);
-    int32_t (*process_by_info)(CGlueC *cont, ProcessInfo info, ProcessInstance<CBox<void>, Context> *ok_out);
-    int32_t (*into_process_by_info)(CGlueC cont, ProcessInfo info, IntoProcessInstance<CBox<void>, Context> *ok_out);
-    int32_t (*process_by_address)(CGlueC *cont, Address addr, ProcessInstance<CBox<void>, Context> *ok_out);
-    int32_t (*process_by_name)(CGlueC *cont, CSliceRef<uint8_t> name, ProcessInstance<CBox<void>, Context> *ok_out);
-    int32_t (*process_by_pid)(CGlueC *cont, Pid pid, ProcessInstance<CBox<void>, Context> *ok_out);
-    int32_t (*into_process_by_address)(CGlueC cont, Address addr, IntoProcessInstance<CBox<void>, Context> *ok_out);
-    int32_t (*into_process_by_name)(CGlueC cont, CSliceRef<uint8_t> name, IntoProcessInstance<CBox<void>, Context> *ok_out);
-    int32_t (*into_process_by_pid)(CGlueC cont, Pid pid, IntoProcessInstance<CBox<void>, Context> *ok_out);
+    int32_t (*process_by_info)(CGlueC *cont,
+                               ProcessInfo info,
+                               ProcessInstance<CBox<void>, Context> *ok_out);
+    int32_t (*into_process_by_info)(CGlueC cont,
+                                    ProcessInfo info,
+                                    IntoProcessInstance<CBox<void>, Context> *ok_out);
+    int32_t (*process_by_address)(CGlueC *cont,
+                                  Address addr,
+                                  ProcessInstance<CBox<void>, Context> *ok_out);
+    int32_t (*process_by_name)(CGlueC *cont,
+                               CSliceRef<uint8_t> name,
+                               ProcessInstance<CBox<void>, Context> *ok_out);
+    int32_t (*process_by_pid)(CGlueC *cont,
+                              Pid pid,
+                              ProcessInstance<CBox<void>, Context> *ok_out);
+    int32_t (*into_process_by_address)(CGlueC cont,
+                                       Address addr,
+                                       IntoProcessInstance<CBox<void>, Context> *ok_out);
+    int32_t (*into_process_by_name)(CGlueC cont,
+                                    CSliceRef<uint8_t> name,
+                                    IntoProcessInstance<CBox<void>, Context> *ok_out);
+    int32_t (*into_process_by_pid)(CGlueC cont,
+                                   Pid pid,
+                                   IntoProcessInstance<CBox<void>, Context> *ok_out);
     int32_t (*module_address_list_callback)(CGlueC *cont, AddressCallback callback);
     int32_t (*module_list_callback)(CGlueC *cont, ModuleInfoCallback callback);
     int32_t (*module_by_address)(CGlueC *cont, Address address, ModuleInfo *ok_out);
     int32_t (*module_by_name)(CGlueC *cont, CSliceRef<uint8_t> name, ModuleInfo *ok_out);
     int32_t (*primary_module_address)(CGlueC *cont, Address *ok_out);
     int32_t (*primary_module)(CGlueC *cont, ModuleInfo *ok_out);
-    int32_t (*module_import_list_callback)(CGlueC *cont, const ModuleInfo *info, ImportCallback callback);
-    int32_t (*module_export_list_callback)(CGlueC *cont, const ModuleInfo *info, ExportCallback callback);
-    int32_t (*module_section_list_callback)(CGlueC *cont, const ModuleInfo *info, SectionCallback callback);
-    int32_t (*module_import_by_name)(CGlueC *cont, const ModuleInfo *info, CSliceRef<uint8_t> name, ImportInfo *ok_out);
-    int32_t (*module_export_by_name)(CGlueC *cont, const ModuleInfo *info, CSliceRef<uint8_t> name, ExportInfo *ok_out);
-    int32_t (*module_section_by_name)(CGlueC *cont, const ModuleInfo *info, CSliceRef<uint8_t> name, SectionInfo *ok_out);
+    int32_t (*module_import_list_callback)(CGlueC *cont,
+                                           const ModuleInfo *info,
+                                           ImportCallback callback);
+    int32_t (*module_export_list_callback)(CGlueC *cont,
+                                           const ModuleInfo *info,
+                                           ExportCallback callback);
+    int32_t (*module_section_list_callback)(CGlueC *cont,
+                                            const ModuleInfo *info,
+                                            SectionCallback callback);
+    int32_t (*module_import_by_name)(CGlueC *cont,
+                                     const ModuleInfo *info,
+                                     CSliceRef<uint8_t> name,
+                                     ImportInfo *ok_out);
+    int32_t (*module_export_by_name)(CGlueC *cont,
+                                     const ModuleInfo *info,
+                                     CSliceRef<uint8_t> name,
+                                     ExportInfo *ok_out);
+    int32_t (*module_section_by_name)(CGlueC *cont,
+                                      const ModuleInfo *info,
+                                      CSliceRef<uint8_t> name,
+                                      SectionInfo *ok_out);
     const OsInfo *(*info)(const CGlueC *cont);
 };
 
@@ -3319,6 +3425,11 @@ struct CGlueTraitObj<T, ProcessVtbl<CGlueObjContainer<T, C, R>>, C, R> {
 
     inline ProcessState state() noexcept {
         ProcessState __ret = (this->vtbl)->state(&this->container);
+        return __ret;
+    }
+
+    inline int32_t set_dtb(Address dtb1, Address dtb2) noexcept {
+        int32_t __ret = (this->vtbl)->set_dtb(&this->container, dtb1, dtb2);
         return __ret;
     }
 

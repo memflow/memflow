@@ -16,7 +16,7 @@ pub fn parallel_init(
     os_args: &OsArgs,
 ) {
     rayon::scope(|s| {
-        (0..8).map(|_| connector.clone()).into_iter().for_each(|c| {
+        (0..8).map(|_| connector.clone()).for_each(|c| {
             s.spawn(move |_| {
                 inventory
                     .create_os(os_name, Some(c), Some(os_args))
@@ -31,7 +31,6 @@ pub fn parallel_init(
 pub fn parallel_kernels(kernel: OsInstanceArcBox<'static>) {
     (0..8)
         .map(|_| kernel.clone())
-        .into_iter()
         .map(|mut k| {
             thread::spawn(move || {
                 let _eprocesses = k.process_address_list().unwrap();
@@ -47,7 +46,6 @@ pub fn parallel_processes(kernel: OsInstanceArcBox<'static>) {
 
     (0..8)
         .map(|_| process.clone())
-        .into_iter()
         .map(|mut p| {
             thread::spawn(move || {
                 let module_list = p.module_list().unwrap();

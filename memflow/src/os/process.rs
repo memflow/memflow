@@ -57,6 +57,13 @@ pub trait Process: Send {
     /// Retrieves the state of the process
     fn state(&mut self) -> ProcessState;
 
+    /// Changes the dtb this process uses for memory translations
+    ///
+    /// # Remarks
+    ///
+    /// In case the architecture only uses a single dtb for translation the second parameter should be set to `Address::invalid()`.
+    fn set_dtb(&mut self, dtb1: Address, dtb2: Address) -> Result<()>;
+
     /// Walks the process' module list and calls the provided callback for each module structure
     /// address
     ///
@@ -343,6 +350,15 @@ pub struct ProcessInfo {
     ///
     /// On windows this technique is called [`WOW64`](https://docs.microsoft.com/en-us/windows/win32/winprog64/wow64-implementation-details).
     pub proc_arch: ArchitectureIdent,
+    /// Directory Table Base
+    ///
+    /// # Remarks
+    ///
+    /// These fields contain the translation base used to translate virtual memory addresses into physical memory addresses.
+    /// On x86 systems only `dtb1` is set because only one dtb is used.
+    /// On arm systems both `dtb1` and `dtb2` are set to their corresponding values.
+    pub dtb1: Address,
+    pub dtb2: Address,
 }
 
 pub type ProcessInfoCallback<'a> = OpaqueCallback<'a, ProcessInfo>;

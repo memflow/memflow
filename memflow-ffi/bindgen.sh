@@ -11,6 +11,9 @@ run_twice() {
 	fi
 }
 
+# remove any RUSTC_WRAPPER like sccache which might cause issues with cglue-bindgen
+export RUSTC_WRAPPER=""
+
 # update cglue-bindgen
 cargo +nightly install cbindgen
 cargo +nightly install cglue-bindgen

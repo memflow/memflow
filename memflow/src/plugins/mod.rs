@@ -41,7 +41,7 @@ pub use util::{wrap, wrap_with_input};
 
 use crate::error::{Result, *};
 
-use log::*;
+use log::{debug, error, info, warn, LevelFilter};
 use std::fs::read_dir;
 use std::mem::MaybeUninit;
 use std::path::{Path, PathBuf};
@@ -141,6 +141,9 @@ pub struct PluginDescriptor<T: Loadable> {
     pub create: CreateFn<T>,
 }
 
+// This warning is misleading here. `Loadable::ArgsType` isn't constrained to be `#[repr(C)]` here
+// but both `ConnectorArgs` and `OsArgs` that use it are marked as `#[repr(C)]`.
+#[allow(improper_ctypes_definitions)]
 pub type CreateFn<T> = extern "C" fn(
     Option<&<T as Loadable>::ArgsType>,
     <T as Loadable>::CInputArg,
@@ -451,14 +454,10 @@ impl Inventory {
 
         // add user directory
         #[cfg(unix)]
-        let path_iter = path_iter.chain(
-            dirs::home_dir()
-                .map(|dir| dir.join(".local").join("lib"))
-                .into_iter(),
-        );
+        let path_iter = path_iter.chain(dirs::home_dir().map(|dir| dir.join(".local").join("lib")));
 
         #[cfg(not(unix))]
-        let path_iter = path_iter.chain(dirs::document_dir().into_iter());
+        let path_iter = path_iter.chain(dirs::document_dir());
 
         let mut ret = Self {
             connectors: vec![],

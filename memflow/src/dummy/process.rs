@@ -1,13 +1,12 @@
-use crate::architecture::x86::x64;
+use crate::architecture::x86::{x64, X86VirtualTranslate};
 use crate::error::*;
-use crate::mem::virt_translate::VirtualTranslate3;
 
 use crate::architecture::ArchitectureIdent;
-use crate::mem::{mem_data::*, memory_view::*};
+use crate::mem::{mem_data::*, memory_view::*, PhysicalMemory, VirtualDma, VirtualTranslate2};
 use crate::os::process::*;
 use crate::os::*;
 use crate::plugins::*;
-use crate::types::{imem, umem, util::GapRemover, Address, PageType};
+use crate::types::{gap_remover::GapRemover, imem, umem, Address, PageType};
 
 use crate::cglue::*;
 use rand::{thread_rng, Rng};
@@ -41,7 +40,7 @@ impl DummyProcessInfo {
         }
     }
 
-    pub fn translator(&self) -> impl VirtualTranslate3 {
+    pub fn translator(&self) -> X86VirtualTranslate {
         x64::new_translator(self.dtb)
     }
 }
@@ -55,12 +54,20 @@ pub struct DummyProcess<T> {
     pub mem: T,
 }
 
-impl<T: MemoryView> Process for DummyProcess<T> {
+impl<T: PhysicalMemory, V: VirtualTranslate2> Process
+    for DummyProcess<VirtualDma<T, V, X86VirtualTranslate>>
+{
     /// Retrieves virtual address translator for the process (if applicable)
     //fn vat(&mut self) -> Option<&mut Self::VirtualTranslateType>;
 
     fn state(&mut self) -> ProcessState {
         ProcessState::Alive
+    }
+
+    fn set_dtb(&mut self, dtb1: Address, _dtb2: Address) -> Result<()> {
+        self.proc.dtb = dtb1;
+        self.mem.set_translator(self.proc.translator());
+        Ok(())
     }
 
     /// Walks the process' module list and calls the provided callback for each module
@@ -178,7 +185,9 @@ impl<T: MemoryView> MemoryView for DummyProcess<T> {
 #[cfg(test)]
 mod tests {
     use super::super::*;
+    use crate::cglue::*;
     use crate::os::{Os, Process};
+    use crate::plugins::ProcessInstance;
     use crate::types::size;
 
     #[test]
@@ -192,5 +201,15 @@ mod tests {
 
         let module = prc.primary_module();
         assert!(module.is_ok())
+    }
+
+    #[test]
+    pub fn cglue_process() {
+        let mem = DummyMemory::new(size::mb(64));
+        let mut os = DummyOs::new(mem);
+
+        let pid = os.alloc_process(size::mb(60), &[]);
+        let prc = os.into_process_by_pid(pid).unwrap();
+        let _obj = group_obj!(prc as ProcessInstance);
     }
 }

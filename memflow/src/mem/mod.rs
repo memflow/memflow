@@ -19,14 +19,12 @@ pub use phys_mem::{CachedPhysicalMemory, PhysicalMemory, PhysicalMemoryMetadata}
 #[cfg(feature = "std")]
 pub use phys_mem::{DelayedPhysicalMemory, PhysicalMemoryMetrics};
 pub use virt_mem::VirtualDma;
-//#[doc(hidden)]
-//pub use virt_mem_batcher::VirtualMemoryBatcher;
 pub use virt_translate::{
     CachedVirtualTranslate, DirectTranslate, VirtualTranslate, VirtualTranslate2,
     VirtualTranslate3, VtopFailureCallback, VtopOutputCallback,
 };
 
-pub use memory_view::{MemoryView, MemoryViewMetadata};
+pub use memory_view::{MemoryView, MemoryViewBatcher, MemoryViewMetadata};
 
 #[cfg(feature = "std")]
 pub use memory_view::MemoryCursor;

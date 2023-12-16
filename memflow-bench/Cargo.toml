@@ -19,7 +19,7 @@ rand = "^0.8.4"
 rand_xorshift = "^0.3"
 
 # This branch provides throughput plots
-criterion = { git = "https://github.com/h33p/criterion.rs.git", branch = "tput" }
+criterion = { git = "https://github.com/h33p/criterion.rs.git", branch = "tput2" }
 
 [dev-dependencies]
 memflow = { version = "0.2.0-beta", path = "../memflow", features = ["dummy_mem", "plugins"] }

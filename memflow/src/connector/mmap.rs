@@ -1,4 +1,4 @@
-///! Basic connector which works on mapped memory.
+//! Basic connector which works on mapped memory.
 use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
 use crate::mem::{
     opt_call, MemoryMap, PhysicalMemory, PhysicalMemoryMetadata, PhysicalReadMemOps,

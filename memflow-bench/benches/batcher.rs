@@ -69,7 +69,7 @@ fn read_test_batcher<T: MemoryView>(chunk_size: usize, mem: &mut T, mut rng: Cur
     let base_addr = Address::from(rng.gen_range(0..size));
 
     let mut batcher = mem.batcher();
-    batcher.read_prealloc(chunk_size);
+    batcher.reserve(chunk_size);
 
     for i in unsafe { TSLICE.iter_mut().take(chunk_size) } {
         batcher.read_into(base_addr + rng.gen_range(0usize..0x2000), i);

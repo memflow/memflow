@@ -217,6 +217,10 @@
 // due to the fact that umem equals u64 when compiling with a x86_64 target clippy issues false-positives on these conversions.
 // targets other than x86_64 still might require those.
 #![allow(clippy::unnecessary_cast)]
+// this issue is triggered due to an issue in bitmask 1.x
+// since upgrading to 2.x broke code generation via cglue-bindgen / cbindgen
+// we are allowing this lint temporarily
+#![allow(clippy::bad_bit_mask)]
 // no-std-compat
 #![cfg_attr(not(feature = "std"), no_std)]
 extern crate no_std_compat as std;

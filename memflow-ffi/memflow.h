@@ -348,6 +348,30 @@ typedef umem Address;
  * Describes the type of a page using a bitflag.
  */
 typedef uint8_t PageType;
+/**
+ * The page explicitly has no flags.
+ */
+#define PageType_NONE 0
+/**
+ * The page type is not known.
+ */
+#define PageType_UNKNOWN 1
+/**
+ * The page contains page table entries.
+ */
+#define PageType_PAGE_TABLE 2
+/**
+ * The page is a writeable page.
+ */
+#define PageType_WRITEABLE 4
+/**
+ * The page is read only.
+ */
+#define PageType_READ_ONLY 8
+/**
+ * The page is not executable.
+ */
+#define PageType_NOEXEC 16
 
 /**
  * This type represents a wrapper over a [address](address/index.html)

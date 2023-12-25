@@ -1,6 +1,6 @@
 [package]
 name = "memflow"
-version = "0.2.0-beta11"
+version = "0.2.0"
 authors = ["ko1N <ko1N1337@gmail.com>", "Aurimas Blažulionis <0x60@pm.me>"]
 edition = "2018"
 description = "core components of the memflow physical memory introspection framework"
@@ -18,7 +18,7 @@ maintenance = { status = "actively-developed" }
 codecov = { repository = "github", branch = "master", service = "github" }
 
 [dependencies]
-memflow-derive = { version = "0.2.0-beta3", path = "../memflow-derive" }
+memflow-derive = { version = "0.2", path = "../memflow-derive" }
 dataview = { version = "^1.0.0", default-features = false }
 log = { version = "^0.4.14", default-features = false }
 # we keep bitflags on version 1.x due to the various issues with cbindgen macro expansion and other issues 

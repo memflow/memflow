@@ -51,7 +51,7 @@ use libloading::Library;
 use once_cell::sync::OnceCell;
 
 /// Exported memflow plugins version
-pub const MEMFLOW_PLUGIN_VERSION: i32 = -9;
+pub const MEMFLOW_PLUGIN_VERSION: i32 = 1;
 
 /// Help and Target callbacks
 pub type HelpCallback<'a> = OpaqueCallback<'a, ReprCString>;

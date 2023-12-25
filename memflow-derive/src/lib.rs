@@ -90,7 +90,7 @@ fn validate_plugin_name(name: &str) {
 /// Examples:
 ///
 /// Simple usage:
-/// ```
+/// ```rust,ignore
 /// # use ::memflow::prelude::v1::*;
 /// # use ::memflow::dummy::*;
 /// #[connector(name = "dummy_conn", version = "1.0.0", description = "Dummy Plugin for Testing purposes")]
@@ -100,7 +100,7 @@ fn validate_plugin_name(name: &str) {
 /// ```
 ///
 /// Disable default caching:
-/// ```
+/// ```rust,ignore
 /// # use ::memflow::prelude::v1::*;
 /// # use ::memflow::dummy::*;
 /// #[connector(name = "dummy_conn", no_default_cache = true)]
@@ -110,7 +110,7 @@ fn validate_plugin_name(name: &str) {
 /// ```
 ///
 /// Custom help function:
-/// ```
+/// ```rust,ignore
 /// # use ::memflow::prelude::v1::*;
 /// # use ::memflow::dummy::*;
 /// #[connector(name = "dummy_conn", help_fn = "help")]
@@ -124,7 +124,7 @@ fn validate_plugin_name(name: &str) {
 /// ```
 ///
 /// Custom target list function:
-/// ```
+/// ```rust,ignore
 /// # use ::memflow::prelude::v1::*;
 /// # use ::memflow::dummy::*;
 /// # use std::vec::Vec;
@@ -139,7 +139,7 @@ fn validate_plugin_name(name: &str) {
 /// ```
 ///
 /// Wrapped return with manually created connector instance:
-/// ```
+/// ```rust,ignore
 /// # use ::memflow::prelude::v1::*;
 /// # use ::memflow::dummy::*;
 /// #[connector(name = "dummy_conn", return_wrapped = true)]
@@ -153,7 +153,7 @@ fn validate_plugin_name(name: &str) {
 /// ```
 ///
 /// Connector with input parameter:
-/// ```
+/// ```rust,ignore
 /// # use ::memflow::prelude::v1::*;
 /// # use ::memflow::dummy::*;
 /// #[connector(name = "dummy_conn", accept_input = true)]
@@ -166,7 +166,7 @@ fn validate_plugin_name(name: &str) {
 /// ```
 ///
 /// Connector with input parameter and manually created connector instance:
-/// ```
+/// ```rust,ignore
 /// # use ::memflow::prelude::v1::*;
 /// # use ::memflow::dummy::*;
 /// #[connector(name = "dummy_conn", accept_input = true, return_wrapped = true)]
@@ -355,7 +355,7 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
 /// Examples:
 ///
 /// Simple usage:
-/// ```
+/// ```rust,ignore
 /// # use ::memflow::prelude::v1::*;
 /// # use ::memflow::dummy::*;
 /// #[os(name = "dummy_os", version = "1.0.0", description = "Dummy Plugin for Testing purposes")]
@@ -368,7 +368,7 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
 ///
 /// ```
 /// Custom help function:
-/// ```
+/// ```rust,ignore
 /// # use ::memflow::prelude::v1::*;
 /// # use ::memflow::dummy::*;
 /// #[os(name = "dummy_os", help_fn = "help")]
@@ -385,7 +385,7 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
 /// ```
 ///
 /// Wrapped return with manually created os instance:
-/// ```
+/// ```rust,ignore
 /// # use ::memflow::prelude::v1::*;
 /// # use ::memflow::dummy::*;
 /// #[os(name = "dummy_os", return_wrapped = true)]
@@ -400,7 +400,7 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
 /// ```
 ///
 /// Os with input parameter:
-/// ```
+/// ```rust,ignore
 /// # use ::memflow::prelude::v1::*;
 /// # use ::memflow::dummy::*;
 /// #[os(name = "dummy_os", accept_input = true)]
@@ -414,7 +414,7 @@ pub fn connector(args: TokenStream, input: TokenStream) -> TokenStream {
 /// ```
 ///
 /// Os with input parameter and manually created os instance:
-/// ```
+/// ```rust,ignore
 /// # use ::memflow::prelude::v1::*;
 /// # use ::memflow::dummy::*;
 /// #[os(name = "dummy_os", accept_input = true, return_wrapped = true)]

@@ -25,5 +25,3 @@ quote = "^1.0"
 darling = "^0.20"
 proc-macro-crate = "^2.0"
 
-[dev-dependencies]
-memflow = { version = "0.2", path = "../memflow", features = ["dummy_mem"] }

@@ -93,9 +93,21 @@ fn rwtest(
 fn read_bench(mut kernel: OsInstanceArcBox) -> Result<()> {
     let proc_list = kernel.process_info_list()?;
     let mut rng = CurRng::seed_from_u64(rand::thread_rng().gen_range(0..!0u64));
+
+    let mut cont_cnt = 0usize;
+
     loop {
-        let mut prc =
-            kernel.process_by_info(proc_list[rng.gen_range(0..proc_list.len())].clone())?;
+        let Ok(mut prc) =
+            kernel.process_by_info(proc_list[rng.gen_range(0..proc_list.len())].clone())
+        else {
+            cont_cnt += 1;
+            if cont_cnt.count_ones() == 1 && cont_cnt > 10 {
+                println!("Warning: could not get proc {cont_cnt} times in a row");
+            }
+            continue;
+        };
+
+        cont_cnt = 0;
 
         let mod_list: Vec<ModuleInfo> = prc
             .module_list()?
@@ -112,7 +124,7 @@ fn read_bench(mut kernel: OsInstanceArcBox) -> Result<()> {
                 prc.info().name,
             );
 
-            let mem_map = prc.mapped_mem_vec(smem::gb(0));
+            let mem_map = prc.mapped_mem_vec(smem::gb(1));
 
             println!("Mapped memory map (with up to 1GB gaps):");
 

@@ -192,7 +192,6 @@ pub trait PhysicalMemory: Send {
     }
 
     // deprecated = Remove this function (superseeded by into_mem_view)
-    #[deprecated = "This function has been renamed to into_mem_view()"]
     #[vtbl_only('static, wrap_with_obj(MemoryView))]
     fn into_phys_view(self) -> PhysicalMemoryView<Self>
     where
@@ -205,7 +204,6 @@ pub trait PhysicalMemory: Send {
     }
 
     // deprecated = Remove this function (superseeded by mem_view)
-    #[deprecated = "This function has been renamed to mem_view()"]
     #[vtbl_only('_, wrap_with_obj(MemoryView))]
     fn phys_view(&mut self) -> PhysicalMemoryView<Fwd<&mut Self>>
     where

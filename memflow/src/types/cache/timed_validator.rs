@@ -56,6 +56,7 @@ impl TimedCacheValidator {
 impl CacheValidator for TimedCacheValidator {
     #[inline]
     fn allocate_slots(&mut self, slot_count: usize) {
+        // allocate all slots in an invalid state
         self.time
             .resize(slot_count, self.last_time - self.valid_time);
     }
@@ -77,6 +78,7 @@ impl CacheValidator for TimedCacheValidator {
 
     #[inline]
     fn invalidate_slot(&mut self, slot_id: usize) {
+        // set this slot to invalid
         self.time[slot_id] = self.last_time - self.valid_time
     }
 }

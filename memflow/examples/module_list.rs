@@ -1,4 +1,11 @@
-/// A simple process list example using memflow
+/*!
+A simple process list example using memflow
+
+# Usage:
+```bash
+cargo run --release --example module_list -- -vvv -c kvm --os win32 --process explorer.exe
+```
+*/
 use clap::*;
 use log::Level;
 

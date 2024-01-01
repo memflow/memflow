@@ -1,4 +1,49 @@
-//! Caching layer for a memory view.
+//! This cache is a wrapper for connector objects that implement the [`PhysicalMemory`] trait.
+//! It enables a configurable caching layer when accessing physical pages.
+//!
+//! Each page that is being read by the the connector will be placed into a `PageCache` object.
+//! If the cache is still valid then for consecutive reads this connector will just return the values from the cache
+//! and not issue out a new read. In case the cache is not valid anymore it will do a new read.
+//!
+//! The cache time is determined by the customizable cache validator.
+//! The cache validator has to implement the [`CacheValidator`](../trait.CacheValidator.html) trait.
+//!
+//! To make it easier and quicker to construct and work with caches this module also contains a cache builder.
+//!
+//! More examples can be found in the documentations for each of the structs in this module.
+//!
+//! # Examples
+//!
+//! Building a simple cache with default settings:
+//! ```
+//! # const MAGIC_VALUE: u64 = 0x23bd_318f_f3a3_5821;
+//! use memflow::prelude::v1::*;
+//! use memflow::dummy::DummyMemory;
+//! # use memflow::dummy::DummyOs;
+//! # use memflow::architecture::x86::x64;
+//!
+//! # let phys_mem = DummyMemory::new(size::mb(16));
+//! # let mut os = DummyOs::new(phys_mem);
+//! # let (dtb, virt_base) = os.alloc_dtb(size::mb(8), &[]);
+//! # let phys_mem = os.into_inner();
+//! # let translator = x64::new_translator(dtb);
+//! let mut virt_mem = VirtualDma::new(phys_mem, x64::ARCH, translator);
+//!
+//! let mut cached_mem = CachedView::builder(virt_mem)
+//!     .arch(x64::ARCH)
+//!     .validator(DefaultCacheValidator::default())
+//!     .cache_size(size::mb(1))
+//!     .build()
+//!     .unwrap();
+//!
+//! let addr = virt_base; // some arbitrary address
+//!
+//! cached_mem.write(addr, &MAGIC_VALUE).unwrap();
+//!
+//! let value: u64 = cached_mem.read(addr).unwrap();
+//! assert_eq!(value, MAGIC_VALUE);
+//! ```
+
 use super::*;
 use crate::mem::phys_mem::{page_cache::PageCache, PhysicalMemoryView};
 
@@ -51,7 +96,6 @@ pub struct CachedViewBuilder<T, Q> {
     validator: Q,
     page_size: Option<usize>,
     cache_size: usize,
-    page_type_mask: PageType,
 }
 
 impl<T: MemoryView> CachedViewBuilder<T, DefaultCacheValidator> {
@@ -71,60 +115,55 @@ impl<T: MemoryView> CachedViewBuilder<T, DefaultCacheValidator> {
     /// Moves ownership of a mem object and retrieves it back:
     /// ```
     /// # const MAGIC_VALUE: u64 = 0x23bd_318f_f3a3_5821;
-    /// use memflow::architecture::x86::x64;
-    /// use memflow::mem::{PhysicalMemory, CachedPhysicalMemory, MemoryView};
+    /// use memflow::prelude::v1::*;
+    /// use memflow::dummy::DummyMemory;
+    /// # use memflow::dummy::DummyOs;
+    /// # use memflow::architecture::x86::x64;
     ///
-    /// fn build<T: PhysicalMemory>(mem: T) {
-    ///     let mut cache = CachedPhysicalMemory::builder(mem)
-    ///         .arch(x64::ARCH)
-    ///         .build()
-    ///         .unwrap();
+    /// # let phys_mem = DummyMemory::new(size::mb(16));
+    /// # let mut os = DummyOs::new(phys_mem);
+    /// # let (dtb, virt_base) = os.alloc_dtb(size::mb(8), &[]);
+    /// # let phys_mem = os.into_inner();
+    /// # let translator = x64::new_translator(dtb);
+    /// let mut virt_mem = VirtualDma::new(phys_mem, x64::ARCH, translator);
     ///
-    ///     cache.phys_write(0.into(), &MAGIC_VALUE);
+    /// let mut cached_mem = CachedView::builder(virt_mem)
+    ///     .arch(x64::ARCH)
+    ///     .build()
+    ///     .unwrap();
     ///
-    ///     let mut mem = cache.into_inner();
+    /// let addr = virt_base; // some arbitrary address
     ///
-    ///     let value: u64 = mem.phys_view().read(0.into()).unwrap();
-    ///     assert_eq!(value, MAGIC_VALUE);
-    /// }
-    /// # use memflow::dummy::DummyMemory;
-    /// # use memflow::types::size;
-    /// # let mut mem = DummyMemory::new(size::mb(4));
-    /// # mem.phys_write(0.into(), &0xffaaffaau64).unwrap();
-    /// # build(mem);
+    /// cached_mem.write(addr, &MAGIC_VALUE).unwrap();
+    ///
+    /// let value: u64 = cached_mem.read(addr).unwrap();
+    /// assert_eq!(value, MAGIC_VALUE);
     /// ```
     ///
     /// Borrowing a mem object:
     /// ```
-    /// # const MAGIC_VALUE: u64 = 0x23bd_318f_f3a3_5821;
-    /// use memflow::architecture::x86::x64;
-    /// use memflow::mem::{PhysicalMemory, CachedPhysicalMemory, MemoryView};
-    /// use memflow::cglue::{Fwd, ForwardMut};
+    /// use memflow::prelude::v1::*;
+    /// use memflow::dummy::DummyMemory;
+    /// # use memflow::dummy::DummyOs;
+    /// # use memflow::architecture::x86::x64;
     ///
-    /// fn build<T: PhysicalMemory>(mem: Fwd<&mut T>)
-    ///     -> impl PhysicalMemory + '_ {
-    ///     CachedPhysicalMemory::builder(mem)
+    /// fn build<T: MemoryView>(mem: Fwd<&mut T>)
+    ///     -> impl MemoryView + '_ {
+    ///     CachedView::builder(mem)
     ///         .arch(x64::ARCH)
     ///         .build()
     ///         .unwrap()
     /// }
     ///
-    /// # use memflow::dummy::DummyMemory;
-    /// # use memflow::types::size;
-    /// # let mut mem = DummyMemory::new(size::mb(4));
-    /// # mem.phys_write(0.into(), &MAGIC_VALUE).unwrap();
-    /// let mut cache = build(mem.forward_mut());
+    /// # let phys_mem = DummyMemory::new(size::mb(16));
+    /// # let mut os = DummyOs::new(phys_mem);
+    /// # let (dtb, virt_base) = os.alloc_dtb(size::mb(8), &[]);
+    /// # let phys_mem = os.into_inner();
+    /// # let translator = x64::new_translator(dtb);
+    /// let mut virt_mem = VirtualDma::new(phys_mem, x64::ARCH, translator);
+    /// let mut cached_view = build(virt_mem.forward_mut());
     ///
-    /// let value: u64 = cache.phys_view().read(0.into()).unwrap();
-    /// assert_eq!(value, MAGIC_VALUE);
-    ///
-    /// cache.phys_write(0.into(), &0u64).unwrap();
-    ///
-    /// // We drop the cache and are able to use mem again
-    /// std::mem::drop(cache);
-    ///
-    /// let value: u64 = mem.phys_view().read(0.into()).unwrap();
-    /// assert_ne!(value, MAGIC_VALUE);
+    /// let read = cached_view.read::<u32>(0.into()).unwrap();
     /// ```
     pub fn new(mem: T) -> Self {
         Self {
@@ -132,7 +171,6 @@ impl<T: MemoryView> CachedViewBuilder<T, DefaultCacheValidator> {
             validator: DefaultCacheValidator::default(),
             page_size: None,
             cache_size: size::mb(2),
-            page_type_mask: PageType::PAGE_TABLE | PageType::READ_ONLY,
         }
     }
 }
@@ -150,7 +188,8 @@ impl<T: MemoryView, Q: CacheValidator> CachedViewBuilder<T, Q> {
                         .log_error("page_size must be initialized")
                 })?,
                 self.cache_size,
-                self.page_type_mask,
+                // we do not know pagetypes on virtual memory so we have to apply this cache to all types
+                PageType::all(),
                 self.validator,
             ),
         );
@@ -162,31 +201,41 @@ impl<T: MemoryView, Q: CacheValidator> CachedViewBuilder<T, Q> {
 
     /// Sets a custom validator for the cache.
     ///
-    /// If this function is not called it will default to a [`DefaultCacheValidator`](../timed_validator/index.html)
-    /// for std builds and a /* TODO */ validator for no_std builds.
+    /// If this function is not called it will default to a [`DefaultCacheValidator`].
+    /// The default validator for std builds is the [`TimedCacheValidator`].
+    /// The default validator for no_std builds is the [`CountCacheValidator`].
     ///
     /// The default setting is `DefaultCacheValidator::default()`.
     ///
     /// # Examples:
     ///
     /// ```
+    /// # const MAGIC_VALUE: u64 = 0x23bd_318f_f3a3_5821;
+    /// use memflow::prelude::v1::*;
+    /// use memflow::dummy::DummyMemory;
     /// use std::time::Duration;
+    /// # use memflow::dummy::DummyOs;
+    /// # use memflow::architecture::x86::x64;
     ///
-    /// use memflow::architecture::x86::x64;
-    /// use memflow::mem::{PhysicalMemory, CachedPhysicalMemory};
-    /// use memflow::types::DefaultCacheValidator;
+    /// # let phys_mem = DummyMemory::new(size::mb(16));
+    /// # let mut os = DummyOs::new(phys_mem);
+    /// # let (dtb, virt_base) = os.alloc_dtb(size::mb(8), &[]);
+    /// # let phys_mem = os.into_inner();
+    /// # let translator = x64::new_translator(dtb);
+    /// let mut virt_mem = VirtualDma::new(phys_mem, x64::ARCH, translator);
     ///
-    /// fn build<T: PhysicalMemory>(mem: T) {
-    ///     let cache = CachedPhysicalMemory::builder(mem)
-    ///         .arch(x64::ARCH)
-    ///         .validator(DefaultCacheValidator::new(Duration::from_millis(2000).into()))
-    ///         .build()
-    ///         .unwrap();
-    /// }
-    /// # use memflow::dummy::DummyMemory;
-    /// # use memflow::types::size;
-    /// # let mut mem = DummyMemory::new(size::mb(4));
-    /// # build(mem);
+    /// let mut cached_mem = CachedView::builder(virt_mem)
+    ///     .arch(x64::ARCH)
+    ///     .validator(DefaultCacheValidator::new(Duration::from_millis(2000).into()))
+    ///     .build()
+    ///     .unwrap();
+    ///
+    /// let addr = virt_base; // some arbitrary address
+    ///
+    /// cached_mem.write(addr, &MAGIC_VALUE).unwrap();
+    ///
+    /// let value: u64 = cached_mem.read(addr).unwrap();
+    /// assert_eq!(value, MAGIC_VALUE);
     /// ```
     pub fn validator<QN: CacheValidator>(self, validator: QN) -> CachedViewBuilder<T, QN> {
         CachedViewBuilder {
@@ -194,7 +243,6 @@ impl<T: MemoryView, Q: CacheValidator> CachedViewBuilder<T, Q> {
             validator,
             page_size: self.page_size,
             cache_size: self.cache_size,
-            page_type_mask: self.page_type_mask,
         }
     }
 
@@ -209,18 +257,30 @@ impl<T: MemoryView, Q: CacheValidator> CachedViewBuilder<T, Q> {
     /// # Examples
     ///
     /// ```
-    /// use memflow::types::size;
-    /// use memflow::mem::{PhysicalMemory, CachedPhysicalMemory};
+    /// # const MAGIC_VALUE: u64 = 0x23bd_318f_f3a3_5821;
+    /// use memflow::prelude::v1::*;
+    /// use memflow::dummy::DummyMemory;
+    /// # use memflow::dummy::DummyOs;
+    /// # use memflow::architecture::x86::x64;
     ///
-    /// fn build<T: PhysicalMemory>(mem: T) {
-    ///     let cache = CachedPhysicalMemory::builder(mem)
-    ///         .page_size(size::kb(4))
-    ///         .build()
-    ///         .unwrap();
-    /// }
-    /// # use memflow::dummy::DummyMemory;
-    /// # let mut mem = DummyMemory::new(size::mb(4));
-    /// # build(mem);
+    /// # let phys_mem = DummyMemory::new(size::mb(16));
+    /// # let mut os = DummyOs::new(phys_mem);
+    /// # let (dtb, virt_base) = os.alloc_dtb(size::mb(8), &[]);
+    /// # let phys_mem = os.into_inner();
+    /// # let translator = x64::new_translator(dtb);
+    /// let mut virt_mem = VirtualDma::new(phys_mem, x64::ARCH, translator);
+    ///
+    /// let mut cached_mem = CachedView::builder(virt_mem)
+    ///     .page_size(size::kb(4))
+    ///     .build()
+    ///     .unwrap();
+    ///
+    /// let addr = virt_base; // some arbitrary address
+    ///
+    /// cached_mem.write(addr, &MAGIC_VALUE).unwrap();
+    ///
+    /// let value: u64 = cached_mem.read(addr).unwrap();
+    /// assert_eq!(value, MAGIC_VALUE);
     /// ```
     pub fn page_size(mut self, page_size: usize) -> Self {
         self.page_size = Some(page_size);
@@ -238,19 +298,30 @@ impl<T: MemoryView, Q: CacheValidator> CachedViewBuilder<T, Q> {
     /// # Examples
     ///
     /// ```
-    /// use memflow::architecture::x86::x64;
-    /// use memflow::mem::{PhysicalMemory, CachedPhysicalMemory};
+    /// # const MAGIC_VALUE: u64 = 0x23bd_318f_f3a3_5821;
+    /// use memflow::prelude::v1::*;
+    /// use memflow::dummy::DummyMemory;
+    /// # use memflow::dummy::DummyOs;
+    /// # use memflow::architecture::x86::x64;
     ///
-    /// fn build<T: PhysicalMemory>(mem: T) {
-    ///     let cache = CachedPhysicalMemory::builder(mem)
-    ///         .arch(x64::ARCH)
-    ///         .build()
-    ///         .unwrap();
-    /// }
-    /// # use memflow::dummy::DummyMemory;
-    /// # use memflow::types::size;
-    /// # let mut mem = DummyMemory::new(size::mb(4));
-    /// # build(mem);
+    /// # let phys_mem = DummyMemory::new(size::mb(16));
+    /// # let mut os = DummyOs::new(phys_mem);
+    /// # let (dtb, virt_base) = os.alloc_dtb(size::mb(8), &[]);
+    /// # let phys_mem = os.into_inner();
+    /// # let translator = x64::new_translator(dtb);
+    /// let mut virt_mem = VirtualDma::new(phys_mem, x64::ARCH, translator);
+    ///
+    /// let mut cached_mem = CachedView::builder(virt_mem)
+    ///     .arch(x64::ARCH)
+    ///     .build()
+    ///     .unwrap();
+    ///
+    /// let addr = virt_base; // some arbitrary address
+    ///
+    /// cached_mem.write(addr, &MAGIC_VALUE).unwrap();
+    ///
+    /// let value: u64 = cached_mem.read(addr).unwrap();
+    /// assert_eq!(value, MAGIC_VALUE);
     /// ```
     pub fn arch(mut self, arch: impl Into<ArchitectureObj>) -> Self {
         self.page_size = Some(arch.into().page_size());
@@ -269,57 +340,34 @@ impl<T: MemoryView, Q: CacheValidator> CachedViewBuilder<T, Q> {
     /// # Examples:
     ///
     /// ```
-    /// use memflow::types::size;
-    /// use memflow::architecture::x86::x64;
-    /// use memflow::mem::{PhysicalMemory, CachedPhysicalMemory};
+    /// # const MAGIC_VALUE: u64 = 0x23bd_318f_f3a3_5821;
+    /// use memflow::prelude::v1::*;
+    /// use memflow::dummy::DummyMemory;
+    /// # use memflow::dummy::DummyOs;
+    /// # use memflow::architecture::x86::x64;
     ///
-    /// fn build<T: PhysicalMemory>(mem: T) {
-    ///     let cache = CachedPhysicalMemory::builder(mem)
-    ///         .arch(x64::ARCH)
-    ///         .cache_size(size::mb(2))
-    ///         .build()
-    ///         .unwrap();
-    /// }
-    /// # use memflow::dummy::DummyMemory;
-    /// # let mut mem = DummyMemory::new(size::mb(4));
-    /// # build(mem);
+    /// # let phys_mem = DummyMemory::new(size::mb(16));
+    /// # let mut os = DummyOs::new(phys_mem);
+    /// # let (dtb, virt_base) = os.alloc_dtb(size::mb(8), &[]);
+    /// # let phys_mem = os.into_inner();
+    /// # let translator = x64::new_translator(dtb);
+    /// let mut virt_mem = VirtualDma::new(phys_mem, x64::ARCH, translator);
+    ///
+    /// let mut cached_mem = CachedView::builder(virt_mem)
+    ///     .arch(x64::ARCH)
+    ///     .cache_size(size::mb(2))
+    ///     .build()
+    ///     .unwrap();
+    ///
+    /// let addr = virt_base; // some arbitrary address
+    ///
+    /// cached_mem.write(addr, &MAGIC_VALUE).unwrap();
+    ///
+    /// let value: u64 = cached_mem.read(addr).unwrap();
+    /// assert_eq!(value, MAGIC_VALUE);
     /// ```
     pub fn cache_size(mut self, cache_size: usize) -> Self {
         self.cache_size = cache_size;
-        self
-    }
-
-    /// Adjusts the type of pages that the cache will hold in it's cache.
-    ///
-    /// The page type can be a bitmask that contains one or multiple page types.
-    /// All page types matching this bitmask will be kept in the cache.
-    /// All pages that are not matching the bitmask will be re-read/re-written on every request.
-    ///
-    /// The default setting is `PageType::PAGE_TABLE | PageType::READ_ONLY`.
-    ///
-    /// This setting can drastically impact the performance of the cache.
-    ///
-    /// # Examples:
-    ///
-    /// ```
-    /// use memflow::types::PageType;
-    /// use memflow::architecture::x86::x32;
-    /// use memflow::mem::{PhysicalMemory, CachedPhysicalMemory};
-    ///
-    /// fn build<T: PhysicalMemory>(mem: T) {
-    ///     let cache = CachedPhysicalMemory::builder(mem)
-    ///         .arch(x32::ARCH)
-    ///         .page_type_mask(PageType::PAGE_TABLE | PageType::READ_ONLY)
-    ///         .build()
-    ///         .unwrap();
-    /// }
-    /// # use memflow::dummy::DummyMemory;
-    /// # use memflow::types::size;
-    /// # let mut mem = DummyMemory::new(size::mb(4));
-    /// # build(mem);
-    /// ```
-    pub fn page_type_mask(mut self, page_type_mask: PageType) -> Self {
-        self.page_type_mask = page_type_mask;
         self
     }
 }

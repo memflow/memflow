@@ -18,16 +18,18 @@
 //! ```
 //! use memflow::architecture::x86::x64;
 //! use memflow::mem::{PhysicalMemory, CachedPhysicalMemory};
+//! use memflow::types::size;
 //!
 //! fn build<T: PhysicalMemory>(mem: T) {
 //!     let cache = CachedPhysicalMemory::builder(mem)
 //!         .arch(x64::ARCH)
+//!         .cache_size(size::mb(1))
 //!         .build()
 //!         .unwrap();
 //! }
 //! ```
 
-mod page_cache;
+pub(crate) mod page_cache;
 
 use crate::architecture::ArchitectureObj;
 use crate::error::{Error, ErrorKind, ErrorOrigin, Result};
@@ -187,17 +189,17 @@ pub struct CachedPhysicalMemoryBuilder<T, Q> {
 }
 
 impl<T: PhysicalMemory> CachedPhysicalMemoryBuilder<T, DefaultCacheValidator> {
-    /// Creates a new `CachedPhysicalMemory` builder.
-    /// The memory object is mandatory as the CachedPhysicalMemory struct wraps around it.
+    /// Creates a new [`CachedPhysicalMemory`] builder.
+    /// The memory object is mandatory as the [`CachedPhysicalMemory`] struct wraps around it.
     ///
     /// This type of cache also is required to know the exact page size of the target system.
     /// This can either be set directly via the `page_size()` method or via the `arch()` method.
-    /// If no page size has been set this builder will fail to build the CachedPhysicalMemory.
+    /// If no page size has been set this builder will fail to build the [`CachedPhysicalMemory`].
     ///
     /// Without further adjustments this function creates a cache that is 2 megabytes in size and caches
     /// pages that contain pagetable entries as well as read-only pages.
     ///
-    /// It is also possible to either let the `CachedPhysicalMemory` object own or just borrow the underlying memory object.
+    /// It is also possible to either let the `[`CachedPhysicalMemory`]` object own or just borrow the underlying memory object.
     ///
     /// # Examples
     /// Moves ownership of a mem object and retrieves it back:
@@ -209,6 +211,7 @@ impl<T: PhysicalMemory> CachedPhysicalMemoryBuilder<T, DefaultCacheValidator> {
     /// fn build<T: PhysicalMemory>(mem: T) {
     ///     let mut cache = CachedPhysicalMemory::builder(mem)
     ///         .arch(x64::ARCH)
+    ///         .cache_size(size::mb(1))
     ///         .build()
     ///         .unwrap();
     ///
@@ -270,7 +273,7 @@ impl<T: PhysicalMemory> CachedPhysicalMemoryBuilder<T, DefaultCacheValidator> {
 }
 
 impl<T: PhysicalMemory, Q: CacheValidator> CachedPhysicalMemoryBuilder<T, Q> {
-    /// Builds the `CachedPhysicalMemory` object or returns an error if the page size is not set.
+    /// Builds the [`CachedPhysicalMemory`] object or returns an error if the page size is not set.
     pub fn build<'a>(self) -> Result<CachedPhysicalMemory<'a, T, Q>> {
         Ok(CachedPhysicalMemory::new(
             self.mem,
@@ -288,8 +291,9 @@ impl<T: PhysicalMemory, Q: CacheValidator> CachedPhysicalMemoryBuilder<T, Q> {
 
     /// Sets a custom validator for the cache.
     ///
-    /// If this function is not called it will default to a [`DefaultCacheValidator`](../timed_validator/index.html)
-    /// for std builds and a /* TODO */ validator for no_std builds.
+    /// If this function is not called it will default to a [`DefaultCacheValidator`].
+    /// The default validator for std builds is the [`TimedCacheValidator`].
+    /// The default validator for no_std builds is the [`CountCacheValidator`].
     ///
     /// The default setting is `DefaultCacheValidator::default()`.
     ///
@@ -356,10 +360,10 @@ impl<T: PhysicalMemory, Q: CacheValidator> CachedPhysicalMemoryBuilder<T, Q> {
         self
     }
 
-    /// Retrieves the page size for this cache from the given `Architecture`.
+    /// Retrieves the page size for this cache from the given [`Architecture`].
     ///
     /// The cache has to know the exact page size of the target system internally to give reasonable performance.
-    /// The page size can be either fetched from the `Architecture` via this method or it can be set directly
+    /// The page size can be either fetched from the [`Architecture`] via this method or it can be set directly
     /// via the `page_size()` method of the builder.
     ///
     /// If the page size is not set the builder will fail.

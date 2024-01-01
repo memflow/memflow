@@ -1,12 +1,12 @@
-use super::mem_data::*;
-
-use crate::prelude::v1::{Result, *};
-
 use std::mem::MaybeUninit;
 use std::prelude::v1::*;
 
+use super::{mem_data::*, phys_mem::*};
+use crate::prelude::v1::{Result, *};
+
 pub mod arch_overlay;
 pub mod batcher;
+pub mod cached_view;
 pub mod remap_view;
 
 #[cfg(feature = "std")]
@@ -14,6 +14,7 @@ pub mod cursor;
 
 pub use arch_overlay::ArchOverlayView;
 pub use batcher::MemoryViewBatcher;
+pub use cached_view::CachedView;
 pub use remap_view::RemapView;
 
 #[cfg(feature = "std")]
@@ -542,6 +543,68 @@ pub trait MemoryView: Send {
         Self: Sized,
     {
         self.forward_mut().into_remap_view(mem_map)
+    }
+
+    // deprecated = Expose this via cglue
+    #[skip_func]
+    fn into_phys_mem(self) -> PhysicalMemoryOnView<Self>
+    where
+        Self: Sized,
+    {
+        PhysicalMemoryOnView { mem: self }
+    }
+
+    // deprecated = Expose this via cglue
+    #[skip_func]
+    fn phys_mem(&mut self) -> PhysicalMemoryOnView<Fwd<&mut Self>>
+    where
+        Self: Sized,
+    {
+        self.forward_mut().into_phys_mem()
+    }
+}
+
+/// Creates a PhysicalMemory object from a MemoryView without doing any translations.
+/// This function simply redirects all calls to PhysicalMemory to the underlying MemoryView
+#[repr(C)]
+#[derive(Clone)]
+#[cfg_attr(feature = "abi_stable", derive(::abi_stable::StableAbi))]
+pub struct PhysicalMemoryOnView<T> {
+    mem: T,
+}
+
+impl<T: MemoryView> PhysicalMemory for PhysicalMemoryOnView<T>
+where
+    T: MemoryView,
+{
+    #[inline]
+    fn phys_read_raw_iter(
+        &mut self,
+        MemOps { inp, out, out_fail }: PhysicalReadMemOps,
+    ) -> Result<()> {
+        let inp = inp.map(|CTup3(addr, meta_addr, data)| CTup3(addr.into(), meta_addr, data));
+        MemOps::with_raw(inp, out, out_fail, |data| self.mem.read_raw_iter(data))
+    }
+
+    #[inline]
+    fn phys_write_raw_iter(
+        &mut self,
+        MemOps { inp, out, out_fail }: PhysicalWriteMemOps,
+    ) -> Result<()> {
+        let inp = inp.map(|CTup3(addr, meta_addr, data)| CTup3(addr.into(), meta_addr, data));
+        MemOps::with_raw(inp, out, out_fail, |data| self.mem.write_raw_iter(data))
+    }
+
+    #[inline]
+    fn metadata(&self) -> PhysicalMemoryMetadata {
+        let md = self.mem.metadata();
+
+        PhysicalMemoryMetadata {
+            max_address: md.max_address,
+            real_size: md.real_size,
+            readonly: md.readonly,
+            ideal_batch_size: 4096,
+        }
     }
 }
 

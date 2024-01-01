@@ -218,6 +218,19 @@ pub trait MemoryView: Send {
         self.read::<u64>(addr).map_data(|d| d.into())
     }
 
+    /// Reads the specified address as a rip-relative address.
+    #[skip_func]
+    fn read_addr64_rip(&mut self, addr: Address) -> PartialResult<Address>
+    where
+        Self: Sized,
+    {
+        let displacement = match self.read::<i32>(addr + 0x3) {
+            Ok(d) => d,
+            Err(e) => return Err(PartialError::Error(e.into())),
+        };
+        Ok(addr + 0x7 + displacement)
+    }
+
     #[skip_func]
     fn read_addr_arch(&mut self, arch: ArchitectureObj, addr: Address) -> PartialResult<Address>
     where
@@ -446,8 +459,6 @@ pub trait MemoryView: Send {
     fn read_char_string(&mut self, addr: Address) -> PartialResult<String> {
         self.read_char_string_n(addr, 4096)
     }
-
-    // TODO: batcher
 
     #[cfg(feature = "std")]
     #[skip_func]

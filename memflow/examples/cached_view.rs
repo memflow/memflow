@@ -22,48 +22,52 @@ use std::sync::{
 };
 
 use clap::*;
-use log::Level;
+use log::{info, Level};
 
 use memflow::prelude::v1::*;
 
-const INVALIDATE_ALWAYS: u8 = 0b00000001;
-const INVALIDATE_FRAME: u8 = 0b00000010;
+#[repr(u8)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub enum InvalidationFlags {
+    Always,
+    Tick,
+}
 
 struct ExternallyControlledValidator {
     validator_next_flags: Arc<AtomicU8>,
-    validator_frame_count: Arc<AtomicI32>,
+    validator_tick_count: Arc<AtomicI32>,
 }
 
 impl ExternallyControlledValidator {
     pub fn new() -> Self {
         Self {
-            validator_next_flags: Arc::new(AtomicU8::new(INVALIDATE_ALWAYS)),
-            validator_frame_count: Arc::new(AtomicI32::new(0)),
+            validator_next_flags: Arc::new(AtomicU8::new(InvalidationFlags::Always as u8)),
+            validator_tick_count: Arc::new(AtomicI32::new(0)),
         }
     }
 
-    pub fn set_next_flags(&mut self, flags: u8) {
+    pub fn set_next_flags(&mut self, flags: InvalidationFlags) {
         self.validator_next_flags
             .store(flags as u8, Ordering::SeqCst);
     }
 
-    pub fn set_frame_count(&mut self, frame_count: i32) {
-        self.validator_frame_count
-            .store(frame_count, Ordering::SeqCst);
+    pub fn set_tick_count(&mut self, tick_count: i32) {
+        self.validator_tick_count
+            .store(tick_count, Ordering::SeqCst);
     }
 
     pub fn validator(&self) -> CustomValidator {
         CustomValidator::new(
             self.validator_next_flags.clone(),
-            self.validator_frame_count.clone(),
+            self.validator_tick_count.clone(),
         )
     }
 }
 
-#[derive(Clone)]
+#[derive(Copy, Clone)]
 struct ValidatorSlot {
     value: i32,
-    flags: u8,
+    flags: InvalidationFlags,
 }
 
 #[derive(Clone)]
@@ -72,30 +76,30 @@ pub struct CustomValidator {
 
     // The invalidation flags used for the next read or write.
     next_flags: Arc<AtomicU8>,
-    next_flags_local: u8,
+    next_flags_local: InvalidationFlags,
 
     // last_count is used to quickly invalidate slots without having to
     // iterate over all slots and invalidating manually.
-    last_count: usize,
+    last_count: i32,
 
     // frame count is the externally controlled frame number that will
     // invalidate specific caches when it is increased.
-    frame_count: Arc<AtomicI32>,
-    frame_count_local: i32,
+    tick_count: Arc<AtomicI32>,
+    tick_count_local: i32,
 }
 
 impl CustomValidator {
-    pub fn new(next_flags: Arc<AtomicU8>, frame_count: Arc<AtomicI32>) -> Self {
+    pub fn new(next_flags: Arc<AtomicU8>, tick_count: Arc<AtomicI32>) -> Self {
         Self {
             slots: vec![],
 
             next_flags,
-            next_flags_local: INVALIDATE_ALWAYS,
+            next_flags_local: InvalidationFlags::Always,
 
             last_count: 0,
 
-            frame_count,
-            frame_count_local: -1,
+            tick_count,
+            tick_count_local: -1,
         }
     }
 }
@@ -107,7 +111,7 @@ impl CacheValidator for CustomValidator {
             slot_count,
             ValidatorSlot {
                 value: -1,
-                flags: INVALIDATE_ALWAYS,
+                flags: InvalidationFlags::Always,
             },
         );
     }
@@ -116,26 +120,34 @@ impl CacheValidator for CustomValidator {
     // This simply updates the internal state and reads the Atomic variables for the upcoming validations.
     fn update_validity(&mut self) {
         self.last_count = self.last_count.wrapping_add(1);
-        self.next_flags_local = self.next_flags.load(Ordering::SeqCst);
-        self.frame_count_local = self.frame_count.load(Ordering::SeqCst);
+
+        // SAFETY: next_flags is guaranteed to be of type InvalidationFlags
+        self.next_flags_local = unsafe {
+            std::mem::transmute::<_, InvalidationFlags>(self.next_flags.load(Ordering::SeqCst))
+        };
+
+        self.tick_count_local = self.tick_count.load(Ordering::SeqCst);
     }
 
     // This simply returns true or false if the slot is valid or not.
     // `last_count` is used here to invalidate slots quickly without requiring to iterate over the entire slot list.
     fn is_slot_valid(&self, slot_id: usize) -> bool {
+        // in case we read / write the same page with different flags we force invalidate this slot instantly
+        if self.next_flags_local != self.slots[slot_id].flags {
+            return false;
+        }
+
         match self.slots[slot_id].flags {
-            INVALIDATE_ALWAYS => self.slots[slot_id].value == self.last_count as i32,
-            INVALIDATE_FRAME => self.slots[slot_id].value == self.frame_count_local as i32,
-            _ => false,
+            InvalidationFlags::Always => self.slots[slot_id].value == self.last_count,
+            InvalidationFlags::Tick => self.slots[slot_id].value == self.tick_count_local,
         }
     }
 
     // In case the cache is being updates this function marks the slot as being valid.
     fn validate_slot(&mut self, slot_id: usize) {
         match self.next_flags_local {
-            INVALIDATE_ALWAYS => self.slots[slot_id].value = self.last_count as i32,
-            INVALIDATE_FRAME => self.slots[slot_id].value = self.frame_count_local as i32,
-            _ => (),
+            InvalidationFlags::Always => self.slots[slot_id].value = self.last_count,
+            InvalidationFlags::Tick => self.slots[slot_id].value = self.tick_count_local,
         }
 
         self.slots[slot_id].flags = self.next_flags_local;
@@ -144,7 +156,7 @@ impl CacheValidator for CustomValidator {
     // In case a slot has to be freed this function resets it to the default values.
     fn invalidate_slot(&mut self, slot_id: usize) {
         self.slots[slot_id].value = -1;
-        self.slots[slot_id].flags = INVALIDATE_ALWAYS;
+        self.slots[slot_id].flags = InvalidationFlags::Always;
     }
 }
 
@@ -180,17 +192,25 @@ fn main() -> Result<()> {
         .build()
         .expect("unable to build cache for process");
 
-    // set the next read to be invalidated only by frame changes
-    validator_controller.set_next_flags(INVALIDATE_FRAME);
+    // set the next read to be invalidated only by tick changes
+    validator_controller.set_next_flags(InvalidationFlags::Tick);
+    info!("reading module_info.base");
+    let _header: [u8; 0x1000] = cached_process
+        .read(module_info.base)
+        .data_part()
+        .expect("unable to read pe header");
+
+    info!("reading module_info.base from cache");
     let _header: [u8; 0x1000] = cached_process
         .read(module_info.base)
         .data_part()
         .expect("unable to read pe header");
 
     // change the frame number to invalidate the cache
-    validator_controller.set_frame_count(1);
+    validator_controller.set_tick_count(1);
 
     // read again with the invalidation flags still in place
+    info!("reading module_info.base again with invalid cache");
     let _header: [u8; 0x1000] = cached_process
         .read(module_info.base)
         .data_part()

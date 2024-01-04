@@ -183,11 +183,13 @@ impl ArchitectureIdent {
 impl From<ArchitectureIdent> for ArchitectureObj {
     fn from(arch: ArchitectureIdent) -> ArchitectureObj {
         const KB4: usize = size::kb(4);
+        const KB16: usize = size::kb(16);
         match arch {
             ArchitectureIdent::X86(32, false) => x86::x32::ARCH,
             ArchitectureIdent::X86(32, true) => x86::x32_pae::ARCH,
             ArchitectureIdent::X86(64, false) => x86::x64::ARCH,
             ArchitectureIdent::AArch64(KB4) => arm::aarch64::ARCH,
+            ArchitectureIdent::AArch64(KB16) => arm::aarch64::ARCH_16K,
             _ => panic!("unsupported architecture! {:?}", arch),
         }
     }

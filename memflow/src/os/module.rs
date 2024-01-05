@@ -100,4 +100,24 @@ pub struct SectionInfo {
     pub size: umem,
 }
 
+impl SectionInfo {
+    /// Checks whether this section is of given name, ignoring '.' or '__' prefix.
+    pub fn is_section(&self, name: &str) -> bool {
+        let mut n = self.name.as_ref();
+        if let Some(stripped) = n.strip_prefix('.') {
+            n = stripped;
+        } else if let Some(stripped) = n.strip_prefix("__") {
+            n = stripped;
+        } else {
+            return false;
+        }
+        n == name
+    }
+
+    /// Checks whether given section is 'text', ignoring prefix.
+    pub fn is_text(&self) -> bool {
+        self.is_section("text")
+    }
+}
+
 pub type SectionCallback<'a> = OpaqueCallback<'a, SectionInfo>;

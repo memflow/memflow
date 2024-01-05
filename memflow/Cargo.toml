@@ -1,6 +1,6 @@
 [package]
 name = "memflow"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["ko1N <ko1N1337@gmail.com>", "Aurimas Blažulionis <0x60@pm.me>"]
 edition = "2018"
 description = "core components of the memflow physical memory introspection framework"
@@ -46,7 +46,7 @@ pelite = { version = "=0.9.0", optional = true, default-features = false, featur
 abi_stable = { version = "=0.10.3", optional = true }
 once_cell = { version = "^1.9", optional = true }
 
-goblin = { version = "^0.7.1", optional = true, features = ["pe32", "pe64", "elf32", "elf64", "mach32", "mach64"] }
+goblin = { version = "0.8", optional = true, features = ["pe32", "pe64", "elf32", "elf64", "mach32", "mach64"] }
 serde = { version = "^1.0.133", optional = true, default-features = false, features = ["derive", "alloc"] }
 toml = { version = "^0.8", optional = true }
 
@@ -69,6 +69,8 @@ plugins = ["libloading", "dirs", "goblin", "os_helpers", "abi_stable", "cglue/la
 filemap = ["memmap"]
 64_bit_mem = []
 os_helpers = ["goblin", "pelite"]
+# Until https://github.com/m4b/goblin/pull/386 is merged
+unstable_goblin_lossy_macho = []
 # use 128 bit addressing.
 # If 64_bit_mem is also enabled, 64-bit mode takes precedence.
 # This is because 128-bit mode is not necessary to date, and u128 is not FFI-safe.

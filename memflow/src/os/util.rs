@@ -12,7 +12,7 @@ use std::vec::Vec;
 use goblin::{
     container::Ctx,
     elf::{dynamic, Dynamic, Elf, ProgramHeader, RelocSection, Symtab},
-    mach::Mach,
+    mach::{exports::ExportInfo as MachExportInfo, Mach, MachO},
     pe::{options::ParseOptions, PE},
     strtab::Strtab,
     Object,
@@ -98,23 +98,41 @@ fn parse_elf(bytes: &[u8]) -> goblin::error::Result<Elf<'_>> {
 
 #[cfg(feature = "goblin")]
 fn custom_parse(buf: &[u8]) -> Result<Object<'_>> {
-    PE::parse_with_opts(buf, &ParseOptions { resolve_rva: false })
-        .map(Object::PE)
-        .map_err(|e| {
-            log::debug!("PE: {}", e);
-            e
-        })
-        .or_else(|_| parse_elf(buf).map(Object::Elf))
-        .map_err(|e| {
-            log::debug!("Elf: {}", e);
-            e
-        })
-        .or_else(|_| Mach::parse(buf).map(Object::Mach))
-        .map_err(|e| {
-            log::debug!("Mach: {}", e);
-            e
-        })
-        .map_err(|_| Error(ErrorOrigin::OsLayer, ErrorKind::InvalidExeFile))
+    PE::parse_with_opts(
+        buf,
+        &ParseOptions {
+            resolve_rva: false,
+            parse_attribute_certificates: false,
+        },
+    )
+    .map(Object::PE)
+    .map_err(|e| {
+        log::debug!("PE: {}", e);
+        e
+    })
+    .or_else(|_| parse_elf(buf).map(Object::Elf))
+    .map_err(|e| {
+        log::debug!("Elf: {}", e);
+        e
+    })
+    .or_else(|_| {
+        // Until https://github.com/m4b/goblin/pull/386 is merged
+        #[cfg(feature = "unstable_goblin_lossy_macho")]
+        return Mach::parse_2(buf, true).map(Object::Mach);
+        #[cfg(not(feature = "unstable_goblin_lossy_macho"))]
+        return Mach::parse(buf).map(Object::Mach);
+    })
+    .map_err(|e| {
+        log::debug!("Mach: {}", e);
+        e
+    })
+    .map_err(|_| Error(ErrorOrigin::OsLayer, ErrorKind::InvalidExeFile))
+}
+
+#[cfg(feature = "goblin")]
+fn macho_base(bin: &MachO) -> Option<umem> {
+    let s = bin.segments.sections().flatten().next()?.ok()?.0;
+    Some(s.addr as umem)
 }
 
 #[inline]
@@ -212,6 +230,20 @@ pub fn import_list_callback(
                 .imports
                 .iter()
                 .map(|e| (e.offset as umem, e.name.as_ref().into()));
+
+            import_call(iter, &mut callback);
+
+            Ok(())
+        }
+        Object::Mach(Mach::Binary(bin)) => {
+            let mbase = macho_base(&bin).unwrap_or_default();
+
+            let iter = bin
+                .imports()
+                .ok()
+                .into_iter()
+                .flatten()
+                .map(|v| ((v.address as umem) - mbase + base.to_umem(), v.name.into()));
 
             import_call(iter, &mut callback);
 
@@ -323,6 +355,21 @@ pub fn export_list_callback(
 
             Ok(())
         }
+        Object::Mach(Mach::Binary(bin)) => {
+            let mbase = macho_base(&bin).unwrap_or_default();
+
+            let iter = bin.exports().ok().into_iter().flatten().filter_map(|v| {
+                let MachExportInfo::Regular { address, .. } = v.info else {
+                    return None;
+                };
+
+                Some(((address as umem) - mbase + base.to_umem(), v.name.into()))
+            });
+
+            export_call(iter, &mut callback);
+
+            Ok(())
+        }
         _ => Err(ErrorKind::InvalidExeFile.into()),
     });
 
@@ -409,6 +456,28 @@ pub fn section_list_callback(
                         name.as_str().into(),
                     )
                 })
+            });
+
+            section_call(iter, &mut callback, base);
+
+            Ok(())
+        }
+        Object::Mach(Mach::Binary(bin)) => {
+            let mut base_off = None;
+
+            let iter = bin.segments.sections().flatten().filter_map(|v| {
+                let (s, _) = v.ok()?;
+                let name = &s.sectname;
+                let name = name.split(|&v| v == 0).next()?;
+                let name = std::str::from_utf8(name).ok()?;
+
+                let addr = s.addr as umem;
+
+                if base_off.is_none() {
+                    base_off = Some(addr);
+                }
+
+                Some((addr - base_off.unwrap(), s.size as umem, name.into()))
             });
 
             section_call(iter, &mut callback, base);

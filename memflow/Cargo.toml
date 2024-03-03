@@ -11,7 +11,7 @@ repository = "https://github.com/memflow/memflow"
 license = "MIT"
 keywords = [ "memflow", "introspection", "memory", "dma" ]
 categories = [ "memory-management", "os" ]
-rust-version = "1.70.0"
+rust-version = "1.74.0"
 
 [badges]
 maintenance = { status = "actively-developed" }
@@ -51,13 +51,12 @@ serde = { version = "^1.0.133", optional = true, default-features = false, featu
 toml = { version = "^0.8", optional = true }
 
 [dev-dependencies]
-rand = { version = "^0.8.4" }
-rand_xorshift = "^0.3"
-# we use clap 4.4 here to stay on rust 1.70.0
-clap = { version = "4.4", features = ["cargo"] }
-simplelog = "^0.12.0"
-rayon = "^1.5.1"
-colored = "^2.0.0"
+rand = { version = "0.8" }
+rand_xorshift = "0.3"
+clap = { version = "4.5", features = ["cargo"] }
+simplelog = "0.12"
+rayon = "1.5"
+colored = "2.0"
 
 [features]
 default = ["std", "serde_derive", "plugins", "os_helpers", "filemap", "memmapfiles", "64_bit_mem"]

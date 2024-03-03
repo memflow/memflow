@@ -146,7 +146,7 @@ impl<T: Seek + Read + Write + Send> FileIoMemory<T> {
 
 #[allow(clippy::needless_option_as_deref)]
 #[allow(clippy::collapsible_if)]
-#[allow(clippy::blocks_in_if_conditions)]
+#[allow(clippy::blocks_in_conditions)]
 impl<T: Seek + Read + Write + Send> PhysicalMemory for FileIoMemory<T> {
     fn phys_read_raw_iter(&mut self, mut data: PhysicalReadMemOps) -> Result<()> {
         let mut iter = self.mem_map.map_iter(data.inp, data.out_fail);

@@ -118,7 +118,7 @@ fn custom_parse(buf: &[u8]) -> Result<Object<'_>> {
     .or_else(|_| {
         // Until https://github.com/m4b/goblin/pull/386 is merged
         #[cfg(feature = "unstable_goblin_lossy_macho")]
-        return Mach::parse_lossy(buf, true).map(Object::Mach);
+        return Mach::parse_lossy(buf).map(Object::Mach);
         #[cfg(not(feature = "unstable_goblin_lossy_macho"))]
         return Mach::parse(buf).map(Object::Mach);
     })

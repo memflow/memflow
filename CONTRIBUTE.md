@@ -7,8 +7,8 @@ There is a feature missing? A bug you have noticed? Some inconsistencies? **Cont
 We welcome your contributions, and we love to keep our code standards high. So, there are a few key guidelines that you should follow for smooth sailing:
 
 - All our code is formatted using rustfmt. Please, run `cargo fmt --all` before committing your changes.
-- Make sure all of the tests pass with `cargo test`, as this would prevent us from merging your changes.
-- Make sure that clippy does not complain with `cargo clippy --all-targets --all-features --workspace -- -D warnings -D clippy::all`
+- Make sure all of the tests pass with `cargo +1.74.0 test`, as this would prevent us from merging your changes.
+- Make sure that clippy does not complain with `cargo +1.74.0 clippy --all-targets --all-features --workspace -- -D warnings -D clippy::all`
 
 ## Review
 

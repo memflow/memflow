@@ -156,6 +156,7 @@ Officialy supported projects:
 Additional projects from the community:
 - [.NET wrapper for memflow-ffi](https://github.com/uberhalit/memflow.NET) by [uberhalit](https://github.com/uberhalit)
 - [rhai integration](https://github.com/dankope/rhai-memflow) by [emesare](https://github.com/emesare)
+- [connectors that exploit vulnerable windows drivers](https://github.com/a2x/memflow-vdm) by [a2x](https://github.com/a2x)
 
 ## Acknowledgements
 - [CasualX](https://github.com/casualx/) for his wonderful pelite crate

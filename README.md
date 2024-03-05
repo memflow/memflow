@@ -71,7 +71,7 @@ Additionally, connectors can be placed in any directory of the environment PATH 
 For more information about how to get started with memflow please head over to the YouTube series produced by [h33p](https://github.com/h33p/):
 
 - [memflow basics](https://www.youtube.com/playlist?list=PLrC4R7zDrxB3RSJQk9ahmXNCw8m3pdP6z)
-- [memflow applied](https://www.youtube.com/watch?v=xJXkRMy71dc&list=PLrC4R7zDrxB17iWCy9eEdCaluCR3Bkn8q)
+- [memflow applied](https://www.youtube.com/watch?v=xJXkRMy71dc&list=PLrC4R7zDrxB17iWCy9eEdCaluCR3Bkn8q) (*the series is intended for memflow 0.1 so most of the code might actually need changes*)
 
 ## Running Examples
 

@@ -16,6 +16,7 @@ use super::{
 
 use crate::connector::cpu_state::*;
 use cglue::trait_group::c_void;
+use dataview::Pod;
 
 cglue_trait_group!(ConnectorInstance, { PhysicalMemory, Clone }, { ConnectorCpuState });
 pub type MuConnectorInstanceArcBox<'a> = std::mem::MaybeUninit<ConnectorInstanceArcBox<'a>>;
@@ -277,6 +278,7 @@ impl ConnectorArgs {
 }
 
 pub type ConnectorDescriptor = PluginDescriptor<LoadableConnector>;
+unsafe impl Pod for ConnectorDescriptor {}
 
 pub struct LoadableConnector {
     descriptor: PluginDescriptor<Self>,

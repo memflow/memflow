@@ -1,11 +1,7 @@
 use crate::cglue::{result::from_int_result, *};
 use crate::error::*;
-use crate::mem::memory_view::*;
-use crate::mem::phys_mem::*;
-use crate::mem::virt_translate::*;
-use crate::os::keyboard::*;
-use crate::os::process::*;
-use crate::os::root::*;
+use crate::mem::{memory_view::*, phys_mem::*, virt_translate::*};
+use crate::os::{keyboard::*, process::*, root::*};
 
 use super::LibArc;
 use super::{
@@ -14,6 +10,7 @@ use super::{
 };
 
 use cglue::trait_group::c_void;
+use dataview::Pod;
 
 pub type OptionArchitectureIdent<'a> = Option<&'a crate::architecture::ArchitectureIdent>;
 
@@ -71,6 +68,7 @@ impl OsArgs {
 }
 
 pub type OsDescriptor = PluginDescriptor<LoadableOs>;
+unsafe impl Pod for OsDescriptor {}
 
 pub struct LoadableOs {
     descriptor: PluginDescriptor<Self>,

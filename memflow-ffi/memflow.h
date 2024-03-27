@@ -2419,7 +2419,7 @@ extern const struct ArchitectureObj *X86_64;
 /**
  * Initialize logging with selected logging level.
  */
-void log_init(LevelFilter level_filter);
+void mf_log_init(LevelFilter level_filter);
 
 /**
  * Logs a error message via log::error!
@@ -2428,7 +2428,7 @@ void log_init(LevelFilter level_filter);
  *
  * The provided string must be a valid null-terminated char array.
  */
-void log_error(const char *s);
+void mf_log_error(const char *s);
 
 /**
  * Logs a warning message via log::warn!
@@ -2437,7 +2437,7 @@ void log_error(const char *s);
  *
  * The provided string must be a valid null-terminated char array.
  */
-void log_warn(const char *s);
+void mf_log_warn(const char *s);
 
 /**
  * Logs a info message via log::info!
@@ -2446,7 +2446,7 @@ void log_warn(const char *s);
  *
  * The provided string must be a valid null-terminated char array.
  */
-void log_info(const char *s);
+void mf_log_info(const char *s);
 
 /**
  * Logs a debug message via log::debug!
@@ -2455,7 +2455,7 @@ void log_info(const char *s);
  *
  * The provided string must be a valid null-terminated char array.
  */
-void log_debug(const char *s);
+void mf_log_debug(const char *s);
 
 /**
  * Logs a trace message via log::trace!
@@ -2464,17 +2464,17 @@ void log_debug(const char *s);
  *
  * The provided string must be a valid null-terminated char array.
  */
-void log_trace(const char *s);
+void mf_log_trace(const char *s);
 
 /**
  * Logs an error code with custom log level.
  */
-void log_errorcode(Level level, int32_t error);
+void mf_log_errorcode(Level level, int32_t error);
 
 /**
  * Logs an error with debug log level.
  */
-void log_debug_errorcode(int32_t error);
+void mf_log_debug_errorcode(int32_t error);
 
 /**
  * Sets new maximum log level.
@@ -2483,14 +2483,14 @@ void log_debug_errorcode(int32_t error);
  * if it is not supplied, plugins will not have their log levels updated, potentially leading to
  * lower performance, or less logging than expected.
  */
-void log_set_max_level(LevelFilter level_filter, const struct Inventory *inventory);
+void mf_log_set_max_level(LevelFilter level_filter, const struct Inventory *inventory);
 
 /**
  * Helper to convert `Address` to a `PhysicalAddress`
  *
  * This will create a `PhysicalAddress` with `UNKNOWN` PageType.
  */
-struct PhysicalAddress addr_to_paddr(Address address);
+struct PhysicalAddress mf_addr_to_paddr(Address address);
 
 /**
  * Create a new connector inventory
@@ -2505,7 +2505,7 @@ struct PhysicalAddress addr_to_paddr(Address address);
  * Inventory is inherently unsafe, because it loads shared libraries which can not be
  * guaranteed to be safe.
  */
-struct Inventory *inventory_scan(void);
+struct Inventory *mf_inventory_scan(void);
 
 /**
  * Create a new inventory with custom path string
@@ -2514,7 +2514,7 @@ struct Inventory *inventory_scan(void);
  *
  * `path` must be a valid null terminated string
  */
-struct Inventory *inventory_scan_path(const char *path);
+struct Inventory *mf_inventory_scan_path(const char *path);
 
 /**
  * Add a directory to an existing inventory
@@ -2523,7 +2523,7 @@ struct Inventory *inventory_scan_path(const char *path);
  *
  * `dir` must be a valid null terminated string
  */
-int32_t inventory_add_dir(struct Inventory *inv, const char *dir);
+int32_t mf_inventory_add_dir(struct Inventory *inv, const char *dir);
 
 /**
  * Create a connector with given arguments
@@ -2544,10 +2544,10 @@ int32_t inventory_add_dir(struct Inventory *inv, const char *dir);
  * Any error strings returned by the connector must not be outputed after the connector gets
  * freed, because that operation could cause the underlying shared library to get unloaded.
  */
-int32_t inventory_create_connector(struct Inventory *inv,
-                                   const char *name,
-                                   const char *args,
-                                   MuConnectorInstanceArcBox *out);
+int32_t mf_inventory_create_connector(struct Inventory *inv,
+                                      const char *name,
+                                      const char *args,
+                                      MuConnectorInstanceArcBox *out);
 
 /**
  * Create a OS instance with given arguments
@@ -2575,11 +2575,11 @@ int32_t inventory_create_connector(struct Inventory *inv,
  * Any error strings returned by the connector must not be outputed after the connector gets
  * freed, because that operation could cause the underlying shared library to get unloaded.
  */
-int32_t inventory_create_os(struct Inventory *inv,
-                            const char *name,
-                            const char *args,
-                            ConnectorInstanceArcBox *mem,
-                            MuOsInstanceArcBox *out);
+int32_t mf_inventory_create_os(struct Inventory *inv,
+                               const char *name,
+                               const char *args,
+                               ConnectorInstanceArcBox *mem,
+                               MuOsInstanceArcBox *out);
 
 /**
  * Free a os plugin
@@ -2589,7 +2589,7 @@ int32_t inventory_create_os(struct Inventory *inv,
  * `os` must point to a valid `OsInstance` that was created using one of the provided
  * functions.
  */
-void os_drop(OsInstanceArcBox *os);
+void mf_os_drop(OsInstanceArcBox *os);
 
 /**
  * Clone a connector
@@ -2603,7 +2603,7 @@ void os_drop(OsInstanceArcBox *os);
  * `conn` has to point to a a valid `CloneablePhysicalMemory` created by one of the provided
  * functions.
  */
-void connector_clone(const ConnectorInstanceArcBox *conn, MuConnectorInstanceArcBox *out);
+void mf_connector_clone(const ConnectorInstanceArcBox *conn, MuConnectorInstanceArcBox *out);
 
 /**
  * Free a connector instance
@@ -2616,7 +2616,7 @@ void connector_clone(const ConnectorInstanceArcBox *conn, MuConnectorInstanceArc
  * There has to be no instance of `PhysicalMemory` created from the input `conn`, because they
  * will become invalid.
  */
-void connector_drop(ConnectorInstanceArcBox *conn);
+void mf_connector_drop(ConnectorInstanceArcBox *conn);
 
 /**
  * Free a connector inventory
@@ -2626,17 +2626,17 @@ void connector_drop(ConnectorInstanceArcBox *conn);
  * `inv` must point to a valid `Inventory` that was created using one of the provided
  * functions.
  */
-void inventory_free(struct Inventory *inv);
+void mf_inventory_free(struct Inventory *inv);
 
-uint8_t arch_bits(const struct ArchitectureObj *arch);
+uint8_t mf_arch_bits(const struct ArchitectureObj *arch);
 
-Endianess arch_endianess(const struct ArchitectureObj *arch);
+Endianess mf_arch_endianess(const struct ArchitectureObj *arch);
 
-uintptr_t arch_page_size(const struct ArchitectureObj *arch);
+uintptr_t mf_arch_page_size(const struct ArchitectureObj *arch);
 
-uintptr_t arch_size_addr(const struct ArchitectureObj *arch);
+uintptr_t mf_arch_size_addr(const struct ArchitectureObj *arch);
 
-uint8_t arch_address_space_bits(const struct ArchitectureObj *arch);
+uint8_t mf_arch_address_space_bits(const struct ArchitectureObj *arch);
 
 /**
  * Free an architecture reference
@@ -2645,9 +2645,9 @@ uint8_t arch_address_space_bits(const struct ArchitectureObj *arch);
  *
  * `arch` must be a valid heap allocated reference created by one of the API's functions.
  */
-void arch_free(struct ArchitectureObj *arch);
+void mf_arch_free(struct ArchitectureObj *arch);
 
-bool is_x86_arch(const struct ArchitectureObj *arch);
+bool mf_is_x86_arch(const struct ArchitectureObj *arch);
 static CArc_c_void ctx_arc_clone(CArc_c_void *self) {
     CArc_c_void ret = *self;
     ret.instance = self->clone_fn(self->instance);

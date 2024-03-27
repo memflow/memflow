@@ -25,7 +25,7 @@ use log::trace;
 /// Inventory is inherently unsafe, because it loads shared libraries which can not be
 /// guaranteed to be safe.
 #[no_mangle]
-pub unsafe extern "C" fn inventory_scan() -> &'static mut Inventory {
+pub unsafe extern "C" fn mf_inventory_scan() -> &'static mut Inventory {
     to_heap(Inventory::scan())
 }
 
@@ -35,7 +35,7 @@ pub unsafe extern "C" fn inventory_scan() -> &'static mut Inventory {
 ///
 /// `path` must be a valid null terminated string
 #[no_mangle]
-pub unsafe extern "C" fn inventory_scan_path(
+pub unsafe extern "C" fn mf_inventory_scan_path(
     path: *const c_char,
 ) -> Option<&'static mut Inventory> {
     let rpath = CStr::from_ptr(path).to_string_lossy();
@@ -51,7 +51,7 @@ pub unsafe extern "C" fn inventory_scan_path(
 ///
 /// `dir` must be a valid null terminated string
 #[no_mangle]
-pub unsafe extern "C" fn inventory_add_dir(inv: &mut Inventory, dir: *const c_char) -> i32 {
+pub unsafe extern "C" fn mf_inventory_add_dir(inv: &mut Inventory, dir: *const c_char) -> i32 {
     let rdir = CStr::from_ptr(dir).to_string_lossy();
 
     inv.add_dir(PathBuf::from(rdir.to_string()))
@@ -76,7 +76,7 @@ pub unsafe extern "C" fn inventory_add_dir(inv: &mut Inventory, dir: *const c_ch
 /// Any error strings returned by the connector must not be outputed after the connector gets
 /// freed, because that operation could cause the underlying shared library to get unloaded.
 #[no_mangle]
-pub unsafe extern "C" fn inventory_create_connector(
+pub unsafe extern "C" fn mf_inventory_create_connector(
     inv: &mut Inventory,
     name: *const c_char,
     args: *const c_char,
@@ -123,7 +123,7 @@ pub unsafe extern "C" fn inventory_create_connector(
 /// Any error strings returned by the connector must not be outputed after the connector gets
 /// freed, because that operation could cause the underlying shared library to get unloaded.
 #[no_mangle]
-pub unsafe extern "C" fn inventory_create_os(
+pub unsafe extern "C" fn mf_inventory_create_os(
     inv: &mut Inventory,
     name: *const c_char,
     args: *const c_char,
@@ -163,7 +163,7 @@ pub unsafe extern "C" fn inventory_create_os(
 /// `os` must point to a valid `OsInstance` that was created using one of the provided
 /// functions.
 #[no_mangle]
-pub unsafe extern "C" fn os_drop(os: &mut OsInstanceArcBox<'static>) {
+pub unsafe extern "C" fn mf_os_drop(os: &mut OsInstanceArcBox<'static>) {
     trace!("connector_drop: {:?}", os as *mut _);
     std::ptr::drop_in_place(os);
 }
@@ -179,7 +179,7 @@ pub unsafe extern "C" fn os_drop(os: &mut OsInstanceArcBox<'static>) {
 /// `conn` has to point to a a valid `CloneablePhysicalMemory` created by one of the provided
 /// functions.
 #[no_mangle]
-pub unsafe extern "C" fn connector_clone(
+pub unsafe extern "C" fn mf_connector_clone(
     conn: &ConnectorInstanceArcBox<'static>,
     out: &mut MuConnectorInstanceArcBox<'static>,
 ) {
@@ -197,7 +197,7 @@ pub unsafe extern "C" fn connector_clone(
 /// There has to be no instance of `PhysicalMemory` created from the input `conn`, because they
 /// will become invalid.
 #[no_mangle]
-pub unsafe extern "C" fn connector_drop(conn: &mut ConnectorInstanceArcBox<'static>) {
+pub unsafe extern "C" fn mf_connector_drop(conn: &mut ConnectorInstanceArcBox<'static>) {
     trace!("connector_drop: {:?}", conn as *mut _);
     std::ptr::drop_in_place(conn)
 }
@@ -209,7 +209,7 @@ pub unsafe extern "C" fn connector_drop(conn: &mut ConnectorInstanceArcBox<'stat
 /// `inv` must point to a valid `Inventory` that was created using one of the provided
 /// functions.
 #[no_mangle]
-pub unsafe extern "C" fn inventory_free(inv: &'static mut Inventory) {
+pub unsafe extern "C" fn mf_inventory_free(inv: &'static mut Inventory) {
     trace!("inventory_free: {:?}", inv as *mut _);
     let _ = Box::from_raw(inv);
 }

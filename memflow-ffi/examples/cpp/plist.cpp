@@ -5,12 +5,12 @@
 void fmt_arch(char *arch, int n, ArchitectureIdent ident);
 
 int main(int argc, char *argv[]) {
-	log_init(LevelFilter::LevelFilter_Info);
+	mf_log_init(LevelFilter::LevelFilter_Info);
 
-	Inventory *inventory = inventory_scan();
+	Inventory *inventory = mf_inventory_scan();
 
 	if (!inventory) {
-		log_error("unable to create inventory");
+		mf_log_error("unable to create inventory");
 		return 1;
 	}
 
@@ -24,9 +24,9 @@ int main(int argc, char *argv[]) {
 	ConnectorInstance<> connector, *conn = conn_name[0] ? &connector : nullptr;
 
 	if (conn) {
-		if (inventory_create_connector(inventory, conn_name, conn_arg, &connector)) {
+		if (mf_inventory_create_connector(inventory, conn_name, conn_arg, &connector)) {
 			printf("unable to initialize connector\n");
-			inventory_free(inventory);
+			mf_inventory_free(inventory);
 			return 1;
 		}
 
@@ -35,13 +35,13 @@ int main(int argc, char *argv[]) {
 
 	OsInstance<> os;
 
-	if (inventory_create_os(inventory, os_name, os_arg, conn, &os)) {
+	if (mf_inventory_create_os(inventory, os_name, os_arg, conn, &os)) {
 		printf("unable to initialize OS\n");
-		inventory_free(inventory);
+		mf_inventory_free(inventory);
 		return 1;
 	}
 
-	inventory_free(inventory);
+	mf_inventory_free(inventory);
 
 	printf("os initialized: %p\n", os.container.instance.instance);
 

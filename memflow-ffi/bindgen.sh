@@ -21,3 +21,7 @@ cargo +nightly install cglue-bindgen
 # generate c and cpp bindings
 run_twice rustup run nightly cglue-bindgen +nightly -c cglue.toml -- --config cbindgen.toml --crate memflow-ffi --output memflow.h -l C
 run_twice rustup run nightly cglue-bindgen +nightly -c cglue.toml -- --config cbindgen.toml --crate memflow-ffi --output memflow.hpp -l C++
+
+# temporary workaround
+sed -i 's/void ctx_arc_drop/static inline void ctx_arc_drop/i' memflow.h
+sed -i 's/void cont_box_drop/static inline void cont_box_drop/i' memflow.h

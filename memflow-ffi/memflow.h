@@ -2654,10 +2654,10 @@ static CArc_c_void ctx_arc_clone(CArc_c_void *self) {
     return ret;
 }
 
-void ctx_arc_drop(CArc_c_void *self) {
+static inline void ctx_arc_drop(CArc_c_void *self) {
     if (self->drop_fn && self->instance) self->drop_fn(self->instance);
 }
-void cont_box_drop(CBox_c_void *self) {
+static inline void cont_box_drop(CBox_c_void *self) {
     if (self->drop_fn && self->instance) self->drop_fn(self->instance);
 }
 

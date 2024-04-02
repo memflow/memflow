@@ -13,6 +13,8 @@ pub mod args;
 #[doc(hidden)]
 pub use args::{ArgDescriptor, Args, ArgsValidator};
 
+pub mod plugin_analyzer;
+
 // cbindgen fails to properly parse this as return type
 pub type OptionVoid = Option<&'static mut c_void>;
 

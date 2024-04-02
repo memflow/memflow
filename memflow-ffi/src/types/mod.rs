@@ -4,6 +4,6 @@ use memflow::types::{Address, PhysicalAddress};
 ///
 /// This will create a `PhysicalAddress` with `UNKNOWN` PageType.
 #[no_mangle]
-pub extern "C" fn addr_to_paddr(address: Address) -> PhysicalAddress {
+pub extern "C" fn mf_addr_to_paddr(address: Address) -> PhysicalAddress {
     address.into()
 }

@@ -3,12 +3,11 @@
 #include <stdio.h>
 
 bool list_processes(OsInstance *os, Address addr) {
-
 	int ret;
 
 	ProcessInstance process;
 	if ((ret = mf_osinstance_process_by_address(os, addr, &process))) {
-		log_debug_errorcode(ret);
+		mf_log_debug_errorcode(ret);
 		return true;
 	}
 
@@ -18,7 +17,7 @@ bool list_processes(OsInstance *os, Address addr) {
 	if ((ret = mf_processinstance_primary_module(&process, &primary_module))) {
 		// no primary module found, continue iteration - this should _never_ happen
 		printf("%d\t%s\t0x%lx\tN/A\n", info->pid, info->name, info->address);
-		log_debug_errorcode(ret);
+		mf_log_debug_errorcode(ret);
 		return true;
 	}
 
@@ -63,10 +62,10 @@ bool list_processes(OsInstance *os, Address addr) {
 
 int main(int argc, char *argv[]) {
 	// enable debug level logging
-	log_init(2);
+	mf_log_init(2);
 
 	// load all available plugins
-	Inventory *inventory = inventory_scan();
+	Inventory *inventory = mf_inventory_scan();
 
 	printf("inventory initialized: %p\n", inventory);
 
@@ -79,9 +78,9 @@ int main(int argc, char *argv[]) {
 
 	// initialize the connector plugin
 	if (conn) {
-		if (inventory_create_connector(inventory, conn_name, conn_arg, conn)) {
+		if (mf_inventory_create_connector(inventory, conn_name, conn_arg, conn)) {
 			printf("unable to initialize connector\n");
-			inventory_free(inventory);
+			mf_inventory_free(inventory);
 			return 1;
 		}
 
@@ -90,9 +89,9 @@ int main(int argc, char *argv[]) {
 
 	// initialize the OS plugin
 	OsInstance os;
-	if (inventory_create_os(inventory, os_name, os_arg, conn, &os)) {
+	if (mf_inventory_create_os(inventory, os_name, os_arg, conn, &os)) {
 		printf("unable to initialize os plugin\n");
-		inventory_free(inventory);
+		mf_inventory_free(inventory);
 		return 1;
 	}
 
@@ -118,7 +117,7 @@ int main(int argc, char *argv[]) {
 	mf_osinstance_drop(os);
 	printf("os plugin/connector freed\n");
 
-	inventory_free(inventory);
+	mf_inventory_free(inventory);
 	printf("inventory freed\n");
 
 	return 0;

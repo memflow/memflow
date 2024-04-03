@@ -31,7 +31,7 @@ const MEMFLOW_EXPORT_PREFIX: &str = "MEMFLOW_";
 #[repr(C, align(4))]
 struct PluginDescriptor32 {
     pub plugin_version: i32,
-    pub accept_input: bool,
+    pub accept_input: u8,   // bool
     pub input_layout: u32,  // &'static TypeLayout
     pub output_layout: u32, // &'static TypeLayout,
     pub name: u32,          // CSliceRef<'static, u8>,
@@ -47,10 +47,10 @@ struct PluginDescriptor32 {
 const _: [(); std::mem::size_of::<PluginDescriptor32>()] = [(); 0x34];
 unsafe impl Pod for PluginDescriptor32 {}
 
-#[repr(C)]
+#[repr(C, align(8))]
 struct PluginDescriptor64 {
     pub plugin_version: i32,
-    pub accept_input: bool,
+    pub accept_input: u8,   // bool
     pub input_layout: u64,  // &'static TypeLayout
     pub output_layout: u64, // &'static TypeLayout,
     pub name: u64,          // CSliceRef<'static, u8>,

@@ -6,7 +6,6 @@
 
 use std::ops::Range;
 
-use constcat::concat;
 use dataview::{DataView, Pod};
 use goblin::{
     elf::{header::ELFMAG, section_header::SHN_XINDEX, Elf},
@@ -260,9 +259,11 @@ fn macho_parse_descriptors(bytes: &[u8], macho: &MachO) -> Result<Vec<PluginDesc
             .log_error("big endian binaries are not supported yet"));
     }
 
+    let memflow_export_prefix_macho = "_".to_owned() + MEMFLOW_EXPORT_PREFIX;
+
     if let Ok(exports) = macho.exports() {
         for export in exports.iter() {
-            if export.name.starts_with(concat!("_", MEMFLOW_EXPORT_PREFIX)) {
+            if export.name.starts_with(&memflow_export_prefix_macho) {
                 let offset = export.offset;
 
                 let data_view = DataView::from(bytes);

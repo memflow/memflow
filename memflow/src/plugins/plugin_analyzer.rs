@@ -47,7 +47,7 @@ struct PluginDescriptor32 {
 const _: [(); std::mem::size_of::<PluginDescriptor32>()] = [(); 0x34];
 unsafe impl Pod for PluginDescriptor32 {}
 
-#[repr(C, align(8))]
+#[repr(C, align(16))]
 struct PluginDescriptor64 {
     pub plugin_version: i32,
     pub accept_input: u8,   // bool

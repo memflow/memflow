@@ -47,18 +47,24 @@ struct PluginDescriptor32 {
 const _: [(); std::mem::size_of::<PluginDescriptor32>()] = [(); 0x34];
 unsafe impl Pod for PluginDescriptor32 {}
 
-#[repr(C, align(16))]
+// The padding inside the struct is only really required for targets
+// which ignore the aligment property.
+// Most notable for i686 cross-compilation the padding is required.
+#[repr(C, align(8))]
 struct PluginDescriptor64 {
     pub plugin_version: i32,
-    pub accept_input: u8,   // bool
+    pub accept_input: u32,  // bool
     pub input_layout: u64,  // &'static TypeLayout
     pub output_layout: u64, // &'static TypeLayout,
     pub name: u64,          // CSliceRef<'static, u8>,
     pub name_length: u32,
+    _pad0: u32,
     pub version: u64, // CSliceRef<'static, u8>,
     pub version_length: u32,
+    _pad1: u32,
     pub description: u64, //CSliceRef<'static, u8>,
     pub description_length: u32,
+    _pad2: u32,
     pub help_callback: u64, // Option<extern "C" fn(callback: HelpCallback) -> ()>,
     pub target_list_callback: u64, // Option<extern "C" fn(callback: TargetCallback) -> i32>,
     pub create: u64,        // CreateFn<T>,

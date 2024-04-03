@@ -160,6 +160,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          lfs: true
           path: 'memflow-repo'
       - name: Set up Rust nightly
         uses: actions-rs/toolchain@v1

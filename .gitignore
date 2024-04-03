@@ -1,9 +1,6 @@
 /target
 **/*.rs.bk
 *.swp
-*.so
-*.dll
-*.dylib
 .vscode
 nostd-test/target
 nostd-test/Cargo.lock

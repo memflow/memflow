@@ -228,6 +228,10 @@ extern crate no_std_compat as std;
 #[macro_use]
 extern crate bitflags;
 
+// smallvec is imported as a replacement for Vec in no-std environments
+#[macro_use]
+extern crate smallvec;
+
 pub mod error;
 
 #[macro_use]

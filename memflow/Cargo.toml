@@ -36,6 +36,9 @@ fixed-slice-vec = "0.10"
 cglue = { version = ">=0.2.10", default-features = false }
 rangemap = "1.5"
 
+# no-std
+smallvec = { version = "1.13", default-features = false }
+
 # plugins
 libloading = { version = "0.8", optional = true }
 dirs = { version = "5.0", optional = true }

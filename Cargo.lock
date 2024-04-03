@@ -715,6 +715,7 @@ dependencies = [
  "rayon",
  "serde",
  "simplelog",
+ "smallvec",
  "toml",
  "x86_64",
 ]

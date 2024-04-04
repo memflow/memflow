@@ -16,7 +16,7 @@ export RUSTC_WRAPPER=""
 
 # update cglue-bindgen (see https://github.com/h33p/cglue/pull/15)
 cargo +nightly install cbindgen
-cargo +nightly install https://github.com/ko1N/cglue/cglue-bindgen
+cargo +nightly install --git https://github.com/ko1N/cglue/cglue-bindgen
 
 # generate c and cpp bindings
 run_twice rustup run nightly cglue-bindgen +nightly -c cglue.toml -- --config cbindgen.toml --crate memflow-ffi --output memflow.h -l C

@@ -18,6 +18,7 @@ pub fn plugin_extension() -> &'static str {
     return "dylib";
 }
 
+/// Returns the plugin file_type appropriate for the current os
 pub fn plugin_file_type() -> PluginFileType {
     #[cfg(target_os = "windows")]
     return PluginFileType::Pe;
@@ -27,6 +28,7 @@ pub fn plugin_file_type() -> PluginFileType {
     return PluginFileType::Mach;
 }
 
+/// Returns the plugin architecture appropriate for the current os
 pub fn plugin_architecture() -> PluginArchitecture {
     #[cfg(target_arch = "x86_64")]
     return PluginArchitecture::X86_64;

@@ -38,8 +38,9 @@ pub type OsInputArg = <LoadableOs as Loadable>::InputArg;
 pub mod logger;
 pub use logger::*; // TODO: restrict
 
+// do not expose the util module in documentation but forward all functions
 pub(crate) mod util;
-pub use util::{wrap, wrap_with_input};
+pub use util::*;
 
 use crate::error::{Result, *};
 
@@ -53,7 +54,6 @@ use libloading::Library;
 use once_cell::sync::OnceCell;
 
 use self::plugin_analyzer::{PluginDescriptorInfo, PluginKind};
-use self::util::plugin_extension;
 
 /// Exported memflow plugins version
 pub const MEMFLOW_PLUGIN_VERSION: i32 = 1;
@@ -609,7 +609,9 @@ impl Inventory {
         let descriptor = descriptors.first().unwrap();
 
         // check plugin architecture
-        if !descriptor.is_loadable() {
+        if descriptor.file_type != plugin_file_type()
+            || descriptor.architecture != plugin_architecture()
+        {
             return Err(
                 Error(ErrorOrigin::Inventory, ErrorKind::InvalidArchitecture).log_warn(format!(
                 "plugin with incompatible architecture found {:?} (plugin was built for {:?}:{:?})",

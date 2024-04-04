@@ -1,7 +1,10 @@
 use crate::cglue::result::into_int_out_result;
 use crate::error::Error;
 
-use super::{LibArc, PluginLogger};
+use super::{
+    plugin_analyzer::{PluginArchitecture, PluginFileType},
+    LibArc, PluginLogger,
+};
 
 use std::mem::MaybeUninit;
 
@@ -13,6 +16,26 @@ pub fn plugin_extension() -> &'static str {
     return "so";
     #[cfg(target_os = "macos")]
     return "dylib";
+}
+
+pub fn plugin_file_type() -> PluginFileType {
+    #[cfg(target_os = "windows")]
+    return PluginFileType::Pe;
+    #[cfg(target_os = "linux")]
+    return PluginFileType::Elf;
+    #[cfg(target_os = "macos")]
+    return PluginFileType::Mach;
+}
+
+pub fn plugin_architecture() -> PluginArchitecture {
+    #[cfg(target_arch = "x86_64")]
+    return PluginArchitecture::X86_64;
+    #[cfg(target_arch = "x86")]
+    return PluginArchitecture::X86;
+    #[cfg(target_arch = "aarch64")]
+    return PluginArchitecture::Arm64;
+    #[cfg(target_arch = "arm")]
+    return PluginArchitecture::Arm;
 }
 
 /// Wrapper for instantiating object.

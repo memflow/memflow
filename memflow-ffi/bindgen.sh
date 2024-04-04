@@ -14,14 +14,10 @@ run_twice() {
 # remove any RUSTC_WRAPPER like sccache which might cause issues with cglue-bindgen
 export RUSTC_WRAPPER=""
 
-# update cglue-bindgen
+# update cglue-bindgen (see https://github.com/h33p/cglue/pull/15)
 cargo +nightly install cbindgen
-cargo +nightly install cglue-bindgen
+cargo +nightly install https://github.com/ko1N/cglue/cglue-bindgen
 
 # generate c and cpp bindings
 run_twice rustup run nightly cglue-bindgen +nightly -c cglue.toml -- --config cbindgen.toml --crate memflow-ffi --output memflow.h -l C
 run_twice rustup run nightly cglue-bindgen +nightly -c cglue.toml -- --config cbindgen.toml --crate memflow-ffi --output memflow.hpp -l C++
-
-# temporary workaround
-sed -i 's/void ctx_arc_drop/static inline void ctx_arc_drop/i' memflow.h
-sed -i 's/void cont_box_drop/static inline void cont_box_drop/i' memflow.h

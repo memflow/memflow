@@ -2648,7 +2648,7 @@ uint8_t mf_arch_address_space_bits(const struct ArchitectureObj *arch);
 void mf_arch_free(struct ArchitectureObj *arch);
 
 bool mf_is_x86_arch(const struct ArchitectureObj *arch);
-static CArc_c_void ctx_arc_clone(CArc_c_void *self) {
+static inline CArc_c_void ctx_arc_clone(CArc_c_void *self) {
     CArc_c_void ret = *self;
     ret.instance = self->clone_fn(self->instance);
     return ret;

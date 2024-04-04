@@ -52,6 +52,9 @@ use abi_stable::{type_layout::TypeLayout, StableAbi};
 use libloading::Library;
 use once_cell::sync::OnceCell;
 
+use self::plugin_analyzer::{PluginDescriptorInfo, PluginKind};
+use self::util::plugin_extension;
+
 /// Exported memflow plugins version
 pub const MEMFLOW_PLUGIN_VERSION: i32 = 1;
 
@@ -179,36 +182,41 @@ pub trait Loadable: Sized {
 
     fn new(descriptor: PluginDescriptor<Self>) -> Self;
 
-    fn load(
+    fn load_descriptor(
         path: impl AsRef<Path>,
         library: &CArc<LibContext>,
-        export: &str,
+        descriptor_info: &PluginDescriptorInfo,
     ) -> Result<LibInstance<Self>> {
         // find os descriptor
-        let descriptor = unsafe {
+        let raw_descriptor = unsafe {
             library
                 .as_ref()
                 // TODO: support loading without arc
                 .ok_or(Error(ErrorOrigin::Inventory, ErrorKind::Uninitialized))?
                 .lib
-                .get::<*mut PluginDescriptor<Self>>(format!("{}\0", export).as_bytes())
+                .get::<*mut PluginDescriptor<Self>>(
+                    format!("{}\0", descriptor_info.export_name).as_bytes(),
+                )
                 .map_err(|_| Error(ErrorOrigin::Inventory, ErrorKind::MemflowExportsNotFound))?
                 .read()
         };
 
-        // check version
-        if descriptor.plugin_version != MEMFLOW_PLUGIN_VERSION {
+        // check descriptor version
+        if raw_descriptor.plugin_version != MEMFLOW_PLUGIN_VERSION {
             warn!(
                 "{} has a different version. version {} required, found {}.",
-                export, MEMFLOW_PLUGIN_VERSION, descriptor.plugin_version
+                descriptor_info.export_name, MEMFLOW_PLUGIN_VERSION, raw_descriptor.plugin_version
             );
-            Ok(LibInstance {
+            return Ok(LibInstance {
                 path: path.as_ref().to_path_buf(),
                 state: LibInstanceState::VersionMismatch,
-            })
-        } else if VerifyLayout::check::<Self::CInputArg>(Some(descriptor.input_layout))
+            });
+        }
+
+        // check abi compatability
+        if VerifyLayout::check::<Self::CInputArg>(Some(raw_descriptor.input_layout))
             .and(VerifyLayout::check::<Self::Instance>(Some(
-                descriptor.output_layout,
+                raw_descriptor.output_layout,
             )))
             .is_valid_strict()
         {
@@ -216,11 +224,11 @@ pub trait Loadable: Sized {
                 path: path.as_ref().to_path_buf(),
                 state: LibInstanceState::Loaded {
                     library: library.clone(),
-                    loader: Self::new(descriptor),
+                    loader: Self::new(raw_descriptor),
                 },
             })
         } else {
-            warn!("{} has invalid ABI.", export);
+            warn!("{} has invalid ABI.", descriptor_info.export_name);
             Ok(LibInstance {
                 path: path.as_ref().to_path_buf(),
                 state: LibInstanceState::InvalidAbi,
@@ -242,21 +250,15 @@ pub trait Loadable: Sized {
     /// the loaded library implements the necessary interface manually.
     ///
     /// It is adviced to use a provided proc macro to define a valid library.
-    fn load_all(path: impl AsRef<Path>) -> Result<Vec<LibInstance<Self>>> {
-        let exports = util::find_export_by_prefix(path.as_ref(), Self::export_prefix())?;
-        if exports.is_empty() {
-            return Err(Error(
-                ErrorOrigin::Inventory,
-                ErrorKind::MemflowExportsNotFound,
-            ));
-        }
-
-        // load library
+    fn load_all_descriptors(
+        path: impl AsRef<Path>,
+        descriptor_infos: &[PluginDescriptorInfo],
+    ) -> Result<Vec<LibInstance<Self>>> {
         let library = unsafe { Library::new(path.as_ref()) }
             .map_err(|err| {
                 debug!(
                     "found {:?} in library '{:?}' but could not load it: {}",
-                    exports,
+                    descriptor_infos,
                     path.as_ref(),
                     err
                 );
@@ -265,9 +267,9 @@ pub trait Loadable: Sized {
             .map(LibContext::from)
             .map(CArc::from)?;
 
-        Ok(exports
-            .into_iter()
-            .filter_map(|e| Self::load(path.as_ref(), &library, &e).ok())
+        Ok(descriptor_infos
+            .iter()
+            .filter_map(|e| Self::load_descriptor(path.as_ref(), &library, e).ok())
             .collect())
     }
 
@@ -281,12 +283,16 @@ pub trait Loadable: Sized {
     /// Loading third party libraries is inherently unsafe and the compiler
     /// cannot guarantee that the implementation of the library matches the one
     /// specified here.
-    fn load_append(path: impl AsRef<Path>, out: &mut Vec<LibInstance<Self>>) -> Result<()> {
+    fn load_append_descriptors(
+        path: impl AsRef<Path>,
+        descriptor_infos: &[PluginDescriptorInfo],
+        out: &mut Vec<LibInstance<Self>>,
+    ) -> Result<()> {
         // try to get the canonical path
         let canonical_path =
             std::fs::canonicalize(path.as_ref()).unwrap_or_else(|_| path.as_ref().to_owned());
 
-        let libs = Self::load_all(path.as_ref())?;
+        let libs = Self::load_all_descriptors(path.as_ref(), descriptor_infos)?;
         for lib in libs.into_iter() {
             // check if the canonical path was already added
             if !out.iter().any(|o| o.path == canonical_path) {
@@ -507,7 +513,7 @@ impl Inventory {
             let entry = entry
                 .map_err(|_| Error(ErrorOrigin::Inventory, ErrorKind::UnableToReadDirEntry))?;
             if let Some(true) = entry.file_name().to_str().map(|n| n.contains(filter)) {
-                self.load(entry.path());
+                self.try_load(entry.path().as_path()).ok();
             }
         }
 
@@ -554,10 +560,95 @@ impl Inventory {
     ///
     /// Same as previous functions - compiler can not guarantee the safety of
     /// third party library implementations.
-    pub fn load(&mut self, path: PathBuf) -> &mut Self {
-        Loadable::load_append(&path, &mut self.connectors).ok();
-        Loadable::load_append(&path, &mut self.os_layers).ok();
-        self
+    pub fn try_load<P: AsRef<Path>>(&mut self, path: P) -> Result<&mut Self> {
+        let extension = path
+            .as_ref()
+            .extension()
+            .unwrap_or_default()
+            .to_str()
+            .unwrap_or_default();
+        if extension != plugin_extension() {
+            return Err(
+                Error(ErrorOrigin::Inventory, ErrorKind::InvalidPath).log_trace(format!(
+                "file {:?} has an invalid file extension (expected extension {:?} but found {:?})",
+                path.as_ref(),
+                plugin_extension(),
+                extension
+            )),
+            );
+        }
+
+        let bytes = std::fs::read(path.as_ref()).map_err(|err| {
+            Error(ErrorOrigin::Inventory, ErrorKind::UnableToReadFile).log_warn(format!(
+                "unable to read file {:?}: {}",
+                path.as_ref(),
+                err
+            ))
+        })?;
+
+        // check if file is an actual binary (pe, elf or macho)
+        if plugin_analyzer::is_binary(&bytes).is_err() {
+            return Err(
+                Error(ErrorOrigin::Inventory, ErrorKind::InvalidExeFile).log_trace(format!(
+                    "{:?} is not a valid executable file",
+                    path.as_ref()
+                )),
+            );
+        }
+
+        // parse descriptors
+        let descriptors = plugin_analyzer::parse_descriptors(&bytes).map_err(|err| {
+            Error(ErrorOrigin::Inventory, ErrorKind::InvalidExeFile).log_warn(format!(
+                "unable to parse descriptors from plugin file {:?}: {}",
+                path.as_ref(),
+                err
+            ))
+        })?;
+
+        // extract the first descriptor to check if version and cpu architecture match
+        let descriptor = descriptors.first().unwrap();
+
+        if descriptor.plugin_version != MEMFLOW_PLUGIN_VERSION {
+            return Err(Error(ErrorOrigin::Inventory, ErrorKind::VersionMismatch).log_warn(format!(
+                "plugin with incompatible version found {:?} (expected version {} but plugin had version {})",
+                path.as_ref(),
+                MEMFLOW_PLUGIN_VERSION,
+                descriptor.plugin_version
+            )));
+        }
+
+        // TODO: compare architecture
+
+        // load plugin and append it to the proper internal list
+        let descriptors_connector = descriptors
+            .iter()
+            .filter(|descriptor| descriptor.plugin_kind == PluginKind::Connector)
+            .cloned()
+            .collect::<Vec<_>>();
+        let descriptors_os = descriptors
+            .iter()
+            .filter(|descriptor| descriptor.plugin_kind == PluginKind::Os)
+            .cloned()
+            .collect::<Vec<_>>();
+
+        if !descriptors_connector.is_empty() {
+            Loadable::load_append_descriptors(
+                path.as_ref(),
+                &descriptors_connector[..],
+                &mut self.connectors,
+            )
+            .ok();
+        }
+        if !descriptors_os.is_empty() {
+            Loadable::load_append_descriptors(
+                path.as_ref(),
+                &descriptors_os[..],
+                &mut self.os_layers,
+            )
+            .ok();
+        }
+
+        Ok(self)
     }
 
     /// Returns the names of all currently available connectors that can be used.

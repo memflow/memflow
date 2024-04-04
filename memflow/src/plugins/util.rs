@@ -1,108 +1,18 @@
 use crate::cglue::result::into_int_out_result;
-use crate::error::{Error, ErrorKind, ErrorOrigin};
+use crate::error::Error;
 
 use super::{LibArc, PluginLogger};
 
 use std::mem::MaybeUninit;
-use std::path::Path;
 
-#[cfg(not(any(target_os = "windows", target_os = "macos")))]
-pub fn find_export_by_prefix(
-    path: impl AsRef<Path>,
-    prefix: &str,
-) -> crate::error::Result<Vec<String>> {
-    use goblin::elf::Elf;
-
-    let buffer = std::fs::read(path.as_ref())
-        .map_err(|err| Error(ErrorOrigin::Inventory, ErrorKind::UnableToReadFile).log_trace(err))?;
-    let elf = Elf::parse(buffer.as_slice())
-        .map_err(|err| Error(ErrorOrigin::Inventory, ErrorKind::InvalidExeFile).log_trace(err))?;
-    Ok(elf
-        .syms
-        .iter()
-        .filter_map(|s| {
-            if let Some(name) = elf.strtab.get_at(s.st_name) {
-                match name.starts_with(prefix) {
-                    true => Some(name.to_owned()),
-                    false => None,
-                }
-            } else {
-                None
-            }
-        })
-        .collect::<Vec<_>>())
-}
-
-#[cfg(target_os = "windows")]
-pub fn find_export_by_prefix(
-    path: impl AsRef<Path>,
-    prefix: &str,
-) -> crate::error::Result<Vec<String>> {
-    use goblin::pe::PE;
-
-    let buffer = std::fs::read(path.as_ref())
-        .map_err(|err| Error(ErrorOrigin::Inventory, ErrorKind::UnableToReadFile).log_trace(err))?;
-    let pe = PE::parse(buffer.as_slice())
-        .map_err(|err| Error(ErrorOrigin::Inventory, ErrorKind::InvalidExeFile).log_trace(err))?;
-    Ok(pe
-        .exports
-        .iter()
-        .filter_map(|s| s.name)
-        .filter_map(|name| {
-            if name.starts_with(prefix) {
-                Some(name.to_owned())
-            } else {
-                None
-            }
-        })
-        .collect::<Vec<_>>())
-}
-
-#[cfg(target_os = "macos")]
-pub fn find_export_by_prefix(
-    path: impl AsRef<Path>,
-    prefix: &str,
-) -> crate::error::Result<Vec<String>> {
-    use goblin::mach::{Mach, SingleArch};
-
-    let buffer = std::fs::read(path.as_ref())
-        .map_err(|err| Error(ErrorOrigin::Inventory, ErrorKind::UnableToReadFile).log_trace(err))?;
-    let mach = Mach::parse(buffer.as_slice())
-        .map_err(|err| Error(ErrorOrigin::Inventory, ErrorKind::InvalidExeFile).log_trace(err))?;
-    let macho = match mach {
-        Mach::Binary(mach) => mach,
-        Mach::Fat(mach) => (0..mach.narches)
-            .filter_map(|i| mach.get(i).ok())
-            .filter_map(|a| match a {
-                SingleArch::MachO(mach) => Some(mach),
-                SingleArch::Archive(_) => None,
-            })
-            .next()
-            .ok_or_else(|| {
-                Error(ErrorOrigin::Inventory, ErrorKind::InvalidExeFile)
-                    .log_trace("failed to find valid MachO header!")
-            })?,
-    };
-
-    // macho symbols are prefixed with `_` in the object file.
-    let macho_prefix = "_".to_owned() + prefix;
-    Ok(macho
-        .symbols
-        .ok_or_else(|| {
-            Error(ErrorOrigin::Inventory, ErrorKind::InvalidExeFile)
-                .log_trace("failed to parse MachO symbols!")
-        })?
-        .iter()
-        .filter_map(|s| s.ok())
-        .filter_map(|(name, _)| {
-            // symbols should only contain ascii characters
-            if name.starts_with(&macho_prefix) {
-                Some(name[1..].to_owned())
-            } else {
-                None
-            }
-        })
-        .collect::<Vec<_>>())
+/// Returns the plugin extension appropriate for the current os
+pub fn plugin_extension() -> &'static str {
+    #[cfg(target_os = "windows")]
+    return "dll";
+    #[cfg(target_os = "linux")]
+    return "so";
+    #[cfg(target_os = "macos")]
+    return "dylib";
 }
 
 /// Wrapper for instantiating object.

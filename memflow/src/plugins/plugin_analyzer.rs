@@ -1,8 +1,8 @@
-//! This module provides functionality to extract the PluginDescriptor from a binary.
+//! This module provides functionality to extract the PluginDescriptorInfo from a binary.
 //!
 //! Rather than loading the module in memory and finding the correct export
 //! the analyzer will do a static analysis based on goblin to piece together
-//! the PluginDescriptor structure.
+//! the PluginDescriptorInfo structure.
 
 use std::ops::Range;
 
@@ -24,12 +24,13 @@ use crate::{
     plugins::{ErrorKind, ErrorOrigin},
 };
 
-const MEMFLOW_EXPORT_PREFIX: &str = "MEMFLOW_";
+const MEMFLOW_EXPORT_PREFIX_CONNECTOR: &str = "MEMFLOW_CONNECTOR_";
+const MEMFLOW_EXPORT_PREFIX_OS: &str = "MEMFLOW_OS_";
 
-/// The PluginDescriptor struct is adapted and translated from memflow version 0.2.x:
+/// The PluginDescriptorInfo struct is adapted and translated from memflow version 0.2.x:
 /// https://github.com/memflow/memflow/blob/0.2.0/memflow/src/plugins/mod.rs#L105
 #[repr(C, align(4))]
-struct PluginDescriptor32 {
+struct PluginDescriptorInfo32 {
     pub plugin_version: i32,
     pub accept_input: u8,   // bool
     pub input_layout: u32,  // &'static TypeLayout
@@ -44,14 +45,14 @@ struct PluginDescriptor32 {
     pub target_list_callback: u32, // Option<extern "C" fn(callback: TargetCallback) -> i32>,
     pub create: u32,        // CreateFn<T>,
 }
-const _: [(); std::mem::size_of::<PluginDescriptor32>()] = [(); 0x34];
-unsafe impl Pod for PluginDescriptor32 {}
+const _: [(); std::mem::size_of::<PluginDescriptorInfo32>()] = [(); 0x34];
+unsafe impl Pod for PluginDescriptorInfo32 {}
 
 // The padding inside the struct is only really required for targets
 // which ignore the aligment property.
 // Most notable for i686 cross-compilation the padding is required.
 #[repr(C, align(8))]
-struct PluginDescriptor64 {
+struct PluginDescriptorInfo64 {
     pub plugin_version: i32,
     pub accept_input: u32,  // bool
     pub input_layout: u64,  // &'static TypeLayout
@@ -69,8 +70,23 @@ struct PluginDescriptor64 {
     pub target_list_callback: u64, // Option<extern "C" fn(callback: TargetCallback) -> i32>,
     pub create: u64,        // CreateFn<T>,
 }
-const _: [(); std::mem::size_of::<PluginDescriptor64>()] = [(); 0x60];
-unsafe impl Pod for PluginDescriptor64 {}
+const _: [(); std::mem::size_of::<PluginDescriptorInfo64>()] = [(); 0x60];
+unsafe impl Pod for PluginDescriptorInfo64 {}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[serde(rename_all = "snake_case")]
+pub enum PluginKind {
+    Connector,
+    Os,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[serde(rename_all = "snake_case")]
+pub enum PluginFileType {
+    Pe,
+    Elf,
+    Mach,
+}
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
 #[serde(rename_all = "snake_case")]
@@ -82,16 +98,10 @@ pub enum PluginArchitecture {
     Arm64,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
-#[serde(rename_all = "snake_case")]
-pub enum PluginFileType {
-    Pe,
-    Elf,
-    Mach,
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub struct PluginDescriptor {
+pub struct PluginDescriptorInfo {
+    pub plugin_kind: PluginKind,
+    pub export_name: String,
     pub file_type: PluginFileType,
     pub architecture: PluginArchitecture,
     pub plugin_version: i32,
@@ -115,7 +125,7 @@ pub fn is_binary(bytes: &[u8]) -> Result<()> {
 
 /// Parses and returns all descriptors found in the binary.
 /// This function tries to guess the binary type.
-pub fn parse_descriptors(bytes: &[u8]) -> Result<Vec<PluginDescriptor>> {
+pub fn parse_descriptors(bytes: &[u8]) -> Result<Vec<PluginDescriptorInfo>> {
     let object = Object::parse(bytes).map_err(|err| {
         Error(ErrorOrigin::Inventory, ErrorKind::InvalidExeFile)
             .log_error(format!("unable to parse binary object: {}", err))
@@ -129,21 +139,38 @@ pub fn parse_descriptors(bytes: &[u8]) -> Result<Vec<PluginDescriptor>> {
     }
 }
 
+/// Returns the plugin kind based of the export prefix
+fn plugin_kind(export_name: &str) -> Result<PluginKind> {
+    // stripping initial _ is required for MACH builds
+    let export_name = export_name.strip_prefix('_').unwrap_or(export_name);
+
+    // match by export prefix
+    if export_name.starts_with(MEMFLOW_EXPORT_PREFIX_CONNECTOR) {
+        Ok(PluginKind::Connector)
+    } else if export_name.starts_with(MEMFLOW_EXPORT_PREFIX_OS) {
+        Ok(PluginKind::Os)
+    } else {
+        Err(Error(ErrorOrigin::Inventory, ErrorKind::PluginNotFound))
+    }
+}
+
 /// Parses the descriptors in a PE binary.
 /// This function currently supports x86 and x86_64 binaries.
-fn pe_parse_descriptors(bytes: &[u8], pe: &PE) -> Result<Vec<PluginDescriptor>> {
+fn pe_parse_descriptors(bytes: &[u8], pe: &PE) -> Result<Vec<PluginDescriptorInfo>> {
     let mut ret = vec![];
 
     for export in pe.exports.iter() {
-        if let Some(name) = export.name {
-            if name.starts_with(MEMFLOW_EXPORT_PREFIX) {
+        if let Some(export_name) = export.name {
+            if let Ok(plugin_kind) = plugin_kind(export_name) {
                 if let Some(offset) = export.offset {
                     let data_view = DataView::from(bytes);
 
                     if pe.is_64 {
-                        let raw_desc = data_view.read::<PluginDescriptor64>(offset);
+                        let raw_desc = data_view.read::<PluginDescriptorInfo64>(offset);
                         #[rustfmt::skip]
-                        ret.push(PluginDescriptor {
+                        ret.push(PluginDescriptorInfo {
+                            plugin_kind,
+                            export_name: export_name.to_string(),
                             file_type: PluginFileType::Pe,
                             architecture: pe_architecture(pe),
                             plugin_version: raw_desc.plugin_version,
@@ -152,9 +179,11 @@ fn pe_parse_descriptors(bytes: &[u8], pe: &PE) -> Result<Vec<PluginDescriptor>> 
                             description: read_string(bytes, pe_va_to_offset(pe, raw_desc.description), raw_desc.description_length as usize)?,
                         });
                     } else {
-                        let raw_desc = data_view.read::<PluginDescriptor32>(offset);
+                        let raw_desc = data_view.read::<PluginDescriptorInfo32>(offset);
                         #[rustfmt::skip]
-                        ret.push(PluginDescriptor {
+                        ret.push(PluginDescriptorInfo {
+                            plugin_kind,
+                            export_name: export_name.to_string(),
                             file_type: PluginFileType::Pe,
                             architecture: pe_architecture(pe),
                             plugin_version: raw_desc.plugin_version,
@@ -221,7 +250,7 @@ fn read_string(bytes: &[u8], offset: usize, len: usize) -> Result<String> {
     Ok(result.to_owned())
 }
 
-fn mach_parse_descriptors(bytes: &[u8], mach: &Mach) -> Result<Vec<PluginDescriptor>> {
+fn mach_parse_descriptors(bytes: &[u8], mach: &Mach) -> Result<Vec<PluginDescriptorInfo>> {
     let mut ret = vec![];
 
     match mach {
@@ -257,7 +286,7 @@ fn mach_parse_descriptors(bytes: &[u8], mach: &Mach) -> Result<Vec<PluginDescrip
     Ok(ret)
 }
 
-fn macho_parse_descriptors(bytes: &[u8], macho: &MachO) -> Result<Vec<PluginDescriptor>> {
+fn macho_parse_descriptors(bytes: &[u8], macho: &MachO) -> Result<Vec<PluginDescriptorInfo>> {
     let mut ret = vec![];
 
     if !macho.little_endian {
@@ -265,19 +294,19 @@ fn macho_parse_descriptors(bytes: &[u8], macho: &MachO) -> Result<Vec<PluginDesc
             .log_error("big endian binaries are not supported yet"));
     }
 
-    let memflow_export_prefix_macho = "_".to_owned() + MEMFLOW_EXPORT_PREFIX;
-
     if let Ok(exports) = macho.exports() {
         for export in exports.iter() {
-            if export.name.starts_with(&memflow_export_prefix_macho) {
+            if let Ok(plugin_kind) = plugin_kind(&export.name) {
                 let offset = export.offset;
 
                 let data_view = DataView::from(bytes);
 
                 if macho.is_64 {
-                    let raw_desc = data_view.read::<PluginDescriptor64>(offset as usize);
+                    let raw_desc = data_view.read::<PluginDescriptorInfo64>(offset as usize);
                     #[rustfmt::skip]
-                    ret.push(PluginDescriptor{
+                    ret.push(PluginDescriptorInfo{
+                        plugin_kind,
+                        export_name: export.name.to_string(),
                         file_type: PluginFileType::Mach,
                         architecture: macho_architecture(macho),
                         plugin_version: raw_desc.plugin_version,
@@ -286,9 +315,11 @@ fn macho_parse_descriptors(bytes: &[u8], macho: &MachO) -> Result<Vec<PluginDesc
                         description: read_string(bytes, macho_va_to_offset(raw_desc.description), raw_desc.description_length as usize)?,
                     });
                 } else {
-                    let raw_desc = data_view.read::<PluginDescriptor32>(offset as usize);
+                    let raw_desc = data_view.read::<PluginDescriptorInfo32>(offset as usize);
                     #[rustfmt::skip]
-                    ret.push(PluginDescriptor{
+                    ret.push(PluginDescriptorInfo{
+                        plugin_kind,
+                        export_name: export.name.to_string(),
                         file_type: PluginFileType::Mach,
                         architecture: macho_architecture(macho),
                         plugin_version: raw_desc.plugin_version,
@@ -322,7 +353,7 @@ fn macho_va_to_offset(va: u64) -> usize {
 
 /// Parses the descriptors in an ELF binary.
 /// This function currently supports x86, x86_64, aarch64 and armv7.
-fn elf_parse_descriptors(bytes: &[u8], elf: &Elf) -> Result<Vec<PluginDescriptor>> {
+fn elf_parse_descriptors(bytes: &[u8], elf: &Elf) -> Result<Vec<PluginDescriptorInfo>> {
     let mut ret = vec![];
 
     if !elf.little_endian {
@@ -336,8 +367,8 @@ fn elf_parse_descriptors(bytes: &[u8], elf: &Elf) -> Result<Vec<PluginDescriptor
         .filter(|s| !s.is_import())
         .filter_map(|s| elf.dynstrtab.get_at(s.st_name).map(|n| (s, n)));
 
-    for (sym, name) in iter {
-        if name.starts_with(MEMFLOW_EXPORT_PREFIX) {
+    for (sym, export_name) in iter {
+        if let Ok(plugin_kind) = plugin_kind(export_name) {
             if sym.st_shndx == SHN_XINDEX as usize {
                 return Err(Error(ErrorOrigin::Inventory, ErrorKind::NotSupported)
                     .log_error("unsupported elf SHN_XINDEX header flag"));
@@ -359,14 +390,16 @@ fn elf_parse_descriptors(bytes: &[u8], elf: &Elf) -> Result<Vec<PluginDescriptor
             let data_view = DataView::from(bytes);
 
             if elf.is_64 {
-                let mut raw_desc = data_view.read::<PluginDescriptor64>(offset as usize);
+                let mut raw_desc = data_view.read::<PluginDescriptorInfo64>(offset as usize);
                 elf_apply_relocs::<u64, _>(
                     elf,
                     sym.st_value..sym.st_value + sym.st_size,
                     &mut raw_desc,
                 )?;
                 #[rustfmt::skip]
-                ret.push(PluginDescriptor{
+                ret.push(PluginDescriptorInfo{
+                    plugin_kind,
+                    export_name: export_name.to_string(),
                     file_type: PluginFileType::Elf,
                     architecture: elf_architecture(elf),
                     plugin_version: raw_desc.plugin_version,
@@ -375,14 +408,16 @@ fn elf_parse_descriptors(bytes: &[u8], elf: &Elf) -> Result<Vec<PluginDescriptor
                     description: read_string(bytes, raw_desc.description as usize, raw_desc.description_length as usize)?,
                 });
             } else {
-                let mut raw_desc = data_view.read::<PluginDescriptor32>(offset as usize);
+                let mut raw_desc = data_view.read::<PluginDescriptorInfo32>(offset as usize);
                 elf_apply_relocs::<u32, _>(
                     elf,
                     sym.st_value..sym.st_value + sym.st_size,
                     &mut raw_desc,
                 )?;
                 #[rustfmt::skip]
-                ret.push(PluginDescriptor{
+                ret.push(PluginDescriptorInfo{
+                    plugin_kind,
+                    export_name: export_name.to_string(),
                     file_type: PluginFileType::Elf,
                     architecture: elf_architecture(elf),
                     plugin_version: raw_desc.plugin_version,
@@ -464,7 +499,9 @@ mod tests {
 
         assert_eq!(
             parse_descriptors(&file[..]).unwrap(),
-            vec![PluginDescriptor {
+            vec![PluginDescriptorInfo {
+                plugin_kind: PluginKind::Connector,
+                export_name: "MEMFLOW_CONNECTOR_COREDUMP".to_owned(),
                 file_type: PluginFileType::Pe,
                 architecture: PluginArchitecture::X86_64,
                 plugin_version: 1,
@@ -483,7 +520,9 @@ mod tests {
 
         assert_eq!(
             parse_descriptors(&file[..]).unwrap(),
-            vec![PluginDescriptor {
+            vec![PluginDescriptorInfo {
+                plugin_kind: PluginKind::Connector,
+                export_name: "MEMFLOW_CONNECTOR_COREDUMP".to_owned(),
                 file_type: PluginFileType::Pe,
                 architecture: PluginArchitecture::X86,
                 plugin_version: 1,
@@ -502,7 +541,9 @@ mod tests {
 
         assert_eq!(
             parse_descriptors(&file[..]).unwrap(),
-            vec![PluginDescriptor {
+            vec![PluginDescriptorInfo {
+                plugin_kind: PluginKind::Connector,
+                export_name: "MEMFLOW_CONNECTOR_COREDUMP".to_owned(),
                 file_type: PluginFileType::Elf,
                 architecture: PluginArchitecture::X86_64,
                 plugin_version: 1,
@@ -521,7 +562,9 @@ mod tests {
 
         assert_eq!(
             parse_descriptors(&file[..]).unwrap(),
-            vec![PluginDescriptor {
+            vec![PluginDescriptorInfo {
+                plugin_kind: PluginKind::Connector,
+                export_name: "MEMFLOW_CONNECTOR_COREDUMP".to_owned(),
                 file_type: PluginFileType::Elf,
                 architecture: PluginArchitecture::X86,
                 plugin_version: 1,
@@ -540,7 +583,9 @@ mod tests {
 
         assert_eq!(
             parse_descriptors(&file[..]).unwrap(),
-            vec![PluginDescriptor {
+            vec![PluginDescriptorInfo {
+                plugin_kind: PluginKind::Connector,
+                export_name: "MEMFLOW_CONNECTOR_COREDUMP".to_owned(),
                 file_type: PluginFileType::Elf,
                 architecture: PluginArchitecture::Arm64,
                 plugin_version: 1,
@@ -559,7 +604,9 @@ mod tests {
 
         assert_eq!(
             parse_descriptors(&file[..]).unwrap(),
-            vec![PluginDescriptor {
+            vec![PluginDescriptorInfo {
+                plugin_kind: PluginKind::Connector,
+                export_name: "MEMFLOW_CONNECTOR_COREDUMP".to_owned(),
                 file_type: PluginFileType::Elf,
                 architecture: PluginArchitecture::Arm,
                 plugin_version: 1,
@@ -578,7 +625,9 @@ mod tests {
 
         assert_eq!(
             parse_descriptors(&file[..]).unwrap(),
-            vec![PluginDescriptor {
+            vec![PluginDescriptorInfo {
+                plugin_kind: PluginKind::Os,
+                export_name: "MEMFLOW_OS_NATIVE".to_owned(),
                 file_type: PluginFileType::Mach,
                 architecture: PluginArchitecture::Arm64,
                 plugin_version: 1,

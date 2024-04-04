@@ -608,6 +608,19 @@ impl Inventory {
         // extract the first descriptor to check if version and cpu architecture match
         let descriptor = descriptors.first().unwrap();
 
+        // check plugin architecture
+        if !descriptor.is_loadable() {
+            return Err(
+                Error(ErrorOrigin::Inventory, ErrorKind::InvalidArchitecture).log_warn(format!(
+                "plugin with incompatible architecture found {:?} (plugin was built for {:?}:{:?})",
+                path.as_ref(),
+                descriptor.file_type,
+                descriptor.architecture,
+            )),
+            );
+        }
+
+        // check plugin version
         if descriptor.plugin_version != MEMFLOW_PLUGIN_VERSION {
             return Err(Error(ErrorOrigin::Inventory, ErrorKind::VersionMismatch).log_warn(format!(
                 "plugin with incompatible version found {:?} (expected version {} but plugin had version {})",
@@ -616,8 +629,6 @@ impl Inventory {
                 descriptor.plugin_version
             )));
         }
-
-        // TODO: compare architecture
 
         // load plugin and append it to the proper internal list
         let descriptors_connector = descriptors

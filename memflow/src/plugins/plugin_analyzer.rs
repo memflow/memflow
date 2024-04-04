@@ -110,6 +110,30 @@ pub struct PluginDescriptorInfo {
     pub description: String,
 }
 
+impl PluginDescriptorInfo {
+    /// Checks if the plugin is loadable on the current system by comparing the
+    /// `file_type` and `architecture` fields with the current build target.
+    pub fn is_loadable(&self) -> bool {
+        #[cfg(target_os = "windows")]
+        let target_file_type = PluginFileType::Pe;
+        #[cfg(target_os = "linux")]
+        let target_file_type = PluginFileType::Elf;
+        #[cfg(target_os = "macos")]
+        let target_file_type = PluginFileType::Mach;
+
+        #[cfg(target_arch = "x86_64")]
+        let target_architecture = PluginArchitecture::X86_64;
+        #[cfg(target_arch = "x86")]
+        let target_architecture = PluginArchitecture::X86;
+        #[cfg(target_arch = "aarch64")]
+        let target_architecture = PluginArchitecture::Arm64;
+        #[cfg(target_arch = "arm")]
+        let target_architecture = PluginArchitecture::Arm;
+
+        self.file_type == target_file_type && self.architecture == target_architecture
+    }
+}
+
 /// Peaks into the first 4 bytes of the header and matches it against a known set of binary magic constants.
 pub fn is_binary(bytes: &[u8]) -> Result<()> {
     let view = DataView::from(bytes);

@@ -306,8 +306,29 @@ impl<U: PrimitiveAddress, T: Pod + Sized> Pointer<U, T> {
 
 /// Implement special phys/virt read/write for CReprStr
 impl<U: PrimitiveAddress> Pointer<U, ReprCString> {
-    pub fn read_string<M: MemoryView>(self, mem: &mut M) -> PartialResult<ReprCString> {
-        match mem.read_char_string(self.inner.to_umem().into()) {
+    pub fn read_utf8<M: MemoryView>(
+        self,
+        mem: &mut M,
+        max_length: usize,
+    ) -> PartialResult<ReprCString> {
+        match mem.read_utf8(self.inner.to_umem().into(), max_length) {
+            Ok(s) => Ok(s.into()),
+            Err(PartialError::Error(e)) => Err(PartialError::Error(e)),
+            Err(PartialError::PartialVirtualRead(s)) => {
+                Err(PartialError::PartialVirtualRead(s.into()))
+            }
+            Err(PartialError::PartialVirtualWrite(s)) => {
+                Err(PartialError::PartialVirtualWrite(s.into()))
+            }
+        }
+    }
+
+    pub fn read_utf8_lossy<M: MemoryView>(
+        self,
+        mem: &mut M,
+        max_length: usize,
+    ) -> PartialResult<ReprCString> {
+        match mem.read_utf8_lossy(self.inner.to_umem().into(), max_length) {
             Ok(s) => Ok(s.into()),
             Err(PartialError::Error(e)) => Err(PartialError::Error(e)),
             Err(PartialError::PartialVirtualRead(s)) => {

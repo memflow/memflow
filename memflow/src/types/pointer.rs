@@ -4,8 +4,9 @@ Pointer abstraction.
 
 use crate::cglue::ReprCString;
 use crate::dataview::Pod;
-use crate::error::{PartialResult, PartialResultExt};
+use crate::error::PartialResult;
 use crate::mem::MemoryView;
+use crate::prelude::PartialError;
 use crate::types::{imem, umem, Address, ByteSwap, PrimitiveAddress};
 
 use std::convert::TryInto;
@@ -306,9 +307,38 @@ impl<U: PrimitiveAddress, T: Pod + Sized> Pointer<U, T> {
 
 /// Implement special phys/virt read/write for CReprStr
 impl<U: PrimitiveAddress> Pointer<U, ReprCString> {
-    pub fn read_string<M: MemoryView>(self, mem: &mut M) -> PartialResult<ReprCString> {
-        mem.read_char_string(self.inner.to_umem().into())
-            .map_data(|s| s.into())
+    pub fn read_utf8<M: MemoryView>(
+        self,
+        mem: &mut M,
+        max_length: usize,
+    ) -> PartialResult<ReprCString> {
+        match mem.read_utf8(self.inner.to_umem().into(), max_length) {
+            Ok(s) => Ok(s.into()),
+            Err(PartialError::Error(e)) => Err(PartialError::Error(e)),
+            Err(PartialError::PartialVirtualRead(s)) => {
+                Err(PartialError::PartialVirtualRead(s.into()))
+            }
+            Err(PartialError::PartialVirtualWrite(s)) => {
+                Err(PartialError::PartialVirtualWrite(s.into()))
+            }
+        }
+    }
+
+    pub fn read_utf8_lossy<M: MemoryView>(
+        self,
+        mem: &mut M,
+        max_length: usize,
+    ) -> PartialResult<ReprCString> {
+        match mem.read_utf8_lossy(self.inner.to_umem().into(), max_length) {
+            Ok(s) => Ok(s.into()),
+            Err(PartialError::Error(e)) => Err(PartialError::Error(e)),
+            Err(PartialError::PartialVirtualRead(s)) => {
+                Err(PartialError::PartialVirtualRead(s.into()))
+            }
+            Err(PartialError::PartialVirtualWrite(s)) => {
+                Err(PartialError::PartialVirtualWrite(s.into()))
+            }
+        }
     }
 }
 

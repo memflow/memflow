@@ -5,8 +5,8 @@ use log::Level;
 use memflow::prelude::v1::*;
 
 fn main() -> Result<()> {
-    let matches = parse_args();
-    let chain = extract_args(&matches)?;
+    //let matches = parse_args();
+    //let chain = extract_args(&matches)?;
 
     let mut registry = Registry::new();
 

@@ -386,6 +386,7 @@ pub trait MemoryView: Send {
     /// The string does not have to be null-terminated.
     /// If a null terminator is found the string is truncated to the terminator.
     /// If no null terminator is found the resulting string is exactly `len` characters long.
+    #[deprecated = "please use read_utf8 or read_utf8_lossy instead"]
     #[skip_func]
     fn read_char_array(&mut self, addr: Address, len: usize) -> PartialResult<String> {
         let mut buf = vec![0; len];
@@ -409,32 +410,10 @@ pub trait MemoryView: Send {
     /// If no null terminator is found the this function will return an error.
     ///
     /// For reading fixed-size char arrays the [`read_char_array`](Self::read_char_array) should be used.
+    #[deprecated = "please use read_utf8 or read_utf8_lossy instead"]
     #[skip_func]
     fn read_char_string_n(&mut self, addr: Address, n: usize) -> PartialResult<String> {
-        let mut buf = vec![0; std::cmp::min(32, n)];
-
-        let mut last_n = 0;
-
-        loop {
-            let (_, right) = buf.split_at_mut(last_n);
-
-            self.read_raw_into(addr + last_n, right).data_part()?;
-            if let Some((n, _)) = right.iter().enumerate().find(|(_, c)| **c == 0_u8) {
-                buf.truncate(last_n + n);
-                return Ok(String::from_utf8_lossy(&buf).to_string());
-            }
-            if buf.len() >= n {
-                break;
-            }
-            last_n = buf.len();
-
-            buf.extend((0..buf.len()).map(|_| 0));
-        }
-
-        Err(PartialError::Error(Error(
-            ErrorOrigin::VirtualMemory,
-            ErrorKind::OutOfBounds,
-        )))
+        self.read_utf8_lossy(addr, n)
     }
 
     /// Reads a variable length string with up to 4kb length from the target.
@@ -442,11 +421,123 @@ pub trait MemoryView: Send {
     /// # Arguments
     ///
     /// * `addr` - target address to read from
+    #[deprecated = "please use read_utf8 or read_utf8_lossy instead"]
     #[skip_func]
     fn read_char_string(&mut self, addr: Address) -> PartialResult<String> {
-        self.read_char_string_n(addr, 4096)
+        self.read_utf8_lossy(addr, 4096)
     }
 
+    /// Reads a string at the given position with a length of up to `max_length` characters.
+    ///
+    /// Not all byte slices are valid `String`s, however: `String`
+    /// requires that it is valid UTF-8. `from_utf8()` checks to ensure that
+    /// the bytes are valid UTF-8, and then does the conversion.
+    ///
+    /// # Remarks
+    ///
+    /// If this string contains a '\0' terminator the returned string is clamped to the position of the terminator.
+    ///
+    /// If the string contains no terminator the a string up to `max_length` characters is returned.
+    ///
+    /// # Examples
+    ///
+    /// Reading from a `MemoryView`:
+    /// ```
+    /// use memflow::types::Address;
+    /// use memflow::mem::MemoryView;
+    ///
+    /// fn read(mem: &mut impl MemoryView, read_addr: Address) {
+    ///     let str = mem.read_utf8(read_addr, 32).unwrap();
+    ///     println!("str: {}", str);
+    ///     # assert_eq!(str, "Hello, World!");
+    /// }
+    /// # use memflow::dummy::{DummyMemory, DummyOs};
+    /// # use memflow::os::Process;
+    /// # use memflow::types::size;
+    /// # let mut proc = DummyOs::quick_process(size::mb(2), &[72, 101, 108, 108, 111, 44, 32, 87, 111, 114, 108, 100, 33, 0]);
+    /// # let virt_base = proc.info().address;
+    /// # read(&mut proc, virt_base);
+    /// ```
+    #[skip_func]
+    fn read_utf8(&mut self, addr: Address, max_length: usize) -> PartialResult<String> {
+        let mut buf = vec![0; max_length];
+
+        // we allow partial reads, all bytes we could not read will be 0.
+        self.read_raw_into(addr, &mut buf).data_part()?;
+
+        // truncate the buffer to the 0 terminator.
+        if let Some((n, _)) = buf.iter().enumerate().find(|(_, c)| **c == 0_u8) {
+            buf.truncate(n);
+        }
+
+        // convert the bytes into a string
+        Ok(String::from_utf8(buf).map_err(|err| {
+            Error(ErrorOrigin::Memory, ErrorKind::Encoding).log_error(format!(
+                "unable to convert bytes to valid utf8 string: {}",
+                err
+            ))
+        })?)
+    }
+
+    /// Reads a string at the given position with a length of up to `max_length` characters.
+    ///
+    /// Not all byte slices are valid strings, however: strings
+    /// are required to be valid UTF-8. During this conversion,
+    /// `from_utf8_lossy()` will replace any invalid UTF-8 sequences with
+    /// [`U+FFFD REPLACEMENT CHARACTER`][U+FFFD], which looks like this: �
+    ///
+    /// [byteslice]: prim@slice
+    /// [U+FFFD]: core::char::REPLACEMENT_CHARACTER
+    ///
+    /// [`from_utf8_unchecked`]: String::from_utf8_unchecked
+    ///
+    /// If our byte slice is invalid UTF-8, then we need to insert the replacement characters,
+    /// which will change the size of the string, and hence, require a `String`. But if
+    /// it's already valid UTF-8, we don't need a new allocation. This return
+    /// type allows us to handle both cases.
+    ///
+    /// # Remarks
+    ///
+    /// If this string contains a '\0' terminator the returned string is clamped to the position of the terminator.
+    ///
+    /// If the string contains no terminator the a string up to `max_length` characters is returned.
+    ///
+    /// # Examples
+    ///
+    /// Reading from a `MemoryView`:
+    /// ```
+    /// use memflow::types::Address;
+    /// use memflow::mem::MemoryView;
+    ///
+    /// fn read(mem: &mut impl MemoryView, read_addr: Address) {
+    ///     let str = mem.read_utf8_lossy(read_addr, 32).unwrap();
+    ///     println!("str: {}", str);
+    ///     # assert_eq!(str, "Hello, World!");
+    /// }
+    /// # use memflow::dummy::{DummyMemory, DummyOs};
+    /// # use memflow::os::Process;
+    /// # use memflow::types::size;
+    /// # let mut proc = DummyOs::quick_process(size::mb(2), &[72, 101, 108, 108, 111, 44, 32, 87, 111, 114, 108, 100, 33, 0]);
+    /// # let virt_base = proc.info().address;
+    /// # read(&mut proc, virt_base);
+    /// ```
+    #[skip_func]
+    fn read_utf8_lossy(&mut self, addr: Address, max_length: usize) -> PartialResult<String> {
+        let mut buf = vec![0; max_length];
+
+        // we allow partial reads, all bytes we could not read will be 0.
+        self.read_raw_into(addr, &mut buf).data_part()?;
+
+        // truncate the buffer to the 0 terminator.
+        if let Some((n, _)) = buf.iter().enumerate().find(|(_, c)| **c == 0_u8) {
+            buf.truncate(n);
+        }
+
+        // convert the bytes into a string
+        Ok(String::from_utf8_lossy(&buf).to_string())
+    }
+
+    /// Returns a cursor over this memory view. See [`MemoryCursor`] for more details.
     #[cfg(feature = "std")]
     #[skip_func]
     fn cursor(&mut self) -> MemoryCursor<Fwd<&mut Self>>
@@ -456,6 +547,7 @@ pub trait MemoryView: Send {
         MemoryCursor::new(self.forward())
     }
 
+    /// Converts this memory view into a cursor. See [`MemoryCursor`] for more details.
     #[cfg(feature = "std")]
     #[skip_func]
     fn into_cursor(self) -> MemoryCursor<Self>
@@ -465,6 +557,7 @@ pub trait MemoryView: Send {
         MemoryCursor::new(self)
     }
 
+    /// Returns a cursor over this memory view at the specified address. See [`MemoryCursor`] for more details.
     #[cfg(feature = "std")]
     #[skip_func]
     fn cursor_at(&mut self, address: Address) -> MemoryCursor<Fwd<&mut Self>>
@@ -474,6 +567,7 @@ pub trait MemoryView: Send {
         MemoryCursor::at(self.forward(), address)
     }
 
+    /// Converts this memory view into a cursor at the specified address. See [`MemoryCursor`] for more details.
     #[cfg(feature = "std")]
     #[skip_func]
     fn into_cursor_at(self, address: Address) -> MemoryCursor<Self>

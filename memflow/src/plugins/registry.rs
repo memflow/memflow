@@ -1,15 +1,13 @@
 use core::cmp::Reverse;
 use std::path::{Path, PathBuf};
-use std::time::SystemTime;
 
 use cglue::arc::CArc;
 use cglue::trait_group::VerifyLayout;
-use chrono::{DateTime, Local, NaiveDate, NaiveDateTime, Utc};
+use chrono::{DateTime, Local, NaiveDateTime};
 use libloading::Library;
 use log::{debug, error, info, warn};
 use serde::{Deserialize, Serialize};
 
-use crate::plugins::plugin_analyzer::PluginKind;
 use crate::plugins::PluginDescriptor;
 use crate::{
     error::{Error, ErrorKind, ErrorOrigin, Result},
@@ -20,10 +18,7 @@ use crate::{
     },
 };
 
-use super::{
-    connector, os, LibContext, LibInstance, Loadable, LoadableOs, OsArgs, OsInputArg,
-    OsInstanceArcBox,
-};
+use super::{LibContext, Loadable, LoadableOs, OsArgs, OsInputArg, OsInstanceArcBox};
 
 pub struct Registry {
     // connectors: Vec<LibInstance<connector::LoadableConnector>>,
@@ -54,8 +49,8 @@ pub struct PluginMetadata {
     pub descriptors: Vec<PluginDescriptorInfo>,
 }
 
-impl Registry {
-    pub fn new() -> Self {
+impl Default for Registry {
+    fn default() -> Self {
         let mut registry = Self {
             plugins: Vec::new(),
         };
@@ -74,6 +69,12 @@ impl Registry {
         }
 
         registry
+    }
+}
+
+impl Registry {
+    pub fn new() -> Self {
+        Self::default()
     }
 
     pub fn add_dir<P: AsRef<Path>>(&mut self, path: P) -> Result<&Self> {

@@ -2,6 +2,19 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
+## 0.2.2
+- Changed minimum supported rust version to 1.74.0
+- Global C/CPP functions are now prefixed with `mf_` to easier distuingish them from other third-party library functions
+- Added lossy Macho parsing via https://github.com/m4b/goblin
+- Replaced old string read functions with `read_utf8` and `read_utf8_lossy` functions.
+
+## 0.2.1
+- Added aarch64 16k page support
+- Added a seperate `CachedView` as a new page cache on top of `MemoryView`
+
+## 0.2.0
+- Updated ABI version to `1`
+
 ## 0.2.0-beta11
 - Added dtb1 and dtb2 fields to ProcessInfo structure
 - Added a function to the process trait which allows overriding dtb1/dtb2 with a custom value

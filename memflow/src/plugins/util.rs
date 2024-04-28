@@ -1,3 +1,6 @@
+use std::mem::MaybeUninit;
+use std::path::PathBuf;
+
 use crate::cglue::result::into_int_out_result;
 use crate::error::Error;
 
@@ -5,8 +8,6 @@ use super::{
     plugin_analyzer::{PluginArchitecture, PluginFileType},
     LibArc, PluginLogger,
 };
-
-use std::mem::MaybeUninit;
 
 /// Returns the plugin extension appropriate for the current os
 pub fn plugin_extension() -> &'static str {
@@ -38,6 +39,29 @@ pub fn plugin_architecture() -> PluginArchitecture {
     return PluginArchitecture::Arm64;
     #[cfg(target_arch = "arm")]
     return PluginArchitecture::Arm;
+}
+
+/// Returns the path in which memflow plugins are stored.
+///
+/// On unix this is returns ~/.local/lib/memflow
+/// On windows this returns C:\Users\[Username]\Documents\memflow
+pub fn plugins_path() -> PathBuf {
+    let path = if cfg!(unix) {
+        dirs::home_dir()
+            .unwrap()
+            .join(".local")
+            .join("lib")
+            .join("memflow")
+    } else {
+        dirs::document_dir().unwrap().join("memflow")
+    };
+
+    // ensure plugins path exists
+    if !path.exists() {
+        std::fs::create_dir_all(&path).expect("unable to create plugins directory");
+    }
+
+    path
 }
 
 /// Wrapper for instantiating object.

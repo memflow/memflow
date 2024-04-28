@@ -2648,16 +2648,16 @@ uint8_t mf_arch_address_space_bits(const struct ArchitectureObj *arch);
 void mf_arch_free(struct ArchitectureObj *arch);
 
 bool mf_is_x86_arch(const struct ArchitectureObj *arch);
-static inline CArc_c_void ctx_arc_clone(CArc_c_void *self) {
+static CArc_c_void ctx_arc_clone(CArc_c_void *self) {
     CArc_c_void ret = *self;
     ret.instance = self->clone_fn(self->instance);
     return ret;
 }
 
-static inline void ctx_arc_drop(CArc_c_void *self) {
+void ctx_arc_drop(CArc_c_void *self) {
     if (self->drop_fn && self->instance) self->drop_fn(self->instance);
 }
-static inline void cont_box_drop(CBox_c_void *self) {
+void cont_box_drop(CBox_c_void *self) {
     if (self->drop_fn && self->instance) self->drop_fn(self->instance);
 }
 

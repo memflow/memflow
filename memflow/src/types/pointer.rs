@@ -4,7 +4,7 @@ Pointer abstraction.
 
 use crate::cglue::ReprCString;
 use crate::dataview::Pod;
-use crate::error::{PartialError, PartialResult};
+use crate::error::{PartialResult, PartialResultExt};
 use crate::mem::MemoryView;
 use crate::types::{imem, umem, Address, ByteSwap, PrimitiveAddress};
 
@@ -307,16 +307,8 @@ impl<U: PrimitiveAddress, T: Pod + Sized> Pointer<U, T> {
 /// Implement special phys/virt read/write for CReprStr
 impl<U: PrimitiveAddress> Pointer<U, ReprCString> {
     pub fn read_string<M: MemoryView>(self, mem: &mut M) -> PartialResult<ReprCString> {
-        match mem.read_char_string(self.inner.to_umem().into()) {
-            Ok(s) => Ok(s.into()),
-            Err(PartialError::Error(e)) => Err(PartialError::Error(e)),
-            Err(PartialError::PartialVirtualRead(s)) => {
-                Err(PartialError::PartialVirtualRead(s.into()))
-            }
-            Err(PartialError::PartialVirtualWrite(s)) => {
-                Err(PartialError::PartialVirtualWrite(s.into()))
-            }
-        }
+        mem.read_char_string(self.inner.to_umem().into())
+            .map_data(|s| s.into())
     }
 }
 

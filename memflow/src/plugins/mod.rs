@@ -15,6 +15,10 @@ pub use args::{ArgDescriptor, Args, ArgsValidator};
 
 pub mod plugin_analyzer;
 
+// TODO: feature gate
+pub mod registry;
+pub use registry::Registry;
+
 // cbindgen fails to properly parse this as return type
 pub type OptionVoid = Option<&'static mut c_void>;
 

@@ -2,13 +2,11 @@ use core::cmp::Reverse;
 use std::path::{Path, PathBuf};
 
 use cglue::arc::CArc;
-use cglue::trait_group::VerifyLayout;
 use chrono::{DateTime, Local, NaiveDateTime};
 use libloading::Library;
-use log::{debug, error, info, warn};
+use log::{debug, info, warn};
 use serde::{Deserialize, Serialize};
 
-use crate::plugins::PluginDescriptor;
 use crate::{
     error::{Error, ErrorKind, ErrorOrigin, Result},
     plugins::{
@@ -18,11 +16,12 @@ use crate::{
     },
 };
 
-use super::{LibContext, Loadable, LoadableOs, OsArgs, OsInputArg, OsInstanceArcBox};
+use super::{
+    ConnectorArgs, ConnectorInputArg, ConnectorInstanceArcBox, LibContext, Loadable,
+    LoadableConnector, LoadableOs, OsArgs, OsInputArg, OsInstanceArcBox,
+};
 
 pub struct Registry {
-    // connectors: Vec<LibInstance<connector::LoadableConnector>>,
-    // os_layers: Vec<LibInstance<os::LoadableOs>>,
     plugins: Vec<PluginEntry>,
 }
 
@@ -30,6 +29,26 @@ struct PluginEntry {
     path: PathBuf,
     instance: Option<CArc<LibContext>>,
     metadata: PluginMetadata,
+}
+
+impl PluginEntry {
+    pub fn load_instance(&mut self) -> Result<&CArc<LibContext>> {
+        if self.instance.is_none() {
+            let library = unsafe { Library::new(&self.path) }
+                .map_err(|err| {
+                    debug!(
+                        "found plugin {:?} but could not load it: {}",
+                        self.path, err
+                    );
+                    Error(ErrorOrigin::Inventory, ErrorKind::UnableToLoadLibrary)
+                })
+                .map(LibContext::from)
+                .map(CArc::from)?;
+            self.instance = Some(library);
+        }
+
+        Ok(self.instance.as_ref().unwrap())
+    }
 }
 
 /// Metadata attached to each file
@@ -208,7 +227,16 @@ impl Registry {
         Ok(self)
     }
 
-    // TODO: load library
+    // TODO: download plugins
+
+    pub fn instantiate_connector(
+        &mut self,
+        name: &str,
+        input: ConnectorInputArg,
+        args: Option<&ConnectorArgs>,
+    ) -> Result<ConnectorInstanceArcBox<'static>> {
+        self.instantiate_plugin::<LoadableConnector>(name, input, args)
+    }
 
     pub fn instantiate_os(
         &mut self,
@@ -226,103 +254,28 @@ impl Registry {
         input: T::InputArg,
         args: Option<&T::ArgsType>,
     ) -> Result<T::Instance> {
-        // find plugin
-        for plugin in self.plugins.iter_mut() {
-            for descriptor in plugin.metadata.descriptors.iter() {
-                // TODO: find
-                if descriptor.name == name {
-                    println!("plugin found");
+        // find plugin + descriptor
+        let (plugin, descriptor) = self
+            .plugins
+            .iter_mut()
+            .find_map(|plugin| {
+                plugin
+                    .metadata
+                    .descriptors
+                    .clone()
+                    .into_iter()
+                    .find(|descriptor| descriptor.name == name)
+                    .map(|descriptor| (plugin, descriptor))
+            })
+            .ok_or(Error(ErrorOrigin::Inventory, ErrorKind::PluginNotFound))?;
 
-                    if plugin.instance.is_none() {
-                        let library = unsafe { Library::new(&plugin.path) }
-                            .map_err(|err| {
-                                debug!(
-                                    "found plugin {} in library {:?} but could not load it: {}",
-                                    descriptor.name, plugin.path, err
-                                );
-                                Error(ErrorOrigin::Inventory, ErrorKind::UnableToLoadLibrary)
-                            })
-                            .map(LibContext::from)
-                            .map(CArc::from)?;
-                        plugin.instance = Some(library);
-                    }
+        // load plugin instance
+        let instance = plugin.load_instance()?;
 
-                    if let Some(instance) = &plugin.instance {
-                        // library is already loaded, create instance
-                        println!("plugin found, instance found");
+        // create `Loadable` from instance
+        let loadable = T::from_instance(instance, &descriptor.export_name)?;
 
-                        // find raw descriptor
-                        let raw_descriptor = unsafe {
-                            instance
-                                .as_ref()
-                                // TODO: support loading without arc
-                                .ok_or(Error(ErrorOrigin::Inventory, ErrorKind::Uninitialized))?
-                                .lib
-                                .get::<*mut PluginDescriptor<T>>(
-                                    format!("{}\0", descriptor.export_name).as_bytes(),
-                                )
-                                .map_err(|_| {
-                                    Error(ErrorOrigin::Inventory, ErrorKind::MemflowExportsNotFound)
-                                })?
-                                .read()
-                        };
-
-                        // check abi compatability
-                        if VerifyLayout::check::<T::CInputArg>(Some(raw_descriptor.input_layout))
-                            .and(VerifyLayout::check::<T::Instance>(Some(
-                                raw_descriptor.output_layout,
-                            )))
-                            .is_valid_strict()
-                        {
-                            return T::new(raw_descriptor).instantiate(
-                                instance.clone(),
-                                input,
-                                args,
-                            );
-                        } else {
-                            // TODO: print filename
-                            warn!("{} has invalid ABI.", descriptor.export_name);
-                        }
-                    }
-                }
-            }
-        }
-
-        error!("unable to find plugin with name '{}'.", name,);
-        Err(Error(ErrorOrigin::Inventory, ErrorKind::PluginNotFound))
-
-        /*
-        let lib = libs
-            .iter()
-            .filter(|l| l.state.is_loaded())
-            .find(|l| l.ident() == Some(name))
-            .ok_or_else(|| {
-                error!("unable to find plugin with name '{}'.", name,);
-                error!(
-                    "possible available `{}` plugins are: {}",
-                    T::plugin_type(),
-                    Self::plugin_list_available(libs),
-                );
-                error!(
-                    "outdated/mismatched `{}` plugins where found at: {}",
-                    T::plugin_type(),
-                    Self::plugin_list_unavailable(libs),
-                );
-                Error(ErrorOrigin::Inventory, ErrorKind::PluginNotFound)
-            })?;
-
-        if let LibInstanceState::Loaded { library, loader } = &lib.state {
-            info!(
-                "attempting to load `{}` type plugin `{}` from `{}`",
-                T::plugin_type(),
-                loader.ident(),
-                lib.path.to_string_lossy(),
-            );
-
-            loader.instantiate(library.clone(), input, args)
-        } else {
-            unreachable!()
-        }
-        */
+        // instantiate the plugin
+        loadable.instantiate(instance.clone(), input, args)
     }
 }

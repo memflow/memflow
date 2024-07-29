@@ -247,7 +247,7 @@ pub trait Process: Send {
 
     /// Finds a single export of a given module by its name
     fn module_export_by_name(&mut self, info: &ModuleInfo, name: &str) -> Result<ExportInfo> {
-        let mut ret = Err(Error(ErrorOrigin::OsLayer, ErrorKind::ImportNotFound));
+        let mut ret = Err(Error(ErrorOrigin::OsLayer, ErrorKind::ExportNotFound));
         let callback = &mut |data: ExportInfo| {
             if data.name.as_ref() == name {
                 ret = Ok(data);
@@ -262,7 +262,7 @@ pub trait Process: Send {
 
     /// Finds a single section of a given module by its name
     fn module_section_by_name(&mut self, info: &ModuleInfo, name: &str) -> Result<SectionInfo> {
-        let mut ret = Err(Error(ErrorOrigin::OsLayer, ErrorKind::ImportNotFound));
+        let mut ret = Err(Error(ErrorOrigin::OsLayer, ErrorKind::SectionNotFound));
         let callback = &mut |data: SectionInfo| {
             if data.name.as_ref() == name {
                 ret = Ok(data);

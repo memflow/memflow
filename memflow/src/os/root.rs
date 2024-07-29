@@ -240,7 +240,7 @@ pub trait Os: Send {
     ///
     /// This function can be useful for quickly accessing a specific module
     fn module_by_name(&mut self, name: &str) -> Result<ModuleInfo> {
-        let mut ret = Err(Error(ErrorOrigin::OsLayer, ErrorKind::ProcessNotFound));
+        let mut ret = Err(Error(ErrorOrigin::OsLayer, ErrorKind::ModuleNotFound));
         let callback = &mut |data: ModuleInfo| {
             if data.name.as_ref() == name {
                 ret = Ok(data);

@@ -33,7 +33,7 @@ itertools = { version = "0.12", default-features = false }
 memmap = { version = "0.7", optional = true }
 hashbrown = "0.14"
 fixed-slice-vec = "0.10"
-cglue = { version = ">=0.2.10", default-features = false }
+cglue = { version = "=0.2.14", default-features = false }
 rangemap = "1.5"
 
 # no-std

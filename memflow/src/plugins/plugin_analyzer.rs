@@ -229,8 +229,14 @@ fn pe_va_to_offset(pe: &PE, va: u64) -> usize {
 
 fn read_string(bytes: &[u8], offset: usize, len: usize) -> Result<String> {
     if offset == 0 {
-        return Err(Error(ErrorOrigin::Inventory, ErrorKind::NotFound)
-            .log_error("unable to read referenced string in binary"));
+        if len <= 1 {
+            // allow empty strings (e.g. for the description field)
+            return Ok(String::new());
+        } else {
+            // we expect a string but found nothing
+            return Err(Error(ErrorOrigin::Inventory, ErrorKind::NotFound)
+                .log_error("unable to read referenced string in binary"));
+        }
     }
 
     if offset + len > bytes.len() {

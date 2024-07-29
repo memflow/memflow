@@ -413,30 +413,7 @@ pub trait MemoryView: Send {
     #[deprecated = "please use read_utf8 or read_utf8_lossy instead"]
     #[skip_func]
     fn read_char_string_n(&mut self, addr: Address, n: usize) -> PartialResult<String> {
-        let mut buf = vec![0; std::cmp::min(32, n)];
-
-        let mut last_n = 0;
-
-        loop {
-            let (_, right) = buf.split_at_mut(last_n);
-
-            self.read_raw_into(addr + last_n, right).data_part()?;
-            if let Some((n, _)) = right.iter().enumerate().find(|(_, c)| **c == 0_u8) {
-                buf.truncate(last_n + n);
-                return Ok(String::from_utf8_lossy(&buf).to_string());
-            }
-            if buf.len() >= n {
-                break;
-            }
-            last_n = buf.len();
-
-            buf.extend((0..buf.len()).map(|_| 0));
-        }
-
-        Err(PartialError::Error(Error(
-            ErrorOrigin::VirtualMemory,
-            ErrorKind::OutOfBounds,
-        )))
+        self.read_utf8_lossy(addr, n)
     }
 
     /// Reads a variable length string with up to 4kb length from the target.
@@ -447,7 +424,7 @@ pub trait MemoryView: Send {
     #[deprecated = "please use read_utf8 or read_utf8_lossy instead"]
     #[skip_func]
     fn read_char_string(&mut self, addr: Address) -> PartialResult<String> {
-        self.read_char_string_n(addr, 4096)
+        self.read_utf8_lossy(addr, 4096)
     }
 
     /// Reads a string at the given position with a length of up to `max_length` characters.

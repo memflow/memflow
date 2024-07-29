@@ -48,12 +48,16 @@ pelite = { version = "=0.9.0", optional = true, default-features = false, featur
 abi_stable = { version = "=0.10.3", optional = true }
 once_cell = { version = "1.19", optional = true }
 
-goblin = { version = "0.8", optional = true, features = ["pe32", "pe64", "elf32", "elf64", "mach32", "mach64"] }
+goblin = { version = "0.8.1", optional = true, features = ["pe32", "pe64", "elf32", "elf64", "mach32", "mach64"] }
 serde = { version = "1.0", optional = true, default-features = false, features = ["derive", "alloc"] }
 toml = { version = "0.8", optional = true }
 
 # plugin analyzer
 num-traits = { version = "0.2", optional = true }
+
+# registry
+serde_json = { version = "1.0", optional = true }
+chrono = { version = "0.4", optional = true, features = ["serde"] }
 
 [dev-dependencies]
 rand = { version = "0.8" }
@@ -70,7 +74,7 @@ dummy_mem = ["rand", "rand_xorshift"]
 std = ["coarsetime", "no-std-compat/std", "cglue/std"]
 serde_derive = ["serde", "cglue/serde"]
 memmapfiles = ["toml", "serde_derive"]
-plugins = ["libloading", "dirs", "goblin", "os_helpers", "abi_stable", "cglue/layout_checks", "log/std", "once_cell", "num-traits"]
+plugins = ["libloading", "dirs", "goblin", "os_helpers", "abi_stable", "cglue/layout_checks", "log/std", "once_cell", "num-traits", "serde_json", "chrono"]
 filemap = ["memmap"]
 64_bit_mem = []
 os_helpers = ["goblin", "pelite"]

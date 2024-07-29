@@ -15,6 +15,10 @@ pub use args::{ArgDescriptor, Args, ArgsValidator};
 
 pub mod plugin_analyzer;
 
+// TODO: feature gate
+pub mod registry;
+pub use registry::Registry;
+
 // cbindgen fails to properly parse this as return type
 pub type OptionVoid = Option<&'static mut c_void>;
 
@@ -181,6 +185,42 @@ pub trait Loadable: Sized {
     fn export_prefix() -> &'static str;
 
     fn new(descriptor: PluginDescriptor<Self>) -> Self;
+
+    fn from_instance(instance: &CArc<LibContext>, export_name: &str) -> Result<Self> {
+        let raw_descriptor = unsafe {
+            instance
+                .as_ref()
+                // TODO: support loading without arc
+                .ok_or(Error(ErrorOrigin::Inventory, ErrorKind::Uninitialized))?
+                .lib
+                .get::<*mut PluginDescriptor<Self>>(format!("{}\0", export_name).as_bytes())
+                .map_err(|_| Error(ErrorOrigin::Inventory, ErrorKind::MemflowExportsNotFound))?
+                .read()
+        };
+
+        // check version
+        if raw_descriptor.plugin_version != MEMFLOW_PLUGIN_VERSION {
+            warn!(
+                "{} has a different version. version {} required, found {}.",
+                export_name, MEMFLOW_PLUGIN_VERSION, raw_descriptor.plugin_version
+            );
+            return Err(Error(ErrorOrigin::Inventory, ErrorKind::VersionMismatch));
+        }
+
+        // check abi compatability
+        if VerifyLayout::check::<Self::CInputArg>(Some(raw_descriptor.input_layout))
+            .and(VerifyLayout::check::<Self::Instance>(Some(
+                raw_descriptor.output_layout,
+            )))
+            .is_valid_strict()
+        {
+            Ok(Self::new(raw_descriptor))
+        } else {
+            // TODO: print filename
+            warn!("{} has a different abi version.", export_name,);
+            Err(Error(ErrorOrigin::Inventory, ErrorKind::VersionMismatch))
+        }
+    }
 
     fn load_descriptor(
         path: impl AsRef<Path>,

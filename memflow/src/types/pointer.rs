@@ -4,8 +4,9 @@ Pointer abstraction.
 
 use crate::cglue::ReprCString;
 use crate::dataview::Pod;
-use crate::error::{PartialError, PartialResult};
+use crate::error::PartialResult;
 use crate::mem::MemoryView;
+use crate::prelude::PartialError;
 use crate::types::{imem, umem, Address, ByteSwap, PrimitiveAddress};
 
 use std::convert::TryInto;

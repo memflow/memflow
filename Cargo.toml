@@ -18,4 +18,3 @@ exclude = [
 ]
 
 [patch.crates-io]
-goblin = { git = "https://github.com/h33p/goblin", branch = "lossy-macho" }

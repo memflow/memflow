@@ -73,14 +73,14 @@ struct PluginDescriptorInfo64 {
 const _: [(); std::mem::size_of::<PluginDescriptorInfo64>()] = [(); 0x60];
 unsafe impl Pod for PluginDescriptorInfo64 {}
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[serde(rename_all = "snake_case")]
 pub enum PluginKind {
     Connector,
     Os,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[serde(rename_all = "snake_case")]
 pub enum PluginFileType {
     Pe,
@@ -88,7 +88,7 @@ pub enum PluginFileType {
     Mach,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Hash, PartialOrd, Ord)]
 #[serde(rename_all = "snake_case")]
 pub enum PluginArchitecture {
     Unknown(u32),

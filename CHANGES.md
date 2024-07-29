@@ -7,6 +7,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 - Global C/CPP functions are now prefixed with `mf_` to easier distuingish them from other third-party library functions
 - Added lossy Macho parsing via https://github.com/m4b/goblin
 - Replaced old string read functions with `read_utf8` and `read_utf8_lossy` functions.
+- Fixed version pinning of cglue causing abi version mismatches.
 
 ## 0.2.1
 - Added aarch64 16k page support

@@ -2,7 +2,7 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
-## 0.2.2
+## 0.2.3
 - Changed minimum supported rust version to 1.74.0
 - Global C/CPP functions are now prefixed with `mf_` to easier distuingish them from other third-party library functions
 - Added lossy Macho parsing via https://github.com/m4b/goblin

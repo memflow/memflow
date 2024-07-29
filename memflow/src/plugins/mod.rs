@@ -7,6 +7,7 @@ All functionality in this module is gated behind `plugins` feature.
 use crate::cglue::*;
 use cglue::trait_group::c_void;
 use core::convert::{TryFrom, TryInto};
+use serde::de;
 use std::prelude::v1::*;
 
 pub mod args;
@@ -646,7 +647,17 @@ impl Inventory {
         })?;
 
         // extract the first descriptor to check if version and cpu architecture match
-        let descriptor = descriptors.first().unwrap();
+        let descriptor = match descriptors.first() {
+            Some(descriptor) => descriptor,
+            None => {
+                return Err(
+                    Error(ErrorOrigin::Inventory, ErrorKind::InvalidExeFile).log_warn(format!(
+                        "no plugin descriptor found in plugin file {:?}",
+                        path.as_ref(),
+                    )),
+                )
+            }
+        };
 
         // check plugin architecture
         if descriptor.file_type != plugin_file_type()

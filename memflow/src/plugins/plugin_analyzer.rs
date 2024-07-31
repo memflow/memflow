@@ -633,7 +633,7 @@ mod tests {
             parse_descriptors(&file[..]).unwrap(),
             vec![PluginDescriptorInfo {
                 plugin_kind: PluginKind::Os,
-                export_name: "_MEMFLOW_OS_NATIVE".to_owned(),
+                export_name: "MEMFLOW_OS_NATIVE".to_owned(),
                 file_type: PluginFileType::Mach,
                 architecture: PluginArchitecture::Arm64,
                 plugin_version: 1,

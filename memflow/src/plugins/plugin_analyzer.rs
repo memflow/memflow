@@ -141,9 +141,6 @@ pub fn parse_descriptors(bytes: &[u8]) -> Result<Vec<PluginDescriptorInfo>> {
 
 /// Returns the plugin kind based of the export prefix
 fn plugin_kind(export_name: &str) -> Result<PluginKind> {
-    // stripping initial _ is required for MACH builds
-    let export_name = export_name.strip_prefix('_').unwrap_or(export_name);
-
     // match by export prefix
     if export_name.starts_with(MEMFLOW_EXPORT_PREFIX_CONNECTOR) {
         Ok(PluginKind::Connector)
@@ -302,7 +299,10 @@ fn macho_parse_descriptors(bytes: &[u8], macho: &MachO) -> Result<Vec<PluginDesc
 
     if let Ok(exports) = macho.exports() {
         for export in exports.iter() {
-            if let Ok(plugin_kind) = plugin_kind(&export.name) {
+            // stripping initial _ is required for MACH builds
+            let export_name = export.name.strip_prefix('_').unwrap_or(&export.name);
+
+            if let Ok(plugin_kind) = plugin_kind(export_name) {
                 let offset = export.offset;
 
                 let data_view = DataView::from(bytes);
@@ -312,7 +312,7 @@ fn macho_parse_descriptors(bytes: &[u8], macho: &MachO) -> Result<Vec<PluginDesc
                     #[rustfmt::skip]
                     ret.push(PluginDescriptorInfo{
                         plugin_kind,
-                        export_name: export.name.to_string(),
+                        export_name: export_name.to_string(),
                         file_type: PluginFileType::Mach,
                         architecture: macho_architecture(macho),
                         plugin_version: raw_desc.plugin_version,

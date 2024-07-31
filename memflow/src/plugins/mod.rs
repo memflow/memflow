@@ -180,6 +180,9 @@ pub trait Loadable: Sized {
     fn new(descriptor: PluginDescriptor<Self>) -> Self;
 
     fn from_instance(instance: &CArc<LibContext>, export_name: &str) -> Result<Self> {
+        // stripping initial _ is required for MACH builds
+        let export_name = export_name.strip_prefix('_').unwrap_or(export_name);
+
         let raw_descriptor = unsafe {
             instance
                 .as_ref()

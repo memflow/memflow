@@ -77,7 +77,9 @@ impl PluginLogger {
     /// Updates the log level on the plugin end from local end
     pub fn on_level_change(&self, new_level: LevelFilter) {
         let val = self.on_level_change.load(Ordering::Relaxed);
-        if let Some(on_change) = unsafe { std::mem::transmute::<_, Option<SetMaxLevelFn>>(val) } {
+        if let Some(on_change) =
+            unsafe { std::mem::transmute::<*mut c_void, Option<SetMaxLevelFn>>(val) }
+        {
             on_change(new_level);
         }
     }

@@ -65,13 +65,13 @@ impl IntError for Error {
         let kind = ((-err.get() - 1) >> 16i32) & 0xFFFi32;
 
         let error_origin = if origin > 0 && origin <= ErrorOrigin::Other as i32 + 1 {
-            unsafe { std::mem::transmute(origin as u16 - 1) }
+            unsafe { std::mem::transmute::<u16, ErrorOrigin>(origin as u16 - 1) }
         } else {
             ErrorOrigin::Other
         };
 
         let error_kind = if kind > 0 && kind <= ErrorKind::Unknown as i32 + 1 {
-            unsafe { std::mem::transmute(kind as u16 - 1) }
+            unsafe { std::mem::transmute::<u16, ErrorKind>(kind as u16 - 1) }
         } else {
             ErrorKind::Unknown
         };

@@ -54,8 +54,6 @@ jobs:
         os: [macos-latest, ubuntu-latest, windows-latest]
     steps:
       - uses: actions/checkout@v4
-        with:
-          lfs: true
       - name: Install rust 1.74.0
         uses: actions-rs/toolchain@v1
         with:
@@ -81,8 +79,6 @@ jobs:
         target: [aarch64-unknown-linux-gnu, i686-unknown-linux-gnu]
     steps:
       - uses: actions/checkout@v4
-        with:
-          lfs: true
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: nightly # currently required due to -Zdoctest-xcompile
@@ -160,7 +156,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          lfs: true
           path: 'memflow-repo'
       - name: Set up Rust nightly
         uses: actions-rs/toolchain@v1

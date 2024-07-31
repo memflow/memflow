@@ -10,8 +10,9 @@ use crate::mem::phys_mem::*;
 use crate::types::{cache::TimedCacheValidator, size};
 
 use super::{
-    args::split_str_args, Args, LibArc, LibContext, Loadable, OsInstanceArcBox, PluginDescriptor,
-    TargetInfo,
+    args::split_str_args,
+    plugin_analyzer::{PluginKind, MEMFLOW_EXPORT_PREFIX_CONNECTOR},
+    Args, LibArc, LibContext, Loadable, OsInstanceArcBox, PluginDescriptor, TargetInfo,
 };
 
 use crate::connector::cpu_state::*;
@@ -294,12 +295,12 @@ impl Loadable for LoadableConnector {
         unsafe { self.descriptor.name.into_str() }
     }
 
-    fn export_prefix() -> &'static str {
-        "MEMFLOW_CONNECTOR_"
+    fn plugin_kind() -> PluginKind {
+        PluginKind::Connector
     }
 
-    fn plugin_type() -> &'static str {
-        "Connector"
+    fn export_prefix() -> &'static str {
+        MEMFLOW_EXPORT_PREFIX_CONNECTOR
     }
 
     fn new(descriptor: PluginDescriptor<Self>) -> Self {

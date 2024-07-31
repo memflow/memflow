@@ -160,7 +160,7 @@ fn main() -> Result<()> {
     .unwrap();
 
     // create connector + os
-    let inventory = Inventory::scan();
+    let mut inventory = Inventory::scan();
 
     let os = inventory.builder().os_chain(chain).build()?;
 

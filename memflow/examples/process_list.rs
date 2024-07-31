@@ -8,13 +8,13 @@ fn main() -> Result<()> {
     //let matches = parse_args();
     //let chain = extract_args(&matches)?;
 
-    let mut registry = Registry::new();
+    let mut inventory = Inventory::new();
 
     // now use the same builder stuff?
-    let mut os = registry.instantiate_os("native", None, None)?;
+    let mut os = inventory.instantiate_os("native", None, None)?;
 
     // create inventory + os
-    //let inventory = Inventory::scan();
+    //let mut inventory = Inventory::scan();
     //let mut os = inventory.builder().os_chain(chain).build()?;
 
     let process_list = os.process_info_list()?;

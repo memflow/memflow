@@ -24,8 +24,8 @@ use crate::{
     plugins::{ErrorKind, ErrorOrigin},
 };
 
-const MEMFLOW_EXPORT_PREFIX_CONNECTOR: &str = "MEMFLOW_CONNECTOR_";
-const MEMFLOW_EXPORT_PREFIX_OS: &str = "MEMFLOW_OS_";
+pub(crate) const MEMFLOW_EXPORT_PREFIX_CONNECTOR: &str = "MEMFLOW_CONNECTOR_";
+pub(crate) const MEMFLOW_EXPORT_PREFIX_OS: &str = "MEMFLOW_OS_";
 
 /// The PluginDescriptorInfo struct is adapted and translated from memflow version 0.2.x:
 /// https://github.com/memflow/memflow/blob/0.2.0/memflow/src/plugins/mod.rs#L105

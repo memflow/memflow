@@ -13,7 +13,7 @@ fn main() -> Result<()> {
     let (chain, sysproc, kernel_mods) = extract_args(&matches)?;
 
     // create inventory + os
-    let inventory = Inventory::scan();
+    let mut inventory = Inventory::scan();
     let mut os = inventory.builder().os_chain(chain).build()?;
 
     {

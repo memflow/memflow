@@ -3,6 +3,7 @@ use crate::error::*;
 use crate::mem::{memory_view::*, phys_mem::*, virt_translate::*};
 use crate::os::{keyboard::*, process::*, root::*};
 
+use super::plugin_analyzer::{PluginKind, MEMFLOW_EXPORT_PREFIX_OS};
 use super::LibArc;
 use super::{
     args::split_str_args, Args, ConnectorInstanceArcBox, LibContext, Loadable, PluginDescriptor,
@@ -80,16 +81,16 @@ impl Loadable for LoadableOs {
     type CInputArg = COption<ConnectorInstanceArcBox<'static>>;
     type ArgsType = OsArgs;
 
-    fn export_prefix() -> &'static str {
-        "MEMFLOW_OS_"
-    }
-
     fn ident(&self) -> &str {
         unsafe { self.descriptor.name.into_str() }
     }
 
-    fn plugin_type() -> &'static str {
-        "OS"
+    fn plugin_kind() -> PluginKind {
+        PluginKind::Os
+    }
+
+    fn export_prefix() -> &'static str {
+        MEMFLOW_EXPORT_PREFIX_OS
     }
 
     fn new(descriptor: PluginDescriptor<Self>) -> Self {

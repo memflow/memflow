@@ -30,7 +30,7 @@ fn main() -> Result<()> {
     let (chain, proc_name, module_name, dtb) = extract_args(&matches)?;
 
     // create inventory + os
-    let inventory = Inventory::scan();
+    let mut inventory = Inventory::scan();
     let mut os = inventory.builder().os_chain(chain).build()?;
 
     let mut process = if let Some(dtb) = dtb {

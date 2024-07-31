@@ -16,7 +16,7 @@ fn main() -> Result<()> {
     let (chain, proc_name) = extract_args(&matches)?;
 
     // create inventory + os
-    let inventory = Inventory::scan();
+    let mut inventory = Inventory::scan();
     let os = inventory.builder().os_chain(chain).build()?;
 
     let mut process = os

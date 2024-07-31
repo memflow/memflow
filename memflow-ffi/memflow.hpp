@@ -180,7 +180,7 @@ using CpuStateRetTmp = void;
  * # use memflow::plugins::OsInstanceArcBox;
  * # use memflow::error::Result;
  * # fn test() -> Result<OsInstanceArcBox<'static>> {
- * let inventory = Inventory::scan();
+ * let mut inventory = Inventory::scan();
  * inventory
  *   .builder()
  *   .connector("qemu")
@@ -195,7 +195,7 @@ using CpuStateRetTmp = void;
  * use memflow::plugins::{Inventory, Args};
  * # use memflow::error::Result;
  * # fn test() -> Result<()> {
- * let inventory = Inventory::scan();
+ * let mut inventory = Inventory::scan();
  * let os = inventory
  *   .builder()
  *   .connector("qemu")

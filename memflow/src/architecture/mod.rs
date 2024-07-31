@@ -135,6 +135,7 @@ impl std::cmp::PartialEq<ArchitectureObj> for ArchitectureObj {
     // This lint doesn't make any sense in our usecase, since we never leak underlying Architecture
     // definitions, and each ARCH is a static trait object with a consistent address.
     #[allow(clippy::vtable_address_comparisons)]
+    // for rust/clippy 1.79.0: #[allow(clippy::ambiguous_wide_pointer_comparisons)]
     fn eq(&self, other: &ArchitectureObj) -> bool {
         std::ptr::eq(*self, *other)
     }

@@ -211,14 +211,14 @@ impl DummyOs {
 
         for _ in 0..2 {
             page_prelist.shuffle(&mut rng);
-            for i in page_prelist {
-                let mut list = if split[i.size.to_idx()] == 0
-                    || (split[i.size.to_idx()] != 2 && rng.gen::<bool>())
+            for pi in page_prelist {
+                let mut list = if split[pi.size.to_idx()] == 0
+                    || (split[pi.size.to_idx()] != 2 && rng.gen::<bool>())
                 {
-                    split[i.size.to_idx()] = std::cmp::max(split[i.size.to_idx()], 1);
-                    i.split_down()
+                    split[pi.size.to_idx()] = std::cmp::max(split[pi.size.to_idx()], 1);
+                    pi.split_down()
                 } else {
-                    [i].to_vec()
+                    [pi].to_vec()
                 };
 
                 list.shuffle(&mut rng);
@@ -228,6 +228,8 @@ impl DummyOs {
                 }
             }
 
+            // this clone is required due to borrowing in the shuffle() call above.
+            // for rust/clippy 1.79.0: #[allow(clippy::assigning_clones)]
             page_prelist = page_list.clone();
         }
 

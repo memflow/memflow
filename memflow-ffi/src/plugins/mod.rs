@@ -76,7 +76,7 @@ pub unsafe extern "C" fn mf_inventory_add_dir(inv: &mut Inventory, dir: *const c
 /// Any error strings returned by the connector must not be outputed after the connector gets
 /// freed, because that operation could cause the underlying shared library to get unloaded.
 #[no_mangle]
-pub unsafe extern "C" fn mf_inventory_create_connector(
+pub unsafe extern "C" fn mf_inventory_instantiate_connector(
     inv: &mut Inventory,
     name: *const c_char,
     args: *const c_char,
@@ -85,14 +85,100 @@ pub unsafe extern "C" fn mf_inventory_create_connector(
     let rname = CStr::from_ptr(name).to_string_lossy();
 
     if args.is_null() {
-        inv.create_connector(&rname, None, None)
+        inv.instantiate_connector(&rname, None, None)
             .map_err(inspect_err)
             .into_int_out_result(out)
     } else {
         let rargs = CStr::from_ptr(args).to_string_lossy();
         str::parse(&rargs)
             .map_err(inspect_err)
-            .and_then(|args| inv.create_connector(&rname, None, Some(&args)))
+            .and_then(|args| inv.instantiate_connector(&rname, None, Some(&args)))
+            .map_err(inspect_err)
+            .into_int_out_result(out)
+    }
+}
+
+/// Create a connector with given arguments
+///
+/// This creates an instance of `ConnectorInstance`.
+///
+/// This instance needs to be dropped using `connector_drop`.
+///
+/// # Arguments
+///
+/// * `name` - name of the connector to use
+/// * `args` - arguments to be passed to the connector upon its creation
+///
+/// # Safety
+///
+/// Both `name`, and `args` must be valid null terminated strings.
+///
+/// Any error strings returned by the connector must not be outputed after the connector gets
+/// freed, because that operation could cause the underlying shared library to get unloaded.
+#[deprecated(note = "use mf_inventory_instantiate_connector instead")]
+#[no_mangle]
+pub unsafe extern "C" fn mf_inventory_create_connector(
+    inv: &mut Inventory,
+    name: *const c_char,
+    args: *const c_char,
+    out: &mut MuConnectorInstanceArcBox<'static>,
+) -> i32 {
+    mf_inventory_instantiate_connector(inv, name, args, out)
+}
+
+/// Create a OS instance with given arguments
+///
+/// This creates an instance of `KernelInstance`.
+///
+/// This instance needs to be freed using `os_drop`.
+///
+/// # Arguments
+///
+/// * `name` - name of the OS to use
+/// * `args` - arguments to be passed to the connector upon its creation
+/// * `mem` - a previously initialized connector instance
+/// * `out` - a valid memory location that will contain the resulting os-instance
+///
+/// # Remarks
+///
+/// The `mem` connector instance is being _moved_ into the os layer.
+/// This means upon calling `os_drop` it is not unnecessary to call `connector_drop` anymore.
+///
+/// # Safety
+///
+/// Both `name`, and `args` must be valid null terminated strings.
+///
+/// Any error strings returned by the connector must not be outputed after the connector gets
+/// freed, because that operation could cause the underlying shared library to get unloaded.
+#[no_mangle]
+pub unsafe extern "C" fn mf_inventory_instantiate_os(
+    inv: &mut Inventory,
+    name: *const c_char,
+    args: *const c_char,
+    mem: *mut ConnectorInstanceArcBox<'static>,
+    out: &mut MuOsInstanceArcBox<'static>,
+) -> i32 {
+    let rname = CStr::from_ptr(name).to_string_lossy();
+    let _args = CStr::from_ptr(args).to_string_lossy();
+
+    let mem_obj = if mem.is_null() {
+        None
+    } else {
+        let mem_obj = mem.read();
+        // Zero out the data so that any automatic destructors on the other side do nothing.
+        std::ptr::write_bytes(mem, 0, 1);
+        Some(mem_obj)
+    };
+
+    if args.is_null() {
+        inv.instantiate_os(&rname, mem_obj, None)
+            .map_err(inspect_err)
+            .into_int_out_result(out)
+    } else {
+        let rargs = CStr::from_ptr(args).to_string_lossy();
+        str::parse(&rargs)
+            .map_err(inspect_err)
+            .and_then(|args| inv.instantiate_os(&rname, mem_obj, Some(&args)))
             .map_err(inspect_err)
             .into_int_out_result(out)
     }
@@ -122,6 +208,7 @@ pub unsafe extern "C" fn mf_inventory_create_connector(
 ///
 /// Any error strings returned by the connector must not be outputed after the connector gets
 /// freed, because that operation could cause the underlying shared library to get unloaded.
+#[deprecated(note = "use mf_inventory_instantiate_os instead")]
 #[no_mangle]
 pub unsafe extern "C" fn mf_inventory_create_os(
     inv: &mut Inventory,
@@ -130,30 +217,7 @@ pub unsafe extern "C" fn mf_inventory_create_os(
     mem: *mut ConnectorInstanceArcBox<'static>,
     out: &mut MuOsInstanceArcBox<'static>,
 ) -> i32 {
-    let rname = CStr::from_ptr(name).to_string_lossy();
-    let _args = CStr::from_ptr(args).to_string_lossy();
-
-    let mem_obj = if mem.is_null() {
-        None
-    } else {
-        let mem_obj = mem.read();
-        // Zero out the data so that any automatic destructors on the other side do nothing.
-        std::ptr::write_bytes(mem, 0, 1);
-        Some(mem_obj)
-    };
-
-    if args.is_null() {
-        inv.create_os(&rname, mem_obj, None)
-            .map_err(inspect_err)
-            .into_int_out_result(out)
-    } else {
-        let rargs = CStr::from_ptr(args).to_string_lossy();
-        str::parse(&rargs)
-            .map_err(inspect_err)
-            .and_then(|args| inv.create_os(&rname, mem_obj, Some(&args)))
-            .map_err(inspect_err)
-            .into_int_out_result(out)
-    }
+    mf_inventory_instantiate_os(inv, name, args, mem, out)
 }
 
 /// Free a os plugin

@@ -48,7 +48,7 @@ pub const UMEM_BITS: u8 = core::mem::size_of::<umem>() as u8 * 8;
 const _: [u8; (core::mem::size_of::<usize>() <= core::mem::size_of::<umem>()) as usize] = [0; 1];
 
 pub const fn clamp_to_usize(val: umem) -> usize {
-    let max = core::usize::MAX as umem;
+    let max = usize::MAX as umem;
 
     let ret = if max < val { max } else { val };
 
@@ -56,8 +56,8 @@ pub const fn clamp_to_usize(val: umem) -> usize {
 }
 
 pub const fn clamp_to_isize(val: imem) -> isize {
-    let max = core::isize::MAX as imem;
-    let min = core::isize::MIN as imem;
+    let max = isize::MAX as imem;
+    let min = isize::MIN as imem;
 
     let ret = if max < val {
         max
@@ -240,10 +240,9 @@ impl Address {
     ///
     /// println!("mask: {}", Address::bit_mask(0..=11));
     /// ```
-    pub fn bit_mask<T: TryInto<u8>>(bits: ops::RangeInclusive<T>) -> Address
+    pub fn bit_mask<T>(bits: ops::RangeInclusive<T>) -> Address
     where
-        T: TryInto<u8>,
-        T: Copy,
+        T: TryInto<u8> + Copy,
     {
         Address(
             (!0 >> ((UMEM_BITS - 1) - (*bits.end()).try_into().ok().unwrap()))
@@ -391,9 +390,9 @@ impl Address {
     /// let addr = Address::from(123456789);
     /// println!("bits[0..2] = {}", addr.extract_bits(0..=2));
     /// ```
-    pub fn extract_bits<T: TryInto<u8>>(self, bits: ops::RangeInclusive<T>) -> Address
+    pub fn extract_bits<T>(self, bits: ops::RangeInclusive<T>) -> Address
     where
-        T: Copy,
+        T: TryInto<u8> + Copy,
     {
         (self.0 & Address::bit_mask(bits).to_umem()).into()
     }

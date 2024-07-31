@@ -7,7 +7,7 @@ fn main() {
     let connector = parse_args();
 
     // create inventory
-    let inventory = Inventory::scan();
+    let mut inventory = Inventory::scan();
 
     // try to get help text
     println!(

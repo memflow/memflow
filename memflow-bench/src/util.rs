@@ -11,7 +11,7 @@ pub fn build_os(
     let filter = log::max_level();
     log::set_max_level(log::Level::Debug.to_level_filter());
 
-    let inventory = Inventory::scan();
+    let mut inventory = Inventory::scan();
 
     log::set_max_level(log::Level::Error.to_level_filter());
 

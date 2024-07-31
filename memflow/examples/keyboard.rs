@@ -9,7 +9,7 @@ fn main() -> Result<()> {
     let chain = extract_args(&matches)?;
 
     // create inventory + os
-    let inventory = Inventory::scan();
+    let mut inventory = Inventory::scan();
     let os = inventory.builder().os_chain(chain).build()?;
 
     if !os.check_impl_oskeyboard() {

@@ -11,15 +11,16 @@ use memflow::plugins::*;
 // For each cloned connector a thread is spawned that initializes a seperate OS instance.
 pub fn parallel_init(
     connector: ConnectorInstanceArcBox<'static>,
-    inventory: &Inventory,
+    inventory: &mut Inventory,
     os_name: &str,
     os_args: &OsArgs,
 ) {
     rayon::scope(|s| {
         (0..8).map(|_| connector.clone()).for_each(|c| {
-            s.spawn(move |_| {
+            s.spawn(|_| {
                 inventory
-                    .create_os(os_name, Some(c), Some(os_args))
+                    .clone()
+                    .instantiate_os(os_name, Some(c), Some(os_args))
                     .unwrap();
             })
         })
@@ -67,19 +68,19 @@ pub fn main() {
     .unwrap();
 
     // create inventory + connector
-    let inventory = Inventory::scan();
+    let mut inventory = Inventory::scan();
     let connector = inventory
-        .create_connector(&conn_name, None, Some(&conn_args))
+        .instantiate_connector(&conn_name, None, Some(&conn_args))
         .unwrap();
 
     // parallel test functions
     // see each function's implementation for further details
 
     // showcasing parallel initialization of kernel objects
-    parallel_init(connector.clone(), &inventory, &os_name, &os_args);
+    parallel_init(connector.clone(), &mut inventory, &os_name, &os_args);
 
     let kernel = inventory
-        .create_os(&os_name, Some(connector), Some(&os_args))
+        .instantiate_os(&os_name, Some(connector), Some(&os_args))
         .unwrap();
 
     // showcasing parallel process iteration

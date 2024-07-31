@@ -79,8 +79,8 @@
 //! ```
 //! # use memflow::prelude::v1::*;
 //! # fn main() -> Result<()> {
-//! let inventory = Inventory::scan();
-//! # let inventory = inventory.with_workspace()?;
+//! let mut inventory = Inventory::scan();
+//! # let mut inventory = inventory.with_workspace()?;
 //!
 //! let conn = inventory.create_connector("dummy", None, None)?;
 //! # Ok(())

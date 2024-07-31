@@ -8,6 +8,7 @@ use super::{
     plugin_analyzer::{PluginArchitecture, PluginFileType},
     LibArc, PluginLogger,
 };
+use super::{ErrorKind, ErrorOrigin};
 
 /// Returns the plugin extension appropriate for the current os
 pub fn plugin_extension() -> &'static str {
@@ -45,7 +46,7 @@ pub fn plugin_architecture() -> PluginArchitecture {
 ///
 /// On unix this is returns ~/.local/lib/memflow
 /// On windows this returns C:\Users\[Username]\Documents\memflow
-pub fn plugins_path() -> PathBuf {
+pub fn plugins_path() -> crate::error::Result<PathBuf> {
     let path = if cfg!(unix) {
         dirs::home_dir()
             .unwrap()
@@ -58,10 +59,13 @@ pub fn plugins_path() -> PathBuf {
 
     // ensure plugins path exists
     if !path.exists() {
-        std::fs::create_dir_all(&path).expect("unable to create plugins directory");
+        std::fs::create_dir_all(&path).map_err(|_| {
+            Error(ErrorOrigin::Inventory, ErrorKind::UnableToCreateDirectory)
+                .log_error("unable to create plugins directory")
+        })?;
     }
 
-    path
+    Ok(path)
 }
 
 /// Wrapper for instantiating object.

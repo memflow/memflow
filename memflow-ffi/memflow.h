@@ -2544,10 +2544,66 @@ int32_t mf_inventory_add_dir(struct Inventory *inv, const char *dir);
  * Any error strings returned by the connector must not be outputed after the connector gets
  * freed, because that operation could cause the underlying shared library to get unloaded.
  */
+int32_t mf_inventory_instantiate_connector(struct Inventory *inv,
+                                           const char *name,
+                                           const char *args,
+                                           MuConnectorInstanceArcBox *out);
+
+/**
+ * Create a connector with given arguments
+ *
+ * This creates an instance of `ConnectorInstance`.
+ *
+ * This instance needs to be dropped using `connector_drop`.
+ *
+ * # Arguments
+ *
+ * * `name` - name of the connector to use
+ * * `args` - arguments to be passed to the connector upon its creation
+ *
+ * # Safety
+ *
+ * Both `name`, and `args` must be valid null terminated strings.
+ *
+ * Any error strings returned by the connector must not be outputed after the connector gets
+ * freed, because that operation could cause the underlying shared library to get unloaded.
+ */
 int32_t mf_inventory_create_connector(struct Inventory *inv,
                                       const char *name,
                                       const char *args,
                                       MuConnectorInstanceArcBox *out);
+
+/**
+ * Create a OS instance with given arguments
+ *
+ * This creates an instance of `KernelInstance`.
+ *
+ * This instance needs to be freed using `os_drop`.
+ *
+ * # Arguments
+ *
+ * * `name` - name of the OS to use
+ * * `args` - arguments to be passed to the connector upon its creation
+ * * `mem` - a previously initialized connector instance
+ * * `out` - a valid memory location that will contain the resulting os-instance
+ *
+ * # Remarks
+ *
+ * The `mem` connector instance is being _moved_ into the os layer.
+ * This means upon calling `os_drop` it is not unnecessary to call `connector_drop` anymore.
+ *
+ * # Safety
+ *
+ * Both `name`, and `args` must be valid null terminated strings.
+ *
+ * Any error strings returned by the connector must not be outputed after the connector gets
+ * freed, because that operation could cause the underlying shared library to get unloaded.
+ */
+int32_t mf_inventory_instantiate_os(struct Inventory *inv,
+                                    const char *name,
+                                    const char *args,
+                                    ConnectorInstanceArcBox *mem,
+                                    MuOsInstanceArcBox *out);
 
 /**
  * Create a OS instance with given arguments
@@ -2648,16 +2704,16 @@ uint8_t mf_arch_address_space_bits(const struct ArchitectureObj *arch);
 void mf_arch_free(struct ArchitectureObj *arch);
 
 bool mf_is_x86_arch(const struct ArchitectureObj *arch);
-static CArc_c_void ctx_arc_clone(CArc_c_void *self) {
+static inline CArc_c_void ctx_arc_clone(CArc_c_void *self) {
     CArc_c_void ret = *self;
     ret.instance = self->clone_fn(self->instance);
     return ret;
 }
 
-void ctx_arc_drop(CArc_c_void *self) {
+static inline void ctx_arc_drop(CArc_c_void *self) {
     if (self->drop_fn && self->instance) self->drop_fn(self->instance);
 }
-void cont_box_drop(CBox_c_void *self) {
+static inline void cont_box_drop(CBox_c_void *self) {
     if (self->drop_fn && self->instance) self->drop_fn(self->instance);
 }
 

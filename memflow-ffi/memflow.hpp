@@ -3121,10 +3121,66 @@ int32_t mf_inventory_add_dir(Inventory *inv, const char *dir);
  * Any error strings returned by the connector must not be outputed after the connector gets
  * freed, because that operation could cause the underlying shared library to get unloaded.
  */
+int32_t mf_inventory_instantiate_connector(Inventory *inv,
+                                           const char *name,
+                                           const char *args,
+                                           MuConnectorInstanceArcBox *out);
+
+/**
+ * Create a connector with given arguments
+ *
+ * This creates an instance of `ConnectorInstance`.
+ *
+ * This instance needs to be dropped using `connector_drop`.
+ *
+ * # Arguments
+ *
+ * * `name` - name of the connector to use
+ * * `args` - arguments to be passed to the connector upon its creation
+ *
+ * # Safety
+ *
+ * Both `name`, and `args` must be valid null terminated strings.
+ *
+ * Any error strings returned by the connector must not be outputed after the connector gets
+ * freed, because that operation could cause the underlying shared library to get unloaded.
+ */
 int32_t mf_inventory_create_connector(Inventory *inv,
                                       const char *name,
                                       const char *args,
                                       MuConnectorInstanceArcBox *out);
+
+/**
+ * Create a OS instance with given arguments
+ *
+ * This creates an instance of `KernelInstance`.
+ *
+ * This instance needs to be freed using `os_drop`.
+ *
+ * # Arguments
+ *
+ * * `name` - name of the OS to use
+ * * `args` - arguments to be passed to the connector upon its creation
+ * * `mem` - a previously initialized connector instance
+ * * `out` - a valid memory location that will contain the resulting os-instance
+ *
+ * # Remarks
+ *
+ * The `mem` connector instance is being _moved_ into the os layer.
+ * This means upon calling `os_drop` it is not unnecessary to call `connector_drop` anymore.
+ *
+ * # Safety
+ *
+ * Both `name`, and `args` must be valid null terminated strings.
+ *
+ * Any error strings returned by the connector must not be outputed after the connector gets
+ * freed, because that operation could cause the underlying shared library to get unloaded.
+ */
+int32_t mf_inventory_instantiate_os(Inventory *inv,
+                                    const char *name,
+                                    const char *args,
+                                    ConnectorInstanceArcBox *mem,
+                                    MuOsInstanceArcBox *out);
 
 /**
  * Create a OS instance with given arguments

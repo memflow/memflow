@@ -116,9 +116,11 @@ impl Default for Inventory {
     fn default() -> Self {
         let mut inventory = Self::empty();
 
-        inventory
-            .add_dir(plugins_path())
-            .expect("unable to parse plugin path");
+        if let Ok(plugins_path) = plugins_path() {
+            inventory
+                .add_dir(plugins_path)
+                .expect("unable to parse plugin path");
+        }
 
         inventory.print_plugins();
 
@@ -192,7 +194,9 @@ impl Inventory {
         let mut inventory = Self::empty();
 
         // add default paths
-        inventory.add_dir(plugins_path()).ok();
+        if let Ok(plugins_path) = plugins_path() {
+            inventory.add_dir(plugins_path).ok();
+        }
 
         // add environment variable MEMFLOW_PLUGIN_PATH
         let path_var = std::env::var_os("MEMFLOW_PLUGIN_PATH");
@@ -226,7 +230,7 @@ impl Inventory {
     ///
     /// This function is used behind the scenes by the documentation, however, is not particularly
     /// useful for end users.
-    pub fn with_workspace(mut self) -> Result<Self> {
+    pub fn add_cargo_workspace(mut self) -> Result<Self> {
         let paths = std::fs::read_dir("../target/").map_err(|_| ErrorKind::UnableToReadDir)?;
         for path in paths {
             match path.unwrap().file_name().to_str() {
@@ -524,7 +528,7 @@ impl Inventory {
     /// ```
     /// use memflow::plugins::{Inventory, ConnectorArgs};
     ///
-    /// # let mut inventory = Inventory::scan().with_workspace().unwrap();
+    /// # let mut inventory = Inventory::scan().add_cargo_workspace().unwrap();
     /// let args = str::parse(":4m").unwrap();
     /// let os = inventory.instantiate_os("dummy", None, Some(&args))
     ///     .unwrap();

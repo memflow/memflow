@@ -80,9 +80,9 @@
 //! # use memflow::prelude::v1::*;
 //! # fn main() -> Result<()> {
 //! let mut inventory = Inventory::scan();
-//! # let mut inventory = inventory.with_workspace()?;
+//! # let mut inventory = inventory.add_cargo_workspace()?;
 //!
-//! let conn = inventory.create_connector("dummy", None, None)?;
+//! let conn = inventory.instantiate_connector("dummy", None, None)?;
 //! # Ok(())
 //! # }
 //!
@@ -194,9 +194,9 @@
 //!
 //! // Use it with plugin object
 //! let mut inventory = Inventory::scan();
-//! # let mut inventory = inventory.with_workspace().unwrap();
+//! # let mut inventory = inventory.add_cargo_workspace().unwrap();
 //! let args = str::parse(":4m").unwrap();
-//! let conn = inventory.create_connector("dummy", None, Some(&args))
+//! let conn = inventory.instantiate_connector("dummy", None, Some(&args))
 //!     .unwrap();
 //!
 //! assert!(special_read(&mut conn.into_phys_view()).is_ok());

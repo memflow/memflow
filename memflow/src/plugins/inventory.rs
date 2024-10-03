@@ -375,13 +375,25 @@ impl Inventory {
 
         // sort by created_at
         let search_key = created_at;
-        match self
+
+        if let Ok(pos) = self
             .plugins
             .binary_search_by_key(&Reverse(search_key), |entry| {
                 Reverse(entry.metadata.created_at)
-            }) {
-            Ok(_) => unreachable!(), // element already in vector @ `pos` // TODO: check for duplicate entries
-            Err(pos) => self.plugins.insert(
+            })
+            .or_else(|v| {
+                for p in &self.plugins[v..] {
+                    if p.path == path.as_ref() {
+                        return Err(v);
+                    }
+                    if p.metadata.created_at != created_at {
+                        break;
+                    }
+                }
+                Ok(v)
+            })
+        {
+            self.plugins.insert(
                 pos,
                 PluginEntry {
                     path: path.as_ref().to_path_buf(),
@@ -393,7 +405,7 @@ impl Inventory {
                         descriptors,
                     },
                 },
-            ),
+            );
         }
 
         Ok(self)

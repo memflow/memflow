@@ -444,7 +444,7 @@ mod tests {
 
     #[test]
     pub fn error_from_i32_invalid() {
-        let mut err = Error::from_int_err(NonZeroI32::new(std::i32::MIN + 1).unwrap());
+        let mut err = Error::from_int_err(NonZeroI32::new(i32::MIN + 1).unwrap());
         assert_eq!(err.0, ErrorOrigin::Other);
         assert_eq!(err.1, ErrorKind::Unknown);
 

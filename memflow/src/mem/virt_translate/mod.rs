@@ -3,21 +3,21 @@
 //! This module describes virtual to physical address translation interfaces.
 //!
 //! * [VirtualTranslate](VirtualTranslate) - user facing trait providing a way to translate
-//! addresses.
+//!   addresses.
 //!
 //! * [VirtualTranslate2](VirtualTranslate2) - internally used trait that translates pairs of
-//! buffers and virtual addresses into pairs of buffers and their corresponding physical addresses.
-//! Is used to provide [virtual memory view](crate::mem::virt_mem::virtual_dma). This trait is also
-//! a [point of caching](crate::mem::virt_translate::cache) for the translations.
+//!   buffers and virtual addresses into pairs of buffers and their corresponding physical addresses.
+//!   Is used to provide [virtual memory view](crate::mem::virt_mem::virtual_dma). This trait is also
+//!   a [point of caching](crate::mem::virt_translate::cache) for the translations.
 //!
 //! * [VirtualTranslate3](VirtualTranslate3) - a sub-scope that translates addresses of a single
-//! address space. Objects that implement VirtualTranslate3 are designed to be cheap to construct,
-//! because they use pooled resources from VirtualTranslate2 objects. This is equivalent to storing
-//! a single VirtualTranslate2 state for the OS, while constructing VirtualTranslate3 instances for
-//! each process. This is precisely what is being done in our Win32 OS (see
-//! [here](https://github.com/memflow/memflow-win32/blob/791bb7afb8a984034dde314c136b7675b44e3abf/src/win32/process.rs#L348),
-//! and
-//! [here](https://github.com/memflow/memflow-win32/blob/791bb7afb8a984034dde314c136b7675b44e3abf/src/win32/process.rs#L314)).
+//!   address space. Objects that implement VirtualTranslate3 are designed to be cheap to construct,
+//!   because they use pooled resources from VirtualTranslate2 objects. This is equivalent to storing
+//!   a single VirtualTranslate2 state for the OS, while constructing VirtualTranslate3 instances for
+//!   each process. This is precisely what is being done in our Win32 OS (see
+//!   [here](https://github.com/memflow/memflow-win32/blob/791bb7afb8a984034dde314c136b7675b44e3abf/src/win32/process.rs#L348),
+//!   and
+//!   [here](https://github.com/memflow/memflow-win32/blob/791bb7afb8a984034dde314c136b7675b44e3abf/src/win32/process.rs#L314)).
 //!
 //! Below figure shows entire pipeline of a virtual address translating object with caching.
 //!

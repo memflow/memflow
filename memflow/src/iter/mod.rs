@@ -129,8 +129,8 @@ pub trait PageChunks {
     /// * `start_address` - starting address of the buffer
     /// * `page_size` - size of a single page
     /// * `split_fn` - page split check function. Receives current address,
-    /// current (temporary) page split, and the memory region afterwards (if exists).
-    /// Hast to return `true` if this region should be split off, and `false` if not.
+    ///   current (temporary) page split, and the memory region afterwards (if exists).
+    ///   Has to return `true` if this region should be split off, and `false` if not.
     ///
     /// # Examples
     ///

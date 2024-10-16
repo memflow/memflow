@@ -286,12 +286,9 @@ impl Inventory {
     }
 
     pub fn add_file<P: AsRef<Path>>(&mut self, path: P) -> Result<&Self> {
-        // TODO: check if there is a .meta file and use that created_at time instead
-
         let mut meta_path = path.as_ref().to_path_buf();
         meta_path.set_extension("meta");
 
-        // TODO: remove unwrap
         let created_at = if meta_path.exists() {
             let content = std::fs::read_to_string(meta_path).map_err(|err| {
                 Error(ErrorOrigin::Inventory, ErrorKind::UnableToReadFile).log_error(format!(

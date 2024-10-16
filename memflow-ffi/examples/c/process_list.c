@@ -1,3 +1,12 @@
+/*
+ * List all processes running on a target.
+ *
+ * Example usage:
+ * ```
+ * ./process_list.out kvm :: win32 ::
+ * ```
+ */
+
 #include "memflow.h"
 
 #include <stdio.h>
@@ -61,18 +70,29 @@ bool list_processes(OsInstance *os, Address addr) {
 }
 
 int main(int argc, char *argv[]) {
-	// enable debug level logging
+  // require at least 1 argument
+  if (argc <= 1) {
+    printf("memflow process_list example\n\n");
+    printf("Missing arguments. Please provide at least a connector.\n\n");
+    printf("Usage:\n");
+    printf("./process_list.out [connector] [connector_args] [os] [os_args]\n\n");
+    printf("Example usage:\n");
+    printf("./process_list.out kvm :: win32 ::\n");
+    return 1;
+  }
+
+	const char *conn_name = argv[1];
+	const char *conn_arg = argc > 2 ? argv[2] : "";
+	const char *os_name = argc > 3 ? argv[3]: "win32";
+	const char *os_arg = argc > 4? argv[4]: "";
+
+  // enable debug level logging
 	mf_log_init(2);
 
 	// load all available plugins
 	Inventory *inventory = mf_inventory_scan();
 
 	printf("inventory initialized: %p\n", inventory);
-
-	const char *conn_name = argc > 1 ? argv[1] : "qemu";
-	const char *conn_arg = argc > 2 ? argv[2] : "";
-	const char *os_name = argc > 3 ? argv[3]: "win32";
-	const char *os_arg = argc > 4? argv[4]: "";
 
 	ConnectorInstance connector, *conn = conn_name[0] ? &connector : NULL;
 

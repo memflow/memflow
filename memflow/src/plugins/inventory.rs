@@ -91,10 +91,8 @@ impl PluginEntry {
             self.instance = Some(library);
         }
 
-        self.instance.as_ref().ok_or_else(|| {
-            Error(ErrorOrigin::Inventory, ErrorKind::NotFound)
-                .log_error("plugin instance is not initialized")
-        })
+        // unwrap is fine because the value is guaranteed to be set at this point.
+        Ok(self.instance.as_ref().unwrap())
     }
 }
 

@@ -91,7 +91,10 @@ impl PluginEntry {
             self.instance = Some(library);
         }
 
-        Ok(self.instance.as_ref().unwrap())
+        self.instance.as_ref().ok_or_else(|| {
+            Error(ErrorOrigin::Inventory, ErrorKind::NotFound)
+                .log_error("plugin instance is not initialized")
+        })
     }
 }
 
@@ -290,9 +293,22 @@ impl Inventory {
         let mut meta_path = path.as_ref().to_path_buf();
         meta_path.set_extension("meta");
 
+        // TODO: remove unwrap
         let created_at = if meta_path.exists() {
-            let content = std::fs::read_to_string(meta_path).unwrap();
-            let metadata: PluginMetadata = serde_json::from_str(&content).unwrap();
+            let content = std::fs::read_to_string(meta_path).map_err(|err| {
+                Error(ErrorOrigin::Inventory, ErrorKind::UnableToReadFile).log_error(format!(
+                    "unable to read plugin file {:?} metadata: {}",
+                    path.as_ref(),
+                    err
+                ))
+            })?;
+            let metadata: PluginMetadata = serde_json::from_str(&content).map_err(|err| {
+                Error(ErrorOrigin::Inventory, ErrorKind::UnableToReadFile).log_error(format!(
+                    "unable to parse plugin file {:?} metadata: {}",
+                    path.as_ref(),
+                    err
+                ))
+            })?;
             metadata.created_at
         } else {
             warn!(

@@ -8,15 +8,12 @@ repository = "https://github.com/memflow/memflow"
 license = "MIT"
 publish = false
 
-[profile.release]
-panic = "abort"
-
-[profile.dev]
-panic = "abort"
-
 [dependencies]
-rlibc = "1.0.0"
-uefi = "0.26.0"
-uefi-services = "0.23.0"
+talc = { version = "4.4", default-features = false, features = ["lock_api", "allocator-api2"] }
+spin = "0.9"
+
+no-std-compat = { version = "0.4", features = ["alloc"] }
+smallvec = { version = "1.13", default-features = false }
+
 log = "0.4"
-memflow = { version = "0.2", path = "../memflow", default-features = false }
+memflow = { version = "0.2", path = "../memflow", default-features = false, features = ["64_bit_mem"] }

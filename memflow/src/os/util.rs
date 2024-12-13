@@ -155,6 +155,8 @@ pub fn import_list_callback(
 
     mem.read_raw_into(base, module_image).data_part()?;
 
+    // never invoked in no_std builds
+    #[allow(unused)]
     fn import_call(iter: impl Iterator<Item = (umem, ReprCString)>, callback: &mut ImportCallback) {
         iter.take_while(|(offset, name)| {
             callback.call(ImportInfo {
@@ -275,6 +277,8 @@ pub fn export_list_callback(
 
     mem.read_raw_into(base, module_image).data_part()?;
 
+    // never invoked in no_std builds
+    #[allow(unused)]
     fn export_call(iter: impl Iterator<Item = (umem, ReprCString)>, callback: &mut ExportCallback) {
         iter.take_while(|(offset, name)| {
             callback.call(ExportInfo {
@@ -396,6 +400,8 @@ pub fn section_list_callback(
 
     mem.read_raw_into(base, module_image).data_part()?;
 
+    // never invoked in no_std builds
+    #[allow(unused)]
     fn section_call(
         iter: impl Iterator<Item = (umem, umem, ReprCString)>,
         callback: &mut SectionCallback,

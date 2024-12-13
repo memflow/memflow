@@ -124,7 +124,7 @@ memflow currently requires at least rustc version `1.74.0` or newer.
 | linux aarch64 | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
 | linux i686    | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
 | linux armv7   | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
-| no-std        | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :x:                |
+| no-std        | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: |
 
 ## Target support
 

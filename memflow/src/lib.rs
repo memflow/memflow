@@ -221,16 +221,18 @@
 // since upgrading to 2.x broke code generation via cglue-bindgen / cbindgen
 // we are allowing this lint temporarily
 #![allow(clippy::bad_bit_mask)]
-// no-std-compat
+// enable no_std when std feature is not active
 #![cfg_attr(not(feature = "std"), no_std)]
+
+// no-std-compat
 extern crate no_std_compat as std;
+// smallvec is imported as a replacement for Vec in no-std environments
+#[cfg(not(feature = "std"))]
+#[macro_use]
+extern crate smallvec;
 
 #[macro_use]
 extern crate bitflags;
-
-// smallvec is imported as a replacement for Vec in no-std environments
-#[macro_use]
-extern crate smallvec;
 
 pub mod error;
 

@@ -5,17 +5,12 @@ use log::Level;
 use memflow::prelude::v1::*;
 
 fn main() -> Result<()> {
-    //let matches = parse_args();
-    //let chain = extract_args(&matches)?;
-
-    let mut inventory = Inventory::new();
-
-    // now use the same builder stuff?
-    let mut os = inventory.instantiate_os("native", None, None)?;
+    let matches = parse_args();
+    let chain = extract_args(&matches)?;
 
     // create inventory + os
-    //let mut inventory = Inventory::scan();
-    //let mut os = inventory.builder().os_chain(chain).build()?;
+    let mut inventory = Inventory::scan();
+    let mut os = inventory.builder().os_chain(chain).build()?;
 
     let process_list = os.process_info_list()?;
 

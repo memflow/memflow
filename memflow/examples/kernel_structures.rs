@@ -1,4 +1,13 @@
-/// A simple kernel structuring example using memflow
+/*!
+This is a small example of replicating C/C+ structs with the Pointer<T> for idiomatic interfacing
+and the offset crate to avoid replicating the whole struct and layout
+Currently it simply checks the PEB of every EPROCESS to determine if a debugger is present
+
+# Usage:
+Open a process such as notepad.exe and attach a debugger
+cargo r --example kernel_structures --connector kvm --os win32
+
+*/
 use clap::*;
 use log::Level;
 
@@ -51,6 +60,8 @@ fn main() -> Result<()> {
 
         let eprocess = process.read::<_EPROCESS>(p.address)?;
         let dtb = eprocess.pcb.directory_table_base;
+        //now that we have the _EPROCESS struct we can just pass a mutable reference to
+        //the MemoryView to dereference/unwrap the value of the pointer
         let pcb = eprocess.peb.read(&mut process)?;
 
         //internally memflow parses this from pdb. so its a good cross check

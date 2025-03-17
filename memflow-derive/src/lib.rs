@@ -18,8 +18,8 @@ use syn::{parse_macro_input, Data, DeriveInput, Fields, ItemFn};
 /// }
 /// ```
 #[proc_macro_derive(Batcher, attributes(batch))]
-pub fn derive_memflow_batched_read(input: TokenStream) -> TokenStream {
-    batcher::derive_memflow_batched_read(input)
+pub fn batcher_derive(input: TokenStream) -> TokenStream {
+    batcher::batcher_derive(input)
 }
 
 #[derive(Debug, FromMeta)]

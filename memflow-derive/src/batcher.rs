@@ -5,26 +5,21 @@ use syn::{
     parse_macro_input, DeriveInput, Expr, Lit, Meta,
 };
 
-struct MemflowAttribute {
+struct MemflowBatcherAttribute {
     offset: u32,
 }
 
-impl Parse for MemflowAttribute {
+impl Parse for MemflowBatcherAttribute {
     fn parse(input: ParseStream) -> syn::Result<Self> {
-        // Iterate through the nested meta items inside the `#[memflow(...)]`
-        while !input.is_empty() {
-            // Parse each nested item (key-value pair)
-            let nested_meta: Meta = input.parse()?;
+        let nested_meta: Meta = input.parse()?;
 
-            if let Meta::NameValue(name_value) = nested_meta {
-                // We are looking for "offset"
-                if name_value.path.is_ident("offset") {
-                    if let Expr::Lit(lit) = name_value.value {
-                        if let Lit::Int(int) = lit.lit {
-                            return Ok(MemflowAttribute {
-                                offset: int.base10_parse().unwrap(),
-                            });
-                        }
+        if let Meta::NameValue(name_value) = nested_meta {
+            if name_value.path.is_ident("offset") {
+                if let Expr::Lit(lit) = name_value.value {
+                    if let Lit::Int(int) = lit.lit {
+                        return Ok(MemflowBatcherAttribute {
+                            offset: int.base10_parse().unwrap(),
+                        });
                     }
                 }
             }
@@ -34,12 +29,12 @@ impl Parse for MemflowAttribute {
     }
 }
 
-pub fn derive_memflow_batched_read(input: TokenStream) -> TokenStream {
+pub fn batcher_derive(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let struct_ident = input.ident;
     let fields = match input.data {
         syn::Data::Struct(ref data_struct) => &data_struct.fields,
-        _ => panic!("MyDerive can only be used on structs"),
+        _ => panic!("Batcher can only be used on structs"),
     };
 
     let mut batch_fields = Vec::new();
@@ -48,7 +43,7 @@ pub fn derive_memflow_batched_read(input: TokenStream) -> TokenStream {
 
         for attr in &field.attrs {
             if let Meta::List(meta_list) = &attr.meta {
-                if let Ok(res) = meta_list.parse_args::<MemflowAttribute>() {
+                if let Ok(res) = meta_list.parse_args::<MemflowBatcherAttribute>() {
                     let offset = res.offset;
                     batch_fields.push(quote! {
                         batcher.read_into(

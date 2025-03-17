@@ -6,7 +6,7 @@ use memflow_derive::Batcher;
 
 #[derive(Debug, Default, Batcher)]
 struct Test {
-    #[batch(d = 0)]
+    #[batch(offset = 0)]
     a: u32,
     #[batch(offset = 4)]
     b: u32,

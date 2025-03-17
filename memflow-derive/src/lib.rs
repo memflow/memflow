@@ -1,8 +1,26 @@
+mod batcher;
+
 use darling::{ast::NestedMeta, FromMeta};
 use proc_macro::TokenStream;
 use proc_macro_crate::*;
 use quote::{format_ident, quote};
 use syn::{parse_macro_input, Data, DeriveInput, Fields, ItemFn};
+
+/// Auto implement a function to batch read fields from a struct.
+///
+/// ```rust
+/// #[derive(Batcher)]
+/// struct FooBar {
+///    #[batch(offset = 0x20)]
+///    foo: u32,
+///    #[batch(offset = 0x1f0)]
+///    bar: u32,
+/// }
+/// ```
+#[proc_macro_derive(Batcher, attributes(batch))]
+pub fn batcher_derive(input: TokenStream) -> TokenStream {
+    batcher::batcher_derive(input)
+}
 
 #[derive(Debug, FromMeta)]
 struct ConnectorFactoryArgs {

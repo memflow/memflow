@@ -7,7 +7,7 @@ use memflow_derive::Batcher;
 #[derive(Debug, Default, Batcher)]
 struct DOSHeader {
     #[batch(offset = 0x0)]
-    pub e_magic: u16,
+    e_magic: u16,
     #[batch(offset = 0x2)]
     e_cblp: u16,
     #[batch(offset = 0x18)]

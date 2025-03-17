@@ -5,16 +5,19 @@ use memflow::prelude::v1::*;
 use memflow_derive::Batcher;
 
 #[derive(Debug, Default, Batcher)]
-struct Test {
-    #[batch(offset = 0)]
-    a: u32,
-    #[batch(offset = 4)]
-    b: u32,
+struct DOSHeader {
+    #[batch(offset = 0x0)]
+    pub e_magic: u16,
+    #[batch(offset = 0x2)]
+    e_cblp: u16,
+    #[batch(offset = 0x18)]
+    e_lfarlc: u16,
 }
 
+// cargo run --example batcher -- -vv --os="native" --process="notepad.exe"
 fn main() -> Result<()> {
     let matches = parse_args();
-    let (chain, proc_name, module_name, dtb) = extract_args(&matches)?;
+    let (chain, proc_name, dtb) = extract_args(&matches)?;
 
     // create inventory + os
     let mut inventory = Inventory::scan();
@@ -42,16 +45,16 @@ fn main() -> Result<()> {
             .expect("unable to modify process dtb");
     }
 
-    // retrieve module info
-    let module_info = process
-        .module_by_name(module_name)
-        .expect("unable to find module in process");
-    println!("{module_info:?}");
+    let module = process
+        .module_by_name(proc_name)
+        .expect("unable to find module");
 
-    let mut test_data = Test::default();
-    test_data.read_all_batched(process, module_info.base);
+    // batch read dos header infos
+    let pe_base = module.base;
+    let mut dos_header = DOSHeader::default();
+    dos_header.read_all_batched(process, pe_base);
 
-    println!("test data: {:?}", test_data);
+    println!("partial dos header data: {:x?}", dos_header);
 
     Ok(())
 }
@@ -84,14 +87,6 @@ fn parse_args() -> ArgMatches {
                 .default_value("explorer.exe"),
         )
         .arg(
-            Arg::new("module")
-                .long("module")
-                .short('m')
-                .action(ArgAction::Set)
-                .required(true)
-                .default_value("KERNEL32.DLL"),
-        )
-        .arg(
             Arg::new("dtb")
                 .long("dtb")
                 .short('d')
@@ -101,7 +96,7 @@ fn parse_args() -> ArgMatches {
         .get_matches()
 }
 
-fn extract_args(matches: &ArgMatches) -> Result<(OsChain<'_>, &str, &str, Option<Address>)> {
+fn extract_args(matches: &ArgMatches) -> Result<(OsChain<'_>, &str, Option<Address>)> {
     let log_level = match matches.get_count("verbose") {
         0 => Level::Error,
         1 => Level::Warn,
@@ -135,7 +130,6 @@ fn extract_args(matches: &ArgMatches) -> Result<(OsChain<'_>, &str, &str, Option
     Ok((
         OsChain::new(conn_iter, os_iter)?,
         matches.get_one::<String>("process").unwrap(),
-        matches.get_one::<String>("module").unwrap(),
         matches
             .get_one::<String>("dtb")
             .map(|dtb| umem::from_str_radix(dtb, 16).expect("unable to parse dtb as a hex number"))

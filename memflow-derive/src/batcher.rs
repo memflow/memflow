@@ -25,7 +25,7 @@ impl Parse for MemflowBatcherAttribute {
             }
         }
 
-        panic!("No offset found in #[memflow(...)] attribute");
+        panic!("No offset found in #[batch(...)] attribute",);
     }
 }
 

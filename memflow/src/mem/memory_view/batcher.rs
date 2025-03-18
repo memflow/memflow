@@ -5,6 +5,13 @@ use crate::dataview::PodMethods;
 use crate::error::PartialResult;
 use crate::types::Address;
 
+/// A trait for reading data from memory.
+/// mainly auto implemented by the `Batcher` derive macro.
+pub trait Batchable {
+    /// reads all fields batched of the struct from the specified (address + offset) in memory
+    fn read_all_batched(&mut self, view: impl MemoryView, address: Address);
+}
+
 /// A structure for batching memory reads and writes.
 ///
 /// # Examples

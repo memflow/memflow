@@ -1,6 +1,7 @@
 use clap::*;
 use log::Level;
 
+use memflow::mem;
 use memflow::prelude::v1::*;
 
 #[derive(Debug, Default, Batcher)]

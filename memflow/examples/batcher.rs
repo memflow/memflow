@@ -2,7 +2,6 @@ use clap::*;
 use log::Level;
 
 use memflow::prelude::v1::*;
-use memflow_derive::Batcher;
 
 #[derive(Debug, Default, Batcher)]
 struct DOSHeader {

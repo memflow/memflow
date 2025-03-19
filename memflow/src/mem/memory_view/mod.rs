@@ -13,6 +13,7 @@ pub mod remap_view;
 pub mod cursor;
 
 pub use arch_overlay::ArchOverlayView;
+pub use batcher::Batchable;
 pub use batcher::MemoryViewBatcher;
 pub use cached_view::CachedView;
 pub use remap_view::RemapView;

@@ -5,6 +5,8 @@ use syn::{
     parse_macro_input, DeriveInput, Expr, Lit, Meta,
 };
 
+use crate::crate_path;
+
 struct MemflowBatcherAttribute {
     offset: u32,
 }
@@ -56,8 +58,9 @@ pub fn batcher_derive(input: TokenStream) -> TokenStream {
         }
     }
 
+    let crate_path = crate_path();
     TokenStream::from(quote! {
-        impl #struct_ident {
+        impl #crate_path::mem::memory_view::Batchable for #struct_ident {
             fn read_all_batched(&mut self, mut view: impl memflow::prelude::MemoryView, address: memflow::prelude::Address) {
                 let mut batcher = view.batcher();
                 #(#batch_fields)*

@@ -8,7 +8,11 @@ use syn::{parse_macro_input, Data, DeriveInput, Fields, ItemFn};
 
 /// Auto implement a function to batch read fields from a struct.
 ///
-/// ```rust
+/// # Example
+///
+/// ```rust,ignore
+/// # use ::memflow::prelude::v1::*;
+///
 /// #[derive(Batcher)]
 /// struct FooBar {
 ///    #[batch(offset = 0x20)]

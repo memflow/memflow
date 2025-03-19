@@ -224,6 +224,9 @@
 // enable no_std when std feature is not active
 #![cfg_attr(not(feature = "std"), no_std)]
 
+// redefine crate as memflow to allow derive macros to be used in the lib
+extern crate self as memflow;
+
 // no-std-compat
 extern crate no_std_compat as std;
 // smallvec is imported as a replacement for Vec in no-std environments

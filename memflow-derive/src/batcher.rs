@@ -60,8 +60,8 @@ pub fn batcher_derive(input: TokenStream) -> TokenStream {
 
     let crate_path = crate_path();
     TokenStream::from(quote! {
-        impl #crate_path::mem::memory_view::Batchable for #struct_ident {
-            fn read_all_batched(&mut self, mut view: impl memflow::prelude::MemoryView, address: memflow::prelude::Address) {
+        impl #crate_path::mem::Batchable for #struct_ident {
+            fn read_all_batched(&mut self, mut view: impl #crate_path::mem::MemoryView, address: #crate_path::types::Address) {
                 let mut batcher = view.batcher();
                 #(#batch_fields)*
             }

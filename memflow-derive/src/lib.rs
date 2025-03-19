@@ -657,27 +657,9 @@ fn crate_path() -> proc_macro2::TokenStream {
 }
 
 fn crate_path_ident() -> (Option<syn::token::PathSep>, proc_macro2::Ident) {
-    match crate_path_fixed() {
-        FoundCrate::Itself => (None, format_ident!("crate")),
-        FoundCrate::Name(name) => (Some(Default::default()), format_ident!("{}", name)),
-    }
-}
-
-fn crate_path_fixed() -> FoundCrate {
     let found_crate = crate_name("memflow").expect("memflow found in `Cargo.toml`");
-
     match found_crate {
-        FoundCrate::Itself => {
-            let has_doc_env = std::env::vars().any(|(k, _)| {
-                k == "UNSTABLE_RUSTDOC_TEST_LINE" || k == "UNSTABLE_RUSTDOC_TEST_PATH"
-            });
-
-            if has_doc_env {
-                FoundCrate::Name("memflow".to_string())
-            } else {
-                FoundCrate::Itself
-            }
-        }
-        x => x,
+        FoundCrate::Itself => (None, format_ident!("memflow")), // we can use memflow instead of crate due to the alias in lib.rs
+        FoundCrate::Name(name) => (Some(Default::default()), format_ident!("{}", name)),
     }
 }

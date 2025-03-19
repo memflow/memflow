@@ -1,21 +1,6 @@
 use clap::*;
 use log::Level;
 
-// this import is only needed in the example
-// in this example the derive will expand to
-//
-// crate::mem::memory_view::Batchable
-//
-// and outside
-//
-// memflow::mem::memory_view::Batchable
-//
-// this one is a direct import from the memflow crate
-// which means that you'll as a user of the library not need to import the trait
-//
-// we could avoid this extra import if we would also expose mem in the prelude
-use memflow::mem;
-
 use memflow::prelude::v1::*;
 
 #[derive(Debug, Default, Batcher)]

@@ -55,6 +55,83 @@ pub use cursor::MemoryCursor;
 #[cglue_forward]
 #[int_result(PartialResult)]
 pub trait MemoryView: Send {
+    /// Raw read operation.
+    ///
+    /// This is the most flexible type of read. One of the read helpers are usually preferred, such
+    /// as [`read`](MemoryView::read) or [`read_iter`](MemoryView::read_iter), but you may wish to
+    /// use this function to customize metadata behavior.
+    ///
+    /// # Examples
+    ///
+    /// Custom metadata tagging:
+    ///
+    /// ```
+    /// use memflow::types::Address;
+    /// use memflow::mem::{MemoryView, mem_data::{MemOps, ReadData}};
+    /// use memflow::types::umem;
+    /// use memflow::cglue::{CTup2, CTup3};
+    ///
+    /// fn read(mut mem: impl MemoryView, read_addrs: &[Address]) {
+    ///     let mut bufs = vec![0u8; 16 * read_addrs.len()];
+    ///
+    ///     let data = read_addrs
+    ///         .iter()
+    ///         .zip(bufs.chunks_mut(16))
+    ///         .enumerate()
+    ///         .map(|(i, (&a, chunk))| CTup3(
+    ///             a,
+    ///             // Sum `i` with the chunk's address so that we can reverse the process
+    ///             Address::from((i as umem).wrapping_add(chunk.as_ptr() as usize as umem)),
+    ///             chunk.into()
+    ///         ));
+    ///
+    ///     let mut succeeded = vec![0; read_addrs.len()];
+    ///     let callback = &mut |CTup2(mdata, d): ReadData| {
+    ///         // `d = orig_chunk + offset`
+    ///         // `mdata = i + d = i + orig_chunk + offset`
+    ///         // We can remove (orig_chunk + offset) by subtracting d from mdata:
+    ///         // Make sure to use wrapping math!
+    ///         let idx = mdata.wrapping_sub(Address::from(d.as_ptr() as usize)).to_umem();
+    ///         succeeded[idx as usize] += 1;
+    ///         true
+    ///     };
+    ///
+    ///     let mut failed = vec![0; read_addrs.len()];
+    ///     let callback_fail = &mut |CTup2(mdata, d): ReadData| {
+    ///         // Same as success callback
+    ///         let idx = mdata.wrapping_sub(Address::from(d.as_ptr() as usize)).to_umem();
+    ///         failed[idx as usize] += 1;
+    ///         true
+    ///     };
+    ///
+    ///     MemOps::with_raw(
+    ///         data,
+    ///         Some(&mut callback.into()),
+    ///         Some(&mut callback_fail.into()),
+    ///         |data| mem.read_raw_iter(data),
+    ///     ).unwrap();
+    /// #   // The first chunk is read in full
+    /// #   // The second chunk is split across 2 pages, thus succeeds twice
+    /// #   // The third chunk is crosses over unmapped area, thus succeeds and fails
+    /// #   // The fourth chunk is outside the bounds, thus fails once
+    /// #   assert_eq!(succeeded, [1, 2, 1, 0]);
+    /// #   assert_eq!(failed, [0, 0, 1, 1]);
+    /// }
+    /// # use memflow::dummy::DummyOs;
+    /// # use memflow::types::size;
+    /// # use memflow::os::Process;
+    /// # let proc = DummyOs::quick_process(
+    /// #     size::mb(2),
+    /// #     &[255, 0].iter().cycle().copied().take(32).collect::<Vec<u8>>()
+    /// # );
+    /// # let virt_base = proc.info().address;
+    /// # read(proc, &[
+    /// #     virt_base,
+    /// #     virt_base + size::kb(4) - 8,
+    /// #     virt_base + size::mb(2) - 8,
+    /// #     virt_base + size::mb(4),
+    /// # ]);
+    /// ```
     #[int_result]
     fn read_raw_iter(&mut self, data: ReadRawMemOps) -> Result<()>;
 

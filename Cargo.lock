@@ -787,6 +787,7 @@ dependencies = [
  "memmap",
  "no-std-compat",
  "num-traits",
+ "offsetter",
  "once_cell",
  "pelite",
  "rand",
@@ -871,6 +872,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5c7398b9c8b70908f6371f47ed36737907c87c52af34c268fed0bf0ceb92ead9"
 dependencies = [
  "libc",
+]
+
+[[package]]
+name = "offsetter"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "647729c48bcfdf0eb9bd843a201d96ce7e0cf40851452aaeb9c50cbc0bdbddd0"
+dependencies = [
+ "paste",
 ]
 
 [[package]]

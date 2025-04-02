@@ -154,24 +154,22 @@ jobs:
   
   build-coverage:
     runs-on: ubuntu-latest
+    env:
+      CARGO_INCREMENTAL: "0"
+      RUSTFLAGS: "-Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off"
     steps:
       - uses: actions/checkout@v4
-        with:
-          path: 'memflow-repo'
-      - name: Set up Rust nightly
+      - name: Set up Rust
         uses: actions-rs/toolchain@v1
         with:
-          profile: minimal
-          toolchain: nightly
+          toolchain: stable
+          components: llvm-tools-preview
           override: true
-      - run: cargo install grcov
-      - name: Run tests with coverage
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@cargo-llvm-cov
+      - name: Generate code coverage
+        id: coverage
+        run: cargo llvm-cov --workspace --exclude memflow-derive --all-features --no-fail-fast --lcov --output-path lcov.info
+      - name: Upload coverage report
         run: |
-          cd memflow-repo
-          export CARGO_INCREMENTAL=0
-          export RUSTFLAGS="-Zprofile -Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off -Zpanic_abort_tests -Cpanic=abort"
-          export RUSTDOCFLAGS="-Cpanic=abort"
-          cargo build --workspace --exclude memflow-derive --all-features
-          cargo test --workspace --exclude memflow-derive --all-features
-          grcov ./target/debug/ -s . -t lcov --llvm --branch --ignore-not-existing -o ./target/debug/coverage
-          bash <(curl -s https://codecov.io/bash) -f ./target/debug/coverage -t ${{ secrets.CODECOV_TOKEN }};
+          bash <(curl -s https://codecov.io/bash) -f lcov.info -t ${{ secrets.CODECOV_TOKEN }};

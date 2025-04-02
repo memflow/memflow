@@ -14,9 +14,9 @@ run_twice() {
 # remove any RUSTC_WRAPPER like sccache which might cause issues with cglue-bindgen
 export RUSTC_WRAPPER=""
 
-# update cglue-bindgen (see https://github.com/h33p/cglue/pull/15)
-cargo +nightly install cbindgen
-cargo +nightly install cglue-bindgen
+# Execute bindgen_prereq.sh from the directory of the current script
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+"$SCRIPT_DIR/bindgen_prereq.sh"
 
 # generate c and cpp bindings
 run_twice rustup run nightly cglue-bindgen +nightly -c cglue.toml -- --config cbindgen.toml --crate memflow-ffi --output memflow.h -l C

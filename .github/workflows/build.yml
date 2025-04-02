@@ -123,7 +123,7 @@ jobs:
           override: true
 
       - name: Validate c and c++ headers
-        run: cd memflow-ffi; ./verify_headers.sh
+        run: cd memflow-ffi; make check
 
       - name: Build memflow
         run: cargo build --workspace --release --verbose

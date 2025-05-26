@@ -90,13 +90,19 @@ Alternatively, you can run the benchmarks via `cargo bench` (can pass regex filt
 All examples support the memflow connector `plugins` inventory system.
 You will have to install at least one `connector` to use the examples. Refer to the [getting started](#getting-started) section for more details.
 
-Run memflow/read\_keys example with a qemu connector:
+Run memflow/keyboard example with a qemu connector:
+`RUST_SETPTRACE=1 cargo run --example keyboard -- -vv -c qemu:[vmname] -o win32`
 
-`RUST_SETPTRACE=1 cargo run --example read_keys -- -vv -c qemu -a [vmname] -o win32`
+Additionally the `[vmname]` can simply be omitted:
+`RUST_SETPTRACE=1 cargo run --example keyboard -- -vv -c qemu -o win32`
+
+The general format for connectors is `[connector]:[target_name]:[additional_arguments]` where `[additional_arguments]` is a comma-seperated key-value list (like `a=b,c=d,...`).
+Additionally the key of the default argument can be omitted (like `b,c=d`, whereas `a` was the default key). For further information about `[additional_arguments]` please refer
+to the individual connector documentation.
 
 Run memflow/read\_bench example with a coredump connector:
 
-`cargo run --example read_bench --release -- -vv -c coredump -a coredump_win10_64bit.raw -o win32`
+`cargo run --example read_bench --release -- -vv -c coredump:coredump_win10_64bit.raw: -o win32`
 
 Note: In the examples above the `qemu` connector requires `'CAP_SYS_PTRACE=ep'` permissions. The runner script in this repository will set the appropriate flags when the `RUST_SETPTRACE` environment variable is passed to it.
 

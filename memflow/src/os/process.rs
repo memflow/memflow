@@ -128,7 +128,7 @@ pub trait Process: Send {
     ) -> Result<ModuleInfo> {
         let mut ret = Err(Error(ErrorOrigin::OsLayer, ErrorKind::ModuleNotFound));
         let callback = &mut |data: ModuleInfo| {
-            if data.name.as_ref() == name {
+            if data.name.as_ref().eq_ignore_ascii_case(name) {
                 ret = Ok(data);
                 false
             } else {

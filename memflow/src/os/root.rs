@@ -79,7 +79,29 @@ pub trait Os: Send {
         let mut ret = Err(Error(ErrorOrigin::OsLayer, ErrorKind::ProcessNotFound));
         let callback = &mut |data: ProcessInfo| {
             if (data.state == ProcessState::Unknown || data.state == ProcessState::Alive)
-                && data.name.as_ref().eq_ignore_ascii_case(name)
+                && data.name.as_ref() == name
+            {
+                ret = Ok(data);
+                false
+            } else {
+                true
+            }
+        };
+        self.process_info_list_callback(callback.into())?;
+        ret
+    }
+
+    /// Find process information by its name using case-insensitive comparison
+    ///
+    /// # Remarks:
+    ///
+    /// This function only returns processes whose state is not [`ProcessState::Dead`].
+    #[skip_func]    
+    fn process_info_by_name_ignore_ascii_case(&mut self, name: &str) -> Result<ProcessInfo> {
+        let mut ret = Err(Error(ErrorOrigin::OsLayer, ErrorKind::ProcessNotFound));
+        let callback = &mut |data: ProcessInfo| {
+            if (data.state == ProcessState::Unknown || data.state == ProcessState::Alive)
+                && data.name.as_str().eq_ignore_ascii_case(name)
             {
                 ret = Ok(data);
                 false
@@ -236,10 +258,28 @@ pub trait Os: Send {
     /// * `address` - address where module's information resides in
     fn module_by_address(&mut self, address: Address) -> Result<ModuleInfo>;
 
-    /// Finds a OS module by its name
+    /// Finds an OS module by its name
     ///
     /// This function can be useful for quickly accessing a specific module
     fn module_by_name(&mut self, name: &str) -> Result<ModuleInfo> {
+        let mut ret = Err(Error(ErrorOrigin::OsLayer, ErrorKind::ModuleNotFound));
+        let callback = &mut |data: ModuleInfo| {
+            if data.name.as_ref() == name {
+                ret = Ok(data);
+                false
+            } else {
+                true
+            }
+        };
+        self.module_list_callback(callback.into())?;
+        ret
+    }
+
+    /// Finds an OS module by its name using case-insensitive comparison
+    ///
+    /// This function can be useful for quickly accessing a specific module
+    #[skip_func]   
+    fn module_by_name_ignore_ascii_case(&mut self, name: &str) -> Result<ModuleInfo> {
         let mut ret = Err(Error(ErrorOrigin::OsLayer, ErrorKind::ModuleNotFound));
         let callback = &mut |data: ModuleInfo| {
             if data.name.as_ref().eq_ignore_ascii_case(name) {

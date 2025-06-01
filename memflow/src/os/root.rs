@@ -101,7 +101,7 @@ pub trait Os: Send {
         let mut ret = Err(Error(ErrorOrigin::OsLayer, ErrorKind::ProcessNotFound));
         let callback = &mut |data: ProcessInfo| {
             if (data.state == ProcessState::Unknown || data.state == ProcessState::Alive)
-                && data.name.as_str().eq_ignore_ascii_case(name)
+                && data.name.as_ref().eq_ignore_ascii_case(name)
             {
                 ret = Ok(data);
                 false

@@ -128,6 +128,32 @@ pub trait Process: Send {
     ) -> Result<ModuleInfo> {
         let mut ret = Err(Error(ErrorOrigin::OsLayer, ErrorKind::ModuleNotFound));
         let callback = &mut |data: ModuleInfo| {
+            if data.name.as_ref() == name {
+                ret = Ok(data);
+                false
+            } else {
+                true
+            }
+        };
+        self.module_list_callback(architecture, callback.into())?;
+        ret
+    }
+
+    /// Finds a process module by its name under specified architecture using case-insensitive comparison
+    ///
+    /// This function can be useful for quickly accessing a specific module
+    ///
+    /// # Arguments
+    /// * `name` - name of the module to find (case-insensitive)
+    /// * `architecture` - architecture of the module. Should be either `ProcessInfo::proc_arch`, or `ProcessInfo::sys_arch`, or None for both.
+    #[skip_func]
+    fn module_by_name_arch_ignore_ascii_case(
+        &mut self,
+        name: &str,
+        architecture: Option<&ArchitectureIdent>,
+    ) -> Result<ModuleInfo> {
+        let mut ret = Err(Error(ErrorOrigin::OsLayer, ErrorKind::ModuleNotFound));
+        let callback = &mut |data: ModuleInfo| {
             if data.name.as_ref().eq_ignore_ascii_case(name) {
                 ret = Ok(data);
                 false
@@ -147,6 +173,17 @@ pub trait Process: Send {
     /// * `name` - name of the module to find
     fn module_by_name(&mut self, name: &str) -> Result<ModuleInfo> {
         self.module_by_name_arch(name, None)
+    }
+
+    /// Finds any architecture process module by its name using case-insensitive comparison
+    ///
+    /// This function can be useful for quickly accessing a specific module
+    ///
+    /// # Arguments
+    /// * `name` - name of the module to find (case-insensitive)
+    #[skip_func]
+    fn module_by_name_ignore_ascii_case(&mut self, name: &str) -> Result<ModuleInfo> {
+        self.module_by_name_arch_ignore_ascii_case(name, None)
     }
 
     /// Retrieves a module list for the process

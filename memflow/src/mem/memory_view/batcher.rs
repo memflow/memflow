@@ -12,6 +12,12 @@ pub trait Batchable {
     fn read_all_batched(&mut self, view: impl MemoryView, address: Address);
 }
 
+/// This represents the sequence in which memory operations are performed by the batcher when committed to memory.
+pub enum Ordering {
+    ReadWrite,
+    WriteRead,
+}
+
 /// A structure for batching memory reads and writes.
 ///
 /// # Examples
@@ -34,6 +40,7 @@ pub struct MemoryViewBatcher<'a, T: MemoryView> {
     vmem: &'a mut T,
     read_list: Vec<ReadData<'a>>,
     write_list: Vec<WriteData<'a>>,
+    ordering: Ordering,
 }
 
 impl<'a, T: MemoryView> MemoryViewBatcher<'a, T> {
@@ -60,6 +67,7 @@ impl<'a, T: MemoryView> MemoryViewBatcher<'a, T> {
             vmem,
             read_list: vec![],
             write_list: vec![],
+            ordering: Ordering::ReadWrite,
         }
     }
 
@@ -100,6 +108,11 @@ impl<'a, T: MemoryView> MemoryViewBatcher<'a, T> {
         self
     }
 
+    /// Sets the ordering for memory operations performed by the batcher
+    pub fn set_ordering(&mut self, ordering: Ordering) {
+        self.ordering = ordering;
+    }
+
     /// Executes all pending operations in this batch.
     ///
     /// This also consumes and discards this batcher so it cannot be used anymore.
@@ -126,14 +139,29 @@ impl<'a, T: MemoryView> MemoryViewBatcher<'a, T> {
     /// batcher.commit_rw().unwrap();
     /// ```
     pub fn commit_rw(&mut self) -> PartialResult<()> {
-        if !self.read_list.is_empty() {
-            self.vmem.read_raw_list(&mut self.read_list)?;
-            self.read_list.clear();
-        }
+        match self.ordering {
+            Ordering::ReadWrite => {
+                if !self.read_list.is_empty() {
+                    self.vmem.read_raw_list(&mut self.read_list)?;
+                    self.read_list.clear();
+                }
 
-        if !self.write_list.is_empty() {
-            self.vmem.write_raw_list(&self.write_list)?;
-            self.write_list.clear();
+                if !self.write_list.is_empty() {
+                    self.vmem.write_raw_list(&self.write_list)?;
+                    self.write_list.clear();
+                }
+            }
+            Ordering::WriteRead => {
+                if !self.write_list.is_empty() {
+                    self.vmem.write_raw_list(&self.write_list)?;
+                    self.write_list.clear();
+                }
+
+                if !self.read_list.is_empty() {
+                    self.vmem.read_raw_list(&mut self.read_list)?;
+                    self.read_list.clear();
+                }
+            }
         }
 
         Ok(())

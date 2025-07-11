@@ -96,7 +96,7 @@ pub trait Os: Send {
     /// # Remarks:
     ///
     /// This function only returns processes whose state is not [`ProcessState::Dead`].
-    #[skip_func]    
+    #[skip_func]
     fn process_info_by_name_ignore_ascii_case(&mut self, name: &str) -> Result<ProcessInfo> {
         let mut ret = Err(Error(ErrorOrigin::OsLayer, ErrorKind::ProcessNotFound));
         let callback = &mut |data: ProcessInfo| {
@@ -278,7 +278,7 @@ pub trait Os: Send {
     /// Finds an OS module by its name using case-insensitive comparison
     ///
     /// This function can be useful for quickly accessing a specific module
-    #[skip_func]   
+    #[skip_func]
     fn module_by_name_ignore_ascii_case(&mut self, name: &str) -> Result<ModuleInfo> {
         let mut ret = Err(Error(ErrorOrigin::OsLayer, ErrorKind::ModuleNotFound));
         let callback = &mut |data: ModuleInfo| {

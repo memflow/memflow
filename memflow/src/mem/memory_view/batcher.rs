@@ -20,6 +20,8 @@ pub enum Ordering {
 
 /// A structure for batching memory reads and writes.
 ///
+/// By default, the batcher performs all reads before writes when committing to memory.
+///
 /// # Examples
 ///
 /// ```
@@ -108,9 +110,12 @@ impl<'a, T: MemoryView> MemoryViewBatcher<'a, T> {
         self
     }
 
-    /// Sets the ordering for memory operations performed by the batcher
-    pub fn set_ordering(&mut self, ordering: Ordering) {
+    /// Sets the ordering for memory operations performed by the batcher.
+    ///
+    /// You can either perform all reads before writes or vice versa by passing the corresponding `Ordering`.
+    pub fn with_ordering(&mut self, ordering: Ordering) -> &mut Self {
         self.ordering = ordering;
+        self
     }
 
     /// Executes all pending operations in this batch.

@@ -113,7 +113,7 @@ impl<'a, T: MemoryView> MemoryViewBatcher<'a, T> {
     /// Sets the ordering for memory operations performed by the batcher.
     ///
     /// You can either perform all reads before writes or vice versa by passing the corresponding `Ordering`.
-    pub fn with_ordering(&mut self, ordering: Ordering) -> &mut Self {
+    pub fn with_ordering(mut self, ordering: Ordering) -> Self {
         self.ordering = ordering;
         self
     }

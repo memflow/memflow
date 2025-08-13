@@ -1,4 +1,3 @@
-use std::mem::MaybeUninit;
 use std::prelude::v1::*;
 
 use super::{mem_data::*, phys_mem::*};
@@ -250,17 +249,33 @@ pub trait MemoryView: Send {
         out
     }
 
+    #[inline]
     fn read_raw_into(&mut self, addr: Address, out: &mut [u8]) -> PartialResult<()> {
         self.read_raw_list(&mut [CTup2(addr, out.into())])
     }
 
+    /// Reads raw bytes from the specified address into a byte vector.
+    ///
+    /// Any data that cannot be read will be defaulted to zero bytes (0x00).
+    /// The returned vector is always exactly `len` bytes long, with unreadable
+    /// portions guaranteed to be zero-initialized.
+    ///
+    /// # Arguments
+    /// * `addr` - The memory address to read from
+    /// * `len` - The number of bytes to read
+    ///
+    /// # Returns
+    /// A `PartialResult<Vec<u8>>` containing the byte vector, where unread
+    /// portions are guaranteed to be zero.
     #[skip_func]
+    #[inline]
     fn read_raw(&mut self, addr: Address, len: usize) -> PartialResult<Vec<u8>> {
         let mut buf = vec![0u8; len];
         self.read_raw_into(addr, &mut buf).map_data(|_| buf)
     }
 
     #[skip_func]
+    #[inline]
     fn read_into<T: Pod + ?Sized>(&mut self, addr: Address, out: &mut T) -> PartialResult<()>
     where
         Self: Sized,
@@ -268,19 +283,64 @@ pub trait MemoryView: Send {
         self.read_raw_into(addr, out.as_bytes_mut())
     }
 
+    /// Reads a value of type `T` from the specified address.
+    ///
+    /// Any data that cannot be read will be defaulted to zero bytes (0x00).
+    /// This ensures that partially readable memory regions return valid data
+    /// with unreadable portions zero-initialized.
+    ///
+    /// Uses stack allocation for types <= 1KB, heap allocation for larger types.
+    ///
+    /// # Safety
+    /// This function is safe for `Pod` types as any bit pattern is valid.
+    ///
+    /// # Returns
+    /// A `PartialResult<T>` containing the read value, where unread portions
+    /// are guaranteed to be zero.
     #[skip_func]
-    #[allow(clippy::uninit_assumed_init)]
     fn read<T: Pod + Sized>(&mut self, addr: Address) -> PartialResult<T>
     where
         Self: Sized,
     {
-        let mut obj: T = unsafe { MaybeUninit::uninit().assume_init() };
-        // TODO: zero out on partial
-        self.read_into(addr, &mut obj).map_data(|_| obj)
+        // 2Kb threshold
+        const STACK_THRESHOLD: usize = 2048;
+
+        // If block will be optimized out by the compiler
+        if std::mem::size_of::<T>() <= STACK_THRESHOLD {
+            // Use stack allocation for small types
+            let mut uninit = std::mem::MaybeUninit::<T>::uninit();
+
+            // Explicitly zero out the memory
+            unsafe {
+                std::ptr::write_bytes(uninit.as_mut_ptr(), 0, 1);
+            }
+
+            let buf = unsafe {
+                std::slice::from_raw_parts_mut(
+                    uninit.as_mut_ptr() as *mut u8,
+                    std::mem::size_of::<T>(),
+                )
+            };
+            self.read_raw_into(addr, buf).map_data(|_| {
+                // Safety: Memory is zero-initialized and read_raw_into has read
+                // whatever it could. It is now safe to assume_init for Pod types.
+                unsafe { uninit.assume_init() }
+            })
+        } else {
+            // Use heap allocation for larger types
+            let mut buf = vec![0u8; std::mem::size_of::<T>()];
+            self.read_raw_into(addr, &mut buf).map_data(|_| {
+                // Safety: This is safe because:
+                // 1. T: Pod means it's safe to transmute from any bit pattern
+                // 2. Buffer is exactly size_of::<T>() bytes and zero-initialized
+                // 3. Any unread portions remain zero (safe for Pod types)
+                unsafe { std::ptr::read(buf.as_ptr() as *const T) }
+            })
+        }
     }
 
-    // TODO: allow cglue to somehow pass MaybeUninit to the IntError
     #[skip_func]
+    #[inline]
     fn read_addr32(&mut self, addr: Address) -> PartialResult<Address>
     where
         Self: Sized,
@@ -289,6 +349,7 @@ pub trait MemoryView: Send {
     }
 
     #[skip_func]
+    #[inline]
     fn read_addr64(&mut self, addr: Address) -> PartialResult<Address>
     where
         Self: Sized,
@@ -312,6 +373,7 @@ pub trait MemoryView: Send {
     }
 
     #[skip_func]
+    #[inline]
     fn read_ptr_into<U: PrimitiveAddress, T: Pod + ?Sized>(
         &mut self,
         ptr: Pointer<U, T>,
@@ -324,6 +386,7 @@ pub trait MemoryView: Send {
     }
 
     #[skip_func]
+    #[inline]
     fn read_ptr<U: PrimitiveAddress, T: Pod + Sized>(
         &mut self,
         ptr: Pointer<U, T>,
@@ -433,11 +496,13 @@ pub trait MemoryView: Send {
         out
     }
 
+    #[inline]
     fn write_raw(&mut self, addr: Address, data: &[u8]) -> PartialResult<()> {
         self.write_raw_list(&[CTup2(addr, data.into())])
     }
 
     #[skip_func]
+    #[inline]
     fn write<T: Pod + ?Sized>(&mut self, addr: Address, data: &T) -> PartialResult<()>
     where
         Self: Sized,
@@ -446,6 +511,7 @@ pub trait MemoryView: Send {
     }
 
     #[skip_func]
+    #[inline]
     fn write_ptr<U: PrimitiveAddress, T: Pod + ?Sized>(
         &mut self,
         ptr: Pointer<U, T>,
@@ -490,6 +556,7 @@ pub trait MemoryView: Send {
     /// For reading fixed-size char arrays the [`read_char_array`](Self::read_char_array) should be used.
     #[deprecated = "please use read_utf8 or read_utf8_lossy instead"]
     #[skip_func]
+    #[inline]
     fn read_char_string_n(&mut self, addr: Address, n: usize) -> PartialResult<String> {
         self.read_utf8_lossy(addr, n)
     }
@@ -501,6 +568,7 @@ pub trait MemoryView: Send {
     /// * `addr` - target address to read from
     #[deprecated = "please use read_utf8 or read_utf8_lossy instead"]
     #[skip_func]
+    #[inline]
     fn read_char_string(&mut self, addr: Address) -> PartialResult<String> {
         self.read_utf8_lossy(addr, 4096)
     }
@@ -618,6 +686,7 @@ pub trait MemoryView: Send {
     /// Returns a cursor over this memory view. See [`MemoryCursor`] for more details.
     #[cfg(feature = "std")]
     #[skip_func]
+    #[inline]
     fn cursor(&mut self) -> MemoryCursor<Fwd<&mut Self>>
     where
         Self: Sized,
@@ -628,6 +697,7 @@ pub trait MemoryView: Send {
     /// Converts this memory view into a cursor. See [`MemoryCursor`] for more details.
     #[cfg(feature = "std")]
     #[skip_func]
+    #[inline]
     fn into_cursor(self) -> MemoryCursor<Self>
     where
         Self: Sized,
@@ -648,6 +718,7 @@ pub trait MemoryView: Send {
     /// Converts this memory view into a cursor at the specified address. See [`MemoryCursor`] for more details.
     #[cfg(feature = "std")]
     #[skip_func]
+    #[inline]
     fn into_cursor_at(self, address: Address) -> MemoryCursor<Self>
     where
         Self: Sized,
@@ -656,6 +727,7 @@ pub trait MemoryView: Send {
     }
 
     #[skip_func]
+    #[inline]
     fn batcher(&mut self) -> MemoryViewBatcher<Self>
     where
         Self: Sized,
@@ -664,6 +736,7 @@ pub trait MemoryView: Send {
     }
 
     #[skip_func]
+    #[inline]
     fn into_overlay_arch(self, arch: ArchitectureObj) -> ArchOverlayView<Self>
     where
         Self: Sized,
@@ -672,6 +745,7 @@ pub trait MemoryView: Send {
     }
 
     #[skip_func]
+    #[inline]
     fn overlay_arch(&mut self, arch: ArchitectureObj) -> ArchOverlayView<Fwd<&mut Self>>
     where
         Self: Sized,
@@ -680,6 +754,7 @@ pub trait MemoryView: Send {
     }
 
     #[skip_func]
+    #[inline]
     fn into_overlay_arch_parts(self, arch_bits: u8, little_endian: bool) -> ArchOverlayView<Self>
     where
         Self: Sized,
@@ -688,6 +763,7 @@ pub trait MemoryView: Send {
     }
 
     #[skip_func]
+    #[inline]
     fn overlay_arch_parts(
         &mut self,
         arch_bits: u8,
@@ -700,6 +776,7 @@ pub trait MemoryView: Send {
     }
 
     #[skip_func]
+    #[inline]
     fn into_remap_view(self, mem_map: MemoryMap<(Address, umem)>) -> RemapView<Self>
     where
         Self: Sized,
@@ -708,6 +785,7 @@ pub trait MemoryView: Send {
     }
 
     #[skip_func]
+    #[inline]
     fn remap_view(&mut self, mem_map: MemoryMap<(Address, umem)>) -> RemapView<Fwd<&mut Self>>
     where
         Self: Sized,
@@ -717,6 +795,7 @@ pub trait MemoryView: Send {
 
     // deprecated = Expose this via cglue
     #[skip_func]
+    #[inline]
     fn into_phys_mem(self) -> PhysicalMemoryOnView<Self>
     where
         Self: Sized,
@@ -726,6 +805,7 @@ pub trait MemoryView: Send {
 
     // deprecated = Expose this via cglue
     #[skip_func]
+    #[inline]
     fn phys_mem(&mut self) -> PhysicalMemoryOnView<Fwd<&mut Self>>
     where
         Self: Sized,

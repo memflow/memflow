@@ -232,3 +232,17 @@ pub trait Loadable: Sized {
         args: Option<&Self::ArgsType>,
     ) -> Result<Self::Instance>;
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    pub fn ensure_stable_abi() {
+        // ensure abi does not change throughout 0.2.x release cycle
+        // this needs to be bumped when going to 0.3.x
+        assert_eq!(MEMFLOW_PLUGIN_VERSION, 1)
+
+        // TODO: Test OsInstanceArcBox::ABI_CONSTS
+    }
+}

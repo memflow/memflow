@@ -209,14 +209,18 @@ fn pe_architecture(pe: &PE) -> PluginArchitecture {
 }
 
 fn pe_va_to_offset(pe: &PE, va: u64) -> usize {
-    let offset_va = va as usize - pe.image_base;
+    let image_base = pe.image_base as u64;
+    if va < image_base {
+        return 0;
+    }
+    let offset_va = va - image_base;
     let file_alignment = pe
         .header
         .optional_header
         .map(|h| h.windows_fields.file_alignment)
         .unwrap_or(512);
     pe::utils::find_offset(
-        offset_va,
+        offset_va as usize,
         &pe.sections,
         file_alignment,
         &ParseOptions::default(),

@@ -474,7 +474,7 @@ impl Inventory {
     ///   .os("native")
     ///   .build();
     /// ```
-    pub fn builder(&mut self) -> BuilderEmpty {
+    pub fn builder(&mut self) -> BuilderEmpty<'_> {
         BuilderEmpty::new(self)
     }
 

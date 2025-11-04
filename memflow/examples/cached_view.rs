@@ -123,7 +123,7 @@ impl CacheValidator for CustomValidator {
 
         // SAFETY: next_flags is guaranteed to be of type InvalidationFlags
         self.next_flags_local = unsafe {
-            std::mem::transmute::<_, InvalidationFlags>(self.next_flags.load(Ordering::SeqCst))
+            std::mem::transmute::<u8, InvalidationFlags>(self.next_flags.load(Ordering::SeqCst))
         };
 
         self.tick_count_local = self.tick_count.load(Ordering::SeqCst);

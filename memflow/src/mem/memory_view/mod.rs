@@ -728,7 +728,7 @@ pub trait MemoryView: Send {
 
     #[skip_func]
     #[inline]
-    fn batcher(&mut self) -> MemoryViewBatcher<Self>
+    fn batcher(&mut self) -> MemoryViewBatcher<'_, Self>
     where
         Self: Sized,
     {

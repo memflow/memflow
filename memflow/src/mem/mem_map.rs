@@ -60,7 +60,7 @@ impl<M> MemoryMapping<M> {
         self.base
     }
 
-    pub fn output(&self) -> std::cell::Ref<M> {
+    pub fn output(&self) -> std::cell::Ref<'_, M> {
         self.output.borrow()
     }
 }

@@ -113,9 +113,8 @@ pub fn wrap_with_input<A: Default, T, I>(
     let args = args.unwrap_or(&default);
 
     into_int_out_result(
-        create_fn(args, input, lib).map_err(|e| {
+        create_fn(args, input, lib).inspect_err(|e| {
             ::log::error!("{}", e);
-            e
         }),
         out,
     )

@@ -95,7 +95,7 @@ fn read_test_with_ctx<T: MemoryView>(
             .iter_mut()
             .map(|arr| {
                 CTup3(Address::INVALID, Address::INVALID, unsafe {
-                    std::mem::transmute(&mut arr[..])
+                    std::mem::transmute::<&mut [u8], CSliceMut<'_, u8>>(&mut arr[..])
                 })
             })
             .take(chunk_size),

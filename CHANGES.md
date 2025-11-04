@@ -2,6 +2,15 @@
 All notable changes to this project will be documented in this file.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
+## 0.2.4
+- Changed minimum supported rust version to 1.82.0
+- Plugin inventory rewrite: plugins are now statically analyzed before being loaded.
+- New `Batcher` derive macro for deriving batched reads/writes for sparse structs.
+- Add new `_ignore_ascii_case` versions of `process_by_name` and `module_by_name`.
+- Allow customizing batcher operations order when submitting a batch.
+- Fix incorrect version pinning causing 'plugin not found' errors
+- Fix undefined behavior in read() causing crashes in optimized builds.
+
 ## 0.2.3
 - Changed minimum supported rust version to 1.74.0
 - Global C/CPP functions are now prefixed with `mf_` to easier distuingish them from other third-party library functions

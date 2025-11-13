@@ -1,5 +1,6 @@
 //! Helpers for implementing several OS functions.
 
+use crate::architecture::ArchitectureIdent;
 use crate::error::*;
 use crate::mem::MemoryView;
 use crate::os::*;
@@ -494,4 +495,145 @@ pub fn section_list_callback(
     });
 
     ret
+}
+
+/// Parse a UTF-16LE environment block at env_block and call callback for each `NAME=VALUE\0` entry.
+#[inline]
+pub fn env_block_list_utf16_callback(
+    mem: &mut impl MemoryView,
+    env_block: Address,
+    max_bytes: umem,
+    arch: ArchitectureIdent,
+    callback: EnvVarCallback,
+) -> Result<()> {
+    env_block_list_utf16(mem, env_block, max_bytes, arch, callback)
+}
+
+pub fn env_block_list_utf16(
+    mem: &mut impl MemoryView,
+    env_block: Address,
+    max_bytes: umem,
+    arch: ArchitectureIdent,
+    mut callback: EnvVarCallback,
+) -> Result<()> {
+    let max_bytes = max_bytes as usize;
+    let mut buf = aligned_alloc(max_bytes);
+    let buf = buf.as_bytes_mut();
+    let take = core::cmp::min(buf.len(), max_bytes);
+    let buf = &mut buf[..take];
+
+    mem.read_raw_into(env_block, buf).data_part()?;
+
+    let bytes = &*buf;
+    let mut i = 0usize;
+
+    // Each entry is UTF-16LE "NAME=VALUE\0", block ends with "\0\0" (two wide NULs).
+    while i + 1 < bytes.len() {
+        if i + 3 < bytes.len()
+            && bytes[i] == 0
+            && bytes[i + 1] == 0
+            && bytes[i + 2] == 0
+            && bytes[i + 3] == 0
+        {
+            break;
+        }
+
+        let start = i;
+
+        while i + 1 < bytes.len() && !(bytes[i] == 0 && bytes[i + 1] == 0) {
+            i = i.saturating_add(2);
+        }
+        if i + 1 >= bytes.len() {
+            break;
+        }
+
+        let s_u16: Vec<u16> = bytes[start..i]
+            .chunks_exact(2)
+            .map(|c| u16::from_le_bytes([c[0], c[1]]))
+            .collect();
+        let s = String::from_utf16_lossy(&s_u16);
+
+        if !s.is_empty() {
+            if let Some(eq) = s.find('=') {
+                let (name, value) = (&s[..eq], &s[eq + 1..]);
+                let info = EnvVarInfo {
+                    name: ReprCString::from(name),
+                    value: ReprCString::from(value),
+                    address: env_block + (start as umem),
+                    arch,
+                };
+                if !callback.call(info) {
+                    return Ok(());
+                }
+            }
+        }
+        i += 2;
+    }
+
+    Ok(())
+}
+
+/// Parse a UTF-8 environment block at env_block and call callback for each NAME=VALUE\0 entry.
+#[inline]
+pub fn env_block_list_utf8_callback(
+    mem: &mut impl MemoryView,
+    env_block: Address,
+    max_bytes: umem,
+    arch: ArchitectureIdent,
+    callback: EnvVarCallback,
+) -> Result<()> {
+    env_block_list_utf8(mem, env_block, max_bytes, arch, callback)
+}
+
+pub fn env_block_list_utf8(
+    mem: &mut impl MemoryView,
+    env_block: Address,
+    max_bytes: umem,
+    arch: ArchitectureIdent,
+    mut callback: EnvVarCallback,
+) -> Result<()> {
+    let max_bytes = max_bytes as usize;
+    let mut buf = aligned_alloc(max_bytes);
+    let buf = buf.as_bytes_mut();
+    let take = core::cmp::min(buf.len(), max_bytes);
+    let buf = &mut buf[..take];
+
+    mem.read_raw_into(env_block, buf).data_part()?;
+
+    // Find double-NUL block terminator and trim after it
+    let mut end = buf.len();
+    for w in buf.windows(2) {
+        if w[0] == 0 && w[1] == 0 {
+            end = (w.as_ptr() as usize) - (buf.as_ptr() as usize);
+            break;
+        }
+    }
+    let slice = &buf[..end];
+
+    // Split on single NULs: NAME=VALUE\0
+    for (off, part) in slice.split(|b| *b == 0).scan(0usize, |pos, part| {
+        let start = *pos;
+        *pos += part.len() + 1; // +1 for NUL
+        Some((start, part))
+    }) {
+        if part.is_empty() {
+            continue;
+        }
+
+        let s = String::from_utf8_lossy(part);
+        if let Some(eq) = s.find('=') {
+            let (name, value) = (&s[..eq], &s[eq + 1..]);
+            let info = EnvVarInfo {
+                name: ReprCString::from(name),
+                value: ReprCString::from(value),
+                address: env_block + (off as umem),
+                arch,
+            };
+            if !callback.call(info) {
+                break;
+            }
+        }
+    }
+
+    Ok(())
 }

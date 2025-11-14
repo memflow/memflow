@@ -38,7 +38,7 @@ fn main() -> Result<()> {
         println!("    {}={}", ev.name.as_ref(), ev.value.as_ref());
     }
 
-    match process.envar_by_name_arch(envar, None) {
+    match process.envar_by_name(envar) {
         Ok(variable) => println!("FOUND {:?}", variable),
         Err(_) => println!("ENVAR NOT FOUND"),
     }

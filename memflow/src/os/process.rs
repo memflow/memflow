@@ -393,34 +393,10 @@ pub trait Process: Send {
         ret
     }
 
-    /// Case-insensitive lookup helper.
-    #[skip_func]
-    fn envar_by_name_arch_ignore_ascii_case(
-        &mut self,
-        name: &str,
-        architecture: Option<&ArchitectureIdent>,
-    ) -> Result<EnvVarInfo> {
-        let mut ret = Err(Error(ErrorOrigin::OsLayer, ErrorKind::EnvarNotFound));
-        let callback = &mut |data: EnvVarInfo| {
-            if data.name.as_ref().eq_ignore_ascii_case(name) {
-                ret = Ok(data);
-                false
-            } else {
-                true
-            }
-        };
-        self.envar_list_callback(architecture, callback.into())?;
-        ret
-    }
-
     /// Any-arch lookup helpers.
     #[skip_func]
     fn envar_by_name(&mut self, name: &str) -> Result<EnvVarInfo> {
         self.envar_by_name_arch(name, None)
-    }
-    #[skip_func]
-    fn envar_by_name_ignore_ascii_case(&mut self, name: &str) -> Result<EnvVarInfo> {
-        self.envar_by_name_arch_ignore_ascii_case(name, None)
     }
 
     // Low-level entry point

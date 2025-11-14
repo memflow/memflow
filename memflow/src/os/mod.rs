@@ -15,6 +15,7 @@
 //! functions. It might be wise to implement helpers for exported functions, memory protection
 //! flags, and other things concerned with individual modules.
 
+pub mod envars;
 pub mod keyboard;
 pub mod module;
 pub mod process;
@@ -27,6 +28,8 @@ pub use module::{
     ExportCallback, ExportInfo, ImportCallback, ImportInfo, ModuleAddressCallback,
     ModuleAddressInfo, ModuleInfo, ModuleInfoCallback, SectionCallback, SectionInfo,
 };
+
+pub use envars::{EnvVarCallback, EnvVarInfo};
 
 pub use process::{Pid, Process, ProcessInfo, ProcessInfoCallback, ProcessState};
 

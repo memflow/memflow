@@ -166,6 +166,111 @@ impl<T: PhysicalMemory, V: VirtualTranslate2> Process
                 .map(|m| CTup3(m.base, m.size, PageType::UNKNOWN)),
         )
     }
+    /// Walks the process' environment and calls the provided callback for each variable
+    ///
+    /// # Arguments
+    /// * `target_arch` - sets which architecture to retrieve the environment for (if emulated). Choose
+    /// between `Some(ProcessInfo::sys_arch())`, and `Some(ProcessInfo::proc_arch())`. `None` for all.
+    /// * `callback` - where to pass each variable to. This is an opaque callback.
+    fn envar_list_callback(
+        &mut self,
+        target_arch: Option<&ArchitectureIdent>,
+        callback: EnvVarCallback,
+    ) -> Result<()> {
+        // Emit a small, deterministic environment for the dummy backend.
+        let mut cb = callback;
+
+        let emit_for_arch =
+            |this: &mut Self, arch: ArchitectureIdent, cb: &mut EnvVarCallback| -> Result<()> {
+                let env_block = this.environment_block_address(arch)?;
+
+                let vars = [
+                    ("PATH", "/usr/bin:/bin", 0x10usize),
+                    ("HOME", "/home/dummy", 0x30usize),
+                    ("USER", "dummy", 0x50usize),
+                ];
+
+                for (name, value, off) in vars {
+                    let info = EnvVarInfo {
+                        name: name.into(),
+                        value: value.into(),
+                        address: env_block + off,
+                        arch,
+                    };
+                    if !cb.call(info) {
+                        break;
+                    }
+                }
+
+                Ok(())
+            };
+
+        match target_arch {
+            Some(a) => emit_for_arch(self, *a, &mut cb)?,
+            None => {
+                let sys_arch = self.info().sys_arch;
+                let proc_arch = self.info().proc_arch;
+
+                emit_for_arch(self, sys_arch, &mut cb)?;
+                if proc_arch != sys_arch {
+                    emit_for_arch(self, proc_arch, &mut cb)?;
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Retrieves address of the process' environment block for the given architecture
+    ///
+    /// # Remarks
+    ///
+    /// This is a dummy implementation. Real backends should locate the environment through the target
+    /// OS structures (e.g. PEB->ProcessParameters->Environment on Windows).
+    fn environment_block_address(&mut self, architecture: ArchitectureIdent) -> Result<Address> {
+        // Provide a stable, per-arch base relative to the process info address.
+        let base = if architecture == self.info().proc_arch {
+            self.proc.info.address + 0x4000usize
+        } else {
+            self.proc.info.address + 0x8000usize
+        };
+        Ok(base)
+    }
+
+    /// Enumerates environment variables starting from a known environment block address
+    ///
+    /// # Arguments
+    /// * `env_block` - base address of the environment block
+    /// * `architecture` - architecture of the environment
+    /// * `callback` - where to pass each variable to. This is an opaque callback.
+    fn envar_list_from_address(
+        &mut self,
+        env_block: Address,
+        architecture: ArchitectureIdent,
+        callback: EnvVarCallback,
+    ) -> Result<()> {
+        let mut cb = callback;
+
+        let vars = [
+            ("PATH", "/usr/bin:/bin", 0x10usize),
+            ("HOME", "/home/dummy", 0x30usize),
+            ("USER", "dummy", 0x50usize),
+        ];
+
+        for (name, value, off) in vars {
+            let info = EnvVarInfo {
+                name: name.into(),
+                value: value.into(),
+                address: env_block + off,
+                arch: architecture,
+            };
+            if !cb.call(info) {
+                break;
+            }
+        }
+
+        Ok(())
+    }
 }
 
 impl<T: MemoryView> MemoryView for DummyProcess<T> {

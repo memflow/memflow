@@ -21,7 +21,7 @@ codecov = { repository = "github", branch = "master", service = "github" }
 memflow-derive = { version = "0.2", path = "../memflow-derive" }
 dataview = { version = "1.0", default-features = false }
 log = { version = "0.4", default-features = false }
-# we keep bitflags on version 1.x due to the various issues with cbindgen macro expansion and other issues 
+# we keep bitflags on version 1.x due to the various issues with cbindgen macro expansion and other issues
 bitflags = "1.3"
 coarsetime = { version = "0.1", optional = true }
 x86_64 = { version = "0.14", default-features = false }
@@ -152,3 +152,7 @@ path = "examples/keyboard.rs"
 [[example]]
 name = "target_list"
 path = "examples/target_list.rs"
+
+[[example]]
+name = "envars_list"
+path = "examples/envars_list.rs"

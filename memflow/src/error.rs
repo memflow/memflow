@@ -227,6 +227,7 @@ pub enum ErrorKind {
     ProcessNotFound,
     InvalidProcessInfo,
     ModuleNotFound,
+    EnvarNotFound,
     ExportNotFound,
     ImportNotFound,
     SectionNotFound,
@@ -288,6 +289,7 @@ impl ErrorKind {
             ErrorKind::ProcessNotFound => "process not found",
             ErrorKind::InvalidProcessInfo => "invalid process info",
             ErrorKind::ModuleNotFound => "module not found",
+            ErrorKind::EnvarNotFound => "environment variable not found",
             ErrorKind::ExportNotFound => "export not found",
             ErrorKind::ImportNotFound => "import not found",
             ErrorKind::SectionNotFound => "section not found",
@@ -302,7 +304,7 @@ impl ErrorKind {
 pub enum PartialError<T> {
     /// Hard Error
     ///
-    /// Catch-all for all hard  
+    /// Catch-all for all hard
     Error(Error),
     /// Partial Virtual Read Error
     ///

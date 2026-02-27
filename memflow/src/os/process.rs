@@ -1,8 +1,8 @@
 //! Describes process context
 
 use super::{
-    ExportCallback, ExportInfo, ImportCallback, ImportInfo, ModuleAddressInfo, ModuleInfo,
-    ModuleInfoCallback, SectionCallback, SectionInfo,
+    EnvVarCallback, EnvVarInfo, ExportCallback, ExportInfo, ImportCallback, ImportInfo,
+    ModuleAddressInfo, ModuleInfo, ModuleInfoCallback, SectionCallback, SectionInfo,
 };
 use crate::cglue::*;
 use crate::prelude::v1::{Result, *};
@@ -345,6 +345,71 @@ pub trait Process: Send {
         self.mapped_mem(gap_size, (&mut out).into());
         out
     }
+
+    /// Walks the process environment and calls the callback for each (name,value) pair.
+    ///
+    /// # Arguments
+    /// * `target_arch` - Choose `Some(ProcessInfo::sys_arch())`, `Some(ProcessInfo::proc_arch())`, or `None` for all.
+    /// * `callback` - receives each EnvVarInfo; return `true` to continue, `false` to stop.
+    fn envar_list_callback(
+        &mut self,
+        target_arch: Option<&ArchitectureIdent>,
+        callback: EnvVarCallback,
+    ) -> Result<()>;
+
+    /// Collect all environment variables for a given arch (or all).
+    #[skip_func]
+    fn envar_list_arch(
+        &mut self,
+        target_arch: Option<&ArchitectureIdent>,
+    ) -> Result<Vec<EnvVarInfo>> {
+        let mut ret = vec![];
+        self.envar_list_callback(target_arch, (&mut ret).into())?;
+        Ok(ret)
+    }
+
+    /// Collect environment variables (any architecture).
+    #[skip_func]
+    fn envar_list(&mut self) -> Result<Vec<EnvVarInfo>> {
+        self.envar_list_arch(None)
+    }
+
+    /// Finds a single environment variable by name (case-sensitive) for a given arch (or any).
+    fn envar_by_name_arch(
+        &mut self,
+        name: &str,
+        architecture: Option<&ArchitectureIdent>,
+    ) -> Result<EnvVarInfo> {
+        let mut ret = Err(Error(ErrorOrigin::OsLayer, ErrorKind::EnvarNotFound));
+        let callback = &mut |data: EnvVarInfo| {
+            if data.name.as_ref() == name {
+                ret = Ok(data);
+                false
+            } else {
+                true
+            }
+        };
+        self.envar_list_callback(architecture, callback.into())?;
+        ret
+    }
+
+    /// Any-arch lookup helpers.
+    #[skip_func]
+    fn envar_by_name(&mut self, name: &str) -> Result<EnvVarInfo> {
+        self.envar_by_name_arch(name, None)
+    }
+
+    // Low-level entry point
+    // Returns the address of the process’s environment block for a given arch (e.g. Windows: PEB->ProcessParameters->Environment).
+    fn environment_block_address(&mut self, architecture: ArchitectureIdent) -> Result<Address>;
+
+    // Enumerate environment variables starting from a known environment block address.
+    fn envar_list_from_address(
+        &mut self,
+        env_block: Address,
+        architecture: ArchitectureIdent,
+        callback: EnvVarCallback,
+    ) -> Result<()>;
 }
 
 /// Process information structure

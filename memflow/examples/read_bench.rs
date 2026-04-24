@@ -110,6 +110,7 @@ fn read_bench(mut kernel: OsInstanceArcBox) -> Result<()> {
         cont_cnt = 0;
 
         let mod_list: Vec<ModuleInfo> = prc
+            .module_view(None)
             .module_list()?
             .into_iter()
             .filter(|module| module.size > 0x1000)

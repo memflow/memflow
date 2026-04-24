@@ -15,7 +15,7 @@ Overwrite dtb with a custom one:
 cargo run --release --example cached_view -- -vv -c kvm --os win32 --process explorer.exe -m KERNEL32.DLL
 ```
 */
-use ::std::sync::atomic::Ordering;
+use std::sync::atomic::Ordering;
 use std::sync::{
     atomic::{AtomicI32, AtomicU8},
     Arc,
@@ -175,6 +175,7 @@ fn main() -> Result<()> {
 
     // retrieve module info
     let module_info = process
+        .module_view(None)
         .module_by_name(module_name)
         .expect("unable to find module in process");
     println!("{module_info:?}");

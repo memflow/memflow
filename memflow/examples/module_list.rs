@@ -25,6 +25,7 @@ fn main() -> Result<()> {
     println!("found process: {:?}", process.info());
 
     let module_list = process
+        .module_view(None)
         .module_list()
         .expect("unable to retrieve module list");
 

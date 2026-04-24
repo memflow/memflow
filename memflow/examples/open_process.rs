@@ -57,6 +57,7 @@ fn main() -> Result<()> {
 
     // retrieve module info
     let module_info = process
+        .module_view(None)
         .module_by_name(module_name)
         .expect("unable to find module in process");
     println!("{module_info:?}");

@@ -25,19 +25,19 @@ impl<T> ModuleView<T> {
     }
 }
 
-impl<T: Process> ModuleView<T> {
+impl<'a, P: Process + ?Sized> ModuleView<&'a mut P> {
     #[inline]
-    pub fn process(&self) -> &T {
+    pub fn process(&self) -> &P {
         &self.process
     }
 
     #[inline]
-    pub fn process_mut(&mut self) -> &mut T {
+    pub fn process_mut(&mut self) -> &mut P {
         &mut self.process
     }
 
     #[inline]
-    pub fn into_process(self) -> T {
+    pub fn into_process(self) -> &'a mut P {
         self.process
     }
 
@@ -59,7 +59,7 @@ impl<T: Process> ModuleView<T> {
     }
 
     pub fn module_list_callback(&mut self, mut callback: ModuleInfoCallback) -> Result<()> {
-        let sptr = &mut self.process as *mut T;
+        let sptr = self.process as *mut P;
         let target_arch = self.effective_target_arch();
         let inner_callback = &mut |ModuleAddressInfo { address, arch }| match unsafe { &mut *sptr }
             .module_by_address(address, arch)
@@ -117,22 +117,13 @@ impl<T: Process> ModuleView<T> {
 
     #[inline]
     pub fn primary_module_address(&mut self) -> Result<Address> {
-        let target_arch = self.effective_target_arch();
-        let mut ret = Err(Error(ErrorOrigin::OsLayer, ErrorKind::ModuleNotFound));
-        let callback = &mut |moduleinfo: ModuleAddressInfo| {
-            ret = Ok(moduleinfo.address);
-            false
-        };
         self.process
-            .module_address_list_callback(Some(&target_arch), callback.into())?;
-        ret
+            .primary_module_address_arch(self.target_arch.as_ref())
     }
 
     #[inline]
     pub fn primary_module(&mut self) -> Result<ModuleInfo> {
-        let target_arch = self.effective_target_arch();
-        let addr = self.primary_module_address()?;
-        self.process.module_by_address(addr, target_arch)
+        self.process.primary_module_arch(self.target_arch.as_ref())
     }
 
     #[inline]

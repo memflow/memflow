@@ -49,7 +49,7 @@ pub fn parallel_processes(kernel: OsInstanceArcBox<'static>) {
         .map(|_| process.clone())
         .map(|mut p| {
             thread::spawn(move || {
-                let module_list = p.module_list().unwrap();
+                let module_list = p.module_view(None).module_list().unwrap();
                 info!("wininit.exe module_list: {}", module_list.len());
             })
         })

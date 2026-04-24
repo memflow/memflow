@@ -112,14 +112,17 @@ impl<T: PhysicalMemory, V: VirtualTranslate2> Process
     }
 
     /// Retrieves address of the primary module structure of the process
-    fn primary_module_address(&mut self) -> Result<Address> {
+    fn primary_module_address_arch(
+        &mut self,
+        target_arch: Option<&ArchitectureIdent>,
+    ) -> Result<Address> {
         let mut ret = Err(Error(ErrorOrigin::OsLayer, ErrorKind::ModuleNotFound));
         let callback = &mut |moduleinfo: ModuleAddressInfo| {
             ret = Ok(moduleinfo.address);
             false
         };
-        let proc_arch = self.info().proc_arch;
-        self.module_address_list_callback(Some(&proc_arch), callback.into())?;
+        let target_arch = target_arch.copied().unwrap_or(self.info().proc_arch);
+        self.module_address_list_callback(Some(&target_arch), callback.into())?;
         ret
     }
 
@@ -199,7 +202,7 @@ mod tests {
         let mut prc = os.process_by_pid(pid).unwrap();
         prc.proc.add_modules(10, size::kb(1));
 
-        let module = prc.primary_module();
+        let module = prc.module_view(None).primary_module();
         assert!(module.is_ok())
     }
 

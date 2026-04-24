@@ -45,6 +45,7 @@ fn main() -> Result<()> {
     }
 
     let module = process
+        .module_view(None)
         .module_by_name(proc_name)
         .expect("unable to find module");
 

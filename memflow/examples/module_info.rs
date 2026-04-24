@@ -18,6 +18,7 @@ fn main() -> Result<()> {
     println!("found process: {:?}", process.info());
 
     let module = process
+        .module_view(None)
         .module_by_name(module_name)
         .expect("unable to retrieve module");
 

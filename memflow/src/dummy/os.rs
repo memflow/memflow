@@ -123,10 +123,7 @@ where
 {
     fn allocate_frame(&mut self) -> Option<PhysFrame<S>> {
         let new_page = self.alloc_pt_page();
-        match PhysFrame::from_start_address(PhysAddr::new(new_page.addr.to_umem() as u64)) {
-            Ok(s) => Some(s),
-            _ => None,
-        }
+        PhysFrame::from_start_address(PhysAddr::new(new_page.addr.to_umem() as u64)).ok()
     }
 }
 

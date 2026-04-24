@@ -57,8 +57,8 @@ pub struct DummyProcess<T> {
 impl<T: PhysicalMemory, V: VirtualTranslate2> Process
     for DummyProcess<VirtualDma<T, V, X86VirtualTranslate>>
 {
-    /// Retrieves virtual address translator for the process (if applicable)
-    //fn vat(&mut self) -> Option<&mut Self::VirtualTranslateType>;
+    // TODO: retrieves virtual address translator for the process (if applicable)
+    // fn vat(&mut self) -> Option<&mut Self::VirtualTranslateType>;
 
     fn state(&mut self) -> ProcessState {
         ProcessState::Alive

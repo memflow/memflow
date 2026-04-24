@@ -128,6 +128,11 @@ impl ArchMmuSpec {
         B: SplitAtIndex,
         C: MmuTranslationBase,
     {
+        if buf.length() == 0 {
+            crate::cold_path();
+            return;
+        }
+
         vtop_trace!("total {:x}+{:x}", addr, buf.length());
         let tr_data = TranslateData {
             addr,
@@ -138,7 +143,10 @@ impl ArchMmuSpec {
         // Trim to virt address space limit
         let (left, reject) = tr_data
             .split_inclusive_at(Address::bit_mask(0..=(self.def.addr_size * 8 - 1)).to_umem());
-        let left = left.unwrap();
+        let Some(left) = left else {
+            crate::cold_path();
+            return;
+        };
 
         if let Some(data) = reject {
             // TODO: handle condition
@@ -472,16 +480,19 @@ impl ArchMmuSpec {
 
                 while let Some(data) = working_pair.1.pop() {
                     if !out_fail.call((err, CTup3(data.addr, data.meta_addr, data.buf))) {
+                        crate::cold_path();
                         return;
                     }
                 }
 
                 while let Some(data) = waiting_pair.1.pop() {
                     if !out_fail.call((err, CTup3(data.addr, data.meta_addr, data.buf))) {
+                        crate::cold_path();
                         return;
                     }
                 }
 
+                crate::cold_path();
                 return;
             }
 

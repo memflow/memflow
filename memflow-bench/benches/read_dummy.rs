@@ -7,7 +7,7 @@ use memflow::dummy::DummyMemory as Memory;
 use memflow::prelude::v1::*;
 
 fn initialize_virt_ctx(cache_size: usize, use_tlb: bool) -> Result<OsInstanceArcBox<'static>> {
-    util::build_os("", cache_size, "dummy", use_tlb)
+    memflow_bench::util::build_os("", cache_size, "dummy", use_tlb)
 }
 
 fn dummy_read_group(c: &mut Criterion) {

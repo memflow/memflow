@@ -3,7 +3,6 @@
 *.swp
 .vscode
 nostd-test/target
-nostd-test/Cargo.lock
 *.so
 .vagrant
 TODO.md

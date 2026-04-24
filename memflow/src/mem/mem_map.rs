@@ -175,27 +175,41 @@ impl<M: SplitAtIndex> MemoryMap<M> {
             output: output.into(),
         };
 
+        let start = base.to_umem();
+        let length = mapping.output.borrow().length();
+        let end = start.checked_add(length).unwrap_or_else(|| {
+            panic!(
+                "MemoryMap::push range overflow: base={:x} length={:x}",
+                base, length
+            )
+        });
+
         let mut shift_idx = self.mappings.len();
 
         // bounds check. In reverse order, because most likely
         // all mappings will be inserted in increasing order
         for (i, m) in self.mappings.iter().enumerate().rev() {
-            let start = base;
-            let end = base + mapping.output.borrow().length();
-            if m.base <= start && start < m.base + m.output.borrow().length()
-                || m.base <= end && end < m.base + m.output.borrow().length()
-            {
+            let m_start = m.base.to_umem();
+            let m_length = m.output.borrow().length();
+            let m_end = m_start.checked_add(m_length).unwrap_or_else(|| {
+                panic!(
+                    "MemoryMap::push existing range overflow: base={:x} length={:x}",
+                    m.base, m_length
+                )
+            });
+
+            if start < m_end && m_start < end {
                 // overlapping memory regions should not be possible
                 panic!(
                     "MemoryMap::push overlapping regions: {:x}-{:x} ({:x}) | {:x}-{:x} ({:x})",
                     base,
-                    end,
-                    mapping.output.borrow().length(),
+                    Address::from(end),
+                    length,
                     m.base,
-                    m.base + m.output.borrow().length(),
-                    m.output.borrow().length()
+                    Address::from(m_end),
+                    m_length
                 );
-            } else if m.base + m.output.borrow().length() <= start {
+            } else if m_end <= start {
                 shift_idx = i + 1;
                 break;
             }
@@ -489,6 +503,7 @@ impl<
                 }
             }
 
+            crate::cold_path();
             let _ = opt_call(self.fail_out.as_deref_mut(), CTup2(meta_addr, buf));
         }
         None
@@ -790,6 +805,42 @@ mod tests {
     }
 
     #[test]
+    #[should_panic]
+    fn test_overlapping_regions_covering_existing() {
+        let mut map = MemoryMap::new();
+        map.push_range(0x2000.into(), 0x3000.into(), 0.into());
+
+        // should panic
+        map.push_range(0x1000.into(), 0x4000.into(), 0.into());
+    }
+
+    #[test]
+    fn test_adjacent_regions_do_not_overlap() {
+        let mut map = MemoryMap::new();
+        map.push_range(0x1000.into(), 0x2000.into(), 0.into());
+        map.push_range(0x2000.into(), 0x3000.into(), 0.into());
+
+        let mut void = |_: CTup2<Address, _>| true;
+
+        assert_eq!(
+            (map.map::<umem, _>(0x1000.into(), 1, Some(&mut void))
+                .next()
+                .unwrap()
+                .0)
+                .0,
+            Address::from(0)
+        );
+        assert_eq!(
+            (map.map::<umem, _>(0x2000.into(), 1, Some(&mut void))
+                .next()
+                .unwrap()
+                .0)
+                .0,
+            Address::from(0)
+        );
+    }
+
+    #[test]
     fn test_max_address() {
         let mut map = MemoryMap::new();
         map.push_remap(0x1000.into(), 0x1000, 0.into());
@@ -804,6 +855,25 @@ mod tests {
         map.push_remap(0x3000.into(), 0x1000, 0x2000.into());
         map.push_remap(0x6000.into(), 0x2000, 0x3000.into());
         assert_eq!(map.real_size(), 0x4000);
+    }
+
+    #[test]
+    #[should_panic(expected = "MemoryMap::push range overflow")]
+    fn test_push_panics_on_range_overflow() {
+        let mut map = MemoryMap::new();
+        map.push(Address::from(!0u64), (Address::null(), 2_u64));
+    }
+
+    #[test]
+    #[should_panic(expected = "MemoryMap::push existing range overflow")]
+    fn test_push_panics_on_existing_range_overflow() {
+        let mut map = MemoryMap {
+            mappings: vec![MemoryMapping {
+                base: Address::from(!0u64),
+                output: std::cell::RefCell::new((Address::null(), 2_u64)),
+            }],
+        };
+        map.push(Address::null(), (Address::null(), 1_u64));
     }
 
     #[cfg(feature = "memmapfiles")]

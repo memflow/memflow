@@ -25,14 +25,7 @@
           inherit overlays system;
         };
 
-        rustToolchain = pkgs.rust-bin.stable.latest.default.override {
-          extensions = [
-            "clippy"
-            "rust-analyzer"
-            "rust-src"
-            "rustfmt"
-          ];
-        };
+        rustToolchain = pkgs.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml;
       in
       {
         devShells.default = pkgs.mkShell {

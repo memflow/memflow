@@ -5,6 +5,7 @@ use crate::mem::{
     DirectTranslate, MemoryView, PhysicalMemory, VirtualDma, VirtualTranslate, VirtualTranslate2,
     VirtualTranslate3,
 };
+use crate::os::process::Process;
 use crate::types::{mem, size, PageType};
 use cglue::tuple::*;
 
@@ -53,6 +54,25 @@ fn test_vtop() {
 
         assert_eq!(vtop, dummy_vtop);
     }
+}
+
+#[test]
+fn test_virt_to_phys_range_zero_length_no_panic() {
+    let mut proc = DummyOs::quick_process(size::mb(2), &[]);
+    let addr = proc.info().address;
+    let mut translated_count = 0;
+
+    proc.mem.virt_to_phys_range(
+        addr,
+        addr,
+        (&mut |_| {
+            translated_count += 1;
+            true
+        })
+            .into(),
+    );
+
+    assert_eq!(translated_count, 0);
 }
 
 #[test]

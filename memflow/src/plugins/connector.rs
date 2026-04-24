@@ -1,5 +1,5 @@
-use ::log::info;
-use ::std::time::Duration;
+use log::info;
+use std::time::Duration;
 
 use crate::cglue::{
     result::{from_int_result, from_int_result_empty},
@@ -33,15 +33,8 @@ pub fn create_instance<T: Send + 'static + PhysicalMemory>(
 // TODO: get rid of these trait bounds
 where
     (T, LibArc): Into<ConnectorInstanceBaseArcBox<'static, T, c_void>>,
-    (
-        CachedPhysicalMemory<'static, T, TimedCacheValidator>,
-        LibArc,
-    ): Into<
-        ConnectorInstanceBaseArcBox<
-            'static,
-            CachedPhysicalMemory<'static, T, TimedCacheValidator>,
-            c_void,
-        >,
+    (CachedPhysicalMemory<T, TimedCacheValidator>, LibArc): Into<
+        ConnectorInstanceBaseArcBox<'static, CachedPhysicalMemory<T, TimedCacheValidator>, c_void>,
     >,
 {
     // check if user explicitly enabled caching or alternatively fall back to auto configuration of the connector

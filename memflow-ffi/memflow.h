@@ -2539,7 +2539,8 @@ int32_t mf_inventory_add_dir(struct Inventory *inv, const char *dir);
  *
  * # Safety
  *
- * Both `name`, and `args` must be valid null terminated strings.
+ * `name` must be a valid, non-null, null terminated string.
+ * `args` may be null. If non-null, it must be a valid null terminated string.
  *
  * Any error strings returned by the connector must not be outputed after the connector gets
  * freed, because that operation could cause the underlying shared library to get unloaded.
@@ -2563,7 +2564,8 @@ int32_t mf_inventory_instantiate_connector(struct Inventory *inv,
  *
  * # Safety
  *
- * Both `name`, and `args` must be valid null terminated strings.
+ * `name` must be a valid, non-null, null terminated string.
+ * `args` may be null. If non-null, it must be a valid null terminated string.
  *
  * Any error strings returned by the connector must not be outputed after the connector gets
  * freed, because that operation could cause the underlying shared library to get unloaded.

@@ -71,7 +71,8 @@ pub unsafe extern "C" fn mf_inventory_add_dir(inv: &mut Inventory, dir: *const c
 ///
 /// # Safety
 ///
-/// Both `name`, and `args` must be valid null terminated strings.
+/// `name` must be a valid, non-null, null terminated string.
+/// `args` may be null. If non-null, it must be a valid null terminated string.
 ///
 /// Any error strings returned by the connector must not be outputed after the connector gets
 /// freed, because that operation could cause the underlying shared library to get unloaded.
@@ -82,6 +83,10 @@ pub unsafe extern "C" fn mf_inventory_instantiate_connector(
     args: *const c_char,
     out: &mut MuConnectorInstanceArcBox<'static>,
 ) -> i32 {
+    assert!(
+        !name.is_null(),
+        "mf_inventory_instantiate_connector: name must not be null"
+    );
     let rname = CStr::from_ptr(name).to_string_lossy();
 
     if args.is_null() {
@@ -111,7 +116,8 @@ pub unsafe extern "C" fn mf_inventory_instantiate_connector(
 ///
 /// # Safety
 ///
-/// Both `name`, and `args` must be valid null terminated strings.
+/// `name` must be a valid, non-null, null terminated string.
+/// `args` may be null. If non-null, it must be a valid null terminated string.
 ///
 /// Any error strings returned by the connector must not be outputed after the connector gets
 /// freed, because that operation could cause the underlying shared library to get unloaded.
@@ -158,8 +164,11 @@ pub unsafe extern "C" fn mf_inventory_instantiate_os(
     mem: *mut ConnectorInstanceArcBox<'static>,
     out: &mut MuOsInstanceArcBox<'static>,
 ) -> i32 {
+    assert!(
+        !name.is_null(),
+        "mf_inventory_instantiate_os: name must not be null"
+    );
     let rname = CStr::from_ptr(name).to_string_lossy();
-    let _args = CStr::from_ptr(args).to_string_lossy();
 
     let mem_obj = if mem.is_null() {
         None

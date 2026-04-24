@@ -19,7 +19,7 @@ use goblin::{
 };
 
 fn aligned_alloc(bytes: usize) -> Vec<u64> {
-    vec![0; (bytes + 8 - 1) / 8]
+    vec![0; bytes.div_ceil(8)]
 }
 
 #[cfg(feature = "goblin")]

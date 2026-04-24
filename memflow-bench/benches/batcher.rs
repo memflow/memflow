@@ -1,3 +1,5 @@
+#![allow(static_mut_refs)]
+
 use criterion::*;
 
 use memflow::prelude::v1::*;

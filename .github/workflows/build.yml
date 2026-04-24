@@ -151,10 +151,10 @@ jobs:
           override: true
 
       - name: Build
-        run: cd nostd-test; cargo build ${{ matrix.flags }} --verbose
+        run: cd nostd-test; cargo build ${{ matrix.flags }} --locked --verbose
 
       - name: Run
-        run: cd nostd-test; cargo run ${{ matrix.flags }} --verbose
+        run: cd nostd-test; cargo run ${{ matrix.flags }} --locked --verbose
 
   build-coverage:
     runs-on: ubuntu-latest

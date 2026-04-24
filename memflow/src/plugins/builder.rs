@@ -71,7 +71,7 @@ fn builder_from_args<'a>(
         .chain(os_layers.map(|(i, a)| BuildStep::new_os(a).map(|a| (i, a))))
         .collect::<Result<Vec<_>>>()?;
 
-    layers.sort_by(|(a, _), (b, _)| a.cmp(b));
+    layers.sort_by_key(|(a, _)| *a);
 
     if layers.windows(2).any(|w| !w[0].1.validate_next(&w[1].1)) {
         return Err(

@@ -176,6 +176,10 @@ pub trait VirtualTranslate: Send {
         out: VirtualTranslationCallback,
     ) {
         assert!(end >= start);
+        if end == start {
+            crate::cold_path();
+            return;
+        }
         self.virt_to_phys_list(
             &[CTup2(start, (end - start) as umem)],
             out,
@@ -828,7 +832,14 @@ where
             &mut success.into(),
             &mut fail.into(),
         );
-        output.map(Ok).unwrap_or_else(|| Err(output_err.unwrap()))
+        debug_assert!(
+            output.is_some() || output_err.is_some(),
+            "virt_to_phys_iter must invoke either success or failure callback"
+        );
+        output.map(Ok).unwrap_or_else(|| {
+            crate::cold_path();
+            Err(output_err.unwrap_or(Error(ErrorOrigin::VirtualTranslate, ErrorKind::NotFound)))
+        })
     }
 }
 
@@ -926,7 +937,14 @@ pub trait VirtualTranslate3: Clone + Copy + Send {
             &mut fail.into(),
             &mut buf,
         );
-        output.map(Ok).unwrap_or_else(|| Err(output_err.unwrap()))
+        debug_assert!(
+            output.is_some() || output_err.is_some(),
+            "virt_to_phys_iter must invoke either success or failure callback"
+        );
+        output.map(Ok).unwrap_or_else(|| {
+            crate::cold_path();
+            Err(output_err.unwrap_or(Error(ErrorOrigin::VirtualTranslate, ErrorKind::NotFound)))
+        })
     }
 
     fn virt_to_phys_iter<

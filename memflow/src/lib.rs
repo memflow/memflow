@@ -255,6 +255,12 @@ pub mod os;
 
 pub mod iter;
 
+// `std::hint::cold_path` is available on Rust 1.95.0+:
+// https://doc.rust-lang.org/beta/std/hint/fn.cold_path.html
+#[inline(never)]
+#[cold]
+pub(crate) fn cold_path() {}
+
 // forward declare
 #[doc(hidden)]
 pub mod derive {

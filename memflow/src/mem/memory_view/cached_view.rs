@@ -59,7 +59,8 @@ where
     T: MemoryView,
     Q: CacheValidator,
 {
-    mem: PhysicalMemoryView<CachedPhysicalMemory<'a, PhysicalMemoryOnView<T>, Q>>,
+    mem: PhysicalMemoryView<CachedPhysicalMemory<PhysicalMemoryOnView<T>, Q>>,
+    _lifetime: core::marker::PhantomData<&'a mut T>,
 }
 
 impl<'a, T, Q> MemoryView for CachedView<'a, T, Q>
@@ -196,6 +197,7 @@ impl<T: MemoryView, Q: CacheValidator> CachedViewBuilder<T, Q> {
 
         Ok(CachedView {
             mem: cache.into_mem_view(),
+            _lifetime: core::marker::PhantomData,
         })
     }
 

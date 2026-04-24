@@ -170,6 +170,7 @@ impl<T: Seek + Read + Write + Send> PhysicalMemory for FileIoMemory<T> {
                     continue;
                 }
             }
+            crate::cold_path();
             opt_call(iter.fail_out(), CTup2(meta_addr, buf));
         }
         Ok(())

@@ -79,6 +79,14 @@ impl<T: PhysicalMemory> PhysicalMemoryMetrics<T> {
     pub fn into_inner(self) -> T {
         self.mem
     }
+
+    pub fn inner(&self) -> &T {
+        &self.mem
+    }
+
+    pub fn inner_mut(&mut self) -> &mut T {
+        &mut self.mem
+    }
 }
 
 // forward PhysicalMemory trait fncs

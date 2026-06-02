@@ -120,6 +120,14 @@ impl<'a, T: PhysicalMemory, Q: CacheValidator> CachedPhysicalMemory<'a, T, Q> {
     pub fn into_inner(self) -> T {
         self.mem
     }
+
+    pub fn inner(&self) -> &T {
+        &self.mem
+    }
+
+    pub fn inner_mut(&mut self) -> &mut T {
+        &mut self.mem
+    }
 }
 
 impl<'a, T: PhysicalMemory> CachedPhysicalMemory<'a, T, DefaultCacheValidator> {
